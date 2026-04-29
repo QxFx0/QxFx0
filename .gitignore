@@ -1,0 +1,35 @@
+dist-newstyle/
+.cabal-store/
+.cabal-dev-*/
+dist-*/
+_build/
+cabal.project.local
+cabal.project.local~
+*.hi
+*.o
+*.db
+*.db-shm
+*.db-wal
+result
+__pycache__/
+semantic_rules.dl
+.test-tmp/
+.verify-home/
+R5Verdict.csv
+ShadowAlert.csv
+spec/gf/*.pgf
+
+# Local scratch files
+run_repl.hs
+test.hs
+test_facts.dl
+
+# Generated evaluation artifacts (large, reproducible)
+reports/eval_runs/
+reports/release_readiness/
+reports/*_result.md
+reports/input_*_report.json
+reports/input_unknown_candidates.json
+
+# Oversized generated morphology index (>100MB); regenerate via scripts/export_lexicon.py
+resources/morphology/forms_by_surface.json

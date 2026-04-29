@@ -1,0 +1,66 @@
+{-| Public facade for consciousness kernel, interpretation, and narrative shaping. -}
+module QxFx0.Core.Consciousness
+  ( ThinkingVector(..)
+  , DesireStrength(..)
+  , KernelDesire(..)
+  , Skill(..)
+  , SkillSet(..)
+  , SelfModel(..)
+  , OntologicalCore(..)
+  , UnconsciousKernel(..)
+  , SelfInterpretation(..)
+  , InterpretationEvent(..)
+  , ConsciousState(..)
+  , ConsciousnessModel(..)
+  , qxfx0UnconsciousKernel
+  , emptyConsciousState
+  , initialConsciousness
+  , kernelPulse
+  , interpretOutput
+  , updateSelfInterpretation
+  , KernelOutput(..)
+  , ConsciousForm(..)
+  , MeaningMode(..)
+  , ReturnMode(..)
+  , NarrativeDrive(..)
+  , ThinkingResult(..)
+  , OntologicalQuestion(..)
+  , ConsciousnessNarrative(..)
+  , consciousnessToNarrative
+  , narrativeToPromptFragment
+  ) where
+
+import QxFx0.Core.Consciousness.Kernel
+  ( emptyConsciousState
+  , initialConsciousness
+  , kernelPulse
+  , qxfx0UnconsciousKernel
+  )
+import QxFx0.Core.Consciousness.Narrative
+  ( consciousnessToNarrative
+  , interpretOutput
+  , narrativeToPromptFragment
+  , updateSelfInterpretation
+  )
+import QxFx0.Core.Consciousness.Types
+  ( ConsciousForm(..)
+  , ConsciousState(..)
+  , ConsciousnessModel(..)
+  , ConsciousnessNarrative(..)
+  , DesireStrength(..)
+  , InterpretationEvent(..)
+  , KernelDesire(..)
+  , KernelOutput(..)
+  , MeaningMode(..)
+  , NarrativeDrive(..)
+  , OntologicalCore(..)
+  , OntologicalQuestion(..)
+  , ReturnMode(..)
+  , SelfInterpretation(..)
+  , SelfModel(..)
+  , Skill(..)
+  , SkillSet(..)
+  , ThinkingResult(..)
+  , ThinkingVector(..)
+  , UnconsciousKernel(..)
+  )

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+python3 scripts/sync_embedded_sql.py --check >/dev/null
+bash scripts/check_generated_artifacts.sh >/dev/null
+bash scripts/check_architecture.sh >/dev/null

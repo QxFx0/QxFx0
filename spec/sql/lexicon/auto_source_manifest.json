@@ -1,0 +1,17 @@
+{
+  "source_name": "pymorphy3-opencorpora-dict",
+  "version": "0.92-scale",
+  "import_date": "2026-04-24T20:29:04.188115+00:00",
+  "license": "CC-BY-SA-3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "checksum": "3decc15ff17e11f672b16f3cb304a93cdd71227f9ce5d1aaa618ee978346a330",
+  "import_script": "scripts/import_ru_opencorpora.py",
+  "tier": "auto-coverage",
+  "enabled": true,
+  "comment": "Pilot auto-sourced Russian morphology from OpenCorpora-derived dictionary. P1 auto-verified: 4000 lemmas (50511 forms). P2 auto-coverage: 17500 lemmas (667986 forms). P1 outranks P2 in resolver. Neither affects routing/GF/Agda.",
+  "provenance": {
+    "source_url": "https://opencorpora.org/",
+    "source_revision": "417150",
+    "source_name_full": "OpenCorpora Russian Dictionary"
+  }
+}

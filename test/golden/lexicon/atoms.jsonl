@@ -1,0 +1,8 @@
+{"input":"свобода","atoms":["Searching"],"expected_family":"CMGround"}
+{"input":"Я очень сильно устал от этой работы","atoms":["Exhaustion"],"expected_family":"CMRepair"}
+{"input":"Ты меня слышишь? Нужен контакт.","atoms":["NeedContact"],"expected_family":"CMContact"}
+{"input":"Что такое свобода?","atoms":["Searching"],"expected_family":"CMDefine"}
+{"input":"Я чувствую страх и тоску","atoms":["NeedContact","Exhaustion"],"expected_family":"CMContact"}
+{"input":"Расскажи что-нибудь","atoms":[],"expected_family":"CMDescribe"}
+{"input":"В чём смысл жизни?","atoms":["Searching"],"expected_family":"CMPurpose"}
+{"input":"Может быть это не так","atoms":["Doubt"],"expected_family":"CMReflect"}

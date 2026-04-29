@@ -1,0 +1,1185 @@
+{
+  "entries": [
+    {
+      "genitive": "абсурда",
+      "lemma": "абсурд",
+      "nominative": "абсурд",
+      "pos": "noun",
+      "prepositional": "абсурде",
+      "quality": 0.95,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "автономии",
+      "lemma": "автономия",
+      "nominative": "автономия",
+      "pos": "noun",
+      "prepositional": "автономии",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "агентности",
+      "lemma": "агентность",
+      "nominative": "агентность",
+      "pos": "noun",
+      "prepositional": "агентности",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "аксиомы",
+      "lemma": "аксиома",
+      "nominative": "аксиома",
+      "pos": "noun",
+      "prepositional": "аксиоме",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "аргумента",
+      "lemma": "аргумент",
+      "nominative": "аргумент",
+      "pos": "noun",
+      "prepositional": "аргументе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "боли",
+      "lemma": "боль",
+      "nominative": "боль",
+      "pos": "noun",
+      "prepositional": "боли",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "валидности",
+      "lemma": "валидность",
+      "nominative": "валидность",
+      "pos": "noun",
+      "prepositional": "валидности",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "вероятности",
+      "lemma": "вероятность",
+      "nominative": "вероятность",
+      "pos": "noun",
+      "prepositional": "вероятности",
+      "quality": 0.98,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "вечности",
+      "lemma": "вечность",
+      "nominative": "вечность",
+      "pos": "noun",
+      "prepositional": "вечности",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "вины",
+      "lemma": "вина",
+      "nominative": "вина",
+      "pos": "noun",
+      "prepositional": "вине",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "возможности",
+      "lemma": "возможность",
+      "nominative": "возможность",
+      "pos": "noun",
+      "prepositional": "возможности",
+      "quality": 0.98,
+      "source": "curated-p0-modality"
+    },
+    {
+      "genitive": "воли",
+      "lemma": "воля",
+      "nominative": "воля",
+      "pos": "noun",
+      "prepositional": "воле",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "вопроса",
+      "lemma": "вопрос",
+      "nominative": "вопрос",
+      "pos": "noun",
+      "prepositional": "вопросе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "времени",
+      "lemma": "время",
+      "nominative": "время",
+      "pos": "noun",
+      "prepositional": "времени",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "выбора",
+      "lemma": "выбор",
+      "nominative": "выбор",
+      "pos": "noun",
+      "prepositional": "выборе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "вывода",
+      "lemma": "вывод",
+      "nominative": "вывод",
+      "pos": "noun",
+      "prepositional": "выводе",
+      "quality": 0.99,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "гипотезы",
+      "lemma": "гипотеза",
+      "nominative": "гипотеза",
+      "pos": "noun",
+      "prepositional": "гипотезе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "гнева",
+      "lemma": "гнев",
+      "nominative": "гнев",
+      "pos": "noun",
+      "prepositional": "гневе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "гордости",
+      "lemma": "гордость",
+      "nominative": "гордость",
+      "pos": "noun",
+      "prepositional": "гордости",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "границы",
+      "lemma": "граница",
+      "nominative": "граница",
+      "pos": "noun",
+      "prepositional": "границе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "делать",
+      "lemma": "делать",
+      "nominative": "делать",
+      "pos": "verb",
+      "prepositional": "делать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "дефиниции",
+      "lemma": "дефиниция",
+      "nominative": "дефиниция",
+      "pos": "noun",
+      "prepositional": "дефиниции",
+      "quality": 0.95,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "диалога",
+      "lemma": "диалог",
+      "nominative": "диалог",
+      "pos": "noun",
+      "prepositional": "диалоге",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "дистинкции",
+      "lemma": "дистинкция",
+      "nominative": "дистинкция",
+      "pos": "noun",
+      "prepositional": "дистинкции",
+      "quality": 0.95,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "доверия",
+      "lemma": "доверие",
+      "nominative": "доверие",
+      "pos": "noun",
+      "prepositional": "доверии",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "довода",
+      "lemma": "довод",
+      "nominative": "довод",
+      "pos": "noun",
+      "prepositional": "доводе",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "доказательства",
+      "lemma": "доказательство",
+      "nominative": "доказательство",
+      "pos": "noun",
+      "prepositional": "доказательстве",
+      "quality": 0.99,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "долга",
+      "lemma": "долг",
+      "nominative": "долг",
+      "pos": "noun",
+      "prepositional": "долге",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "допущения",
+      "lemma": "допущение",
+      "nominative": "допущение",
+      "pos": "noun",
+      "prepositional": "допущении",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "достаточности",
+      "lemma": "достаточность",
+      "nominative": "достаточность",
+      "pos": "noun",
+      "prepositional": "достаточности",
+      "quality": 0.98,
+      "source": "curated-p0-modality"
+    },
+    {
+      "genitive": "достоверности",
+      "lemma": "достоверность",
+      "nominative": "достоверность",
+      "pos": "noun",
+      "prepositional": "достоверности",
+      "quality": 0.98,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "жизни",
+      "lemma": "жизнь",
+      "nominative": "жизнь",
+      "pos": "noun",
+      "prepositional": "жизни",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "задачи",
+      "lemma": "задача",
+      "nominative": "задача",
+      "pos": "noun",
+      "prepositional": "задаче",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "заключения",
+      "lemma": "заключение",
+      "nominative": "заключение",
+      "pos": "noun",
+      "prepositional": "заключении",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "знать",
+      "lemma": "знать",
+      "nominative": "знать",
+      "pos": "verb",
+      "prepositional": "знать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "идентичности",
+      "lemma": "идентичность",
+      "nominative": "идентичность",
+      "pos": "noun",
+      "prepositional": "идентичности",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "иллюзии",
+      "lemma": "иллюзия",
+      "nominative": "иллюзия",
+      "pos": "noun",
+      "prepositional": "иллюзии",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "импликации",
+      "lemma": "импликация",
+      "nominative": "импликация",
+      "pos": "noun",
+      "prepositional": "импликации",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "интерпретации",
+      "lemma": "интерпретация",
+      "nominative": "интерпретация",
+      "pos": "noun",
+      "prepositional": "интерпретации",
+      "quality": 0.97,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "исключения",
+      "lemma": "исключение",
+      "nominative": "исключение",
+      "pos": "noun",
+      "prepositional": "исключении",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "истины",
+      "lemma": "истина",
+      "nominative": "истина",
+      "pos": "noun",
+      "prepositional": "истине",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "квантора",
+      "lemma": "квантор",
+      "nominative": "квантор",
+      "pos": "noun",
+      "prepositional": "кванторе",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "контакта",
+      "lemma": "контакт",
+      "nominative": "контакт",
+      "pos": "noun",
+      "prepositional": "контакте",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "контрпримера",
+      "lemma": "контрпример",
+      "nominative": "контрпример",
+      "pos": "noun",
+      "prepositional": "контрпримере",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "конфликта",
+      "lemma": "конфликт",
+      "nominative": "конфликт",
+      "pos": "noun",
+      "prepositional": "конфликте",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "конфронтации",
+      "lemma": "конфронтация",
+      "nominative": "конфронтация",
+      "pos": "noun",
+      "prepositional": "конфронтации",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "критерия",
+      "lemma": "критерий",
+      "nominative": "критерий",
+      "pos": "noun",
+      "prepositional": "критерии",
+      "quality": 0.97,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "леммы",
+      "lemma": "лемма",
+      "nominative": "лемма",
+      "pos": "noun",
+      "prepositional": "лемме",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "любви",
+      "lemma": "любовь",
+      "nominative": "любовь",
+      "pos": "noun",
+      "prepositional": "любви",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "модальности",
+      "lemma": "модальность",
+      "nominative": "модальность",
+      "pos": "noun",
+      "prepositional": "модальности",
+      "quality": 0.96,
+      "source": "curated-p0-modality"
+    },
+    {
+      "genitive": "молчания",
+      "lemma": "молчание",
+      "nominative": "молчание",
+      "pos": "noun",
+      "prepositional": "молчании",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "мыслить",
+      "lemma": "мыслить",
+      "nominative": "мыслить",
+      "pos": "verb",
+      "prepositional": "мыслить",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "надежды",
+      "lemma": "надежда",
+      "nominative": "надежда",
+      "pos": "noun",
+      "prepositional": "надежде",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "надёжности",
+      "lemma": "надёжность",
+      "nominative": "надёжность",
+      "pos": "noun",
+      "prepositional": "надёжности",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "назначения",
+      "lemma": "назначение",
+      "nominative": "назначение",
+      "pos": "noun",
+      "prepositional": "назначении",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "необходимости",
+      "lemma": "необходимость",
+      "nominative": "необходимость",
+      "pos": "noun",
+      "prepositional": "необходимости",
+      "quality": 0.98,
+      "source": "curated-p0-modality"
+    },
+    {
+      "genitive": "несовместимости",
+      "lemma": "несовместимость",
+      "nominative": "несовместимость",
+      "pos": "noun",
+      "prepositional": "несовместимости",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "ничего",
+      "lemma": "ничто",
+      "nominative": "ничто",
+      "pos": "noun",
+      "prepositional": "ничём",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "обиды",
+      "lemma": "обида",
+      "nominative": "обида",
+      "pos": "noun",
+      "prepositional": "обиде",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "обоснования",
+      "lemma": "обоснование",
+      "nominative": "обоснование",
+      "pos": "noun",
+      "prepositional": "обосновании",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "объяснения",
+      "lemma": "объяснение",
+      "nominative": "объяснение",
+      "pos": "noun",
+      "prepositional": "объяснении",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "обязанности",
+      "lemma": "обязанность",
+      "nominative": "обязанность",
+      "pos": "noun",
+      "prepositional": "обязанности",
+      "quality": 0.98,
+      "source": "curated-p0-agency"
+    },
+    {
+      "genitive": "одиночества",
+      "lemma": "одиночество",
+      "nominative": "одиночество",
+      "pos": "noun",
+      "prepositional": "одиночестве",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "описания",
+      "lemma": "описание",
+      "nominative": "описание",
+      "pos": "noun",
+      "prepositional": "описании",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "определения",
+      "lemma": "определение",
+      "nominative": "определение",
+      "pos": "noun",
+      "prepositional": "определении",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "опровержения",
+      "lemma": "опровержение",
+      "nominative": "опровержение",
+      "pos": "noun",
+      "prepositional": "опровержении",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "основания",
+      "lemma": "основание",
+      "nominative": "основание",
+      "pos": "noun",
+      "prepositional": "основании",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "основывать",
+      "lemma": "основывать",
+      "nominative": "основывать",
+      "pos": "verb",
+      "prepositional": "основывать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "ответа",
+      "lemma": "ответ",
+      "nominative": "ответ",
+      "pos": "noun",
+      "prepositional": "ответе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "ответственности",
+      "lemma": "ответственность",
+      "nominative": "ответственность",
+      "pos": "noun",
+      "prepositional": "ответственности",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "отражения",
+      "lemma": "отражение",
+      "nominative": "отражение",
+      "pos": "noun",
+      "prepositional": "отражении",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "ошибки",
+      "lemma": "ошибка",
+      "nominative": "ошибка",
+      "pos": "noun",
+      "prepositional": "ошибке",
+      "quality": 0.97,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "памяти",
+      "lemma": "память",
+      "nominative": "память",
+      "pos": "noun",
+      "prepositional": "памяти",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "понимания",
+      "lemma": "понимание",
+      "nominative": "понимание",
+      "pos": "noun",
+      "prepositional": "понимании",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "понимать",
+      "lemma": "понимать",
+      "nominative": "понимать",
+      "pos": "verb",
+      "prepositional": "понимать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "посылки",
+      "lemma": "посылка",
+      "nominative": "посылка",
+      "pos": "noun",
+      "prepositional": "посылке",
+      "quality": 0.99,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "правды",
+      "lemma": "правда",
+      "nominative": "правда",
+      "pos": "noun",
+      "prepositional": "правде",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "права",
+      "lemma": "право",
+      "nominative": "право",
+      "pos": "noun",
+      "prepositional": "праве",
+      "quality": 0.98,
+      "source": "curated-p0-agency"
+    },
+    {
+      "genitive": "предположения",
+      "lemma": "предположение",
+      "nominative": "предположение",
+      "pos": "noun",
+      "prepositional": "предположении",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "предпосылки",
+      "lemma": "предпосылка",
+      "nominative": "предпосылка",
+      "pos": "noun",
+      "prepositional": "предпосылке",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "присутствия",
+      "lemma": "присутствие",
+      "nominative": "присутствие",
+      "pos": "noun",
+      "prepositional": "присутствии",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "причины",
+      "lemma": "причина",
+      "nominative": "причина",
+      "pos": "noun",
+      "prepositional": "причине",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "проверки",
+      "lemma": "проверка",
+      "nominative": "проверка",
+      "pos": "noun",
+      "prepositional": "проверке",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "проникнуть",
+      "lemma": "проникнуть",
+      "nominative": "проникнуть",
+      "pos": "verb",
+      "prepositional": "проникнуть",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "противоречия",
+      "lemma": "противоречие",
+      "nominative": "противоречие",
+      "pos": "noun",
+      "prepositional": "противоречии",
+      "quality": 0.99,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "пустоты",
+      "lemma": "пустота",
+      "nominative": "пустота",
+      "pos": "noun",
+      "prepositional": "пустоте",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "равносильности",
+      "lemma": "равносильность",
+      "nominative": "равносильность",
+      "pos": "noun",
+      "prepositional": "равносильности",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "радости",
+      "lemma": "радость",
+      "nominative": "радость",
+      "pos": "noun",
+      "prepositional": "радости",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "разграничения",
+      "lemma": "разграничение",
+      "nominative": "разграничение",
+      "pos": "noun",
+      "prepositional": "разграничении",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "различать",
+      "lemma": "различать",
+      "nominative": "различать",
+      "pos": "verb",
+      "prepositional": "различать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "различия",
+      "lemma": "различие",
+      "nominative": "различие",
+      "pos": "noun",
+      "prepositional": "различии",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "разницы",
+      "lemma": "разница",
+      "nominative": "разница",
+      "pos": "noun",
+      "prepositional": "разнице",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "разрешения",
+      "lemma": "разрешение",
+      "nominative": "разрешение",
+      "pos": "noun",
+      "prepositional": "разрешении",
+      "quality": 0.96,
+      "source": "curated-p0-agency"
+    },
+    {
+      "genitive": "разума",
+      "lemma": "разум",
+      "nominative": "разум",
+      "pos": "noun",
+      "prepositional": "разуме",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "ракурса",
+      "lemma": "ракурс",
+      "nominative": "ракурс",
+      "pos": "noun",
+      "prepositional": "ракурсе",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "ремонта",
+      "lemma": "ремонт",
+      "nominative": "ремонт",
+      "pos": "noun",
+      "prepositional": "ремонте",
+      "quality": 0.96,
+      "source": "curated"
+    },
+    {
+      "genitive": "свидетельства",
+      "lemma": "свидетельство",
+      "nominative": "свидетельство",
+      "pos": "noun",
+      "prepositional": "свидетельстве",
+      "quality": 0.97,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "свободы",
+      "lemma": "свобода",
+      "nominative": "свобода",
+      "pos": "noun",
+      "prepositional": "свободе",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "сказать",
+      "lemma": "сказать",
+      "nominative": "сказать",
+      "pos": "verb",
+      "prepositional": "сказать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "следствия",
+      "lemma": "следствие",
+      "nominative": "следствие",
+      "pos": "noun",
+      "prepositional": "следствии",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "смерти",
+      "lemma": "смерть",
+      "nominative": "смерть",
+      "pos": "noun",
+      "prepositional": "смерти",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "смирения",
+      "lemma": "смирение",
+      "nominative": "смирение",
+      "pos": "noun",
+      "prepositional": "смирении",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "смысла",
+      "lemma": "смысл",
+      "nominative": "смысл",
+      "pos": "noun",
+      "prepositional": "смысле",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "сознания",
+      "lemma": "сознание",
+      "nominative": "сознание",
+      "pos": "noun",
+      "prepositional": "сознании",
+      "quality": 0.99,
+      "source": "curated"
+    },
+    {
+      "genitive": "сомнения",
+      "lemma": "сомнение",
+      "nominative": "сомнение",
+      "pos": "noun",
+      "prepositional": "сомнении",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "способности",
+      "lemma": "способность",
+      "nominative": "способность",
+      "pos": "noun",
+      "prepositional": "способности",
+      "quality": 0.97,
+      "source": "curated-p0-agency"
+    },
+    {
+      "genitive": "справедливости",
+      "lemma": "справедливость",
+      "nominative": "справедливость",
+      "pos": "noun",
+      "prepositional": "справедливости",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "страдания",
+      "lemma": "страдание",
+      "nominative": "страдание",
+      "pos": "noun",
+      "prepositional": "страдании",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "страха",
+      "lemma": "страх",
+      "nominative": "страх",
+      "pos": "noun",
+      "prepositional": "страхе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "стыда",
+      "lemma": "стыд",
+      "nominative": "стыд",
+      "pos": "noun",
+      "prepositional": "стыде",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "судьбы",
+      "lemma": "судьба",
+      "nominative": "судьба",
+      "pos": "noun",
+      "prepositional": "судьбе",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "существования",
+      "lemma": "существование",
+      "nominative": "существование",
+      "pos": "noun",
+      "prepositional": "существовании",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "существовать",
+      "lemma": "существовать",
+      "nominative": "существовать",
+      "pos": "verb",
+      "prepositional": "существовать",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "тела",
+      "lemma": "тело",
+      "nominative": "тело",
+      "pos": "noun",
+      "prepositional": "теле",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "теоремы",
+      "lemma": "теорема",
+      "nominative": "теорема",
+      "pos": "noun",
+      "prepositional": "теореме",
+      "quality": 0.98,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "термина",
+      "lemma": "термин",
+      "nominative": "термин",
+      "pos": "noun",
+      "prepositional": "термине",
+      "quality": 0.97,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "тоски",
+      "lemma": "тоска",
+      "nominative": "тоска",
+      "pos": "noun",
+      "prepositional": "тоске",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "тревоги",
+      "lemma": "тревога",
+      "nominative": "тревога",
+      "pos": "noun",
+      "prepositional": "тревоге",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "условия",
+      "lemma": "условие",
+      "nominative": "условие",
+      "pos": "noun",
+      "prepositional": "условии",
+      "quality": 0.98,
+      "source": "curated-p0-modality"
+    },
+    {
+      "genitive": "уточнять",
+      "lemma": "уточнять",
+      "nominative": "уточнять",
+      "pos": "verb",
+      "prepositional": "уточнять",
+      "quality": 0.95,
+      "source": "curated"
+    },
+    {
+      "genitive": "утраты",
+      "lemma": "утрата",
+      "nominative": "утрата",
+      "pos": "noun",
+      "prepositional": "утрате",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "ухода",
+      "lemma": "уход",
+      "nominative": "уход",
+      "pos": "noun",
+      "prepositional": "уходе",
+      "quality": 0.97,
+      "source": "curated"
+    },
+    {
+      "genitive": "факта",
+      "lemma": "факт",
+      "nominative": "факт",
+      "pos": "noun",
+      "prepositional": "факте",
+      "quality": 0.98,
+      "source": "curated-p0-epistemic"
+    },
+    {
+      "genitive": "философии",
+      "lemma": "философия",
+      "nominative": "философия",
+      "pos": "noun",
+      "prepositional": "философии",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "хрупкости",
+      "lemma": "хрупкость",
+      "nominative": "хрупкость",
+      "pos": "noun",
+      "prepositional": "хрупкости",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "цели",
+      "lemma": "цель",
+      "nominative": "цель",
+      "pos": "noun",
+      "prepositional": "цели",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "цифры",
+      "lemma": "цифра",
+      "nominative": "цифра",
+      "pos": "noun",
+      "prepositional": "цифре",
+      "quality": 0.96,
+      "source": "curated"
+    },
+    {
+      "genitive": "честности",
+      "lemma": "честность",
+      "nominative": "честность",
+      "pos": "noun",
+      "prepositional": "честности",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "эквиваленции",
+      "lemma": "эквиваленция",
+      "nominative": "эквиваленция",
+      "pos": "noun",
+      "prepositional": "эквиваленции",
+      "quality": 0.96,
+      "source": "curated-p0-logic"
+    },
+    {
+      "genitive": "языка",
+      "lemma": "язык",
+      "nominative": "язык",
+      "pos": "noun",
+      "prepositional": "языке",
+      "quality": 0.98,
+      "source": "curated"
+    },
+    {
+      "genitive": "якоря",
+      "lemma": "якорь",
+      "nominative": "якорь",
+      "pos": "noun",
+      "prepositional": "якоре",
+      "quality": 0.97,
+      "source": "curated"
+    }
+  ],
+  "language": "ru",
+  "lemma_count": 131
+}

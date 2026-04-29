@@ -1,0 +1,74 @@
+{
+  "auto_quality_metrics": {
+    "p1_domain_seed_hit_count": 188,
+    "p1_lemma_count": 3997,
+    "p1_long_lemma_count": 0,
+    "p1_mostly_proper_count": 0,
+    "p1_patronymic_like_count": 0,
+    "p1_technical_compound_count": 0,
+    "p2_domain_seed_hit_count": 50,
+    "p2_lemma_count": 17498,
+    "p2_mostly_proper_count": 2,
+    "p2_patronymic_like_count": 0
+  },
+  "auto_source_enabled": true,
+  "canonical_direction": "sql_to_morphology_gf_agda_haskell",
+  "case_surface_metrics": {
+    "feminine_like_acc_eq_nom_count": 0,
+    "feminine_like_acc_eq_nom_ratio": 0.0,
+    "feminine_like_noun_count": 38,
+    "noun_acc_eq_nom_count": 108,
+    "noun_acc_eq_nom_ratio": 0.7397260273972602,
+    "noun_count": 146,
+    "noun_ins_eq_nom_count": 0,
+    "noun_ins_eq_nom_ratio": 0.0,
+    "soft_sign_ins_eq_nom_count": 0,
+    "soft_sign_ins_eq_nom_ratio": 0.0,
+    "soft_sign_noun_count": 34
+  },
+  "collision_count": 0,
+  "complete_rows": 156,
+  "dangerous_collision_count": 0,
+  "dataset_sha256": "0c76f436ea157829cc0d8add3fce01af7ddcd8b506bd1bc102a435df782c5a25",
+  "drift_check": {
+    "auto_manifest_present": true,
+    "schema_sha256": "f2333f1be7d360c4",
+    "seed_sha256": "f51598d512f5f942"
+  },
+  "forms_by_surface": {
+    "dangerous_collision_count": 0,
+    "expected_ambiguity_count": 1739,
+    "harmless_collision_count": 75,
+    "p1_form_count": 50500,
+    "p1_lemma_count": 3997,
+    "p2_form_count": 667986,
+    "p2_lemma_count": 17498,
+    "surface_count": 434597
+  },
+  "generated_artifacts": [
+    "resources/morphology/nominative.json",
+    "resources/morphology/genitive.json",
+    "resources/morphology/prepositional.json",
+    "resources/morphology/forms_by_surface.json",
+    "resources/morphology/lexicon_quality.json",
+    "spec/lexicon_snapshot.tsv",
+    "spec/gf/QxFx0Lexicon.gf",
+    "spec/gf/QxFx0LexiconRus.gf",
+    "spec/gf/QxFx0Syntax.gf",
+    "spec/gf/QxFx0SyntaxRus.gf",
+    "spec/gf/lexicon_funmap.tsv",
+    "spec/LexiconData.agda",
+    "spec/LexiconProof.agda",
+    "src/QxFx0/Lexicon/Generated.hs"
+  ],
+  "harmless_collision_count": 0,
+  "invalid_rows": 0,
+  "lemma_count": 156,
+  "score": 10.0,
+  "sources": [
+    "spec/sql/lexicon/schema.sql",
+    "spec/sql/lexicon/seed_ru_curated.sql"
+  ],
+  "target_lemma_count": 70,
+  "target_min_score": 8.0
+}

@@ -1,0 +1,32 @@
+# Runtime-critical SQL contract manifest.
+# Format: kind<TAB>parent<TAB>name
+# parent is "-" for object kinds that do not belong to a table.
+#
+# This file is intentionally narrower than spec/sql/schema.sql. It lists the
+# schema objects whose absence must make runtime health/bootstrap fail.
+table	-	schema_version
+table	-	identity_claims
+table	-	semantic_clusters
+table	-	realization_templates
+table	-	runtime_sessions
+table	-	dialogue_state
+table	-	turn_quality
+table	-	shadow_divergence_log
+column	turn_quality	warranted_mode
+column	turn_quality	decision_disposition
+column	turn_quality	shadow_snapshot_id
+column	turn_quality	shadow_divergence_kind
+column	turn_quality	replay_trace_json
+column	shadow_divergence_log	shadow_snapshot_id
+column	shadow_divergence_log	shadow_divergence_kind
+index	-	idx_identity_concept
+index	-	idx_identity_topic
+index	-	idx_templates_move
+index	-	idx_clusters_name
+index	-	idx_dialogue_state_session
+index	-	idx_turn_quality_session_turn
+index	-	idx_turn_quality_divergence
+index	-	idx_shadow_divergence_session_turn
+trigger	-	identity_claims_ai
+trigger	-	identity_claims_ad
+fts	-	identity_claims_fts

@@ -1,0 +1,4 @@
+{"input":"Что такое свобода?","family":"CMDefine","force":"Interrogative","clause":"Interrogative","focus_entity":"свобода"}
+{"input":"Я чувствую страх и тоску","family":"CMContact","force":"IFContact","clause":"Declarative","emotional_tone":"distress"}
+{"input":"Расскажи про волю","family":"CMGround","force":"IFAssert","clause":"Declarative","focus_entity":"воля"}
+{"input":"В чём разница между свободой и автономией?","family":"CMDistinguish","force":"IFAssert","clause":"Interrogative","focus_entity":"свобода"}

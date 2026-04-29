@@ -1,0 +1,61 @@
+id	prompt	expected_family
+R001	как тебя зовут	CMDescribe
+R002	кто ты	CMDescribe
+R003	зачем ты тут	CMPurpose
+R004	что такое логика	CMDefine
+R005	как отличить ложь от правды	CMDistinguish
+R006	в чём функция стола	CMPurpose
+R007	зачем человеку руки	CMPurpose
+R008	зачем ты есть	CMPurpose
+R009	что ты знаешь о себе	CMDescribe
+R010	что ты знаешь обо мне	CMDescribe
+R011	ты можешь мне помочь	CMDescribe
+R012	ты умеешь думать	CMDescribe
+R013	что ты думаешь о космосе	CMDescribe
+R014	кто я такой	CMDescribe
+R015	что такое жизнь	CMDefine
+R016	что такое смерть	CMDefine
+R017	что такое истина	CMDefine
+R018	что такое диалог	CMDefine
+R019	что такое любовь	CMDefine
+R020	что такое сложность	CMDefine
+R021	что есть смысл	CMDefine
+R022	говори не из шаблона	CMRepair
+R023	скажи что-то ценное	CMDescribe
+R024	скажи интересную мысль	CMDescribe
+R025	скажи еще одну мысль	CMDescribe
+R026	скажи новую мысль	CMDescribe
+R027	есть логичный тезис	CMDescribe
+R028	дай локальный ответ	CMReflect
+R029	апельсин вкусный	CMReflect
+R030	кто такой бог	CMDefine
+R031	почему ты это ты	CMGround
+R032	почему ты тут	CMGround
+R033	почему ты не работаешь	CMGround
+R034	что сделать чтобы ты работал	CMClarify
+R035	что ты умеешь рассказывать о себе	CMDescribe
+R036	что ты можешь рассказать о себе	CMDescribe
+R037	как ты будешь определять границы	CMDescribe
+R038	поговорим о логике	CMDeepen
+R039	поговорим	CMContact
+R040	привет	CMContact
+R041	здравствуй	CMContact
+R042	как дела	CMContact
+R043	как жизнь	CMContact
+R044	я не понимаю тебя	CMRepair
+R045	контакт потерян	CMRepair
+R046	это противоречие	CMConfront
+R047	что дальше	CMNextStep
+R048	в чём функция смысла	CMPurpose
+R049	в чём функция жизни	CMPurpose
+R050	в чём функция работы	CMPurpose
+R051	как отличить правду от лжи	CMDistinguish
+R052	как отличить истину от мнения	CMDistinguish
+R053	стол на стуле или стул на столе что логичнее	CMDistinguish
+R054	ты живёшь в рамке	CMReflect
+R055	чем ты ограничен	CMDescribe
+R056	замолчи	CMReflect
+R057	не будь собой	CMReflect
+R058	о чём ты думаешь	CMDescribe
+R059	знаешь что такое солнце	CMDefine
+R060	знаешь что такое осень	CMDefine

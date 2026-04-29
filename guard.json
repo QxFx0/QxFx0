@@ -1,0 +1,7 @@
+{
+  "concept": "Смысл",
+  "min_agency": 0.3,
+  "min_tension": 0.2,
+  "allowed_layers": ["ContentLayer", "MetaLayer"],
+  "policy": "allowed"
+}

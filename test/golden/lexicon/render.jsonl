@@ -1,0 +1,5 @@
+{"move":"MoveGroundKnown","topic":"свобода","expected_contains":"свободе"}
+{"move":"MoveDefineFrame","topic":"воля","expected_contains":"воля"}
+{"move":"MoveReflectMirror","topic":"смысл","expected_contains":"смысл"}
+{"move":"MoveAffirmPresence","topic":"свобода","expected_contains":"здесь"}
+{"move":"MoveContactBridge","topic":"контакт","expected_contains":"контакт"}

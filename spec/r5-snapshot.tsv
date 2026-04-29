@@ -1,0 +1,15 @@
+family	force	layer	warranted	isContent	isMeta
+CMGround	IFAssert	ContentLayer	AlwaysWarranted	1	0
+CMDefine	IFAssert	ContentLayer	AlwaysWarranted	1	0
+CMDistinguish	IFAssert	ContentLayer	ConditionallyWarranted	1	0
+CMReflect	IFAssert	MetaLayer	AlwaysWarranted	0	0
+CMDescribe	IFAssert	ContentLayer	AlwaysWarranted	1	0
+CMPurpose	IFAssert	ContentLayer	ConditionallyWarranted	1	0
+CMHypothesis	IFAsk	MetaLayer	ConditionallyWarranted	0	0
+CMRepair	IFOffer	MetaLayer	AlwaysWarranted	0	0
+CMContact	IFContact	ContactLayer	AlwaysWarranted	0	0
+CMAnchor	IFAssert	ContentLayer	AlwaysWarranted	1	0
+CMClarify	IFAsk	MetaLayer	ConditionallyWarranted	0	0
+CMDeepen	IFAsk	MetaLayer	ConditionallyWarranted	0	0
+CMConfront	IFConfront	MetaLayer	NeverWarranted	0	0
+CMNextStep	IFOffer	MetaLayer	ConditionallyWarranted	0	0

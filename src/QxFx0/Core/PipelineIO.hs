@@ -1,0 +1,62 @@
+{-| Core-facing effect boundary and helper operations for runtime-integrated turn execution. -}
+module QxFx0.Core.PipelineIO
+  ( PipelineRuntimeMode(..)
+  , LocalRecoveryPolicy(..)
+  , ShadowPolicy(..)
+  , ShadowResult(..)
+  , PipelineIO
+  , TestPipelineConfig(..)
+  , defaultTestPipelineConfig
+  , mkTestPipelineIO
+  , pipelineRuntimeMode
+  , pipelineRuntimeModeText
+  , pipelineShadowPolicy
+  , shadowPolicyText
+  , pipelineLocalRecoveryPolicy
+  , localRecoveryPolicyText
+  , resolveTurnEffect
+  , resolveTurnEffects
+  , runShadowVerification
+  , verifyPipelineAgda
+  , savePipelineState
+  , checkpointPipelineState
+  , resolvePipelineNixPath
+  , runPipelineNixCheck
+  , modifyPipelineConsciousLoop
+  , modifyPipelineIntuition
+  , checkPipelineApiHealth
+  , pipelineUpdateHistory
+  ) where
+
+import QxFx0.Core.PipelineIO.Internal
+  ( LocalRecoveryPolicy(..)
+  , PipelineIO
+  , PipelineRuntimeMode(..)
+  , ShadowPolicy(..)
+  , ShadowResult(..)
+  )
+import QxFx0.Core.PipelineIO.Operations
+  ( checkPipelineApiHealth
+    , checkpointPipelineState
+    , localRecoveryPolicyText
+    , modifyPipelineConsciousLoop
+    , modifyPipelineIntuition
+    , pipelineLocalRecoveryPolicy
+    , pipelineRuntimeModeText
+    , pipelineRuntimeMode
+    , pipelineShadowPolicy
+    , shadowPolicyText
+  , pipelineUpdateHistory
+  , resolvePipelineNixPath
+  , resolveTurnEffect
+  , resolveTurnEffects
+  , runPipelineNixCheck
+  , runShadowVerification
+  , savePipelineState
+  , verifyPipelineAgda
+  )
+import QxFx0.Core.PipelineIO.Test
+  ( TestPipelineConfig(..)
+  , defaultTestPipelineConfig
+  , mkTestPipelineIO
+  )
