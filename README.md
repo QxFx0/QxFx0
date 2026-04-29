@@ -20,6 +20,22 @@ QxFx0 is an alternative, spec-first approach to text generation:
 - not a web-scale knowledge engine
 - not a hidden black-box sampler: core behavior is implemented as explicit contracts, typed states, and verifiable gates
 
+## Architecture Map
+
+- `Haskell` (runtime core): typed routing, turn pipeline, rendering, state, and HTTP/CLI surfaces
+  (`src/QxFx0/**`, `app/**`).
+- `Nix` (constitutional/runtime guard): evaluator policy and strict/degraded readiness contour
+  (`semantics/concepts.nix`, `nix/module.nix`).
+- `SQL` (persistent contract): runtime schema, lexicon seeds, and schema invariants
+  (`spec/sql/schema.sql`, `spec/sql/lexicon/**`, `migrations/**`).
+- `Agda` (proof/spec layer): sovereignty and generated lexicon proof/data artifacts
+  (`spec/Sovereignty.agda`, `spec/LexiconData.agda`, `spec/LexiconProof.agda`).
+- `Datalog` (symbolic reasoning bridge): runtime datalog execution and compare/support layers
+  (`src/QxFx0/Bridge/Datalog/**`, `src/QxFx0/Bridge/Datalog.hs`).
+- `GF` (grammar layer): generated lexicon + syntax/concrete grammar used by runtime mappings
+  (`spec/gf/QxFx0Lexicon.gf`, `spec/gf/QxFx0LexiconRus.gf`,
+  `spec/gf/QxFx0Syntax.gf`, `spec/gf/QxFx0SyntaxRus.gf`).
+
 ## Canonical Sources
 
 - R5 contract vocabulary: `spec/R5Core.agda`, `src/QxFx0/Types/Domain.hs`
