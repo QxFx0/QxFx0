@@ -7,6 +7,19 @@ QxFx0 is a Russian-language philosophical dialogue runtime with:
 - Agda/Haskell constructor sync checks
 - CLI and HTTP machine interfaces
 
+## What It Is
+
+QxFx0 is an alternative, spec-first approach to text generation:
+- typed semantic routing first, rendering second
+- grammar-constrained Russian output (GF artifacts + runtime mappings)
+- reproducible local runtime with explicit readiness and trace contracts
+
+## What It Is Not
+
+- not a general-purpose replacement for frontier chat models
+- not a web-scale knowledge engine
+- not a hidden black-box sampler: core behavior is implemented as explicit contracts, typed states, and verifiable gates
+
 ## Canonical Sources
 
 - R5 contract vocabulary: `spec/R5Core.agda`, `src/QxFx0/Types/Domain.hs`
