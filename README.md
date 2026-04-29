@@ -63,6 +63,30 @@ bash scripts/check_lexicon.sh
 Canonical direction is strict: `SQL -> morphology JSON + GF + Agda`.
 Do not edit generated GF files manually.
 
+## Quick Demo
+
+Run an interactive Russian dialogue session:
+
+```bash
+cabal run -v0 qxfx0-main -- --session demo
+```
+
+In the REPL:
+
+```text
+привет
+что такое логика?
+как отличить истину от мнения?
+:state
+:quit
+```
+
+Or one-shot JSON turn from CLI:
+
+```bash
+cabal run -v0 qxfx0-main -- --turn-json "что такое свобода?"
+```
+
 If you want local guardrails before every commit:
 
 ```bash

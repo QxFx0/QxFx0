@@ -28,8 +28,13 @@ test_facts.dl
 reports/eval_runs/
 reports/release_readiness/
 reports/*_result.md
+reports/*.tsv
 reports/input_*_report.json
 reports/input_unknown_candidates.json
 
 # Oversized generated morphology index (>100MB); regenerate via scripts/export_lexicon.py
 resources/morphology/forms_by_surface.json
+
+# Internal research / audit packs (not part of public runtime surface)
+research_packs/
+docs/audits/
