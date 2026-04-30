@@ -32,18 +32,19 @@
   "dataset_sha256": "0c76f436ea157829cc0d8add3fce01af7ddcd8b506bd1bc102a435df782c5a25",
   "drift_check": {
     "auto_manifest_present": true,
-    "schema_sha256": "f2333f1be7d360c4",
+    "schema_sha256": "f5899715476dc6af",
+    "seed_brain_kb_reviewed_sha256": "0396a6aa2b2027bc",
     "seed_sha256": "f51598d512f5f942"
   },
   "forms_by_surface": {
     "dangerous_collision_count": 0,
-    "expected_ambiguity_count": 1739,
-    "harmless_collision_count": 75,
-    "p1_form_count": 50500,
-    "p1_lemma_count": 3997,
-    "p2_form_count": 667986,
+    "expected_ambiguity_count": 1713,
+    "harmless_collision_count": 73,
+    "p1_form_count": 50458,
+    "p1_lemma_count": 3996,
+    "p2_form_count": 667983,
     "p2_lemma_count": 17498,
-    "surface_count": 434597
+    "surface_count": 434601
   },
   "generated_artifacts": [
     "resources/morphology/nominative.json",
@@ -67,7 +68,8 @@
   "score": 10.0,
   "sources": [
     "spec/sql/lexicon/schema.sql",
-    "spec/sql/lexicon/seed_ru_curated.sql"
+    "spec/sql/lexicon/seed_ru_curated.sql",
+    "spec/sql/lexicon/seed_brain_kb_reviewed.sql"
   ],
   "target_lemma_count": 70,
   "target_min_score": 8.0

@@ -188,6 +188,7 @@ instance FromJSON NixGuardStatus where
 
 data SourceTier
   = CuratedTier
+  | BrainKbReviewedTier
   | AutoVerifiedTier
   | AutoCoverageTier
   deriving stock (Eq, Ord, Show, Read, Bounded, Enum, Generic)
@@ -195,11 +196,13 @@ data SourceTier
 
 instance ToJSON SourceTier where
   toJSON CuratedTier       = "curated"
+  toJSON BrainKbReviewedTier = "brain-kb-reviewed"
   toJSON AutoVerifiedTier  = "auto-verified"
   toJSON AutoCoverageTier  = "auto-coverage"
 
 instance FromJSON SourceTier where
   parseJSON "curated"       = pure CuratedTier
+  parseJSON "brain-kb-reviewed" = pure BrainKbReviewedTier
   parseJSON "auto-verified" = pure AutoVerifiedTier
   parseJSON "auto-coverage" = pure AutoCoverageTier
   parseJSON _               = fail ("unknown SourceTier")

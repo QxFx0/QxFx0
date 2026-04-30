@@ -29,8 +29,10 @@ import QxFx0.Lexicon.Resolver (resolveLexemeForm, tierPriority)
 lexiconTests :: [Test]
 lexiconTests =
   [ TestLabel "resolver priority: curated beats auto-verified" (TestCase testResolverPriorityCuratedBeatsAutoVerified)
+  , TestLabel "resolver priority: brain-kb-reviewed beats auto-verified" (TestCase testResolverPriorityBrainReviewedBeatsAutoVerified)
   , TestLabel "resolver priority: auto-verified beats auto-coverage" (TestCase testResolverPriorityAutoVerifiedBeatsAutoCoverage)
   , TestLabel "resolver priority: curated beats auto-coverage" (TestCase testResolverPriorityCuratedBeatsAutoCoverage)
+  , TestLabel "resolver priority: curated beats brain-kb-reviewed" (TestCase testResolverPriorityCuratedBeatsBrainReviewed)
   , TestLabel "resolver priority: higher quality wins within same tier" (TestCase testResolverPriorityHigherQualityWithinTier)
   , TestLabel "ambiguity fallback: same tier and quality returns raw surface" (TestCase testAmbiguityFallbackSameTierQuality)
   , TestLabel "ambiguity fallback: different tier resolves" (TestCase testAmbiguityFallbackDifferentTier)
@@ -42,7 +44,7 @@ lexiconTests =
   , TestLabel "JSON backward compatibility: MorphologyData parses without mdFormsBySurface" (TestCase testJsonBackwardCompatibility)
   , TestLabel "generated artifact: forms_by_surface.json is valid JSON" (TestCase testFormsBySurfaceValidJson)
   , TestLabel "generated artifact: forms_by_surface.json has expected object structure" (TestCase testFormsBySurfaceStructure)
-  , TestLabel "tierPriority: curated=3, autoVerified=2, autoCoverage=1" (TestCase testTierPriorityValues)
+  , TestLabel "tierPriority: curated=4, brainReviewed=3, autoVerified=2, autoCoverage=1" (TestCase testTierPriorityValues)
   ]
 
 -- 1. Resolver priority: curated > auto-verified > auto-coverage
@@ -54,6 +56,14 @@ testResolverPriorityCuratedBeatsAutoVerified = do
       md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [("свобода", [autoVerifiedForm, curatedForm])])
       result = resolveLexemeForm md "свобода" (Just NominativeCase) (Just SingularNumber)
   assertEqual "curated tier should beat auto-verified even with lower quality" (Just curatedForm) result
+
+testResolverPriorityBrainReviewedBeatsAutoVerified :: Assertion
+testResolverPriorityBrainReviewedBeatsAutoVerified = do
+  let autoVerifiedForm = LexemeForm "рамка" "рамка" "noun" NominativeCase SingularNumber AutoVerifiedTier 0.95
+      brainReviewedForm = LexemeForm "рамка" "рамка" "noun" NominativeCase SingularNumber BrainKbReviewedTier 0.8
+      md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [("рамка", [autoVerifiedForm, brainReviewedForm])])
+      result = resolveLexemeForm md "рамка" (Just NominativeCase) (Just SingularNumber)
+  assertEqual "brain-kb-reviewed tier should beat auto-verified" (Just brainReviewedForm) result
 
 testResolverPriorityAutoVerifiedBeatsAutoCoverage :: Assertion
 testResolverPriorityAutoVerifiedBeatsAutoCoverage = do
@@ -70,6 +80,14 @@ testResolverPriorityCuratedBeatsAutoCoverage = do
       md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [("свобода", [autoCoverageForm, curatedForm])])
       result = resolveLexemeForm md "свобода" (Just NominativeCase) (Just SingularNumber)
   assertEqual "curated tier should beat auto-coverage regardless of quality" (Just curatedForm) result
+
+testResolverPriorityCuratedBeatsBrainReviewed :: Assertion
+testResolverPriorityCuratedBeatsBrainReviewed = do
+  let brainReviewedForm = LexemeForm "смысл" "смысл" "noun" NominativeCase SingularNumber BrainKbReviewedTier 0.99
+      curatedForm = LexemeForm "смысл" "смысл" "noun" NominativeCase SingularNumber CuratedTier 0.7
+      md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [("смысл", [brainReviewedForm, curatedForm])])
+      result = resolveLexemeForm md "смысл" (Just NominativeCase) (Just SingularNumber)
+  assertEqual "curated tier should beat brain-kb-reviewed tier" (Just curatedForm) result
 
 testResolverPriorityHigherQualityWithinTier :: Assertion
 testResolverPriorityHigherQualityWithinTier = do
@@ -200,6 +218,7 @@ testFormsBySurfaceStructure = do
 
 testTierPriorityValues :: Assertion
 testTierPriorityValues = do
-  assertEqual "CuratedTier priority should be 3" 3 (tierPriority CuratedTier)
+  assertEqual "CuratedTier priority should be 4" 4 (tierPriority CuratedTier)
+  assertEqual "BrainKbReviewedTier priority should be 3" 3 (tierPriority BrainKbReviewedTier)
   assertEqual "AutoVerifiedTier priority should be 2" 2 (tierPriority AutoVerifiedTier)
   assertEqual "AutoCoverageTier priority should be 1" 1 (tierPriority AutoCoverageTier)

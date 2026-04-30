@@ -491,7 +491,7 @@ generatedLexemeEntries =
   ]
 
 -- Candidate forms loaded from resources/morphology/forms_by_surface.json at runtime.
--- Populated from SQL lexicon_forms table (curated + auto-verified tiers).
+-- Populated from SQL lexicon_forms table (curated + brain-kb-reviewed tiers).
 generatedCandidateForms :: M.Map Text [LexemeForm]
 generatedCandidateForms =
   M.fromList
@@ -530,6 +530,33 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "автономия" , lfLemma = "автономия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("автор",
+      [
+        LexemeForm { lfSurface = "автор" , lfLemma = "автор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "автор" , lfLemma = "автор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "автор" , lfLemma = "автор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("автора",
+      [
+        LexemeForm { lfSurface = "автора" , lfLemma = "автор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("автором",
+      [
+        LexemeForm { lfSurface = "автором" , lfLemma = "автор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ага",
+      [
+        LexemeForm { lfSurface = "ага" , lfLemma = "ага" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "ага" , lfLemma = "ага" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "ага" , lfLemma = "ага" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("агент",
+      [
+        LexemeForm { lfSurface = "агент" , lfLemma = "агент" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "агент" , lfLemma = "агент" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "агент" , lfLemma = "агент" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "агент" , lfLemma = "агент" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("агентности",
       [
         LexemeForm { lfSurface = "агентности" , lfLemma = "агентность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -543,6 +570,29 @@ generatedCandidateForms =
     ("агентностью",
       [
         LexemeForm { lfSurface = "агентностью" , lfLemma = "агентность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("агентом",
+      [
+        LexemeForm { lfSurface = "агентом" , lfLemma = "агент" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("агой",
+      [
+        LexemeForm { lfSurface = "агой" , lfLemma = "ага" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("агу",
+      [
+        LexemeForm { lfSurface = "агу" , lfLemma = "ага" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("адрес",
+      [
+        LexemeForm { lfSurface = "адрес" , lfLemma = "адрес" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "адрес" , lfLemma = "адрес" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "адрес" , lfLemma = "адрес" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "адрес" , lfLemma = "адрес" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("адресом",
+      [
+        LexemeForm { lfSurface = "адресом" , lfLemma = "адрес" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
       ]),
     ("аксиома",
       [
@@ -563,6 +613,28 @@ generatedCandidateForms =
     ("аксиомы",
       [
         LexemeForm { lfSurface = "аксиомы" , lfLemma = "аксиома" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("акт",
+      [
+        LexemeForm { lfSurface = "акт" , lfLemma = "акт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "акт" , lfLemma = "акт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "акт" , lfLemma = "акт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "акт" , lfLemma = "акт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("актив",
+      [
+        LexemeForm { lfSurface = "актив" , lfLemma = "актив" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "актив" , lfLemma = "актив" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "актив" , lfLemma = "актив" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "актив" , lfLemma = "актив" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("активом",
+      [
+        LexemeForm { lfSurface = "активом" , lfLemma = "актив" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("актом",
+      [
+        LexemeForm { lfSurface = "актом" , lfLemma = "акт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("антитезис",
       [
@@ -598,6 +670,222 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "аргументом" , lfLemma = "аргумент" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("архив",
+      [
+        LexemeForm { lfSurface = "архив" , lfLemma = "архив" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "архив" , lfLemma = "архив" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "архив" , lfLemma = "архив" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "архив" , lfLemma = "архив" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("архивом",
+      [
+        LexemeForm { lfSurface = "архивом" , lfLemma = "архив" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("атака",
+      [
+        LexemeForm { lfSurface = "атака" , lfLemma = "атака" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "атака" , lfLemma = "атака" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "атака" , lfLemma = "атака" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("атакой",
+      [
+        LexemeForm { lfSurface = "атакой" , lfLemma = "атака" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("атаку",
+      [
+        LexemeForm { lfSurface = "атаку" , lfLemma = "атака" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("атом",
+      [
+        LexemeForm { lfSurface = "атом" , lfLemma = "атом" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "атом" , lfLemma = "атом" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "атом" , lfLemma = "атом" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "атом" , lfLemma = "атом" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("атомом",
+      [
+        LexemeForm { lfSurface = "атомом" , lfLemma = "атом" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("баг",
+      [
+        LexemeForm { lfSurface = "баг" , lfLemma = "баг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баг" , lfLemma = "баг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баг" , lfLemma = "баг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баг" , lfLemma = "баг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("багом",
+      [
+        LexemeForm { lfSurface = "багом" , lfLemma = "баг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("баз",
+      [
+        LexemeForm { lfSurface = "баз" , lfLemma = "баз" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баз" , lfLemma = "баз" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баз" , lfLemma = "баз" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "баз" , lfLemma = "баз" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("базом",
+      [
+        LexemeForm { lfSurface = "базом" , lfLemma = "баз" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("байт",
+      [
+        LexemeForm { lfSurface = "байт" , lfLemma = "байт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "байт" , lfLemma = "байт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "байт" , lfLemma = "байт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "байт" , lfLemma = "байт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("байтом",
+      [
+        LexemeForm { lfSurface = "байтом" , lfLemma = "байт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("банк",
+      [
+        LexemeForm { lfSurface = "банк" , lfLemma = "банк" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "банк" , lfLemma = "банк" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "банк" , lfLemma = "банк" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "банк" , lfLemma = "банк" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("банком",
+      [
+        LexemeForm { lfSurface = "банком" , lfLemma = "банк" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("бег",
+      [
+        LexemeForm { lfSurface = "бег" , lfLemma = "бег" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "бег" , lfLemma = "бег" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "бег" , lfLemma = "бег" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "бег" , lfLemma = "бег" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
+    ("бегом",
+      [
+        LexemeForm { lfSurface = "бегом" , lfLemma = "бег" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
+    ("белка",
+      [
+        LexemeForm { lfSurface = "белка" , lfLemma = "белка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "белка" , lfLemma = "белка" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "белка" , lfLemma = "белка" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("белкой",
+      [
+        LexemeForm { lfSurface = "белкой" , lfLemma = "белка" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("белком",
+      [
+        LexemeForm { lfSurface = "белком" , lfLemma = "белок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("белку",
+      [
+        LexemeForm { lfSurface = "белку" , lfLemma = "белка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("белок",
+      [
+        LexemeForm { lfSurface = "белок" , lfLemma = "белок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "белок" , lfLemma = "белок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "белок" , lfLemma = "белок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "белок" , lfLemma = "белок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("бер",
+      [
+        LexemeForm { lfSurface = "бер" , lfLemma = "бер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "бер" , lfLemma = "бер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "бер" , lfLemma = "бер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("бера",
+      [
+        LexemeForm { lfSurface = "бера" , lfLemma = "бер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("берег",
+      [
+        LexemeForm { lfSurface = "берег" , lfLemma = "берег" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "берег" , lfLemma = "берег" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "берег" , lfLemma = "берег" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "берег" , lfLemma = "берег" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("берегом",
+      [
+        LexemeForm { lfSurface = "берегом" , lfLemma = "берег" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бером",
+      [
+        LexemeForm { lfSurface = "бером" , lfLemma = "бер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("биржа",
+      [
+        LexemeForm { lfSurface = "биржа" , lfLemma = "биржа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "биржа" , lfLemma = "биржа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "биржа" , lfLemma = "биржа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("биржей",
+      [
+        LexemeForm { lfSurface = "биржей" , lfLemma = "биржа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("биржу",
+      [
+        LexemeForm { lfSurface = "биржу" , lfLemma = "биржа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("битва",
+      [
+        LexemeForm { lfSurface = "битва" , lfLemma = "битва" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "битва" , lfLemma = "битва" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "битва" , lfLemma = "битва" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("битвой",
+      [
+        LexemeForm { lfSurface = "битвой" , lfLemma = "битва" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("битву",
+      [
+        LexemeForm { lfSurface = "битву" , lfLemma = "битва" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("благо",
+      [
+        LexemeForm { lfSurface = "благо" , lfLemma = "благо" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.819 },
+        LexemeForm { lfSurface = "благо" , lfLemma = "благо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.819 },
+        LexemeForm { lfSurface = "благо" , lfLemma = "благо" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.819 },
+        LexemeForm { lfSurface = "благо" , lfLemma = "благо" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.819 }
+      ]),
+    ("благом",
+      [
+        LexemeForm { lfSurface = "благом" , lfLemma = "благо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.819 }
+      ]),
+    ("блеск",
+      [
+        LexemeForm { lfSurface = "блеск" , lfLemma = "блеск" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.792 },
+        LexemeForm { lfSurface = "блеск" , lfLemma = "блеск" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.792 },
+        LexemeForm { lfSurface = "блеск" , lfLemma = "блеск" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.792 },
+        LexemeForm { lfSurface = "блеск" , lfLemma = "блеск" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.792 }
+      ]),
+    ("блеском",
+      [
+        LexemeForm { lfSurface = "блеском" , lfLemma = "блеск" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.792 }
+      ]),
+    ("блок",
+      [
+        LexemeForm { lfSurface = "блок" , lfLemma = "блок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "блок" , lfLemma = "блок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "блок" , lfLemma = "блок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "блок" , lfLemma = "блок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("блоком",
+      [
+        LexemeForm { lfSurface = "блоком" , lfLemma = "блок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("бог",
+      [
+        LexemeForm { lfSurface = "бог" , lfLemma = "бог" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "бог" , lfLemma = "бог" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "бог" , lfLemma = "бог" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("бога",
+      [
+        LexemeForm { lfSurface = "бога" , lfLemma = "бог" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("богом",
+      [
+        LexemeForm { lfSurface = "богом" , lfLemma = "бог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
     ("боли",
       [
         LexemeForm { lfSurface = "боли" , lfLemma = "боль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -608,9 +896,117 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "боль" , lfLemma = "боль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
         LexemeForm { lfSurface = "боль" , lfLemma = "боль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("большинство",
+      [
+        LexemeForm { lfSurface = "большинство" , lfLemma = "большинство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "большинство" , lfLemma = "большинство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "большинство" , lfLemma = "большинство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "большинство" , lfLemma = "большинство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("большинством",
+      [
+        LexemeForm { lfSurface = "большинством" , lfLemma = "большинство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
     ("болью",
       [
         LexemeForm { lfSurface = "болью" , lfLemma = "боль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("борьба",
+      [
+        LexemeForm { lfSurface = "борьба" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "борьба" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "борьба" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("борьбой",
+      [
+        LexemeForm { lfSurface = "борьбой" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("борьбу",
+      [
+        LexemeForm { lfSurface = "борьбу" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бот",
+      [
+        LexemeForm { lfSurface = "бот" , lfLemma = "бот" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "бот" , lfLemma = "бот" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "бот" , lfLemma = "бот" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "бот" , lfLemma = "бот" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ботом",
+      [
+        LexemeForm { lfSurface = "ботом" , lfLemma = "бот" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бременем",
+      [
+        LexemeForm { lfSurface = "бременем" , lfLemma = "бремя" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.8 }
+      ]),
+    ("бремя",
+      [
+        LexemeForm { lfSurface = "бремя" , lfLemma = "бремя" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.8 },
+        LexemeForm { lfSurface = "бремя" , lfLemma = "бремя" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.8 },
+        LexemeForm { lfSurface = "бремя" , lfLemma = "бремя" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.8 },
+        LexemeForm { lfSurface = "бремя" , lfLemma = "бремя" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.8 }
+      ]),
+    ("бренд",
+      [
+        LexemeForm { lfSurface = "бренд" , lfLemma = "бренд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.824 },
+        LexemeForm { lfSurface = "бренд" , lfLemma = "бренд" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.824 },
+        LexemeForm { lfSurface = "бренд" , lfLemma = "бренд" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.824 },
+        LexemeForm { lfSurface = "бренд" , lfLemma = "бренд" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.824 }
+      ]),
+    ("брендом",
+      [
+        LexemeForm { lfSurface = "брендом" , lfLemma = "бренд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.824 }
+      ]),
+    ("буква",
+      [
+        LexemeForm { lfSurface = "буква" , lfLemma = "буква" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "буква" , lfLemma = "буква" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "буква" , lfLemma = "буква" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("буквой",
+      [
+        LexemeForm { lfSurface = "буквой" , lfLemma = "буква" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("букву",
+      [
+        LexemeForm { lfSurface = "букву" , lfLemma = "буква" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бумага",
+      [
+        LexemeForm { lfSurface = "бумага" , lfLemma = "бумага" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "бумага" , lfLemma = "бумага" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "бумага" , lfLemma = "бумага" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бумагой",
+      [
+        LexemeForm { lfSurface = "бумагой" , lfLemma = "бумага" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бумагу",
+      [
+        LexemeForm { lfSurface = "бумагу" , lfLemma = "бумага" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("бунт",
+      [
+        LexemeForm { lfSurface = "бунт" , lfLemma = "бунт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "бунт" , lfLemma = "бунт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "бунт" , lfLemma = "бунт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "бунт" , lfLemma = "бунт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("бунтом",
+      [
+        LexemeForm { lfSurface = "бунтом" , lfLemma = "бунт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("буфер",
+      [
+        LexemeForm { lfSurface = "буфер" , lfLemma = "буфер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "буфер" , lfLemma = "буфер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "буфер" , lfLemma = "буфер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "буфер" , lfLemma = "буфер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("буфером",
+      [
+        LexemeForm { lfSurface = "буфером" , lfLemma = "буфер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("валидности",
       [
@@ -626,6 +1022,38 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "валидностью" , lfLemma = "валидность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("ввод",
+      [
+        LexemeForm { lfSurface = "ввод" , lfLemma = "ввод" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ввод" , lfLemma = "ввод" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ввод" , lfLemma = "ввод" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ввод" , lfLemma = "ввод" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("вводом",
+      [
+        LexemeForm { lfSurface = "вводом" , lfLemma = "ввод" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("вдох",
+      [
+        LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("вдохом",
+      [
+        LexemeForm { lfSurface = "вдохом" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("вера",
+      [
+        LexemeForm { lfSurface = "вера" , lfLemma = "вера" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вера" , lfLemma = "вера" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вера" , lfLemma = "вера" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("верой",
+      [
+        LexemeForm { lfSurface = "верой" , lfLemma = "вера" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("вероятности",
       [
         LexemeForm { lfSurface = "вероятности" , lfLemma = "вероятность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -640,6 +1068,79 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "вероятностью" , lfLemma = "вероятность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("веру",
+      [
+        LexemeForm { lfSurface = "веру" , lfLemma = "вера" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вес",
+      [
+        LexemeForm { lfSurface = "вес" , lfLemma = "вес" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вес" , lfLemma = "вес" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вес" , lfLemma = "вес" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вес" , lfLemma = "вес" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("весом",
+      [
+        LexemeForm { lfSurface = "весом" , lfLemma = "вес" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("весь",
+      [
+        LexemeForm { lfSurface = "весь" , lfLemma = "весь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "весь" , lfLemma = "весь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "весь" , lfLemma = "весь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "весь" , lfLemma = "весь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("весью",
+      [
+        LexemeForm { lfSurface = "весью" , lfLemma = "весь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("ветвь",
+      [
+        LexemeForm { lfSurface = "ветвь" , lfLemma = "ветвь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ветвь" , lfLemma = "ветвь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ветвь" , lfLemma = "ветвь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ветвь" , lfLemma = "ветвь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("ветвью",
+      [
+        LexemeForm { lfSurface = "ветвью" , lfLemma = "ветвь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("ветер",
+      [
+        LexemeForm { lfSurface = "ветер" , lfLemma = "ветер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "ветер" , lfLemma = "ветер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "ветер" , lfLemma = "ветер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "ветер" , lfLemma = "ветер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("ветка",
+      [
+        LexemeForm { lfSurface = "ветка" , lfLemma = "ветка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ветка" , lfLemma = "ветка" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ветка" , lfLemma = "ветка" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("веткой",
+      [
+        LexemeForm { lfSurface = "веткой" , lfLemma = "ветка" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ветку",
+      [
+        LexemeForm { lfSurface = "ветку" , lfLemma = "ветка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ветром",
+      [
+        LexemeForm { lfSurface = "ветром" , lfLemma = "ветер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("вечер",
+      [
+        LexemeForm { lfSurface = "вечер" , lfLemma = "вечер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.769 },
+        LexemeForm { lfSurface = "вечер" , lfLemma = "вечер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.769 },
+        LexemeForm { lfSurface = "вечер" , lfLemma = "вечер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.769 },
+        LexemeForm { lfSurface = "вечер" , lfLemma = "вечер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.769 }
+      ]),
+    ("вечером",
+      [
+        LexemeForm { lfSurface = "вечером" , lfLemma = "вечер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.769 }
+      ]),
     ("вечности",
       [
         LexemeForm { lfSurface = "вечности" , lfLemma = "вечность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -653,6 +1154,72 @@ generatedCandidateForms =
     ("вечностью",
       [
         LexemeForm { lfSurface = "вечностью" , lfLemma = "вечность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("вещь",
+      [
+        LexemeForm { lfSurface = "вещь" , lfLemma = "вещь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вещь" , lfLemma = "вещь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вещь" , lfLemma = "вещь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вещь" , lfLemma = "вещь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вещью",
+      [
+        LexemeForm { lfSurface = "вещью" , lfLemma = "вещь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вздох",
+      [
+        LexemeForm { lfSurface = "вздох" , lfLemma = "вздох" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "вздох" , lfLemma = "вздох" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "вздох" , lfLemma = "вздох" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "вздох" , lfLemma = "вздох" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("вздохом",
+      [
+        LexemeForm { lfSurface = "вздохом" , lfLemma = "вздох" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("взлом",
+      [
+        LexemeForm { lfSurface = "взлом" , lfLemma = "взлом" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "взлом" , lfLemma = "взлом" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "взлом" , lfLemma = "взлом" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "взлом" , lfLemma = "взлом" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("взломом",
+      [
+        LexemeForm { lfSurface = "взломом" , lfLemma = "взлом" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("взрыв",
+      [
+        LexemeForm { lfSurface = "взрыв" , lfLemma = "взрыв" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "взрыв" , lfLemma = "взрыв" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "взрыв" , lfLemma = "взрыв" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "взрыв" , lfLemma = "взрыв" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("взрывом",
+      [
+        LexemeForm { lfSurface = "взрывом" , lfLemma = "взрыв" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вид",
+      [
+        LexemeForm { lfSurface = "вид" , lfLemma = "вид" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вид" , lfLemma = "вид" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вид" , lfLemma = "вид" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вид" , lfLemma = "вид" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("видео",
+      [
+        LexemeForm { lfSurface = "видео" , lfLemma = "видео" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "видео" , lfLemma = "видео" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "видео" , lfLemma = "видео" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "видео" , lfLemma = "видео" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("видеом",
+      [
+        LexemeForm { lfSurface = "видеом" , lfLemma = "видео" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("видом",
+      [
+        LexemeForm { lfSurface = "видом" , lfLemma = "вид" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("вина",
       [
@@ -674,6 +1241,61 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "вины" , lfLemma = "вина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("вирус",
+      [
+        LexemeForm { lfSurface = "вирус" , lfLemma = "вирус" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вирус" , lfLemma = "вирус" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вирус" , lfLemma = "вирус" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вирус" , lfLemma = "вирус" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вирусом",
+      [
+        LexemeForm { lfSurface = "вирусом" , lfLemma = "вирус" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вклад",
+      [
+        LexemeForm { lfSurface = "вклад" , lfLemma = "вклад" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вклад" , lfLemma = "вклад" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вклад" , lfLemma = "вклад" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вклад" , lfLemma = "вклад" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вкладом",
+      [
+        LexemeForm { lfSurface = "вкладом" , lfLemma = "вклад" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вкус",
+      [
+        LexemeForm { lfSurface = "вкус" , lfLemma = "вкус" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вкус" , lfLemma = "вкус" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вкус" , lfLemma = "вкус" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вкус" , lfLemma = "вкус" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вкусом",
+      [
+        LexemeForm { lfSurface = "вкусом" , lfLemma = "вкус" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вод",
+      [
+        LexemeForm { lfSurface = "вод" , lfLemma = "вод" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вод" , lfLemma = "вод" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вод" , lfLemma = "вод" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вод" , lfLemma = "вод" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("водом",
+      [
+        LexemeForm { lfSurface = "водом" , lfLemma = "вод" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("воздух",
+      [
+        LexemeForm { lfSurface = "воздух" , lfLemma = "воздух" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "воздух" , lfLemma = "воздух" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "воздух" , lfLemma = "воздух" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "воздух" , lfLemma = "воздух" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("воздухом",
+      [
+        LexemeForm { lfSurface = "воздухом" , lfLemma = "воздух" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("возможности",
       [
         LexemeForm { lfSurface = "возможности" , lfLemma = "возможность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -688,6 +1310,20 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "возможностью" , lfLemma = "возможность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("война",
+      [
+        LexemeForm { lfSurface = "война" , lfLemma = "война" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "война" , lfLemma = "война" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "война" , lfLemma = "война" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("войной",
+      [
+        LexemeForm { lfSurface = "войной" , lfLemma = "война" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("войну",
+      [
+        LexemeForm { lfSurface = "войну" , lfLemma = "война" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
     ("воле",
       [
         LexemeForm { lfSurface = "воле" , lfLemma = "воля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
@@ -699,6 +1335,20 @@ generatedCandidateForms =
     ("воли",
       [
         LexemeForm { lfSurface = "воли" , lfLemma = "воля" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("волна",
+      [
+        LexemeForm { lfSurface = "волна" , lfLemma = "волна" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "волна" , lfLemma = "волна" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "волна" , lfLemma = "волна" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("волной",
+      [
+        LexemeForm { lfSurface = "волной" , lfLemma = "волна" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("волну",
+      [
+        LexemeForm { lfSurface = "волну" , lfLemma = "волна" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("волю",
       [
@@ -725,6 +1375,31 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "вопросом" , lfLemma = "вопрос" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("враг",
+      [
+        LexemeForm { lfSurface = "враг" , lfLemma = "враг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "враг" , lfLemma = "враг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "враг" , lfLemma = "враг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("врага",
+      [
+        LexemeForm { lfSurface = "врага" , lfLemma = "враг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("врагом",
+      [
+        LexemeForm { lfSurface = "врагом" , lfLemma = "враг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вред",
+      [
+        LexemeForm { lfSurface = "вред" , lfLemma = "вред" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "вред" , lfLemma = "вред" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "вред" , lfLemma = "вред" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "вред" , lfLemma = "вред" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("вредом",
+      [
+        LexemeForm { lfSurface = "вредом" , lfLemma = "вред" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
     ("временем",
       [
         LexemeForm { lfSurface = "временем" , lfLemma = "время" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
@@ -738,6 +1413,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "время" , lfLemma = "время" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
         LexemeForm { lfSurface = "время" , lfLemma = "время" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("вход",
+      [
+        LexemeForm { lfSurface = "вход" , lfLemma = "вход" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вход" , lfLemma = "вход" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вход" , lfLemma = "вход" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вход" , lfLemma = "вход" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("входом",
+      [
+        LexemeForm { lfSurface = "входом" , lfLemma = "вход" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("выбор",
       [
@@ -787,6 +1473,28 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "выводом" , lfLemma = "вывод" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("выдох",
+      [
+        LexemeForm { lfSurface = "выдох" , lfLemma = "выдох" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "выдох" , lfLemma = "выдох" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "выдох" , lfLemma = "выдох" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "выдох" , lfLemma = "выдох" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("выдохом",
+      [
+        LexemeForm { lfSurface = "выдохом" , lfLemma = "выдох" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("вызов",
+      [
+        LexemeForm { lfSurface = "вызов" , lfLemma = "вызов" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вызов" , lfLemma = "вызов" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вызов" , lfLemma = "вызов" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "вызов" , lfLemma = "вызов" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("вызовом",
+      [
+        LexemeForm { lfSurface = "вызовом" , lfLemma = "вызов" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("высказывание",
       [
         LexemeForm { lfSurface = "высказывание" , lfLemma = "высказывание" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -803,6 +1511,42 @@ generatedCandidateForms =
     ("высказывания",
       [
         LexemeForm { lfSurface = "высказывания" , lfLemma = "высказывание" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("выход",
+      [
+        LexemeForm { lfSurface = "выход" , lfLemma = "выход" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "выход" , lfLemma = "выход" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "выход" , lfLemma = "выход" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "выход" , lfLemma = "выход" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("выходом",
+      [
+        LexemeForm { lfSurface = "выходом" , lfLemma = "выход" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("газ",
+      [
+        LexemeForm { lfSurface = "газ" , lfLemma = "газ" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "газ" , lfLemma = "газ" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "газ" , lfLemma = "газ" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "газ" , lfLemma = "газ" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("газом",
+      [
+        LexemeForm { lfSurface = "газом" , lfLemma = "газ" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("гайда",
+      [
+        LexemeForm { lfSurface = "гайда" , lfLemma = "гайда" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "гайда" , lfLemma = "гайда" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "гайда" , lfLemma = "гайда" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("гайдой",
+      [
+        LexemeForm { lfSurface = "гайдой" , lfLemma = "гайда" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("гайду",
+      [
+        LexemeForm { lfSurface = "гайду" , lfLemma = "гайда" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
       ]),
     ("гипотеза",
       [
@@ -824,6 +1568,31 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "гипотезы" , lfLemma = "гипотеза" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("глаз",
+      [
+        LexemeForm { lfSurface = "глаз" , lfLemma = "глаз" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "глаз" , lfLemma = "глаз" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "глаз" , lfLemma = "глаз" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "глаз" , lfLemma = "глаз" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("глазом",
+      [
+        LexemeForm { lfSurface = "глазом" , lfLemma = "глаз" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("глина",
+      [
+        LexemeForm { lfSurface = "глина" , lfLemma = "глина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "глина" , lfLemma = "глина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "глина" , lfLemma = "глина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("глиной",
+      [
+        LexemeForm { lfSurface = "глиной" , lfLemma = "глина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("глину",
+      [
+        LexemeForm { lfSurface = "глину" , lfLemma = "глина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
     ("гнев",
       [
         LexemeForm { lfSurface = "гнев" , lfLemma = "гнев" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -841,6 +1610,62 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "гневом" , lfLemma = "гнев" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("голова",
+      [
+        LexemeForm { lfSurface = "голова" , lfLemma = "голова" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "голова" , lfLemma = "голова" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "голова" , lfLemma = "голова" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("головой",
+      [
+        LexemeForm { lfSurface = "головой" , lfLemma = "голова" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("голову",
+      [
+        LexemeForm { lfSurface = "голову" , lfLemma = "голова" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("голод",
+      [
+        LexemeForm { lfSurface = "голод" , lfLemma = "голод" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "голод" , lfLemma = "голод" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "голод" , lfLemma = "голод" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "голод" , lfLemma = "голод" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("голодом",
+      [
+        LexemeForm { lfSurface = "голодом" , lfLemma = "голод" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("голос",
+      [
+        LexemeForm { lfSurface = "голос" , lfLemma = "голос" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "голос" , lfLemma = "голос" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "голос" , lfLemma = "голос" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "голос" , lfLemma = "голос" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("голосом",
+      [
+        LexemeForm { lfSurface = "голосом" , lfLemma = "голос" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("гонка",
+      [
+        LexemeForm { lfSurface = "гонка" , lfLemma = "гонка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "гонка" , lfLemma = "гонка" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "гонка" , lfLemma = "гонка" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("гонкой",
+      [
+        LexemeForm { lfSurface = "гонкой" , lfLemma = "гонка" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("гонку",
+      [
+        LexemeForm { lfSurface = "гонку" , lfLemma = "гонка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("гора",
+      [
+        LexemeForm { lfSurface = "гора" , lfLemma = "гора" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "гора" , lfLemma = "гора" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "гора" , lfLemma = "гора" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
     ("гордости",
       [
         LexemeForm { lfSurface = "гордости" , lfLemma = "гордость" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -854,6 +1679,50 @@ generatedCandidateForms =
     ("гордостью",
       [
         LexemeForm { lfSurface = "гордостью" , lfLemma = "гордость" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("горе",
+      [
+        LexemeForm { lfSurface = "горе" , lfLemma = "горе" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "горе" , lfLemma = "горе" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "горе" , lfLemma = "горе" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "горе" , lfLemma = "горе" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("горем",
+      [
+        LexemeForm { lfSurface = "горем" , lfLemma = "горе" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("город",
+      [
+        LexemeForm { lfSurface = "город" , lfLemma = "город" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "город" , lfLemma = "город" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "город" , lfLemma = "город" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "город" , lfLemma = "город" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("городом",
+      [
+        LexemeForm { lfSurface = "городом" , lfLemma = "город" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("горой",
+      [
+        LexemeForm { lfSurface = "горой" , lfLemma = "гора" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
+    ("гору",
+      [
+        LexemeForm { lfSurface = "гору" , lfLemma = "гора" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
+    ("гот",
+      [
+        LexemeForm { lfSurface = "гот" , lfLemma = "гот" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "гот" , lfLemma = "гот" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "гот" , lfLemma = "гот" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("гота",
+      [
+        LexemeForm { lfSurface = "гота" , lfLemma = "гот" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("готом",
+      [
+        LexemeForm { lfSurface = "готом" , lfLemma = "гот" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("граница",
       [
@@ -875,6 +1744,133 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "границы" , lfLemma = "граница" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("грант",
+      [
+        LexemeForm { lfSurface = "грант" , lfLemma = "грант" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "грант" , lfLemma = "грант" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "грант" , lfLemma = "грант" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "грант" , lfLemma = "грант" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("грантом",
+      [
+        LexemeForm { lfSurface = "грантом" , lfLemma = "грант" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("грань",
+      [
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("гранью",
+      [
+        LexemeForm { lfSurface = "гранью" , lfLemma = "грань" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("граф",
+      [
+        LexemeForm { lfSurface = "граф" , lfLemma = "граф" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "граф" , lfLemma = "граф" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "граф" , lfLemma = "граф" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "граф" , lfLemma = "граф" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("графом",
+      [
+        LexemeForm { lfSurface = "графом" , lfLemma = "граф" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("грех",
+      [
+        LexemeForm { lfSurface = "грех" , lfLemma = "грех" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "грех" , lfLemma = "грех" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "грех" , lfLemma = "грех" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "грех" , lfLemma = "грех" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("грехом",
+      [
+        LexemeForm { lfSurface = "грехом" , lfLemma = "грех" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("грудь",
+      [
+        LexemeForm { lfSurface = "грудь" , lfLemma = "грудь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "грудь" , lfLemma = "грудь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "грудь" , lfLemma = "грудь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "грудь" , lfLemma = "грудь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("грудью",
+      [
+        LexemeForm { lfSurface = "грудью" , lfLemma = "грудь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("груз",
+      [
+        LexemeForm { lfSurface = "груз" , lfLemma = "груз" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "груз" , lfLemma = "груз" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "груз" , lfLemma = "груз" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "груз" , lfLemma = "груз" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("грузом",
+      [
+        LexemeForm { lfSurface = "грузом" , lfLemma = "груз" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("губа",
+      [
+        LexemeForm { lfSurface = "губа" , lfLemma = "губа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "губа" , lfLemma = "губа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "губа" , lfLemma = "губа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("губой",
+      [
+        LexemeForm { lfSurface = "губой" , lfLemma = "губа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("губу",
+      [
+        LexemeForm { lfSurface = "губу" , lfLemma = "губа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("гул",
+      [
+        LexemeForm { lfSurface = "гул" , lfLemma = "гул" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "гул" , lfLemma = "гул" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "гул" , lfLemma = "гул" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "гул" , lfLemma = "гул" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("гулом",
+      [
+        LexemeForm { lfSurface = "гулом" , lfLemma = "гул" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("дама",
+      [
+        LexemeForm { lfSurface = "дама" , lfLemma = "дама" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "дама" , lfLemma = "дама" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "дама" , lfLemma = "дама" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("дамой",
+      [
+        LexemeForm { lfSurface = "дамой" , lfLemma = "дама" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("дамп",
+      [
+        LexemeForm { lfSurface = "дамп" , lfLemma = "дамп" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "дамп" , lfLemma = "дамп" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "дамп" , lfLemma = "дамп" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "дамп" , lfLemma = "дамп" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("дампом",
+      [
+        LexemeForm { lfSurface = "дампом" , lfLemma = "дамп" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("даму",
+      [
+        LexemeForm { lfSurface = "даму" , lfLemma = "дама" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("дверь",
+      [
+        LexemeForm { lfSurface = "дверь" , lfLemma = "дверь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дверь" , lfLemma = "дверь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дверь" , lfLemma = "дверь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дверь" , lfLemma = "дверь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дверью",
+      [
+        LexemeForm { lfSurface = "дверью" , lfLemma = "дверь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("делать",
       [
         LexemeForm { lfSurface = "делать" , lfLemma = "делать" , lfPOS = "verb" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
@@ -882,6 +1878,38 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "делать" , lfLemma = "делать" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "делать" , lfLemma = "делать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "делать" , lfLemma = "делать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("демон",
+      [
+        LexemeForm { lfSurface = "демон" , lfLemma = "демон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "демон" , lfLemma = "демон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "демон" , lfLemma = "демон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("демона",
+      [
+        LexemeForm { lfSurface = "демона" , lfLemma = "демон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("демоном",
+      [
+        LexemeForm { lfSurface = "демоном" , lfLemma = "демон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("день",
+      [
+        LexemeForm { lfSurface = "день" , lfLemma = "день" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "день" , lfLemma = "день" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "день" , lfLemma = "день" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "день" , lfLemma = "день" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дерево",
+      [
+        LexemeForm { lfSurface = "дерево" , lfLemma = "дерево" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дерево" , lfLemma = "дерево" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дерево" , lfLemma = "дерево" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дерево" , lfLemma = "дерево" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("деревом",
+      [
+        LexemeForm { lfSurface = "деревом" , lfLemma = "дерево" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
       ]),
     ("дефиницией",
       [
@@ -917,6 +1945,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "диалогом" , lfLemma = "диалог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("диск",
+      [
+        LexemeForm { lfSurface = "диск" , lfLemma = "диск" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "диск" , lfLemma = "диск" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "диск" , lfLemma = "диск" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 },
+        LexemeForm { lfSurface = "диск" , lfLemma = "диск" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
+    ("диском",
+      [
+        LexemeForm { lfSurface = "диском" , lfLemma = "диск" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.763 }
+      ]),
     ("дистинкцией",
       [
         LexemeForm { lfSurface = "дистинкцией" , lfLemma = "дистинкция" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
@@ -933,6 +1972,46 @@ generatedCandidateForms =
     ("дистинкция",
       [
         LexemeForm { lfSurface = "дистинкция" , lfLemma = "дистинкция" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("длина",
+      [
+        LexemeForm { lfSurface = "длина" , lfLemma = "длина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "длина" , lfLemma = "длина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "длина" , lfLemma = "длина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("длиной",
+      [
+        LexemeForm { lfSurface = "длиной" , lfLemma = "длина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("длину",
+      [
+        LexemeForm { lfSurface = "длину" , lfLemma = "длина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("днем",
+      [
+        LexemeForm { lfSurface = "днем" , lfLemma = "день" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дно",
+      [
+        LexemeForm { lfSurface = "дно" , lfLemma = "дно" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дно" , lfLemma = "дно" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дно" , lfLemma = "дно" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дно" , lfLemma = "дно" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("дном",
+      [
+        LexemeForm { lfSurface = "дном" , lfLemma = "дно" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("добро",
+      [
+        LexemeForm { lfSurface = "добро" , lfLemma = "добро" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "добро" , lfLemma = "добро" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "добро" , lfLemma = "добро" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "добро" , lfLemma = "добро" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("добром",
+      [
+        LexemeForm { lfSurface = "добром" , lfLemma = "добро" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
       ]),
     ("доверие",
       [
@@ -968,6 +2047,45 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "доводом" , lfLemma = "довод" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("догма",
+      [
+        LexemeForm { lfSurface = "догма" , lfLemma = "догма" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "догма" , lfLemma = "догма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "догма" , lfLemma = "догма" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("догмой",
+      [
+        LexemeForm { lfSurface = "догмой" , lfLemma = "догма" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("догму",
+      [
+        LexemeForm { lfSurface = "догму" , lfLemma = "догма" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("дождем",
+      [
+        LexemeForm { lfSurface = "дождем" , lfLemma = "дождь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("дождь",
+      [
+        LexemeForm { lfSurface = "дождь" , lfLemma = "дождь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "дождь" , lfLemma = "дождь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "дождь" , lfLemma = "дождь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "дождь" , lfLemma = "дождь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("доза",
+      [
+        LexemeForm { lfSurface = "доза" , lfLemma = "доза" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "доза" , lfLemma = "доза" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "доза" , lfLemma = "доза" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("дозой",
+      [
+        LexemeForm { lfSurface = "дозой" , lfLemma = "доза" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("дозу",
+      [
+        LexemeForm { lfSurface = "дозу" , lfLemma = "доза" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
     ("доказательства",
       [
         LexemeForm { lfSurface = "доказательства" , lfLemma = "доказательство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -1001,6 +2119,42 @@ generatedCandidateForms =
     ("долгом",
       [
         LexemeForm { lfSurface = "долгом" , lfLemma = "долг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("долей",
+      [
+        LexemeForm { lfSurface = "долей" , lfLemma = "доля" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("долю",
+      [
+        LexemeForm { lfSurface = "долю" , lfLemma = "доля" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("доля",
+      [
+        LexemeForm { lfSurface = "доля" , lfLemma = "доля" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "доля" , lfLemma = "доля" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "доля" , lfLemma = "доля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дом",
+      [
+        LexemeForm { lfSurface = "дом" , lfLemma = "дом" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дом" , lfLemma = "дом" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дом" , lfLemma = "дом" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дом" , lfLemma = "дом" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("домен",
+      [
+        LexemeForm { lfSurface = "домен" , lfLemma = "домен" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "домен" , lfLemma = "домен" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "домен" , lfLemma = "домен" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "домен" , lfLemma = "домен" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("доменом",
+      [
+        LexemeForm { lfSurface = "доменом" , lfLemma = "домен" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("домом",
+      [
+        LexemeForm { lfSurface = "домом" , lfLemma = "дом" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("допущение",
       [
@@ -1047,6 +2201,178 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "достоверностью" , lfLemma = "достоверность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("доход",
+      [
+        LexemeForm { lfSurface = "доход" , lfLemma = "доход" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "доход" , lfLemma = "доход" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "доход" , lfLemma = "доход" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "доход" , lfLemma = "доход" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("доходом",
+      [
+        LexemeForm { lfSurface = "доходом" , lfLemma = "доход" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("драма",
+      [
+        LexemeForm { lfSurface = "драма" , lfLemma = "драма" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "драма" , lfLemma = "драма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "драма" , lfLemma = "драма" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("драмой",
+      [
+        LexemeForm { lfSurface = "драмой" , lfLemma = "драма" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("драму",
+      [
+        LexemeForm { lfSurface = "драму" , lfLemma = "драма" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("дрейф",
+      [
+        LexemeForm { lfSurface = "дрейф" , lfLemma = "дрейф" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дрейф" , lfLemma = "дрейф" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дрейф" , lfLemma = "дрейф" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дрейф" , lfLemma = "дрейф" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дрейфом",
+      [
+        LexemeForm { lfSurface = "дрейфом" , lfLemma = "дрейф" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дрожь",
+      [
+        LexemeForm { lfSurface = "дрожь" , lfLemma = "дрожь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "дрожь" , lfLemma = "дрожь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "дрожь" , lfLemma = "дрожь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "дрожь" , lfLemma = "дрожь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("дрожью",
+      [
+        LexemeForm { lfSurface = "дрожью" , lfLemma = "дрожь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("друг",
+      [
+        LexemeForm { lfSurface = "друг" , lfLemma = "друг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "друг" , lfLemma = "друг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "друг" , lfLemma = "друг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("друга",
+      [
+        LexemeForm { lfSurface = "друга" , lfLemma = "друг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("другом",
+      [
+        LexemeForm { lfSurface = "другом" , lfLemma = "друг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дуга",
+      [
+        LexemeForm { lfSurface = "дуга" , lfLemma = "дуга" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дуга" , lfLemma = "дуга" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дуга" , lfLemma = "дуга" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дугой",
+      [
+        LexemeForm { lfSurface = "дугой" , lfLemma = "дуга" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дугу",
+      [
+        LexemeForm { lfSurface = "дугу" , lfLemma = "дуга" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дух",
+      [
+        LexemeForm { lfSurface = "дух" , lfLemma = "дух" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "дух" , lfLemma = "дух" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "дух" , lfLemma = "дух" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "дух" , lfLemma = "дух" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("духом",
+      [
+        LexemeForm { lfSurface = "духом" , lfLemma = "дух" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("душ",
+      [
+        LexemeForm { lfSurface = "душ" , lfLemma = "душ" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "душ" , lfLemma = "душ" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "душ" , lfLemma = "душ" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "душ" , lfLemma = "душ" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("душем",
+      [
+        LexemeForm { lfSurface = "душем" , lfLemma = "душ" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дым",
+      [
+        LexemeForm { lfSurface = "дым" , lfLemma = "дым" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дым" , lfLemma = "дым" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дым" , lfLemma = "дым" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "дым" , lfLemma = "дым" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дымом",
+      [
+        LexemeForm { lfSurface = "дымом" , lfLemma = "дым" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("дыра",
+      [
+        LexemeForm { lfSurface = "дыра" , lfLemma = "дыра" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дыра" , lfLemma = "дыра" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "дыра" , lfLemma = "дыра" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("дырой",
+      [
+        LexemeForm { lfSurface = "дырой" , lfLemma = "дыра" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("дыру",
+      [
+        LexemeForm { lfSurface = "дыру" , lfLemma = "дыра" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("еда",
+      [
+        LexemeForm { lfSurface = "еда" , lfLemma = "еда" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "еда" , lfLemma = "еда" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "еда" , lfLemma = "еда" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("едой",
+      [
+        LexemeForm { lfSurface = "едой" , lfLemma = "еда" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("еду",
+      [
+        LexemeForm { lfSurface = "еду" , lfLemma = "еда" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("жажда",
+      [
+        LexemeForm { lfSurface = "жажда" , lfLemma = "жажда" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "жажда" , lfLemma = "жажда" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "жажда" , lfLemma = "жажда" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("жаждой",
+      [
+        LexemeForm { lfSurface = "жаждой" , lfLemma = "жажда" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("жажду",
+      [
+        LexemeForm { lfSurface = "жажду" , lfLemma = "жажда" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("жанр",
+      [
+        LexemeForm { lfSurface = "жанр" , lfLemma = "жанр" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.801 },
+        LexemeForm { lfSurface = "жанр" , lfLemma = "жанр" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.801 },
+        LexemeForm { lfSurface = "жанр" , lfLemma = "жанр" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.801 },
+        LexemeForm { lfSurface = "жанр" , lfLemma = "жанр" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.801 }
+      ]),
+    ("жанром",
+      [
+        LexemeForm { lfSurface = "жанром" , lfLemma = "жанр" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.801 }
+      ]),
+    ("жест",
+      [
+        LexemeForm { lfSurface = "жест" , lfLemma = "жест" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "жест" , lfLemma = "жест" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "жест" , lfLemma = "жест" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "жест" , lfLemma = "жест" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("жестом",
+      [
+        LexemeForm { lfSurface = "жестом" , lfLemma = "жест" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("жизни",
       [
         LexemeForm { lfSurface = "жизни" , lfLemma = "жизнь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -1060,6 +2386,20 @@ generatedCandidateForms =
     ("жизнью",
       [
         LexemeForm { lfSurface = "жизнью" , lfLemma = "жизнь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("жила",
+      [
+        LexemeForm { lfSurface = "жила" , lfLemma = "жила" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "жила" , lfLemma = "жила" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "жила" , lfLemma = "жила" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("жилой",
+      [
+        LexemeForm { lfSurface = "жилой" , lfLemma = "жила" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("жилу",
+      [
+        LexemeForm { lfSurface = "жилу" , lfLemma = "жила" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
       ]),
     ("задача",
       [
@@ -1081,6 +2421,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "задачу" , lfLemma = "задача" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("зазор",
+      [
+        LexemeForm { lfSurface = "зазор" , lfLemma = "зазор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зазор" , lfLemma = "зазор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зазор" , lfLemma = "зазор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зазор" , lfLemma = "зазор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("зазором",
+      [
+        LexemeForm { lfSurface = "зазором" , lfLemma = "зазор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("заключение",
       [
         LexemeForm { lfSurface = "заключение" , lfLemma = "заключение" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -1097,6 +2448,50 @@ generatedCandidateForms =
     ("заключения",
       [
         LexemeForm { lfSurface = "заключения" , lfLemma = "заключение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("закон",
+      [
+        LexemeForm { lfSurface = "закон" , lfLemma = "закон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "закон" , lfLemma = "закон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "закон" , lfLemma = "закон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "закон" , lfLemma = "закон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("законом",
+      [
+        LexemeForm { lfSurface = "законом" , lfLemma = "закон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("зал",
+      [
+        LexemeForm { lfSurface = "зал" , lfLemma = "зал" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зал" , lfLemma = "зал" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зал" , lfLemma = "зал" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "зал" , lfLemma = "зал" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("залог",
+      [
+        LexemeForm { lfSurface = "залог" , lfLemma = "залог" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "залог" , lfLemma = "залог" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "залог" , lfLemma = "залог" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "залог" , lfLemma = "залог" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("залогом",
+      [
+        LexemeForm { lfSurface = "залогом" , lfLemma = "залог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("залом",
+      [
+        LexemeForm { lfSurface = "залом" , lfLemma = "зал" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("замком",
+      [
+        LexemeForm { lfSurface = "замком" , lfLemma = "замок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("замок",
+      [
+        LexemeForm { lfSurface = "замок" , lfLemma = "замок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "замок" , lfLemma = "замок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "замок" , lfLemma = "замок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "замок" , lfLemma = "замок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
       ]),
     ("запрет",
       [
@@ -1115,6 +2510,78 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "запретом" , lfLemma = "запрет" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("заряд",
+      [
+        LexemeForm { lfSurface = "заряд" , lfLemma = "заряд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "заряд" , lfLemma = "заряд" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "заряд" , lfLemma = "заряд" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "заряд" , lfLemma = "заряд" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("зарядом",
+      [
+        LexemeForm { lfSurface = "зарядом" , lfLemma = "заряд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("звезда",
+      [
+        LexemeForm { lfSurface = "звезда" , lfLemma = "звезда" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "звезда" , lfLemma = "звезда" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "звезда" , lfLemma = "звезда" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("звездой",
+      [
+        LexemeForm { lfSurface = "звездой" , lfLemma = "звезда" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("звезду",
+      [
+        LexemeForm { lfSurface = "звезду" , lfLemma = "звезда" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("звено",
+      [
+        LexemeForm { lfSurface = "звено" , lfLemma = "звено" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "звено" , lfLemma = "звено" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "звено" , lfLemma = "звено" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "звено" , lfLemma = "звено" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("звеном",
+      [
+        LexemeForm { lfSurface = "звеном" , lfLemma = "звено" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("звук",
+      [
+        LexemeForm { lfSurface = "звук" , lfLemma = "звук" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "звук" , lfLemma = "звук" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "звук" , lfLemma = "звук" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "звук" , lfLemma = "звук" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("звуком",
+      [
+        LexemeForm { lfSurface = "звуком" , lfLemma = "звук" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("землей",
+      [
+        LexemeForm { lfSurface = "землей" , lfLemma = "земля" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("землю",
+      [
+        LexemeForm { lfSurface = "землю" , lfLemma = "земля" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("земля",
+      [
+        LexemeForm { lfSurface = "земля" , lfLemma = "земля" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "земля" , lfLemma = "земля" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "земля" , lfLemma = "земля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("знак",
+      [
+        LexemeForm { lfSurface = "знак" , lfLemma = "знак" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "знак" , lfLemma = "знак" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "знак" , lfLemma = "знак" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "знак" , lfLemma = "знак" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("знаком",
+      [
+        LexemeForm { lfSurface = "знаком" , lfLemma = "знак" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
     ("знать",
       [
         LexemeForm { lfSurface = "знать" , lfLemma = "знать" , lfPOS = "verb" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
@@ -1122,6 +2589,77 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "знать" , lfLemma = "знать" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "знать" , lfLemma = "знать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "знать" , lfLemma = "знать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("зона",
+      [
+        LexemeForm { lfSurface = "зона" , lfLemma = "зона" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "зона" , lfLemma = "зона" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "зона" , lfLemma = "зона" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("зоной",
+      [
+        LexemeForm { lfSurface = "зоной" , lfLemma = "зона" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("зону",
+      [
+        LexemeForm { lfSurface = "зону" , lfLemma = "зона" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("игла",
+      [
+        LexemeForm { lfSurface = "игла" , lfLemma = "игла" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "игла" , lfLemma = "игла" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "игла" , lfLemma = "игла" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("иглой",
+      [
+        LexemeForm { lfSurface = "иглой" , lfLemma = "игла" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("иглу",
+      [
+        LexemeForm { lfSurface = "иглу" , lfLemma = "игла" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("игра",
+      [
+        LexemeForm { lfSurface = "игра" , lfLemma = "игра" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "игра" , lfLemma = "игра" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "игра" , lfLemma = "игра" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("игрой",
+      [
+        LexemeForm { lfSurface = "игрой" , lfLemma = "игра" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("игрок",
+      [
+        LexemeForm { lfSurface = "игрок" , lfLemma = "игрок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "игрок" , lfLemma = "игрок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "игрок" , lfLemma = "игрок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("игрока",
+      [
+        LexemeForm { lfSurface = "игрока" , lfLemma = "игрок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("игроком",
+      [
+        LexemeForm { lfSurface = "игроком" , lfLemma = "игрок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("игру",
+      [
+        LexemeForm { lfSurface = "игру" , lfLemma = "игра" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("идеал",
+      [
+        LexemeForm { lfSurface = "идеал" , lfLemma = "идеал" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "идеал" , lfLemma = "идеал" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "идеал" , lfLemma = "идеал" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "идеал" , lfLemma = "идеал" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("идеалом",
+      [
+        LexemeForm { lfSurface = "идеалом" , lfLemma = "идеал" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("идеей",
+      [
+        LexemeForm { lfSurface = "идеей" , lfLemma = "идея" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("идентичности",
       [
@@ -1136,6 +2674,38 @@ generatedCandidateForms =
     ("идентичностью",
       [
         LexemeForm { lfSurface = "идентичностью" , lfLemma = "идентичность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("идею",
+      [
+        LexemeForm { lfSurface = "идею" , lfLemma = "идея" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("идея",
+      [
+        LexemeForm { lfSurface = "идея" , lfLemma = "идея" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "идея" , lfLemma = "идея" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "идея" , lfLemma = "идея" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("изгиб",
+      [
+        LexemeForm { lfSurface = "изгиб" , lfLemma = "изгиб" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "изгиб" , lfLemma = "изгиб" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "изгиб" , lfLemma = "изгиб" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "изгиб" , lfLemma = "изгиб" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("изгибом",
+      [
+        LexemeForm { lfSurface = "изгибом" , lfLemma = "изгиб" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("изъян",
+      [
+        LexemeForm { lfSurface = "изъян" , lfLemma = "изъян" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "изъян" , lfLemma = "изъян" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "изъян" , lfLemma = "изъян" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "изъян" , lfLemma = "изъян" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("изъяном",
+      [
+        LexemeForm { lfSurface = "изъяном" , lfLemma = "изъян" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
       ]),
     ("иллюзией",
       [
@@ -1222,6 +2792,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "исключения" , lfLemma = "исключение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("искусство",
+      [
+        LexemeForm { lfSurface = "искусство" , lfLemma = "искусство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "искусство" , lfLemma = "искусство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "искусство" , lfLemma = "искусство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "искусство" , lfLemma = "искусство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("искусством",
+      [
+        LexemeForm { lfSurface = "искусством" , lfLemma = "искусство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
     ("истина",
       [
         LexemeForm { lfSurface = "истина" , lfLemma = "истина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -1256,6 +2837,142 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "истины" , lfLemma = "истина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("историей",
+      [
+        LexemeForm { lfSurface = "историей" , lfLemma = "история" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("историю",
+      [
+        LexemeForm { lfSurface = "историю" , lfLemma = "история" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("история",
+      [
+        LexemeForm { lfSurface = "история" , lfLemma = "история" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "история" , lfLemma = "история" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "история" , lfLemma = "история" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("итог",
+      [
+        LexemeForm { lfSurface = "итог" , lfLemma = "итог" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "итог" , lfLemma = "итог" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "итог" , lfLemma = "итог" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "итог" , lfLemma = "итог" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("итогом",
+      [
+        LexemeForm { lfSurface = "итогом" , lfLemma = "итог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кадр",
+      [
+        LexemeForm { lfSurface = "кадр" , lfLemma = "кадр" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "кадр" , lfLemma = "кадр" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "кадр" , lfLemma = "кадр" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "кадр" , lfLemma = "кадр" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("кадром",
+      [
+        LexemeForm { lfSurface = "кадром" , lfLemma = "кадр" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("камень",
+      [
+        LexemeForm { lfSurface = "камень" , lfLemma = "камень" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "камень" , lfLemma = "камень" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "камень" , lfLemma = "камень" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "камень" , lfLemma = "камень" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("камнем",
+      [
+        LexemeForm { lfSurface = "камнем" , lfLemma = "камень" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("канал",
+      [
+        LexemeForm { lfSurface = "канал" , lfLemma = "канал" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "канал" , lfLemma = "канал" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "канал" , lfLemma = "канал" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "канал" , lfLemma = "канал" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("каналом",
+      [
+        LexemeForm { lfSurface = "каналом" , lfLemma = "канал" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("каплей",
+      [
+        LexemeForm { lfSurface = "каплей" , lfLemma = "капля" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("каплю",
+      [
+        LexemeForm { lfSurface = "каплю" , lfLemma = "капля" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("капля",
+      [
+        LexemeForm { lfSurface = "капля" , lfLemma = "капля" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "капля" , lfLemma = "капля" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "капля" , lfLemma = "капля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("карма",
+      [
+        LexemeForm { lfSurface = "карма" , lfLemma = "карма" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "карма" , lfLemma = "карма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "карма" , lfLemma = "карма" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("кармой",
+      [
+        LexemeForm { lfSurface = "кармой" , lfLemma = "карма" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("карму",
+      [
+        LexemeForm { lfSurface = "карму" , lfLemma = "карма" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("карри",
+      [
+        LexemeForm { lfSurface = "карри" , lfLemma = "карри" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "карри" , lfLemma = "карри" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "карри" , lfLemma = "карри" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "карри" , lfLemma = "карри" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("карриом",
+      [
+        LexemeForm { lfSurface = "карриом" , lfLemma = "карри" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("карта",
+      [
+        LexemeForm { lfSurface = "карта" , lfLemma = "карта" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "карта" , lfLemma = "карта" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "карта" , lfLemma = "карта" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("картина",
+      [
+        LexemeForm { lfSurface = "картина" , lfLemma = "картина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "картина" , lfLemma = "картина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "картина" , lfLemma = "картина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("картиной",
+      [
+        LexemeForm { lfSurface = "картиной" , lfLemma = "картина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("картину",
+      [
+        LexemeForm { lfSurface = "картину" , lfLemma = "картина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("картой",
+      [
+        LexemeForm { lfSurface = "картой" , lfLemma = "карта" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("карту",
+      [
+        LexemeForm { lfSurface = "карту" , lfLemma = "карта" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("качество",
+      [
+        LexemeForm { lfSurface = "качество" , lfLemma = "качество" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "качество" , lfLemma = "качество" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "качество" , lfLemma = "качество" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "качество" , lfLemma = "качество" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("качеством",
+      [
+        LexemeForm { lfSurface = "качеством" , lfLemma = "качество" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("квантор",
       [
         LexemeForm { lfSurface = "квантор" , lfLemma = "квантор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 },
@@ -1272,6 +2989,154 @@ generatedCandidateForms =
     ("квантором",
       [
         LexemeForm { lfSurface = "квантором" , lfLemma = "квантор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
+      ]),
+    ("кейс",
+      [
+        LexemeForm { lfSurface = "кейс" , lfLemma = "кейс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кейс" , lfLemma = "кейс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кейс" , lfLemma = "кейс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кейс" , lfLemma = "кейс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кейсом",
+      [
+        LexemeForm { lfSurface = "кейсом" , lfLemma = "кейс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кивком",
+      [
+        LexemeForm { lfSurface = "кивком" , lfLemma = "кивок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("кивок",
+      [
+        LexemeForm { lfSurface = "кивок" , lfLemma = "кивок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "кивок" , lfLemma = "кивок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "кивок" , lfLemma = "кивок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "кивок" , lfLemma = "кивок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("класс",
+      [
+        LexemeForm { lfSurface = "класс" , lfLemma = "класс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "класс" , lfLemma = "класс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "класс" , lfLemma = "класс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "класс" , lfLemma = "класс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("классом",
+      [
+        LexemeForm { lfSurface = "классом" , lfLemma = "класс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("клик",
+      [
+        LexemeForm { lfSurface = "клик" , lfLemma = "клик" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "клик" , lfLemma = "клик" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "клик" , lfLemma = "клик" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "клик" , lfLemma = "клик" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("кликом",
+      [
+        LexemeForm { lfSurface = "кликом" , lfLemma = "клик" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("клуб",
+      [
+        LexemeForm { lfSurface = "клуб" , lfLemma = "клуб" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "клуб" , lfLemma = "клуб" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "клуб" , lfLemma = "клуб" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "клуб" , lfLemma = "клуб" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("клубом",
+      [
+        LexemeForm { lfSurface = "клубом" , lfLemma = "клуб" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("ключ",
+      [
+        LexemeForm { lfSurface = "ключ" , lfLemma = "ключ" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ключ" , lfLemma = "ключ" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ключ" , lfLemma = "ключ" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ключ" , lfLemma = "ключ" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ключом",
+      [
+        LexemeForm { lfSurface = "ключом" , lfLemma = "ключ" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("книга",
+      [
+        LexemeForm { lfSurface = "книга" , lfLemma = "книга" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "книга" , lfLemma = "книга" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "книга" , lfLemma = "книга" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("книгой",
+      [
+        LexemeForm { lfSurface = "книгой" , lfLemma = "книга" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("книгу",
+      [
+        LexemeForm { lfSurface = "книгу" , lfLemma = "книга" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("код",
+      [
+        LexemeForm { lfSurface = "код" , lfLemma = "код" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "код" , lfLemma = "код" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "код" , lfLemma = "код" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "код" , lfLemma = "код" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кодом",
+      [
+        LexemeForm { lfSurface = "кодом" , lfLemma = "код" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кожа",
+      [
+        LexemeForm { lfSurface = "кожа" , lfLemma = "кожа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кожа" , lfLemma = "кожа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кожа" , lfLemma = "кожа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кожей",
+      [
+        LexemeForm { lfSurface = "кожей" , lfLemma = "кожа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кожу",
+      [
+        LexemeForm { lfSurface = "кожу" , lfLemma = "кожа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("количество",
+      [
+        LexemeForm { lfSurface = "количество" , lfLemma = "количество" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "количество" , lfLemma = "количество" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "количество" , lfLemma = "количество" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "количество" , lfLemma = "количество" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("количеством",
+      [
+        LexemeForm { lfSurface = "количеством" , lfLemma = "количество" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ком",
+      [
+        LexemeForm { lfSurface = "ком" , lfLemma = "ком" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "ком" , lfLemma = "ком" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "ком" , lfLemma = "ком" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "ком" , lfLemma = "ком" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("комом",
+      [
+        LexemeForm { lfSurface = "комом" , lfLemma = "ком" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("конец",
+      [
+        LexemeForm { lfSurface = "конец" , lfLemma = "конец" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "конец" , lfLemma = "конец" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "конец" , lfLemma = "конец" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "конец" , lfLemma = "конец" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("конкретика",
+      [
+        LexemeForm { lfSurface = "конкретика" , lfLemma = "конкретика" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "конкретика" , lfLemma = "конкретика" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "конкретика" , lfLemma = "конкретика" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("конкретикой",
+      [
+        LexemeForm { lfSurface = "конкретикой" , lfLemma = "конкретика" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("конкретику",
+      [
+        LexemeForm { lfSurface = "конкретику" , lfLemma = "конкретика" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
       ]),
     ("контакт",
       [
@@ -1341,6 +3206,34 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "конфронтация" , lfLemma = "конфронтация" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("концом",
+      [
+        LexemeForm { lfSurface = "концом" , lfLemma = "конец" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("копией",
+      [
+        LexemeForm { lfSurface = "копией" , lfLemma = "копия" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 }
+      ]),
+    ("копию",
+      [
+        LexemeForm { lfSurface = "копию" , lfLemma = "копия" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 }
+      ]),
+    ("копия",
+      [
+        LexemeForm { lfSurface = "копия" , lfLemma = "копия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 },
+        LexemeForm { lfSurface = "копия" , lfLemma = "копия" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 },
+        LexemeForm { lfSurface = "копия" , lfLemma = "копия" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 }
+      ]),
+    ("кора",
+      [
+        LexemeForm { lfSurface = "кора" , lfLemma = "кора" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кора" , lfLemma = "кора" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кора" , lfLemma = "кора" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("корой",
+      [
+        LexemeForm { lfSurface = "корой" , lfLemma = "кора" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("королларием",
       [
         LexemeForm { lfSurface = "королларием" , lfLemma = "королларий" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
@@ -1372,6 +3265,96 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "корректностью" , lfLemma = "корректность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("кору",
+      [
+        LexemeForm { lfSurface = "кору" , lfLemma = "кора" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кот",
+      [
+        LexemeForm { lfSurface = "кот" , lfLemma = "кот" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 },
+        LexemeForm { lfSurface = "кот" , lfLemma = "кот" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 },
+        LexemeForm { lfSurface = "кот" , lfLemma = "кот" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 }
+      ]),
+    ("кота",
+      [
+        LexemeForm { lfSurface = "кота" , lfLemma = "кот" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 }
+      ]),
+    ("котом",
+      [
+        LexemeForm { lfSurface = "котом" , lfLemma = "кот" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 }
+      ]),
+    ("кофе",
+      [
+        LexemeForm { lfSurface = "кофе" , lfLemma = "кофе" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кофе" , lfLemma = "кофе" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кофе" , lfLemma = "кофе" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кофе" , lfLemma = "кофе" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кофем",
+      [
+        LexemeForm { lfSurface = "кофем" , lfLemma = "кофе" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("краем",
+      [
+        LexemeForm { lfSurface = "краем" , lfLemma = "край" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("кража",
+      [
+        LexemeForm { lfSurface = "кража" , lfLemma = "кража" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "кража" , lfLemma = "кража" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "кража" , lfLemma = "кража" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("кражей",
+      [
+        LexemeForm { lfSurface = "кражей" , lfLemma = "кража" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("кражу",
+      [
+        LexemeForm { lfSurface = "кражу" , lfLemma = "кража" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("край",
+      [
+        LexemeForm { lfSurface = "край" , lfLemma = "край" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "край" , lfLemma = "край" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "край" , lfLemma = "край" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "край" , lfLemma = "край" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("крах",
+      [
+        LexemeForm { lfSurface = "крах" , lfLemma = "крах" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "крах" , lfLemma = "крах" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "крах" , lfLemma = "крах" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "крах" , lfLemma = "крах" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("крахом",
+      [
+        LexemeForm { lfSurface = "крахом" , lfLemma = "крах" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("кривизна",
+      [
+        LexemeForm { lfSurface = "кривизна" , lfLemma = "кривизна" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "кривизна" , lfLemma = "кривизна" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "кривизна" , lfLemma = "кривизна" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("кривизной",
+      [
+        LexemeForm { lfSurface = "кривизной" , lfLemma = "кривизна" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("кривизну",
+      [
+        LexemeForm { lfSurface = "кривизну" , lfLemma = "кривизна" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("крик",
+      [
+        LexemeForm { lfSurface = "крик" , lfLemma = "крик" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "крик" , lfLemma = "крик" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "крик" , lfLemma = "крик" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "крик" , lfLemma = "крик" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("криком",
+      [
+        LexemeForm { lfSurface = "криком" , lfLemma = "крик" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
     ("критерием",
       [
         LexemeForm { lfSurface = "критерием" , lfLemma = "критерий" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
@@ -1388,6 +3371,104 @@ generatedCandidateForms =
     ("критерия",
       [
         LexemeForm { lfSurface = "критерия" , lfLemma = "критерий" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("крон",
+      [
+        LexemeForm { lfSurface = "крон" , lfLemma = "крон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.78 },
+        LexemeForm { lfSurface = "крон" , lfLemma = "крон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.78 },
+        LexemeForm { lfSurface = "крон" , lfLemma = "крон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.78 },
+        LexemeForm { lfSurface = "крон" , lfLemma = "крон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.78 }
+      ]),
+    ("кроном",
+      [
+        LexemeForm { lfSurface = "кроном" , lfLemma = "крон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.78 }
+      ]),
+    ("круг",
+      [
+        LexemeForm { lfSurface = "круг" , lfLemma = "круг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "круг" , lfLemma = "круг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "круг" , lfLemma = "круг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "круг" , lfLemma = "круг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кругом",
+      [
+        LexemeForm { lfSurface = "кругом" , lfLemma = "круг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кулак",
+      [
+        LexemeForm { lfSurface = "кулак" , lfLemma = "кулак" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "кулак" , lfLemma = "кулак" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "кулак" , lfLemma = "кулак" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "кулак" , lfLemma = "кулак" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("кулаком",
+      [
+        LexemeForm { lfSurface = "кулаком" , lfLemma = "кулак" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("культура",
+      [
+        LexemeForm { lfSurface = "культура" , lfLemma = "культура" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "культура" , lfLemma = "культура" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "культура" , lfLemma = "культура" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("культурой",
+      [
+        LexemeForm { lfSurface = "культурой" , lfLemma = "культура" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("культуру",
+      [
+        LexemeForm { lfSurface = "культуру" , lfLemma = "культура" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кун",
+      [
+        LexemeForm { lfSurface = "кун" , lfLemma = "кун" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "кун" , lfLemma = "кун" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "кун" , lfLemma = "кун" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "кун" , lfLemma = "кун" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("куном",
+      [
+        LexemeForm { lfSurface = "куном" , lfLemma = "кун" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("курс",
+      [
+        LexemeForm { lfSurface = "курс" , lfLemma = "курс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "курс" , lfLemma = "курс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "курс" , lfLemma = "курс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "курс" , lfLemma = "курс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("курсом",
+      [
+        LexemeForm { lfSurface = "курсом" , lfLemma = "курс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кэш",
+      [
+        LexemeForm { lfSurface = "кэш" , lfLemma = "кэш" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кэш" , lfLemma = "кэш" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кэш" , lfLemma = "кэш" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "кэш" , lfLemma = "кэш" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("кэшем",
+      [
+        LexemeForm { lfSurface = "кэшем" , lfLemma = "кэш" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лайк",
+      [
+        LexemeForm { lfSurface = "лайк" , lfLemma = "лайк" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лайк" , lfLemma = "лайк" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лайк" , lfLemma = "лайк" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лайк" , lfLemma = "лайк" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("лайком",
+      [
+        LexemeForm { lfSurface = "лайком" , lfLemma = "лайк" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("лед",
+      [
+        LexemeForm { lfSurface = "лед" , lfLemma = "лед" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.796 },
+        LexemeForm { lfSurface = "лед" , lfLemma = "лед" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.796 },
+        LexemeForm { lfSurface = "лед" , lfLemma = "лед" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.796 },
+        LexemeForm { lfSurface = "лед" , lfLemma = "лед" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.796 }
       ]),
     ("лемма",
       [
@@ -1409,10 +3490,123 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "леммы" , lfLemma = "лемма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("лента",
+      [
+        LexemeForm { lfSurface = "лента" , lfLemma = "лента" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лента" , lfLemma = "лента" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лента" , lfLemma = "лента" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лентой",
+      [
+        LexemeForm { lfSurface = "лентой" , lfLemma = "лента" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ленту",
+      [
+        LexemeForm { lfSurface = "ленту" , lfLemma = "лента" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лень",
+      [
+        LexemeForm { lfSurface = "лень" , lfLemma = "лень" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "лень" , lfLemma = "лень" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "лень" , lfLemma = "лень" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "лень" , lfLemma = "лень" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("ленью",
+      [
+        LexemeForm { lfSurface = "ленью" , lfLemma = "лень" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("лес",
+      [
+        LexemeForm { lfSurface = "лес" , lfLemma = "лес" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "лес" , lfLemma = "лес" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "лес" , lfLemma = "лес" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "лес" , lfLemma = "лес" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("лесом",
+      [
+        LexemeForm { lfSurface = "лесом" , lfLemma = "лес" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
     ("лжи",
       [
         LexemeForm { lfSurface = "лжи" , lfLemma = "ложь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
         LexemeForm { lfSurface = "лжи" , lfLemma = "ложь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("лидер",
+      [
+        LexemeForm { lfSurface = "лидер" , lfLemma = "лидер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "лидер" , lfLemma = "лидер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "лидер" , lfLemma = "лидер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("лидера",
+      [
+        LexemeForm { lfSurface = "лидера" , lfLemma = "лидер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("лидером",
+      [
+        LexemeForm { lfSurface = "лидером" , lfLemma = "лидер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("линза",
+      [
+        LexemeForm { lfSurface = "линза" , lfLemma = "линза" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "линза" , lfLemma = "линза" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "линза" , lfLemma = "линза" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("линзой",
+      [
+        LexemeForm { lfSurface = "линзой" , lfLemma = "линза" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("линзу",
+      [
+        LexemeForm { lfSurface = "линзу" , lfLemma = "линза" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("линией",
+      [
+        LexemeForm { lfSurface = "линией" , lfLemma = "линия" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("линию",
+      [
+        LexemeForm { lfSurface = "линию" , lfLemma = "линия" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("линия",
+      [
+        LexemeForm { lfSurface = "линия" , lfLemma = "линия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "линия" , lfLemma = "линия" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "линия" , lfLemma = "линия" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лист",
+      [
+        LexemeForm { lfSurface = "лист" , lfLemma = "лист" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лист" , lfLemma = "лист" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лист" , lfLemma = "лист" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "лист" , lfLemma = "лист" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("листом",
+      [
+        LexemeForm { lfSurface = "листом" , lfLemma = "лист" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("лицо",
+      [
+        LexemeForm { lfSurface = "лицо" , lfLemma = "лицо" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лицо" , lfLemma = "лицо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лицо" , lfLemma = "лицо" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лицо" , lfLemma = "лицо" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лицом",
+      [
+        LexemeForm { lfSurface = "лицом" , lfLemma = "лицо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("лог",
+      [
+        LexemeForm { lfSurface = "лог" , lfLemma = "лог" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лог" , lfLemma = "лог" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лог" , lfLemma = "лог" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "лог" , lfLemma = "лог" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("логик",
+      [
+        LexemeForm { lfSurface = "логик" , lfLemma = "логик" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "логик" , lfLemma = "логик" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "логик" , lfLemma = "логик" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("логика",
       [
@@ -1430,9 +3624,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "логикой" , lfLemma = "логика" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("логиком",
+      [
+        LexemeForm { lfSurface = "логиком" , lfLemma = "логик" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("логику",
       [
         LexemeForm { lfSurface = "логику" , lfLemma = "логика" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("логом",
+      [
+        LexemeForm { lfSurface = "логом" , lfLemma = "лог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("ложь",
       [
@@ -1442,6 +3644,35 @@ generatedCandidateForms =
     ("ложью",
       [
         LexemeForm { lfSurface = "ложью" , lfLemma = "ложь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("луна",
+      [
+        LexemeForm { lfSurface = "луна" , lfLemma = "луна" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "луна" , lfLemma = "луна" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "луна" , lfLemma = "луна" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("луной",
+      [
+        LexemeForm { lfSurface = "луной" , lfLemma = "луна" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("луну",
+      [
+        LexemeForm { lfSurface = "луну" , lfLemma = "луна" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("луч",
+      [
+        LexemeForm { lfSurface = "луч" , lfLemma = "луч" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "луч" , lfLemma = "луч" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "луч" , lfLemma = "луч" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "луч" , lfLemma = "луч" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("лучом",
+      [
+        LexemeForm { lfSurface = "лучом" , lfLemma = "луч" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("льдом",
+      [
+        LexemeForm { lfSurface = "льдом" , lfLemma = "лед" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.796 }
       ]),
     ("любви",
       [
@@ -1457,6 +3688,136 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "любовью" , lfLemma = "любовь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("магией",
+      [
+        LexemeForm { lfSurface = "магией" , lfLemma = "магия" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.794 }
+      ]),
+    ("магию",
+      [
+        LexemeForm { lfSurface = "магию" , lfLemma = "магия" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.794 }
+      ]),
+    ("магия",
+      [
+        LexemeForm { lfSurface = "магия" , lfLemma = "магия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.794 },
+        LexemeForm { lfSurface = "магия" , lfLemma = "магия" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.794 },
+        LexemeForm { lfSurface = "магия" , lfLemma = "магия" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.794 }
+      ]),
+    ("манер",
+      [
+        LexemeForm { lfSurface = "манер" , lfLemma = "манер" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "манер" , lfLemma = "манер" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "манер" , lfLemma = "манер" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "манер" , lfLemma = "манер" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("манером",
+      [
+        LexemeForm { lfSurface = "манером" , lfLemma = "манер" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("мастерство",
+      [
+        LexemeForm { lfSurface = "мастерство" , lfLemma = "мастерство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "мастерство" , lfLemma = "мастерство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "мастерство" , lfLemma = "мастерство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "мастерство" , lfLemma = "мастерство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("мастерством",
+      [
+        LexemeForm { lfSurface = "мастерством" , lfLemma = "мастерство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("маяк",
+      [
+        LexemeForm { lfSurface = "маяк" , lfLemma = "маяк" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "маяк" , lfLemma = "маяк" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "маяк" , lfLemma = "маяк" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "маяк" , lfLemma = "маяк" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("маяком",
+      [
+        LexemeForm { lfSurface = "маяком" , lfLemma = "маяк" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("мера",
+      [
+        LexemeForm { lfSurface = "мера" , lfLemma = "мера" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мера" , lfLemma = "мера" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мера" , lfLemma = "мера" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мерой",
+      [
+        LexemeForm { lfSurface = "мерой" , lfLemma = "мера" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("меру",
+      [
+        LexemeForm { lfSurface = "меру" , lfLemma = "мера" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("место",
+      [
+        LexemeForm { lfSurface = "место" , lfLemma = "место" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "место" , lfLemma = "место" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "место" , lfLemma = "место" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "место" , lfLemma = "место" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("местом",
+      [
+        LexemeForm { lfSurface = "местом" , lfLemma = "место" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("месяц",
+      [
+        LexemeForm { lfSurface = "месяц" , lfLemma = "месяц" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "месяц" , lfLemma = "месяц" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "месяц" , lfLemma = "месяц" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "месяц" , lfLemma = "месяц" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("месяцем",
+      [
+        LexemeForm { lfSurface = "месяцем" , lfLemma = "месяц" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("миг",
+      [
+        LexemeForm { lfSurface = "миг" , lfLemma = "миг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "миг" , lfLemma = "миг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "миг" , lfLemma = "миг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "миг" , lfLemma = "миг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("мигом",
+      [
+        LexemeForm { lfSurface = "мигом" , lfLemma = "миг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("минута",
+      [
+        LexemeForm { lfSurface = "минута" , lfLemma = "минута" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "минута" , lfLemma = "минута" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 },
+        LexemeForm { lfSurface = "минута" , lfLemma = "минута" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("минутой",
+      [
+        LexemeForm { lfSurface = "минутой" , lfLemma = "минута" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("минуту",
+      [
+        LexemeForm { lfSurface = "минуту" , lfLemma = "минута" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.878 }
+      ]),
+    ("мир",
+      [
+        LexemeForm { lfSurface = "мир" , lfLemma = "мир" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мир" , lfLemma = "мир" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мир" , lfLemma = "мир" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мир" , lfLemma = "мир" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("миром",
+      [
+        LexemeForm { lfSurface = "миром" , lfLemma = "мир" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("миф",
+      [
+        LexemeForm { lfSurface = "миф" , lfLemma = "миф" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "миф" , lfLemma = "миф" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "миф" , lfLemma = "миф" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "миф" , lfLemma = "миф" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мифом",
+      [
+        LexemeForm { lfSurface = "мифом" , lfLemma = "миф" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("модальности",
       [
         LexemeForm { lfSurface = "модальности" , lfLemma = "модальность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 },
@@ -1470,6 +3831,17 @@ generatedCandidateForms =
     ("модальностью",
       [
         LexemeForm { lfSurface = "модальностью" , lfLemma = "модальность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
+      ]),
+    ("мозг",
+      [
+        LexemeForm { lfSurface = "мозг" , lfLemma = "мозг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мозг" , lfLemma = "мозг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мозг" , lfLemma = "мозг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мозг" , lfLemma = "мозг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мозгом",
+      [
+        LexemeForm { lfSurface = "мозгом" , lfLemma = "мозг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("молчание",
       [
@@ -1488,6 +3860,42 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "молчания" , lfLemma = "молчание" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("мост",
+      [
+        LexemeForm { lfSurface = "мост" , lfLemma = "мост" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мост" , lfLemma = "мост" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мост" , lfLemma = "мост" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мост" , lfLemma = "мост" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мостом",
+      [
+        LexemeForm { lfSurface = "мостом" , lfLemma = "мост" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("музыка",
+      [
+        LexemeForm { lfSurface = "музыка" , lfLemma = "музыка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "музыка" , lfLemma = "музыка" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "музыка" , lfLemma = "музыка" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("музыкой",
+      [
+        LexemeForm { lfSurface = "музыкой" , lfLemma = "музыка" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("музыку",
+      [
+        LexemeForm { lfSurface = "музыку" , lfLemma = "музыка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мусор",
+      [
+        LexemeForm { lfSurface = "мусор" , lfLemma = "мусор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "мусор" , lfLemma = "мусор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "мусор" , lfLemma = "мусор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "мусор" , lfLemma = "мусор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("мусором",
+      [
+        LexemeForm { lfSurface = "мусором" , lfLemma = "мусор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
     ("мыслить",
       [
         LexemeForm { lfSurface = "мыслить" , lfLemma = "мыслить" , lfPOS = "verb" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
@@ -1495,6 +3903,17 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "мыслить" , lfLemma = "мыслить" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "мыслить" , lfLemma = "мыслить" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "мыслить" , lfLemma = "мыслить" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("мысль",
+      [
+        LexemeForm { lfSurface = "мысль" , lfLemma = "мысль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мысль" , lfLemma = "мысль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мысль" , lfLemma = "мысль" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "мысль" , lfLemma = "мысль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("мыслью",
+      [
+        LexemeForm { lfSurface = "мыслью" , lfLemma = "мысль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("надежда",
       [
@@ -1547,6 +3966,70 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "назначения" , lfLemma = "назначение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("народ",
+      [
+        LexemeForm { lfSurface = "народ" , lfLemma = "народ" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "народ" , lfLemma = "народ" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "народ" , lfLemma = "народ" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "народ" , lfLemma = "народ" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("народом",
+      [
+        LexemeForm { lfSurface = "народом" , lfLemma = "народ" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("наука",
+      [
+        LexemeForm { lfSurface = "наука" , lfLemma = "наука" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "наука" , lfLemma = "наука" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "наука" , lfLemma = "наука" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("наукой",
+      [
+        LexemeForm { lfSurface = "наукой" , lfLemma = "наука" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("науку",
+      [
+        LexemeForm { lfSurface = "науку" , lfLemma = "наука" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("небо",
+      [
+        LexemeForm { lfSurface = "небо" , lfLemma = "небо" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "небо" , lfLemma = "небо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "небо" , lfLemma = "небо" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "небо" , lfLemma = "небо" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("небом",
+      [
+        LexemeForm { lfSurface = "небом" , lfLemma = "небо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("неделей",
+      [
+        LexemeForm { lfSurface = "неделей" , lfLemma = "неделя" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("неделю",
+      [
+        LexemeForm { lfSurface = "неделю" , lfLemma = "неделя" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("неделя",
+      [
+        LexemeForm { lfSurface = "неделя" , lfLemma = "неделя" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "неделя" , lfLemma = "неделя" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "неделя" , lfLemma = "неделя" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("немота",
+      [
+        LexemeForm { lfSurface = "немота" , lfLemma = "немота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "немота" , lfLemma = "немота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "немота" , lfLemma = "немота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("немотой",
+      [
+        LexemeForm { lfSurface = "немотой" , lfLemma = "немота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("немоту",
+      [
+        LexemeForm { lfSurface = "немоту" , lfLemma = "немота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
     ("необходимости",
       [
         LexemeForm { lfSurface = "необходимости" , lfLemma = "необходимость" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -1574,6 +4057,17 @@ generatedCandidateForms =
     ("непротиворечивостью",
       [
         LexemeForm { lfSurface = "непротиворечивостью" , lfLemma = "непротиворечивость" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
+      ]),
+    ("нерв",
+      [
+        LexemeForm { lfSurface = "нерв" , lfLemma = "нерв" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "нерв" , lfLemma = "нерв" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "нерв" , lfLemma = "нерв" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "нерв" , lfLemma = "нерв" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("нервом",
+      [
+        LexemeForm { lfSurface = "нервом" , lfLemma = "нерв" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
       ]),
     ("несовместимости",
       [
@@ -1605,6 +4099,84 @@ generatedCandidateForms =
     ("ничтом",
       [
         LexemeForm { lfSurface = "ничтом" , lfLemma = "ничто" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("ниша",
+      [
+        LexemeForm { lfSurface = "ниша" , lfLemma = "ниша" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.778 },
+        LexemeForm { lfSurface = "ниша" , lfLemma = "ниша" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.778 },
+        LexemeForm { lfSurface = "ниша" , lfLemma = "ниша" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.778 }
+      ]),
+    ("нишей",
+      [
+        LexemeForm { lfSurface = "нишей" , lfLemma = "ниша" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.778 }
+      ]),
+    ("нишу",
+      [
+        LexemeForm { lfSurface = "нишу" , lfLemma = "ниша" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.778 }
+      ]),
+    ("новизна",
+      [
+        LexemeForm { lfSurface = "новизна" , lfLemma = "новизна" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "новизна" , lfLemma = "новизна" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "новизна" , lfLemma = "новизна" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("новизной",
+      [
+        LexemeForm { lfSurface = "новизной" , lfLemma = "новизна" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("новизну",
+      [
+        LexemeForm { lfSurface = "новизну" , lfLemma = "новизна" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("нога",
+      [
+        LexemeForm { lfSurface = "нога" , lfLemma = "нога" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "нога" , lfLemma = "нога" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "нога" , lfLemma = "нога" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ногой",
+      [
+        LexemeForm { lfSurface = "ногой" , lfLemma = "нога" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ногу",
+      [
+        LexemeForm { lfSurface = "ногу" , lfLemma = "нога" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("нолем",
+      [
+        LexemeForm { lfSurface = "нолем" , lfLemma = "ноль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("ноль",
+      [
+        LexemeForm { lfSurface = "ноль" , lfLemma = "ноль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "ноль" , lfLemma = "ноль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "ноль" , lfLemma = "ноль" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "ноль" , lfLemma = "ноль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("нота",
+      [
+        LexemeForm { lfSurface = "нота" , lfLemma = "нота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "нота" , lfLemma = "нота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "нота" , lfLemma = "нота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("нотой",
+      [
+        LexemeForm { lfSurface = "нотой" , lfLemma = "нота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ноту",
+      [
+        LexemeForm { lfSurface = "ноту" , lfLemma = "нота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("нулем",
+      [
+        LexemeForm { lfSurface = "нулем" , lfLemma = "нуль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("нуль",
+      [
+        LexemeForm { lfSurface = "нуль" , lfLemma = "нуль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "нуль" , lfLemma = "нуль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "нуль" , lfLemma = "нуль" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "нуль" , lfLemma = "нуль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
       ]),
     ("обида",
       [
@@ -1642,6 +4214,28 @@ generatedCandidateForms =
     ("обоснования",
       [
         LexemeForm { lfSurface = "обоснования" , lfLemma = "обоснование" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("образ",
+      [
+        LexemeForm { lfSurface = "образ" , lfLemma = "образ" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "образ" , lfLemma = "образ" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "образ" , lfLemma = "образ" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "образ" , lfLemma = "образ" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("образом",
+      [
+        LexemeForm { lfSurface = "образом" , lfLemma = "образ" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("общество",
+      [
+        LexemeForm { lfSurface = "общество" , lfLemma = "общество" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "общество" , lfLemma = "общество" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "общество" , lfLemma = "общество" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "общество" , lfLemma = "общество" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("обществом",
+      [
+        LexemeForm { lfSurface = "обществом" , lfLemma = "общество" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
       ]),
     ("объяснение",
       [
@@ -1691,6 +4285,20 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "обязательством" , lfLemma = "обязательство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("огнем",
+      [
+        LexemeForm { lfSurface = "огнем" , lfLemma = "огонь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("огнь",
+      [
+        LexemeForm { lfSurface = "огнь" , lfLemma = "огонь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("огонь",
+      [
+        LexemeForm { lfSurface = "огонь" , lfLemma = "огонь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "огонь" , lfLemma = "огонь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "огонь" , lfLemma = "огонь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
     ("ограничение",
       [
         LexemeForm { lfSurface = "ограничение" , lfLemma = "ограничение" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 },
@@ -1725,6 +4333,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "одиночеством" , lfLemma = "одиночество" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("окно",
+      [
+        LexemeForm { lfSurface = "окно" , lfLemma = "окно" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "окно" , lfLemma = "окно" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "окно" , lfLemma = "окно" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "окно" , lfLemma = "окно" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("окном",
+      [
+        LexemeForm { lfSurface = "окном" , lfLemma = "окно" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("описание",
       [
         LexemeForm { lfSurface = "описание" , lfLemma = "описание" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -1741,6 +4360,17 @@ generatedCandidateForms =
     ("описания",
       [
         LexemeForm { lfSurface = "описания" , lfLemma = "описание" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("опор",
+      [
+        LexemeForm { lfSurface = "опор" , lfLemma = "опор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опор" , lfLemma = "опор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опор" , lfLemma = "опор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опор" , lfLemma = "опор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("опором",
+      [
+        LexemeForm { lfSurface = "опором" , lfLemma = "опор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("определение",
       [
@@ -1776,6 +4406,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "опровержения" , lfLemma = "опровержение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("опыт",
+      [
+        LexemeForm { lfSurface = "опыт" , lfLemma = "опыт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опыт" , lfLemma = "опыт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опыт" , lfLemma = "опыт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "опыт" , lfLemma = "опыт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("опытом",
+      [
+        LexemeForm { lfSurface = "опытом" , lfLemma = "опыт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("основание",
       [
         LexemeForm { lfSurface = "основание" , lfLemma = "основание" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -1800,6 +4441,17 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "основывать" , lfLemma = "основывать" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "основывать" , lfLemma = "основывать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "основывать" , lfLemma = "основывать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("ось",
+      [
+        LexemeForm { lfSurface = "ось" , lfLemma = "ось" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "ось" , lfLemma = "ось" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "ось" , lfLemma = "ось" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "ось" , lfLemma = "ось" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("осью",
+      [
+        LexemeForm { lfSurface = "осью" , lfLemma = "ось" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
       ]),
     ("ответ",
       [
@@ -1849,6 +4501,28 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "отражения" , lfLemma = "отражение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("офис",
+      [
+        LexemeForm { lfSurface = "офис" , lfLemma = "офис" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.782 },
+        LexemeForm { lfSurface = "офис" , lfLemma = "офис" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.782 },
+        LexemeForm { lfSurface = "офис" , lfLemma = "офис" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.782 },
+        LexemeForm { lfSurface = "офис" , lfLemma = "офис" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.782 }
+      ]),
+    ("офисом",
+      [
+        LexemeForm { lfSurface = "офисом" , lfLemma = "офис" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.782 }
+      ]),
+    ("очко",
+      [
+        LexemeForm { lfSurface = "очко" , lfLemma = "очко" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "очко" , lfLemma = "очко" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "очко" , lfLemma = "очко" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "очко" , lfLemma = "очко" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("очком",
+      [
+        LexemeForm { lfSurface = "очком" , lfLemma = "очко" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("ошибка",
       [
         LexemeForm { lfSurface = "ошибка" , lfLemma = "ошибка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
@@ -1883,6 +4557,89 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "памятью" , lfLemma = "память" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("пар",
+      [
+        LexemeForm { lfSurface = "пар" , lfLemma = "пар" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пар" , lfLemma = "пар" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пар" , lfLemma = "пар" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пар" , lfLemma = "пар" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("паром",
+      [
+        LexemeForm { lfSurface = "паром" , lfLemma = "пар" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("патч",
+      [
+        LexemeForm { lfSurface = "патч" , lfLemma = "патч" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "патч" , lfLemma = "патч" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "патч" , lfLemma = "патч" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "патч" , lfLemma = "патч" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("патчем",
+      [
+        LexemeForm { lfSurface = "патчем" , lfLemma = "патч" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пинг",
+      [
+        LexemeForm { lfSurface = "пинг" , lfLemma = "пинг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пинг" , lfLemma = "пинг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пинг" , lfLemma = "пинг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пинг" , lfLemma = "пинг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("пингом",
+      [
+        LexemeForm { lfSurface = "пингом" , lfLemma = "пинг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("пир",
+      [
+        LexemeForm { lfSurface = "пир" , lfLemma = "пир" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "пир" , lfLemma = "пир" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "пир" , lfLemma = "пир" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "пир" , lfLemma = "пир" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("пиром",
+      [
+        LexemeForm { lfSurface = "пиром" , lfLemma = "пир" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("письмо",
+      [
+        LexemeForm { lfSurface = "письмо" , lfLemma = "письмо" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "письмо" , lfLemma = "письмо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "письмо" , lfLemma = "письмо" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "письмо" , lfLemma = "письмо" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("письмом",
+      [
+        LexemeForm { lfSurface = "письмом" , lfLemma = "письмо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("план",
+      [
+        LexemeForm { lfSurface = "план" , lfLemma = "план" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "план" , lfLemma = "план" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "план" , lfLemma = "план" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "план" , lfLemma = "план" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("планом",
+      [
+        LexemeForm { lfSurface = "планом" , lfLemma = "план" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("плач",
+      [
+        LexemeForm { lfSurface = "плач" , lfLemma = "плач" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "плач" , lfLemma = "плач" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "плач" , lfLemma = "плач" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "плач" , lfLemma = "плач" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("плачем",
+      [
+        LexemeForm { lfSurface = "плачем" , lfLemma = "плач" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("поза",
+      [
+        LexemeForm { lfSurface = "поза" , lfLemma = "поза" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "поза" , lfLemma = "поза" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "поза" , lfLemma = "поза" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
     ("позицией",
       [
         LexemeForm { lfSurface = "позицией" , lfLemma = "позиция" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
@@ -1899,6 +4656,53 @@ generatedCandidateForms =
     ("позиция",
       [
         LexemeForm { lfSurface = "позиция" , lfLemma = "позиция" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("позой",
+      [
+        LexemeForm { lfSurface = "позой" , lfLemma = "поза" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("позу",
+      [
+        LexemeForm { lfSurface = "позу" , lfLemma = "поза" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("пола",
+      [
+        LexemeForm { lfSurface = "пола" , lfLemma = "пола" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пола" , lfLemma = "пола" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пола" , lfLemma = "пола" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("поле",
+      [
+        LexemeForm { lfSurface = "поле" , lfLemma = "поле" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "поле" , lfLemma = "поле" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "поле" , lfLemma = "поле" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "поле" , lfLemma = "поле" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полем",
+      [
+        LexemeForm { lfSurface = "полем" , lfLemma = "поле" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полнота",
+      [
+        LexemeForm { lfSurface = "полнота" , lfLemma = "полнота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "полнота" , lfLemma = "полнота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "полнота" , lfLemma = "полнота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полнотой",
+      [
+        LexemeForm { lfSurface = "полнотой" , lfLemma = "полнота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полноту",
+      [
+        LexemeForm { lfSurface = "полноту" , lfLemma = "полнота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полой",
+      [
+        LexemeForm { lfSurface = "полой" , lfLemma = "пола" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("полу",
+      [
+        LexemeForm { lfSurface = "полу" , lfLemma = "пола" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("понимание",
       [
@@ -1942,6 +4746,53 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "понятия" , lfLemma = "понятие" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("пора",
+      [
+        LexemeForm { lfSurface = "пора" , lfLemma = "пора" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пора" , lfLemma = "пора" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пора" , lfLemma = "пора" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("порой",
+      [
+        LexemeForm { lfSurface = "порой" , lfLemma = "пора" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("порт",
+      [
+        LexemeForm { lfSurface = "порт" , lfLemma = "порт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порт" , lfLemma = "порт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порт" , lfLemma = "порт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порт" , lfLemma = "порт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("портом",
+      [
+        LexemeForm { lfSurface = "портом" , lfLemma = "порт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пору",
+      [
+        LexemeForm { lfSurface = "пору" , lfLemma = "пора" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("порядком",
+      [
+        LexemeForm { lfSurface = "порядком" , lfLemma = "порядок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("порядок",
+      [
+        LexemeForm { lfSurface = "порядок" , lfLemma = "порядок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порядок" , lfLemma = "порядок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порядок" , lfLemma = "порядок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "порядок" , lfLemma = "порядок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пост",
+      [
+        LexemeForm { lfSurface = "пост" , lfLemma = "пост" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 },
+        LexemeForm { lfSurface = "пост" , lfLemma = "пост" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 },
+        LexemeForm { lfSurface = "пост" , lfLemma = "пост" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 },
+        LexemeForm { lfSurface = "пост" , lfLemma = "пост" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 }
+      ]),
+    ("постом",
+      [
+        LexemeForm { lfSurface = "постом" , lfLemma = "пост" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.814 }
+      ]),
     ("посылка",
       [
         LexemeForm { lfSurface = "посылка" , lfLemma = "посылка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -1961,6 +4812,17 @@ generatedCandidateForms =
     ("посылку",
       [
         LexemeForm { lfSurface = "посылку" , lfLemma = "посылка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("пот",
+      [
+        LexemeForm { lfSurface = "пот" , lfLemma = "пот" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пот" , lfLemma = "пот" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пот" , lfLemma = "пот" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пот" , lfLemma = "пот" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("потом",
+      [
+        LexemeForm { lfSurface = "потом" , lfLemma = "пот" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("права",
       [
@@ -1999,6 +4861,20 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "правом" , lfLemma = "право" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("правота",
+      [
+        LexemeForm { lfSurface = "правота" , lfLemma = "правота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "правота" , lfLemma = "правота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 },
+        LexemeForm { lfSurface = "правота" , lfLemma = "правота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("правотой",
+      [
+        LexemeForm { lfSurface = "правотой" , lfLemma = "правота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
+    ("правоту",
+      [
+        LexemeForm { lfSurface = "правоту" , lfLemma = "правота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.84 }
+      ]),
     ("предположение",
       [
         LexemeForm { lfSurface = "предположение" , lfLemma = "предположение" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -2035,6 +4911,17 @@ generatedCandidateForms =
     ("предпосылку",
       [
         LexemeForm { lfSurface = "предпосылку" , lfLemma = "предпосылка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("пример",
+      [
+        LexemeForm { lfSurface = "пример" , lfLemma = "пример" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пример" , lfLemma = "пример" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пример" , lfLemma = "пример" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пример" , lfLemma = "пример" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("примером",
+      [
+        LexemeForm { lfSurface = "примером" , lfLemma = "пример" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("принуждение",
       [
@@ -2118,6 +5005,17 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "проникнуть" , lfLemma = "проникнуть" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "проникнуть" , lfLemma = "проникнуть" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
       ]),
+    ("пространство",
+      [
+        LexemeForm { lfSurface = "пространство" , lfLemma = "пространство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пространство" , lfLemma = "пространство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пространство" , lfLemma = "пространство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "пространство" , lfLemma = "пространство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пространством",
+      [
+        LexemeForm { lfSurface = "пространством" , lfLemma = "пространство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("противоречие",
       [
         LexemeForm { lfSurface = "противоречие" , lfLemma = "противоречие" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -2134,6 +5032,28 @@ generatedCandidateForms =
     ("противоречия",
       [
         LexemeForm { lfSurface = "противоречия" , lfLemma = "противоречие" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("процесс",
+      [
+        LexemeForm { lfSurface = "процесс" , lfLemma = "процесс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "процесс" , lfLemma = "процесс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "процесс" , lfLemma = "процесс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "процесс" , lfLemma = "процесс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("процессом",
+      [
+        LexemeForm { lfSurface = "процессом" , lfLemma = "процесс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пул",
+      [
+        LexemeForm { lfSurface = "пул" , lfLemma = "пул" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "пул" , lfLemma = "пул" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "пул" , lfLemma = "пул" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "пул" , lfLemma = "пул" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("пулом",
+      [
+        LexemeForm { lfSurface = "пулом" , lfLemma = "пул" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
       ]),
     ("пустота",
       [
@@ -2154,6 +5074,42 @@ generatedCandidateForms =
     ("пустоты",
       [
         LexemeForm { lfSurface = "пустоты" , lfLemma = "пустота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("путем",
+      [
+        LexemeForm { lfSurface = "путем" , lfLemma = "путь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("путь",
+      [
+        LexemeForm { lfSurface = "путь" , lfLemma = "путь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "путь" , lfLemma = "путь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "путь" , lfLemma = "путь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "путь" , lfLemma = "путь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("пыль",
+      [
+        LexemeForm { lfSurface = "пыль" , lfLemma = "пыль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пыль" , lfLemma = "пыль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пыль" , lfLemma = "пыль" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "пыль" , lfLemma = "пыль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("пылью",
+      [
+        LexemeForm { lfSurface = "пылью" , lfLemma = "пыль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("работа",
+      [
+        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("работой",
+      [
+        LexemeForm { lfSurface = "работой" , lfLemma = "работа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("работу",
+      [
+        LexemeForm { lfSurface = "работу" , lfLemma = "работа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("равносильности",
       [
@@ -2296,6 +5252,59 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "ракурсом" , lfLemma = "ракурс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("рана",
+      [
+        LexemeForm { lfSurface = "рана" , lfLemma = "рана" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рана" , lfLemma = "рана" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рана" , lfLemma = "рана" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ранг",
+      [
+        LexemeForm { lfSurface = "ранг" , lfLemma = "ранг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ранг" , lfLemma = "ранг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ранг" , lfLemma = "ранг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ранг" , lfLemma = "ранг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рангом",
+      [
+        LexemeForm { lfSurface = "рангом" , lfLemma = "ранг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("раной",
+      [
+        LexemeForm { lfSurface = "раной" , lfLemma = "рана" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рану",
+      [
+        LexemeForm { lfSurface = "рану" , lfLemma = "рана" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ребенка",
+      [
+        LexemeForm { lfSurface = "ребенка" , lfLemma = "ребенок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.811 }
+      ]),
+    ("ребенком",
+      [
+        LexemeForm { lfSurface = "ребенком" , lfLemma = "ребенок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.811 }
+      ]),
+    ("ребенок",
+      [
+        LexemeForm { lfSurface = "ребенок" , lfLemma = "ребенок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.811 },
+        LexemeForm { lfSurface = "ребенок" , lfLemma = "ребенок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.811 },
+        LexemeForm { lfSurface = "ребенок" , lfLemma = "ребенок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.811 }
+      ]),
+    ("река",
+      [
+        LexemeForm { lfSurface = "река" , lfLemma = "река" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "река" , lfLemma = "река" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 },
+        LexemeForm { lfSurface = "река" , lfLemma = "река" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("рекой",
+      [
+        LexemeForm { lfSurface = "рекой" , lfLemma = "река" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
+    ("реку",
+      [
+        LexemeForm { lfSurface = "реку" , lfLemma = "река" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.884 }
+      ]),
     ("ремонт",
       [
         LexemeForm { lfSurface = "ремонт" , lfLemma = "ремонт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 },
@@ -2329,6 +5338,130 @@ generatedCandidateForms =
     ("решения",
       [
         LexemeForm { lfSurface = "решения" , lfLemma = "решение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("риск",
+      [
+        LexemeForm { lfSurface = "риск" , lfLemma = "риск" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "риск" , lfLemma = "риск" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "риск" , lfLemma = "риск" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "риск" , lfLemma = "риск" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("риском",
+      [
+        LexemeForm { lfSurface = "риском" , lfLemma = "риск" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ритм",
+      [
+        LexemeForm { lfSurface = "ритм" , lfLemma = "ритм" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ритм" , lfLemma = "ритм" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ритм" , lfLemma = "ритм" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ритм" , lfLemma = "ритм" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ритмом",
+      [
+        LexemeForm { lfSurface = "ритмом" , lfLemma = "ритм" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("род",
+      [
+        LexemeForm { lfSurface = "род" , lfLemma = "род" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "род" , lfLemma = "род" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "род" , lfLemma = "род" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "род" , lfLemma = "род" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("родом",
+      [
+        LexemeForm { lfSurface = "родом" , lfLemma = "род" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("роль",
+      [
+        LexemeForm { lfSurface = "роль" , lfLemma = "роль" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "роль" , lfLemma = "роль" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "роль" , lfLemma = "роль" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "роль" , lfLemma = "роль" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ролью",
+      [
+        LexemeForm { lfSurface = "ролью" , lfLemma = "роль" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рост",
+      [
+        LexemeForm { lfSurface = "рост" , lfLemma = "рост" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рост" , lfLemma = "рост" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рост" , lfLemma = "рост" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рост" , lfLemma = "рост" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ростом",
+      [
+        LexemeForm { lfSurface = "ростом" , lfLemma = "рост" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рука",
+      [
+        LexemeForm { lfSurface = "рука" , lfLemma = "рука" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рука" , lfLemma = "рука" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "рука" , lfLemma = "рука" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рукой",
+      [
+        LexemeForm { lfSurface = "рукой" , lfLemma = "рука" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("руку",
+      [
+        LexemeForm { lfSurface = "руку" , lfLemma = "рука" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рябь",
+      [
+        LexemeForm { lfSurface = "рябь" , lfLemma = "рябь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "рябь" , lfLemma = "рябь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "рябь" , lfLemma = "рябь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "рябь" , lfLemma = "рябь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("рябью",
+      [
+        LexemeForm { lfSurface = "рябью" , lfLemma = "рябь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("ряд",
+      [
+        LexemeForm { lfSurface = "ряд" , lfLemma = "ряд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ряд" , lfLemma = "ряд" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ряд" , lfLemma = "ряд" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ряд" , lfLemma = "ряд" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("рядом",
+      [
+        LexemeForm { lfSurface = "рядом" , lfLemma = "ряд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("сад",
+      [
+        LexemeForm { lfSurface = "сад" , lfLemma = "сад" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сад" , lfLemma = "сад" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сад" , lfLemma = "сад" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сад" , lfLemma = "сад" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("садом",
+      [
+        LexemeForm { lfSurface = "садом" , lfLemma = "сад" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("сайт",
+      [
+        LexemeForm { lfSurface = "сайт" , lfLemma = "сайт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "сайт" , lfLemma = "сайт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "сайт" , lfLemma = "сайт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "сайт" , lfLemma = "сайт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("сайтом",
+      [
+        LexemeForm { lfSurface = "сайтом" , lfLemma = "сайт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("сбор",
+      [
+        LexemeForm { lfSurface = "сбор" , lfLemma = "сбор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "сбор" , lfLemma = "сбор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "сбор" , lfLemma = "сбор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "сбор" , lfLemma = "сбор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("сбором",
+      [
+        LexemeForm { lfSurface = "сбором" , lfLemma = "сбор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
       ]),
     ("свидетельства",
       [
@@ -2367,6 +5500,62 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "свободы" , lfLemma = "свобода" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("свойство",
+      [
+        LexemeForm { lfSurface = "свойство" , lfLemma = "свойство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "свойство" , lfLemma = "свойство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "свойство" , lfLemma = "свойство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "свойство" , lfLemma = "свойство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("свойством",
+      [
+        LexemeForm { lfSurface = "свойством" , lfLemma = "свойство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("секунда",
+      [
+        LexemeForm { lfSurface = "секунда" , lfLemma = "секунда" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "секунда" , lfLemma = "секунда" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "секунда" , lfLemma = "секунда" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("секундой",
+      [
+        LexemeForm { lfSurface = "секундой" , lfLemma = "секунда" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("секунду",
+      [
+        LexemeForm { lfSurface = "секунду" , lfLemma = "секунда" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("семьей",
+      [
+        LexemeForm { lfSurface = "семьей" , lfLemma = "семья" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.797 }
+      ]),
+    ("семью",
+      [
+        LexemeForm { lfSurface = "семью" , lfLemma = "семья" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.797 }
+      ]),
+    ("семья",
+      [
+        LexemeForm { lfSurface = "семья" , lfLemma = "семья" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.797 },
+        LexemeForm { lfSurface = "семья" , lfLemma = "семья" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.797 },
+        LexemeForm { lfSurface = "семья" , lfLemma = "семья" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.797 }
+      ]),
+    ("сердце",
+      [
+        LexemeForm { lfSurface = "сердце" , lfLemma = "сердце" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "сердце" , lfLemma = "сердце" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "сердце" , lfLemma = "сердце" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "сердце" , lfLemma = "сердце" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("сердцем",
+      [
+        LexemeForm { lfSurface = "сердцем" , lfLemma = "сердце" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("сила",
+      [
+        LexemeForm { lfSurface = "сила" , lfLemma = "сила" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сила" , lfLemma = "сила" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сила" , lfLemma = "сила" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("силлогизм",
       [
         LexemeForm { lfSurface = "силлогизм" , lfLemma = "силлогизм" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 },
@@ -2384,6 +5573,28 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "силлогизмом" , lfLemma = "силлогизм" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("силой",
+      [
+        LexemeForm { lfSurface = "силой" , lfLemma = "сила" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("силу",
+      [
+        LexemeForm { lfSurface = "силу" , lfLemma = "сила" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("система",
+      [
+        LexemeForm { lfSurface = "система" , lfLemma = "система" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "система" , lfLemma = "система" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "система" , lfLemma = "система" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("системой",
+      [
+        LexemeForm { lfSurface = "системой" , lfLemma = "система" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("систему",
+      [
+        LexemeForm { lfSurface = "систему" , lfLemma = "система" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("сказать",
       [
         LexemeForm { lfSurface = "сказать" , lfLemma = "сказать" , lfPOS = "verb" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
@@ -2391,6 +5602,17 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "сказать" , lfLemma = "сказать" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "сказать" , lfLemma = "сказать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "сказать" , lfLemma = "сказать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("след",
+      [
+        LexemeForm { lfSurface = "след" , lfLemma = "след" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "след" , lfLemma = "след" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "след" , lfLemma = "след" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "след" , lfLemma = "след" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("следом",
+      [
+        LexemeForm { lfSurface = "следом" , lfLemma = "след" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("следствие",
       [
@@ -2408,6 +5630,75 @@ generatedCandidateForms =
     ("следствия",
       [
         LexemeForm { lfSurface = "следствия" , lfLemma = "следствие" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("слепота",
+      [
+        LexemeForm { lfSurface = "слепота" , lfLemma = "слепота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "слепота" , lfLemma = "слепота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "слепота" , lfLemma = "слепота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("слепотой",
+      [
+        LexemeForm { lfSurface = "слепотой" , lfLemma = "слепота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("слепоту",
+      [
+        LexemeForm { lfSurface = "слепоту" , lfLemma = "слепота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("слово",
+      [
+        LexemeForm { lfSurface = "слово" , lfLemma = "слово" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "слово" , lfLemma = "слово" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "слово" , lfLemma = "слово" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "слово" , lfLemma = "слово" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("словом",
+      [
+        LexemeForm { lfSurface = "словом" , lfLemma = "слово" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("слом",
+      [
+        LexemeForm { lfSurface = "слом" , lfLemma = "слом" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "слом" , lfLemma = "слом" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "слом" , lfLemma = "слом" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "слом" , lfLemma = "слом" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("сломом",
+      [
+        LexemeForm { lfSurface = "сломом" , lfLemma = "слом" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("слот",
+      [
+        LexemeForm { lfSurface = "слот" , lfLemma = "слот" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 },
+        LexemeForm { lfSurface = "слот" , lfLemma = "слот" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 },
+        LexemeForm { lfSurface = "слот" , lfLemma = "слот" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 },
+        LexemeForm { lfSurface = "слот" , lfLemma = "слот" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 }
+      ]),
+    ("слотом",
+      [
+        LexemeForm { lfSurface = "слотом" , lfLemma = "слот" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.784 }
+      ]),
+    ("слух",
+      [
+        LexemeForm { lfSurface = "слух" , lfLemma = "слух" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "слух" , lfLemma = "слух" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "слух" , lfLemma = "слух" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "слух" , lfLemma = "слух" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("слухом",
+      [
+        LexemeForm { lfSurface = "слухом" , lfLemma = "слух" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("случаем",
+      [
+        LexemeForm { lfSurface = "случаем" , lfLemma = "случай" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("случай",
+      [
+        LexemeForm { lfSurface = "случай" , lfLemma = "случай" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "случай" , lfLemma = "случай" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "случай" , lfLemma = "случай" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "случай" , lfLemma = "случай" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("смерти",
       [
@@ -2440,6 +5731,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "смирения" , lfLemma = "смирение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
       ]),
+    ("смог",
+      [
+        LexemeForm { lfSurface = "смог" , lfLemma = "смог" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "смог" , lfLemma = "смог" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "смог" , lfLemma = "смог" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "смог" , lfLemma = "смог" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("смогом",
+      [
+        LexemeForm { lfSurface = "смогом" , lfLemma = "смог" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
     ("смысл",
       [
         LexemeForm { lfSurface = "смысл" , lfLemma = "смысл" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -2456,6 +5758,10 @@ generatedCandidateForms =
     ("смыслом",
       [
         LexemeForm { lfSurface = "смыслом" , lfLemma = "смысл" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("сном",
+      [
+        LexemeForm { lfSurface = "сном" , lfLemma = "сон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("согласие",
       [
@@ -2522,6 +5828,46 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "сомнения" , lfLemma = "сомнение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("сон",
+      [
+        LexemeForm { lfSurface = "сон" , lfLemma = "сон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сон" , lfLemma = "сон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сон" , lfLemma = "сон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сон" , lfLemma = "сон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("союз",
+      [
+        LexemeForm { lfSurface = "союз" , lfLemma = "союз" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "союз" , lfLemma = "союз" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "союз" , lfLemma = "союз" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "союз" , lfLemma = "союз" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("союзом",
+      [
+        LexemeForm { lfSurface = "союзом" , lfLemma = "союз" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("спам",
+      [
+        LexemeForm { lfSurface = "спам" , lfLemma = "спам" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "спам" , lfLemma = "спам" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "спам" , lfLemma = "спам" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "спам" , lfLemma = "спам" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("спамом",
+      [
+        LexemeForm { lfSurface = "спамом" , lfLemma = "спам" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("спор",
+      [
+        LexemeForm { lfSurface = "спор" , lfLemma = "спор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "спор" , lfLemma = "спор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "спор" , lfLemma = "спор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "спор" , lfLemma = "спор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("спором",
+      [
+        LexemeForm { lfSurface = "спором" , lfLemma = "спор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("способности",
       [
         LexemeForm { lfSurface = "способности" , lfLemma = "способность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -2550,6 +5896,83 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "справедливостью" , lfLemma = "справедливость" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("срок",
+      [
+        LexemeForm { lfSurface = "срок" , lfLemma = "срок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "срок" , lfLemma = "срок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "срок" , lfLemma = "срок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "срок" , lfLemma = "срок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("сроком",
+      [
+        LexemeForm { lfSurface = "сроком" , lfLemma = "срок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("срыв",
+      [
+        LexemeForm { lfSurface = "срыв" , lfLemma = "срыв" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "срыв" , lfLemma = "срыв" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "срыв" , lfLemma = "срыв" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "срыв" , lfLemma = "срыв" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("срывом",
+      [
+        LexemeForm { lfSurface = "срывом" , lfLemma = "срыв" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("стан",
+      [
+        LexemeForm { lfSurface = "стан" , lfLemma = "стан" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "стан" , lfLemma = "стан" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "стан" , lfLemma = "стан" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 },
+        LexemeForm { lfSurface = "стан" , lfLemma = "стан" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("станом",
+      [
+        LexemeForm { lfSurface = "станом" , lfLemma = "стан" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.759 }
+      ]),
+    ("стек",
+      [
+        LexemeForm { lfSurface = "стек" , lfLemma = "стек" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стек" , lfLemma = "стек" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стек" , lfLemma = "стек" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стек" , lfLemma = "стек" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("стеком",
+      [
+        LexemeForm { lfSurface = "стеком" , lfLemma = "стек" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("стен",
+      [
+        LexemeForm { lfSurface = "стен" , lfLemma = "стен" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стен" , lfLemma = "стен" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стен" , lfLemma = "стен" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стен" , lfLemma = "стен" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("стеном",
+      [
+        LexemeForm { lfSurface = "стеном" , lfLemma = "стен" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("стих",
+      [
+        LexemeForm { lfSurface = "стих" , lfLemma = "стих" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "стих" , lfLemma = "стих" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "стих" , lfLemma = "стих" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "стих" , lfLemma = "стих" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("стихом",
+      [
+        LexemeForm { lfSurface = "стихом" , lfLemma = "стих" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("стол",
+      [
+        LexemeForm { lfSurface = "стол" , lfLemma = "стол" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стол" , lfLemma = "стол" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стол" , lfLemma = "стол" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "стол" , lfLemma = "стол" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("столом",
+      [
+        LexemeForm { lfSurface = "столом" , lfLemma = "стол" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("страдание",
       [
         LexemeForm { lfSurface = "страдание" , lfLemma = "страдание" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -2566,6 +5989,20 @@ generatedCandidateForms =
     ("страдания",
       [
         LexemeForm { lfSurface = "страдания" , lfLemma = "страдание" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("страна",
+      [
+        LexemeForm { lfSurface = "страна" , lfLemma = "страна" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "страна" , lfLemma = "страна" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "страна" , lfLemma = "страна" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("страной",
+      [
+        LexemeForm { lfSurface = "страной" , lfLemma = "страна" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("страну",
+      [
+        LexemeForm { lfSurface = "страну" , lfLemma = "страна" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
       ]),
     ("страх",
       [
@@ -2584,6 +6021,42 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "страхом" , lfLemma = "страх" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("структура",
+      [
+        LexemeForm { lfSurface = "структура" , lfLemma = "структура" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "структура" , lfLemma = "структура" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "структура" , lfLemma = "структура" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("структурой",
+      [
+        LexemeForm { lfSurface = "структурой" , lfLemma = "структура" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("структуру",
+      [
+        LexemeForm { lfSurface = "структуру" , lfLemma = "структура" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("стук",
+      [
+        LexemeForm { lfSurface = "стук" , lfLemma = "стук" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "стук" , lfLemma = "стук" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "стук" , lfLemma = "стук" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "стук" , lfLemma = "стук" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("стуком",
+      [
+        LexemeForm { lfSurface = "стуком" , lfLemma = "стук" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("стул",
+      [
+        LexemeForm { lfSurface = "стул" , lfLemma = "стул" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "стул" , lfLemma = "стул" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "стул" , lfLemma = "стул" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "стул" , lfLemma = "стул" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("стулом",
+      [
+        LexemeForm { lfSurface = "стулом" , lfLemma = "стул" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
     ("стыд",
       [
         LexemeForm { lfSurface = "стыд" , lfLemma = "стыд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -2600,6 +6073,17 @@ generatedCandidateForms =
     ("стыдом",
       [
         LexemeForm { lfSurface = "стыдом" , lfLemma = "стыд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("стык",
+      [
+        LexemeForm { lfSurface = "стык" , lfLemma = "стык" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "стык" , lfLemma = "стык" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "стык" , lfLemma = "стык" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "стык" , lfLemma = "стык" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("стыком",
+      [
+        LexemeForm { lfSurface = "стыком" , lfLemma = "стык" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
       ]),
     ("судьба",
       [
@@ -2663,6 +6147,78 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "существовать" , lfLemma = "существовать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "существовать" , lfLemma = "существовать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
       ]),
+    ("сын",
+      [
+        LexemeForm { lfSurface = "сын" , lfLemma = "сын" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "сын" , lfLemma = "сын" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "сын" , lfLemma = "сын" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("сына",
+      [
+        LexemeForm { lfSurface = "сына" , lfLemma = "сын" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("сыном",
+      [
+        LexemeForm { lfSurface = "сыном" , lfLemma = "сын" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("сыр",
+      [
+        LexemeForm { lfSurface = "сыр" , lfLemma = "сыр" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.733 },
+        LexemeForm { lfSurface = "сыр" , lfLemma = "сыр" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.733 },
+        LexemeForm { lfSurface = "сыр" , lfLemma = "сыр" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.733 },
+        LexemeForm { lfSurface = "сыр" , lfLemma = "сыр" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.733 }
+      ]),
+    ("сыром",
+      [
+        LexemeForm { lfSurface = "сыром" , lfLemma = "сыр" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.733 }
+      ]),
+    ("сырье",
+      [
+        LexemeForm { lfSurface = "сырье" , lfLemma = "сырье" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сырье" , lfLemma = "сырье" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сырье" , lfLemma = "сырье" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "сырье" , lfLemma = "сырье" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("сырьем",
+      [
+        LexemeForm { lfSurface = "сырьем" , lfLemma = "сырье" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("табу",
+      [
+        LexemeForm { lfSurface = "табу" , lfLemma = "табу" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "табу" , lfLemma = "табу" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "табу" , lfLemma = "табу" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "табу" , lfLemma = "табу" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("табуом",
+      [
+        LexemeForm { lfSurface = "табуом" , lfLemma = "табу" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("такт",
+      [
+        LexemeForm { lfSurface = "такт" , lfLemma = "такт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "такт" , lfLemma = "такт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "такт" , lfLemma = "такт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "такт" , lfLemma = "такт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тактом",
+      [
+        LexemeForm { lfSurface = "тактом" , lfLemma = "такт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тег",
+      [
+        LexemeForm { lfSurface = "тег" , lfLemma = "тег" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.764 },
+        LexemeForm { lfSurface = "тег" , lfLemma = "тег" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.764 },
+        LexemeForm { lfSurface = "тег" , lfLemma = "тег" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.764 }
+      ]),
+    ("тега",
+      [
+        LexemeForm { lfSurface = "тега" , lfLemma = "тег" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.764 }
+      ]),
+    ("тегом",
+      [
+        LexemeForm { lfSurface = "тегом" , lfLemma = "тег" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.764 }
+      ]),
     ("тезис",
       [
         LexemeForm { lfSurface = "тезис" , lfLemma = "тезис" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -2680,6 +6236,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "тезисом" , lfLemma = "тезис" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("текст",
+      [
+        LexemeForm { lfSurface = "текст" , lfLemma = "текст" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "текст" , lfLemma = "текст" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "текст" , lfLemma = "текст" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "текст" , lfLemma = "текст" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("текстом",
+      [
+        LexemeForm { lfSurface = "текстом" , lfLemma = "текст" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("тела",
       [
         LexemeForm { lfSurface = "тела" , lfLemma = "тело" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
@@ -2696,6 +6263,67 @@ generatedCandidateForms =
     ("телом",
       [
         LexemeForm { lfSurface = "телом" , lfLemma = "тело" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("тема",
+      [
+        LexemeForm { lfSurface = "тема" , lfLemma = "тема" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тема" , lfLemma = "тема" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тема" , lfLemma = "тема" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темнота",
+      [
+        LexemeForm { lfSurface = "темнота" , lfLemma = "темнота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "темнота" , lfLemma = "темнота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "темнота" , lfLemma = "темнота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темнотой",
+      [
+        LexemeForm { lfSurface = "темнотой" , lfLemma = "темнота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темноту",
+      [
+        LexemeForm { lfSurface = "темноту" , lfLemma = "темнота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темой",
+      [
+        LexemeForm { lfSurface = "темой" , lfLemma = "тема" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темп",
+      [
+        LexemeForm { lfSurface = "темп" , lfLemma = "темп" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "темп" , lfLemma = "темп" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "темп" , lfLemma = "темп" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "темп" , lfLemma = "темп" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темпом",
+      [
+        LexemeForm { lfSurface = "темпом" , lfLemma = "темп" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тему",
+      [
+        LexemeForm { lfSurface = "тему" , lfLemma = "тема" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("темь",
+      [
+        LexemeForm { lfSurface = "темь" , lfLemma = "темь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "темь" , lfLemma = "темь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "темь" , lfLemma = "темь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "темь" , lfLemma = "темь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("темью",
+      [
+        LexemeForm { lfSurface = "темью" , lfLemma = "темь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("тень",
+      [
+        LexemeForm { lfSurface = "тень" , lfLemma = "тень" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тень" , lfLemma = "тень" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тень" , lfLemma = "тень" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тень" , lfLemma = "тень" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тенью",
+      [
+        LexemeForm { lfSurface = "тенью" , lfLemma = "тень" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("теорема",
       [
@@ -2717,6 +6345,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "теоремы" , lfLemma = "теорема" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("тепло",
+      [
+        LexemeForm { lfSurface = "тепло" , lfLemma = "тепло" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "тепло" , lfLemma = "тепло" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "тепло" , lfLemma = "тепло" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "тепло" , lfLemma = "тепло" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("теплом",
+      [
+        LexemeForm { lfSurface = "теплом" , lfLemma = "тепло" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
     ("термин",
       [
         LexemeForm { lfSurface = "термин" , lfLemma = "термин" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -2733,6 +6372,86 @@ generatedCandidateForms =
     ("термином",
       [
         LexemeForm { lfSurface = "термином" , lfLemma = "термин" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("тест",
+      [
+        LexemeForm { lfSurface = "тест" , lfLemma = "тест" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тест" , lfLemma = "тест" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тест" , lfLemma = "тест" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тест" , lfLemma = "тест" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тестом",
+      [
+        LexemeForm { lfSurface = "тестом" , lfLemma = "тест" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тип",
+      [
+        LexemeForm { lfSurface = "тип" , lfLemma = "тип" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тип" , lfLemma = "тип" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тип" , lfLemma = "тип" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тип" , lfLemma = "тип" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("типом",
+      [
+        LexemeForm { lfSurface = "типом" , lfLemma = "тип" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тис",
+      [
+        LexemeForm { lfSurface = "тис" , lfLemma = "тис" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "тис" , lfLemma = "тис" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "тис" , lfLemma = "тис" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "тис" , lfLemma = "тис" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("тисом",
+      [
+        LexemeForm { lfSurface = "тисом" , lfLemma = "тис" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("тишина",
+      [
+        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тишиной",
+      [
+        LexemeForm { lfSurface = "тишиной" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тишину",
+      [
+        LexemeForm { lfSurface = "тишину" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тканье",
+      [
+        LexemeForm { lfSurface = "тканье" , lfLemma = "тканье" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "тканье" , lfLemma = "тканье" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "тканье" , lfLemma = "тканье" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 },
+        LexemeForm { lfSurface = "тканье" , lfLemma = "тканье" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("тканьем",
+      [
+        LexemeForm { lfSurface = "тканьем" , lfLemma = "тканье" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.828 }
+      ]),
+    ("тон",
+      [
+        LexemeForm { lfSurface = "тон" , lfLemma = "тон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тон" , lfLemma = "тон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тон" , lfLemma = "тон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "тон" , lfLemma = "тон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("тоном",
+      [
+        LexemeForm { lfSurface = "тоном" , lfLemma = "тон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("торг",
+      [
+        LexemeForm { lfSurface = "торг" , lfLemma = "торг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "торг" , lfLemma = "торг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "торг" , lfLemma = "торг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 },
+        LexemeForm { lfSurface = "торг" , lfLemma = "торг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
+      ]),
+    ("торгом",
+      [
+        LexemeForm { lfSurface = "торгом" , lfLemma = "торг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.746 }
       ]),
     ("тоска",
       [
@@ -2773,6 +6492,158 @@ generatedCandidateForms =
     ("тревогу",
       [
         LexemeForm { lfSurface = "тревогу" , lfLemma = "тревога" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("трек",
+      [
+        LexemeForm { lfSurface = "трек" , lfLemma = "трек" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "трек" , lfLemma = "трек" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "трек" , lfLemma = "трек" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "трек" , lfLemma = "трек" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("треком",
+      [
+        LexemeForm { lfSurface = "треком" , lfLemma = "трек" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("труд",
+      [
+        LexemeForm { lfSurface = "труд" , lfLemma = "труд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "труд" , lfLemma = "труд" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "труд" , lfLemma = "труд" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "труд" , lfLemma = "труд" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("трудом",
+      [
+        LexemeForm { lfSurface = "трудом" , lfLemma = "труд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("трюк",
+      [
+        LexemeForm { lfSurface = "трюк" , lfLemma = "трюк" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "трюк" , lfLemma = "трюк" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "трюк" , lfLemma = "трюк" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "трюк" , lfLemma = "трюк" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("трюком",
+      [
+        LexemeForm { lfSurface = "трюком" , lfLemma = "трюк" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("тьма",
+      [
+        LexemeForm { lfSurface = "тьма" , lfLemma = "тьма" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "тьма" , lfLemma = "тьма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 },
+        LexemeForm { lfSurface = "тьма" , lfLemma = "тьма" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("тьмой",
+      [
+        LexemeForm { lfSurface = "тьмой" , lfLemma = "тьма" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("тьму",
+      [
+        LexemeForm { lfSurface = "тьму" , lfLemma = "тьма" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.818 }
+      ]),
+    ("тяга",
+      [
+        LexemeForm { lfSurface = "тяга" , lfLemma = "тяга" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "тяга" , lfLemma = "тяга" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 },
+        LexemeForm { lfSurface = "тяга" , lfLemma = "тяга" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("тягой",
+      [
+        LexemeForm { lfSurface = "тягой" , lfLemma = "тяга" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("тягу",
+      [
+        LexemeForm { lfSurface = "тягу" , lfLemma = "тяга" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.807 }
+      ]),
+    ("углом",
+      [
+        LexemeForm { lfSurface = "углом" , lfLemma = "угол" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("угол",
+      [
+        LexemeForm { lfSurface = "угол" , lfLemma = "угол" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "угол" , lfLemma = "угол" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "угол" , lfLemma = "угол" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "угол" , lfLemma = "угол" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("удар",
+      [
+        LexemeForm { lfSurface = "удар" , lfLemma = "удар" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "удар" , lfLemma = "удар" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "удар" , lfLemma = "удар" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "удар" , lfLemma = "удар" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ударом",
+      [
+        LexemeForm { lfSurface = "ударом" , lfLemma = "удар" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ужас",
+      [
+        LexemeForm { lfSurface = "ужас" , lfLemma = "ужас" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "ужас" , lfLemma = "ужас" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "ужас" , lfLemma = "ужас" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "ужас" , lfLemma = "ужас" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("ужасом",
+      [
+        LexemeForm { lfSurface = "ужасом" , lfLemma = "ужас" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("ужин",
+      [
+        LexemeForm { lfSurface = "ужин" , lfLemma = "ужин" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "ужин" , lfLemma = "ужин" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "ужин" , lfLemma = "ужин" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "ужин" , lfLemma = "ужин" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("ужином",
+      [
+        LexemeForm { lfSurface = "ужином" , lfLemma = "ужин" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("узел",
+      [
+        LexemeForm { lfSurface = "узел" , lfLemma = "узел" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узел" , lfLemma = "узел" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узел" , lfLemma = "узел" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узел" , lfLemma = "узел" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("узлом",
+      [
+        LexemeForm { lfSurface = "узлом" , lfLemma = "узел" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("узор",
+      [
+        LexemeForm { lfSurface = "узор" , lfLemma = "узор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узор" , lfLemma = "узор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узор" , lfLemma = "узор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "узор" , lfLemma = "узор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("узором",
+      [
+        LexemeForm { lfSurface = "узором" , lfLemma = "узор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ум",
+      [
+        LexemeForm { lfSurface = "ум" , lfLemma = "ум" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ум" , lfLemma = "ум" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ум" , lfLemma = "ум" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ум" , lfLemma = "ум" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("умом",
+      [
+        LexemeForm { lfSurface = "умом" , lfLemma = "ум" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("урка",
+      [
+        LexemeForm { lfSurface = "урка" , lfLemma = "урка" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "урка" , lfLemma = "урка" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 },
+        LexemeForm { lfSurface = "урка" , lfLemma = "урка" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("уркой",
+      [
+        LexemeForm { lfSurface = "уркой" , lfLemma = "урка" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
+      ]),
+    ("урку",
+      [
+        LexemeForm { lfSurface = "урку" , lfLemma = "урка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.821 }
       ]),
     ("условие",
       [
@@ -2836,6 +6707,17 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "утраты" , lfLemma = "утрата" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("утро",
+      [
+        LexemeForm { lfSurface = "утро" , lfLemma = "утро" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "утро" , lfLemma = "утро" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "утро" , lfLemma = "утро" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "утро" , lfLemma = "утро" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("утром",
+      [
+        LexemeForm { lfSurface = "утром" , lfLemma = "утро" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
     ("уход",
       [
         LexemeForm { lfSurface = "уход" , lfLemma = "уход" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 },
@@ -2852,6 +6734,31 @@ generatedCandidateForms =
     ("уходом",
       [
         LexemeForm { lfSurface = "уходом" , lfLemma = "уход" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("фаза",
+      [
+        LexemeForm { lfSurface = "фаза" , lfLemma = "фаза" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фаза" , lfLemma = "фаза" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фаза" , lfLemma = "фаза" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фазой",
+      [
+        LexemeForm { lfSurface = "фазой" , lfLemma = "фаза" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фазу",
+      [
+        LexemeForm { lfSurface = "фазу" , lfLemma = "фаза" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("файл",
+      [
+        LexemeForm { lfSurface = "файл" , lfLemma = "файл" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "файл" , lfLemma = "файл" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "файл" , lfLemma = "файл" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "файл" , lfLemma = "файл" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("файлом",
+      [
+        LexemeForm { lfSurface = "файлом" , lfLemma = "файл" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("факт",
       [
@@ -2870,6 +6777,28 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "фактом" , lfLemma = "факт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("фейк",
+      [
+        LexemeForm { lfSurface = "фейк" , lfLemma = "фейк" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фейк" , lfLemma = "фейк" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фейк" , lfLemma = "фейк" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фейк" , lfLemma = "фейк" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фейком",
+      [
+        LexemeForm { lfSurface = "фейком" , lfLemma = "фейк" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фикс",
+      [
+        LexemeForm { lfSurface = "фикс" , lfLemma = "фикс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "фикс" , lfLemma = "фикс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "фикс" , lfLemma = "фикс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "фикс" , lfLemma = "фикс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("фиксом",
+      [
+        LexemeForm { lfSurface = "фиксом" , lfLemma = "фикс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
     ("философией",
       [
         LexemeForm { lfSurface = "философией" , lfLemma = "философия" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
@@ -2886,6 +6815,114 @@ generatedCandidateForms =
     ("философия",
       [
         LexemeForm { lfSurface = "философия" , lfLemma = "философия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("фича",
+      [
+        LexemeForm { lfSurface = "фича" , lfLemma = "фича" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фича" , lfLemma = "фича" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фича" , lfLemma = "фича" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фичей",
+      [
+        LexemeForm { lfSurface = "фичей" , lfLemma = "фича" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фичу",
+      [
+        LexemeForm { lfSurface = "фичу" , lfLemma = "фича" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("флаг",
+      [
+        LexemeForm { lfSurface = "флаг" , lfLemma = "флаг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "флаг" , lfLemma = "флаг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "флаг" , lfLemma = "флаг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 },
+        LexemeForm { lfSurface = "флаг" , lfLemma = "флаг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("флагом",
+      [
+        LexemeForm { lfSurface = "флагом" , lfLemma = "флаг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.896 }
+      ]),
+    ("фон",
+      [
+        LexemeForm { lfSurface = "фон" , lfLemma = "фон" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фон" , lfLemma = "фон" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фон" , lfLemma = "фон" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "фон" , lfLemma = "фон" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("фонд",
+      [
+        LexemeForm { lfSurface = "фонд" , lfLemma = "фонд" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "фонд" , lfLemma = "фонд" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "фонд" , lfLemma = "фонд" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 },
+        LexemeForm { lfSurface = "фонд" , lfLemma = "фонд" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("фондом",
+      [
+        LexemeForm { lfSurface = "фондом" , lfLemma = "фонд" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.859 }
+      ]),
+    ("фоном",
+      [
+        LexemeForm { lfSurface = "фоном" , lfLemma = "фон" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("форма",
+      [
+        LexemeForm { lfSurface = "форма" , lfLemma = "форма" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "форма" , lfLemma = "форма" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "форма" , lfLemma = "форма" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("формой",
+      [
+        LexemeForm { lfSurface = "формой" , lfLemma = "форма" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("форму",
+      [
+        LexemeForm { lfSurface = "форму" , lfLemma = "форма" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("функцией",
+      [
+        LexemeForm { lfSurface = "функцией" , lfLemma = "функция" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("функцию",
+      [
+        LexemeForm { lfSurface = "функцию" , lfLemma = "функция" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("функция",
+      [
+        LexemeForm { lfSurface = "функция" , lfLemma = "функция" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "функция" , lfLemma = "функция" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "функция" , lfLemma = "функция" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("хаос",
+      [
+        LexemeForm { lfSurface = "хаос" , lfLemma = "хаос" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "хаос" , lfLemma = "хаос" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "хаос" , lfLemma = "хаос" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "хаос" , lfLemma = "хаос" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("хаосом",
+      [
+        LexemeForm { lfSurface = "хаосом" , lfLemma = "хаос" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ход",
+      [
+        LexemeForm { lfSurface = "ход" , lfLemma = "ход" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ход" , lfLemma = "ход" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ход" , lfLemma = "ход" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ход" , lfLemma = "ход" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ходом",
+      [
+        LexemeForm { lfSurface = "ходом" , lfLemma = "ход" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("хор",
+      [
+        LexemeForm { lfSurface = "хор" , lfLemma = "хор" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "хор" , lfLemma = "хор" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "хор" , lfLemma = "хор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "хор" , lfLemma = "хор" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("хором",
+      [
+        LexemeForm { lfSurface = "хором" , lfLemma = "хор" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
       ]),
     ("хрупкости",
       [
@@ -2915,6 +6952,42 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "целью" , lfLemma = "цель" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
       ]),
+    ("цена",
+      [
+        LexemeForm { lfSurface = "цена" , lfLemma = "цена" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цена" , lfLemma = "цена" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цена" , lfLemma = "цена" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ценой",
+      [
+        LexemeForm { lfSurface = "ценой" , lfLemma = "цена" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("цену",
+      [
+        LexemeForm { lfSurface = "цену" , lfLemma = "цена" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("цепь",
+      [
+        LexemeForm { lfSurface = "цепь" , lfLemma = "цепь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цепь" , lfLemma = "цепь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цепь" , lfLemma = "цепь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цепь" , lfLemma = "цепь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("цепью",
+      [
+        LexemeForm { lfSurface = "цепью" , lfLemma = "цепь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("цикл",
+      [
+        LexemeForm { lfSurface = "цикл" , lfLemma = "цикл" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цикл" , lfLemma = "цикл" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цикл" , lfLemma = "цикл" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "цикл" , lfLemma = "цикл" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("циклом",
+      [
+        LexemeForm { lfSurface = "циклом" , lfLemma = "цикл" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("цифра",
       [
         LexemeForm { lfSurface = "цифра" , lfLemma = "цифра" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
@@ -2935,6 +7008,73 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "цифры" , lfLemma = "цифра" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.96 }
       ]),
+    ("час",
+      [
+        LexemeForm { lfSurface = "час" , lfLemma = "час" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "час" , lfLemma = "час" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "час" , lfLemma = "час" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "час" , lfLemma = "час" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("часом",
+      [
+        LexemeForm { lfSurface = "часом" , lfLemma = "час" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("чаша",
+      [
+        LexemeForm { lfSurface = "чаша" , lfLemma = "чаша" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "чаша" , lfLemma = "чаша" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 },
+        LexemeForm { lfSurface = "чаша" , lfLemma = "чаша" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("чашей",
+      [
+        LexemeForm { lfSurface = "чашей" , lfLemma = "чаша" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("чашу",
+      [
+        LexemeForm { lfSurface = "чашу" , lfLemma = "чаша" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.757 }
+      ]),
+    ("чаща",
+      [
+        LexemeForm { lfSurface = "чаща" , lfLemma = "чаща" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "чаща" , lfLemma = "чаща" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 },
+        LexemeForm { lfSurface = "чаща" , lfLemma = "чаща" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("чащей",
+      [
+        LexemeForm { lfSurface = "чащей" , lfLemma = "чаща" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("чащу",
+      [
+        LexemeForm { lfSurface = "чащу" , lfLemma = "чаща" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.871 }
+      ]),
+    ("человек",
+      [
+        LexemeForm { lfSurface = "человек" , lfLemma = "человек" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "человек" , lfLemma = "человек" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "человек" , lfLemma = "человек" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("человека",
+      [
+        LexemeForm { lfSurface = "человека" , lfLemma = "человек" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("человеком",
+      [
+        LexemeForm { lfSurface = "человеком" , lfLemma = "человек" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("черт",
+      [
+        LexemeForm { lfSurface = "черт" , lfLemma = "черт" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "черт" , lfLemma = "черт" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
+        LexemeForm { lfSurface = "черт" , lfLemma = "черт" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("черта",
+      [
+        LexemeForm { lfSurface = "черта" , lfLemma = "черт" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("чертом",
+      [
+        LexemeForm { lfSurface = "чертом" , lfLemma = "черт" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
     ("честности",
       [
         LexemeForm { lfSurface = "честности" , lfLemma = "честность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -2948,6 +7088,166 @@ generatedCandidateForms =
     ("честностью",
       [
         LexemeForm { lfSurface = "честностью" , lfLemma = "честность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 }
+      ]),
+    ("чип",
+      [
+        LexemeForm { lfSurface = "чип" , lfLemma = "чип" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "чип" , lfLemma = "чип" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "чип" , lfLemma = "чип" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "чип" , lfLemma = "чип" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("чипом",
+      [
+        LexemeForm { lfSurface = "чипом" , lfLemma = "чип" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("число",
+      [
+        LexemeForm { lfSurface = "число" , lfLemma = "число" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "число" , lfLemma = "число" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "число" , lfLemma = "число" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "число" , lfLemma = "число" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("числом",
+      [
+        LexemeForm { lfSurface = "числом" , lfLemma = "число" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("чистота",
+      [
+        LexemeForm { lfSurface = "чистота" , lfLemma = "чистота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "чистота" , lfLemma = "чистота" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "чистота" , lfLemma = "чистота" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("чистотой",
+      [
+        LexemeForm { lfSurface = "чистотой" , lfLemma = "чистота" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("чистоту",
+      [
+        LexemeForm { lfSurface = "чистоту" , lfLemma = "чистота" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("член",
+      [
+        LexemeForm { lfSurface = "член" , lfLemma = "член" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "член" , lfLemma = "член" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "член" , lfLemma = "член" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "член" , lfLemma = "член" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("членом",
+      [
+        LexemeForm { lfSurface = "членом" , lfLemma = "член" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("чувство",
+      [
+        LexemeForm { lfSurface = "чувство" , lfLemma = "чувство" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "чувство" , lfLemma = "чувство" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "чувство" , lfLemma = "чувство" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "чувство" , lfLemma = "чувство" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("чувством",
+      [
+        LexemeForm { lfSurface = "чувством" , lfLemma = "чувство" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("шаг",
+      [
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("шагом",
+      [
+        LexemeForm { lfSurface = "шагом" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("шанс",
+      [
+        LexemeForm { lfSurface = "шанс" , lfLemma = "шанс" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "шанс" , lfLemma = "шанс" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "шанс" , lfLemma = "шанс" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 },
+        LexemeForm { lfSurface = "шанс" , lfLemma = "шанс" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("шансом",
+      [
+        LexemeForm { lfSurface = "шансом" , lfLemma = "шанс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.846 }
+      ]),
+    ("швом",
+      [
+        LexemeForm { lfSurface = "швом" , lfLemma = "шов" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("школа",
+      [
+        LexemeForm { lfSurface = "школа" , lfLemma = "школа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "школа" , lfLemma = "школа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 },
+        LexemeForm { lfSurface = "школа" , lfLemma = "школа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("школой",
+      [
+        LexemeForm { lfSurface = "школой" , lfLemma = "школа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("школу",
+      [
+        LexemeForm { lfSurface = "школу" , lfLemma = "школа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.834 }
+      ]),
+    ("шлюз",
+      [
+        LexemeForm { lfSurface = "шлюз" , lfLemma = "шлюз" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "шлюз" , lfLemma = "шлюз" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "шлюз" , lfLemma = "шлюз" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 },
+        LexemeForm { lfSurface = "шлюз" , lfLemma = "шлюз" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("шлюзом",
+      [
+        LexemeForm { lfSurface = "шлюзом" , lfLemma = "шлюз" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.79 }
+      ]),
+    ("шов",
+      [
+        LexemeForm { lfSurface = "шов" , lfLemma = "шов" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "шов" , lfLemma = "шов" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "шов" , lfLemma = "шов" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 },
+        LexemeForm { lfSurface = "шов" , lfLemma = "шов" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.853 }
+      ]),
+    ("шок",
+      [
+        LexemeForm { lfSurface = "шок" , lfLemma = "шок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "шок" , lfLemma = "шок" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "шок" , lfLemma = "шок" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 },
+        LexemeForm { lfSurface = "шок" , lfLemma = "шок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("шоком",
+      [
+        LexemeForm { lfSurface = "шоком" , lfLemma = "шок" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.762 }
+      ]),
+    ("шрам",
+      [
+        LexemeForm { lfSurface = "шрам" , lfLemma = "шрам" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "шрам" , lfLemma = "шрам" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "шрам" , lfLemma = "шрам" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 },
+        LexemeForm { lfSurface = "шрам" , lfLemma = "шрам" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("шрамом",
+      [
+        LexemeForm { lfSurface = "шрамом" , lfLemma = "шрам" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.89 }
+      ]),
+    ("шум",
+      [
+        LexemeForm { lfSurface = "шум" , lfLemma = "шум" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шум" , lfLemma = "шум" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шум" , lfLemma = "шум" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "шум" , lfLemma = "шум" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("шумом",
+      [
+        LexemeForm { lfSurface = "шумом" , lfLemma = "шум" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("щель",
+      [
+        LexemeForm { lfSurface = "щель" , lfLemma = "щель" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "щель" , lfLemma = "щель" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "щель" , lfLemma = "щель" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "щель" , lfLemma = "щель" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("щелью",
+      [
+        LexemeForm { lfSurface = "щелью" , lfLemma = "щель" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
       ]),
     ("эквиваленцией",
       [
@@ -3000,6 +7300,50 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "энтейлментом" , lfLemma = "энтейлмент" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
       ]),
+    ("этап",
+      [
+        LexemeForm { lfSurface = "этап" , lfLemma = "этап" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "этап" , lfLemma = "этап" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "этап" , lfLemma = "этап" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "этап" , lfLemma = "этап" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("этапом",
+      [
+        LexemeForm { lfSurface = "этапом" , lfLemma = "этап" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("эфир",
+      [
+        LexemeForm { lfSurface = "эфир" , lfLemma = "эфир" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "эфир" , lfLemma = "эфир" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "эфир" , lfLemma = "эфир" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 },
+        LexemeForm { lfSurface = "эфир" , lfLemma = "эфир" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("эфиром",
+      [
+        LexemeForm { lfSurface = "эфиром" , lfLemma = "эфир" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.741 }
+      ]),
+    ("эхо",
+      [
+        LexemeForm { lfSurface = "эхо" , lfLemma = "эхо" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "эхо" , lfLemma = "эхо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "эхо" , lfLemma = "эхо" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "эхо" , lfLemma = "эхо" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("эхом",
+      [
+        LexemeForm { lfSurface = "эхом" , lfLemma = "эхо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ядро",
+      [
+        LexemeForm { lfSurface = "ядро" , lfLemma = "ядро" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ядро" , lfLemma = "ядро" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ядро" , lfLemma = "ядро" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
+        LexemeForm { lfSurface = "ядро" , lfLemma = "ядро" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("ядром",
+      [
+        LexemeForm { lfSurface = "ядром" , lfLemma = "ядро" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
     ("язык",
       [
         LexemeForm { lfSurface = "язык" , lfLemma = "язык" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.98 },
@@ -3033,6 +7377,17 @@ generatedCandidateForms =
     ("якоря",
       [
         LexemeForm { lfSurface = "якоря" , lfLemma = "якорь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.97 }
+      ]),
+    ("ящик",
+      [
+        LexemeForm { lfSurface = "ящик" , lfLemma = "ящик" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ящик" , lfLemma = "ящик" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ящик" , lfLemma = "ящик" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 },
+        LexemeForm { lfSurface = "ящик" , lfLemma = "ящик" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
+      ]),
+    ("ящиком",
+      [
+        LexemeForm { lfSurface = "ящиком" , lfLemma = "ящик" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.777 }
       ])
     ]
 

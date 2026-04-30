@@ -10,12 +10,13 @@ import sqlite3
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SQL_SCHEMA = ROOT / "spec" / "sql" / "lexicon" / "schema.sql"
 SQL_SEED_CURATED = ROOT / "spec" / "sql" / "lexicon" / "seed_ru_curated.sql"
+SQL_SEED_BRAIN_REVIEWED = ROOT / "spec" / "sql" / "lexicon" / "seed_brain_kb_reviewed.sql"
 SQL_SEED_FALLBACK = ROOT / "spec" / "sql" / "lexicon" / "seed_ru_core.sql"
 AUTO_MANIFEST = ROOT / "spec" / "sql" / "lexicon" / "auto_source_manifest.json"
 AUTO_SEED_TSV = ROOT / "spec" / "sql" / "lexicon" / "seed_ru_auto.tsv"
@@ -403,7 +404,7 @@ def _sync_entries_to_forms(conn: sqlite3.Connection) -> None:
 def _hydrate_entry_case_forms(conn: sqlite3.Connection) -> None:
     """Backfill lexicon_entries.accusative/instrumental from lexicon_forms.
 
-    Preference order: curated > auto-verified > auto-coverage, then by quality.
+    Preference order: curated > brain-kb-reviewed > auto-verified > auto-coverage, then by quality.
     Missing values fall back to nominative to preserve non-empty guarantees.
     """
     conn.execute(
@@ -421,8 +422,9 @@ def _hydrate_entry_case_forms(conn: sqlite3.Connection) -> None:
             ORDER BY
               CASE f.tier
                 WHEN 'curated' THEN 0
-                WHEN 'auto-verified' THEN 1
-                ELSE 2
+                WHEN 'brain-kb-reviewed' THEN 1
+                WHEN 'auto-verified' THEN 2
+                ELSE 3
               END,
               f.quality DESC
             LIMIT 1
@@ -442,8 +444,9 @@ def _hydrate_entry_case_forms(conn: sqlite3.Connection) -> None:
             ORDER BY
               CASE f.tier
                 WHEN 'curated' THEN 0
-                WHEN 'auto-verified' THEN 1
-                ELSE 2
+                WHEN 'brain-kb-reviewed' THEN 1
+                WHEN 'auto-verified' THEN 2
+                ELSE 3
               END,
               f.quality DESC
             LIMIT 1
@@ -543,6 +546,8 @@ def load_rows() -> Tuple[List[Lexeme], Dict[str, List[List[object]]]]:
         conn.executescript(SQL_SCHEMA.read_text(encoding="utf-8"))
         seed_path = SQL_SEED_CURATED if SQL_SEED_CURATED.exists() else SQL_SEED_FALLBACK
         conn.executescript(seed_path.read_text(encoding="utf-8"))
+        if SQL_SEED_BRAIN_REVIEWED.exists():
+            conn.executescript(SQL_SEED_BRAIN_REVIEWED.read_text(encoding="utf-8"))
         _load_auto_source(conn)
         _hydrate_entry_case_forms(conn)
         _sync_entries_to_forms(conn)
@@ -1023,6 +1028,7 @@ def hs_quote(text: str) -> str:
 def hs_tier_constructor(tier: str) -> str:
     mapping = {
         "curated": "CuratedTier",
+        "brain-kb-reviewed": "BrainKbReviewedTier",
         "auto-verified": "AutoVerifiedTier",
         "auto-coverage": "AutoCoverageTier",
     }
@@ -1089,12 +1095,15 @@ def render_haskell_runtime_module(
             f"    ({hs_quote(surface)}, {hs_quote(lemma)}, {hs_quote(pos)}, {hs_quote(case_tag)}){suffix}"
         )
 
-    # generatedCandidateForms: only curated entries (P1/P2 loaded from JSON at runtime).
+    # generatedCandidateForms: curated + brain-kb-reviewed entries
+    # (P1/P2 loaded from JSON at runtime).
     # This keeps the generated module small and compilation fast.
     # Compact tuple format: [surface, lemma, pos, case, number, tier, quality]
     curated_forms: Dict[str, List[List[object]]] = {}
     for surface, forms in forms_by_surface.items():
-        curated_only = [f for f in forms if f[5] == "curated"]
+        curated_only = [
+            f for f in forms if f[5] in {"curated", "brain-kb-reviewed"}
+        ]
         if curated_only:
             curated_forms[surface] = curated_only
 
@@ -1133,7 +1142,7 @@ def render_haskell_runtime_module(
             "  ]",
             "",
             "-- Candidate forms loaded from resources/morphology/forms_by_surface.json at runtime.",
-            "-- Populated from SQL lexicon_forms table (curated + auto-verified tiers).",
+            "-- Populated from SQL lexicon_forms table (curated + brain-kb-reviewed tiers).",
             "generatedCandidateForms :: M.Map Text [LexemeForm]",
             "generatedCandidateForms =",
         ]
@@ -1187,17 +1196,31 @@ def build_forms_by_surface(
             if sig not in seen:
                 seen.add(sig)
                 deduped.append(e)
-        # Curated outranks auto: suppress auto forms that conflict with curated
-        # on the same surface but have a different lemma.
+        # Tier suppression policy:
+        # - curated suppresses conflicting non-curated lemmas
+        # - brain-kb-reviewed suppresses conflicting auto lemmas
         curated_lemmas = {e[1] for e in deduped if e[5] == "curated"}
         if curated_lemmas:
             deduped = [
                 e for e in deduped if e[5] == "curated" or e[1] in curated_lemmas
             ]
+        else:
+            brain_reviewed_lemmas = {e[1] for e in deduped if e[5] == "brain-kb-reviewed"}
+            if brain_reviewed_lemmas:
+                deduped = [
+                    e
+                    for e in deduped
+                    if e[5] in {"brain-kb-reviewed", "curated"} or e[1] in brain_reviewed_lemmas
+                ]
         result[surface] = sorted(
             deduped,
             key=lambda f: (
-                {"curated": 0, "auto-verified": 1, "auto-coverage": 2}.get(f[5], 2),
+                {
+                    "curated": 0,
+                    "brain-kb-reviewed": 1,
+                    "auto-verified": 2,
+                    "auto-coverage": 3,
+                }.get(f[5], 3),
                 -f[6],
                 f[1],
             ),
@@ -1372,6 +1395,11 @@ def main() -> int:
                     SQL_SEED_CURATED if SQL_SEED_CURATED.exists() else SQL_SEED_FALLBACK
                 ).read_bytes()
             ).hexdigest()[:16],
+            "seed_brain_kb_reviewed_sha256": hashlib.sha256(
+                SQL_SEED_BRAIN_REVIEWED.read_bytes()
+            ).hexdigest()[:16]
+            if SQL_SEED_BRAIN_REVIEWED.exists()
+            else "",
             "auto_manifest_present": AUTO_MANIFEST.exists(),
         },
         "sources": [
@@ -1381,7 +1409,12 @@ def main() -> int:
                     SQL_SEED_CURATED if SQL_SEED_CURATED.exists() else SQL_SEED_FALLBACK
                 ).relative_to(ROOT)
             ),
-        ],
+        ]
+        + (
+            [str(SQL_SEED_BRAIN_REVIEWED.relative_to(ROOT))]
+            if SQL_SEED_BRAIN_REVIEWED.exists()
+            else []
+        ),
         "auto_source_enabled": AUTO_MANIFEST.exists()
         and json.loads(AUTO_MANIFEST.read_text(encoding="utf-8")).get("enabled", False),
         "auto_quality_metrics": auto_quality_metrics,

@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
-{-| Lexeme candidate resolver policy: curated > auto-verified > auto-coverage,
+{-| Lexeme candidate resolver policy: curated > brain-kb-reviewed > auto-verified > auto-coverage,
     exact match preferred, higher quality wins, dangerous ambiguity falls back.
 -}
 module QxFx0.Lexicon.Resolver
@@ -24,7 +24,8 @@ import QxFx0.Types.Domain.Atoms
   )
 
 tierPriority :: SourceTier -> Int
-tierPriority CuratedTier = 3
+tierPriority CuratedTier = 4
+tierPriority BrainKbReviewedTier = 3
 tierPriority AutoVerifiedTier = 2
 tierPriority AutoCoverageTier = 1
 

@@ -14,11 +14,12 @@ CREATE TABLE IF NOT EXISTS lexicon_sources (
   checksum TEXT NOT NULL DEFAULT '',
   import_script TEXT NOT NULL DEFAULT '',
   tier TEXT NOT NULL DEFAULT 'curated'
-    CHECK (tier IN ('curated', 'auto-verified', 'auto-coverage'))
+    CHECK (tier IN ('curated', 'brain-kb-reviewed', 'auto-verified', 'auto-coverage'))
 );
 
 INSERT OR IGNORE INTO lexicon_sources (source_name, tier) VALUES
   ('curated', 'curated'),
+  ('brain-kb-reviewed', 'brain-kb-reviewed'),
   ('auto-verified', 'auto-verified'),
   ('auto-coverage', 'auto-coverage');
 
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS lexicon_entries (
   instrumental TEXT NOT NULL DEFAULT '',
   source TEXT NOT NULL DEFAULT 'curated',
   tier TEXT NOT NULL DEFAULT 'curated'
-    CHECK (tier IN ('curated', 'auto-verified', 'auto-coverage')),
+    CHECK (tier IN ('curated', 'brain-kb-reviewed', 'auto-verified', 'auto-coverage')),
   quality REAL NOT NULL DEFAULT 1.0 CHECK (quality >= 0.0 AND quality <= 1.0),
   PRIMARY KEY (language_code, lemma, pos),
   FOREIGN KEY (language_code) REFERENCES lex_languages(code)
@@ -56,7 +57,7 @@ CREATE TABLE IF NOT EXISTS lexicon_forms (
     CHECK (number_tag IN ('singular', 'plural')),
   source TEXT NOT NULL DEFAULT 'curated',
   tier TEXT NOT NULL DEFAULT 'curated'
-    CHECK (tier IN ('curated', 'auto-verified', 'auto-coverage')),
+    CHECK (tier IN ('curated', 'brain-kb-reviewed', 'auto-verified', 'auto-coverage')),
   quality REAL NOT NULL DEFAULT 1.0 CHECK (quality >= 0.0 AND quality <= 1.0),
   UNIQUE(language_code, surface, lemma, pos, case_tag, number_tag, source),
   FOREIGN KEY (language_code) REFERENCES lex_languages(code)
@@ -65,6 +66,30 @@ CREATE TABLE IF NOT EXISTS lexicon_forms (
 CREATE INDEX IF NOT EXISTS idx_lexicon_forms_surface ON lexicon_forms(surface);
 CREATE INDEX IF NOT EXISTS idx_lexicon_forms_lemma ON lexicon_forms(lemma);
 CREATE INDEX IF NOT EXISTS idx_lexicon_forms_tier ON lexicon_forms(tier);
+
+CREATE TABLE IF NOT EXISTS brain_kb_units_raw (
+  id TEXT PRIMARY KEY,
+  layer TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT '',
+  text TEXT NOT NULL DEFAULT '',
+  topic_json TEXT NOT NULL DEFAULT '[]',
+  triggers_json TEXT NOT NULL DEFAULT '[]',
+  source_kind TEXT NOT NULL DEFAULT '',
+  weight REAL NOT NULL DEFAULT 0.0
+);
+
+CREATE TABLE IF NOT EXISTS brain_kb_lexeme_candidates (
+  lemma TEXT PRIMARY KEY,
+  mention_count INTEGER NOT NULL DEFAULT 0,
+  weighted_score REAL NOT NULL DEFAULT 0.0,
+  layers_json TEXT NOT NULL DEFAULT '[]',
+  topics_json TEXT NOT NULL DEFAULT '[]',
+  triggers_json TEXT NOT NULL DEFAULT '[]',
+  selected INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_brain_kb_candidates_score
+  ON brain_kb_lexeme_candidates(weighted_score DESC);
 
 CREATE TABLE IF NOT EXISTS lex_templates (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
