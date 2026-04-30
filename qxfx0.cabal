@@ -126,6 +126,16 @@ library
     QxFx0.Semantic.Embedding
     QxFx0.Semantic.Morphology
     QxFx0.Semantic.Proposition
+    QxFx0.Semantic.Proposition.Types
+    QxFx0.Semantic.Proposition.Parse
+    QxFx0.Semantic.Proposition.Detect.Contact
+    QxFx0.Semantic.Proposition.Detect.Ground
+    QxFx0.Semantic.Proposition.Detect.Define
+    QxFx0.Semantic.Proposition.Detect.Reflect
+    QxFx0.Semantic.Proposition.Detect.Repair
+    QxFx0.Semantic.Proposition.Detect.NextStep
+    QxFx0.Semantic.Proposition.Detect.Comparison
+    QxFx0.Semantic.Proposition.Detect.Overrides
     QxFx0.Semantic.SemanticScene
     QxFx0.Semantic.SemanticInput
     QxFx0.Semantic.Input
