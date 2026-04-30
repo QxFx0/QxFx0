@@ -148,6 +148,7 @@ structuredDialogueType propositionType =
     , MisunderstandingReport
     , GenerativePrompt
     , ContemplativeTopic
+    , NextStepQ
     ]
 
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
@@ -175,8 +176,15 @@ structuredBody propositionType frame rmp renderStyle morph =
           claim = linearizeOrFallback ast renderStyle morph "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: я могу схлопнуть вопрос до одного слова и выбрать слишком шаблонный ход."
       in withClaim (clText claim) ast claim
     GroundQ ->
-      plain ("Понял тебя: это фактическое сообщение о " <> structuredPrepositional morph (nonEmptyOr (ipfSemanticSubject frame) "ситуации")
-        <> ". Я держу его как устойчивую опору и могу дальше развернуть причину, последствия или практический следующий шаг.")
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) "ситуация"
+          topicPrep = structuredPrepositional morph topicRef
+          seed = T.toLower (ipfRawText frame) <> "|ground_q"
+      in plain (pickDeterministic seed
+        [ "Понял тебя: это фактическое сообщение о " <> topicPrep <> ". Я держу его как устойчивую опору и могу дальше развернуть причину, последствия или практический следующий шаг."
+        , "Принято как рабочий факт о " <> topicPrep <> ". Могу идти дальше по трём направлениям: причина, последствия или конкретное действие."
+        , "Фиксирую это как опору по теме " <> topicPrep <> ". Дальше можем выбрать один вектор: объяснение причины, проверка последствий или следующий практический шаг."
+        , "Вижу здесь фактический слой о " <> topicPrep <> ". Если нужно, разверну его в причинную линию или в короткий план действий."
+        ])
     SystemLogicQ ->
       let ast = claimAstOrFallback MoveSystemLogic (rmpPrimaryClaimAst rmp)
           claim = linearizeOrFallback ast renderStyle morph (systemLogicSurface frame)
@@ -230,11 +238,23 @@ structuredBody propositionType frame rmp renderStyle morph =
         <> ", полезно сначала выделить действие, контекст применения и устойчивый результат. "
         <> purposeClaimText) ast claim
     WorldCauseQ ->
-      let ast = claimAstOrFallback (MoveCause (MkNP (topicToGfLexemeId (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "явления")))) MechParse) (rmpPrimaryClaimAst rmp)
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "явление")
+          topicNom = toNominative morph topicRef
+          topicGen = structuredGenitive morph topicNom
+          safeTopicGen
+            | isLikelyBrokenGenitive topicNom topicGen = "этого явления"
+            | isLikelyAdjectiveLikeTopic topicNom = "этого явления"
+            | otherwise = topicGen
+          ast = claimAstOrFallback (MoveCause (MkNP (topicToGfLexemeId topicNom)) MechParse) (rmpPrimaryClaimAst rmp)
           claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-      in withClaim ("Если говорить о причине " <> structuredGenitive morph (nonEmptyOr (ipfSemanticSubject frame) "этого явления")
-        <> ", то я могу дать только объяснительную рамку. "
-        <> clText claim
+          seed = T.toLower (ipfRawText frame) <> "|world_cause"
+          intro = pickDeterministic seed
+            [ "Если говорить о причине " <> safeTopicGen <> ", то я могу дать только объяснительную рамку."
+            , "По вопросу о причине " <> safeTopicGen <> " я могу дать рамку рассуждения, а не эмпирическое доказательство."
+            , "Причинный разбор " <> safeTopicGen <> " в моём контуре остаётся локальной объяснительной моделью."
+            , "Для причины " <> safeTopicGen <> " я могу предложить только локально согласованное объяснение."
+            ]
+      in withClaim (intro <> " " <> clText claim
         <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире.") ast claim
     LocationFormationQ ->
       plain ("Если говорить " <> aboutWithTopic (structuredPrepositional morph (nonEmptyOr (ipfSemanticSubject frame) "мысль"))
@@ -272,6 +292,19 @@ structuredBody propositionType frame rmp renderStyle morph =
           claim = linearizeOrFallback ast renderStyle morph ("Если держаться слова " <> openGuillemet <> toNominative morph (nonEmptyOr (ipfSemanticSubject frame) "тема") <> closeGuillemet
             <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни.")
       in withClaim (clText claim) ast claim
+    NextStepQ ->
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "задача")
+          topicNom = toNominative morph topicRef
+          ast = claimAstOrFallback (MoveNextStepLocal (MkNP (topicToGfLexemeId topicNom))) (rmpPrimaryClaimAst rmp)
+          claim = linearizeOrFallback ast renderStyle morph ("Следующий шаг: конкретизировать " <> topicNom <> " в одном действии.")
+      in withClaim
+          ( "Давай зафиксируем практичный следующий ход:\n"
+            <> "1) Назови одну цель по теме " <> topicNom <> ".\n"
+            <> "2) Выбери минимальный шаг на 10-15 минут и сделай его.\n"
+            <> "3) Проверь результат: стало яснее или нет, и скорректируй следующий шаг."
+          )
+          ast
+          claim
     _ ->
       plain (rmpPrimaryClaim rmp)
   where
@@ -331,7 +364,13 @@ linearizeClaimAstRus ast renderStyle morph =
       in Just (subjNom <> " является " <> objIns <> ".")
     MoveCause (MkNP gfSubj) MechParse ->
       let subjGen = maybe "смысла" glfGen (lookupGfLexemeForms gfSubj)
-      in Just ("Причиной " <> subjGen <> " служит механизм локального разбора.")
+          seed = "cause|" <> subjGen
+      in Just (pickDeterministic seed
+          [ "Причиной " <> subjGen <> " служит механизм локального разбора."
+          , "В моём локальном контуре причина " <> subjGen <> " объясняется механизмом локального разбора."
+          , "Для " <> subjGen <> " я беру причинную схему через механизм локального разбора."
+          , "Причинное объяснение " <> subjGen <> " у меня строится через механизм локального разбора."
+          ])
     MoveInvite (MkNP gfTopic) gfMod gfAction ->
       -- Runtime fallback mirrors the GF surface when PGF is unavailable.
       let prepForm = maybe "смысле" glfPrep (lookupGfLexemeForms gfTopic)
@@ -836,6 +875,21 @@ isVerbLikeTopic txt =
   let w = T.toLower (T.strip txt)
   in w `elem` ["есть", "быть", "жить", "живём", "живем"]
       || any (`T.isSuffixOf` w) ["ть", "ти", "чь", "ем", "ём", "ешь", "ет", "ут", "ют", "ишь", "им", "ите", "ете"]
+
+isLikelyAdjectiveLikeTopic :: Text -> Bool
+isLikelyAdjectiveLikeTopic raw =
+  let txt = T.toLower (T.strip raw)
+      shortAdjLike =
+        txt `elem`
+          [ "важен", "важна", "важно", "важны"
+          , "нужен", "нужна", "нужно", "нужны"
+          , "должен", "должна", "должно", "должны"
+          , "сложен", "сложна", "сложно", "сложны"
+          ]
+  in shortAdjLike || any (`T.isSuffixOf` txt)
+      [ "ый", "ий", "ой", "ая", "яя", "ое", "ее", "ые", "ие"
+      , "ого", "ему", "ыми", "ых", "ую", "юю"
+      ]
 
 isRussianLetter :: Char -> Bool
 isRussianLetter c =

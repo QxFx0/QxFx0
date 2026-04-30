@@ -396,6 +396,7 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectWorldCause rawText tokens
   , detectLocationFormation rawText tokens
   , detectSelfState rawText tokens
+  , detectAffectiveSupport rawText tokens
   , detectComparisonPlausibility rawText tokens
   , detectDistinctionQuestion rawText tokens
   , detectConfrontSignal rawText tokens
@@ -535,8 +536,43 @@ detectNextStepSignal rawText tokens
   | containsKeywordPhrase tokens "дальше что" = Just NextStepQ
   | containsKeywordPhrase tokens "что теперь" = Just NextStepQ
   | containsKeywordPhrase tokens "что потом" = Just NextStepQ
+  | containsKeywordPhrase tokens "с чего начать" = Just NextStepQ
+  | containsKeywordPhrase tokens "какой первый шаг" = Just NextStepQ
+  | containsKeywordPhrase tokens "что мне делать дальше" = Just NextStepQ
+  | containsKeywordPhrase tokens "как действовать дальше" = Just NextStepQ
+  | containsKeywordPhrase tokens "нет понимания что дальше" = Just NextStepQ
   | T.toLower (T.strip rawText) `elem` ["дальше", "что дальше?"] = Just NextStepQ
   | otherwise = Nothing
+
+detectAffectiveSupport :: Text -> [Text] -> Maybe PropositionType
+detectAffectiveSupport rawText tokens
+  | containsKeywordPhrase tokens "как не переживать" = Just ContactSignal
+  | containsKeywordPhrase tokens "как не волноваться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как успокоиться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как перестать переживать" = Just ContactSignal
+  | containsKeywordPhrase tokens "как перестать волноваться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как справиться с тревогой" = Just ContactSignal
+  | containsKeywordPhrase tokens "как справиться со страхом" = Just ContactSignal
+  | containsKeywordPhrase tokens "как справиться с апатией" = Just ContactSignal
+  | containsKeywordPhrase tokens "что делать если тревожно" = Just ContactSignal
+  | containsKeywordPhrase tokens "что делать если страшно" = Just ContactSignal
+  | containsKeywordPhrase tokens "что делать когда тревожно" = Just ContactSignal
+  | containsKeywordPhrase tokens "что делать когда плохо" = Just ContactSignal
+  | containsKeywordPhrase tokens "что делать когда грустно" = Just ContactSignal
+  | containsKeywordPhrase tokens "не хочется ничего делать" = Just ContactSignal
+  | containsKeywordPhrase tokens "ничего не хочется делать" = Just ContactSignal
+  | containsKeywordPhrase tokens "нет сил" = Just ContactSignal
+  | containsKeywordPhrase tokens "устал и ничего не хочется" = Just ContactSignal
+  | containsKeywordPhrase tokens "устала и ничего не хочется" = Just ContactSignal
+  | hasAffectiveLexeme && T.isSuffixOf "?" (T.strip rawText) = Just ContactSignal
+  | otherwise = Nothing
+  where
+    hasAffectiveLexeme =
+      any (`elem` tokens)
+        [ "тревожно", "тревога", "грустно", "тоскливо", "плохо", "одиноко", "страшно"
+        , "паника", "апатия", "выгорел", "выгорела", "переживать", "переживаю"
+        , "волноваться", "волнуюсь", "устал", "устала", "сил", "тяжело"
+        ]
 
 specialFocusEntity :: PropositionType -> Maybe Text
 specialFocusEntity OperationalStatusQ = Just "работа"
@@ -668,6 +704,9 @@ detectDialogueInvitation _rawText tokens
   | containsKeywordPhrase tokens "обсудим" = Just DialogueInvitationQ
   | containsKeywordPhrase tokens "можем поговорить" = Just DialogueInvitationQ
   | containsKeywordPhrase tokens "хочу поговорить" = Just DialogueInvitationQ
+  | containsKeywordPhrase tokens "хочешь"
+      && any (`elem` tokens) ["пойдем", "пойдем", "пойдём", "гулять", "прогуляться", "встретимся"] =
+          Just DialogueInvitationQ
   | otherwise = Nothing
 
 detectConceptKnowledge :: Text -> [Text] -> Maybe PropositionType

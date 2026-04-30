@@ -565,7 +565,18 @@ routeCatalog =
   , (RouteTypeRepair, "apology_repair", "semantic_apology_repair", ["извини", "прости", "прошу прощения"])
   , (RouteTypeContact, "farewell_contact", "semantic_farewell_contact", ["пока", "до свидания", "увидимся"])
   , (RouteTypeContact, "gratitude_contact", "semantic_gratitude_contact", ["спасибо", "благодарю", "thank you"])
-  , (RouteTypeContact, "affective_help", "semantic_affective_help", ["что делать если грустно", "мне тревожно", "мне плохо"])
+  , (RouteTypeContact, "affective_help", "semantic_affective_help"
+      , [ "что делать если грустно"
+        , "как не переживать"
+        , "как не волноваться"
+        , "как успокоиться"
+        , "не хочется ничего делать"
+        , "что мне делать дальше"
+        , "нет сил"
+        , "мне тревожно"
+        , "мне плохо"
+        ]
+    )
   , (RouteTypeGround, "agreement_anchor", "semantic_agreement_anchor", ["я согласен", "верно", "логично"])
   , (RouteTypeDistinguish, "disagreement_confront", "semantic_disagreement_confront", ["я не согласен", "сомневаюсь", "это спорно"])
   , (RouteTypeDescribe, "opinion_question", "semantic_opinion_question", ["какое твое мнение", "как считаешь", "что думаешь об этом"])
@@ -582,7 +593,15 @@ routeCatalog =
   , (RouteTypeGround, "operational_cause", "semantic_operational_cause", ["почему система не работает", "почему ты не отвечаешь"])
   , (RouteTypeGround, "world_cause", "semantic_world_cause", ["почему небо голубое", "почему солнце светит"])
   , (RouteTypeGround, "location_formation", "semantic_location_formation", ["где формируется мысль", "откуда берется идея"])
-  , (RouteTypeClarify, "next_step", "semantic_next_step", ["что дальше", "что теперь", "что потом"])
+  , (RouteTypeClarify, "next_step", "semantic_next_step"
+      , [ "что дальше"
+        , "что теперь"
+        , "что потом"
+        , "с чего начать"
+        , "какой первый шаг"
+        , "как действовать дальше"
+        ]
+    )
   , (RouteTypeGround, "everyday_event", "semantic_everyday_event", ["я купил дом", "я живу дома"])
   , (RouteTypeDeepen, "contemplative_topic", "semantic_contemplative_topic", ["тишина", "смысл", "истина", "я думаю"])
   , (RouteTypeUnknown, "unknown", "semantic_unknown", ["что", "непонятно"])
@@ -721,12 +740,26 @@ isInsultSignal normalized _units =
       || T.isInfixOf "ты туп" lowered
 
 isNextStepQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
-isNextStepQuestion normalized _units =
-  niIsQuestion normalized
+isNextStepQuestion normalized units =
+  let planningPattern =
+        hasPhrase tokens ["с", "чего", "начать"]
+          || hasPhrase tokens ["какой", "первый", "шаг"]
+          || hasPhrase tokens ["что", "мне", "делать", "дальше"]
+          || hasPhrase tokens ["что", "сейчас", "делать"]
+          || hasPhrase tokens ["как", "действовать", "дальше"]
+          || hasPhrase tokens ["нет", "понимания", "что", "дальше"]
+      distressPlusAction =
+        hasAny tokens ["что", "как"]
+          && hasAny tokens ["делать", "дальше", "шаг", "начать"]
+          && hasAny tokens ["тревожно", "тревога", "плохо", "грустно", "страшно", "апатия", "переживать", "волноваться", "сил", "устал", "устала"]
+  in niIsQuestion normalized
     && ( hasPhrase tokens ["что", "дальше"]
       || hasPhrase tokens ["дальше", "что"]
       || hasPhrase tokens ["что", "теперь"]
       || hasPhrase tokens ["что", "потом"]
+      || planningPattern
+      || distressPlusAction
+      || isAffectiveHelpQuestion normalized units
       )
   where
     tokens = niTokens normalized
@@ -820,6 +853,8 @@ isContemplativeQuestion normalized units =
   niIsQuestion normalized &&
   any (\u -> SemContemplative `elem` wmuSemanticClasses u) units
     && not (hasSecondPersonReference units)
+    && not (isAffectiveHelpQuestion normalized units)
+    && not (isNextStepQuestion normalized units)
     && not (isDefinitionalQuestion normalized units)
     && not (isPurposeFunctionQuestion normalized units)
     && not (isRelationComparisonQuestion normalized units)
@@ -1279,9 +1314,37 @@ asksUserIdentityQuestion normalized units =
 
 isAffectiveHelpQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isAffectiveHelpQuestion normalized units =
-  niIsQuestion normalized
-    && hasPhrase (niTokens normalized) ["что", "делать"]
-    && any (\u -> wmuLemma u `elem` affectiveStateLemmas) units
+  let tokens = niTokens normalized
+      hasAffectiveSignal =
+        any (\u -> wmuLemma u `elem` affectiveStateLemmas) units
+          || hasAny tokens
+              [ "тревожно", "тревога", "грустно", "тоскливо", "плохо", "одиноко", "страшно"
+              , "паника", "апатия", "выгорел", "выгорела", "переживать", "переживаю"
+              , "волноваться", "волнуюсь", "устал", "устала", "сил", "тяжело"
+              ]
+      classicHelpPattern =
+        hasPhrase tokens ["что", "делать"]
+          && (hasAffectiveSignal || hasAny tokens ["если", "когда"])
+      regulationPattern =
+        hasPhrase tokens ["как", "не", "переживать"]
+          || hasPhrase tokens ["как", "не", "волноваться"]
+          || hasPhrase tokens ["как", "успокоиться"]
+          || hasPhrase tokens ["как", "перестать", "переживать"]
+          || hasPhrase tokens ["как", "перестать", "волноваться"]
+          || hasPhrase tokens ["как", "справиться", "с", "тревогой"]
+          || hasPhrase tokens ["как", "справиться", "со", "страхом"]
+          || hasPhrase tokens ["как", "справиться", "с", "апатией"]
+      lowEnergyPattern =
+        hasPhrase tokens ["не", "хочется", "ничего", "делать"]
+          || hasPhrase tokens ["ничего", "не", "хочется", "делать"]
+          || hasPhrase tokens ["нет", "сил"]
+          || hasPhrase tokens ["устал", "и", "ничего", "не", "хочется"]
+          || hasPhrase tokens ["устала", "и", "ничего", "не", "хочется"]
+      shortSupportProbe =
+        (hasAny tokens ["как", "что"] && hasAffectiveSignal)
+          || hasPhrase tokens ["что", "мне", "делать"]
+  in niIsQuestion normalized
+      && (classicHelpPattern || regulationPattern || lowEnergyPattern || shortSupportProbe)
 
 isEverydayEventAssertion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isEverydayEventAssertion normalized units =

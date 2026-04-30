@@ -2319,10 +2319,10 @@ testParsePropositionEverydayResidenceStatement = TestCase $ do
 testParsePropositionAffectiveHelpQuestion :: Test
 testParsePropositionAffectiveHelpQuestion = TestCase $ do
   let frame = parseProposition "что делать если грустно?"
-  assertEqual "Affective-help question should route to contact signal"
-    "ContactSignal" (ipfPropositionType frame)
-  assertEqual "Affective-help family should be CMContact"
-    CMContact (ipfCanonicalFamily frame)
+  assertEqual "Affective-help question should route to next-step planning"
+    "NextStepQ" (ipfPropositionType frame)
+  assertEqual "Affective-help family should be CMNextStep"
+    CMNextStep (ipfCanonicalFamily frame)
 
 testParsePropositionComparisonPlausibilityTableChair :: Test
 testParsePropositionComparisonPlausibilityTableChair = TestCase $ do

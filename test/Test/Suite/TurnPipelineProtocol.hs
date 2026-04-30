@@ -551,7 +551,8 @@ testWorldCauseQuestionRendersGroundedExplanation = TestCase $
     assertStructuredTurn
       "почему солнце светит?"
       CMGround
-      [ "если говорить о причине солнца"
+      [ "причин"
+      , "механизм локального разбора"
       , "внешнем мире"
       ]
 
@@ -590,10 +591,11 @@ testAffectiveHelpQuestionUsesContactWithoutLexicalFallback = TestCase $
   withDeterministicEmbedding $
     assertStructuredTurn
       "что делать если грустно?"
-      CMContact
-      [ "нужна опора"
-      , "\"грустно\""
-      , "один короткий шаг"
+      CMNextStep
+      [ "зафиксируем практичный следующий ход"
+      , "1) назови одну цель"
+      , "2) выбери минимальный шаг"
+      , "3) проверь результат"
       ]
 
 testGreetingSmallTalkUsesContactWithoutDistressFallback :: Test
