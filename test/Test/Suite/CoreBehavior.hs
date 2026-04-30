@@ -739,7 +739,7 @@ testClaimAstCoverageForOperationalAndMetaPrompts = TestCase $ do
         , ("Почему ты не работаешь?", "OperationalCauseQ")
         , ("В чём твоя логика?", "SystemLogicQ")
         , ("Я не понимаю тебя", "MisunderstandingReport")
-        , ("Скажи интересную мысль", "GenerativePrompt")
+        , ("Скажи интересную мысль", "ReflectiveQ")
         , ("Тишина", "ContemplativeTopic")
         ]
   forM_ probes $ \(inputText, expectedType) -> do

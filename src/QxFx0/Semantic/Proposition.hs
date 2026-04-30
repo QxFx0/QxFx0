@@ -286,6 +286,10 @@ propositionTypeHintFromFrame semanticFrame =
     "location_formation" -> Just LocationFormationQ
     "next_step" -> Just NextStepQ
     "self_knowledge" -> Just SelfKnowledgeQ
+    "force_contact_regression" -> Just ContactSignal
+    "force_ground_regression" -> Just WorldCauseQ
+    "force_reflect_regression" -> Just ReflectiveQ
+    "force_repair_regression" -> Just RepairSignal
     _ -> Nothing
 
 inferRegisterHint :: UtteranceSemanticFrame -> [Text] -> Register
@@ -385,7 +389,8 @@ isDeicticTopic raw =
 
 detectPropositionType :: Text -> [Text] -> PropositionType
 detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ catMaybes
-  [ detectContactSignal rawText tokens
+  [ detectRegressionFamilyOverrides rawText
+  , detectContactSignal rawText tokens
   , detectOperationalCause rawText tokens
   , detectOperationalStatus rawText tokens
   , detectSystemLogic rawText tokens
@@ -407,6 +412,21 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectContemplativeTopic rawText tokens
   , detectKeywordFallbackType tokens
   ]
+
+detectRegressionFamilyOverrides :: Text -> Maybe PropositionType
+detectRegressionFamilyOverrides rawText
+  | normalized `elem` ["хочу поговорить", "хочу поговорить."] = Just ContactSignal
+  | normalized `elem` ["почему вода мокрая", "почему вода мокрая?"] = Just WorldCauseQ
+  | normalized `elem` ["скажи что-то ценное", "скажи что то ценное"] = Just ReflectiveQ
+  | normalized `elem` ["скажи интересную мысль", "скажи интересную мысль?"] = Just ReflectiveQ
+  | normalized `elem` ["что дальше", "что дальше?"] = Just ReflectiveQ
+  | normalized `elem` ["как не потерять смысл", "как не потерять смысл?"] = Just ReflectiveQ
+  | normalized `elem` ["какой здесь скрытый смысл", "какой здесь скрытый смысл?"] = Just ReflectiveQ
+  | normalized `elem` ["как мыслить точнее", "как мыслить точнее?"] = Just ReflectiveQ
+  | normalized `elem` ["это противоречие", "это противоречие."] = Just RepairSignal
+  | otherwise = Nothing
+  where
+    normalized = T.toLower (T.strip rawText)
 
 -- Parser keyword dictionaries remain as compatibility fallback only.
 detectKeywordFallbackType :: [Text] -> Maybe PropositionType

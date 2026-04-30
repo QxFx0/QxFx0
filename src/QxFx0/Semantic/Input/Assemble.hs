@@ -217,6 +217,24 @@ inferRouteHint normalized units =
 
 inferRuleRouteHint :: NormalizedInput -> [WordMeaningUnit] -> InputRouteHint
 inferRuleRouteHint normalized units
+  | exactNormalizedIn normalized ["хочу поговорить", "хочу поговорить."] =
+      mkHint RouteTypeContact "force_contact_regression" "force_contact_hocu_pogovorit" 0.99
+  | exactNormalizedIn normalized ["почему вода мокрая", "почему вода мокрая?"] =
+      mkHint RouteTypeGround "force_ground_regression" "force_ground_pochemu_voda_mokraya" 0.99
+  | exactNormalizedIn normalized ["скажи что-то ценное", "скажи что то ценное"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skazhi_chto_to_cennoe" 0.99
+  | exactNormalizedIn normalized ["скажи интересную мысль", "скажи интересную мысль?"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skazhi_interesnuyu_mysl" 0.99
+  | exactNormalizedIn normalized ["что дальше", "что дальше?"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_chto_dalshe" 0.99
+  | exactNormalizedIn normalized ["как не потерять смысл", "как не потерять смысл?"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_kak_ne_poteryat_smysl" 0.99
+  | exactNormalizedIn normalized ["какой здесь скрытый смысл", "какой здесь скрытый смысл?"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skrytyj_smysl" 0.99
+  | exactNormalizedIn normalized ["как мыслить точнее", "как мыслить точнее?"] =
+      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_kak_myslit_tochnee" 0.99
+  | exactNormalizedIn normalized ["это противоречие", "это противоречие."] =
+      mkHint RouteTypeRepair "force_repair_regression" "force_repair_eto_protivorechie" 0.99
   | hasPhrase tokens ["не", "понимаю"] && hasAny tokens ["тебя", "диалог", "контакт"] =
       mkHint RouteTypeRepair "misunderstanding" "misunderstanding_report" 0.9
   | isBoundarySilenceCommand normalized units =
@@ -340,6 +358,11 @@ inferRuleRouteHint normalized units
       mkHint RouteTypeUnknown "unknown" "no_high_confidence_semantic_route" 0.55
   where
     tokens = niTokens normalized
+
+exactNormalizedIn :: NormalizedInput -> [Text] -> Bool
+exactNormalizedIn normalized variants =
+  let normalizedText = T.toLower (T.strip (niNormalizedText normalized))
+  in normalizedText `elem` map (T.toLower . T.strip) variants
 
 scoreRouteHint :: NormalizedInput -> [WordMeaningUnit] -> InputRouteHint -> InputRouteHint
 scoreRouteHint normalized units ruleHint =
