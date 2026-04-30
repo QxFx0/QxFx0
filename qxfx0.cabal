@@ -139,82 +139,13 @@ library
     QxFx0.Semantic.SemanticScene
     QxFx0.Semantic.SemanticInput
     QxFx0.Semantic.Input
-    QxFx0.Render.Dialogue
-    QxFx0.Render.Semantic
-    QxFx0.Render.Text
-    QxFx0.Core.TurnPipeline.Route.Render
-  other-modules:
-    Paths_qxfx0
-    QxFx0.Types.Decision.Enums
-    QxFx0.Types.Decision.Enums.Support
-    QxFx0.Types.Decision.Enums.Conversation
-    QxFx0.Types.Decision.Enums.Render
-    QxFx0.Types.Decision.Enums.Governance
-    QxFx0.Types.Decision.Family
-    QxFx0.Types.Decision.Model
-    QxFx0.Types.Config.Decision
-    QxFx0.Types.Config.Domain
-    QxFx0.Types.Config.Dream
-    QxFx0.Types.Config.Identity
-    QxFx0.Types.Config.Observability
-    QxFx0.Types.Config.Orbital
-    QxFx0.Types.Config.SemanticScene
-    QxFx0.Types.Config.State
-    QxFx0.Types.Domain.R5
-    QxFx0.Types.Domain.User
-    QxFx0.Types.State.Identity
-    QxFx0.Types.State.Dialogue
-    QxFx0.Types.State.Semantic
-    QxFx0.Types.State.System
-    QxFx0.Types.Text
-    QxFx0.Types.Thresholds.Types
-    QxFx0.Types.Thresholds.Common
-    QxFx0.Types.Thresholds.Legitimacy
-    QxFx0.Types.Thresholds.Intuition
-    QxFx0.Types.Thresholds.Consciousness
-    QxFx0.Types.Thresholds.Orbital
-    QxFx0.Types.Thresholds.Routing
-    QxFx0.Types.Thresholds.Dream
-    QxFx0.Types.Thresholds.Constants
-    QxFx0.Policy.Contracts
-    QxFx0.Policy.Consciousness
-    QxFx0.Policy.Consciousness.Signals
-    QxFx0.Policy.Consciousness.Ontology
-    QxFx0.Policy.Consciousness.Interpretation
-    QxFx0.Policy.Consciousness.Profiles
-    QxFx0.Policy.ParserKeywords
-    QxFx0.Policy.RenderLexicon
-    QxFx0.Policy.SemanticScoring
-    QxFx0.Bridge.AgdaWitness
-    QxFx0.Bridge.Datalog.Compare
-    QxFx0.Bridge.Datalog.Runtime
-    QxFx0.Bridge.Datalog.Support
-    QxFx0.Bridge.Datalog.Types
-    QxFx0.Bridge.SQLite.Pool
-    QxFx0.Bridge.SQLite.Bootstrap
-    QxFx0.Bridge.SQLite.Queries
-    QxFx0.Resources.Paths
-    QxFx0.Resources.Morphology
-    QxFx0.Resources.Readiness
-    QxFx0.Runtime.Context
-    QxFx0.Runtime.Gate
-    QxFx0.Runtime.Mode
-    QxFx0.Runtime.Paths
-    QxFx0.Runtime.Session.Types
-    QxFx0.Runtime.Session.Bootstrap
-    QxFx0.Runtime.Session.UI
-    QxFx0.Runtime.Wiring
-    QxFx0.Runtime.Wiring.Context
-    QxFx0.Runtime.Wiring.Readiness
-    QxFx0.Runtime.Wiring.Pipeline
-    QxFx0.Semantic.KeywordMatch
-    QxFx0.Semantic.Embedding.Types
-    QxFx0.Semantic.Embedding.Support
-    QxFx0.Semantic.Embedding.Fallback
-    QxFx0.Semantic.Embedding.Runtime
+    QxFx0.Semantic.Input.Assemble.Types
+    QxFx0.Semantic.Input.Assemble.WordUnits
+    QxFx0.Semantic.Input.Assemble.RouteHints
+    QxFx0.Semantic.Input.Assemble.Detection
+    QxFx0.Semantic.Input.Assemble.Builders
     QxFx0.Semantic.Input.Model
     QxFx0.Semantic.Input.Normalize
-    QxFx0.Semantic.Input.GeneratedLexicon
     QxFx0.Semantic.Input.Lexicon
     QxFx0.Semantic.Input.Classify
     QxFx0.Semantic.Input.Assemble
