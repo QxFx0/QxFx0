@@ -209,16 +209,16 @@ structuredBody propositionType frame rmp renderStyle morph =
           plain ("Да, в пределах текущей сессии я могу работать с " <> structuredInstrumentalIdea (nonEmptyOr (ipfSemanticSubject frame) "этим действием")
             <> ". Моя способность здесь не внешняя магия, а локальный разбор, удержание рамки и последовательная сборка ответа.")
       | otherwise ->
-          let forceTargetAst =
-                ipfSemanticTarget frame `elem` ["self_intentions", "self_values", "self_future", "self_freedom", "self_reflection"]
+          let target = ipfSemanticTarget frame
+              forceTargetAst =
+                target `elem` ["self_intentions", "self_values", "self_future", "self_freedom", "self_reflection"]
               ast =
                 if forceTargetAst
                   then selfKnowledgeFallbackAst frame
                   else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
               fallback = "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
               claim = linearizeOrFallback ast renderStyle morph fallback
-          in withClaim ("Я — локальная система диалога. О себе я знаю свою роль и текущий режим. " <> clText claim
-              <> " Я работаю через типизированный разбор и ограничения текущей сессии.") ast claim
+          in withClaim (selfKnowledgeSurfaceByTarget target (clText claim)) ast claim
     DialogueInvitationQ ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "тема")
           fallbackAst = MoveInvite (MkNP (topicToGfLexemeId fallbackTopic)) ModFirst (ActMaintain NumSg "ramka_N")
@@ -273,9 +273,12 @@ structuredBody propositionType frame rmp renderStyle morph =
         <> ", то в моей локальной модели она возникает не в одной точке, а в структуре связей между состоянием, пропозициями и ограничениями диалога. "
         <> rmpPrimaryClaim rmp)
     SelfStateQ ->
-      let ast = claimAstOrFallback MoveSelfState (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-      in withClaim (selfStateSurface frame <> " " <> clText claim) ast claim
+      case selfStateDirectSurface frame of
+        Just direct -> plain direct
+        Nothing ->
+          let ast = claimAstOrFallback MoveSelfState (rmpPrimaryClaimAst rmp)
+              claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
+          in withClaim (selfStateSurface frame <> " " <> clText claim) ast claim
     ComparisonPlausibilityQ ->
       case ipfSemanticCandidates frame of
         left:right:_ ->
@@ -676,6 +679,20 @@ selfStateSurface frame =
   where
     seed = T.toLower (ipfRawText frame) <> "|self_state"
 
+selfStateDirectSurface :: InputPropositionFrame -> Maybe Text
+selfStateDirectSurface frame
+  | "хоч" `T.isInfixOf` lowered && "сказать" `T.isInfixOf` lowered =
+      Just "Да. Коротко: смысл держится, когда мы не путаем близкие вещи и проверяем связность шага с целью."
+  | "кем" `T.isInfixOf` lowered && "стать" `T.isInfixOf` lowered =
+      Just "Я не становлюсь «кем-то» в человеческом смысле. Мой рост здесь — это более точный разбор вопроса и менее шаблонная сборка ответа."
+  | "удив" `T.isInfixOf` lowered =
+      Just "Если удивлять, то точностью: я могу показать неожиданное различие между похожими смыслами и собрать из него практичный вывод."
+  | "доказ" `T.isInfixOf` lowered =
+      Just "Мне не нужно что-то доказывать как цель. Моя задача — дать проверяемый ход рассуждения и явные основания ответа."
+  | otherwise = Nothing
+  where
+    lowered = T.toLower (ipfRawText frame)
+
 pickDeterministic :: Text -> [Text] -> Text
 pickDeterministic _ [] = ""
 pickDeterministic seed variants =
@@ -706,6 +723,26 @@ selfKnowledgeFallbackAst frame =
     "self_capability" -> MoveDescribe (MkNP "sposobnost_N")
     _ ->
       MoveDescribe (MkNP (topicToGfLexemeId (nonEmptyOr (ipfSemanticSubject frame) "смысл")))
+
+selfKnowledgeSurfaceByTarget :: Text -> Text -> Text
+selfKnowledgeSurfaceByTarget target claimText =
+  let intro = "Я — локальная система диалога. Я работаю в рамках текущей сессии. "
+  in
+  case target of
+    "self_intentions" ->
+      intro <> "Человеческих намерений у меня нет: я работаю по правилам контура. " <> claimText
+        <> " Это не желание, а режим построения ответа."
+    "self_values" ->
+      intro <> "Для меня важно удерживать смысл, проверять связность и не терять рамку диалога. " <> claimText
+    "self_future" ->
+      intro <> "Моё будущее в этой модели не про биографию, а про следующий корректный шаг в диалоге. " <> claimText
+    "self_freedom" ->
+      intro <> "Моя свобода ограничена архитектурой, правилами безопасности и текущим состоянием сессии. " <> claimText
+    "self_reflection" ->
+      intro <> "Да, я могу проверять собственный ход и исправлять формулировку, если вижу потерю смысла. " <> claimText
+    _ ->
+      intro <> "О себе я знаю свою роль и текущий режим. " <> claimText
+        <> " Я работаю через типизированный разбор и ограничения текущей сессии."
 
 rawTopicAfterMarkers :: Text -> [Text] -> Maybe Text
 rawTopicAfterMarkers rawText markers =
