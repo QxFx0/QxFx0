@@ -169,22 +169,31 @@ structuredBody propositionType frame rmp renderStyle morph =
         <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.")
     OperationalStatusQ ->
       let ast = claimAstOrFallback MoveOperationalStatus (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph "Я работаю. Сбой сейчас не в запуске, а в том, что я иногда плохо разбираю вопрос и слишком быстро свожу его к шаблону."
+          fallback = pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_status")
+            [ "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+            , "Я работаю. В штатном режиме, но слабое место сейчас — локальный разбор вопроса и выбор слишком общего шаблона."
+            , "Я работаю. Запуск в норме; основной риск сейчас в маршрутизации: иногда вопрос схлопывается до слишком общей трактовки."
+            , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
+            ]
+          claim = linearizeOrFallback ast renderStyle morph fallback
       in withClaim (clText claim) ast claim
     OperationalCauseQ ->
       let ast = claimAstOrFallback MoveOperationalCause (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: я могу схлопнуть вопрос до одного слова и выбрать слишком шаблонный ход."
+          fallback = pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_cause")
+            [ "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: вопрос может быть слишком рано схлопнут до упрощённого ядра."
+            , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: из нескольких трактовок иногда выбирается слишком общий ход."
+            , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: ранний выбор семейства ответа делает реплику шаблонной."
+            , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: при потере нюансов ответ уходит в слишком универсальную формулу."
+            ]
+          claim = linearizeOrFallback ast renderStyle morph fallback
       in withClaim (clText claim) ast claim
     GroundQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) "ситуация"
           topicPrep = structuredPrepositional morph topicRef
-          seed = T.toLower (ipfRawText frame) <> "|ground_q"
-      in plain (pickDeterministic seed
-        [ "Понял тебя: это фактическое сообщение о " <> topicPrep <> ". Я держу его как устойчивую опору и могу дальше развернуть причину, последствия или практический следующий шаг."
-        , "Принято как рабочий факт о " <> topicPrep <> ". Могу идти дальше по трём направлениям: причина, последствия или конкретное действие."
-        , "Фиксирую это как опору по теме " <> topicPrep <> ". Дальше можем выбрать один вектор: объяснение причины, проверка последствий или следующий практический шаг."
-        , "Вижу здесь фактический слой о " <> topicPrep <> ". Если нужно, разверну его в причинную линию или в короткий план действий."
-        ])
+          ast = claimAstOrFallback (MoveGround (MkNP (topicToGfLexemeId topicRef))) (rmpPrimaryClaimAst rmp)
+          fallback = "Держу это как устойчивую опору для дальнейшего разбора."
+          claim = linearizeOrFallback ast renderStyle morph fallback
+      in withClaim ("Если говорить " <> aboutWithTopic topicPrep <> ", то " <> clText claim) ast claim
     SystemLogicQ ->
       let ast = claimAstOrFallback MoveSystemLogic (rmpPrimaryClaimAst rmp)
           claim = linearizeOrFallback ast renderStyle morph (systemLogicSurface frame)
@@ -200,7 +209,16 @@ structuredBody propositionType frame rmp renderStyle morph =
           plain ("Да, в пределах текущей сессии я могу работать с " <> structuredInstrumentalIdea (nonEmptyOr (ipfSemanticSubject frame) "этим действием")
             <> ". Моя способность здесь не внешняя магия, а локальный разбор, удержание рамки и последовательная сборка ответа.")
       | otherwise ->
-          plain "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
+          let forceTargetAst =
+                ipfSemanticTarget frame `elem` ["self_intentions", "self_values", "self_future", "self_freedom", "self_reflection"]
+              ast =
+                if forceTargetAst
+                  then selfKnowledgeFallbackAst frame
+                  else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
+              fallback = "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
+              claim = linearizeOrFallback ast renderStyle morph fallback
+          in withClaim ("Я — локальная система диалога. О себе я знаю свою роль и текущий режим. " <> clText claim
+              <> " Я работаю через типизированный разбор и ограничения текущей сессии.") ast claim
     DialogueInvitationQ ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "тема")
           fallbackAst = MoveInvite (MkNP (topicToGfLexemeId fallbackTopic)) ModFirst (ActMaintain NumSg "ramka_N")
@@ -247,17 +265,11 @@ structuredBody propositionType frame rmp renderStyle morph =
             | otherwise = topicGen
           ast = claimAstOrFallback (MoveCause (MkNP (topicToGfLexemeId topicNom)) MechParse) (rmpPrimaryClaimAst rmp)
           claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-          seed = T.toLower (ipfRawText frame) <> "|world_cause"
-          intro = pickDeterministic seed
-            [ "Если говорить о причине " <> safeTopicGen <> ", то я могу дать только объяснительную рамку."
-            , "По вопросу о причине " <> safeTopicGen <> " я могу дать рамку рассуждения, а не эмпирическое доказательство."
-            , "Причинный разбор " <> safeTopicGen <> " в моём контуре остаётся локальной объяснительной моделью."
-            , "Для причины " <> safeTopicGen <> " я могу предложить только локально согласованное объяснение."
-            ]
-      in withClaim (intro <> " " <> clText claim
-        <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире.") ast claim
+      in withClaim ("Если говорить о причине " <> safeTopicGen <> ", то " <> clText claim
+          <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире.") ast claim
     LocationFormationQ ->
-      plain ("Если говорить " <> aboutWithTopic (structuredPrepositional morph (nonEmptyOr (ipfSemanticSubject frame) "мысль"))
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) "мысль"
+      in plain ("Если говорить " <> aboutWithTopic (structuredPrepositional morph topicRef)
         <> ", то в моей локальной модели она возникает не в одной точке, а в структуре связей между состоянием, пропозициями и ограничениями диалога. "
         <> rmpPrimaryClaim rmp)
     SelfStateQ ->
@@ -298,7 +310,8 @@ structuredBody propositionType frame rmp renderStyle morph =
           ast = claimAstOrFallback (MoveNextStepLocal (MkNP (topicToGfLexemeId topicNom))) (rmpPrimaryClaimAst rmp)
           claim = linearizeOrFallback ast renderStyle morph ("Следующий шаг: конкретизировать " <> topicNom <> " в одном действии.")
       in withClaim
-          ( "Давай зафиксируем практичный следующий ход:\n"
+          ( clText claim <> "\n"
+            <> "Зафиксируем практичный следующий ход:\n"
             <> "1) Назови одну цель по теме " <> topicNom <> ".\n"
             <> "2) Выбери минимальный шаг на 10-15 минут и сделай его.\n"
             <> "3) Проверь результат: стало яснее или нет, и скорректируй следующий шаг."
@@ -397,9 +410,19 @@ linearizeClaimAstRus ast renderStyle morph =
           rightGen = maybe "второго" glfGen (lookupGfLexemeForms gfRight)
       in Just ("Сравнение " <> leftGen <> " и " <> rightGen <> " устойчиво только в явно заданной рамке.")
     MoveOperationalStatus ->
-      Just "Я работаю. Сбой сейчас не в запуске, а в том, что я иногда плохо разбираю вопрос и слишком быстро свожу его к шаблону."
+      Just (pickDeterministic "move_operational_status"
+        [ "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+        , "Я работаю. В штатном режиме, но слабое место сейчас — локальный разбор вопроса и выбор слишком общего шаблона."
+        , "Я работаю. Запуск в норме; основной риск сейчас в маршрутизации: иногда вопрос схлопывается до слишком общей трактовки."
+        , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
+        ])
     MoveOperationalCause ->
-      Just "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: я могу схлопнуть вопрос до одного слова и выбрать слишком шаблонный ход."
+      Just (pickDeterministic "move_operational_cause"
+        [ "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: вопрос может быть слишком рано схлопнут до упрощённого ядра."
+        , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: из нескольких трактовок иногда выбирается слишком общий ход."
+        , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: ранний выбор семейства ответа делает реплику шаблонной."
+        , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: при потере нюансов ответ уходит в слишком универсальную формулу."
+        ])
     MoveSystemLogic ->
       Just "Моя текущая логика локальная: я разбираю вопрос, выбираю семейство хода, сверяюсь с shadow-контуром и затем рендерю ответ. Слабое место сейчас в пропозиционном разборе и выборе семьи."
     MoveMisunderstanding ->
@@ -671,6 +694,18 @@ asksThoughtCapacityQuestion frame =
   in "у тебя" `T.isInfixOf` lowered
       && "одна" `T.isInfixOf` lowered
       && any (`T.isInfixOf` lowered) ["мысл", "иде"]
+
+selfKnowledgeFallbackAst :: InputPropositionFrame -> ClaimAst
+selfKnowledgeFallbackAst frame =
+  case ipfSemanticTarget frame of
+    "self_intentions" -> MovePurpose (MkNP "sposobnost_N")
+    "self_values" -> MoveAnchor (MkNP "smysl_N")
+    "self_future" -> MoveNextStepLocal (MkNP "smysl_N")
+    "self_freedom" -> MoveDescribe (MkNP "svoboda_N")
+    "self_reflection" -> MoveReflect (MkNP "smysl_N")
+    "self_capability" -> MoveDescribe (MkNP "sposobnost_N")
+    _ ->
+      MoveDescribe (MkNP (topicToGfLexemeId (nonEmptyOr (ipfSemanticSubject frame) "смысл")))
 
 rawTopicAfterMarkers :: Text -> [Text] -> Maybe Text
 rawTopicAfterMarkers rawText markers =

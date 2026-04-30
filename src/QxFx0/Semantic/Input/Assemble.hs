@@ -241,12 +241,18 @@ inferRuleRouteHint normalized units
       mkHint RouteTypeDistinguish "disagreement_confront" "disagreement_signal" 0.88
   | isAgreementSignal normalized units =
       mkHint RouteTypeGround "agreement_anchor" "agreement_signal" 0.86
+  | isSelfFutureQuestion normalized units =
+      mkHint RouteTypeDescribe "self_knowledge" "self_future_question" 0.9
   | isOpinionQuestion normalized units =
       mkHint RouteTypeDescribe "opinion_question" "opinion_question" 0.88
   | isNameQuestion normalized units =
       mkHint RouteTypeDescribe "self_knowledge" "self_name_question" 0.9
   | isSelfDescriptionRequest normalized units =
       mkHint RouteTypeDescribe "self_knowledge" "self_knowledge_profile_request" 0.9
+  | isSelfIntentQuestion normalized units =
+      mkHint RouteTypeDescribe "self_state" "self_intent_question" 0.9
+  | isSelfMetaQuestion normalized units =
+      mkHint RouteTypeDescribe "self_knowledge" "self_meta_question_direct" 0.9
   | isSelfThoughtQuestion normalized units =
       mkHint RouteTypeDescribe "self_state" "self_state_question_direct" 0.89
   | isGenericHowYouProcessQuestion normalized units =
@@ -349,6 +355,11 @@ scoreRouteHint normalized units ruleHint =
         irhTag ruleHint `elem`
           [ "misunderstanding"
           , "boundary_command"
+          , "apology_repair"
+          , "farewell_contact"
+          , "gratitude_contact"
+          , "affective_help"
+          , "greeting_smalltalk"
           , "purpose_function"
           , "comparison_relation"
           , "disagreement_confront"
@@ -358,6 +369,10 @@ scoreRouteHint normalized units ruleHint =
           , "self_knowledge"
           , "self_state"
           , "system_logic"
+          , "operational_cause"
+          , "world_cause"
+          , "location_formation"
+          , "generative_prompt"
           ]
       useBest =
         (not preserveRuleHint)
@@ -570,7 +585,17 @@ routeCatalog =
         , "как не переживать"
         , "как не волноваться"
         , "как успокоиться"
+        , "как сохранить спокойствие"
+        , "как не паниковать"
+        , "как выйти из апатии"
+        , "как вернуть мотивацию"
+        , "как вернуть силы"
+        , "как собраться с силами"
         , "не хочется ничего делать"
+        , "нет энергии"
+        , "руки опускаются"
+        , "ничего не радует"
+        , "все бесит"
         , "что мне делать дальше"
         , "нет сил"
         , "мне тревожно"
@@ -768,6 +793,10 @@ isOpinionQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isOpinionQuestion normalized _units =
   let tokens = niTokens normalized
   in niIsQuestion normalized
+    && not (hasPhrase tokens ["какое", "у", "тебя", "будущее"])
+    && not (hasPhrase tokens ["какое", "у", "вас", "будущее"])
+    && not (hasPhrase tokens ["у", "тебя", "есть", "будущее"])
+    && not (hasPhrase tokens ["у", "вас", "есть", "будущее"])
     && ( hasPhrase tokens ["какое", "твое", "мнение"]
       || hasPhrase tokens ["какое", "ваше", "мнение"]
       || hasPhrase tokens ["каково", "твое", "мнение"]
@@ -918,34 +947,36 @@ isSystemIdentityQuestion normalized units =
             || hasPhrase tokens ["ты", "какой"]
             )
   in niIsQuestion normalized
-      && hasSecondPersonReference units
+      && hasSecondPersonOrToken units tokens
       && ( hasAny tokens ["машина", "бот", "промт", "prompt", "llm", "модель", "механизм"]
          || hasShortIdentityProbe
          )
 
 isDirectSelfProbeQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isDirectSelfProbeQuestion normalized units =
+  let tokens = niTokens normalized
+  in
   niIsQuestion normalized
-    && startsWithSecondPerson (niTokens normalized)
-    && hasSecondPersonReference units
+    && startsWithSecondPerson tokens
+    && hasSecondPersonOrToken units tokens
     && not (isDefinitionalQuestion normalized units)
-    && not (hasPhrase (niTokens normalized) ["что", "такое"])
+    && not (hasPhrase tokens ["что", "такое"])
     && not (isNameQuestion normalized units)
     && not (asksSelfRoleQuestion normalized units)
     && not (asksCapabilityQuestion normalized units)
     && not (asksAssistanceQuestion normalized units)
     && not (asksSystemLogicQuestion normalized units)
     && not (hasLemmaAny units ["работать"])
-    && not (hasAnyPrefix (niTokens normalized) ["работ"])
-    && not (hasAny (niTokens normalized) ["будешь", "будете"])
-    && not (hasAny (niTokens normalized) ["как"])
+    && not (hasAnyPrefix tokens ["работ"])
+    && not (hasAny tokens ["будешь", "будете"])
+    && not (hasAny tokens ["как"])
     && not (isSelfThoughtQuestion normalized units)
     && not (isGenericHowYouProcessQuestion normalized units)
     && any
       (\unit ->
         topicalUnit unit
           && ( wmuPartOfSpeech unit `elem` [PosNoun, PosAdjective, PosVerb]
-                || (wmuPartOfSpeech unit == PosUnknown && length (niTokens normalized) <= 3)
+                || (wmuPartOfSpeech unit == PosUnknown && length tokens <= 4)
              )
       )
       units
@@ -969,6 +1000,64 @@ isSelfDescriptionRequest normalized _units =
     || hasPhrase tokens ["что", "вы", "можете", "рассказать", "о", "себе"]
   where
     tokens = niTokens normalized
+
+isSelfFutureQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
+isSelfFutureQuestion normalized units =
+  let tokens = niTokens normalized
+  in niIsQuestion normalized
+      && hasSecondPersonOrToken units tokens
+      && ( hasPhrase tokens ["какое", "у", "тебя", "будущее"]
+        || hasPhrase tokens ["какое", "у", "вас", "будущее"]
+        || hasPhrase tokens ["у", "тебя", "есть", "будущее"]
+        || hasPhrase tokens ["у", "вас", "есть", "будущее"]
+        || hasPhrase tokens ["как", "думаешь", "какое", "у", "тебя", "будущее"]
+        || hasPhrase tokens ["как", "считаешь", "какое", "у", "тебя", "будущее"]
+        )
+
+isSelfIntentQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
+isSelfIntentQuestion normalized units =
+  let tokens = niTokens normalized
+      bareIntentPattern =
+        hasPhrase tokens ["хочешь", "что-то", "сказать"]
+          || hasPhrase tokens ["хочешь", "что", "то", "сказать"]
+          || hasPhrase tokens ["хочешь", "сказать"]
+  in niIsQuestion normalized
+      && (hasSecondPersonOrToken units tokens || bareIntentPattern)
+      && ( hasPhrase tokens ["что", "ты", "хочешь"]
+        || hasPhrase tokens ["что", "вы", "хотите"]
+        || hasPhrase tokens ["ты", "хочешь"]
+        || hasPhrase tokens ["вы", "хотите"]
+        || hasPhrase tokens ["кем", "ты", "хочешь", "стать"]
+        || hasPhrase tokens ["кем", "вы", "хотите", "стать"]
+        || hasPhrase tokens ["хочешь", "ли", "ты"]
+        || hasPhrase tokens ["хотите", "ли", "вы"]
+        || bareIntentPattern
+        )
+
+isSelfMetaQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
+isSelfMetaQuestion normalized units =
+  let tokens = niTokens normalized
+      low = niNormalizedText normalized
+  in niIsQuestion normalized
+      && hasSecondPersonOrToken units tokens
+      && ( hasPhrase tokens ["у", "тебя", "есть", "послание", "миру"]
+        || hasPhrase tokens ["у", "вас", "есть", "послание", "миру"]
+        || hasPhrase tokens ["у", "тебя", "есть", "намерения"]
+        || hasPhrase tokens ["есть", "ли", "у", "тебя", "намерения"]
+        || hasPhrase tokens ["какое", "у", "тебя", "будущее"]
+        || hasPhrase tokens ["у", "тебя", "есть", "будущее"]
+        || hasPhrase tokens ["ты", "способен", "найти", "ответ", "на", "свой", "же", "вопрос"]
+        || hasPhrase tokens ["на", "тебя", "действуют", "промты"]
+        || hasPhrase tokens ["на", "вас", "действуют", "промты"]
+        || hasPhrase tokens ["что", "для", "тебя", "важно"]
+        || hasPhrase tokens ["что", "для", "вас", "важно"]
+        || hasPhrase tokens ["ты", "субъектен"]
+        || hasPhrase tokens ["ты", "субьектен"]
+        || hasPhrase tokens ["ты", "умный"]
+        || hasPhrase tokens ["ты", "свободен"]
+        || hasPhrase tokens ["ты", "сложная", "система"]
+        || T.isInfixOf "почему ты знаешь то что знаешь" low
+        )
 
 isSelfThoughtQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isSelfThoughtQuestion normalized _units =
@@ -1283,20 +1372,32 @@ hasSecondPersonReference :: [WordMeaningUnit] -> Bool
 hasSecondPersonReference =
   any (\unit -> FeatPerson2 `elem` wmuMorphFeatures unit || SemUserReference `elem` wmuSemanticClasses unit)
 
+hasSecondPersonToken :: [Text] -> Bool
+hasSecondPersonToken tokens =
+  hasAny tokens ["ты", "тебя", "тебе", "тобой", "твой", "твоя", "твое", "твоё", "твои", "вы", "вас", "вам", "вами", "ваш", "ваша", "ваше", "ваши"]
+
+hasSecondPersonOrToken :: [WordMeaningUnit] -> [Text] -> Bool
+hasSecondPersonOrToken units tokens =
+  hasSecondPersonReference units || hasSecondPersonToken tokens
+
 hasLemmaAny :: [WordMeaningUnit] -> [Text] -> Bool
 hasLemmaAny units lemmas = any (\unit -> wmuLemma unit `elem` lemmas) units
 
 asksCapabilityQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 asksCapabilityQuestion normalized units =
+  let tokens = niTokens normalized
+  in
   niIsQuestion normalized
-    && hasSecondPersonReference units
+    && hasSecondPersonOrToken units tokens
     && hasLemmaAny units ["уметь", "мочь"]
     && isJustText (abilityComplement units)
     && not (asksAssistanceQuestion normalized units)
 
 asksAssistanceQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 asksAssistanceQuestion normalized units =
-  hasSecondPersonReference units
+  let tokens = niTokens normalized
+  in
+  hasSecondPersonOrToken units tokens
     && hasLemmaAny units ["мочь", "помочь", "помощь"]
     && hasLemmaAny units ["помочь", "помощь"]
     && (niIsQuestion normalized || any ((== PosVerb) . wmuPartOfSpeech) units)
@@ -1329,6 +1430,16 @@ isAffectiveHelpQuestion normalized units =
         hasPhrase tokens ["как", "не", "переживать"]
           || hasPhrase tokens ["как", "не", "волноваться"]
           || hasPhrase tokens ["как", "успокоиться"]
+          || hasPhrase tokens ["как", "сохранить", "спокойствие"]
+          || hasPhrase tokens ["как", "держать", "спокойствие"]
+          || hasPhrase tokens ["как", "не", "паниковать"]
+          || hasPhrase tokens ["как", "перестать", "тревожиться"]
+          || hasPhrase tokens ["как", "не", "тревожиться"]
+          || hasPhrase tokens ["как", "выйти", "из", "апатии"]
+          || hasPhrase tokens ["как", "собраться", "с", "силами"]
+          || hasPhrase tokens ["как", "вернуть", "силы"]
+          || hasPhrase tokens ["как", "вернуть", "мотивацию"]
+          || hasPhrase tokens ["как", "найти", "силы"]
           || hasPhrase tokens ["как", "перестать", "переживать"]
           || hasPhrase tokens ["как", "перестать", "волноваться"]
           || hasPhrase tokens ["как", "справиться", "с", "тревогой"]
@@ -1338,13 +1449,30 @@ isAffectiveHelpQuestion normalized units =
         hasPhrase tokens ["не", "хочется", "ничего", "делать"]
           || hasPhrase tokens ["ничего", "не", "хочется", "делать"]
           || hasPhrase tokens ["нет", "сил"]
+          || hasPhrase tokens ["нет", "энергии"]
+          || hasPhrase tokens ["руки", "опускаются"]
+          || hasPhrase tokens ["все", "бесит"]
+          || hasPhrase tokens ["всё", "бесит"]
+          || hasPhrase tokens ["ничего", "не", "радует"]
+          || hasPhrase tokens ["ничего", "не", "хочу"]
+          || hasPhrase tokens ["не", "могу", "собраться"]
+          || hasPhrase tokens ["не", "хочу", "ничего"]
+          || hasPhrase tokens ["не", "знаю", "что", "делать"]
           || hasPhrase tokens ["устал", "и", "ничего", "не", "хочется"]
           || hasPhrase tokens ["устала", "и", "ничего", "не", "хочется"]
       shortSupportProbe =
         (hasAny tokens ["как", "что"] && hasAffectiveSignal)
           || hasPhrase tokens ["что", "мне", "делать"]
+          || hasPhrase tokens ["помоги", "собраться"]
+          || hasPhrase tokens ["дай", "мне", "шаг"]
+          || hasPhrase tokens ["с", "чего", "начать", "когда", "тревожно"]
+      relaxedRegulationProbe =
+        hasAny tokens ["как"]
+          && ( hasAnyPrefix tokens ["пережив", "волнов", "тревож", "паник", "успок", "апат"]
+            || hasAffectiveSignal
+             )
   in niIsQuestion normalized
-      && (classicHelpPattern || regulationPattern || lowEnergyPattern || shortSupportProbe)
+      && (classicHelpPattern || regulationPattern || lowEnergyPattern || shortSupportProbe || relaxedRegulationProbe)
 
 isEverydayEventAssertion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isEverydayEventAssertion normalized units =

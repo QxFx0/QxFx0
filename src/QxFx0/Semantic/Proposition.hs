@@ -549,6 +549,15 @@ detectAffectiveSupport rawText tokens
   | containsKeywordPhrase tokens "как не переживать" = Just ContactSignal
   | containsKeywordPhrase tokens "как не волноваться" = Just ContactSignal
   | containsKeywordPhrase tokens "как успокоиться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как сохранить спокойствие" = Just ContactSignal
+  | containsKeywordPhrase tokens "как держать спокойствие" = Just ContactSignal
+  | containsKeywordPhrase tokens "как не паниковать" = Just ContactSignal
+  | containsKeywordPhrase tokens "как перестать тревожиться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как не тревожиться" = Just ContactSignal
+  | containsKeywordPhrase tokens "как выйти из апатии" = Just ContactSignal
+  | containsKeywordPhrase tokens "как вернуть мотивацию" = Just ContactSignal
+  | containsKeywordPhrase tokens "как вернуть силы" = Just ContactSignal
+  | containsKeywordPhrase tokens "как найти силы" = Just ContactSignal
   | containsKeywordPhrase tokens "как перестать переживать" = Just ContactSignal
   | containsKeywordPhrase tokens "как перестать волноваться" = Just ContactSignal
   | containsKeywordPhrase tokens "как справиться с тревогой" = Just ContactSignal
@@ -562,9 +571,17 @@ detectAffectiveSupport rawText tokens
   | containsKeywordPhrase tokens "не хочется ничего делать" = Just ContactSignal
   | containsKeywordPhrase tokens "ничего не хочется делать" = Just ContactSignal
   | containsKeywordPhrase tokens "нет сил" = Just ContactSignal
+  | containsKeywordPhrase tokens "нет энергии" = Just ContactSignal
+  | containsKeywordPhrase tokens "руки опускаются" = Just ContactSignal
+  | containsKeywordPhrase tokens "ничего не радует" = Just ContactSignal
+  | containsKeywordPhrase tokens "ничего не хочу" = Just ContactSignal
+  | containsKeywordPhrase tokens "не могу собраться" = Just ContactSignal
+  | containsKeywordPhrase tokens "все бесит" = Just ContactSignal
+  | containsKeywordPhrase tokens "всё бесит" = Just ContactSignal
   | containsKeywordPhrase tokens "устал и ничего не хочется" = Just ContactSignal
   | containsKeywordPhrase tokens "устала и ничего не хочется" = Just ContactSignal
   | hasAffectiveLexeme && T.isSuffixOf "?" (T.strip rawText) = Just ContactSignal
+  | hasRelaxedRegulationProbe && T.isSuffixOf "?" (T.strip rawText) = Just ContactSignal
   | otherwise = Nothing
   where
     hasAffectiveLexeme =
@@ -573,6 +590,9 @@ detectAffectiveSupport rawText tokens
         , "паника", "апатия", "выгорел", "выгорела", "переживать", "переживаю"
         , "волноваться", "волнуюсь", "устал", "устала", "сил", "тяжело"
         ]
+    hasRelaxedRegulationProbe =
+      any (`elem` tokens) ["как"]
+        && any (\tok -> any (`T.isPrefixOf` tok) ["пережив", "волнов", "тревож", "паник", "успок", "апат"]) tokens
 
 specialFocusEntity :: PropositionType -> Maybe Text
 specialFocusEntity OperationalStatusQ = Just "работа"
@@ -604,6 +624,11 @@ inferSemanticSlots rawText tokens propType =
           target
             | asksAboutUser rawText = "user"
             | T.isInfixOf "помоч" lowered = "user_help"
+            | any (`T.isInfixOf` lowered) ["намерени"] = "self_intentions"
+            | any (`T.isInfixOf` lowered) ["важно", "ценност"] = "self_values"
+            | any (`T.isInfixOf` lowered) ["будущ"] = "self_future"
+            | any (`T.isInfixOf` lowered) ["свобод"] = "self_freedom"
+            | any (`T.isInfixOf` lowered) ["свой же вопрос", "свой вопрос"] = "self_reflection"
             | any (`T.isInfixOf` lowered) ["умеешь", "можешь"] = "self_capability"
             | otherwise = "self"
           subject =
@@ -611,6 +636,11 @@ inferSemanticSlots rawText tokens propType =
               "user" -> "пользователь"
               "user_help" -> fromMaybe "помощь" (capabilitySubject tokens)
               "self_capability" -> fromMaybe "способность" (capabilitySubject tokens)
+              "self_intentions" -> "намерения"
+              "self_values" -> "принципы"
+              "self_future" -> "будущее"
+              "self_freedom" -> "свобода"
+              "self_reflection" -> "саморефлексия"
               _ -> "система"
       in (subject, target, [], semanticEvidenceFor rawText tokens propType)
     DialogueInvitationQ ->
@@ -671,6 +701,22 @@ detectSelfKnowledge rawText tokens
   | T.isInfixOf "как ты держишь рамку" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "что у тебя в фокусе" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "ты различаешь темы" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты умный" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты свободен" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты сложная система" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты субъектен" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты субьектен" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "на тебя действуют промты" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "на тебя действуют prompt" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "у тебя есть намерения" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "есть ли у тебя намерения" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "у тебя есть послание миру" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "что для тебя важно" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "какое у тебя будущее" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "у тебя есть будущее" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты способен найти ответ на свой же вопрос" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "почему ты знаешь то что знаешь" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "ты можешь не быть собой" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "расскажи о себе" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "что ты можешь рассказать о себе" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "что вы можете рассказать о себе" (T.toLower rawText) = Just SelfKnowledgeQ
@@ -749,6 +795,13 @@ detectSelfState rawText tokens
   | T.isInfixOf "о чем ты" (T.toLower rawText) && any (`elem` tokens) ["думаешь", "размышляешь"] =
       Just SelfStateQ
   | T.isInfixOf "что ты хочешь сказать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "хочешь что-то сказать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "хочешь что то сказать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "ты хочешь что-то сказать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "ты хочешь что то сказать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "а кем ты хочешь стать" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "хочешь ли ты меня удивить" (T.toLower rawText) = Just SelfStateQ
+  | T.isInfixOf "что ты хочешь доказать" (T.toLower rawText) = Just SelfStateQ
   | (containsKeywordPhrase tokens "что ты" || containsKeywordPhrase tokens "что вы")
       && any (`elem` tokens) ["думаешь", "думаете", "размышляешь", "размышляете", "считаешь", "считаете", "полагаешь", "полагаете"]
       && not (containsKeywordPhrase tokens "о чем") && not (containsKeywordPhrase tokens "о чём")
