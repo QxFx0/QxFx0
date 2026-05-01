@@ -33,7 +33,6 @@ import qualified Data.ByteString as BS
 import Foreign hiding (void)
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.C.String (CString, withCString, peekCString)
-import Foreign.Ptr (nullPtr)
 import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(SQLiteError))
 
 data CDatabase
