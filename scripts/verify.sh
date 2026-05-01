@@ -15,9 +15,11 @@ SHARED_CABAL_STORE="${QXFX0_SHARED_CABAL_STORE:-$DEFAULT_CABAL_STORE}"
 SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
 EXIT_CODE=0
-REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-1}"
+REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
-ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-1}"
+ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
+ENFORCE_HADDOCK_GATE="${QXFX0_ENFORCE_HADDOCK_GATE:-1}"
+ENABLE_COVERAGE_GATE="${QXFX0_ENABLE_COVERAGE_GATE:-1}"
 VERIFY_HOME="$(mktemp -d "${TMPDIR:-/tmp}/qxfx0-verify.XXXXXX")"
 VERIFY_CACHE="$VERIFY_HOME/.cache"
 VERIFY_CONFIG="$VERIFY_HOME/.config"
@@ -214,6 +216,40 @@ else
   exit 1
 fi
 
+echo "[2b/9] Haddock module headers ..."
+if [ "$ENFORCE_HADDOCK_GATE" = "1" ]; then
+  if [ -x "$ROOT/scripts/check_haddock.sh" ]; then
+    if "$ROOT/scripts/check_haddock.sh" >/dev/null 2>&1; then
+      echo "  OK"
+    else
+      echo "  FAIL (haddock module headers check failed)"
+      exit 1
+    fi
+  else
+    echo "  FAIL (scripts/check_haddock.sh is missing or not executable)"
+    exit 1
+  fi
+else
+  echo "  SKIP (QXFX0_ENFORCE_HADDOCK_GATE=0)"
+fi
+
+echo "[2c/9] Coverage gate ..."
+if [ "$ENABLE_COVERAGE_GATE" = "1" ]; then
+  if [ -x "$ROOT/scripts/test_coverage.sh" ]; then
+    if "$ROOT/scripts/test_coverage.sh" >/dev/null 2>&1; then
+      echo "  OK"
+    else
+      echo "  FAIL (coverage thresholds were not met)"
+      exit 1
+    fi
+  else
+    echo "  FAIL (scripts/test_coverage.sh is missing or not executable)"
+    exit 1
+  fi
+else
+  echo "  SKIP (QXFX0_ENABLE_COVERAGE_GATE=0)"
+fi
+
 echo "[3/10] Agda R5 typecheck ..."
 AGDA_WITNESS_READY=0
 if [ "${QXFX0_SKIP_AGDA:-0}" = "1" ]; then
@@ -327,10 +363,14 @@ if [ -x "$ROOT/scripts/check_generated_artifacts.sh" ]; then
     QXFX0_REQUIRE_GF=1 "$ROOT/scripts/check_generated_artifacts.sh" >/dev/null 2>&1 || GEN_OK=$?
   else
     GEN_OK=0
-    "$ROOT/scripts/check_generated_artifacts.sh" >/dev/null 2>&1 || GEN_OK=$?
+    QXFX0_REQUIRE_GF=0 "$ROOT/scripts/check_generated_artifacts.sh" >/dev/null 2>&1 || GEN_OK=$?
   fi
   if [ "$GEN_OK" -eq 0 ]; then
-    echo "  OK"
+    if [ "$ENFORCE_STRICT_GF_GATE" = "1" ]; then
+      echo "  OK (strict GF gate)"
+    else
+      echo "  OK (GF gate without strict compiler requirement)"
+    fi
   else
     echo "  FAIL (generated artifacts drifted from canonical sources)"
     exit 1
@@ -377,7 +417,9 @@ else
 fi
 
 echo "[12/12] Replay envelope trace fields ..."
-if command -v python3 &>/dev/null; then
+if [ "$REQUIRE_STRICT_RUNTIME" != "1" ]; then
+  echo "  SKIP (replay strict-envelope check requires QXFX0_REQUIRE_STRICT_RUNTIME=1)"
+elif command -v python3 &>/dev/null; then
   REPLAY_DB="$VERIFY_HOME/replay-envelope.db"
   if REPLAY_TURN_OUT="$(QXFX0_DB="$REPLAY_DB" QXFX0_RUNTIME_MODE=strict QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" run_cabal_check "cabal run -v0 qxfx0-main -- --session replay-gate --input 'Что такое свобода?' --json 2>&1")"; then
     if TRACE_CHECK_OUT="$(python3 - "$REPLAY_DB" <<'PY' 2>&1

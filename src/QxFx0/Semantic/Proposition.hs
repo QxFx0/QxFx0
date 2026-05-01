@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-| Proposition classification from user text into canonical move families and semantic frames. -}
 module QxFx0.Semantic.Proposition
   ( PropositionType(..)
   , propositionToFamily
