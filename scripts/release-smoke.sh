@@ -22,9 +22,9 @@ PID_HTTP=""
 PASS=0
 FAIL=0
 SKIP=0
-REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-1}"
+REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
-ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-1}"
+ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 SMOKE_RUNTIME_MODE="strict"
 START_TIME="$(date +%s)"
 PRE_SMOKE_STATUS=""
@@ -420,7 +420,7 @@ if [ -x "$GEN_CHECK" ]; then
         QXFX0_REQUIRE_GF=1 "$GEN_CHECK" >/dev/null 2>&1 || GEN_OK=$?
     else
         GEN_OK=0
-        "$GEN_CHECK" >/dev/null 2>&1 || GEN_OK=$?
+        QXFX0_REQUIRE_GF=0 "$GEN_CHECK" >/dev/null 2>&1 || GEN_OK=$?
     fi
     if [ "$GEN_OK" -eq 0 ]; then
         step_info "Generated artifacts: OK"

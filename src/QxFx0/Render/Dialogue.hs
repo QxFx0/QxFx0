@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, LambdaCase, DerivingStrategies #-}
+{-| Dialogue surface rendering: claim linearization, stance framing, and fallback text assembly. -}
 module QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
@@ -15,7 +16,7 @@ module QxFx0.Render.Dialogue
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Char as Char
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import QxFx0.Types
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)

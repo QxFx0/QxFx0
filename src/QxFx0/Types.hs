@@ -1,3 +1,4 @@
+{-| Top-level type facade for QxFx0 domain, decision, state, and runtime contracts. -}
 module QxFx0.Types
   ( module QxFx0.Types.Domain
   , module QxFx0.Types.Decision

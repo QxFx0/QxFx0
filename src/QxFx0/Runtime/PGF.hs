@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{-| Out-of-process PGF linearization bridge using the @gf@ CLI. -}
 module QxFx0.Runtime.PGF
   ( astToGfExpr
   , linearizeClaimAstGf
