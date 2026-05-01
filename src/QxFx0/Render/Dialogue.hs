@@ -494,7 +494,7 @@ pickStyleVariant :: RenderStyle -> [Text] -> Text
 pickStyleVariant _ [] = ""
 pickStyleVariant style variants =
   let idx = fromEnum style `mod` length variants
-  in variants !! idx
+  in fromMaybe "" (listToMaybe (drop idx variants))
 
 normalizedTopic :: Text -> Text
 normalizedTopic = T.toLower . T.strip
@@ -697,7 +697,7 @@ pickDeterministic :: Text -> [Text] -> Text
 pickDeterministic _ [] = ""
 pickDeterministic seed variants =
   let idx = stableHash (T.unpack seed) `mod` length variants
-  in variants !! idx
+  in fromMaybe "" (listToMaybe (drop idx variants))
 
 stableHash :: String -> Int
 stableHash = go 0
