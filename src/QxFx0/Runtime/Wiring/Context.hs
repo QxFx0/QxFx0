@@ -112,7 +112,7 @@ resolveTimeSource = do
   case mFixed of
     Nothing -> pure Clock.getCurrentTime
     Just epochStr ->
-      case reads epochStr of
+      case (reads epochStr :: [(Integer, String)]) of
         [(epochSeconds, "")] -> do
           ref <- newIORef epochSeconds
           pure $ do

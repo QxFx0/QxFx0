@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-| Per-session critical section registry for serializing concurrent turn execution. -}
 module QxFx0.Core.SessionLock
@@ -27,7 +28,7 @@ data SessionLockStats = SessionLockStats
   { slsTrackedLocks :: !Int
   , slsMaxTrackedLocks :: !Int
   , slsOverflowActive :: !Bool
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 newSessionLockManager :: IO SessionLockManager
 newSessionLockManager = do
