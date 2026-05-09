@@ -1,437 +1,0 @@
-Cases: 420  Tried: 0  Errors: 0  Failures: 0Cases: 420  Tried: 1  Errors: 0  Failures: 0Cases: 420  Tried: 2  Errors: 0  Failures: 0Cases: 420  Tried: 3  Errors: 0  Failures: 0Cases: 420  Tried: 4  Errors: 0  Failures: 0Cases: 420  Tried: 5  Errors: 0  Failures: 0Cases: 420  Tried: 6  Errors: 0  Failures: 0Cases: 420  Tried: 7  Errors: 0  Failures: 0Cases: 420  Tried: 8  Errors: 0  Failures: 0Cases: 420  Tried: 9  Errors: 0  Failures: 0Cases: 420  Tried: 10  Errors: 0  Failures: 0Cases: 420  Tried: 11  Errors: 0  Failures: 0Cases: 420  Tried: 12  Errors: 0  Failures: 0Cases: 420  Tried: 13  Errors: 0  Failures: 0Cases: 420  Tried: 14  Errors: 0  Failures: 0Cases: 420  Tried: 15  Errors: 0  Failures: 0Cases: 420  Tried: 16  Errors: 0  Failures: 0Cases: 420  Tried: 17  Errors: 0  Failures: 0session_lock_overflow: session=overflow-session-4097 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4098 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4099 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4100 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4101 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4102 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4103 tracked=4096 cap=4096
-session_lock_overflow: session=overflow-session-4104 tracked=4096 cap=4096
-Cases: 420  Tried: 18  Errors: 0  Failures: 0session_lock_overflow: session=cap-session-5 tracked=4 cap=4
-session_lock_overflow: session=cap-session-6 tracked=4 cap=4
-Cases: 420  Tried: 19  Errors: 0  Failures: 0Cases: 420  Tried: 20  Errors: 0  Failures: 0Cases: 420  Tried: 21  Errors: 0  Failures: 0Cases: 420  Tried: 22  Errors: 0  Failures: 0Cases: 420  Tried: 23  Errors: 0  Failures: 0Cases: 420  Tried: 24  Errors: 0  Failures: 0Cases: 420  Tried: 25  Errors: 0  Failures: 0Cases: 420  Tried: 26  Errors: 0  Failures: 0Cases: 420  Tried: 27  Errors: 0  Failures: 0Cases: 420  Tried: 28  Errors: 0  Failures: 0Cases: 420  Tried: 29  Errors: 0  Failures: 0Cases: 420  Tried: 30  Errors: 0  Failures: 0Cases: 420  Tried: 31  Errors: 0  Failures: 0Cases: 420  Tried: 32  Errors: 0  Failures: 0Cases: 420  Tried: 33  Errors: 0  Failures: 0Cases: 420  Tried: 34  Errors: 0  Failures: 0Cases: 420  Tried: 35  Errors: 0  Failures: 0Cases: 420  Tried: 36  Errors: 0  Failures: 0Cases: 420  Tried: 37  Errors: 0  Failures: 0Cases: 420  Tried: 38  Errors: 0  Failures: 0Cases: 420  Tried: 39  Errors: 0  Failures: 0Cases: 420  Tried: 40  Errors: 0  Failures: 0Cases: 420  Tried: 41  Errors: 0  Failures: 0Cases: 420  Tried: 42  Errors: 0  Failures: 0Cases: 420  Tried: 43  Errors: 0  Failures: 0Cases: 420  Tried: 44  Errors: 0  Failures: 0Cases: 420  Tried: 45  Errors: 0  Failures: 0Cases: 420  Tried: 46  Errors: 0  Failures: 0Cases: 420  Tried: 47  Errors: 0  Failures: 0Cases: 420  Tried: 48  Errors: 0  Failures: 0Cases: 420  Tried: 49  Errors: 0  Failures: 0Cases: 420  Tried: 50  Errors: 0  Failures: 0Cases: 420  Tried: 51  Errors: 0  Failures: 0Cases: 420  Tried: 52  Errors: 0  Failures: 0Cases: 420  Tried: 53  Errors: 0  Failures: 0Cases: 420  Tried: 54  Errors: 0  Failures: 0Cases: 420  Tried: 55  Errors: 0  Failures: 0Cases: 420  Tried: 56  Errors: 0  Failures: 0Cases: 420  Tried: 57  Errors: 0  Failures: 0Cases: 420  Tried: 58  Errors: 0  Failures: 0Cases: 420  Tried: 59  Errors: 0  Failures: 0Cases: 420  Tried: 60  Errors: 0  Failures: 0Cases: 420  Tried: 61  Errors: 0  Failures: 0Cases: 420  Tried: 62  Errors: 0  Failures: 0Cases: 420  Tried: 63  Errors: 0  Failures: 0Cases: 420  Tried: 64  Errors: 0  Failures: 0Cases: 420  Tried: 65  Errors: 0  Failures: 0Cases: 420  Tried: 66  Errors: 0  Failures: 0Cases: 420  Tried: 67  Errors: 0  Failures: 0Cases: 420  Tried: 68  Errors: 0  Failures: 0Cases: 420  Tried: 69  Errors: 0  Failures: 0Cases: 420  Tried: 70  Errors: 0  Failures: 0Cases: 420  Tried: 71  Errors: 0  Failures: 0Cases: 420  Tried: 72  Errors: 0  Failures: 0Cases: 420  Tried: 73  Errors: 0  Failures: 0Cases: 420  Tried: 74  Errors: 0  Failures: 0Cases: 420  Tried: 75  Errors: 0  Failures: 0Cases: 420  Tried: 76  Errors: 0  Failures: 0Cases: 420  Tried: 77  Errors: 0  Failures: 0Cases: 420  Tried: 78  Errors: 0  Failures: 0Cases: 420  Tried: 79  Errors: 0  Failures: 0Cases: 420  Tried: 80  Errors: 0  Failures: 0Cases: 420  Tried: 81  Errors: 0  Failures: 0Cases: 420  Tried: 82  Errors: 0  Failures: 0Cases: 420  Tried: 83  Errors: 0  Failures: 0Cases: 420  Tried: 84  Errors: 0  Failures: 0Cases: 420  Tried: 85  Errors: 0  Failures: 0Cases: 420  Tried: 86  Errors: 0  Failures: 0Cases: 420  Tried: 87  Errors: 0  Failures: 0Cases: 420  Tried: 88  Errors: 0  Failures: 0Cases: 420  Tried: 89  Errors: 0  Failures: 0Cases: 420  Tried: 90  Errors: 0  Failures: 0Cases: 420  Tried: 91  Errors: 0  Failures: 0Cases: 420  Tried: 92  Errors: 0  Failures: 0Cases: 420  Tried: 93  Errors: 0  Failures: 0Cases: 420  Tried: 94  Errors: 0  Failures: 0Cases: 420  Tried: 95  Errors: 0  Failures: 0Cases: 420  Tried: 96  Errors: 0  Failures: 0Cases: 420  Tried: 97  Errors: 0  Failures: 0Cases: 420  Tried: 98  Errors: 0  Failures: 0Cases: 420  Tried: 99  Errors: 0  Failures: 0Cases: 420  Tried: 100  Errors: 0  Failures: 0Cases: 420  Tried: 101  Errors: 0  Failures: 0Cases: 420  Tried: 102  Errors: 0  Failures: 0Cases: 420  Tried: 103  Errors: 0  Failures: 0Cases: 420  Tried: 104  Errors: 0  Failures: 0Cases: 420  Tried: 105  Errors: 0  Failures: 0Cases: 420  Tried: 106  Errors: 0  Failures: 0Cases: 420  Tried: 107  Errors: 0  Failures: 0Cases: 420  Tried: 108  Errors: 0  Failures: 0Cases: 420  Tried: 109  Errors: 0  Failures: 0Cases: 420  Tried: 110  Errors: 0  Failures: 0Cases: 420  Tried: 111  Errors: 0  Failures: 0Cases: 420  Tried: 112  Errors: 0  Failures: 0Cases: 420  Tried: 113  Errors: 0  Failures: 0Cases: 420  Tried: 114  Errors: 0  Failures: 0Cases: 420  Tried: 115  Errors: 0  Failures: 0Cases: 420  Tried: 116  Errors: 0  Failures: 0Cases: 420  Tried: 117  Errors: 0  Failures: 0Cases: 420  Tried: 118  Errors: 0  Failures: 0Cases: 420  Tried: 119  Errors: 0  Failures: 0Cases: 420  Tried: 120  Errors: 0  Failures: 0Cases: 420  Tried: 121  Errors: 0  Failures: 0Cases: 420  Tried: 122  Errors: 0  Failures: 0Cases: 420  Tried: 123  Errors: 0  Failures: 0Cases: 420  Tried: 124  Errors: 0  Failures: 0Cases: 420  Tried: 125  Errors: 0  Failures: 0Cases: 420  Tried: 126  Errors: 0  Failures: 0Cases: 420  Tried: 127  Errors: 0  Failures: 0Cases: 420  Tried: 128  Errors: 0  Failures: 0Cases: 420  Tried: 129  Errors: 0  Failures: 0Cases: 420  Tried: 130  Errors: 0  Failures: 0Cases: 420  Tried: 131  Errors: 0  Failures: 0Cases: 420  Tried: 132  Errors: 0  Failures: 0Cases: 420  Tried: 133  Errors: 0  Failures: 0Cases: 420  Tried: 134  Errors: 0  Failures: 0Cases: 420  Tried: 135  Errors: 0  Failures: 0Cases: 420  Tried: 136  Errors: 0  Failures: 0Cases: 420  Tried: 137  Errors: 0  Failures: 0Cases: 420  Tried: 138  Errors: 0  Failures: 0Cases: 420  Tried: 139  Errors: 0  Failures: 0Cases: 420  Tried: 140  Errors: 0  Failures: 0Cases: 420  Tried: 141  Errors: 0  Failures: 0Cases: 420  Tried: 142  Errors: 0  Failures: 0Cases: 420  Tried: 143  Errors: 0  Failures: 0Cases: 420  Tried: 144  Errors: 0  Failures: 0Cases: 420  Tried: 145  Errors: 0  Failures: 0Cases: 420  Tried: 146  Errors: 0  Failures: 0Cases: 420  Tried: 147  Errors: 0  Failures: 0Cases: 420  Tried: 148  Errors: 0  Failures: 0Cases: 420  Tried: 149  Errors: 0  Failures: 0Cases: 420  Tried: 150  Errors: 0  Failures: 0Cases: 420  Tried: 151  Errors: 0  Failures: 0Cases: 420  Tried: 152  Errors: 0  Failures: 0Cases: 420  Tried: 153  Errors: 0  Failures: 0Cases: 420  Tried: 154  Errors: 0  Failures: 0Cases: 420  Tried: 155  Errors: 0  Failures: 0Cases: 420  Tried: 156  Errors: 0  Failures: 0Cases: 420  Tried: 157  Errors: 0  Failures: 0Cases: 420  Tried: 158  Errors: 0  Failures: 0Cases: 420  Tried: 159  Errors: 0  Failures: 0Cases: 420  Tried: 160  Errors: 0  Failures: 0Cases: 420  Tried: 161  Errors: 0  Failures: 0Cases: 420  Tried: 162  Errors: 0  Failures: 0Cases: 420  Tried: 163  Errors: 0  Failures: 0Cases: 420  Tried: 164  Errors: 0  Failures: 0Cases: 420  Tried: 165  Errors: 0  Failures: 0Cases: 420  Tried: 166  Errors: 0  Failures: 0Cases: 420  Tried: 167  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 168  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 169  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 170  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 171  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 172  Errors: 0  Failures: 0Cases: 420  Tried: 173  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 174  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 175  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 176  Errors: 0  Failures: 0Cases: 420  Tried: 177  Errors: 0  Failures: 0Cases: 420  Tried: 178  Errors: 0  Failures: 0Cases: 420  Tried: 179  Errors: 0  Failures: 0Cases: 420  Tried: 180  Errors: 0  Failures: 0Cases: 420  Tried: 181  Errors: 0  Failures: 0Cases: 420  Tried: 182  Errors: 0  Failures: 0Cases: 420  Tried: 183  Errors: 0  Failures: 0Cases: 420  Tried: 184  Errors: 0  Failures: 0Cases: 420  Tried: 185  Errors: 0  Failures: 0Cases: 420  Tried: 186  Errors: 0  Failures: 0Cases: 420  Tried: 187  Errors: 0  Failures: 0Cases: 420  Tried: 188  Errors: 0  Failures: 0Cases: 420  Tried: 189  Errors: 0  Failures: 0Cases: 420  Tried: 190  Errors: 0  Failures: 0Cases: 420  Tried: 191  Errors: 0  Failures: 0Cases: 420  Tried: 192  Errors: 0  Failures: 0Cases: 420  Tried: 193  Errors: 0  Failures: 0Cases: 420  Tried: 194  Errors: 0  Failures: 0Cases: 420  Tried: 195  Errors: 0  Failures: 0Cases: 420  Tried: 196  Errors: 0  Failures: 0Cases: 420  Tried: 197  Errors: 0  Failures: 0Cases: 420  Tried: 198  Errors: 0  Failures: 0Cases: 420  Tried: 199  Errors: 0  Failures: 0Cases: 420  Tried: 200  Errors: 0  Failures: 0Cases: 420  Tried: 201  Errors: 0  Failures: 0Cases: 420  Tried: 202  Errors: 0  Failures: 0Cases: 420  Tried: 203  Errors: 0  Failures: 0Cases: 420  Tried: 204  Errors: 0  Failures: 0Cases: 420  Tried: 205  Errors: 0  Failures: 0Cases: 420  Tried: 206  Errors: 0  Failures: 0Cases: 420  Tried: 207  Errors: 0  Failures: 0Cases: 420  Tried: 208  Errors: 0  Failures: 0Cases: 420  Tried: 209  Errors: 0  Failures: 0Cases: 420  Tried: 210  Errors: 0  Failures: 0Cases: 420  Tried: 211  Errors: 0  Failures: 0Cases: 420  Tried: 212  Errors: 0  Failures: 0Cases: 420  Tried: 213  Errors: 0  Failures: 0Cases: 420  Tried: 214  Errors: 0  Failures: 0Cases: 420  Tried: 215  Errors: 0  Failures: 0Cases: 420  Tried: 216  Errors: 0  Failures: 0Cases: 420  Tried: 217  Errors: 0  Failures: 0Cases: 420  Tried: 218  Errors: 0  Failures: 0Cases: 420  Tried: 219  Errors: 0  Failures: 0Cases: 420  Tried: 220  Errors: 0  Failures: 0Cases: 420  Tried: 221  Errors: 0  Failures: 0Cases: 420  Tried: 222  Errors: 0  Failures: 0Cases: 420  Tried: 223  Errors: 0  Failures: 0Cases: 420  Tried: 224  Errors: 0  Failures: 0Cases: 420  Tried: 225  Errors: 0  Failures: 0Cases: 420  Tried: 226  Errors: 0  Failures: 0Cases: 420  Tried: 227  Errors: 0  Failures: 0Cases: 420  Tried: 228  Errors: 0  Failures: 0Cases: 420  Tried: 229  Errors: 0  Failures: 0Cases: 420  Tried: 230  Errors: 0  Failures: 0Cases: 420  Tried: 231  Errors: 0  Failures: 0Cases: 420  Tried: 232  Errors: 0  Failures: 0Cases: 420  Tried: 233  Errors: 0  Failures: 0Cases: 420  Tried: 234  Errors: 0  Failures: 0Cases: 420  Tried: 235  Errors: 0  Failures: 0Cases: 420  Tried: 236  Errors: 0  Failures: 0Cases: 420  Tried: 237  Errors: 0  Failures: 0Cases: 420  Tried: 238  Errors: 0  Failures: 0Cases: 420  Tried: 239  Errors: 0  Failures: 0Cases: 420  Tried: 240  Errors: 0  Failures: 0Cases: 420  Tried: 241  Errors: 0  Failures: 0Cases: 420  Tried: 242  Errors: 0  Failures: 0Cases: 420  Tried: 243  Errors: 0  Failures: 0Cases: 420  Tried: 244  Errors: 0  Failures: 0Cases: 420  Tried: 245  Errors: 0  Failures: 0Cases: 420  Tried: 246  Errors: 0  Failures: 0Cases: 420  Tried: 247  Errors: 0  Failures: 0Cases: 420  Tried: 248  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 249  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 250  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 251  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 252  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 253  Errors: 0  Failures: 0[warn] commit runtime state failed after save; state re-hydrated from persisted snapshot: user error (forced_commit_runtime_failure_once)
-Cases: 420  Tried: 254  Errors: 0  Failures: 0Cases: 420  Tried: 255  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 256  Errors: 0  Failures: 0+++ OK, passed 100 tests.
-Cases: 420  Tried: 257  Errors: 0  Failures: 0Cases: 420  Tried: 258  Errors: 0  Failures: 0Cases: 420  Tried: 259  Errors: 0  Failures: 0Cases: 420  Tried: 260  Errors: 0  Failures: 0Cases: 420  Tried: 261  Errors: 0  Failures: 0Cases: 420  Tried: 262  Errors: 0  Failures: 0Cases: 420  Tried: 263  Errors: 0  Failures: 0Cases: 420  Tried: 264  Errors: 0  Failures: 0Cases: 420  Tried: 265  Errors: 0  Failures: 0Cases: 420  Tried: 266  Errors: 0  Failures: 0Cases: 420  Tried: 267  Errors: 0  Failures: 0Cases: 420  Tried: 268  Errors: 0  Failures: 0Cases: 420  Tried: 269  Errors: 0  Failures: 0Cases: 420  Tried: 270  Errors: 0  Failures: 0Cases: 420  Tried: 271  Errors: 0  Failures: 0Cases: 420  Tried: 272  Errors: 0  Failures: 0Cases: 420  Tried: 273  Errors: 0  Failures: 0Cases: 420  Tried: 274  Errors: 0  Failures: 0Cases: 420  Tried: 275  Errors: 0  Failures: 0Cases: 420  Tried: 276  Errors: 0  Failures: 0Cases: 420  Tried: 277  Errors: 0  Failures: 0Cases: 420  Tried: 278  Errors: 0  Failures: 0Cases: 420  Tried: 279  Errors: 0  Failures: 0Cases: 420  Tried: 280  Errors: 0  Failures: 0Cases: 420  Tried: 281  Errors: 0  Failures: 0Cases: 420  Tried: 282  Errors: 0  Failures: 0Cases: 420  Tried: 283  Errors: 0  Failures: 0Cases: 420  Tried: 284  Errors: 0  Failures: 0Cases: 420  Tried: 285  Errors: 0  Failures: 0Cases: 420  Tried: 286  Errors: 0  Failures: 0Cases: 420  Tried: 287  Errors: 0  Failures: 0Cases: 420  Tried: 288  Errors: 0  Failures: 0Cases: 420  Tried: 289  Errors: 0  Failures: 0Cases: 420  Tried: 290  Errors: 0  Failures: 0Cases: 420  Tried: 291  Errors: 0  Failures: 0Cases: 420  Tried: 292  Errors: 0  Failures: 0Cases: 420  Tried: 293  Errors: 0  Failures: 0Cases: 420  Tried: 294  Errors: 0  Failures: 0Cases: 420  Tried: 295  Errors: 0  Failures: 0Cases: 420  Tried: 296  Errors: 0  Failures: 0Cases: 420  Tried: 297  Errors: 0  Failures: 0Cases: 420  Tried: 298  Errors: 0  Failures: 0Cases: 420  Tried: 299  Errors: 0  Failures: 0Cases: 420  Tried: 300  Errors: 0  Failures: 0Cases: 420  Tried: 301  Errors: 0  Failures: 0Cases: 420  Tried: 302  Errors: 0  Failures: 0Cases: 420  Tried: 303  Errors: 0  Failures: 0Cases: 420  Tried: 304  Errors: 0  Failures: 0Cases: 420  Tried: 305  Errors: 0  Failures: 0Cases: 420  Tried: 306  Errors: 0  Failures: 0Cases: 420  Tried: 307  Errors: 0  Failures: 0Cases: 420  Tried: 308  Errors: 0  Failures: 0Cases: 420  Tried: 309  Errors: 0  Failures: 0Cases: 420  Tried: 310  Errors: 0  Failures: 0Cases: 420  Tried: 311  Errors: 0  Failures: 0Cases: 420  Tried: 312  Errors: 0  Failures: 0Cases: 420  Tried: 313  Errors: 0  Failures: 0Cases: 420  Tried: 314  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204510-49f1f69a-dedb-4178-81d5-46a745405a90 session_id=legacy_v1_migration turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:30.78563ms,save_state:7.677333ms,render:0.225269ms,api_health:9.4288e-2ms,intuition:1.7452000000000002e-2ms,consciousness:1.1783810000000001ms,nix_check:5.67392ms,embedding:2.8933e-2ms,prepare_static:7.8006839999999995ms total_ms=30.78563 
-Cases: 420  Tried: 315  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204511-d2c92659-fba7-46c9-8e54-29d9fd81d556 session_id=legacy_v2_shadow_log_migration turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:33.958343ms,save_state:11.585281ms,render:0.259832ms,api_health:1.4931e-2ms,intuition:2.1582e-2ms,consciousness:7.0366e-2ms,nix_check:5.6043639999999995ms,embedding:3.0963e-2ms,prepare_static:7.0404279999999995ms total_ms=33.958343 
-Cases: 420  Tried: 316  Errors: 0  Failures: 0Cases: 420  Tried: 317  Errors: 0  Failures: 0Cases: 420  Tried: 318  Errors: 0  Failures: 0Cases: 420  Tried: 319  Errors: 0  Failures: 0Cases: 420  Tried: 320  Errors: 0  Failures: 0Cases: 420  Tried: 321  Errors: 0  Failures: 0Cases: 420  Tried: 322  Errors: 0  Failures: 0Cases: 420  Tried: 323  Errors: 0  Failures: 0Cases: 420  Tried: 324  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204515-2fcd3830-4685-4e3b-82d4-3130d8375776 session_id=test_runtime_persist turn=1 family=CMDefine embedding=local_implicit nix=Unavailable "nix evaluator unavailable: evaluation_failed" safety=InvariantOK api_healthy=1 phases=total:94.795958ms,save_state:8.047355000000001ms,render:0.268903ms,api_health:7.7797e-2ms,intuition:1.3951000000000002e-2ms,consciousness:1.012787ms,nix_check:74.490134ms,embedding:2.6712e-2ms,prepare_static:8.789159ms total_ms=94.795958 
-Cases: 420  Tried: 325  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204516-3d515cc8-2cf9-4ad3-91b5-a394f4f0474c session_id=test_runtime_strict_persist turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:28.824448999999998ms,save_state:7.086112ms,render:0.360771ms,api_health:7.4826e-2ms,intuition:1.4592e-2ms,consciousness:0.9443309999999999ms,nix_check:5.365004ms,embedding:2.8172e-2ms,prepare_static:7.0951319999999996ms total_ms=28.824448999999998 
-Cases: 420  Tried: 326  Errors: 0  Failures: 0Cases: 420  Tried: 327  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204517-ca975e09-4050-4723-872b-85daaeee19a9 session_id=test_runtime_semantic turn=1 family=CMDefine embedding=local_implicit nix=Unavailable "nix evaluator unavailable: evaluation_failed" safety=InvariantOK api_healthy=1 phases=total:93.331211ms,save_state:8.33253ms,render:0.21057800000000002ms,api_health:7.7597e-2ms,intuition:1.4661e-2ms,consciousness:1.017008ms,nix_check:73.801355ms,embedding:2.4892e-2ms,prepare_static:8.289036ms total_ms=93.331211 
-Cases: 420  Tried: 328  Errors: 0  Failures: 0Cases: 420  Tried: 329  Errors: 0  Failures: 0Cases: 420  Tried: 330  Errors: 0  Failures: 0Cases: 420  Tried: 331  Errors: 0  Failures: 0Cases: 420  Tried: 332  Errors: 0  Failures: 0Cases: 420  Tried: 333  Errors: 0  Failures: 0Cases: 420  Tried: 334  Errors: 0  Failures: 0Cases: 420  Tried: 335  Errors: 0  Failures: 0Cases: 420  Tried: 336  Errors: 0  Failures: 0Cases: 420  Tried: 337  Errors: 0  Failures: 0Cases: 420  Tried: 338  Errors: 0  Failures: 0Cases: 420  Tried: 339  Errors: 0  Failures: 0Cases: 420  Tried: 340  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204519-9f2577d7-5618-472c-a058-0efd0a925f68 session_id=test_turn_quality turn=1 family=CMDefine embedding=local_implicit nix=Unavailable "nix evaluator unavailable: evaluation_failed" safety=InvariantOK api_healthy=1 phases=total:93.80950200000001ms,save_state:8.047655ms,render:0.24653099999999997ms,api_health:9.071e-3ms,intuition:2.0852e-2ms,consciousness:0.93346ms,nix_check:75.08574499999999ms,embedding:2.6952e-2ms,prepare_static:7.558443ms total_ms=93.80950200000001 
-Cases: 420  Tried: 341  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204520-252b57c9-b6bc-44a7-a79c-ef85e4279e5a session_id=test_session_id_persist turn=1 family=CMDefine embedding=local_implicit nix=Unavailable "nix evaluator unavailable: evaluation_failed" safety=InvariantOK api_healthy=1 phases=total:93.377795ms,save_state:7.390589ms,render:0.187906ms,api_health:7.1977e-2ms,intuition:1.4742e-2ms,consciousness:0.8630340000000001ms,nix_check:75.099856ms,embedding:2.5482e-2ms,prepare_static:7.7859419999999995ms total_ms=93.377795 
-Cases: 420  Tried: 342  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204521-5eb0ad7b-ac9a-4ac5-809e-05540bdb7cf1 session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:32.373266ms,save_state:7.346995000000001ms,render:0.515424ms,api_health:6.8606e-2ms,intuition:1.3401999999999999e-2ms,consciousness:0.9232090000000001ms,nix_check:5.2256409999999995ms,embedding:3.8662999999999996e-2ms,prepare_static:9.897705ms total_ms=32.373266 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204521-62080154-7e47-403c-97de-2841ee774490 session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:26.446903000000002ms,save_state:1.654752ms,render:0.340119ms,api_health:5.7275000000000006e-2ms,intuition:1.0921e-2ms,consciousness:1.105955ms,nix_check:6.067314ms,embedding:3.5183e-2ms,prepare_static:9.571496ms total_ms=26.446903000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204521-cfc7a33b-0242-43ff-8079-ef4a2c13bd88 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:30.92479ms,save_state:6.841711ms,render:0.218019ms,api_health:9.2708e-2ms,intuition:1.7082e-2ms,consciousness:1.0660820000000002ms,nix_check:5.7761890000000005ms,embedding:5.3773999999999995e-2ms,prepare_static:8.568729000000001ms total_ms=30.92479 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204522-7e401a28-b26e-457c-829e-3781f817605b session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:24.567731ms,save_state:1.5028789999999999ms,render:0.194067ms,api_health:6.8356e-2ms,intuition:1.0771000000000001e-2ms,consciousness:0.862324ms,nix_check:4.879612ms,embedding:4.0324e-2ms,prepare_static:8.056586ms total_ms=24.567731 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204522-8bfc263a-0e43-40e3-8ebf-dc7b629c87c2 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:29.262847ms,save_state:6.947970000000001ms,render:0.297446ms,api_health:7.2986e-2ms,intuition:1.3671e-2ms,consciousness:1.0383499999999999ms,nix_check:5.240462000000001ms,embedding:2.8232999999999998e-2ms,prepare_static:6.897946ms total_ms=29.262847 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204522-2d0d9a04-2ea3-498c-b3c2-c583cba5c578 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:23.215315ms,save_state:1.535753ms,render:0.199778ms,api_health:5.9015000000000005e-2ms,intuition:1.0711e-2ms,consciousness:0.974644ms,nix_check:5.786779ms,embedding:2.7812e-2ms,prepare_static:6.762754ms total_ms=23.215315 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204523-8c74e6c0-fc9d-4a56-ba80-9f70c6230d92 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:29.816615000000002ms,save_state:6.732362ms,render:0.33833ms,api_health:7.6987e-2ms,intuition:1.4721e-2ms,consciousness:0.982965ms,nix_check:5.626926ms,embedding:3.3203e-2ms,prepare_static:8.543638ms total_ms=29.816615000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204523-fa8dbab9-c939-4439-8be9-87719d259b40 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:25.349689ms,save_state:1.547864ms,render:0.22258999999999998ms,api_health:8.6337e-2ms,intuition:1.0831e-2ms,consciousness:0.9989370000000001ms,nix_check:5.490824ms,embedding:3.1822e-2ms,prepare_static:8.609373ms total_ms=25.349689 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204524-8680ff82-fe89-4dff-84e8-383a28906b73 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:32.369335ms,save_state:7.919034ms,render:0.164684ms,api_health:1.5191999999999999e-2ms,intuition:5.2965e-2ms,consciousness:0.940241ms,nix_check:5.684800999999999ms,embedding:3.2213e-2ms,prepare_static:9.073553ms total_ms=32.369335 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204524-f42d0a00-40d9-4446-81ab-6c43717cea6f session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:25.778466ms,save_state:1.8885729999999998ms,render:0.825882ms,api_health:6.0626e-2ms,intuition:1.1250999999999999e-2ms,consciousness:0.895398ms,nix_check:5.220751ms,embedding:3.1783e-2ms,prepare_static:8.822982ms total_ms=25.778466 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204525-f7ff7514-41b4-412a-b108-827ba6b7083a session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:30.888578ms,save_state:7.2367550000000005ms,render:0.194607ms,api_health:9.085700000000001e-2ms,intuition:1.6822e-2ms,consciousness:1.023668ms,nix_check:5.5468ms,embedding:4.0063e-2ms,prepare_static:8.743015ms total_ms=30.888578 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204525-8ccf4e67-f393-41fa-8a94-30cb9e156eed session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:24.507277000000002ms,save_state:1.508581ms,render:0.149663ms,api_health:6.238500000000001e-2ms,intuition:1.1451e-2ms,consciousness:0.837502ms,nix_check:5.468622ms,embedding:3.2363e-2ms,prepare_static:8.688260999999999ms total_ms=24.507277000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204525-1736ca14-f9b8-47a2-b347-57cbcc98dcb7 session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:33.021011ms,save_state:7.5130680000000005ms,render:0.35369ms,api_health:7.574700000000001e-2ms,intuition:1.3890999999999999e-2ms,consciousness:0.941641ms,nix_check:6.009429ms,embedding:2.7183e-2ms,prepare_static:9.932258ms total_ms=33.021011 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204525-ee2f49ad-5d7e-446a-a003-749c69fcbc46 session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:27.470932ms,save_state:1.441134ms,render:0.34511ms,api_health:1.1541000000000001e-2ms,intuition:6.640999999999999e-3ms,consciousness:4.3834e-2ms,nix_check:5.596023000000001ms,embedding:2.9563000000000002e-2ms,prepare_static:9.913856000000001ms total_ms=27.470932 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204526-49f4314e-d710-4fe9-a7e7-45586dc3f352 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:28.686107ms,save_state:7.085622ms,render:0.246832ms,api_health:5.7624999999999996e-2ms,intuition:1.4501e-2ms,consciousness:0.92029ms,nix_check:5.368454ms,embedding:2.7863000000000002e-2ms,prepare_static:7.442093000000001ms total_ms=28.686107 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204526-39c12a40-0f62-4662-8be0-b38adbbc7c30 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:23.058681ms,save_state:1.6367720000000001ms,render:0.197547ms,api_health:1.1241e-2ms,intuition:3.6393999999999996e-2ms,consciousness:0.844783ms,nix_check:5.110671ms,embedding:2.9212000000000002e-2ms,prepare_static:7.06944ms total_ms=23.058681 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204527-d36f1c7c-836a-420a-9d98-f4f0c3a172f3 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:31.792285000000003ms,save_state:7.496987ms,render:0.19736800000000002ms,api_health:8.7047e-2ms,intuition:1.6552e-2ms,consciousness:0.9011680000000001ms,nix_check:5.727844999999999ms,embedding:3.0923000000000003e-2ms,prepare_static:9.376909ms total_ms=31.792285000000003 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204527-0ecbdaba-c26e-4491-91d6-8d345ebf4325 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:25.018500999999997ms,save_state:1.709158ms,render:0.201538ms,api_health:6.3276e-2ms,intuition:1.0991e-2ms,consciousness:0.883546ms,nix_check:5.2114199999999995ms,embedding:3.2373000000000006e-2ms,prepare_static:8.540518ms total_ms=25.018500999999997 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204528-e92ce015-2de7-4a01-9f6b-f8bf66fc3812 session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:32.217711ms,save_state:6.829239ms,render:0.311877ms,api_health:7.2436e-2ms,intuition:1.3951999999999999e-2ms,consciousness:0.940801ms,nix_check:5.6957320000000005ms,embedding:2.8213e-2ms,prepare_static:9.899384000000001ms total_ms=32.217711 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204528-1fb8491e-28dc-400b-9e6f-e4afd22aa0af session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:26.249557ms,save_state:1.482788ms,render:0.302656ms,api_health:5.6755e-2ms,intuition:9.731e-3ms,consciousness:0.831982ms,nix_check:5.5228969999999995ms,embedding:2.8673e-2ms,prepare_static:9.403482ms total_ms=26.249557 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204528-59f44613-b164-424c-9794-3ec4c58ed180 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:28.221866000000002ms,save_state:7.035227ms,render:0.208048ms,api_health:7.5447e-2ms,intuition:1.4251e-2ms,consciousness:0.938171ms,nix_check:5.246294000000001ms,embedding:2.7632e-2ms,prepare_static:6.755332999999999ms total_ms=28.221866000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204529-3a23d8ea-53da-46a3-ba2f-15b2a0cde414 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:24.21245ms,save_state:1.482038ms,render:0.174135ms,api_health:1.3611e-2ms,intuition:4.0284e-2ms,consciousness:0.837092ms,nix_check:5.611914ms,embedding:2.8232999999999998e-2ms,prepare_static:7.3223020000000005ms total_ms=24.21245 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204529-f43f47bf-cd47-4247-99ff-f268812bb0bc session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:28.822668999999998ms,save_state:6.706189ms,render:0.216048ms,api_health:1.3550999999999999e-2ms,intuition:5.3484e-2ms,consciousness:1.0540910000000001ms,nix_check:5.43999ms,embedding:2.7951999999999998e-2ms,prepare_static:7.085172ms total_ms=28.822668999999998 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204529-0c78f2b2-1ea1-4689-a12f-5b69d8db2bdb session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:24.294107ms,save_state:2.039956ms,render:0.28078400000000003ms,api_health:5.8715e-2ms,intuition:1.0731e-2ms,consciousness:0.885567ms,nix_check:5.8283830000000005ms,embedding:2.8422e-2ms,prepare_static:6.880704ms total_ms=24.294107 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204530-7596f618-6f5a-46b3-8b05-81950289353d session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:29.423000000000002ms,save_state:7.431272ms,render:0.251412ms,api_health:7.8747e-2ms,intuition:1.4691000000000001e-2ms,consciousness:0.918929ms,nix_check:5.067377ms,embedding:2.7951999999999998e-2ms,prepare_static:7.07007ms total_ms=29.423000000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204530-3544243b-176b-4612-85f0-ceaecf16d1b6 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:23.603168ms,save_state:1.537613ms,render:0.197557ms,api_health:2.2182e-2ms,intuition:9.8909e-2ms,consciousness:1.014908ms,nix_check:6.284843ms,embedding:3.0963e-2ms,prepare_static:7.083332ms total_ms=23.603168 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204531-e1eb1547-419e-4d2b-b258-22252c79c0a2 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:30.92184ms,save_state:7.718306999999999ms,render:0.154983ms,api_health:7.8367e-2ms,intuition:1.4361e-2ms,consciousness:0.938871ms,nix_check:5.491904ms,embedding:3.2693e-2ms,prepare_static:8.905168999999999ms total_ms=30.92184 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204531-8f6f1a36-2b9b-429e-9ecf-974e302ec8a6 session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:25.313505ms,save_state:1.8340480000000001ms,render:0.176295ms,api_health:6.2765e-2ms,intuition:1.0941000000000001e-2ms,consciousness:0.910109ms,nix_check:5.632857ms,embedding:3.1983000000000004e-2ms,prepare_static:8.285755ms total_ms=25.313505 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204531-4dcfb9df-e3d8-446c-ab88-7fd7b86b47bf session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:32.883919ms,save_state:6.990684ms,render:0.431137ms,api_health:8.2607e-2ms,intuition:1.4811e-2ms,consciousness:1.0579910000000001ms,nix_check:5.536206999999999ms,embedding:2.7742e-2ms,prepare_static:10.866658ms total_ms=32.883919 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204532-68fb05a1-308f-4ab1-9136-5ca6ee1d98dd session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:27.309508ms,save_state:1.683845ms,render:0.408316ms,api_health:9.934799999999999e-2ms,intuition:1.8131e-2ms,consciousness:0.990466ms,nix_check:5.460591ms,embedding:5.5855e-2ms,prepare_static:9.833119ms total_ms=27.309508 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204532-468aeb3c-5836-41f1-b649-2f2b5b88d967 session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:32.023475000000005ms,save_state:6.721541ms,render:0.3462ms,api_health:6.7686e-2ms,intuition:1.3101e-2ms,consciousness:0.901058ms,nix_check:5.603454ms,embedding:2.8541999999999998e-2ms,prepare_static:9.623581000000001ms total_ms=32.023475000000005 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204532-7cd930e6-59cc-4cd4-ae77-d9f23e8130a5 session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:25.270442ms,save_state:1.521312ms,render:0.30624599999999996ms,api_health:5.9205e-2ms,intuition:1.0561e-2ms,consciousness:0.8693649999999999ms,nix_check:4.871771ms,embedding:2.8502e-2ms,prepare_static:9.229876999999998ms total_ms=25.270442 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204533-238e9e27-4121-4228-9131-e845bcc66b90 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:29.42313ms,save_state:7.861809000000001ms,render:0.277254ms,api_health:7.5057e-2ms,intuition:1.4661e-2ms,consciousness:0.974875ms,nix_check:5.012663ms,embedding:2.8062999999999998e-2ms,prepare_static:7.013245ms total_ms=29.42313 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204533-2f078448-8553-4a57-abfa-b65d18b8755f session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:23.390779000000002ms,save_state:1.755211ms,render:0.253122ms,api_health:6.1886e-2ms,intuition:1.0690999999999999e-2ms,consciousness:0.9843449999999999ms,nix_check:5.162545ms,embedding:2.7632e-2ms,prepare_static:6.957291ms total_ms=23.390779000000002 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204534-bbc2d3a7-e594-4581-a12a-aa894e122ace session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:30.839562ms,save_state:6.660185ms,render:0.312477ms,api_health:1.3971e-2ms,intuition:7.5196e-2ms,consciousness:1.075693ms,nix_check:5.163006ms,embedding:3.7564e-2ms,prepare_static:9.543984ms total_ms=30.839562 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204534-f31f1b90-96fe-4b90-8be0-a8678546ec65 session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:25.850932ms,save_state:1.636171ms,render:0.371212ms,api_health:5.6435e-2ms,intuition:1.0491e-2ms,consciousness:0.835402ms,nix_check:5.269575000000001ms,embedding:2.8002e-2ms,prepare_static:9.007628ms total_ms=25.850932 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204535-4cc03954-2966-464d-9544-a849ffc3d55c session_id=fresh_det_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:33.285903ms,save_state:7.879199999999999ms,render:0.483272ms,api_health:7.3517e-2ms,intuition:1.3371e-2ms,consciousness:1.03957ms,nix_check:5.845574ms,embedding:2.8242000000000003e-2ms,prepare_static:9.924176ms total_ms=33.285903 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204535-67774518-bc4a-40ca-bb74-ca5ff9cb94a1 session_id=fresh_det_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:26.189339999999998ms,save_state:1.6664640000000002ms,render:0.324148ms,api_health:5.5685e-2ms,intuition:1.0161e-2ms,consciousness:1.034839ms,nix_check:5.534848ms,embedding:2.7852000000000002e-2ms,prepare_static:9.202653999999999ms total_ms=26.189339999999998 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204535-86393b91-0277-46a6-9c50-0f6155f1f041 session_id=fresh_det_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:31.586256ms,save_state:7.373996ms,render:0.19351700000000002ms,api_health:7.4336e-2ms,intuition:1.4051e-2ms,consciousness:0.9243ms,nix_check:5.433149ms,embedding:3.4353e-2ms,prepare_static:9.210935ms total_ms=31.586256 
-Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204535-2739373e-6922-4640-9e24-59d5bfe6530c session_id=fresh_det_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:24.492934ms,save_state:1.6897749999999998ms,render:0.18556599999999998ms,api_health:7.1726e-2ms,intuition:1.1511e-2ms,consciousness:1.008507ms,nix_check:5.3525220000000004ms,embedding:3.8704e-2ms,prepare_static:8.21778ms total_ms=24.492934 
-+++ OK, passed 20 tests.
-Cases: 420  Tried: 343  Errors: 0  Failures: 0qxfx0_turn request_id=18581117000000-699efa7f-d0a4-42b1-82e1-ec7e39fa20e4 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-81f9521c-c812-45bb-8dcd-7193f0198a64 session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-55a140d8-d3b3-4fdd-b70c-b9e6d6a91afb session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-1274f9f0-f96e-48c4-88d7-b2decda20ea2 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-c4b1c84a-2e68-4e94-b849-c9a003af00b8 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-27736572-6c72-4354-88df-86961e7e41e4 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-2293f0b4-5642-4f81-b1b3-2076b962f2d8 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-a6b933dd-a5e4-4580-bc14-88a5575f242c session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-7c971cba-7ba5-4a25-bd9d-e9a33631ff46 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-d49745cb-c5e8-44bf-bf1d-a7eb12b20154 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-f9ffde5c-cd6f-463f-b632-47cc8fca6d49 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-05d1097b-de75-413b-ae87-52714affc9fe session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-7b21531e-3c5b-4867-b300-531d94628610 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-6b366c2a-003d-471f-a55d-01e850cea1de session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-471c0885-85c7-4998-a204-1c2d73ba89d1 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-77cb8c89-82ca-433f-a0bd-4b5586a10f29 session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:1000.0ms,consciousness:1000.0ms,nix_check:3000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-c35fb1d7-4760-4e5a-b7eb-4b62f5ab47e0 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-2e5e5ed2-45b1-4df6-a86c-8ab23d1b8b3d session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-526f23f3-0378-452a-aaf2-54d760223635 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-16129541-f6ff-4f89-a31b-89e9785eec81 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-b2a4eb6f-67ff-4418-b93c-9aa61120e602 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-bffa99ec-abe6-4058-86e0-357b60b905c4 session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-8c2818cb-f183-45cb-8da5-a18dc2a55673 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-ccf962e2-b0a0-4c9f-a000-611f87c3a4ea session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-676f1659-8b4d-487b-9fc2-61130d4735ad session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-e8626109-3164-4e08-b92a-088d457697dd session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-84bfdb0e-03f9-4d91-a15d-2ebb1858cbf3 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-dedf5bfb-78e8-41f5-a2b9-a3f4c343e770 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-35b03b94-7164-4f43-9920-1cf9e46ec7a3 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-1419226a-fe15-434d-be65-d84f72e1573e session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-5de3dd3f-ea04-4960-8ca8-7e7584d7f3f5 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-c9963395-0d56-4a9d-b8ec-f1a0317ac631 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-88e04cce-3f09-4a8b-a4d9-276ad5a75f7e session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-542546cc-345b-422d-ad9b-8410f636a64a session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-890f1185-bd53-43ea-9586-b98b2cfbfa84 session_id=fixed_time_session_a turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-f9d3d77e-a277-4c12-bcec-9c6ca68c1733 session_id=fixed_time_session_b turn=1 family=CMRepair embedding=local_deterministic nix=Blocked "shadow_diverged:family,force,layer|diag:requested_family_shift:atom_signals_overrode_requested_family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-f83a78fa-9687-4d92-a7fe-5742a44c20d7 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:2000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-202a3074-02e6-4489-adac-6ca613d8ef57 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family,warranted" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-3a5ac6bf-58e4-416c-a689-f1dcbbbfa074 session_id=fixed_time_session_a turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:1000.0ms,intuition:2000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-qxfx0_turn request_id=18581117000000-acaa36d7-086d-406f-84d4-10c5f2e08db3 session_id=fixed_time_session_b turn=1 family=CMGround embedding=local_deterministic nix=Blocked "shadow_diverged:family" safety=InvariantOK api_healthy=1 phases=total:16000.0ms,save_state:1000.0ms,render:1000.0ms,api_health:4000.0ms,intuition:1000.0ms,consciousness:5000.0ms,nix_check:2000.0ms,embedding:1000.0ms,prepare_static:1000.0ms total_ms=16000.0 
-+++ OK, passed 20 tests.
-Cases: 420  Tried: 344  Errors: 0  Failures: 0Cases: 420  Tried: 345  Errors: 0  Failures: 0Cases: 420  Tried: 346  Errors: 0  Failures: 0Cases: 420  Tried: 347  Errors: 0  Failures: 0Cases: 420  Tried: 348  Errors: 0  Failures: 0Cases: 420  Tried: 349  Errors: 0  Failures: 0Cases: 420  Tried: 350  Errors: 0  Failures: 0Cases: 420  Tried: 351  Errors: 0  Failures: 0Cases: 420  Tried: 352  Errors: 0  Failures: 0Cases: 420  Tried: 353  Errors: 0  Failures: 0Cases: 420  Tried: 354  Errors: 0  Failures: 0Cases: 420  Tried: 355  Errors: 0  Failures: 0Cases: 420  Tried: 356  Errors: 0  Failures: 0Cases: 420  Tried: 357  Errors: 0  Failures: 0Cases: 420  Tried: 358  Errors: 0  Failures: 0Cases: 420  Tried: 359  Errors: 0  Failures: 0Cases: 420  Tried: 360  Errors: 0  Failures: 0Cases: 420  Tried: 361  Errors: 0  Failures: 0Cases: 420  Tried: 362  Errors: 0  Failures: 0Cases: 420  Tried: 363  Errors: 0  Failures: 0Cases: 420  Tried: 364  Errors: 0  Failures: 0Cases: 420  Tried: 365  Errors: 0  Failures: 0Cases: 420  Tried: 366  Errors: 0  Failures: 0Cases: 420  Tried: 367  Errors: 0  Failures: 0Cases: 420  Tried: 368  Errors: 0  Failures: 0Cases: 420  Tried: 369  Errors: 0  Failures: 0Cases: 420  Tried: 370  Errors: 0  Failures: 0Cases: 420  Tried: 371  Errors: 0  Failures: 0Dream rewiring: 168 edges adjusted
-qxfx0_turn request_id=20260501204555-6cda9d0d-6c19-4825-9517-d1dcb32889f8 session_id=test_runtime_session_last_active turn=1 family=CMDefine embedding=local_implicit nix=Unavailable "nix evaluator unavailable: evaluation_failed" safety=InvariantOK api_healthy=1 phases=total:91.22597ms,save_state:2.037016ms,render:0.188517ms,api_health:8.076699999999999e-2ms,intuition:1.5302e-2ms,consciousness:0.938011ms,nix_check:76.792795ms,embedding:2.5013e-2ms,prepare_static:9.334825ms total_ms=91.22597 
-Cases: 420  Tried: 372  Errors: 0  Failures: 0Cases: 420  Tried: 373  Errors: 0  Failures: 0Cases: 420  Tried: 374  Errors: 0  Failures: 0Cases: 420  Tried: 375  Errors: 0  Failures: 0Cases: 420  Tried: 376  Errors: 0  Failures: 0Cases: 420  Tried: 377  Errors: 0  Failures: 0Cases: 420  Tried: 378  Errors: 0  Failures: 0Cases: 420  Tried: 379  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 380  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 381  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 382  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 383  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 384  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 385  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 386  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 387  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 388  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 389  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 390  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 391  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 392  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 393  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 394  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 395  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 396  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 397  Errors: 0  Failures: 0Configuration is affected by the following files:
-- cabal.project
-- cabal.project.freeze
-- cabal.project.local
-Cases: 420  Tried: 398  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 399  Errors: 0  Failures: 0Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    s=socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1]); s.close()
-  File "/usr/lib/python3.14/socket.py", line 236, in __init__
-    _socket.socket.__init__(self, family, type, proto, fileno)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-PermissionError: [Errno 1] Operation not permitted
-Cases: 420  Tried: 400  Errors: 0  Failures: 0Cases: 420  Tried: 401  Errors: 0  Failures: 0Cases: 420  Tried: 402  Errors: 0  Failures: 0Cases: 420  Tried: 403  Errors: 0  Failures: 0Cases: 420  Tried: 404  Errors: 0  Failures: 0Cases: 420  Tried: 405  Errors: 0  Failures: 0Cases: 420  Tried: 406  Errors: 0  Failures: 0Cases: 420  Tried: 407  Errors: 0  Failures: 0Cases: 420  Tried: 408  Errors: 0  Failures: 0Cases: 420  Tried: 409  Errors: 0  Failures: 0Cases: 420  Tried: 410  Errors: 0  Failures: 0Cases: 420  Tried: 411  Errors: 0  Failures: 0Cases: 420  Tried: 412  Errors: 0  Failures: 0Cases: 420  Tried: 413  Errors: 0  Failures: 0Cases: 420  Tried: 414  Errors: 0  Failures: 0Cases: 420  Tried: 415  Errors: 0  Failures: 0Cases: 420  Tried: 416  Errors: 0  Failures: 0Cases: 420  Tried: 417  Errors: 0  Failures: 0Cases: 420  Tried: 418  Errors: 0  Failures: 0Cases: 420  Tried: 419  Errors: 0  Failures: 0                                              Cases: 420  Tried: 420  Errors: 0  Failures: 0
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Internal.FilePath.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticScene.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixCache.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Render.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Render.Semantic.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Render.Dialogue.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticInput.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Proposition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Morphology.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Logic.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningAtoms.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.CLI.Parser.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.TxStatement.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.StatePersistence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaWitness.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaR5.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Morphology.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.EmbeddedSQL.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NativeSQLite.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.SchemaContract.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Protocol.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Ego.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.ClaimBuilder.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentityGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentitySignal.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.R5Dynamics.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.SessionLock.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Observability.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Runtime.PGF.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Health.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.BackgroundProcess.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.DreamDynamics.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.MeaningGraph.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.PrincipledCore.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Intuition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.ConsciousnessLoop.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Inflection.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Resolver.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Analyze.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Runtime.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.GfMap.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Generated.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Loader.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Types.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.ExceptionPolicy.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Vec.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.TurnProjection.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.ClaimAst.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.ShadowDivergence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.IdentityGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Orbital.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Recovery.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Readiness.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Persistence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Observability.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Intuition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Dream.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Domain.Atoms.hs.html
-Writing: hpc_index.html
-Writing: hpc_index_fun.html
-Writing: hpc_index_alt.html
-Writing: hpc_index_exp.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Internal.FilePath.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticScene.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixCache.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Render.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Render.Semantic.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Render.Dialogue.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticInput.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Proposition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Morphology.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Logic.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningAtoms.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.CLI.Parser.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.TxStatement.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.StatePersistence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaWitness.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaR5.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Morphology.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.EmbeddedSQL.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NativeSQLite.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.SchemaContract.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Protocol.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Ego.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.ClaimBuilder.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentityGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentitySignal.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.R5Dynamics.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.SessionLock.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Observability.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Runtime.PGF.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Health.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.BackgroundProcess.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.DreamDynamics.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.MeaningGraph.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.PrincipledCore.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.Intuition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Core.ConsciousnessLoop.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Inflection.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Resolver.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Analyze.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Runtime.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.GfMap.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Generated.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Loader.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Types.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.ExceptionPolicy.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Vec.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.TurnProjection.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.ClaimAst.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.ShadowDivergence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.IdentityGuard.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Orbital.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Recovery.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Readiness.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Persistence.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Observability.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Intuition.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Dream.hs.html
-Writing: qxfx0-0.1.0.0-inplace/QxFx0.Types.Domain.Atoms.hs.html
-Writing: hpc_index.html
-Writing: hpc_index_fun.html
-Writing: hpc_index_alt.html
-Writing: hpc_index_exp.html
