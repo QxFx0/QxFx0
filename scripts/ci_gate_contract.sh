@@ -90,7 +90,7 @@ fi
 
 # ── Gate 2: Fast tests ──────────────────────────────────────────────────
 FAST_LOG="$GATES_DIR/02_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
-if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test-fast" > "$FAST_LOG" 2>&1; then
+if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test" > "$FAST_LOG" 2>&1; then
   if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
     log_gate "cabal test fast" "0" "PASS" "0 errors, 0 failures"
   else
