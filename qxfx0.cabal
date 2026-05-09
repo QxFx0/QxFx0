@@ -11,6 +11,10 @@ category:      AI
 author:        QxFx Research
 maintainer:    QxFx Research <qxfx@research.example>
 license:       MIT
+default-language: Haskell2010
+source-repository head
+  type: git
+  location: https://github.com/qxfx/qxfx0
 data-files:
   migrations/*.sql
   resources/lexicon/*.json
@@ -39,6 +43,7 @@ common base-deps
     , containers    >=0.6 && <0.8
     , aeson         >=1.5 && <2.3
     , unordered-containers >=0.2 && <0.3
+    , pgf2
 
 library
   import:           warnings, base-deps
@@ -46,6 +51,7 @@ library
     Paths_qxfx0
   exposed-modules:
     QxFx0.Types
+    QxFx0.Types.Consciousness
     QxFx0.Types.Domain
     QxFx0.Types.Domain.Atoms
     QxFx0.Types.Decision
@@ -56,10 +62,12 @@ library
     QxFx0.Types.Readiness
     QxFx0.Types.Recovery
     QxFx0.Types.State
+    QxFx0.Types.State.Discourse
     QxFx0.Types.Thresholds
     QxFx0.Types.Orbital
     QxFx0.Types.IdentityGuard
     QxFx0.Types.ShadowDivergence
+    QxFx0.Types.SemanticConfig
     QxFx0.Types.ClaimAst
     QxFx0.Types.TurnProjection
     QxFx0.Types.Vec
@@ -85,11 +93,14 @@ library
     QxFx0.Core.PrincipledCore
     QxFx0.Core.MeaningGraph
     QxFx0.Core.DreamDynamics
+    QxFx0.Core.TopicTransition
 
     QxFx0.Core.BackgroundProcess
     QxFx0.Runtime
     QxFx0.Runtime.Health
     QxFx0.Runtime.PGF
+    QxFx0.Runtime.GF.Map
+    QxFx0.Runtime.GF.Morphology
     QxFx0.Runtime.Session
     QxFx0.Core.Observability
     QxFx0.Core.SessionLock
@@ -115,6 +126,7 @@ library
     QxFx0.Bridge.EmbeddedSQL
     QxFx0.Bridge.Morphology
     QxFx0.Bridge.AgdaR5
+    QxFx0.Bridge.AgdaWitness
     QxFx0.Bridge.Datalog
     QxFx0.Bridge.StatePersistence
     QxFx0.Bridge.TxStatement
@@ -122,7 +134,18 @@ library
     QxFx0.CLI.Parser
     QxFx0.Semantic
     QxFx0.Semantic.MeaningAtoms
+    QxFx0.Semantic.MeaningAtom
+    QxFx0.Semantic.MeaningAssembly
+    QxFx0.Semantic.MeaningDecompose
+    QxFx0.Semantic.MeaningDecompose.Core
+    QxFx0.Semantic.MeaningDecompose.Domains
+    QxFx0.Semantic.Syntax.Combinators
     QxFx0.Semantic.Logic
+    QxFx0.Semantic.DialogAssembly
+    QxFx0.Semantic.DialogAtom
+    QxFx0.Semantic.DialogMeaning
+    QxFx0.Semantic.Input.Parse
+    QxFx0.Semantic.Lexicon.RuntimeParadigms
     QxFx0.Semantic.Embedding
     QxFx0.Semantic.Morphology
     QxFx0.Semantic.Proposition
@@ -132,7 +155,8 @@ library
     QxFx0.Render.Dialogue
     QxFx0.Render.Semantic
     QxFx0.Render.Text
-    QxFx0.Core.TurnPipeline.Route.Render
+     QxFx0.Core.TurnPipeline.Route.Render
+     QxFx0.Internal.FilePath
   other-modules:
     Paths_qxfx0
     QxFx0.Types.Decision.Enums
@@ -175,7 +199,6 @@ library
     QxFx0.Policy.ParserKeywords
     QxFx0.Policy.RenderLexicon
     QxFx0.Policy.SemanticScoring
-    QxFx0.Bridge.AgdaWitness
     QxFx0.Bridge.Datalog.Compare
     QxFx0.Bridge.Datalog.Runtime
     QxFx0.Bridge.Datalog.Support
