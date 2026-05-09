@@ -7,6 +7,13 @@ QxFx0 is a Russian-language philosophical dialogue runtime with:
 - Agda/Haskell constructor sync checks
 - CLI and HTTP machine interfaces
 
+## Current Status
+
+- Date: `2026-05-10`
+- Release contour: `PROD_GO` (core contract passed)
+- Extended contour: `FULL_SCIENTIFIC_GO` deferred by infrastructure requirements (high-memory runner, >=32 GB RAM)
+- Canonical evidence index: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+
 ## What It Is
 
 QxFx0 is an alternative, spec-first approach to text generation:
@@ -19,6 +26,7 @@ QxFx0 is an alternative, spec-first approach to text generation:
 - not a general-purpose replacement for frontier chat models
 - not a web-scale knowledge engine
 - not a hidden black-box sampler: core behavior is implemented as explicit contracts, typed states, and verifiable gates
+- not a legal or medical advice engine
 
 ## Architecture Map
 
@@ -87,6 +95,16 @@ bash scripts/check_lexicon.sh
 Canonical direction is strict: `SQL -> morphology JSON + GF + Agda`.
 Do not edit generated GF files manually.
 For release contract details and runner requirements, see `docs/CI_PRODUCTION_PROFILE.md`.
+
+## Auditor Quick Verify (Core Contract)
+
+```bash
+cabal build all
+QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh
+cat reports/baseline_v2/final_gates/_gate_results_*_core.md
+```
+
+Expected verdict in gate summary: `CONTRACT_VERDICT: PROD_GO`.
 
 ## Quick Demo
 
@@ -231,6 +249,19 @@ Readiness probe semantics:
 - **Test coverage gaps.** The default test interpreter stubs all external effects (Nix, Agda, Shadow verification). Happy-path integration with real external systems is untested.
 - **Non-determinism in production.** While the test harness uses fixed time, the production runtime calls `getCurrentTime`, `threadDelay`, and UUID generation, meaning turn surfacing and request tracing are not fully deterministic in production.
 - **Session lock cap is a soft limit.** Past 4096 tracked sessions, new sessions bypass the per-session lock registry and use a shared overflow lock. This prevents unbounded memory growth but reduces isolation for overflow sessions.
+
+## Reproducibility and Determinism
+
+- Contract and gate outputs are reproducible at the build/test/check level when toolchain and inputs are pinned.
+- Runtime dialogue execution is intentionally not fully deterministic in production due to wall-clock time, UUID generation, and live process scheduling.
+- Core release decisions should rely on gate evidence (`scripts/ci_gate_contract.sh`) rather than raw turn-by-turn textual identity.
+
+## Transfer Maturity (v2 -> QxFx0)
+
+- Package A (CI/gates/docs): transferred and active.
+- Package B (runtime/render/PGF compatibility): transferred and validated by core gates.
+- Package C (GF bilingual lexicon pipeline + generated artifacts): transferred and validated by core gates.
+- Current release target is core production contour (`PROD_GO`); extended contour remains a separate high-memory execution track.
 
 ## Notes
 
