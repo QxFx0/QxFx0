@@ -21,11 +21,36 @@ compile_with_nix_shell() {
     develop "$ROOT" --command gf -make -f pgf "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
 }
 
+# Fast path: if PGF is already present and newer than all source .gf files, skip compile.
+needs_compile() {
+  local pgf="$OUT_PGF"
+  if [ ! -f "$pgf" ]; then
+    return 0
+  fi
+  local src
+  for src in "$ROOT/spec/gf/"*.gf; do
+    [ -f "$src" ] || continue
+    if [ "$src" -nt "$pgf" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+if ! needs_compile; then
+  echo "OK: $OUT_PGF is up to date"
+  exit 0
+fi
+
 if command -v gf >/dev/null 2>&1; then
   compile_with_gf
 else
   if [ "$REQUIRE_GF" != "1" ]; then
-    echo "SKIP: gf compiler is not installed; PGF compile step not enforced."
+    if [ -f "$OUT_PGF" ]; then
+      echo "SKIP: gf compiler is not installed; using existing $OUT_PGF."
+      exit 0
+    fi
+    echo "SKIP: gf compiler is not installed and no $OUT_PGF present."
     exit 0
   fi
   if command -v nix >/dev/null 2>&1 && [ -f "$ROOT/flake.nix" ]; then
