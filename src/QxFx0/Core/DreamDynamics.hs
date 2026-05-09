@@ -8,6 +8,7 @@ module QxFx0.Core.DreamDynamics
   , runDreamCycle
   , runDreamCatchup
   , computeBiasAttractor
+  , buildTransitionMatrix
   ) where
 
 import QxFx0.Types.Dream
@@ -15,6 +16,8 @@ import QxFx0.Types.Vec (CoreVec(..), zeroVec, vecAdd, vecSub, vecScale, vecNorm,
 import QxFx0.Types.Thresholds (clamp01, dreamMinCycleDurationHours)
 import Data.List (foldl')
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
+import qualified Data.Map.Strict as M
+import QxFx0.Types.Observability (MeaningGraph(..), MeaningEdge(..), MeaningStateId)
 
 -- | Run one dream update step for a bounded time delta.
 -- Applies drift decay, evidence quality gates, and bias relaxation.
@@ -114,3 +117,15 @@ auditDreamEvidence cfg = map auditOne
            quality
            experience
             (either Just (const Nothing) decision)
+
+buildTransitionMatrix :: MeaningGraph -> M.Map MeaningStateId (M.Map MeaningStateId Double)
+buildTransitionMatrix mg =
+  let outgoing = foldl' addEdge M.empty (mgEdges mg)
+      normalize m = M.mapWithKey (\_ neighbors ->
+        let total = sum (M.elems neighbors)
+        in if total > 1e-9 then M.map (/ total) neighbors else neighbors) m
+      -- COMPAT GLUE: Source v2 used 3-field MeaningEdge; target has 9 fields.
+      -- We only need the IDs and dream bias (weight) for the transition matrix.
+      addEdge acc (MeaningEdge { meFromId = from, meToId = to, meDreamBias = w }) =
+        M.insertWith (M.unionWith (+)) from (M.singleton to w) acc
+  in normalize outgoing

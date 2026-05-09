@@ -11,12 +11,15 @@ module QxFx0.Render.Dialogue
   , cleanTopic
   , stancePrefix
   , linearizeClaimAstRus
+  -- v2 assembly path
+  , renderArtifactViaAssembly
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Char as Char
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, isJust)
+import Control.Applicative ((<|>))
 import QxFx0.Types
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
@@ -31,6 +34,16 @@ import QxFx0.Policy.ParserKeywords
   ( vapidWords
   )
 import QxFx0.Semantic.KeywordMatch (tokenizeKeywordText)
+import QxFx0.Semantic.DialogMeaning (buildDialogAtoms)
+import QxFx0.Semantic.DialogAtom (DialogAtoms, emptyDialogAtoms)
+import QxFx0.Semantic.Input.Parse (ParsedInput)
+import QxFx0.Semantic.DialogAssembly (assembleTurn)
+import QxFx0.Semantic.MeaningDecompose (factBySubject)
+import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
+import QxFx0.Types.State.System (emptySystemState, ssDiscourse)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
+import QxFx0.Types.Consciousness (ConsciousnessNarrative)
+import QxFx0.Types.Observability (GeodesicPlan)
 import QxFx0.Policy.RenderLexicon
   ( stanceExplore, stanceTentative, stanceFirm, stanceHonest
   , stanceHoldBack, stanceCurated
@@ -61,6 +74,7 @@ data DialogueRenderArtifact = DialogueRenderArtifact
   , draLinearizationLang :: !(Maybe Text)
   , draLinearizationOk :: !Bool
   , draFallbackReason :: !(Maybe Text)
+  , draDialogAtoms :: !DialogAtoms
   } deriving stock (Eq, Show)
 
 renderDialogueUtterance :: ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> Text
@@ -100,6 +114,7 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
           , draLinearizationLang = Nothing
           , draLinearizationOk = False
           , draFallbackReason = Nothing
+          , draDialogAtoms = emptyDialogAtoms
           }
 
 hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
@@ -116,17 +131,18 @@ renderStructuredDialogueArtifact frame rmp renderStyle morph = do
             structuredBody propositionType frame rmp renderStyle morph
           rendered = finalizeForce IFAssert (T.strip body)
       in Just
-          DialogueRenderArtifact
-            { draRenderedText = rendered
-            , draQuestionLike = False
-            , draStylePrefixText = ""
-            , draTemplateBodyText = body
-            , draClaimText = ""
-            , draClaimAst = claimAst
-            , draLinearizationLang = mLang
-            , draLinearizationOk = linearizationOk
-            , draFallbackReason = fallbackReason
-            }
+           DialogueRenderArtifact
+             { draRenderedText = rendered
+             , draQuestionLike = False
+             , draStylePrefixText = ""
+             , draTemplateBodyText = body
+             , draClaimText = ""
+             , draClaimAst = claimAst
+             , draLinearizationLang = mLang
+             , draLinearizationOk = linearizationOk
+             , draFallbackReason = fallbackReason
+             , draDialogAtoms = emptyDialogAtoms
+             }
 
 structuredDialogueType :: PropositionType -> Bool
 structuredDialogueType propositionType =
@@ -974,3 +990,118 @@ dedupeText =
   foldr
     (\item acc -> if item `elem` acc then acc else item : acc)
     []
+
+fallbackStructuredText :: InputPropositionFrame -> Maybe Text
+fallbackStructuredText frame = do
+  pt <- propositionTypeFromText (ipfPropositionType frame)
+  case pt of
+    RepairSignal ->
+      Just "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
+    ContactSignal ->
+      Just "Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+    AffectiveQ ->
+      Just "Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+    OperationalStatusQ ->
+      Just "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+    OperationalCauseQ ->
+      Just "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: вопрос может быть слишком рано схлопнут до упрощённого ядра."
+    GroundQ ->
+      Just "Держу это как устойчивую опору для дальнейшего разбора."
+    SystemLogicQ ->
+      Just "Моя текущая логика локальная: я разбираю вопрос, выбираю семейство хода, сверяюсь с shadow-контуром и затем рендерю ответ."
+    SelfKnowledgeQ ->
+      Just "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора."
+    DialogueInvitationQ ->
+      Just "Да, поговорим об этом. Я зафиксирую рамку и начну с опорного различения."
+    ConceptKnowledgeQ ->
+      Just "Зафиксирую рабочее определение и отделю его от употребления и границ знания."
+    PurposeQ ->
+      Just "Функция этого проявляется через повторяемую роль в действии."
+    WorldCauseQ ->
+      Just "Различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+    LocationFormationQ ->
+      Just "В моей локальной модели мысль возникает не в одной точке, а в структуре связей."
+    SelfStateQ ->
+      Just "Мой текущий ход строится из разбора реплики, выбора семейства ответа и ограничений сессии."
+    ComparisonPlausibilityQ ->
+      Just "Сравнение плаузибельности требует явной рамки."
+    MisunderstandingReport ->
+      Just "Я принимаю это как сигнал сбоя взаимопонимания. Давай уточним, где именно ответ разошёлся с твоим запросом."
+    GenerativePrompt ->
+      Just "Одна мысль: смысл держится на связи между словами и опытом."
+    ContemplativeTopic ->
+      Just "Я слышу в этом не только предмет, но и поле смыслов."
+    NextStepQ ->
+      Just "Следующий шаг: конкретизировать задачу в одном действии."
+    _ -> Nothing
+
+--------------------------------------------------------------------------------
+-- v2 assembly path (transferred from stabilize-v2-gf)
+--------------------------------------------------------------------------------
+
+rightToMaybe :: Either e a -> Maybe a
+rightToMaybe (Right a) = Just a
+rightToMaybe (Left _)  = Nothing
+
+renderDialogueArtifactImpl :: RuntimeParadigms -> InputPropositionFrame -> ResponseMeaningPlan
+                       -> ResponseContentPlan -> Text -> [IdentityClaimRef]
+                       -> MorphologyData -> ParsedInput -> DialogueRenderArtifact
+renderDialogueArtifactImpl rp _frame rmp rcp topic _claims morph parsedInput =
+  let seed = nonEmptyOr (cleanTopic topic) (rmpTopic rmp)
+      frame' = emptyInputPropositionFrame
+        { ipfRawText = seed
+        , ipfCanonicalFamily = rcpFamily rcp
+        , ipfFocusEntity = seed
+        }
+      da = buildDialogAtoms frame' rmp emptySystemState morph parsedInput Nothing
+      rendered = case assembleTurn rp da (rcpStyle rcp) (ssDiscourse emptySystemState) of
+                   Right text -> text
+                   Left _err  -> ""
+      ast = rmpPrimaryClaimAst rmp
+      linearized = linearizeClaimAstRus (fromMaybe (MovePurpose (MkNP seed)) ast) (rcpStyle rcp) morph
+  in DialogueRenderArtifact
+      { draRenderedText = finalizeForce (rmpForce rmp) (T.strip rendered)
+      , draQuestionLike = rmpForce rmp == IFAsk
+      , draStylePrefixText = ""
+      , draTemplateBodyText = rendered
+      , draClaimText = fromMaybe "" linearized
+      , draClaimAst = ast
+      , draDialogAtoms = da
+      , draLinearizationLang = Just "ru_meaning_assembly"
+      , draLinearizationOk = isJust linearized
+      , draFallbackReason = if isJust linearized then Nothing else Just "no_ast"
+      }
+
+renderArtifactViaAssembly :: RuntimeParadigms -> SystemState -> InputPropositionFrame
+                           -> ResponseMeaningPlan -> ResponseContentPlan
+                           -> Text -> [IdentityClaimRef]
+                           -> MorphologyData -> RenderStyle -> ParsedInput
+                           -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> DialogueRenderArtifact
+renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInput mnarr mGeodesicPlan =
+   let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
+       da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
+       dialogText = case assembleTurn rp da style (ssDiscourse ss) of
+                      Right txt | not (T.null (T.strip txt)) -> Just txt
+                      _ -> Nothing
+       factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
+       -- COMPAT GLUE: old template path fallback for test contexts where paradigms are empty.
+       -- Fallback chain: dialogText -> factualText -> templateArtifact(draTemplateBodyText) -> structuredFallback.
+       templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
+       templateText = let txt = draTemplateBodyText templateArtifact
+                      in if T.null (T.strip txt) then Nothing else Just txt
+       structuredFallback
+         | hasStructuredDialogueSurface frame = fallbackStructuredText frame
+         | otherwise                          = Nothing
+       rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
+       -- COMPAT GLUE: preserve old template path finalization when falling back.
+       -- Assembly-generated text is finalized with rmpForce; fallback text is
+       -- already finalized inside templateArtifact (e.g. IFAssert for structured).
+       isFreshAssembly = isJust dialogText || isJust factualText
+       finalRendered
+         | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
+         | otherwise       = draRenderedText templateArtifact
+    in templateArtifact
+         { draRenderedText = finalRendered
+         , draTemplateBodyText = rendered
+         , draDialogAtoms = da
+         }
