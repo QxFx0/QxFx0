@@ -13,11 +13,12 @@
 
 | Tier | Verdict | Status |
 |------|---------|--------|
-| **Core Contract** (`PROD_GO`) | **ACHIEVED** | All common gates PASS on 8 GB dev runner. `ci_gate_contract.sh` with `QXFX0_CONTRACT_PROFILE=core` produces `CONTRACT_VERDICT: PROD_GO`. |
+| **Core Contract** (`PROD_GO`) | **HONEST FAIL — Gate 4 (GF quality)** | Build, tests, architecture, haddock, SQL sync, schema consistency/contract, generated artifacts, lexicon, and release-smoke (degraded-local) all PASS. `gf_quality_gate.sh` FAILs because `spec/gf/QxFx0Syntax.pgf` is missing and no GF compiler is available in current environment (`pkgs.gf` in nixpkgs resolves to `gf2`, a GDB frontend, not Grammatical Framework). This is an INFRA gap, not a code defect. |
 | **Extended Contract** (`FULL_SCIENTIFIC_GO`) | **BLOCKED — INFRA** | Requires >=32 GB RAM runner. Slow tests and coverage rebuild exceed capacity on current 8 GB dev runner. No code defects. |
 
 **Current runner capability:** 8 GB effective RAM (single local dev instance).  
 **Production CI capability required:** `core-contract` on `ubuntu-latest` (16 GB); `extended-contract` on high-mem runner (>=32 GB).  
+**Path to PROD_GO in target:** Install/provide the Grammatical Framework compiler (`gf`) and compile `spec/gf/QxFx0SyntaxRus.gf` → `spec/gf/QxFx0Syntax.pgf`, or commit a pre-built PGF artifact.  
 **Path to FULL_SCIENTIFIC_GO:** Provision extended runner per `docs/CI_PRODUCTION_PROFILE.md` and run `QXFX0_CONTRACT_PROFILE=extended bash scripts/ci_gate_contract.sh`.
 
 ---
