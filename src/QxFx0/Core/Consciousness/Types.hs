@@ -31,6 +31,7 @@ module QxFx0.Core.Consciousness.Types
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
+import QxFx0.Types.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Core.Policy.Consciousness
   ( deepContentGeneralization
   , deepContentLowConfidence
@@ -222,11 +223,4 @@ data ConsciousnessModel = ConsciousnessModel
   , cmConscious :: ConsciousState
   } deriving stock (Show, Read, Generic)
 
-data ConsciousnessNarrative = ConsciousnessNarrative
-  { cnKernelState :: Text
-  , cnActiveDesires :: Text
-  , cnSkillInPlay :: Text
-  , cnSelfView :: Text
-  , cnConflict :: Text
-  , cnLimitation :: Text
-  } deriving stock (Show, Read, Generic)
+
