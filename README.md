@@ -33,8 +33,9 @@ QxFx0 is an alternative, spec-first approach to text generation:
 - `Datalog` (symbolic reasoning bridge): runtime datalog execution and compare/support layers
   (`src/QxFx0/Bridge/Datalog/**`, `src/QxFx0/Bridge/Datalog.hs`).
 - `GF` (grammar layer): generated lexicon + syntax/concrete grammar used by runtime mappings
-  (`spec/gf/QxFx0Lexicon.gf`, `spec/gf/QxFx0LexiconRus.gf`,
-  `spec/gf/QxFx0Syntax.gf`, `spec/gf/QxFx0SyntaxRus.gf`).
+  (`spec/gf/lexicon_bilingual.tsv`, `spec/gf/QxFx0LexiconEng.gf`,
+  `spec/gf/QxFx0SyntaxEng.gf`, `spec/gf/QxFx0SyntaxRusColloquial.gf`,
+  `spec/gf/QxFx0Syntax.pgf`).
 
 ## Canonical Sources
 
@@ -44,7 +45,7 @@ QxFx0 is an alternative, spec-first approach to text generation:
 - Layer-safe shared types: `src/QxFx0/Types/Orbital.hs`, `src/QxFx0/Types/IdentityGuard.hs`
 - SQL contract: `spec/sql/schema.sql`
 - Lexicon raw source: `spec/sql/lexicon/schema.sql`, `spec/sql/lexicon/seed_ru_core.sql`
-- GF lexicon artifacts (generated): `spec/gf/QxFx0Lexicon.gf`, `spec/gf/QxFx0LexiconRus.gf`
+- GF lexicon source/artifacts: `spec/gf/lexicon_bilingual.tsv`, `spec/gf/QxFx0LexiconEng.gf`, `spec/gf/QxFx0SyntaxEng.gf`, `spec/gf/QxFx0SyntaxRusColloquial.gf`, `spec/gf/QxFx0Syntax.pgf`
 - Agda lexicon artifacts (generated): `spec/LexiconData.agda`, `spec/LexiconProof.agda`
 - Haskell runtime lexicon map (generated): `src/QxFx0/Lexicon/Generated.hs`
 - Operational policy/template texts: `src/QxFx0/Policy/Templates.hs` (not canonical lexicon contour)
@@ -52,6 +53,8 @@ QxFx0 is an alternative, spec-first approach to text generation:
 - Runtime-critical schema contract: `spec/sql/runtime_critical_contract.tsv`
 - Runtime invariants: `docs/runtime_invariants.md`
 - Schema contract playbook: `docs/schema_contract_playbook.md`
+- CI/release contract: `docs/CI_PRODUCTION_PROFILE.md`
+- Extended high-mem execution runbook: `docs/EXTENDED_CONTRACT_RUNBOOK.md`
 - Commit preparation guide: `docs/commit_preparation.md`
 - Release gate: `scripts/release-smoke.sh`
 
@@ -61,13 +64,18 @@ QxFx0 is an alternative, spec-first approach to text generation:
 cabal build all
 cabal test qxfx0-test
 bash scripts/check_architecture.sh
+bash scripts/gf_quality_gate.sh
 python3 scripts/check_schema_contract.py
 bash scripts/check_lexicon.sh
 bash scripts/check_generated_artifacts.sh
 python3 scripts/verify_agda_sync.py
 bash scripts/verify.sh
-bash scripts/release-smoke.sh
+QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh
 ```
+
+Release smoke modes:
+- `QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUN_SLOW_TESTS=0 bash scripts/release-smoke.sh` for core profile (`PROD_GO`)
+- `QXFX0_RELEASE_SMOKE_MODE=strict bash scripts/release-smoke.sh` for extended profile (`FULL_SCIENTIFIC_GO`, high-memory runner)
 
 Lexicon artifacts are generated from SQL:
 
@@ -78,6 +86,7 @@ bash scripts/check_lexicon.sh
 
 Canonical direction is strict: `SQL -> morphology JSON + GF + Agda`.
 Do not edit generated GF files manually.
+For release contract details and runner requirements, see `docs/CI_PRODUCTION_PROFILE.md`.
 
 ## Quick Demo
 
