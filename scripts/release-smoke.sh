@@ -25,7 +25,12 @@ SKIP=0
 REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
 ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
+RUN_SLOW_TESTS="${QXFX0_RUN_SLOW_TESTS:-auto}"
 SMOKE_RUNTIME_MODE="strict"
+RELEASE_SMOKE_MODE="${QXFX0_RELEASE_SMOKE_MODE:-strict}"
+# Supported modes:
+#   strict         — CI/release; infra failures are treated as FAIL.
+#   degraded-local — local dev; infra failures are SKIP/WARN.
 START_TIME="$(date +%s)"
 PRE_SMOKE_STATUS=""
 RELEASE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/qxfx0-release-smoke.XXXXXX")"
@@ -309,17 +314,26 @@ cleanup() {
     echo "════════════════════════════════════════════════════════════"
     echo "  RELEASE GATE RESULTS"
     echo "════════════════════════════════════════════════════════════"
+    echo "  Mode:     $RELEASE_SMOKE_MODE"
     echo "  Passed:   $PASS"
     echo "  Failed:   $FAIL"
     echo "  Skipped:  $SKIP"
     echo "  Elapsed:  ${ELAPSED}s"
     echo "════════════════════════════════════════════════════════════"
     if [ "$FAIL" -gt 0 ]; then
-        echo -e "  ${RED}${BOLD}VERDICT: REJECT${NC}"
+        echo -e "  ${RED}${BOLD}VERDICT: REJECT${NC} — $FAIL gate(s) failed"
+        exit 1
+    elif [ "$RELEASE_SMOKE_MODE" = "strict" ] && [ "$SKIP" -gt 0 ]; then
+        echo -e "  ${RED}${BOLD}VERDICT: REJECT${NC} — $SKIP gate(s) skipped in strict mode (no skips allowed)"
         exit 1
     else
-        echo -e "  ${GREEN}${BOLD}VERDICT: ACCEPT${NC}"
-        exit 0
+        if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ] && [ "$SKIP" -gt 0 ]; then
+            echo -e "  ${YELLOW}${BOLD}VERDICT: ACCEPT_WITH_SKIPS${NC} — $SKIP infra/opt-out gate(s) skipped in degraded-local"
+            exit 0
+        else
+            echo -e "  ${GREEN}${BOLD}VERDICT: ACCEPT${NC}"
+            exit 0
+        fi
     fi
 }
 trap cleanup EXIT
@@ -329,6 +343,8 @@ echo "║   QxFx0 Release Smoke Test — 10 Constitutional Gates      ║"
 echo "║   Конституционная Монархия Языков                         ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
+step_info "Profile context: release-smoke | Runtime mode: $SMOKE_RUNTIME_MODE | Script mode: $RELEASE_SMOKE_MODE"
+step_info "Profile semantics: strict=REJECT on any skip; degraded-local=ACCEPT_WITH_SKIPS on infra skips"
 step_info "Runtime mode for release gates: $SMOKE_RUNTIME_MODE"
 
 PRE_SMOKE_STATUS=""
@@ -387,6 +403,30 @@ else
     step_fail "cabal test exited non-zero"
 fi
 rm -f "$TEST_LOG"
+
+case "$RUN_SLOW_TESTS" in
+    0|false|FALSE|no|NO)
+        step_skip "slow suite disabled (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
+        ;;
+    1|true|TRUE|yes|YES)
+        SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
+        step_info "Running cabal test qxfx0-test-slow..."
+        if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
+            tail -8 "$SLOW_TEST_LOG"
+            step_pass
+        else
+            tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
+            step_fail "cabal test qxfx0-test-slow exited non-zero"
+        fi
+        rm -f "$SLOW_TEST_LOG"
+        ;;
+    auto|AUTO|Auto|'')
+        step_skip "slow suite skipped: auto mode (spaCy + ru_core_news_sm check not implemented in minimal integration)"
+        ;;
+    *)
+        step_fail "unsupported QXFX0_RUN_SLOW_TESTS value: $RUN_SLOW_TESTS"
+        ;;
+esac
 
 ARCH_CHECK="$ROOT/scripts/check_architecture.sh"
 if [ -x "$ARCH_CHECK" ]; then
