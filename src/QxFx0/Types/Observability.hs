@@ -10,6 +10,7 @@ module QxFx0.Types.Observability
   , LiveRenderTelemetry(..)
   , MeaningGraph(..)
   , emptyMeaningGraph
+  , GeodesicPlan(..)
   , MeaningEdge(..)
   , MeaningState(..)
   , MeaningStateId
@@ -200,6 +201,12 @@ instance FromJSON MeaningGraph where parseJSON = genericParseJSON defaultOptions
 
 emptyMeaningGraph :: MeaningGraph
 emptyMeaningGraph = MeaningGraph [] 0
+
+data GeodesicPlan
+  = DirectJump
+  | BridgedJump [Text]
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data KernelPulse = KernelPulse
   { kpActive :: !Bool

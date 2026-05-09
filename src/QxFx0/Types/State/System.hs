@@ -24,6 +24,8 @@ module QxFx0.Types.State.System
   , ssLastGuardReport
   , ssTrace
   , ssMeaningGraph
+  , ssDiscourse
+  , ssSemanticConfig
   , ssKernelPulse
   , ssBlockedConcepts
   , ssClusters
@@ -31,6 +33,7 @@ module QxFx0.Types.State.System
   , ssLastTurnDecision
   , ssIntuitConfidence
   , ssDreamState
+  , ssDreamAxiom
   , ssIntuitionState
   , emptySystemState
   ) where
@@ -77,6 +80,14 @@ import QxFx0.Types.Orbital (OrbitalMemory)
 import QxFx0.Types.State.Dialogue
   ( DialogueState(..)
   , emptyDialogueState
+  )
+import QxFx0.Types.State.Discourse
+  ( DiscourseState
+  , emptyDiscourseState
+  )
+import QxFx0.Types.SemanticConfig
+  ( SemanticConfig
+  , defaultSemanticConfig
   )
 import QxFx0.Types.State.Identity
   ( EgoState
@@ -225,6 +236,12 @@ ssTrace = semTrace . ssSemantic
 ssMeaningGraph :: SystemState -> MeaningGraph
 ssMeaningGraph = semMeaningGraph . ssSemantic
 
+ssDiscourse :: SystemState -> DiscourseState
+ssDiscourse _ = emptyDiscourseState
+
+ssSemanticConfig :: SystemState -> SemanticConfig
+ssSemanticConfig _ = defaultSemanticConfig
+
 ssKernelPulse :: SystemState -> KernelPulse
 ssKernelPulse = semKernelPulse . ssSemantic
 
@@ -242,6 +259,11 @@ ssLastTurnDecision = semLastTurnDecision . ssSemantic
 
 ssIntuitConfidence :: SystemState -> Double
 ssIntuitConfidence = semIntuitConfidence . ssSemantic
+
+ssDreamAxiom :: SystemState -> Text
+-- COMPAT GLUE: Source v2 had ssDreamAxiom field; target does not.
+-- Returning empty text preserves old callers without adding persistent state.
+ssDreamAxiom _ = ""
 
 ssDreamState :: SystemState -> DreamState
 ssDreamState = semDreamState . ssSemantic
