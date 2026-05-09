@@ -1,45 +1,76 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-{-| Out-of-process PGF linearization bridge using the @gf@ CLI. -}
+{-| In-process PGF linearization via the @pgf2@ Haskell library.
+    Replaces the old out-of-process @gf -run@ CLI bridge.
+
+    COMPAT GLUE: astToGfExpr uses old target ClaimAst constructors
+    (MoveDefine, MoveGround, etc.) to avoid changing Types.ClaimAst.
+-}
 module QxFx0.Runtime.PGF
   ( astToGfExpr
   , linearizeClaimAstGf
+  , dialogAtomsToGfExpr
+  , linearizeDialogAtomsGf
   ) where
 
+import Control.Exception (try, SomeException)
 import Data.Char (isSpace)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
-import System.Exit (ExitCode(..))
-import System.Process (readProcessWithExitCode)
+import qualified PGF2 as PGF
 
-import QxFx0.Lexicon.GfMap (topicToGfLexemeId)
 import QxFx0.Types (ClaimAst(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..))
+import QxFx0.Runtime.GF.Map (topicToGfLexemeId, buildGfLexemeMap)
+import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
+import QxFx0.Semantic.DialogAtom (DialogAtoms, daTopicNominative, hasTag, headAtomValue, AtomTag(..))
 
 defaultPgfPath :: FilePath
 defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
 
+-- COMPAT GLUE: Old target wiring expects 2-arg interface (no explicit language).
+-- We default to the Russian concrete syntax shipped in the repo.
 linearizeClaimAstGf :: Maybe FilePath -> ClaimAst -> IO (Either Text Text)
-linearizeClaimAstGf mPgfPath ast =
+linearizeClaimAstGf mPgfPath ast = linearizeClaimAstGfLang mPgfPath "QxFx0SyntaxRus" ast
+
+linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text Text)
+linearizeClaimAstGfLang mPgfPath lang ast =
   case astToGfExpr ast of
     Left err -> pure (Left err)
-    Right expr -> do
-      let pgfPath = fromMaybe defaultPgfPath mPgfPath
-      exists <- doesFileExist pgfPath
-      if not exists
-        then pure (Left ("pgf_missing:" <> T.pack pgfPath))
-        else do
-          (exitCode, stdoutText, stderrText) <-
-            readProcessWithExitCode "gf" ["-run", pgfPath] (T.unpack expr <> "\n")
-          case exitCode of
-            ExitSuccess ->
-              case extractLinearization (T.pack stdoutText) of
-                Just rendered -> pure (Right rendered)
-                Nothing -> pure (Left "gf_empty_output")
-            ExitFailure _ ->
-              let err = summarizeGfFailure (T.pack stderrText) (T.pack stdoutText)
-              in pure (Left err)
+    Right expr -> linearizeExpr mPgfPath lang expr
+
+linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text Text)
+linearizeDialogAtomsGf mPgfPath da = linearizeDialogAtomsGfLang mPgfPath "QxFx0SyntaxRus" da
+
+linearizeDialogAtomsGfLang :: Maybe FilePath -> Text -> DialogAtoms -> IO (Either Text Text)
+linearizeDialogAtomsGfLang mPgfPath lang da =
+  case dialogAtomsToGfExpr da of
+    Left err -> pure (Left err)
+    Right expr -> linearizeExpr mPgfPath lang expr
+
+linearizeExpr :: Maybe FilePath -> Text -> Text -> IO (Either Text Text)
+linearizeExpr mPgfPath lang expr = do
+  let pgfPath = fromMaybe defaultPgfPath mPgfPath
+  exists <- doesFileExist pgfPath
+  if not exists
+    then pure (Left ("pgf_missing:" <> T.pack pgfPath))
+    else do
+      result <- try $ do
+        pgf <- PGF.readPGF pgfPath
+        let langs = PGF.languages pgf
+        case Map.lookup (T.unpack lang) langs of
+          Nothing -> pure (Left ("pgf_lang_not_found:" <> lang <> ":available=" <> T.pack (show (Map.keys langs))))
+          Just concr -> case PGF.readExpr (T.unpack expr) of
+            Nothing -> pure (Left ("pgf_parse_expr_failed:" <> expr))
+            Just pgfExpr ->
+              let raw = T.pack (PGF.linearize concr pgfExpr)
+              in pure (Right raw)
+      case result of
+        Left (e :: SomeException) -> pure (Left ("pgf_exception:" <> T.pack (show e)))
+        Right r -> pure r
 
 astToGfExpr :: ClaimAst -> Either Text Text
 astToGfExpr ast =
@@ -131,45 +162,16 @@ gfActionExpr action =
     ActMaintain number obj -> Right ("ActMaintain " <> gfNumberExpr number <> " " <> obj)
     ActDefine obj -> Right ("ActDefine " <> obj)
 
-extractLinearization :: Text -> Maybe Text
-extractLinearization rawOutput =
-  let linesNoEmpty = filter (not . T.null) (map T.strip (T.lines rawOutput))
-      pick =
-        listToMaybe
-          ( reverse
-              [ normalizeQuoted line
-              | line <- linesNoEmpty
-              , not (">" `T.isPrefixOf` line)
-              ]
-          )
-  in pick
-
-normalizeQuoted :: Text -> Text
-normalizeQuoted line =
-  case T.uncons line of
-    Just ('"', rest) ->
-      case T.unsnoc rest of
-        Just (middle, '"') -> middle
-        _ -> line
-    _ -> line
-
-summarizeGfFailure :: Text -> Text -> Text
-summarizeGfFailure stderrText stdoutText =
-  let stderrLine = firstUsefulLine stderrText
-      stdoutLine = firstUsefulLine stdoutText
-      merged =
-        case (stderrLine, stdoutLine) of
-          (Just e, _) -> e
-          (Nothing, Just o) -> o
-          _ -> "gf_failed"
-  in "gf_failed:" <> merged
-
-firstUsefulLine :: Text -> Maybe Text
-firstUsefulLine =
-  listToMaybe
-    . filter (not . T.null)
-    . map (T.take 160 . T.dropAround isSpace)
-    . T.lines
+dialogAtomsToGfExpr :: DialogAtoms -> Either Text Text
+dialogAtomsToGfExpr da =
+  let topicStr = daTopicNominative da
+      gfTopic = topicToGfLexemeId buildGfLexemeMap topicStr
+      intent = if hasTag TUserIntent da then headAtomValue TUserIntent da else ""
+  in if intent == "define"
+     then Right ("MoveDefine (MkNP " <> gfTopic <> ") (MkNP " <> gfTopic <> ")")
+     else if intent == "ground"
+     then Right ("MoveGround (MkNP " <> gfTopic <> ")")
+     else Right ("MoveGround (MkNP " <> gfTopic <> ")")
 
 sanitizeLegacyLexemeId :: Text -> Text
-sanitizeLegacyLexemeId = topicToGfLexemeId
+sanitizeLegacyLexemeId = LegacyGfMap.topicToGfLexemeId
