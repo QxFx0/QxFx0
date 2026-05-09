@@ -1055,6 +1055,41 @@ def hs_number_constructor(number_tag: str) -> str:
     return mapping.get(number_tag, "SingularNumber")
 
 
+_RUS_VERB_FORMS = {
+    "делать": ("делаю", "делает"),
+    "думать": ("думаю", "думает"),
+    "понимать": ("понимаю", "понимает"),
+    "мыслить": ("мыслю", "мыслит"),
+    "сказать": ("скажу", "скажет"),
+    "основывать": ("основываю", "основывает"),
+    "проникнуть": ("проникну", "проникнет"),
+    "различать": ("различаю", "различает"),
+    "существовать": ("существую", "существует"),
+    "уточнять": ("уточняю", "уточняет"),
+    "чувствовать": ("чувствую", "чувствует"),
+    "доказывать": ("доказываю", "доказывает"),
+    "изменять": ("изменяю", "изменяет"),
+    "использовать": ("использую", "использует"),
+    "исследовать": ("исследую", "исследует"),
+    "наблюдать": ("наблюдаю", "наблюдает"),
+    "общаться": ("общаюсь", "общается"),
+    "познавать": ("познаю", "познает"),
+    "развивать": ("развиваю", "развивает"),
+    "сознавать": ("сознаю", "сознает"),
+    "воспринимать": ("воспринимаю", "воспринимает"),
+    "выделять": ("выделяю", "выделяет"),
+    "выражать": ("выражаю", "выражает"),
+    "критиковать": ("критикую", "критикует"),
+    "держать": ("держу", "держит"),
+    "возражать": ("возражаю", "возражает"),
+    "спрашивать": ("спрашиваю", "спрашивает"),
+}
+
+
+def _rus_verb_1sg(infinitive: str) -> str:
+    return _RUS_VERB_FORMS.get(infinitive, (infinitive, infinitive + "ет"))[0]
+
+
 def render_haskell_runtime_module(
     rows: List[Lexeme],
     forms_by_surface: Dict[str, List[List[object]]],
@@ -1064,12 +1099,15 @@ def render_haskell_runtime_module(
         entries.append((r.nominative, r.lemma, r.pos, "nominative"))
         entries.append((r.genitive, r.lemma, r.pos, "genitive"))
         entries.append((r.prepositional, r.lemma, r.pos, "prepositional"))
+        entries.append((r.accusative, r.lemma, r.pos, "accusative"))
+        entries.append((r.instrumental, r.lemma, r.pos, "instrumental"))
 
     out = [
         "{-# LANGUAGE OverloadedStrings #-}",
         "module QxFx0.Lexicon.Generated",
         "  ( generatedLexemeEntries",
         "  , generatedCandidateForms",
+        "  , generatedFiniteVerbMap",
         "  ) where",
         "",
         "import qualified Data.Map.Strict as M",
@@ -1157,6 +1195,26 @@ def render_haskell_runtime_module(
         out.append("    ]")
     else:
         out.append("  M.empty")
+
+    # generatedFiniteVerbMap: infinitive -> 1sg present for runtime GF verb slot filling
+    finite_verbs = []
+    for r in rows:
+        if r.pos == "verb":
+            sg1 = _rus_verb_1sg(r.lemma)
+            finite_verbs.append((r.lemma, sg1))
+    # Hardcoded verbs from QxFx0SyntaxRus.gf not always present in SQL rows
+    for inf in ("критиковать", "держать", "возражать", "спрашивать"):
+        if inf not in {lv[0] for lv in finite_verbs}:
+            finite_verbs.append((inf, _rus_verb_1sg(inf)))
+    finite_verbs.sort(key=lambda t: t[0])
+    out.append("")
+    out.append("generatedFiniteVerbMap :: M.Map Text Text")
+    out.append("generatedFiniteVerbMap = M.fromList")
+    out.append("  [")
+    for idx, (inf, sg1) in enumerate(finite_verbs):
+        suffix = "," if idx < len(finite_verbs) - 1 else ""
+        out.append(f"    ({hs_quote(inf)}, {hs_quote(sg1)}){suffix}")
+    out.append("  ]")
 
     out.append("")
     return "\n".join(out) + "\n"
