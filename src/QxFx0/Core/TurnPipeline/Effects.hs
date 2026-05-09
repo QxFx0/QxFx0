@@ -25,6 +25,7 @@ import QxFx0.Core.Policy.Contracts (fallbackWord)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Core.Intuition (IntuitiveFlash)
+import QxFx0.Semantic.DialogAtom (DialogAtoms)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -50,6 +51,7 @@ data TurnEffectRequest
   | TurnReqRollbackTurnProjections !Text !Int
   | TurnReqCheckpoint !Int
   | TurnReqLinearizeClaimAst !(Maybe FilePath) !ClaimAst
+  | TurnReqLinearizeDialogAtoms !(Maybe FilePath) !DialogAtoms
   deriving stock (Show)
 
 data TurnEffectResult
@@ -70,6 +72,7 @@ data TurnEffectResult
   | TurnResRollbackTurnProjections !(Either PersistenceDiagnostic ())
   | TurnResCheckpointCompleted
   | TurnResLinearizeClaimAst !(Either Text Text)
+  | TurnResLinearizeDialogAtoms !(Either Text Text)
 
 data PrepareStatic = PrepareStatic
   { psInputText :: !Text

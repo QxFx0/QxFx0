@@ -9,7 +9,6 @@ module QxFx0.Runtime.Wiring.Pipeline
 
 import qualified Data.Text as T
 import Data.Char (isAlphaNum)
-import Data.List (isPrefixOf)
 import qualified Data.Set as Set
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Data.UUID as UUID
@@ -20,13 +19,14 @@ import System.Directory
   , doesDirectoryExist
   )
 import System.Environment (lookupEnv)
-import System.FilePath ((</>), isAbsolute, normalise, splitDirectories, takeDirectory, takeFileName)
+import System.FilePath ((</>), isAbsolute, normalise, takeDirectory, takeFileName)
 import System.IO (hClose, hPutStr)
 import System.Posix.Files (ownerReadMode, ownerWriteMode, unionFileModes)
 import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), defaultFileFlags, fdToHandle, openFd)
 import System.Posix.Types (FileMode)
 
 import QxFx0.Bridge.SQLite (maybeCheckpoint)
+import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProjection)
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
@@ -40,7 +40,7 @@ import QxFx0.Core.PipelineIO
 import QxFx0.Core.PipelineIO.Internal (PipelineIO(..))
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Runtime.Mode (RuntimeMode(..))
-import QxFx0.Runtime.PGF (linearizeClaimAstGf)
+import QxFx0.Runtime.PGF (linearizeClaimAstGf, linearizeDialogAtomsGf)
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
   , TimeSource
@@ -156,6 +156,8 @@ runtimeInterpreter ctx request =
       pure TurnResCheckpointCompleted
     TurnReqLinearizeClaimAst mPgfPath claimAst ->
       TurnResLinearizeClaimAst <$> linearizeClaimAstGf mPgfPath claimAst
+    TurnReqLinearizeDialogAtoms mPgfPath da ->
+      TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGf mPgfPath da
 
 generateRequestId :: TimeSource -> IO T.Text
 generateRequestId timeSource = do
@@ -203,12 +205,6 @@ resolveAbsoluteMarkerPath canonicalTmp canonicalStateDir absoluteCandidate = do
         if isPathWithin canonicalTmp canonicalCandidate || isPathWithin canonicalStateDir canonicalCandidate
           then Just canonicalCandidate
           else Nothing
-
-isPathWithin :: FilePath -> FilePath -> Bool
-isPathWithin root candidate =
-  let rootParts = splitDirectories (normalise root)
-      pathParts = splitDirectories (normalise candidate)
-  in rootParts `isPrefixOf` pathParts
 
 isSafeRelativeMarker :: FilePath -> Bool
 isSafeRelativeMarker relPath =
