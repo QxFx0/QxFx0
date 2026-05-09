@@ -9,26 +9,31 @@
 
 ## Canonical Core Contract Evidence (PROD_GO)
 
-### Primary Contract Run (Target Repo)
+### Primary Contract Run (Target Repo) — Package A+B+C Closure
 
 | File | Path | Description | Commit Context |
 |------|------|-------------|-------------|
-| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260509-201231_core.md` | Final target core gate verdict: **CONTRACT_VERDICT: PROD_GO**, 11 gates PASS, 0 FAIL | `7207a0e` |
-| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260509-201231_core.tsv` | Machine-readable gate results | `7207a0e` |
-| Full stdout log | `/tmp/ci_contract_target_final.log` | Complete `ci_gate_contract.sh` stdout (core profile) | captured 2026-05-09 20:28 |
+| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260509-234041_core.md` | Final target core gate verdict: **CONTRACT_VERDICT: PROD_GO**, 11 gates PASS, 0 FAIL | `8f6cfd7` |
+| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260509-234041_core.tsv` | Machine-readable gate results | `8f6cfd7` |
 
-### Per-Gate Logs (core, RUN_ID: `ci-20260509-201231`)
+### Per-Gate Logs (core, RUN_ID: `ci-20260509-234041`)
 
 | Gate | Log File |
 |------|----------|
-| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-201231_core.log` |
-| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-201231_core.log` |
-| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-201231_core.log` |
-| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260509-201231_core.log` |
-| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260509-201231_core.log` |
-| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260509-201231_core.log` |
-| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260509-201231_core.log` |
-| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260509-201231_core.log` |
+| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-234041_core.log` |
+| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-234041_core.log` |
+| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-234041_core.log` |
+| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260509-234041_core.log` |
+| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260509-234041_core.log` |
+| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260509-234041_core.log` |
+| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260509-234041_core.log` |
+| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260509-234041_core.log` |
+
+### Historical Contract Run (Target Repo) — Package A Only
+
+| File | Path | Description | Commit Context |
+|------|------|-------------|-------------|
+| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260509-201231_core.md` | Package A target closure: **CONTRACT_VERDICT: PROD_GO** | `7207a0e` |
 
 ---
 
