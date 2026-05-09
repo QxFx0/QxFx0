@@ -1,0 +1,85 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>module QxFx0.Semantic.Input.Normalize
+<span class="lineno">    6 </span>  ( NormalizedInput(..)
+<span class="lineno">    7 </span>  , normalizeInput
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import Data.Char (isAlphaNum)
+<span class="lineno">   11 </span>import Data.Text (Text)
+<span class="lineno">   12 </span>import qualified Data.Text as T
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>data NormalizedInput = NormalizedInput
+<span class="lineno">   15 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">niRawText</span></span></span> :: !Text
+<span class="lineno">   16 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">niNormalizedText</span></span></span> :: !Text
+<span class="lineno">   17 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">niTokens</span></span></span> :: ![Text]
+<span class="lineno">   18 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">niIsQuestion</span></span></span> :: !Bool
+<span class="lineno">   19 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>normalizeInput :: Text -&gt; NormalizedInput
+<span class="lineno">   22 </span><span class="decl"><span class="istickedoff">normalizeInput rawText =</span>
+<span class="lineno">   23 </span><span class="spaces">  </span><span class="istickedoff">let stripped = T.strip rawText</span>
+<span class="lineno">   24 </span><span class="spaces">      </span><span class="istickedoff">lower = T.toLower stripped</span>
+<span class="lineno">   25 </span><span class="spaces">      </span><span class="istickedoff">normalized = normalizeOrthography lower</span>
+<span class="lineno">   26 </span><span class="spaces">      </span><span class="istickedoff">tokens =</span>
+<span class="lineno">   27 </span><span class="spaces">        </span><span class="istickedoff">filter (not . T.null)</span>
+<span class="lineno">   28 </span><span class="spaces">          </span><span class="istickedoff">(map trimToken (T.words (T.map normalizeChar normalized)))</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">isQuestion = T.isSuffixOf &quot;?&quot; stripped || isQuestionByCue tokens</span>
+<span class="lineno">   30 </span><span class="spaces">  </span><span class="istickedoff">in NormalizedInput</span>
+<span class="lineno">   31 </span><span class="spaces">       </span><span class="istickedoff">{ niRawText = rawText</span>
+<span class="lineno">   32 </span><span class="spaces">       </span><span class="istickedoff">, niNormalizedText = normalized</span>
+<span class="lineno">   33 </span><span class="spaces">       </span><span class="istickedoff">, niTokens = tokens</span>
+<span class="lineno">   34 </span><span class="spaces">       </span><span class="istickedoff">, niIsQuestion = isQuestion</span>
+<span class="lineno">   35 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>isQuestionByCue :: [Text] -&gt; Bool
+<span class="lineno">   38 </span><span class="decl"><span class="istickedoff">isQuestionByCue [] = <span class="nottickedoff">False</span></span>
+<span class="lineno">   39 </span><span class="spaces"></span><span class="istickedoff">isQuestionByCue (firstToken:rest) =</span>
+<span class="lineno">   40 </span><span class="spaces">  </span><span class="istickedoff">firstToken `elem`</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;что&quot;, &quot;кто&quot;, &quot;где&quot;, &quot;когда&quot;, &quot;почему&quot;, &quot;зачем&quot;, &quot;как&quot;</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">, &quot;какой&quot;, &quot;какая&quot;, &quot;какое&quot;, &quot;каков&quot;, &quot;какова&quot;, &quot;каковы&quot;</span>
+<span class="lineno">   43 </span><span class="spaces">    </span><span class="istickedoff">, &quot;чем&quot;, &quot;сколько&quot;, &quot;ли&quot;, &quot;чей&quot;, &quot;чья&quot;, &quot;чье&quot;, &quot;чьё&quot;</span>
+<span class="lineno">   44 </span><span class="spaces">    </span><span class="istickedoff">]</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">|| [firstToken, <span class="nottickedoff">secondToken</span>] `elem` [[&quot;для&quot;, <span class="nottickedoff">&quot;чего&quot;</span>], [&quot;в&quot;, <span class="nottickedoff">&quot;чем&quot;</span>], [&quot;в&quot;, <span class="nottickedoff">&quot;чём&quot;</span>]]</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">secondToken =</span></span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case rest of</span></span>
+<span class="lineno">   49 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">[] -&gt; &quot;&quot;</span></span>
+<span class="lineno">   50 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(x:_) -&gt; x</span></span></span>
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>normalizeOrthography :: Text -&gt; Text
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">normalizeOrthography = T.replace &quot;ё&quot; &quot;е&quot;</span></span>
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>normalizeChar :: Char -&gt; Char
+<span class="lineno">   56 </span><span class="decl"><span class="istickedoff">normalizeChar c</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">| isAlphaNum c = c</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">| c == '-' = c</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ' '</span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>trimToken :: Text -&gt; Text
+<span class="lineno">   62 </span><span class="decl"><span class="istickedoff">trimToken = T.dropAround (\c -&gt; not (isAlphaNum c) &amp;&amp; <span class="nottickedoff">c /= '-'</span>)</span></span>
+
+</pre>
+</body>
+</html>

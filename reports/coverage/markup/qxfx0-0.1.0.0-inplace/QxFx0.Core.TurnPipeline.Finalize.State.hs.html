@@ -1,0 +1,265 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE BangPatterns #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>{-| Finalize-stage construction of persisted state, projection, output, and final metrics. -}
+<span class="lineno">    6 </span>module QxFx0.Core.TurnPipeline.Finalize.State
+<span class="lineno">    7 </span>  ( buildNextSystemState
+<span class="lineno">    8 </span>  , buildTurnProjection
+<span class="lineno">    9 </span>  , buildFinalOutput
+<span class="lineno">   10 </span>  , finalizeMetrics
+<span class="lineno">   11 </span>  ) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import QxFx0.Types
+<span class="lineno">   14 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   15 </span>  ( legitimacyPassThreshold
+<span class="lineno">   16 </span>  , legitimacyRecoveryThreshold
+<span class="lineno">   17 </span>  , parserLowConfidenceThreshold
+<span class="lineno">   18 </span>  , scenePressureLowThreshold
+<span class="lineno">   19 </span>  , scenePressureMediumThreshold
+<span class="lineno">   20 </span>  , ScenePressure(..)
+<span class="lineno">   21 </span>  , LegitimacyStatus(..)
+<span class="lineno">   22 </span>  , blockedConceptsRetentionLimit
+<span class="lineno">   23 </span>  , recentFamiliesLimit
+<span class="lineno">   24 </span>  , rawInputHistoryLimit
+<span class="lineno">   25 </span>  )
+<span class="lineno">   26 </span>import QxFx0.Core.TurnPipeline.Types
+<span class="lineno">   27 </span>import QxFx0.Core.TurnRender (updateStateNixCache)
+<span class="lineno">   28 </span>import qualified QxFx0.Core.Guard as Guard
+<span class="lineno">   29 </span>import QxFx0.Core.TurnLegitimacy (safeOutputText)
+<span class="lineno">   30 </span>import QxFx0.Core.Observability
+<span class="lineno">   31 </span>import QxFx0.Core.Intuition (IntuitiveFlash(..))
+<span class="lineno">   32 </span>import QxFx0.Core.Render.Semantic (renderSemanticIntrospection)
+<span class="lineno">   33 </span>import QxFx0.Core.Semantic.Embedding (embeddingQualityText)
+<span class="lineno">   34 </span>import QxFx0.Types.Text (textShow)
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>import Data.Sequence (Seq)
+<span class="lineno">   37 </span>import qualified Data.Foldable as F
+<span class="lineno">   38 </span>import qualified Data.Set as Set
+<span class="lineno">   39 </span>import Data.Text (Text)
+<span class="lineno">   40 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>buildNextSystemState :: (Text -&gt; Seq Text -&gt; Seq Text) -&gt; SystemState -&gt; TurnInput -&gt; TurnSignals -&gt; TurnPlan -&gt; TurnArtifacts -&gt; DreamState -&gt; MeaningGraph -&gt; CanonicalMoveFamily -&gt; R5Verdict -&gt; Int -&gt; SystemState
+<span class="lineno">   43 </span><span class="decl"><span class="istickedoff">buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)</span>
+<span class="lineno">   45 </span><span class="spaces">      </span><span class="istickedoff">updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">in ss</span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="istickedoff">{ ssDialogue = (ssDialogue ss)</span>
+<span class="lineno">   48 </span><span class="spaces">          </span><span class="istickedoff">{ dsHistory = newHumanHistory</span>
+<span class="lineno">   49 </span><span class="spaces">          </span><span class="istickedoff">, dsActiveScene = tpActiveScene tp</span>
+<span class="lineno">   50 </span><span class="spaces">          </span><span class="istickedoff">, dsLastFamily = outcomeFamily</span>
+<span class="lineno">   51 </span><span class="spaces">          </span><span class="istickedoff">, dsLastTopic = tiBestTopic ti</span>
+<span class="lineno">   52 </span><span class="spaces">          </span><span class="istickedoff">, dsUserState = tiNextUserState ti</span>
+<span class="lineno">   53 </span><span class="spaces">          </span><span class="istickedoff">, dsLastForce = r5Force outcomeVerdict</span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff">, dsLastLayer = r5Layer outcomeVerdict</span>
+<span class="lineno">   55 </span><span class="spaces">          </span><span class="istickedoff">, dsRecentFamilies = take recentFamiliesLimit (outcomeFamily : ssRecentFamilies ss)</span>
+<span class="lineno">   56 </span><span class="spaces">          </span><span class="istickedoff">, dsRawInputHistory = appendHistoryBounded rawInputHistoryLimit (ssRawInputHistory ss) (ipfRawText (tiFrame ti))</span>
+<span class="lineno">   57 </span><span class="spaces">          </span><span class="istickedoff">, dsTurnCount = ssTurnCount ss + 1</span>
+<span class="lineno">   58 </span><span class="spaces">          </span><span class="istickedoff">, dsConsecutiveReflect = consecReflect</span>
+<span class="lineno">   59 </span><span class="spaces">          </span><span class="istickedoff">, dsLastEmbedding = Just (tiEmbedding ti)</span>
+<span class="lineno">   60 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">   61 </span><span class="spaces">      </span><span class="istickedoff">, ssIdentity = (ssIdentity ss)</span>
+<span class="lineno">   62 </span><span class="spaces">          </span><span class="istickedoff">{ idsEgo = tpNewEgo tp</span>
+<span class="lineno">   63 </span><span class="spaces">          </span><span class="istickedoff">, idsOrbitalMemory = tpUpdatedOrbital tp</span>
+<span class="lineno">   64 </span><span class="spaces">          </span><span class="istickedoff">, idsLastGuardReport = Just (tpGuardReport tp)</span>
+<span class="lineno">   65 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">, ssSemantic = (ssSemantic ss)</span>
+<span class="lineno">   67 </span><span class="spaces">          </span><span class="istickedoff">{ semTrace = tiNewTrace ti</span>
+<span class="lineno">   68 </span><span class="spaces">          </span><span class="istickedoff">, semMeaningGraph = newMeaningGraph</span>
+<span class="lineno">   69 </span><span class="spaces">          </span><span class="istickedoff">, semDreamState = newDreamState</span>
+<span class="lineno">   70 </span><span class="spaces">          </span><span class="istickedoff">, semIntuitionState = Just (tsIntuitionState ts)</span>
+<span class="lineno">   71 </span><span class="spaces">          </span><span class="istickedoff">, semKernelPulse = (ssKernelPulse ss) { kpActive = True, kpLastUpdate = ssTurnCount ss + 1 }</span>
+<span class="lineno">   72 </span><span class="spaces">          </span><span class="istickedoff">, semBlockedConcepts =</span>
+<span class="lineno">   73 </span><span class="spaces">              </span><span class="istickedoff">case tiNixStatus ti of</span>
+<span class="lineno">   74 </span><span class="spaces">                </span><span class="istickedoff">Blocked reason -&gt; retainBlockedConcepts reason (ssBlockedConcepts ss)</span>
+<span class="lineno">   75 </span><span class="spaces">                </span><span class="istickedoff">_ -&gt; ssBlockedConcepts ss</span>
+<span class="lineno">   76 </span><span class="spaces">          </span><span class="istickedoff">, semIntuitConfidence = tsIntuitPosterior ts</span>
+<span class="lineno">   77 </span><span class="spaces">          </span><span class="istickedoff">, semSemanticAnchor = tpSemanticAnchor tp</span>
+<span class="lineno">   78 </span><span class="spaces">          </span><span class="istickedoff">, semLastTurnDecision = Just (taDecision ta)</span>
+<span class="lineno">   79 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">   80 </span><span class="spaces">      </span><span class="istickedoff">, ssObservability = (ssObservability ss)</span>
+<span class="lineno">   81 </span><span class="spaces">          </span><span class="istickedoff">{ obsNixCache = updatedNixCache</span>
+<span class="lineno">   82 </span><span class="spaces">          </span><span class="istickedoff">, obsTelemetry = (obsTelemetry (ssObservability ss))</span>
+<span class="lineno">   83 </span><span class="spaces">              </span><span class="istickedoff">{ lrtFamily = outcomeFamily</span>
+<span class="lineno">   84 </span><span class="spaces">              </span><span class="istickedoff">, lrtTopic = tiBestTopic ti</span>
+<span class="lineno">   85 </span><span class="spaces">              </span><span class="istickedoff">, lrtApiHealthy = tsApiHealthy ts</span>
+<span class="lineno">   86 </span><span class="spaces">              </span><span class="istickedoff">, lrtGuardStatus = tdGuardStatus (taDecision ta)</span>
+<span class="lineno">   87 </span><span class="spaces">              </span><span class="istickedoff">, lrtSurfaceRoute = taSurfaceProv ta</span>
+<span class="lineno">   88 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff">, obsEmbeddingApiHealthy = tsApiHealthy ts</span>
+<span class="lineno">   90 </span><span class="spaces">          </span><span class="istickedoff">, obsLastLegitimacyScore = tpLegitScore tp</span>
+<span class="lineno">   91 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>buildTurnProjection
+<span class="lineno">   95 </span>  :: Text
+<span class="lineno">   96 </span>  -&gt; Text
+<span class="lineno">   97 </span>  -&gt; Text
+<span class="lineno">   98 </span>  -&gt; Bool
+<span class="lineno">   99 </span>  -&gt; Bool
+<span class="lineno">  100 </span>  -&gt; SystemState
+<span class="lineno">  101 </span>  -&gt; TurnInput
+<span class="lineno">  102 </span>  -&gt; TurnSignals
+<span class="lineno">  103 </span>  -&gt; TurnPlan
+<span class="lineno">  104 </span>  -&gt; TurnArtifacts
+<span class="lineno">  105 </span>  -&gt; TurnProjection
+<span class="lineno">  106 </span><span class="decl"><span class="istickedoff">buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled nextSs ti ts tp ta =</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">let decision = taDecision ta</span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">parserConfidence = ipfConfidence (tiFrame ti)</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">parserErrors = if <span class="tickonlyfalse">parserConfidence &lt; parserLowConfidenceThreshold</span> then <span class="nottickedoff">[&quot;low_confidence&quot;]</span> else []</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">scenePressure</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff">| asLoad (tiAtomSet ti) &lt;= scenePressureLowThreshold = PressureLow</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">| asLoad (tiAtomSet ti) &lt;= scenePressureMediumThreshold = PressureMedium</span>
+<span class="lineno">  113 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = PressureHigh</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">legitScore = tpLegitScore tp</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">legitimacyStatus</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff">| legitScore &gt;= legitimacyPassThreshold = LegitimacyPass</span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff">| legitScore &gt;= legitimacyRecoveryThreshold = LegitimacyDegraded</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = LegitimacyRecovery</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">legitimacyReason</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="istickedoff">| tpShadowGateTriggered tp = ReasonShadowDivergence</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">| tpShadowStatus tp == ShadowUnavailable = ReasonShadowUnavailable</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlyfalse">parserConfidence &lt; parserLowConfidenceThreshold</span> = <span class="nottickedoff">ReasonLowParserConfidence</span></span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ReasonOk</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">ownerFamily = tdFamily decision</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">ownerForce = tdForce decision</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">warrantedMode = warrantedForFamily ownerFamily</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">legitimacyOutcome = classifyLegitimacyOutcome legitimacyStatus legitimacyReason warrantedMode (tpShadowStatus tp) (tpShadowDivergenceSeverity tp)</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">requestId = tmRequestId (tiMetrics ti)</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">sessionId = tmSessionId (tiMetrics ti)</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">intuitionHint = <span class="nottickedoff">ifDirective</span> &lt;$&gt; tsFlash ts</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">(recoveryCause, recoveryStrategy, recoveryEvidence) =</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">case taLocalRecoveryCause ta of</span>
+<span class="lineno">  133 </span><span class="spaces">          </span><span class="istickedoff">Just cause -&gt;</span>
+<span class="lineno">  134 </span><span class="spaces">            </span><span class="istickedoff">(Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)</span>
+<span class="lineno">  135 </span><span class="spaces">          </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  136 </span><span class="spaces">            </span><span class="istickedoff">| runtimeMode == &quot;degraded&quot; -&gt;</span>
+<span class="lineno">  137 </span><span class="spaces">                </span><span class="istickedoff">(Just RecoveryRuntimeDegraded, Just StrategyNarrowScope, [&quot;runtime_mode=degraded&quot;])</span>
+<span class="lineno">  138 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  139 </span><span class="spaces">            </span><span class="istickedoff">(Nothing, Nothing, [])</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">replayTrace =</span>
+<span class="lineno">  141 </span><span class="spaces">        </span><span class="istickedoff">TurnReplayTrace</span>
+<span class="lineno">  142 </span><span class="spaces">          </span><span class="istickedoff">{ trcRequestId = requestId</span>
+<span class="lineno">  143 </span><span class="spaces">          </span><span class="istickedoff">, trcSessionId = sessionId</span>
+<span class="lineno">  144 </span><span class="spaces">          </span><span class="istickedoff">, trcRuntimeMode = runtimeMode</span>
+<span class="lineno">  145 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowPolicy = shadowPolicy</span>
+<span class="lineno">  146 </span><span class="spaces">          </span><span class="istickedoff">, trcLocalRecoveryPolicy = localRecoveryPolicy</span>
+<span class="lineno">  147 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryCause = recoveryCause</span>
+<span class="lineno">  148 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryStrategy = recoveryStrategy</span>
+<span class="lineno">  149 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryEvidence = recoveryEvidence</span>
+<span class="lineno">  150 </span><span class="spaces">          </span><span class="istickedoff">, trcSemanticIntrospectionEnabled = semanticIntrospectionEnabled</span>
+<span class="lineno">  151 </span><span class="spaces">          </span><span class="istickedoff">, trcWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled</span>
+<span class="lineno">  152 </span><span class="spaces">          </span><span class="istickedoff">, trcRequestedFamily = tiRecommendedFamily ti</span>
+<span class="lineno">  153 </span><span class="spaces">          </span><span class="istickedoff">, trcStrategyFamily = tpStrategyFamily tp</span>
+<span class="lineno">  154 </span><span class="spaces">          </span><span class="istickedoff">, trcNarrativeHint = tsNarrativeFragment ts</span>
+<span class="lineno">  155 </span><span class="spaces">          </span><span class="istickedoff">, trcIntuitionHint = intuitionHint</span>
+<span class="lineno">  156 </span><span class="spaces">          </span><span class="istickedoff">, trcPreShadowFamily = tpPreShadowFamily tp</span>
+<span class="lineno">  157 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowSnapshotId = tpShadowSnapshotId tp</span>
+<span class="lineno">  158 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowStatus = tpShadowStatus tp</span>
+<span class="lineno">  159 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowDivergenceKind = tpShadowDivergenceKind tp</span>
+<span class="lineno">  160 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowDivergenceSeverity = tpShadowDivergenceSeverity tp</span>
+<span class="lineno">  161 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowResolvedFamily = tpFamily tp</span>
+<span class="lineno">  162 </span><span class="spaces">          </span><span class="istickedoff">, trcFinalFamily = tdFamily decision</span>
+<span class="lineno">  163 </span><span class="spaces">          </span><span class="istickedoff">, trcFinalForce = tdForce decision</span>
+<span class="lineno">  164 </span><span class="spaces">          </span><span class="istickedoff">, trcDecisionDisposition = loDisposition legitimacyOutcome</span>
+<span class="lineno">  165 </span><span class="spaces">          </span><span class="istickedoff">, trcLegitimacyReason = legitimacyReason</span>
+<span class="lineno">  166 </span><span class="spaces">          </span><span class="istickedoff">, trcParserConfidence = parserConfidence</span>
+<span class="lineno">  167 </span><span class="spaces">          </span><span class="istickedoff">, trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)</span>
+<span class="lineno">  168 </span><span class="spaces">          </span><span class="istickedoff">, trcClaimAst = taClaimAst ta</span>
+<span class="lineno">  169 </span><span class="spaces">          </span><span class="istickedoff">, trcLinearizationLang = taLinearizationLang ta</span>
+<span class="lineno">  170 </span><span class="spaces">          </span><span class="istickedoff">, trcLinearizationOk = taLinearizationOk ta</span>
+<span class="lineno">  171 </span><span class="spaces">          </span><span class="istickedoff">, trcFallbackReason = taLinearizationFallbackReason ta</span>
+<span class="lineno">  172 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">in TurnProjection</span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff">{ tqpTurn = ssTurnCount nextSs</span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserMode = ParserFrameV1</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserConfidence = parserConfidence</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserErrors = parserErrors</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="istickedoff">, tqpPlannerMode = case tpPrincipledMode tp of Just _ -&gt; <span class="nottickedoff">PrincipledPlanner</span>; Nothing -&gt; DefaultPlanner</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff">, tqpPlannerDecision = tpFamily tp</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">, tqpAtomRegister = asRegister (tiAtomSet ti)</span>
+<span class="lineno">  181 </span><span class="spaces">      </span><span class="istickedoff">, tqpAtomLoad = asLoad (tiAtomSet ti)</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">, tqpScenePressure = scenePressure</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="istickedoff">, tqpSceneRequest = tiBestTopic ti</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">, tqpSceneStance = usNeedLayer (tiNextUserState ti)</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">, tqpRenderLane = rsMove (tpRenderStrategy tp)</span>
+<span class="lineno">  186 </span><span class="spaces">      </span><span class="istickedoff">, tqpRenderStyle = tdRenderStyle decision</span>
+<span class="lineno">  187 </span><span class="spaces">      </span><span class="istickedoff">, tqpLegitimacyStatus = legitimacyStatus</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="istickedoff">, tqpLegitimacyReason = legitimacyReason</span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="istickedoff">, tqpWarrantedMode = warrantedMode</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="istickedoff">, tqpDecisionDisposition = loDisposition legitimacyOutcome</span>
+<span class="lineno">  191 </span><span class="spaces">      </span><span class="istickedoff">, tqpOwnerFamily = ownerFamily</span>
+<span class="lineno">  192 </span><span class="spaces">      </span><span class="istickedoff">, tqpOwnerForce = ownerForce</span>
+<span class="lineno">  193 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowStatus = tpShadowStatus tp</span>
+<span class="lineno">  194 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowSnapshotId = tpShadowSnapshotId tp</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowDivergenceKind = tpShadowDivergenceKind tp</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowFamily = tpShadowFamily tp</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowForce = tpShadowForce tp</span>
+<span class="lineno">  198 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowMessage = tpShadowMessage tp</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="istickedoff">, tqpReplayTrace = replayTrace</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="istickedoff">, tqpDivergence = tpShadowDivergence tp</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  202 </span>
+<span class="lineno">  203 </span>buildFinalOutput :: Bool -&gt; SystemState -&gt; Guard.GuardSurface -&gt; SystemState -&gt; (Text, Guard.SafetyStatus)
+<span class="lineno">  204 </span><span class="decl"><span class="istickedoff">buildFinalOutput wantIntrospection ss baseSurface nextSs =</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">let preIntrospectionSurface =</span>
+<span class="lineno">  206 </span><span class="spaces">        </span><span class="istickedoff">if wantIntrospection</span>
+<span class="lineno">  207 </span><span class="spaces">          </span><span class="istickedoff">then</span>
+<span class="lineno">  208 </span><span class="spaces">            </span><span class="istickedoff">let introspectionText = renderSemanticIntrospection nextSs</span>
+<span class="lineno">  209 </span><span class="spaces">            </span><span class="istickedoff">in baseSurface</span>
+<span class="lineno">  210 </span><span class="spaces">                </span><span class="istickedoff">{ Guard.gsRenderedText = Guard.gsRenderedText baseSurface &lt;&gt; &quot;\n&quot; &lt;&gt; introspectionText</span>
+<span class="lineno">  211 </span><span class="spaces">                </span><span class="istickedoff">, Guard.gsSegments = Guard.gsSegments baseSurface &lt;&gt; [Guard.RenderSegment Guard.SegmentIntrospection introspectionText]</span>
+<span class="lineno">  212 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  213 </span><span class="spaces">          </span><span class="istickedoff">else baseSurface</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">finalSafetyStatus = Guard.postRenderSafetyCheckSurface preIntrospectionSurface (F.toList (ssHistory ss))</span>
+<span class="lineno">  215 </span><span class="spaces">      </span><span class="istickedoff">outputText = safeOutputText preIntrospectionSurface <span class="nottickedoff">baseSurface</span> finalSafetyStatus</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="istickedoff">in (outputText, finalSafetyStatus)</span></span>
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>finalizeMetrics :: TurnInput -&gt; TurnArtifacts -&gt; CanonicalMoveFamily -&gt; TurnDecision -&gt; SystemState -&gt; Bool -&gt; Guard.SafetyStatus -&gt; UTCTime -&gt; UTCTime -&gt; TurnMetrics
+<span class="lineno">  219 </span><span class="decl"><span class="istickedoff">finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatus tSave0 tSave1 =</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">let !metrics5 =</span>
+<span class="lineno">  221 </span><span class="spaces">        </span><span class="istickedoff">addPhase (recordPhase &quot;save_state&quot; tSave0 tSave1)</span>
+<span class="lineno">  222 </span><span class="spaces">          </span><span class="istickedoff">$ (taMetrics ta)</span>
+<span class="lineno">  223 </span><span class="spaces">              </span><span class="istickedoff">{ tmTurnCount = ssTurnCount savedSs</span>
+<span class="lineno">  224 </span><span class="spaces">              </span><span class="istickedoff">, tmFamily = textShow outcomeFamily</span>
+<span class="lineno">  225 </span><span class="spaces">              </span><span class="istickedoff">, tmNixStatus = textShow (tdGuardStatus decision)</span>
+<span class="lineno">  226 </span><span class="spaces">              </span><span class="istickedoff">, tmSafetyStatus = textShow finalSafetyStatus</span>
+<span class="lineno">  227 </span><span class="spaces">              </span><span class="istickedoff">, tmApiHealthy = apiHealthy</span>
+<span class="lineno">  228 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">!metricsFinal = addPhase (recordPhase &quot;total&quot; (tiStartTime ti) tSave1) metrics5</span>
+<span class="lineno">  230 </span><span class="spaces">  </span><span class="istickedoff">in metricsFinal</span></span>
+<span class="lineno">  231 </span>
+<span class="lineno">  232 </span>retainBlockedConcepts :: Text -&gt; [Text] -&gt; [Text]
+<span class="lineno">  233 </span><span class="decl"><span class="istickedoff">retainBlockedConcepts latestReason existing =</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">take blockedConceptsRetentionLimit (dedupePreservingOrder (latestReason : existing))</span></span>
+<span class="lineno">  235 </span>
+<span class="lineno">  236 </span>dedupePreservingOrder :: [Text] -&gt; [Text]
+<span class="lineno">  237 </span><span class="decl"><span class="istickedoff">dedupePreservingOrder = go Set.empty</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="istickedoff">go _ [] = []</span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="istickedoff">go seen (value : rest)</span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff">| value `Set.member` seen = go <span class="nottickedoff">seen</span> rest</span>
+<span class="lineno">  242 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = value : go (Set.insert value seen) rest</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE BangPatterns #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>{-| Route-stage rendering plan, effect resolution, and artifact assembly. -}
+<span class="lineno">    7 </span>module QxFx0.Core.TurnPipeline.Route.Render
+<span class="lineno">    8 </span>  ( RenderStatic(..)
+<span class="lineno">    9 </span>  , LocalRecoveryPlan(..)
+<span class="lineno">   10 </span>  , RenderEffectPlan(..)
+<span class="lineno">   11 </span>  , RenderEffectResults(..)
+<span class="lineno">   12 </span>  , planRenderEffects
+<span class="lineno">   13 </span>  , planRenderEffectsForRuntime
+<span class="lineno">   14 </span>  , resolveRenderEffects
+<span class="lineno">   15 </span>  , buildTurnArtifacts
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import QxFx0.Types
+<span class="lineno">   19 </span>import QxFx0.Core.TurnPipeline.Types
+<span class="lineno">   20 </span>import QxFx0.Core.TurnPipeline.Effects
+<span class="lineno">   21 </span>  ( TurnEffectRequest(..)
+<span class="lineno">   22 </span>  , TurnEffectResult(..)
+<span class="lineno">   23 </span>  )
+<span class="lineno">   24 </span>import QxFx0.Core.Intuition (IntuitiveFlash(..))
+<span class="lineno">   25 </span>import QxFx0.Core.PipelineIO
+<span class="lineno">   26 </span>  ( PipelineIO
+<span class="lineno">   27 </span>  , PipelineRuntimeMode(..)
+<span class="lineno">   28 </span>  , resolveTurnEffect
+<span class="lineno">   29 </span>  )
+<span class="lineno">   30 </span>import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..))
+<span class="lineno">   31 </span>import qualified QxFx0.Core.Guard as Guard
+<span class="lineno">   32 </span>import QxFx0.Core.BackgroundProcess (surfacingToFragment)
+<span class="lineno">   33 </span>import QxFx0.Core.Observability
+<span class="lineno">   34 </span>import QxFx0.Core.TurnLegitimacy (finalizeOutput)
+<span class="lineno">   35 </span>import QxFx0.Core.TurnPlanning (integrateIdentityClaims)
+<span class="lineno">   36 </span>import QxFx0.Core.TurnRender
+<span class="lineno">   37 </span>  ( renderAnchorPrefix
+<span class="lineno">   38 </span>  , renderPrincipledPrefix
+<span class="lineno">   39 </span>  , renderStylePrefix
+<span class="lineno">   40 </span>  , snapshotIdentitySignal
+<span class="lineno">   41 </span>  )
+<span class="lineno">   42 </span>import QxFx0.Core.Semantic.Morphology (hasKnownMorphologyForm)
+<span class="lineno">   43 </span>import QxFx0.Core.Render.Dialogue
+<span class="lineno">   44 </span>  ( DialogueRenderArtifact(..)
+<span class="lineno">   45 </span>  , hasStructuredDialogueSurface
+<span class="lineno">   46 </span>  , renderDialogueArtifact
+<span class="lineno">   47 </span>  )
+<span class="lineno">   48 </span>import QxFx0.Types.Text (finalizeForce)
+<span class="lineno">   49 </span>import QxFx0.Types.Thresholds (parserLowConfidenceThreshold)
+<span class="lineno">   50 </span>import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..), shadowDivergenceSeverityText)
+<span class="lineno">   51 </span>import QxFx0.ExceptionPolicy
+<span class="lineno">   52 </span>  ( QxFx0Exception(PersistenceError)
+<span class="lineno">   53 </span>  , throwQxFx0
+<span class="lineno">   54 </span>  )
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>import Data.Char (isSpace)
+<span class="lineno">   57 </span>import qualified Data.Foldable as F
+<span class="lineno">   58 </span>import qualified Data.List as L
+<span class="lineno">   59 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   60 </span>import Data.Text (Text)
+<span class="lineno">   61 </span>import qualified Data.Text as T
+<span class="lineno">   62 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>data RenderStatic = RenderStatic
+<span class="lineno">   65 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rsRenderWithBg</span></span></span> :: !Text
+<span class="lineno">   66 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsTemplateArtifact</span></span></span> :: !DialogueRenderArtifact
+<span class="lineno">   67 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsModePrefixText</span></span></span> :: !Text
+<span class="lineno">   68 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsAnchorPrefixText</span></span></span> :: !Text
+<span class="lineno">   69 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsNarrativeFragmentText</span></span></span> :: !Text
+<span class="lineno">   70 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsSurfacingFragmentText</span></span></span> :: !Text
+<span class="lineno">   71 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>data LocalRecoveryPlan = LocalRecoveryPlan
+<span class="lineno">   74 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">lrpCause</span></span></span> :: !LocalRecoveryCause
+<span class="lineno">   75 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrpStrategy</span></span></span> :: !LocalRecoveryStrategy
+<span class="lineno">   76 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrpEvidence</span></span></span> :: ![Text]
+<span class="lineno">   77 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrpSurface</span></span></span> :: !Text
+<span class="lineno">   78 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>data RenderEffectPlan = RenderEffectPlan
+<span class="lineno">   81 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">repRenderStatic</span></span></span> :: !RenderStatic
+<span class="lineno">   82 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">repLocalRecoveryPlan</span></span></span> :: !(Maybe LocalRecoveryPlan)
+<span class="lineno">   83 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">repRenderMorphologyWarning</span></span></span> :: !(Maybe Text)
+<span class="lineno">   84 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>data RenderTimeline = RenderTimeline
+<span class="lineno">   87 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rtlRenderStart</span></span></span> :: !UTCTime
+<span class="lineno">   88 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rtlRenderEnd</span></span></span> :: !UTCTime
+<span class="lineno">   89 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>data RenderEffectResults = RenderEffectResults
+<span class="lineno">   92 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rerRenderTimeline</span></span></span> :: !RenderTimeline
+<span class="lineno">   93 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rerResolvedRenderStatic</span></span></span> :: !(Maybe RenderStatic)
+<span class="lineno">   94 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>planRenderEffects :: LocalRecoveryPolicy -&gt; SystemState -&gt; TurnInput -&gt; TurnSignals -&gt; TurnPlan -&gt; RenderEffectPlan
+<span class="lineno">   97 </span><span class="decl"><span class="istickedoff">planRenderEffects = planRenderEffectsForRuntime RuntimeStrict</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>planRenderEffectsForRuntime :: PipelineRuntimeMode -&gt; LocalRecoveryPolicy -&gt; SystemState -&gt; TurnInput -&gt; TurnSignals -&gt; TurnPlan -&gt; RenderEffectPlan
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">planRenderEffectsForRuntime runtimeMode localRecoveryPolicy ss ti ts tp =</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">let bestTopic = tiBestTopic ti</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">mFlash = tsFlash ts</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">consciousLoop' = tsConsciousLoop' ts</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">rmpAfterLegit = tpRmpAfterLegit tp</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">rcpFinal = tpRcpFinal tp</span>
+<span class="lineno">  106 </span><span class="spaces">      </span><span class="istickedoff">semanticAnchor = tpSemanticAnchor tp</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">(mPressure, principledModeResult) =</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">case tpPrincipledMode tp of</span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">Just (p, pmr) -&gt; <span class="nottickedoff">(Just p, Just pmr)</span></span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt; (<span class="nottickedoff">Nothing</span>, Nothing)</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">identityClaims = integrateIdentityClaims (ssIdentityClaims ss) <span class="nottickedoff">(tpFamily tp)</span> bestTopic</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">input = ipfRawText (tiFrame ti)</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">structuredSurface = hasStructuredDialogueSurface (tiFrame ti)</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">dialogueArtifact =</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="istickedoff">renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss)</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">forceFinalized =</span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff">if structuredSurface</span>
+<span class="lineno">  118 </span><span class="spaces">          </span><span class="istickedoff">then draRenderedText dialogueArtifact</span>
+<span class="lineno">  119 </span><span class="spaces">          </span><span class="istickedoff">else finalizeForce (rmpForce rmpAfterLegit) (draRenderedText dialogueArtifact)</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">finalRender =</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">case mFlash of</span>
+<span class="lineno">  122 </span><span class="spaces">          </span><span class="istickedoff">Just flash -&gt;</span>
+<span class="lineno">  123 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">if ifOverridesAll flash</span></span>
+<span class="lineno">  124 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">then forceFinalized &lt;&gt; &quot;\n[&quot; &lt;&gt; ifDirective flash &lt;&gt; &quot;]&quot;</span></span>
+<span class="lineno">  125 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">else forceFinalized</span></span>
+<span class="lineno">  126 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt; forceFinalized</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">renderWithContext =</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="istickedoff">let modePrefix =</span>
+<span class="lineno">  129 </span><span class="spaces">              </span><span class="istickedoff">if structuredSurface</span>
+<span class="lineno">  130 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  131 </span><span class="spaces">                </span><span class="istickedoff">else maybe &quot;&quot; <span class="nottickedoff">(renderPrincipledPrefix mPressure)</span> principledModeResult</span>
+<span class="lineno">  132 </span><span class="spaces">            </span><span class="istickedoff">stylePrefix =</span>
+<span class="lineno">  133 </span><span class="spaces">              </span><span class="istickedoff">if structuredSurface</span>
+<span class="lineno">  134 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  135 </span><span class="spaces">                </span><span class="istickedoff">else renderStylePrefix (rcpStyle rcpFinal)</span>
+<span class="lineno">  136 </span><span class="spaces">            </span><span class="istickedoff">anchorPrefixAllowed =</span>
+<span class="lineno">  137 </span><span class="spaces">              </span><span class="istickedoff">not structuredSurface &amp;&amp; tpFinalFamily tp == CMAnchor</span>
+<span class="lineno">  138 </span><span class="spaces">            </span><span class="istickedoff">anchorPrefix =</span>
+<span class="lineno">  139 </span><span class="spaces">              </span><span class="istickedoff">if not anchorPrefixAllowed</span>
+<span class="lineno">  140 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  141 </span><span class="spaces">                </span><span class="istickedoff">else maybe <span class="nottickedoff">&quot;&quot;</span> renderAnchorPrefix semanticAnchor</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="istickedoff">in T.intercalate &quot;\n&quot; (filter (not . T.null) [stylePrefix, modePrefix, anchorPrefix, finalRender])</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">narrativeFragment = maybe <span class="nottickedoff">&quot;&quot;</span> id (tsNarrativeFragment ts)</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">narrativeEnriched =</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="istickedoff">if structuredSurface || T.null narrativeFragment</span>
+<span class="lineno">  146 </span><span class="spaces">          </span><span class="istickedoff">then renderWithContext</span>
+<span class="lineno">  147 </span><span class="spaces">          </span><span class="istickedoff">else renderWithContext &lt;&gt; &quot;\n&quot; &lt;&gt; T.take 80 narrativeFragment</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">surfacingFragment =</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="istickedoff">case structuredSurface of</span>
+<span class="lineno">  150 </span><span class="spaces">          </span><span class="istickedoff">True -&gt; &quot;&quot;</span>
+<span class="lineno">  151 </span><span class="spaces">          </span><span class="istickedoff">False -&gt;</span>
+<span class="lineno">  152 </span><span class="spaces">            </span><span class="istickedoff">case clLastSurfacing consciousLoop' of</span>
+<span class="lineno">  153 </span><span class="spaces">              </span><span class="istickedoff">Just se -&gt; <span class="nottickedoff">surfacingToFragment se</span></span>
+<span class="lineno">  154 </span><span class="spaces">              </span><span class="istickedoff">Nothing -&gt; &quot;&quot;</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">renderWithBg =</span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">T.null surfacingFragment</span></span>
+<span class="lineno">  157 </span><span class="spaces">          </span><span class="istickedoff">then narrativeEnriched</span>
+<span class="lineno">  158 </span><span class="spaces">          </span><span class="istickedoff">else <span class="nottickedoff">narrativeEnriched &lt;&gt; &quot;\n&quot; &lt;&gt; surfacingFragment</span></span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">structuredQuestion =</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="istickedoff">ipfConfidence (tiFrame ti) &gt;= parserLowConfidenceThreshold</span>
+<span class="lineno">  161 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; ipfPropositionType (tiFrame ti) /= &quot;PlainAssert&quot;</span>
+<span class="lineno">  162 </span><span class="spaces">      </span><span class="istickedoff">morphologyWarning =</span>
+<span class="lineno">  163 </span><span class="spaces">        </span><span class="istickedoff">if T.any isSpace input</span>
+<span class="lineno">  164 </span><span class="spaces">             </span><span class="istickedoff">&amp;&amp; not structuredQuestion</span>
+<span class="lineno">  165 </span><span class="spaces">             </span><span class="istickedoff">&amp;&amp; not (T.null bestTopic)</span>
+<span class="lineno">  166 </span><span class="spaces">             </span><span class="istickedoff">&amp;&amp; not (hasKnownMorphologyForm (ssMorphology ss) bestTopic)</span>
+<span class="lineno">  167 </span><span class="spaces">          </span><span class="istickedoff">then Just bestTopic</span>
+<span class="lineno">  168 </span><span class="spaces">          </span><span class="istickedoff">else Nothing</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">localRecoveryPlan =</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">buildLocalRecoveryPlan runtimeMode localRecoveryPolicy ss ti tp morphologyWarning</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">in RenderEffectPlan</span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">{ repRenderStatic = RenderStatic</span>
+<span class="lineno">  173 </span><span class="spaces">          </span><span class="istickedoff">{ rsRenderWithBg = renderWithBg</span>
+<span class="lineno">  174 </span><span class="spaces">          </span><span class="istickedoff">, rsTemplateArtifact = dialogueArtifact</span>
+<span class="lineno">  175 </span><span class="spaces">          </span><span class="istickedoff">, rsModePrefixText =</span>
+<span class="lineno">  176 </span><span class="spaces">              </span><span class="istickedoff">if structuredSurface</span>
+<span class="lineno">  177 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  178 </span><span class="spaces">                </span><span class="istickedoff">else</span>
+<span class="lineno">  179 </span><span class="spaces">                  </span><span class="istickedoff">T.intercalate</span>
+<span class="lineno">  180 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">&quot;\n&quot;</span></span>
+<span class="lineno">  181 </span><span class="spaces">                    </span><span class="istickedoff">(filter</span>
+<span class="lineno">  182 </span><span class="spaces">                      </span><span class="istickedoff">(not . T.null)</span>
+<span class="lineno">  183 </span><span class="spaces">                      </span><span class="istickedoff">[ renderStylePrefix (rcpStyle rcpFinal)</span>
+<span class="lineno">  184 </span><span class="spaces">                      </span><span class="istickedoff">, maybe &quot;&quot; <span class="nottickedoff">(renderPrincipledPrefix mPressure)</span> principledModeResult</span>
+<span class="lineno">  185 </span><span class="spaces">                      </span><span class="istickedoff">])</span>
+<span class="lineno">  186 </span><span class="spaces">          </span><span class="istickedoff">, rsAnchorPrefixText =</span>
+<span class="lineno">  187 </span><span class="spaces">              </span><span class="istickedoff">if not (not structuredSurface &amp;&amp; tpFinalFamily tp == CMAnchor)</span>
+<span class="lineno">  188 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">                </span><span class="istickedoff">else maybe <span class="nottickedoff">&quot;&quot;</span> renderAnchorPrefix semanticAnchor</span>
+<span class="lineno">  190 </span><span class="spaces">          </span><span class="istickedoff">, rsNarrativeFragmentText =</span>
+<span class="lineno">  191 </span><span class="spaces">              </span><span class="istickedoff">if structuredSurface</span>
+<span class="lineno">  192 </span><span class="spaces">                </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">                </span><span class="istickedoff">else narrativeFragment</span>
+<span class="lineno">  194 </span><span class="spaces">          </span><span class="istickedoff">, rsSurfacingFragmentText = surfacingFragment</span>
+<span class="lineno">  195 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">, repLocalRecoveryPlan = localRecoveryPlan</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">, repRenderMorphologyWarning = morphologyWarning</span>
+<span class="lineno">  198 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>resolveRenderEffects :: PipelineIO -&gt; RenderEffectPlan -&gt; IO RenderEffectResults
+<span class="lineno">  201 </span><span class="decl"><span class="istickedoff">resolveRenderEffects pio effectPlan = do</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">tRender0 &lt;- resolveRenderCurrentTime pio</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">warnMorphologyFallback &lt;- shouldWarnMorphologyFallback pio</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">case repRenderMorphologyWarning effectPlan of</span>
+<span class="lineno">  205 </span><span class="spaces">    </span><span class="istickedoff">Just bestTopic | <span class="tickonlyfalse">warnMorphologyFallback</span> -&gt;</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">hPutStrLnWarning (&quot;Morphology fallback: unknown topic lexeme: &quot; &lt;&gt; T.unpack bestTopic)</span></span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  209 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">resolvedRenderStatic &lt;- resolveRuntimeGfLinearization pio <span class="nottickedoff">(repRenderStatic effectPlan)</span></span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">tRender1 &lt;- resolveRenderCurrentTime pio</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">pure RenderEffectResults</span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">{ rerRenderTimeline = RenderTimeline</span>
+<span class="lineno">  214 </span><span class="spaces">        </span><span class="istickedoff">{ rtlRenderStart = tRender0</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">, rtlRenderEnd = tRender1</span>
+<span class="lineno">  216 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">, rerResolvedRenderStatic = resolvedRenderStatic</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  219 </span>
+<span class="lineno">  220 </span>buildTurnArtifacts :: SystemState -&gt; TurnInput -&gt; TurnSignals -&gt; TurnPlan -&gt; RenderEffectPlan -&gt; RenderEffectResults -&gt; TurnArtifacts
+<span class="lineno">  221 </span><span class="decl"><span class="istickedoff">buildTurnArtifacts ss ti _ts tp effectPlan effectResults =</span>
+<span class="lineno">  222 </span><span class="spaces">  </span><span class="istickedoff">let renderStatic = fromMaybe (repRenderStatic effectPlan) (rerResolvedRenderStatic effectResults)</span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="istickedoff">renderWithBg = rsRenderWithBg renderStatic</span>
+<span class="lineno">  224 </span><span class="spaces">      </span><span class="istickedoff">localRecoveryPlan = repLocalRecoveryPlan effectPlan</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">localRecoveryText = lrpSurface &lt;$&gt; localRecoveryPlan</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">preSafetyRendered =</span>
+<span class="lineno">  227 </span><span class="spaces">        </span><span class="istickedoff">case localRecoveryText of</span>
+<span class="lineno">  228 </span><span class="spaces">          </span><span class="istickedoff">Just fb -&gt; renderWithBg &lt;&gt; &quot;\n&quot; &lt;&gt; fb</span>
+<span class="lineno">  229 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt; renderWithBg</span>
+<span class="lineno">  230 </span><span class="spaces">      </span><span class="istickedoff">preSafetySurface =</span>
+<span class="lineno">  231 </span><span class="spaces">        </span><span class="istickedoff">Guard.GuardSurface</span>
+<span class="lineno">  232 </span><span class="spaces">          </span><span class="istickedoff">{ Guard.gsRenderedText = preSafetyRendered</span>
+<span class="lineno">  233 </span><span class="spaces">          </span><span class="istickedoff">, Guard.gsSegments =</span>
+<span class="lineno">  234 </span><span class="spaces">              </span><span class="istickedoff">filter (not . T.null . Guard.rsText)</span>
+<span class="lineno">  235 </span><span class="spaces">                </span><span class="istickedoff">[ Guard.RenderSegment Guard.SegmentTemplate (draStylePrefixText (rsTemplateArtifact renderStatic))</span>
+<span class="lineno">  236 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentTemplate (rsModePrefixText renderStatic)</span>
+<span class="lineno">  237 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentTemplate (rsAnchorPrefixText renderStatic)</span>
+<span class="lineno">  238 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentTemplate (draTemplateBodyText (rsTemplateArtifact renderStatic))</span>
+<span class="lineno">  239 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentIdentityClaim (draClaimText (rsTemplateArtifact renderStatic))</span>
+<span class="lineno">  240 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentNarrative (rsNarrativeFragmentText renderStatic)</span>
+<span class="lineno">  241 </span><span class="spaces">                </span><span class="istickedoff">, Guard.RenderSegment Guard.SegmentSurfacing (rsSurfacingFragmentText renderStatic)</span>
+<span class="lineno">  242 </span><span class="spaces">                </span><span class="istickedoff">]</span>
+<span class="lineno">  243 </span><span class="spaces">                  </span><span class="istickedoff">++ maybe [] (\fb -&gt; [Guard.RenderSegment Guard.SegmentLocalRecovery fb]) localRecoveryText</span>
+<span class="lineno">  244 </span><span class="spaces">          </span><span class="istickedoff">, Guard.gsQuestionLike = draQuestionLike (rsTemplateArtifact renderStatic)</span>
+<span class="lineno">  245 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">timeline = rerRenderTimeline effectResults</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">!metrics4 = addPhase (recordPhase &quot;render&quot; (rtlRenderStart timeline) (rtlRenderEnd timeline)) (tpMetrics tp)</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">guardSafety = Guard.postRenderSafetyCheckSurface preSafetySurface (F.toList (ssHistory ss))</span>
+<span class="lineno">  249 </span><span class="spaces">      </span><span class="istickedoff">(renderedSurface, surfaceProv) = finalizeOutput preSafetySurface (F.toList (ssHistory ss))</span>
+<span class="lineno">  250 </span><span class="spaces">      </span><span class="istickedoff">rendered = Guard.gsRenderedText renderedSurface</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">finalRendered = rendered</span>
+<span class="lineno">  252 </span><span class="spaces">      </span><span class="istickedoff">(recoveryCause, recoveryStrategy, recoveryEvidence) =</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="istickedoff">case surfaceProv of</span>
+<span class="lineno">  254 </span><span class="spaces">          </span><span class="istickedoff">FromRecovery -&gt;</span>
+<span class="lineno">  255 </span><span class="spaces">            </span><span class="istickedoff">(Just RecoveryRenderBlocked, Just StrategySafeRecovery, [<span class="nottickedoff">&quot;render_guard=blocked&quot;</span>])</span>
+<span class="lineno">  256 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  257 </span><span class="spaces">            </span><span class="istickedoff">case localRecoveryPlan of</span>
+<span class="lineno">  258 </span><span class="spaces">              </span><span class="istickedoff">Just plan -&gt; (Just (lrpCause plan), Just (lrpStrategy plan), lrpEvidence plan)</span>
+<span class="lineno">  259 </span><span class="spaces">              </span><span class="istickedoff">Nothing -&gt; (Nothing, Nothing, [])</span>
+<span class="lineno">  260 </span><span class="spaces">      </span><span class="istickedoff">decision = TurnDecision</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="istickedoff">{ tdFamily = case surfaceProv of FromRecovery -&gt; CMRepair; _ -&gt; tpFinalFamily tp</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="istickedoff">, tdForce = case surfaceProv of FromRecovery -&gt; IFOffer; _ -&gt; tpFinalForce tp</span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="istickedoff">, tdRenderStrategy = tpRenderStrategy tp</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">, tdRenderStyle = rcpStyle (tpRcpFinal tp)</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">, tdGuardStatus =</span>
+<span class="lineno">  266 </span><span class="spaces">            </span><span class="istickedoff">if tpShadowGateTriggered tp</span>
+<span class="lineno">  267 </span><span class="spaces">              </span><span class="istickedoff">then Blocked (tpShadowMessage tp)</span>
+<span class="lineno">  268 </span><span class="spaces">              </span><span class="istickedoff">else case guardSafety of</span>
+<span class="lineno">  269 </span><span class="spaces">                </span><span class="istickedoff">Guard.InvariantBlock w -&gt; Blocked w</span>
+<span class="lineno">  270 </span><span class="spaces">                </span><span class="istickedoff">_ -&gt; tiNixStatus ti</span>
+<span class="lineno">  271 </span><span class="spaces">        </span><span class="istickedoff">, tdGuardReport = tpGuardReport tp</span>
+<span class="lineno">  272 </span><span class="spaces">        </span><span class="istickedoff">, tdLegitimacy = tpLegitScore tp</span>
+<span class="lineno">  273 </span><span class="spaces">        </span><span class="istickedoff">, tdIdentity = snapshotIdentitySignal (tpIdentitySignal tp)</span>
+<span class="lineno">  274 </span><span class="spaces">        </span><span class="istickedoff">, tdSemanticAnchor = tpSemanticAnchor tp</span>
+<span class="lineno">  275 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">in TurnArtifacts</span>
+<span class="lineno">  277 </span><span class="spaces">      </span><span class="istickedoff">{ taPreSafetyRendered = preSafetyRendered</span>
+<span class="lineno">  278 </span><span class="spaces">      </span><span class="istickedoff">, taGuardSurface = renderedSurface</span>
+<span class="lineno">  279 </span><span class="spaces">      </span><span class="istickedoff">, taRendered = rendered</span>
+<span class="lineno">  280 </span><span class="spaces">      </span><span class="istickedoff">, taSurfaceProv = surfaceProv</span>
+<span class="lineno">  281 </span><span class="spaces">      </span><span class="istickedoff">, taFinalRendered = finalRendered</span>
+<span class="lineno">  282 </span><span class="spaces">      </span><span class="istickedoff">, taClaimAst = draClaimAst (rsTemplateArtifact renderStatic)</span>
+<span class="lineno">  283 </span><span class="spaces">      </span><span class="istickedoff">, taLinearizationLang = draLinearizationLang (rsTemplateArtifact renderStatic)</span>
+<span class="lineno">  284 </span><span class="spaces">      </span><span class="istickedoff">, taLinearizationOk = draLinearizationOk (rsTemplateArtifact renderStatic)</span>
+<span class="lineno">  285 </span><span class="spaces">      </span><span class="istickedoff">, taLinearizationFallbackReason = draFallbackReason (rsTemplateArtifact renderStatic)</span>
+<span class="lineno">  286 </span><span class="spaces">      </span><span class="istickedoff">, taDecision = decision</span>
+<span class="lineno">  287 </span><span class="spaces">      </span><span class="istickedoff">, taLocalRecoveryCause = recoveryCause</span>
+<span class="lineno">  288 </span><span class="spaces">      </span><span class="istickedoff">, taLocalRecoveryStrategy = recoveryStrategy</span>
+<span class="lineno">  289 </span><span class="spaces">      </span><span class="istickedoff">, taLocalRecoveryEvidence = recoveryEvidence</span>
+<span class="lineno">  290 </span><span class="spaces">      </span><span class="istickedoff">, taMetrics = metrics4</span>
+<span class="lineno">  291 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>buildLocalRecoveryPlan :: PipelineRuntimeMode -&gt; LocalRecoveryPolicy -&gt; SystemState -&gt; TurnInput -&gt; TurnPlan -&gt; Maybe Text -&gt; Maybe LocalRecoveryPlan
+<span class="lineno">  294 </span><span class="decl"><span class="istickedoff">buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  295 </span><span class="spaces"></span><span class="istickedoff">buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarning =</span>
+<span class="lineno">  296 </span><span class="spaces">  </span><span class="istickedoff">let parserConfidence = ipfConfidence (tiFrame ti)</span>
+<span class="lineno">  297 </span><span class="spaces">      </span><span class="istickedoff">legitScore = tpLegitScore tp</span>
+<span class="lineno">  298 </span><span class="spaces">      </span><span class="istickedoff">lowLegitThreshold = ctLocalRecoveryThreshold (obsConstitutionalThresholds (ssObservability ss))</span>
+<span class="lineno">  299 </span><span class="spaces">      </span><span class="istickedoff">candidateFamilies = localRecoveryCandidateFamilies ti tp</span>
+<span class="lineno">  300 </span><span class="spaces">      </span><span class="istickedoff">hasCandidateSplit = length candidateFamilies &gt;= 2</span>
+<span class="lineno">  301 </span><span class="spaces">      </span><span class="istickedoff">hasDisambiguationCue = mentionsDisambiguationCue (ipfRawText (tiFrame ti))</span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="istickedoff">parserStrategy =</span>
+<span class="lineno">  303 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlytrue">hasCandidateSplit &amp;&amp; hasDisambiguationCue</span></span>
+<span class="lineno">  304 </span><span class="spaces">          </span><span class="istickedoff">then StrategyDistinguishCandidates</span>
+<span class="lineno">  305 </span><span class="spaces">          </span><span class="istickedoff">else <span class="nottickedoff">StrategyAskClarification</span></span>
+<span class="lineno">  306 </span><span class="spaces">      </span><span class="istickedoff">parserEvidence =</span>
+<span class="lineno">  307 </span><span class="spaces">        </span><span class="istickedoff">[&quot;parser_confidence=&quot; &lt;&gt; T.pack (show parserConfidence)]</span>
+<span class="lineno">  308 </span><span class="spaces">          </span><span class="istickedoff">&lt;&gt; if <span class="tickonlytrue">hasCandidateSplit</span></span>
+<span class="lineno">  309 </span><span class="spaces">            </span><span class="istickedoff">then [&quot;candidate_families=&quot; &lt;&gt; renderCandidateFamilies candidateFamilies]</span>
+<span class="lineno">  310 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">[]</span></span>
+<span class="lineno">  311 </span><span class="spaces">      </span><span class="istickedoff">candidate =</span>
+<span class="lineno">  312 </span><span class="spaces">        </span><span class="istickedoff">case <span class="nottickedoff">()</span> of</span>
+<span class="lineno">  313 </span><span class="spaces">          </span><span class="istickedoff">_</span>
+<span class="lineno">  314 </span><span class="spaces">            </span><span class="istickedoff">| tpShadowStatus tp == ShadowDiverged</span>
+<span class="lineno">  315 </span><span class="spaces">                </span><span class="istickedoff">&amp;&amp; tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory -&gt;</span>
+<span class="lineno">  316 </span><span class="spaces">                </span><span class="istickedoff">Just</span>
+<span class="lineno">  317 </span><span class="spaces">                  </span><span class="istickedoff">( RecoveryShadowDivergence</span>
+<span class="lineno">  318 </span><span class="spaces">                  </span><span class="istickedoff">, StrategyNarrowScope</span>
+<span class="lineno">  319 </span><span class="spaces">                  </span><span class="istickedoff">, [ &quot;shadow_status=diverged&quot;</span>
+<span class="lineno">  320 </span><span class="spaces">                    </span><span class="istickedoff">, &quot;shadow_kind=&quot; &lt;&gt; T.pack (show (tpShadowDivergenceKind tp))</span>
+<span class="lineno">  321 </span><span class="spaces">                    </span><span class="istickedoff">, &quot;shadow_severity=&quot; &lt;&gt; shadowDivergenceSeverityText (tpShadowDivergenceSeverity tp)</span>
+<span class="lineno">  322 </span><span class="spaces">                    </span><span class="istickedoff">]</span>
+<span class="lineno">  323 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  324 </span><span class="spaces">            </span><span class="istickedoff">| tpShadowStatus tp == ShadowUnavailable -&gt;</span>
+<span class="lineno">  325 </span><span class="spaces">                </span><span class="istickedoff">Just</span>
+<span class="lineno">  326 </span><span class="spaces">                  </span><span class="istickedoff">( RecoveryShadowUnavailable</span>
+<span class="lineno">  327 </span><span class="spaces">                  </span><span class="istickedoff">, StrategyExposeUncertainty</span>
+<span class="lineno">  328 </span><span class="spaces">                  </span><span class="istickedoff">, [ &quot;shadow_status=unavailable&quot;</span>
+<span class="lineno">  329 </span><span class="spaces">                    </span><span class="istickedoff">, &quot;shadow_snapshot=&quot; &lt;&gt; T.pack (show (tpShadowSnapshotId tp))</span>
+<span class="lineno">  330 </span><span class="spaces">                    </span><span class="istickedoff">]</span>
+<span class="lineno">  331 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  332 </span><span class="spaces">            </span><span class="istickedoff">| parserConfidence &lt; parserLowConfidenceThreshold -&gt;</span>
+<span class="lineno">  333 </span><span class="spaces">                </span><span class="istickedoff">Just</span>
+<span class="lineno">  334 </span><span class="spaces">                  </span><span class="istickedoff">( RecoveryParserLowConfidence</span>
+<span class="lineno">  335 </span><span class="spaces">                  </span><span class="istickedoff">, parserStrategy</span>
+<span class="lineno">  336 </span><span class="spaces">                  </span><span class="istickedoff">, parserEvidence</span>
+<span class="lineno">  337 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  338 </span><span class="spaces">            </span><span class="istickedoff">| legitScore &lt; lowLegitThreshold -&gt;</span>
+<span class="lineno">  339 </span><span class="spaces">                </span><span class="istickedoff">Just</span>
+<span class="lineno">  340 </span><span class="spaces">                  </span><span class="istickedoff">( RecoveryLowLegitimacy</span>
+<span class="lineno">  341 </span><span class="spaces">                  </span><span class="istickedoff">, StrategyExposeUncertainty</span>
+<span class="lineno">  342 </span><span class="spaces">                  </span><span class="istickedoff">, [<span class="nottickedoff">&quot;legitimacy_score=&quot; &lt;&gt; T.pack (show legitScore)</span>]</span>
+<span class="lineno">  343 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  344 </span><span class="spaces">            </span><span class="istickedoff">| runtimeMode == RuntimeDegraded -&gt;</span>
+<span class="lineno">  345 </span><span class="spaces">                </span><span class="istickedoff">Just</span>
+<span class="lineno">  346 </span><span class="spaces">                  </span><span class="istickedoff">( RecoveryRuntimeDegraded</span>
+<span class="lineno">  347 </span><span class="spaces">                  </span><span class="istickedoff">, StrategyNarrowScope</span>
+<span class="lineno">  348 </span><span class="spaces">                  </span><span class="istickedoff">, [<span class="nottickedoff">&quot;runtime_mode=degraded&quot;</span>]</span>
+<span class="lineno">  349 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  350 </span><span class="spaces">            </span><span class="istickedoff">| hasStructuredDialogueSurface (tiFrame ti) -&gt;</span>
+<span class="lineno">  351 </span><span class="spaces">                </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  352 </span><span class="spaces">            </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt;</span>
+<span class="lineno">  353 </span><span class="spaces">                </span><span class="istickedoff">case morphologyWarning of</span>
+<span class="lineno">  354 </span><span class="spaces">                  </span><span class="istickedoff">Just topic -&gt;</span>
+<span class="lineno">  355 </span><span class="spaces">                    </span><span class="istickedoff">Just</span>
+<span class="lineno">  356 </span><span class="spaces">                      </span><span class="istickedoff">( RecoveryUnknownTopic</span>
+<span class="lineno">  357 </span><span class="spaces">                      </span><span class="istickedoff">, StrategyDefineKnownTerms</span>
+<span class="lineno">  358 </span><span class="spaces">                      </span><span class="istickedoff">, [&quot;unknown_topic=&quot; &lt;&gt; topic]</span>
+<span class="lineno">  359 </span><span class="spaces">                      </span><span class="istickedoff">)</span>
+<span class="lineno">  360 </span><span class="spaces">                  </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  361 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  362 </span><span class="spaces">   </span><span class="istickedoff">in fmap</span>
+<span class="lineno">  363 </span><span class="spaces">        </span><span class="istickedoff">(\(cause, strategy, evidence) -&gt;</span>
+<span class="lineno">  364 </span><span class="spaces">          </span><span class="istickedoff">LocalRecoveryPlan</span>
+<span class="lineno">  365 </span><span class="spaces">            </span><span class="istickedoff">{ lrpCause = cause</span>
+<span class="lineno">  366 </span><span class="spaces">            </span><span class="istickedoff">, lrpStrategy = strategy</span>
+<span class="lineno">  367 </span><span class="spaces">            </span><span class="istickedoff">, lrpEvidence = evidence</span>
+<span class="lineno">  368 </span><span class="spaces">            </span><span class="istickedoff">, lrpSurface = renderLocalRecoverySurface <span class="nottickedoff">cause</span> strategy (tiBestTopic ti)</span>
+<span class="lineno">  369 </span><span class="spaces">            </span><span class="istickedoff">})</span>
+<span class="lineno">  370 </span><span class="spaces">        </span><span class="istickedoff">candidate</span></span>
+<span class="lineno">  371 </span>
+<span class="lineno">  372 </span>renderLocalRecoverySurface :: LocalRecoveryCause -&gt; LocalRecoveryStrategy -&gt; Text -&gt; Text
+<span class="lineno">  373 </span><span class="decl"><span class="istickedoff">renderLocalRecoverySurface _cause strategy topic =</span>
+<span class="lineno">  374 </span><span class="spaces">  </span><span class="istickedoff">let topicText = if <span class="tickonlyfalse">T.null topic</span> then <span class="nottickedoff">&quot;этот вопрос&quot;</span> else topic</span>
+<span class="lineno">  375 </span><span class="spaces">      </span><span class="istickedoff">header = &quot;Локальный режим восстановления.&quot;</span>
+<span class="lineno">  376 </span><span class="spaces">   </span><span class="istickedoff">in case strategy of</span>
+<span class="lineno">  377 </span><span class="spaces">        </span><span class="istickedoff">StrategyAskClarification -&gt;</span>
+<span class="lineno">  378 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">header &lt;&gt; &quot; Уточни, тебе нужно определение, различение или пример по теме: &quot; &lt;&gt; topicText &lt;&gt; &quot;?&quot;</span></span>
+<span class="lineno">  379 </span><span class="spaces">        </span><span class="istickedoff">StrategyNarrowScope -&gt;</span>
+<span class="lineno">  380 </span><span class="spaces">          </span><span class="istickedoff">header &lt;&gt; &quot; Я сужаю ответ до устойчивой части и не буду достраивать непроверенные выводы.&quot;</span>
+<span class="lineno">  381 </span><span class="spaces">        </span><span class="istickedoff">StrategyDefineKnownTerms -&gt;</span>
+<span class="lineno">  382 </span><span class="spaces">          </span><span class="istickedoff">header &lt;&gt; &quot; Я могу опереться только на известные локальные термины; для нового термина нужна рамка употребления: &quot; &lt;&gt; topicText &lt;&gt; &quot;.&quot;</span>
+<span class="lineno">  383 </span><span class="spaces">        </span><span class="istickedoff">StrategyDistinguishCandidates -&gt;</span>
+<span class="lineno">  384 </span><span class="spaces">          </span><span class="istickedoff">header &lt;&gt; &quot; Я различу возможные чтения и отмечу, где локальных данных недостаточно.&quot;</span>
+<span class="lineno">  385 </span><span class="spaces">        </span><span class="istickedoff">StrategyExposeUncertainty -&gt;</span>
+<span class="lineno">  386 </span><span class="spaces">          </span><span class="istickedoff">header &lt;&gt; &quot; Уверенность снижена; продолжу с явной пометкой неопределенности вместо внешней догадки.&quot;</span>
+<span class="lineno">  387 </span><span class="spaces">        </span><span class="istickedoff">StrategySafeRecovery -&gt;</span>
+<span class="lineno">  388 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">header &lt;&gt; &quot; Ответ переведен в безопасную форму восстановления хода.&quot;</span></span></span>
+<span class="lineno">  389 </span>
+<span class="lineno">  390 </span>localRecoveryCandidateFamilies :: TurnInput -&gt; TurnPlan -&gt; [CanonicalMoveFamily]
+<span class="lineno">  391 </span><span class="decl"><span class="istickedoff">localRecoveryCandidateFamilies ti tp =</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="istickedoff">L.nub</span>
+<span class="lineno">  393 </span><span class="spaces">    </span><span class="istickedoff">( [ tiRecommendedFamily ti</span>
+<span class="lineno">  394 </span><span class="spaces">      </span><span class="istickedoff">, ipfCanonicalFamily (tiFrame ti)</span>
+<span class="lineno">  395 </span><span class="spaces">      </span><span class="istickedoff">, tpPreShadowFamily tp</span>
+<span class="lineno">  396 </span><span class="spaces">      </span><span class="istickedoff">, tpFinalFamily tp</span>
+<span class="lineno">  397 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno">  398 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; maybe <span class="nottickedoff">[]</span> pure (tpStrategyFamily tp)</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>mentionsDisambiguationCue :: Text -&gt; Bool
+<span class="lineno">  402 </span><span class="decl"><span class="istickedoff">mentionsDisambiguationCue input =</span>
+<span class="lineno">  403 </span><span class="spaces">  </span><span class="istickedoff">let lowered = &quot; &quot; &lt;&gt; T.toLower input &lt;&gt; &quot; &quot;</span>
+<span class="lineno">  404 </span><span class="spaces">      </span><span class="istickedoff">cues =</span>
+<span class="lineno">  405 </span><span class="spaces">        </span><span class="istickedoff">[ &quot; или &quot;</span>
+<span class="lineno">  406 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">&quot; либо &quot;</span></span>
+<span class="lineno">  407 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">&quot;разниц&quot;</span></span>
+<span class="lineno">  408 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">&quot;отлич&quot;</span></span>
+<span class="lineno">  409 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">&quot; vs &quot;</span></span>
+<span class="lineno">  410 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">&quot; versus &quot;</span></span>
+<span class="lineno">  411 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  412 </span><span class="spaces">  </span><span class="istickedoff">in any (`T.isInfixOf` lowered) cues</span></span>
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>renderCandidateFamilies :: [CanonicalMoveFamily] -&gt; Text
+<span class="lineno">  415 </span><span class="decl"><span class="istickedoff">renderCandidateFamilies =</span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">T.intercalate &quot;,&quot; . map (T.pack . show)</span></span>
+<span class="lineno">  417 </span>
+<span class="lineno">  418 </span>shouldWarnMorphologyFallback :: PipelineIO -&gt; IO Bool
+<span class="lineno">  419 </span><span class="decl"><span class="istickedoff">shouldWarnMorphologyFallback pio = do</span>
+<span class="lineno">  420 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- resolveTurnEffect pio (TurnReqReadEnv &quot;QXFX0_WARN_MORPHOLOGY_FALLBACK&quot;)</span>
+<span class="lineno">  421 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  422 </span><span class="spaces">    </span><span class="istickedoff">TurnResReadEnv (Just &quot;1&quot;) -&gt; <span class="nottickedoff">pure True</span></span>
+<span class="lineno">  423 </span><span class="spaces">    </span><span class="istickedoff">TurnResReadEnv _ -&gt; pure False</span>
+<span class="lineno">  424 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">pure False</span></span></span>
+<span class="lineno">  425 </span>
+<span class="lineno">  426 </span>resolveRenderCurrentTime :: PipelineIO -&gt; IO UTCTime
+<span class="lineno">  427 </span><span class="decl"><span class="istickedoff">resolveRenderCurrentTime pio = do</span>
+<span class="lineno">  428 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- resolveTurnEffect pio TurnReqCurrentTime</span>
+<span class="lineno">  429 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  430 </span><span class="spaces">    </span><span class="istickedoff">TurnResCurrentTime currentTime -&gt; pure currentTime</span>
+<span class="lineno">  431 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">throwQxFx0 (PersistenceError &quot;render timeline current time effect returned unexpected result&quot;)</span></span></span>
+<span class="lineno">  432 </span>
+<span class="lineno">  433 </span>resolveRuntimeGfLinearization :: PipelineIO -&gt; RenderStatic -&gt; IO (Maybe RenderStatic)
+<span class="lineno">  434 </span><span class="decl"><span class="istickedoff">resolveRuntimeGfLinearization pio renderStatic = do</span>
+<span class="lineno">  435 </span><span class="spaces">  </span><span class="istickedoff">runtimeEnabled &lt;- shouldUseGfRuntime pio</span>
+<span class="lineno">  436 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">not runtimeEnabled</span></span>
+<span class="lineno">  437 </span><span class="spaces">    </span><span class="istickedoff">then pure Nothing</span>
+<span class="lineno">  438 </span><span class="spaces">    </span><span class="istickedoff">else</span>
+<span class="lineno">  439 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case draClaimAst (rsTemplateArtifact renderStatic) of</span></span>
+<span class="lineno">  440 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Nothing -&gt; pure Nothing</span></span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Just claimAst -&gt; do</span></span>
+<span class="lineno">  442 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">mPgfPath &lt;- resolveGfPgfPath pio</span></span>
+<span class="lineno">  443 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">result &lt;- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath claimAst)</span></span>
+<span class="lineno">  444 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure (Just (applyRuntimeGfResult renderStatic result))</span></span></span>
+<span class="lineno">  445 </span>
+<span class="lineno">  446 </span>shouldUseGfRuntime :: PipelineIO -&gt; IO Bool
+<span class="lineno">  447 </span><span class="decl"><span class="istickedoff">shouldUseGfRuntime pio = do</span>
+<span class="lineno">  448 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- resolveTurnEffect pio (TurnReqReadEnv &quot;QXFX0_GF_RUNTIME&quot;)</span>
+<span class="lineno">  449 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  450 </span><span class="spaces">    </span><span class="istickedoff">TurnResReadEnv (Just rawValue) -&gt;</span>
+<span class="lineno">  451 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (normalizeBool rawValue)</span></span>
+<span class="lineno">  452 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  453 </span><span class="spaces">      </span><span class="istickedoff">pure False</span></span>
+<span class="lineno">  454 </span>
+<span class="lineno">  455 </span>resolveGfPgfPath :: PipelineIO -&gt; IO (Maybe FilePath)
+<span class="lineno">  456 </span><span class="decl"><span class="nottickedoff">resolveGfPgfPath pio = do</span>
+<span class="lineno">  457 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio (TurnReqReadEnv &quot;QXFX0_GF_PGF_PATH&quot;)</span>
+<span class="lineno">  458 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  459 </span><span class="spaces">    </span><span class="nottickedoff">TurnResReadEnv (Just rawPath) -&gt;</span>
+<span class="lineno">  460 </span><span class="spaces">      </span><span class="nottickedoff">let stripped = T.unpack (T.strip rawPath)</span>
+<span class="lineno">  461 </span><span class="spaces">      </span><span class="nottickedoff">in pure (if null stripped then Nothing else Just stripped)</span>
+<span class="lineno">  462 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt;</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="nottickedoff">pure Nothing</span></span>
+<span class="lineno">  464 </span>
+<span class="lineno">  465 </span>normalizeBool :: Text -&gt; Bool
+<span class="lineno">  466 </span><span class="decl"><span class="nottickedoff">normalizeBool rawValue =</span>
+<span class="lineno">  467 </span><span class="spaces">  </span><span class="nottickedoff">T.toLower (T.strip rawValue) `elem` [&quot;1&quot;, &quot;true&quot;, &quot;yes&quot;, &quot;on&quot;]</span></span>
+<span class="lineno">  468 </span>
+<span class="lineno">  469 </span>applyRuntimeGfResult :: RenderStatic -&gt; TurnEffectResult -&gt; RenderStatic
+<span class="lineno">  470 </span><span class="decl"><span class="nottickedoff">applyRuntimeGfResult renderStatic result =</span>
+<span class="lineno">  471 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="nottickedoff">TurnResLinearizeClaimAst (Right gfText)</span>
+<span class="lineno">  473 </span><span class="spaces">      </span><span class="nottickedoff">| not (T.null (T.strip gfText)) -&gt;</span>
+<span class="lineno">  474 </span><span class="spaces">          </span><span class="nottickedoff">let baseArtifact = rsTemplateArtifact renderStatic</span>
+<span class="lineno">  475 </span><span class="spaces">              </span><span class="nottickedoff">updatedArtifact =</span>
+<span class="lineno">  476 </span><span class="spaces">                </span><span class="nottickedoff">baseArtifact</span>
+<span class="lineno">  477 </span><span class="spaces">                  </span><span class="nottickedoff">{ draRenderedText = gfText</span>
+<span class="lineno">  478 </span><span class="spaces">                  </span><span class="nottickedoff">, draTemplateBodyText = gfText</span>
+<span class="lineno">  479 </span><span class="spaces">                  </span><span class="nottickedoff">, draLinearizationLang = Just &quot;ru_GF_PGF&quot;</span>
+<span class="lineno">  480 </span><span class="spaces">                  </span><span class="nottickedoff">, draLinearizationOk = True</span>
+<span class="lineno">  481 </span><span class="spaces">                  </span><span class="nottickedoff">, draFallbackReason = Nothing</span>
+<span class="lineno">  482 </span><span class="spaces">                  </span><span class="nottickedoff">}</span>
+<span class="lineno">  483 </span><span class="spaces">          </span><span class="nottickedoff">in renderStatic</span>
+<span class="lineno">  484 </span><span class="spaces">               </span><span class="nottickedoff">{ rsTemplateArtifact = updatedArtifact</span>
+<span class="lineno">  485 </span><span class="spaces">               </span><span class="nottickedoff">, rsRenderWithBg = rebuildRenderWithBg renderStatic gfText</span>
+<span class="lineno">  486 </span><span class="spaces">               </span><span class="nottickedoff">}</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="nottickedoff">TurnResLinearizeClaimAst (Left err) -&gt;</span>
+<span class="lineno">  488 </span><span class="spaces">      </span><span class="nottickedoff">let baseArtifact = rsTemplateArtifact renderStatic</span>
+<span class="lineno">  489 </span><span class="spaces">      </span><span class="nottickedoff">in renderStatic</span>
+<span class="lineno">  490 </span><span class="spaces">           </span><span class="nottickedoff">{ rsTemplateArtifact =</span>
+<span class="lineno">  491 </span><span class="spaces">               </span><span class="nottickedoff">baseArtifact</span>
+<span class="lineno">  492 </span><span class="spaces">                 </span><span class="nottickedoff">{ draLinearizationLang = Just &quot;ru_GF_PGF&quot;</span>
+<span class="lineno">  493 </span><span class="spaces">                 </span><span class="nottickedoff">, draLinearizationOk = False</span>
+<span class="lineno">  494 </span><span class="spaces">                 </span><span class="nottickedoff">, draFallbackReason = Just (&quot;gf_runtime:&quot; &lt;&gt; err)</span>
+<span class="lineno">  495 </span><span class="spaces">                 </span><span class="nottickedoff">}</span>
+<span class="lineno">  496 </span><span class="spaces">           </span><span class="nottickedoff">}</span>
+<span class="lineno">  497 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt;</span>
+<span class="lineno">  498 </span><span class="spaces">      </span><span class="nottickedoff">let baseArtifact = rsTemplateArtifact renderStatic</span>
+<span class="lineno">  499 </span><span class="spaces">      </span><span class="nottickedoff">in renderStatic</span>
+<span class="lineno">  500 </span><span class="spaces">           </span><span class="nottickedoff">{ rsTemplateArtifact =</span>
+<span class="lineno">  501 </span><span class="spaces">               </span><span class="nottickedoff">baseArtifact</span>
+<span class="lineno">  502 </span><span class="spaces">                 </span><span class="nottickedoff">{ draLinearizationLang = Just &quot;ru_GF_PGF&quot;</span>
+<span class="lineno">  503 </span><span class="spaces">                 </span><span class="nottickedoff">, draLinearizationOk = False</span>
+<span class="lineno">  504 </span><span class="spaces">                 </span><span class="nottickedoff">, draFallbackReason = Just &quot;gf_runtime:unexpected_effect_result&quot;</span>
+<span class="lineno">  505 </span><span class="spaces">                 </span><span class="nottickedoff">}</span>
+<span class="lineno">  506 </span><span class="spaces">           </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  507 </span>
+<span class="lineno">  508 </span>rebuildRenderWithBg :: RenderStatic -&gt; Text -&gt; Text
+<span class="lineno">  509 </span><span class="decl"><span class="nottickedoff">rebuildRenderWithBg renderStatic claimText =</span>
+<span class="lineno">  510 </span><span class="spaces">  </span><span class="nottickedoff">let renderWithContext =</span>
+<span class="lineno">  511 </span><span class="spaces">        </span><span class="nottickedoff">T.intercalate</span>
+<span class="lineno">  512 </span><span class="spaces">          </span><span class="nottickedoff">&quot;\n&quot;</span>
+<span class="lineno">  513 </span><span class="spaces">          </span><span class="nottickedoff">( filter</span>
+<span class="lineno">  514 </span><span class="spaces">              </span><span class="nottickedoff">(not . T.null)</span>
+<span class="lineno">  515 </span><span class="spaces">              </span><span class="nottickedoff">[ rsModePrefixText renderStatic</span>
+<span class="lineno">  516 </span><span class="spaces">              </span><span class="nottickedoff">, rsAnchorPrefixText renderStatic</span>
+<span class="lineno">  517 </span><span class="spaces">              </span><span class="nottickedoff">, claimText</span>
+<span class="lineno">  518 </span><span class="spaces">              </span><span class="nottickedoff">]</span>
+<span class="lineno">  519 </span><span class="spaces">          </span><span class="nottickedoff">)</span>
+<span class="lineno">  520 </span><span class="spaces">      </span><span class="nottickedoff">withNarrative =</span>
+<span class="lineno">  521 </span><span class="spaces">        </span><span class="nottickedoff">if T.null (rsNarrativeFragmentText renderStatic)</span>
+<span class="lineno">  522 </span><span class="spaces">          </span><span class="nottickedoff">then renderWithContext</span>
+<span class="lineno">  523 </span><span class="spaces">          </span><span class="nottickedoff">else renderWithContext &lt;&gt; &quot;\n&quot; &lt;&gt; T.take 80 (rsNarrativeFragmentText renderStatic)</span>
+<span class="lineno">  524 </span><span class="spaces">  </span><span class="nottickedoff">in if T.null (rsSurfacingFragmentText renderStatic)</span>
+<span class="lineno">  525 </span><span class="spaces">       </span><span class="nottickedoff">then withNarrative</span>
+<span class="lineno">  526 </span><span class="spaces">       </span><span class="nottickedoff">else withNarrative &lt;&gt; &quot;\n&quot; &lt;&gt; rsSurfacingFragmentText renderStatic</span></span>
+
+</pre>
+</body>
+</html>

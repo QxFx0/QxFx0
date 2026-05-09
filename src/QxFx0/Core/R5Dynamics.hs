@@ -47,6 +47,8 @@ import QxFx0.Types.Thresholds
   , directiveDefaultContactBias
   , directiveDefaultCounterpressureStrength
   , directiveDefaultStabilityUnderTension
+  , directiveDefaultAbstractionBudget
+  , directiveDefaultMaxWordsHint
   )
 
 data CoreDirective = CoreDirective
@@ -67,12 +69,12 @@ defaultCoreDirective :: CoreDirective
 defaultCoreDirective = CoreDirective
   { cdContactBias             = directiveDefaultContactBias
   , cdBoundaryBias            = directiveDefaultBoundaryBias
-  , cdAbstractionBudget       = 1
+  , cdAbstractionBudget       = directiveDefaultAbstractionBudget
   , cdAssertionForce          = directiveDefaultAssertionForce
   , cdCounterpressureStrength = directiveDefaultCounterpressureStrength
   , cdStabilityUnderTension   = directiveDefaultStabilityUnderTension
   , cdMoveBias                = BiasLateral
-  , cdMaxWordsHint            = 48
+  , cdMaxWordsHint            = directiveDefaultMaxWordsHint
   , cdAllowCounterweight      = True
   , cdAllowMeaningLift        = True
   }

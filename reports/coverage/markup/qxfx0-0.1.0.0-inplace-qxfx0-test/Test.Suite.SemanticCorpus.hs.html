@@ -1,0 +1,237 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module Test.Suite.SemanticCorpus
+<span class="lineno">    5 </span>  ( semanticCorpusTests
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Control.Monad (forM_, unless, when)
+<span class="lineno">    9 </span>import Data.Aeson (FromJSON(..), eitherDecodeStrict', withObject, (.:))
+<span class="lineno">   10 </span>import Data.Char (isAlphaNum)
+<span class="lineno">   11 </span>import Data.Text (Text)
+<span class="lineno">   12 </span>import qualified Data.Text as T
+<span class="lineno">   13 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   14 </span>import qualified Data.Text.IO as TIO
+<span class="lineno">   15 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   16 </span>import Test.HUnit
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import qualified QxFx0.Bridge.NixGuard as NixGuard
+<span class="lineno">   19 </span>import QxFx0.Semantic.Logic (runSemanticLogic)
+<span class="lineno">   20 </span>import QxFx0.Semantic.MeaningAtoms (collectAtoms)
+<span class="lineno">   21 </span>import QxFx0.Semantic.Proposition (parseProposition)
+<span class="lineno">   22 </span>import QxFx0.Types (ClusterDef(..), NixGuardStatus(..), ipfCanonicalFamily, ipfFocusEntity, ipfFocusNominative)
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>data SemanticCorpusCase = SemanticCorpusCase
+<span class="lineno">   25 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">sccId</span></span></span> :: !Text
+<span class="lineno">   26 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccTier</span></span></span> :: !Text
+<span class="lineno">   27 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccLang</span></span></span> :: !Text
+<span class="lineno">   28 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccClass</span></span></span> :: !Text
+<span class="lineno">   29 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccInput</span></span></span> :: !Text
+<span class="lineno">   30 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccMustNotFamily</span></span></span> :: ![Text]
+<span class="lineno">   31 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccExpectedFamilyAnyOf</span></span></span> :: ![Text]
+<span class="lineno">   32 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccMustNotFocus</span></span></span> :: ![Text]
+<span class="lineno">   33 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccMustNotGuardReasonContains</span></span></span> :: ![Text]
+<span class="lineno">   34 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sccRequiresReplayEnvelope</span></span></span> :: !Bool
+<span class="lineno">   35 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON SemanticCorpusCase</span></span></span></span> where
+<span class="lineno">   38 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;SemanticCorpusCase&quot;</span> $ \o -&gt;</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">SemanticCorpusCase</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .: &quot;id&quot;</span>
+<span class="lineno">   41 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;tier&quot;</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lang&quot;</span>
+<span class="lineno">   43 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;class&quot;</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;input&quot;</span>
+<span class="lineno">   45 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;must_not_family&quot;</span>
+<span class="lineno">   46 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;expected_family_any_of&quot;</span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;must_not_focus&quot;</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;must_not_guard_reason_contains&quot;</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;requires_replay_envelope&quot;</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>semanticCorpusTests :: [Test]
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">semanticCorpusTests =</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;semantic corpus file has expected shape&quot;</span> (TestCase testSemanticCorpusShape)</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;semantic corpus P0/P1 pure invariants hold&quot;</span> (TestCase testSemanticCorpusPureInvariants)</span>
+<span class="lineno">   55 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;semantic corpus NixGuard degradation is not semantic repair&quot;</span> (TestCase testNixGuardCorpusDiagnostics)</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>testSemanticCorpusShape :: Assertion
+<span class="lineno">   59 </span><span class="decl"><span class="istickedoff">testSemanticCorpusShape = do</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">corpusCases &lt;- readSemanticCorpus</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;semantic corpus case count&quot;</span> 110 (length corpusCases)</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;P0 case count&quot;</span> 5 (tierCount &quot;P0&quot; corpusCases)</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;P1 case count&quot;</span> 88 (tierCount &quot;P1&quot; corpusCases)</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;P2 case count&quot;</span> 17 (tierCount &quot;P2&quot; corpusCases)</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">forM_ corpusCases $ \c -&gt; do</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(caseLabel c &lt;&gt; &quot; has id&quot;)</span> (not (T.null (sccId c)))</span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(caseLabel c &lt;&gt; &quot; has lang&quot;)</span> (sccLang c `elem` [&quot;ru&quot;, &quot;en&quot;])</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(caseLabel c &lt;&gt; &quot; has class&quot;)</span> (not (T.null (sccClass c)))</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">(caseLabel c &lt;&gt; &quot; requires replay envelope&quot;)</span> (sccRequiresReplayEnvelope c)</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>testSemanticCorpusPureInvariants :: Assertion
+<span class="lineno">   72 </span><span class="decl"><span class="istickedoff">testSemanticCorpusPureInvariants = do</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">corpusCases &lt;- readSemanticCorpus</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">forM_ (filter isEnforcedTier corpusCases) $ \c -&gt; do</span>
+<span class="lineno">   75 </span><span class="spaces">    </span><span class="istickedoff">let frame = parseProposition (sccInput c)</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="istickedoff">focus = normalizeFocus (firstNonEmpty [ipfFocusNominative frame, <span class="nottickedoff">ipfFocusEntity frame</span>])</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">atoms = collectAtoms (sccInput c) semanticCorpusClusters</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">families = map (textShow . fst) (runSemanticLogic atoms)</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">canonicalFamily = textShow (ipfCanonicalFamily frame)</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">forM_ (sccMustNotFocus c) $ \badFocus -&gt;</span>
+<span class="lineno">   81 </span><span class="spaces">      </span><span class="istickedoff">unless (T.null focus) $</span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">assertBool</span>
+<span class="lineno">   83 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(caseLabel c &lt;&gt; &quot; focus must not be &quot; &lt;&gt; T.unpack badFocus &lt;&gt; &quot;; actual=&quot; &lt;&gt; T.unpack focus)</span></span>
+<span class="lineno">   84 </span><span class="spaces">          </span><span class="istickedoff">(focus /= normalizeFocus badFocus)</span>
+<span class="lineno">   85 </span><span class="spaces">    </span><span class="istickedoff">forM_ (sccMustNotFamily c) $ \badFamily -&gt;</span>
+<span class="lineno">   86 </span><span class="spaces">      </span><span class="istickedoff">assertBool</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(caseLabel c &lt;&gt; &quot; semantic logic must not rank &quot; &lt;&gt; T.unpack badFamily &lt;&gt; &quot;; ranked=&quot; &lt;&gt; show families)</span></span>
+<span class="lineno">   88 </span><span class="spaces">        </span><span class="istickedoff">(badFamily `notElem` families)</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">when (sccTier c == &quot;P0&quot; &amp;&amp; not (null (sccExpectedFamilyAnyOf c))) $</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">assertBool</span>
+<span class="lineno">   91 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(caseLabel c &lt;&gt; &quot; canonical family must stay in expected routing band; actual=&quot; &lt;&gt; T.unpack canonicalFamily)</span></span>
+<span class="lineno">   92 </span><span class="spaces">        </span><span class="istickedoff">(canonicalFamily `elem` sccExpectedFamilyAnyOf c)</span></span>
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>testNixGuardCorpusDiagnostics :: Assertion
+<span class="lineno">   95 </span><span class="decl"><span class="istickedoff">testNixGuardCorpusDiagnostics = do</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">corpusCases &lt;- readSemanticCorpus</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">forM_ (filter ((== &quot;P0&quot;) . sccTier) corpusCases) $ \c -&gt; do</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="istickedoff">let frame = parseProposition (sccInput c)</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">concept = firstNonEmpty [ipfFocusNominative frame, <span class="nottickedoff">ipfFocusEntity frame</span>]</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">status &lt;- NixGuard.checkConstitution &quot;semantics/concepts.nix&quot; concept 0.0 0.0</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">let rendered = T.toLower (textShow status)</span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="istickedoff">forM_ (sccMustNotGuardReasonContains c) $ \needle -&gt;</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">assertBool</span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(caseLabel c &lt;&gt; &quot; guard diagnostic must not contain &quot; &lt;&gt; T.unpack needle &lt;&gt; &quot;; status=&quot; &lt;&gt; T.unpack rendered)</span></span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="istickedoff">(not (T.toLower needle `T.isInfixOf` rendered))</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">case status of</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">Blocked reason -&gt;</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertBool</span></span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(caseLabel c &lt;&gt; &quot; explicit policy block must not be caused by unsupported ordinary prose; reason=&quot; &lt;&gt; T.unpack reason)</span></span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(not (&quot;unsupported&quot; `T.isInfixOf` T.toLower reason))</span></span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>readSemanticCorpus :: IO [SemanticCorpusCase]
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">readSemanticCorpus = do</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">raw &lt;- TIO.readFile corpusPath</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">let nonEmptyLines = filter (not . T.null . T.strip) (T.lines raw)</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">case traverse decodeLine (zip [(1 :: Int)..] nonEmptyLines) of</span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure err &gt;&gt; pure []</span></span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="istickedoff">Right corpusCases -&gt; pure corpusCases</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  121 </span><span class="spaces">    </span><span class="istickedoff">decodeLine (lineNo, lineText) =</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 lineText) of</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">Left (&quot;invalid semantic corpus JSONL line &quot; &lt;&gt; show lineNo &lt;&gt; &quot;: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="istickedoff">Right c -&gt; Right c</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>corpusPath :: FilePath
+<span class="lineno">  127 </span><span class="decl"><span class="istickedoff">corpusPath = &quot;test&quot; &lt;/&gt; &quot;golden&quot; &lt;/&gt; &quot;semantic_corpus.jsonl&quot;</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>semanticCorpusClusters :: [ClusterDef]
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">semanticCorpusClusters =</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">[ ClusterDef</span>
+<span class="lineno">  132 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;exhaustion&quot;</span>
+<span class="lineno">  133 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;устал&quot;, &quot;устала&quot;, &quot;выгорел&quot;, &quot;выгорела&quot;, &quot;нет сил&quot;]</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  135 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;verification&quot;</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;доказательство&quot;, &quot;докажи&quot;, &quot;verify&quot;, &quot;proof&quot;]</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;doubt&quot;</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;разница&quot;, &quot;отличие&quot;, &quot;отличается&quot;, &quot;distinguish&quot;, &quot;difference&quot;]</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  147 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;logicalinference&quot;</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;следует из&quot;, &quot;не следует из&quot;, &quot;влечёт&quot;, &quot;вытекает из&quot;, &quot;follows from&quot;, &quot;does not follow&quot;]</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;proofrequest&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;доказательство&quot;, &quot;обоснование&quot;, &quot;докажи&quot;, &quot;обоснуй&quot;, &quot;proof&quot;, &quot;justify&quot;]</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;distinctionrequest&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;необходимое условие&quot;, &quot;достаточное условие&quot;, &quot;чем отличается&quot;, &quot;necessary condition&quot;, &quot;sufficient condition&quot;]</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  162 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;counterexamplerequest&quot;</span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;контрпример&quot;, &quot;опровержение&quot;, &quot;противоречие&quot;, &quot;counterexample&quot;, &quot;refutation&quot;, &quot;contradiction&quot;]</span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;obligationduty&quot;</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;должен&quot;, &quot;обязан&quot;, &quot;нужно&quot;, &quot;must&quot;, &quot;should&quot;]</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;permissionright&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;имеет право&quot;, &quot;не имеет права&quot;, &quot;вправе&quot;, &quot;allowed to&quot;, &quot;has the right&quot;]</span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;temporalordering&quot;</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;когда&quot;, &quot;пока&quot;, &quot;прежде чем&quot;, &quot;после того как&quot;, &quot;before&quot;, &quot;after&quot;, &quot;while&quot;]</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">, ClusterDef</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">{ cdName = &quot;contrastcorrection&quot;</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="istickedoff">, cdKeywords = [&quot;не доказательство а объяснение&quot;, &quot;не причина а основание&quot;, &quot;however&quot;, &quot;although&quot;, &quot;not proof but explanation&quot;]</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">, cdPriority = 1.0</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>isEnforcedTier :: SemanticCorpusCase -&gt; Bool
+<span class="lineno">  189 </span><span class="decl"><span class="istickedoff">isEnforcedTier c = sccTier c `elem` [&quot;P0&quot;, &quot;P1&quot;]</span></span>
+<span class="lineno">  190 </span>
+<span class="lineno">  191 </span>tierCount :: Text -&gt; [SemanticCorpusCase] -&gt; Int
+<span class="lineno">  192 </span><span class="decl"><span class="istickedoff">tierCount tier = length . filter ((== tier) . sccTier)</span></span>
+<span class="lineno">  193 </span>
+<span class="lineno">  194 </span>normalizeFocus :: Text -&gt; Text
+<span class="lineno">  195 </span><span class="decl"><span class="istickedoff">normalizeFocus raw =</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">case simpleTokens raw of</span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">(token:_) -&gt; token</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">T.toLower (T.strip raw)</span></span></span>
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>simpleTokens :: Text -&gt; [Text]
+<span class="lineno">  201 </span><span class="decl"><span class="istickedoff">simpleTokens =</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">filter (not . T.null)</span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">. T.words</span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">. T.map (\c -&gt; if <span class="tickonlytrue">isAlphaNum c || <span class="nottickedoff">c == '_' || c == '-'</span></span> then c else <span class="nottickedoff">' '</span>)</span>
+<span class="lineno">  205 </span><span class="spaces">    </span><span class="istickedoff">. T.toLower</span></span>
+<span class="lineno">  206 </span>
+<span class="lineno">  207 </span>firstNonEmpty :: [Text] -&gt; Text
+<span class="lineno">  208 </span><span class="decl"><span class="istickedoff">firstNonEmpty = foldr (\candidate acc -&gt; if <span class="tickonlyfalse">T.null (T.strip candidate)</span> then <span class="nottickedoff">acc</span> else candidate) <span class="nottickedoff">&quot;&quot;</span></span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>caseLabel :: SemanticCorpusCase -&gt; String
+<span class="lineno">  211 </span><span class="decl"><span class="nottickedoff">caseLabel c = T.unpack (sccId c)</span></span>
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>textShow :: Show a =&gt; a -&gt; Text
+<span class="lineno">  214 </span><span class="decl"><span class="istickedoff">textShow = T.pack . show</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Observability
+<span class="lineno">    7 </span>  ( LogicalBond
+<span class="lineno">    8 </span>  , ContractProvenance(..)
+<span class="lineno">    9 </span>  , SurfaceProvenance(..)
+<span class="lineno">   10 </span>  , LiveRenderTelemetry(..)
+<span class="lineno">   11 </span>  , MeaningGraph(..)
+<span class="lineno">   12 </span>  , emptyMeaningGraph
+<span class="lineno">   13 </span>  , MeaningEdge(..)
+<span class="lineno">   14 </span>  , MeaningState(..)
+<span class="lineno">   15 </span>  , MeaningStateId
+<span class="lineno">   16 </span>  , ResonanceBand(..)
+<span class="lineno">   17 </span>  , DepthBand(..)
+<span class="lineno">   18 </span>  , DensityBand(..)
+<span class="lineno">   19 </span>  , ResponseDepth(..)
+<span class="lineno">   20 </span>  , ResponseStance(..)
+<span class="lineno">   21 </span>  , ConvMove(..)
+<span class="lineno">   22 </span>  , ResponseStrategy(..)
+<span class="lineno">   23 </span>  , PressureBand(..)
+<span class="lineno">   24 </span>  , KernelPulse(..)
+<span class="lineno">   25 </span>  , emptyKernelPulse
+<span class="lineno">   26 </span>  , ConstitutionalThresholds(..)
+<span class="lineno">   27 </span>  , emptyConstitutionalThresholds
+<span class="lineno">   28 </span>  , DepthMode(..)
+<span class="lineno">   29 </span>  , depthModeText
+<span class="lineno">   30 </span>  , ObservabilityState(..)
+<span class="lineno">   31 </span>  , emptyObservabilityState
+<span class="lineno">   32 </span>  ) where
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   35 </span>import Data.Aeson
+<span class="lineno">   36 </span>  ( FromJSON(..)
+<span class="lineno">   37 </span>  , ToJSON(..)
+<span class="lineno">   38 </span>  , (.:)
+<span class="lineno">   39 </span>  , (.:?)
+<span class="lineno">   40 </span>  , (.=)
+<span class="lineno">   41 </span>  , defaultOptions
+<span class="lineno">   42 </span>  , genericParseJSON
+<span class="lineno">   43 </span>  , genericToJSON
+<span class="lineno">   44 </span>  , object
+<span class="lineno">   45 </span>  , withObject
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>import Data.Map.Strict (Map)
+<span class="lineno">   48 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   49 </span>import Data.Text (Text)
+<span class="lineno">   50 </span>import Data.Time (UTCTime)
+<span class="lineno">   51 </span>import GHC.Generics (Generic)
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>import QxFx0.Types.Domain (CanonicalMoveFamily(..), NixGuardStatus(..))
+<span class="lineno">   54 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   55 </span>  ( DepthMode(..)
+<span class="lineno">   56 </span>  , constitutionalAgencyMinDefault
+<span class="lineno">   57 </span>  , constitutionalAmbiguityPenaltyDefault
+<span class="lineno">   58 </span>  , constitutionalLocalRecoveryThresholdDefault
+<span class="lineno">   59 </span>  , constitutionalShadowDivergencePenaltyDefault
+<span class="lineno">   60 </span>  , constitutionalTensionMaxDefault
+<span class="lineno">   61 </span>  , depthModeText
+<span class="lineno">   62 </span>  , kernelPulseAgencySignalDefault
+<span class="lineno">   63 </span>  , kernelPulseCoherenceDefault
+<span class="lineno">   64 </span>  )
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>data LogicalBond = LogicalBond
+<span class="lineno">   67 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lbPremise</span></span></span> :: !Text
+<span class="lineno">   68 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lbConclusion</span></span></span> :: !Text
+<span class="lineno">   69 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lbStrength</span></span></span> :: !Double
+<span class="lineno">   70 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lbIsDefeasible</span></span></span> :: !Bool
+<span class="lineno">   71 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   72 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   73 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LogicalBond</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">   74 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON LogicalBond</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>data ContractProvenance
+<span class="lineno">   77 </span>  = BuiltClaim | FallbackRoute | RecoveryRoute
+<span class="lineno">   78 </span>  | NixGuarded | OperatorMapping | AssembledClaim
+<span class="lineno">   79 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   80 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   81 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ContractProvenance</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">   82 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ContractProvenance</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>data SurfaceProvenance
+<span class="lineno">   85 </span>  = FromDB | FromFallback | FromRecovery
+<span class="lineno">   86 </span>  | FromNixGuard | FromOperator | FromHardFallback
+<span class="lineno">   87 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   88 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   89 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON SurfaceProvenance</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">   90 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON SurfaceProvenance</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>data LiveRenderTelemetry = LiveRenderTelemetry
+<span class="lineno">   93 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtEmbeddingMs</span></span></span> :: !Double
+<span class="lineno">   94 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtLogicMs</span></span></span> :: !Double
+<span class="lineno">   95 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtNixCheckMs</span></span></span> :: !Double
+<span class="lineno">   96 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtRenderMs</span></span></span> :: !Double
+<span class="lineno">   97 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtSaveMs</span></span></span> :: !Double
+<span class="lineno">   98 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtTotalMs</span></span></span> :: !Double
+<span class="lineno">   99 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtSurfaceRoute</span></span></span> :: !SurfaceProvenance
+<span class="lineno">  100 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtGuardStatus</span></span></span> :: !NixGuardStatus
+<span class="lineno">  101 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtApiHealthy</span></span></span> :: !Bool
+<span class="lineno">  102 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">  103 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">lrtTopic</span></span></span> :: !Text
+<span class="lineno">  104 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  105 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  106 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LiveRenderTelemetry</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  107 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON LiveRenderTelemetry</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>data ResonanceBand
+<span class="lineno">  110 </span>  = ResonanceLow | ResonanceMed | ResonanceHigh
+<span class="lineno">  111 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  112 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  113 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResonanceBand</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  114 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ResonanceBand</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>data DepthBand
+<span class="lineno">  117 </span>  = DepthShallow | DepthMech | DepthPattern | DepthAxiom
+<span class="lineno">  118 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  119 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  120 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON DepthBand</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  121 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON DepthBand</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>data DensityBand
+<span class="lineno">  124 </span>  = DensityLow | DensityMed | DensityHigh
+<span class="lineno">  125 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  126 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  127 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON DensityBand</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  128 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON DensityBand</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>data PressureBand = PressNone | PressLight | PressHeavy
+<span class="lineno">  131 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  132 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  133 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON PressureBand</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  134 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON PressureBand</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>data MeaningState = MeaningState
+<span class="lineno">  137 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">msResonance</span></span></span> :: !ResonanceBand
+<span class="lineno">  138 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">msPressure</span></span></span>  :: !PressureBand
+<span class="lineno">  139 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">msDepth</span></span></span>     :: !DepthBand
+<span class="lineno">  140 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  141 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  142 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON MeaningState</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  143 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON MeaningState</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>type MeaningStateId = String
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>data ResponseDepth
+<span class="lineno">  148 </span>  = ShallowResp | ModerateResp | DeepResp
+<span class="lineno">  149 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  150 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  151 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResponseDepth</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  152 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ResponseDepth</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  153 </span>
+<span class="lineno">  154 </span>data ResponseStance
+<span class="lineno">  155 </span>  = HoldStance | OpenStance | RedirectStance | AcknowledgeStance
+<span class="lineno">  156 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  157 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  158 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResponseStance</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  159 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ResponseStance</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>data ConvMove
+<span class="lineno">  162 </span>  = CounterMove | ReframeMove | QuestionMove | ValidateMove | SilenceMove
+<span class="lineno">  163 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  164 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  165 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ConvMove</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  166 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ConvMove</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>data ResponseStrategy = ResponseStrategy
+<span class="lineno">  169 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rsDepth</span></span></span>    :: !ResponseDepth
+<span class="lineno">  170 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsStance</span></span></span>   :: !ResponseStance
+<span class="lineno">  171 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rsMove</span></span></span>     :: !ConvMove
+<span class="lineno">  172 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rsDensityT</span></span></span> :: !DensityBand
+<span class="lineno">  173 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  174 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  175 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResponseStrategy</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  176 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ResponseStrategy</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  177 </span>
+<span class="lineno">  178 </span>data MeaningEdge = MeaningEdge
+<span class="lineno">  179 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">meFromId</span></span></span>     :: !MeaningStateId
+<span class="lineno">  180 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meToId</span></span></span>       :: !MeaningStateId
+<span class="lineno">  181 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">meFrom</span></span></span>       :: !MeaningState
+<span class="lineno">  182 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">meTo</span></span></span>         :: !MeaningState
+<span class="lineno">  183 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meStrategy</span></span></span>   :: !ResponseStrategy
+<span class="lineno">  184 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meCount</span></span></span>      :: !Int
+<span class="lineno">  185 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meWins</span></span></span>       :: !Int
+<span class="lineno">  186 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meDreamBias</span></span></span>  :: !Double
+<span class="lineno">  187 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">meLastRewiredAt</span></span></span> :: !(Maybe UTCTime)
+<span class="lineno">  188 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  189 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  190 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON MeaningEdge</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  191 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON MeaningEdge</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  192 </span>
+<span class="lineno">  193 </span>data MeaningGraph = MeaningGraph
+<span class="lineno">  194 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">mgEdges</span></span></span>     :: ![MeaningEdge]
+<span class="lineno">  195 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mgTurnCount</span></span></span> :: !Int
+<span class="lineno">  196 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  197 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  198 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON MeaningGraph</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  199 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON MeaningGraph</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  200 </span>
+<span class="lineno">  201 </span>emptyMeaningGraph :: MeaningGraph
+<span class="lineno">  202 </span><span class="decl"><span class="istickedoff">emptyMeaningGraph = MeaningGraph [] 0</span></span>
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>data KernelPulse = KernelPulse
+<span class="lineno">  205 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">kpActive</span></span></span> :: !Bool
+<span class="lineno">  206 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">kpCoherence</span></span></span> :: !Double
+<span class="lineno">  207 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">kpValence</span></span></span> :: !Double
+<span class="lineno">  208 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">kpAgencySignal</span></span></span> :: !Double
+<span class="lineno">  209 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">kpLastUpdate</span></span></span> :: !Int
+<span class="lineno">  210 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  211 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  212 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON KernelPulse</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  213 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON KernelPulse</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  214 </span>
+<span class="lineno">  215 </span>emptyKernelPulse :: KernelPulse
+<span class="lineno">  216 </span><span class="decl"><span class="istickedoff">emptyKernelPulse = KernelPulse False kernelPulseCoherenceDefault 0.0 kernelPulseAgencySignalDefault 0</span></span>
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>data ConstitutionalThresholds = ConstitutionalThresholds
+<span class="lineno">  219 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ctAgencyMin</span></span></span> :: !Double
+<span class="lineno">  220 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ctTensionMax</span></span></span> :: !Double
+<span class="lineno">  221 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ctAmbiguityPenalty</span></span></span> :: !Double
+<span class="lineno">  222 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ctShadowDivergencePenalty</span></span></span> :: !Double
+<span class="lineno">  223 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ctLocalRecoveryThreshold</span></span></span> :: !Double
+<span class="lineno">  224 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  225 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  226 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ConstitutionalThresholds</span></span></span></span></span></span></span></span> where
+<span class="lineno">  227 </span>  <span class="decl"><span class="istickedoff">toJSON ct =</span>
+<span class="lineno">  228 </span><span class="spaces">    </span><span class="istickedoff">object</span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;ctAgencyMin&quot; .= ctAgencyMin ct</span>
+<span class="lineno">  230 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ctTensionMax&quot; .= ctTensionMax ct</span>
+<span class="lineno">  231 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ctAmbiguityPenalty&quot; .= ctAmbiguityPenalty ct</span>
+<span class="lineno">  232 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ctShadowDivergencePenalty&quot; .= ctShadowDivergencePenalty ct</span>
+<span class="lineno">  233 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ctLocalRecoveryThreshold&quot; .= ctLocalRecoveryThreshold ct</span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  235 </span>
+<span class="lineno">  236 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON ConstitutionalThresholds</span></span></span></span> where
+<span class="lineno">  237 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;ConstitutionalThresholds&quot;</span> $ \obj -&gt; do</span>
+<span class="lineno">  238 </span><span class="spaces">    </span><span class="istickedoff">localRecoveryThreshold &lt;-</span>
+<span class="lineno">  239 </span><span class="spaces">      </span><span class="istickedoff">obj .:? &quot;ctLocalRecoveryThreshold&quot;</span>
+<span class="lineno">  240 </span><span class="spaces">        </span><span class="istickedoff">&gt;&gt;= maybe</span>
+<span class="lineno">  241 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(obj .:? &quot;ctLlmFallbackThreshold&quot;)</span></span>
+<span class="lineno">  242 </span><span class="spaces">          </span><span class="istickedoff">(pure . Just)</span>
+<span class="lineno">  243 </span><span class="spaces">    </span><span class="istickedoff">ConstitutionalThresholds</span>
+<span class="lineno">  244 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; obj .: &quot;ctAgencyMin&quot;</span>
+<span class="lineno">  245 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; obj .: &quot;ctTensionMax&quot;</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; obj .: &quot;ctAmbiguityPenalty&quot;</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; obj .: &quot;ctShadowDivergencePenalty&quot;</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; pure (maybe <span class="nottickedoff">constitutionalLocalRecoveryThresholdDefault</span> id localRecoveryThreshold)</span></span>
+<span class="lineno">  249 </span>
+<span class="lineno">  250 </span>emptyConstitutionalThresholds :: ConstitutionalThresholds
+<span class="lineno">  251 </span><span class="decl"><span class="istickedoff">emptyConstitutionalThresholds =</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">ConstitutionalThresholds</span>
+<span class="lineno">  253 </span><span class="spaces">    </span><span class="istickedoff">constitutionalAgencyMinDefault</span>
+<span class="lineno">  254 </span><span class="spaces">    </span><span class="istickedoff">constitutionalTensionMaxDefault</span>
+<span class="lineno">  255 </span><span class="spaces">    </span><span class="istickedoff">constitutionalAmbiguityPenaltyDefault</span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">constitutionalShadowDivergencePenaltyDefault</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">constitutionalLocalRecoveryThresholdDefault</span></span>
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>data ObservabilityState = ObservabilityState
+<span class="lineno">  260 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">obsNixCache</span></span></span> :: !(Map Text NixGuardStatus)
+<span class="lineno">  261 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">obsLastPersistedTurn</span></span></span> :: !Int
+<span class="lineno">  262 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">obsTelemetry</span></span></span> :: !LiveRenderTelemetry
+<span class="lineno">  263 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">obsEmbeddingApiHealthy</span></span></span> :: !Bool
+<span class="lineno">  264 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">obsLastLegitimacyScore</span></span></span> :: !Double
+<span class="lineno">  265 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">obsConstitutionalThresholds</span></span></span> :: !ConstitutionalThresholds
+<span class="lineno">  266 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">obsEvidenceBonds</span></span></span> :: ![LogicalBond]
+<span class="lineno">  267 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  268 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  269 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ObservabilityState</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  270 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ObservabilityState</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  271 </span>
+<span class="lineno">  272 </span>emptyObservabilityState :: ObservabilityState
+<span class="lineno">  273 </span><span class="decl"><span class="istickedoff">emptyObservabilityState = ObservabilityState</span>
+<span class="lineno">  274 </span><span class="spaces">  </span><span class="istickedoff">{ obsNixCache = M.empty</span>
+<span class="lineno">  275 </span><span class="spaces">  </span><span class="istickedoff">, obsLastPersistedTurn = 0</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">, obsTelemetry = LiveRenderTelemetry 0 0 0 0 0 0 FromDB Allowed True CMGround &quot;&quot;</span>
+<span class="lineno">  277 </span><span class="spaces">  </span><span class="istickedoff">, obsEmbeddingApiHealthy = True</span>
+<span class="lineno">  278 </span><span class="spaces">  </span><span class="istickedoff">, obsLastLegitimacyScore = 1.0</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="istickedoff">, obsConstitutionalThresholds = emptyConstitutionalThresholds</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="istickedoff">, obsEvidenceBonds = []</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

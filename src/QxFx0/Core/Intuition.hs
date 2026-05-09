@@ -55,6 +55,7 @@ import QxFx0.Types.Thresholds
   , intuitionCoreVecSteadiness
   , intuitionSteadinessBaseline
   , intuitionSignalSteadyBonusScale
+  , intuitionCooldownTurns
   )
 import QxFx0.Core.Policy.Consciousness
   ( triggerDeepResonance, triggerCrisisMoment, triggerPureKernel, triggerConvergence
@@ -147,14 +148,14 @@ checkIntuition resonance tension turnNumber state =
   in if newCooldown > 0
      then (Nothing, state')
      else if currentPosterior >= flashThreshold
-          then let flash = buildFlash resonance tension currentPosterior
-                   state'' = state'
-                     { isPosterior  = posteriorAfterFlash newPost
-                     , isLongPosterior = longPosteriorAfterFlash newLongPost
-                     , isCooldown   = 2
-                     , isFlashCount = isFlashCount state + 1
-                     , isLastTurn   = turnNumber
-                     }
+           then let flash = buildFlash resonance tension currentPosterior
+                    state'' = state'
+                      { isPosterior  = posteriorAfterFlash newPost
+                      , isLongPosterior = longPosteriorAfterFlash newLongPost
+                      , isCooldown   = intuitionCooldownTurns
+                      , isFlashCount = isFlashCount state + 1
+                      , isLastTurn   = turnNumber
+                      }
                in (Just flash, state'')
           else (Nothing, state')
 

@@ -1,0 +1,43 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Main (main) where
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>import System.Exit (exitFailure, exitSuccess)
+<span class="lineno">    6 </span>import Test.HUnit
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Test.Suite.CoreBehavior (coreBehaviorTests)
+<span class="lineno">    9 </span>import Test.Suite.TurnPipelineProtocol (turnPipelineProtocolTests)
+<span class="lineno">   10 </span>import Test.Suite.RuntimeInfrastructure (runtimeInfrastructureTests)
+<span class="lineno">   11 </span>import Test.Suite.HttpRuntime (httpRuntimeTests)
+<span class="lineno">   12 </span>import Test.Suite.SemanticCorpus (semanticCorpusTests)
+<span class="lineno">   13 </span>import Test.Suite.LexiconTests (lexiconTests)
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>main :: IO ()
+<span class="lineno">   16 </span><span class="decl"><span class="istickedoff">main = do</span>
+<span class="lineno">   17 </span><span class="spaces">  </span><span class="istickedoff">testCounts &lt;- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests ++ semanticCorpusTests ++ lexiconTests)</span>
+<span class="lineno">   18 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">errors testCounts + failures testCounts &gt; 0</span></span>
+<span class="lineno">   19 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">exitFailure</span></span>
+<span class="lineno">   20 </span><span class="spaces">    </span><span class="istickedoff">else exitSuccess</span></span>
+
+</pre>
+</body>
+</html>

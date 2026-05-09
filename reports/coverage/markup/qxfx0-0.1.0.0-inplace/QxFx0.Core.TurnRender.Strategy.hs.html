@@ -1,0 +1,166 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Render-strategy adaptation from routing decisions and identity signal cues. -}
+<span class="lineno">    5 </span>module QxFx0.Core.TurnRender.Strategy
+<span class="lineno">    6 </span>  ( applyRenderStrategy
+<span class="lineno">    7 </span>  , renderStyleFromDecision
+<span class="lineno">    8 </span>  , strategyDepthMode
+<span class="lineno">    9 </span>  , strategyToAnswerStrategy
+<span class="lineno">   10 </span>  , responseStanceToMarker
+<span class="lineno">   11 </span>  , strategyEpistemicFromDepth
+<span class="lineno">   12 </span>  , strategyDepthLabel
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import QxFx0.Core.IdentitySignal (IdentitySignal(..))
+<span class="lineno">   18 </span>import QxFx0.Core.PrincipledCore (PrincipledMode(..))
+<span class="lineno">   19 </span>import QxFx0.Core.R5Dynamics (EncounterMode(..))
+<span class="lineno">   20 </span>import QxFx0.Core.Semantic.SemanticInput (SemanticInput(..))
+<span class="lineno">   21 </span>import QxFx0.Types
+<span class="lineno">   22 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   23 </span>  ( strategyDeepKnownConfidenceCap
+<span class="lineno">   24 </span>  , strategyDeepKnownConfidenceBoost
+<span class="lineno">   25 </span>  , strategyDeepProbableToKnownCap
+<span class="lineno">   26 </span>  , strategyDeepProbableToKnownBoost
+<span class="lineno">   27 </span>  , strategyDeepUncertainToProbableCap
+<span class="lineno">   28 </span>  , strategyDeepUncertainToProbableBoost
+<span class="lineno">   29 </span>  , strategyDeepUnknownToUncertainCap
+<span class="lineno">   30 </span>  , strategyDeepSpeculativeToUncertainCap
+<span class="lineno">   31 </span>  , strategyShallowKnownToProbableFloor
+<span class="lineno">   32 </span>  , strategyShallowKnownPenalty
+<span class="lineno">   33 </span>  , strategyShallowProbableToUncertainFloor
+<span class="lineno">   34 </span>  , strategyShallowProbablePenalty
+<span class="lineno">   35 </span>  )
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>applyRenderStrategy :: CanonicalMoveFamily -&gt; ResponseStrategy -&gt; ResponseMeaningPlan -&gt; ResponseMeaningPlan
+<span class="lineno">   38 </span><span class="decl"><span class="istickedoff">applyRenderStrategy family strategy meaningPlan =</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">meaningPlan</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">{ rmpStrategy = strategyToAnswerStrategy <span class="nottickedoff">family</span> strategy</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">, rmpStance = responseStanceToMarker (rsStance strategy)</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">, rmpEpistemic = strategyEpistemicFromDepth (rsDepth strategy) (rmpEpistemic meaningPlan)</span>
+<span class="lineno">   43 </span><span class="spaces">    </span><span class="istickedoff">, rmpDepthMode = strategyDepthMode (rsDepth strategy)</span>
+<span class="lineno">   44 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>renderStyleFromDecision :: ResponseStrategy -&gt; Maybe PrincipledMode -&gt; IdentitySignal -&gt; Maybe SemanticAnchor -&gt; SemanticInput -&gt; RenderStyle
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput =</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">let byStrategy = styleFromStrategy strategy</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">byPrincipled = styleFromPrincipled mode byStrategy</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">byIdentity = styleFromIdentity identitySignal byPrincipled</span>
+<span class="lineno">   51 </span><span class="spaces">      </span><span class="istickedoff">bySemantic = styleFromSemantic semanticInput byIdentity</span>
+<span class="lineno">   52 </span><span class="spaces">   </span><span class="istickedoff">in maybe bySemantic (`styleFromAnchor` bySemantic) semanticAnchor</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>strategyDepthMode :: ResponseDepth -&gt; DepthMode
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">strategyDepthMode DeepResp = DeepDepth</span>
+<span class="lineno">   56 </span><span class="spaces"></span><span class="istickedoff">strategyDepthMode ModerateResp = MediumDepth</span>
+<span class="lineno">   57 </span><span class="spaces"></span><span class="istickedoff">strategyDepthMode ShallowResp = SurfaceDepth</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>strategyToAnswerStrategy :: CanonicalMoveFamily -&gt; ResponseStrategy -&gt; AnswerStrategy
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">strategyToAnswerStrategy _family strategy =</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">case rsMove strategy of</span>
+<span class="lineno">   62 </span><span class="spaces">    </span><span class="istickedoff">CounterMove -&gt; DeepenThenProbe</span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">ReframeMove -&gt; ClarifyThenDisambiguate</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="istickedoff">QuestionMove -&gt; <span class="nottickedoff">DeepenThenProbe</span></span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">ValidateMove -&gt; ContactThenBridge</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">SilenceMove -&gt; AnchorThenStabilize</span></span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>responseStanceToMarker :: ResponseStance -&gt; StanceMarker
+<span class="lineno">   69 </span><span class="decl"><span class="istickedoff">responseStanceToMarker HoldStance = Firm</span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="istickedoff">responseStanceToMarker OpenStance = Explore</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="istickedoff">responseStanceToMarker RedirectStance = Observe</span>
+<span class="lineno">   72 </span><span class="spaces"></span><span class="istickedoff">responseStanceToMarker AcknowledgeStance = Honest</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>strategyEpistemicFromDepth :: ResponseDepth -&gt; EpistemicStatus -&gt; EpistemicStatus
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">strategyEpistemicFromDepth depth current =</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">case depth of</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">DeepResp -&gt;</span>
+<span class="lineno">   78 </span><span class="spaces">      </span><span class="istickedoff">case current of</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">Known confidence -&gt;</span>
+<span class="lineno">   80 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Known</span></span>
+<span class="lineno">   81 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">(min strategyDeepKnownConfidenceCap (confidence + strategyDeepKnownConfidenceBoost))</span></span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">Probable confidence -&gt;</span>
+<span class="lineno">   83 </span><span class="spaces">          </span><span class="istickedoff">Known</span>
+<span class="lineno">   84 </span><span class="spaces">            </span><span class="istickedoff">(min strategyDeepProbableToKnownCap (confidence + strategyDeepProbableToKnownBoost))</span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff">Uncertain confidence -&gt;</span>
+<span class="lineno">   86 </span><span class="spaces">          </span><span class="istickedoff">Probable</span>
+<span class="lineno">   87 </span><span class="spaces">            </span><span class="istickedoff">(min strategyDeepUncertainToProbableCap (confidence + strategyDeepUncertainToProbableBoost))</span>
+<span class="lineno">   88 </span><span class="spaces">        </span><span class="istickedoff">Unknown confidence -&gt;</span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff">Uncertain</span>
+<span class="lineno">   90 </span><span class="spaces">            </span><span class="istickedoff">(min strategyDeepUnknownToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))</span>
+<span class="lineno">   91 </span><span class="spaces">        </span><span class="istickedoff">Speculative confidence -&gt;</span>
+<span class="lineno">   92 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Uncertain</span></span>
+<span class="lineno">   93 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">(min strategyDeepSpeculativeToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))</span></span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="istickedoff">ModerateResp -&gt; current</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">ShallowResp -&gt;</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">case current of</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff">Known confidence -&gt;</span>
+<span class="lineno">   98 </span><span class="spaces">          </span><span class="istickedoff">Probable</span>
+<span class="lineno">   99 </span><span class="spaces">            </span><span class="istickedoff">(max strategyShallowKnownToProbableFloor (confidence - strategyShallowKnownPenalty))</span>
+<span class="lineno">  100 </span><span class="spaces">        </span><span class="istickedoff">Probable confidence -&gt;</span>
+<span class="lineno">  101 </span><span class="spaces">          </span><span class="istickedoff">Uncertain</span>
+<span class="lineno">  102 </span><span class="spaces">            </span><span class="istickedoff">(max strategyShallowProbableToUncertainFloor (confidence - strategyShallowProbablePenalty))</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="istickedoff">other -&gt; <span class="nottickedoff">other</span></span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>strategyDepthLabel :: ResponseDepth -&gt; Text
+<span class="lineno">  106 </span><span class="decl"><span class="nottickedoff">strategyDepthLabel = depthModeText . strategyDepthMode</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>styleFromStrategy :: ResponseStrategy -&gt; RenderStyle
+<span class="lineno">  109 </span><span class="decl"><span class="istickedoff">styleFromStrategy strategy =</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">case (rsStance strategy, rsMove strategy, rsDepth strategy) of</span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">(HoldStance, _, _) -&gt; StyleFormal</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">(_, CounterMove, _) -&gt; StyleDirect</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">(_, _, DeepResp) -&gt; StylePoetic</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">(AcknowledgeStance, _, _) -&gt; <span class="nottickedoff">StyleWarm</span></span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; StyleStandard</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>styleFromPrincipled :: Maybe PrincipledMode -&gt; RenderStyle -&gt; RenderStyle
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">styleFromPrincipled mode fallback =</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">case mode of</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="istickedoff">Just HoldGround -&gt; StyleFormal</span>
+<span class="lineno">  121 </span><span class="spaces">    </span><span class="istickedoff">Just AcknowledgeAndHold -&gt; <span class="nottickedoff">StyleWarm</span></span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; fallback</span></span>
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>styleFromIdentity :: IdentitySignal -&gt; RenderStyle -&gt; RenderStyle
+<span class="lineno">  125 </span><span class="decl"><span class="istickedoff">styleFromIdentity identitySignal fallback =</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">case isEncounterMode identitySignal of</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">EncounterRecovery -&gt; <span class="nottickedoff">StyleWarm</span></span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">EncounterHolding -&gt; <span class="nottickedoff">StyleFormal</span></span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">EncounterPressure -&gt; <span class="nottickedoff">StyleDirect</span></span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; fallback</span></span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>styleFromSemantic :: SemanticInput -&gt; RenderStyle -&gt; RenderStyle
+<span class="lineno">  133 </span><span class="decl"><span class="istickedoff">styleFromSemantic semanticInput fallback =</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">case siNeedLayer semanticInput of</span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="istickedoff">ContactLayer -&gt; <span class="nottickedoff">StyleWarm</span></span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="istickedoff">MetaLayer -&gt; <span class="nottickedoff">StyleFormal</span></span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">ContentLayer -&gt; fallback</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>styleFromAnchor :: SemanticAnchor -&gt; RenderStyle -&gt; RenderStyle
+<span class="lineno">  140 </span><span class="decl"><span class="istickedoff">styleFromAnchor anchor fallback</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">| saDominantChannel anchor == ChannelContact = StyleWarm</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">saDominantChannel anchor == ChannelAnchor</span> = <span class="nottickedoff">StyleFormal</span></span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = fallback</span></span>
+
+</pre>
+</body>
+</html>

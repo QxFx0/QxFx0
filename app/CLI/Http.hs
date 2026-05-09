@@ -13,11 +13,12 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import System.Environment (getExecutablePath, lookupEnv)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist, getCurrentDirectory)
-import System.FilePath ((</>), normalise, splitDirectories, takeDirectory, takeFileName)
+import System.FilePath ((</>), normalise, takeDirectory, takeFileName)
 import System.Process (callProcess)
 import Text.Read (readMaybe)
 
 import Paths_qxfx0 (getDataFileName)
+import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(RuntimeInitError)
   , throwQxFx0
@@ -102,7 +103,7 @@ resolveExistingScript candidates = do
           ++ ". Set QXFX0_HTTP_RUNTIME to an explicit script path.")
     pick (path:rest) = do
       exists <- doesFileExist path
-      if exists then pure path else pick rest
+      if exists then validateAutoResolvedScriptPath path else pick rest
 
 eitherToMaybe :: Either a b -> Maybe b
 eitherToMaybe (Left _) = Nothing
@@ -124,6 +125,20 @@ validateExplicitScriptPath path = do
           throwRuntimeInit
             ("QXFX0_HTTP_RUNTIME points outside trusted roots: " ++ canonicalPath)
 
+validateAutoResolvedScriptPath :: FilePath -> IO FilePath
+validateAutoResolvedScriptPath path = do
+  exePath <- getExecutablePath
+  cwd <- getCurrentDirectory
+  canonicalPath <- canonicalizePath path
+  trustedRoots <- resolveTrustedScriptRoots exePath cwd
+  if any (`isPathWithin` canonicalPath) trustedRoots
+    then pure canonicalPath
+    else
+      throwRuntimeInit
+        ("auto-resolved http_runtime.py outside trusted roots: " ++ canonicalPath
+         ++ "; trusted roots: " ++ intercalate ", " trustedRoots
+         ++ ". Set QXFX0_HTTP_RUNTIME to an explicit script path.")
+
 resolveTrustedScriptRoots :: FilePath -> FilePath -> IO [FilePath]
 resolveTrustedScriptRoots exePath cwd = do
   let roots =
@@ -134,12 +149,6 @@ resolveTrustedScriptRoots exePath cwd = do
   existing <- filterM doesDirectoryExist roots
   canonical <- mapM canonicalizePath existing
   pure (L.nub canonical)
-
-isPathWithin :: FilePath -> FilePath -> Bool
-isPathWithin root candidate =
-  let rootParts = splitDirectories (normalise root)
-      pathParts = splitDirectories (normalise candidate)
-  in rootParts `L.isPrefixOf` pathParts
 
 throwRuntimeInit :: String -> IO a
 throwRuntimeInit = throwQxFx0 . RuntimeInitError . T.pack

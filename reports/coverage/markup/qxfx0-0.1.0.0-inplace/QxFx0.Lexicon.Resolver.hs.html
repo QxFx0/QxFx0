@@ -1,0 +1,102 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>{-| Lexeme candidate resolver policy: curated &gt; brain-kb-reviewed &gt; auto-verified &gt; auto-coverage,
+<span class="lineno">    5 </span>    exact match preferred, higher quality wins, dangerous ambiguity falls back.
+<span class="lineno">    6 </span>-}
+<span class="lineno">    7 </span>module QxFx0.Lexicon.Resolver
+<span class="lineno">    8 </span>  ( resolveLexemeForm
+<span class="lineno">    9 </span>  , resolveLexemeFormRawFallback
+<span class="lineno">   10 </span>  , tierPriority
+<span class="lineno">   11 </span>  ) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import Data.List (sortOn)
+<span class="lineno">   14 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import qualified Data.Text as T
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import QxFx0.Types.Domain.Atoms
+<span class="lineno">   19 </span>  ( LexemeForm(..)
+<span class="lineno">   20 </span>  , LexemeCase(..)
+<span class="lineno">   21 </span>  , LexemeNumber(..)
+<span class="lineno">   22 </span>  , SourceTier(..)
+<span class="lineno">   23 </span>  , MorphologyData(..)
+<span class="lineno">   24 </span>  )
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>tierPriority :: SourceTier -&gt; Int
+<span class="lineno">   27 </span><span class="decl"><span class="istickedoff">tierPriority CuratedTier = 4</span>
+<span class="lineno">   28 </span><span class="spaces"></span><span class="istickedoff">tierPriority BrainKbReviewedTier = 3</span>
+<span class="lineno">   29 </span><span class="spaces"></span><span class="istickedoff">tierPriority AutoVerifiedTier = 2</span>
+<span class="lineno">   30 </span><span class="spaces"></span><span class="istickedoff">tierPriority AutoCoverageTier = 1</span></span>
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>resolveLexemeForm
+<span class="lineno">   33 </span>  :: MorphologyData
+<span class="lineno">   34 </span>  -&gt; Text
+<span class="lineno">   35 </span>  -&gt; Maybe LexemeCase
+<span class="lineno">   36 </span>  -&gt; Maybe LexemeNumber
+<span class="lineno">   37 </span>  -&gt; Maybe LexemeForm
+<span class="lineno">   38 </span><span class="decl"><span class="istickedoff">resolveLexemeForm md surface mCase mNumber =</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">let lower = T.toLower surface</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">candidates = M.lookup lower (mdFormsBySurface md)</span>
+<span class="lineno">   41 </span><span class="spaces">  </span><span class="istickedoff">in case candidates of</span>
+<span class="lineno">   42 </span><span class="spaces">       </span><span class="istickedoff">Nothing -&gt; Nothing</span>
+<span class="lineno">   43 </span><span class="spaces">       </span><span class="istickedoff">Just forms -&gt;</span>
+<span class="lineno">   44 </span><span class="spaces">         </span><span class="istickedoff">let filtered = filterMatches mCase mNumber forms</span>
+<span class="lineno">   45 </span><span class="spaces">             </span><span class="istickedoff">ranked = sortOn rankingKey filtered</span>
+<span class="lineno">   46 </span><span class="spaces">         </span><span class="istickedoff">in pickUnambiguous ranked</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>filterMatches :: Maybe LexemeCase -&gt; Maybe LexemeNumber -&gt; [LexemeForm] -&gt; [LexemeForm]
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">filterMatches Nothing Nothing forms = forms</span>
+<span class="lineno">   50 </span><span class="spaces"></span><span class="istickedoff">filterMatches (Just c) Nothing forms = [f | f &lt;- forms, lfCase f == c]</span>
+<span class="lineno">   51 </span><span class="spaces"></span><span class="istickedoff">filterMatches Nothing (Just n) forms = <span class="nottickedoff">[f | f &lt;- forms, lfNumber f == n]</span></span>
+<span class="lineno">   52 </span><span class="spaces"></span><span class="istickedoff">filterMatches (Just c) (Just n) forms = [f | f &lt;- forms, lfCase f == c, <span class="tickonlytrue">lfNumber f == n</span>]</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>rankingKey :: LexemeForm -&gt; (Int, Double, Text)
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">rankingKey f =</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">( negate (tierPriority (lfTier f))</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">, negate (lfQuality f)</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">, lfLemma f</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">)</span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>-- | Pick the top candidate only if it is unambiguous at the tier level.
+<span class="lineno">   62 </span>-- If the top two candidates have the same tier and quality, treat as
+<span class="lineno">   63 </span>-- dangerous ambiguity and return Nothing (fallback to raw surface).
+<span class="lineno">   64 </span>pickUnambiguous :: [LexemeForm] -&gt; Maybe LexemeForm
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">pickUnambiguous [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   66 </span><span class="spaces"></span><span class="istickedoff">pickUnambiguous [f] = Just f</span>
+<span class="lineno">   67 </span><span class="spaces"></span><span class="istickedoff">pickUnambiguous (f1:f2:_)</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">| lfTier f1 == lfTier f2 &amp;&amp; lfQuality f1 == lfQuality f2 = Nothing</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Just f1</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>-- | Convenience: resolve and return the raw surface on failure.
+<span class="lineno">   72 </span>resolveLexemeFormRawFallback
+<span class="lineno">   73 </span>  :: MorphologyData
+<span class="lineno">   74 </span>  -&gt; Text
+<span class="lineno">   75 </span>  -&gt; Maybe LexemeCase
+<span class="lineno">   76 </span>  -&gt; Maybe LexemeNumber
+<span class="lineno">   77 </span>  -&gt; Text
+<span class="lineno">   78 </span><span class="decl"><span class="nottickedoff">resolveLexemeFormRawFallback md surface mCase mNumber =</span>
+<span class="lineno">   79 </span><span class="spaces">  </span><span class="nottickedoff">maybe surface lfSurface (resolveLexemeForm md surface mCase mNumber)</span></span>
+
+</pre>
+</body>
+</html>

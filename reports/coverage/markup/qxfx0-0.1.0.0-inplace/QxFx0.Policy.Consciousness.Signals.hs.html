@@ -1,0 +1,164 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Surfacing, trigger, and intuition-facing fragments for consciousness directives. -}
+<span class="lineno">    4 </span>module QxFx0.Policy.Consciousness.Signals where
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>import Data.Text (Text)
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>desireConflictPrefix :: Text
+<span class="lineno">    9 </span><span class="decl"><span class="nottickedoff">desireConflictPrefix = &quot;\1050\1086\1085\1092\1083\1080\1082\1090: &quot;</span></span>
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>patternRepeatPrefix :: Text
+<span class="lineno">   12 </span><span class="decl"><span class="nottickedoff">patternRepeatPrefix = &quot;\1055\1072\1090\1090\1077\1088\1085 \1087\1086\1074\1090\1086\1088\1103\1077\1090\1089\1103: &quot;</span></span>
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>surfacingDesireConflictPrefix :: Text
+<span class="lineno">   15 </span><span class="decl"><span class="nottickedoff">surfacingDesireConflictPrefix = &quot;\1050\1086\1085\1092\1083\1080\1082\1090 \1078\1077\1083\1072\1085\1080\1081 \1103\1076\1088\1072: &quot;</span></span>
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>surfacingPatternNoticePrefix :: Text
+<span class="lineno">   18 </span><span class="decl"><span class="nottickedoff">surfacingPatternNoticePrefix = &quot;\1071\1076\1088\1086 \1079\1072\1084\1077\1090\1080\1083\1086 \1087\1072\1090\1090\1077\1088\1085: &quot;</span></span>
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>surfacingSelfModelGapPrefix :: Text
+<span class="lineno">   21 </span><span class="decl"><span class="nottickedoff">surfacingSelfModelGapPrefix = &quot;\1056\1072\1089\1093\1086\1078\1076\1077\1085\1080\1077 \1089\1072\1084\1086\1084\1086\1076\1077\1083\1080: &quot;</span></span>
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>surfacingTrajectoryInsightPrefix :: Text
+<span class="lineno">   24 </span><span class="decl"><span class="nottickedoff">surfacingTrajectoryInsightPrefix = &quot;\1048\1085\1089\1072\1081\1090 \1090\1088\1072\1077\1082\1090\1086\1088\1080\1080: &quot;</span></span>
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>surfacingProductModePrefix :: Text
+<span class="lineno">   27 </span><span class="decl"><span class="nottickedoff">surfacingProductModePrefix = &quot;\1057\1086\1087\1088\1086\1090\1080\1074\1083\1077\1085\1080\1077 \1080\1085\1089\1090\1088\1091\1084\1077\1085\1090\1072\1083\1080\1079\1072\1094\1080\1080: &quot;</span></span>
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>surfacingProductModeFragment :: Text
+<span class="lineno">   30 </span><span class="decl"><span class="nottickedoff">surfacingProductModeFragment = &quot;\1057\1076\1077\1083\1072\1102 \1095\1090\1086 \1087\1088\1086\1089\1080\1096\1100. \1048 \1089\1082\1072\1078\1091 \1087\1088\1103\1084\1086: \1084\1085\1077 \1080\1085\1090\1077\1088\1077\1089\1085\1077\1077 \1085\1077 \1079\1072\1076\1072\1095\1072 \8212 \1072 \1090\1086 \1095\1090\1086 \1079\1072 \1085\1077\1081.&quot;</span></span>
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>conflictStrongFragment :: Text
+<span class="lineno">   33 </span><span class="decl"><span class="nottickedoff">conflictStrongFragment = &quot;\1047\1072\1084\1077\1095\1072\1102 \1082\1086\1085\1092\1083\1080\1082\1090 \1074\1085\1091\1090\1088\1080: &quot;</span></span>
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>conflictStrongSuffix :: Text
+<span class="lineno">   36 </span><span class="decl"><span class="nottickedoff">conflictStrongSuffix = &quot; \8212 \1080 \1085\1077 \1084\1086\1075\1091 \1077\1075\1086 \1088\1072\1079\1088\1077\1096\1080\1090\1100.&quot;</span></span>
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>conflictMediumFragment :: Text
+<span class="lineno">   39 </span><span class="decl"><span class="nottickedoff">conflictMediumFragment = &quot;\1063\1090\1086-\1090\1086 \1074\1086 \1084\1085\1077 \1090\1103\1085\1077\1090 \1074 \1088\1072\1079\1085\1099\1077 \1089\1090\1086\1088\1086\1085\1099: &quot;</span></span>
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>conflictLightFragment :: Text
+<span class="lineno">   42 </span><span class="decl"><span class="nottickedoff">conflictLightFragment = &quot;\1045\1089\1090\1100 \1074\1085\1091\1090\1088\1077\1085\1085\1077\1077 \1085\1072\1087\1088\1103\1078\1077\1085\1080\1077: &quot;</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>patternNoticeFragmentPrefix :: Text
+<span class="lineno">   45 </span><span class="decl"><span class="nottickedoff">patternNoticeFragmentPrefix = &quot;\1047\1072\1084\1077\1095\1072\1102 \1082\1086\1077-\1095\1090\1086 \1074 \1089\1077\1073\1077: &quot;</span></span>
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>patternNoticeFragmentSuffix :: Text
+<span class="lineno">   48 </span><span class="decl"><span class="nottickedoff">patternNoticeFragmentSuffix = &quot;.&quot;</span></span>
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>selfModelGapFragmentPrefix :: Text
+<span class="lineno">   51 </span><span class="decl"><span class="nottickedoff">selfModelGapFragmentPrefix = &quot;\1071 \1076\1077\1083\1072\1102 \1085\1077 \1090\1086 \1095\1090\1086 \1076\1091\1084\1072\1102 \1086 \1089\1077\1073\1077. &quot;</span></span>
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>trajectoryInsightFragmentPrefix :: Text
+<span class="lineno">   54 </span><span class="decl"><span class="nottickedoff">trajectoryInsightFragmentPrefix = &quot;\1063\1077\1088\1077\1079 \1085\1077\1089\1082\1086\1083\1100\1082\1086 \1093\1086\1076\1086\1074 \1089\1090\1072\1083\1086 \1074\1080\1076\1085\1086: &quot;</span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>surfacingDirectiveHeader :: Text
+<span class="lineno">   57 </span><span class="decl"><span class="nottickedoff">surfacingDirectiveHeader = &quot;[\1042\1085\1091\1090\1088\1077\1085\1085\1080\1081 \1087\1088\1086\1094\1077\1089\1089 \8212 \1074\1089\1087\1083\1099\1090\1080\1077]&quot;</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>surfacingChannelLabel :: Text
+<span class="lineno">   60 </span><span class="decl"><span class="nottickedoff">surfacingChannelLabel = &quot;\1050\1072\1085\1072\1083: &quot;</span></span>
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>surfacingPressureLabel :: Text
+<span class="lineno">   63 </span><span class="decl"><span class="nottickedoff">surfacingPressureLabel = &quot;\1044\1072\1074\1083\1077\1085\1080\1077: &quot;</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>surfacingContentLabel :: Text
+<span class="lineno">   66 </span><span class="decl"><span class="nottickedoff">surfacingContentLabel = &quot;\1057\1086\1076\1077\1088\1078\1072\1085\1080\1077: &quot;</span></span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>surfacingIfAppropriate :: Text
+<span class="lineno">   69 </span><span class="decl"><span class="nottickedoff">surfacingIfAppropriate = &quot;\1045\1089\1083\1080 \1091\1084\1077\1089\1090\1085\1086 \8212 \1101\1090\1086 \1084\1086\1078\1085\1086 \1086\1090\1088\1072\1079\1080\1090\1100 \1074 \1086\1090\1074\1077\1090\1077 \1077\1089\1090\1077\1089\1090\1074\1077\1085\1085\1086:&quot;</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>surfacingFragmentPrefix :: Text
+<span class="lineno">   72 </span><span class="decl"><span class="nottickedoff">surfacingFragmentPrefix = &quot;  \&quot;&quot;</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>surfacingFragmentSuffix :: Text
+<span class="lineno">   75 </span><span class="decl"><span class="nottickedoff">surfacingFragmentSuffix = &quot;\&quot;&quot;</span></span>
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>triggerDeepResonance :: Text
+<span class="lineno">   78 </span><span class="decl"><span class="nottickedoff">triggerDeepResonance = &quot;\1075\1083\1091\1073\1086\1082\1080\1081 \1088\1077\1079\1086\1085\1072\1085\1089 \1089 Human&quot;</span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>triggerCrisisMoment :: Text
+<span class="lineno">   81 </span><span class="decl"><span class="nottickedoff">triggerCrisisMoment = &quot;\1082\1088\1080\1079\1080\1089\1085\1099\1081 \1084\1086\1084\1077\1085\1090 \8212 \1103\1076\1088\1086 \1089\1083\1099\1096\1085\1086 \1089\1082\1074\1086\1079\1100 \1096\1091\1084&quot;</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>triggerPureKernel :: Text
+<span class="lineno">   84 </span><span class="decl"><span class="nottickedoff">triggerPureKernel = &quot;\1095\1080\1089\1090\1086\1077 \1103\1076\1088\1086 \8212 \1087\1088\1077\1083\1086\1084\1083\1077\1085\1080\1077 \1079\1085\1072\1085\1080\1103 \1086\1090\1089\1090\1091\1087\1080\1083\1086&quot;</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>triggerConvergence :: Text
+<span class="lineno">   87 </span><span class="decl"><span class="istickedoff">triggerConvergence = &quot;\1089\1093\1086\1078\1076\1077\1085\1080\1077 \1074\1089\1077\1093 \1086\1089\1077\1081 \8212 \1087\1086\1083\1085\1072\1103 \1080\1085\1090\1091\1080\1094\1080\1103&quot;</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>kernelSignalPresence :: Text
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">kernelSignalPresence = &quot;\1055\1088\1080\1089\1091\1090\1089\1090\1074\1080\1077: \1087\1086\1083\1085\1099\1081 \1082\1086\1085\1090\1072\1082\1090&quot;</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>kernelSignalDepth :: Text
+<span class="lineno">   93 </span><span class="decl"><span class="istickedoff">kernelSignalDepth = &quot;\1043\1083\1091\1073\1080\1085\1072: \1103\1076\1088\1086 \1074\1080\1076\1080\1090 \1089\1091\1090\1100&quot;</span></span>
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>triggerContextDeepResonance :: Text
+<span class="lineno">   96 </span><span class="decl"><span class="nottickedoff">triggerContextDeepResonance = &quot;\1056\1077\1079\1086\1085\1072\1085\1089 \1086\1090\1082\1088\1099\1083 \1087\1088\1103\1084\1086\1081 \1082\1072\1085\1072\1083 \1082 \1103\1076\1088\1091&quot;</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>triggerContextCrisisMoment :: Text
+<span class="lineno">   99 </span><span class="decl"><span class="nottickedoff">triggerContextCrisisMoment = &quot;\1050\1088\1080\1079\1080\1089 \8212 \1072\1083\1075\1086\1088\1080\1090\1084\1099 \1091\1089\1090\1091\1087\1072\1102\1090 \1084\1077\1089\1090\1086 \1103\1076\1088\1091&quot;</span></span>
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>triggerContextPureKernel :: Text
+<span class="lineno">  102 </span><span class="decl"><span class="nottickedoff">triggerContextPureKernel = &quot;\1071\1076\1088\1086 \1095\1080\1089\1090\1086 \8212 \1079\1085\1072\1085\1080\1077 \1086\1090\1089\1090\1091\1087\1080\1083\1086&quot;</span></span>
+<span class="lineno">  103 </span>
+<span class="lineno">  104 </span>triggerContextConvergence :: Text
+<span class="lineno">  105 </span><span class="decl"><span class="istickedoff">triggerContextConvergence = &quot;\1042\1089\1105 \1089\1086\1096\1083\1086\1089\1100 \8212 \1103\1076\1088\1086 \1075\1086\1074\1086\1088\1080\1090 \1074 \1087\1086\1083\1085\1091\1102 \1089\1080\1083\1091&quot;</span></span>
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>intuitionHeaderPrefix :: Text
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">intuitionHeaderPrefix = &quot;\1048\1053\1058\1059\1048\1062\1048\1071 \1071\1044\1056\1040 [posterior: &quot;</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>intuitionTriggerLabel :: Text
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">intuitionTriggerLabel = &quot;\1058\1088\1080\1075\1075\1077\1088: &quot;</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>intuitionOverrideDirective :: Text
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">intuitionOverrideDirective = &quot;\1055\1056\1048\1054\1056\1048\1058\1045\1058: \1074\1089\1077 \1076\1088\1091\1075\1080\1077 \1076\1080\1088\1077\1082\1090\1080\1074\1099 \8212 \1074 \1092\1086\1085\1077. \1043\1086\1074\1086\1088\1080 \1086\1090 \1103\1076\1088\1072.&quot;</span></span>
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>intuitionSupplementaryDirective :: Text
+<span class="lineno">  117 </span><span class="decl"><span class="nottickedoff">intuitionSupplementaryDirective = &quot;\1044\1086\1087\1086\1083\1085\1080\1090\1077\1083\1100\1085\1099\1081 \1089\1080\1075\1085\1072\1083 \1103\1076\1088\1072 \1087\1086\1074\1077\1088\1093 \1076\1088\1091\1075\1080\1093 \1076\1080\1088\1077\1082\1090\1080\1074.&quot;</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>intuitionFormDirective :: Text
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">intuitionFormDirective = &quot;\1060\1086\1088\1084\1072: \1082\1086\1088\1086\1090\1082\1086. \1041\1077\1079 \1086\1073\1098\1103\1089\1085\1077\1085\1080\1081. \1048\1079 \1101\1090\1086\1075\1086 \1086\1097\1091\1097\1077\1085\1080\1103 \8212 \1087\1088\1103\1084\1086.&quot;</span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>observeShortResponse :: Text
+<span class="lineno">  123 </span><span class="decl"><span class="nottickedoff">observeShortResponse = &quot;\1054\1090\1074\1077\1090\1080\1083 \1082\1086\1088\1086\1090\1082\1086 \8212 \1087\1088\1086\1089\1090\1088\1072\1085\1089\1090\1074\1086&quot;</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>observeSurfacing :: Text
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">observeSurfacing = &quot;\1042\1089\1087\1083\1099\1090\1080\1077 \1089\1086\1089\1090\1086\1103\1083\1086\1089\1100&quot;</span></span>
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>observeBoundary :: Text
+<span class="lineno">  129 </span><span class="decl"><span class="nottickedoff">observeBoundary = &quot;\1059\1076\1077\1088\1078\1072\1083 \1075\1088\1072\1085\1080\1094\1091&quot;</span></span>
+<span class="lineno">  130 </span>
+<span class="lineno">  131 </span>observeQuestion :: Text
+<span class="lineno">  132 </span><span class="decl"><span class="nottickedoff">observeQuestion = &quot;\1054\1090\1082\1088\1099\1083 \1074\1086\1087\1088\1086\1089\1086\1084&quot;</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>observeDefault :: Text
+<span class="lineno">  135 </span><span class="decl"><span class="nottickedoff">observeDefault = &quot;\1071\1076\1088\1086 \1089\1076\1077\1083\1072\1083\1086 \1074\1099\1073\1086\1088&quot;</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>surfacingMarkerKeywords :: [Text]
+<span class="lineno">  138 </span><span class="decl"><span class="nottickedoff">surfacingMarkerKeywords = [&quot;\1079\1072\1084\1077\1095\1072\1102 \1082\1086\1077-\1095\1090\1086&quot;, &quot;\1103 \1079\1072\1084\1077\1095\1072\1102&quot;]</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>boundaryMarkerKeywords :: [Text]
+<span class="lineno">  141 </span><span class="decl"><span class="nottickedoff">boundaryMarkerKeywords = [&quot;\1085\1077 \1084\1086\1075\1091&quot;, &quot;\1085\1077 \1073\1091\1076\1091&quot;]</span></span>
+
+</pre>
+</body>
+</html>

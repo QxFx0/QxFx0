@@ -1,0 +1,12 @@
+[1/4] PGF artifact ...
+  OK: 312662 bytes
+[2/4] No template collapse strings in GF concrete ...
+  OK: no template markers in concrete syntax
+[3/4] Core-family lexicon coverage in GF ...
+  OK: all core topics present
+[4/4] GF round-trip via fast test suite ... SKIP (set QXFX0_GF_FAST_TEST=1 to enable)
+
+=== GF Quality Gate Summary ===
+  Errors:   0
+  Warnings: 0
+  VERDICT: PASS

@@ -1,0 +1,122 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>{-| Per-session critical section registry for serializing concurrent turn execution. -}
+<span class="lineno">    4 </span>module QxFx0.Core.SessionLock
+<span class="lineno">    5 </span>  ( SessionLockManager
+<span class="lineno">    6 </span>  , SessionLockStats(..)
+<span class="lineno">    7 </span>  , newSessionLockManager
+<span class="lineno">    8 </span>  , withSessionLock
+<span class="lineno">    9 </span>  , sessionLockStats
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import Control.Concurrent.MVar (MVar, newMVar, withMVar)
+<span class="lineno">   13 </span>import Control.Concurrent.STM (TVar, atomically, newTVarIO, readTVar, modifyTVar')
+<span class="lineno">   14 </span>import Data.Map.Strict (Map)
+<span class="lineno">   15 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">   16 </span>import Data.Text (Text)
+<span class="lineno">   17 </span>import qualified Data.Text as T
+<span class="lineno">   18 </span>import System.Environment (lookupEnv)
+<span class="lineno">   19 </span>import System.IO (hPutStrLn, stderr)
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>data SessionLockManager = SessionLockManager
+<span class="lineno">   22 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">slmLocks</span></span></span> :: !(TVar (Map Text (MVar ())))
+<span class="lineno">   23 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">slmOverflowLock</span></span></span> :: !(MVar ())
+<span class="lineno">   24 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">slmMaxTrackedLocks</span></span></span> :: !Int
+<span class="lineno">   25 </span>  }
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>data SessionLockStats = SessionLockStats
+<span class="lineno">   28 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">slsTrackedLocks</span></span></span> :: !Int
+<span class="lineno">   29 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">slsMaxTrackedLocks</span></span></span> :: !Int
+<span class="lineno">   30 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">slsOverflowActive</span></span></span> :: !Bool
+<span class="lineno">   31 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>newSessionLockManager :: IO SessionLockManager
+<span class="lineno">   34 </span><span class="decl"><span class="istickedoff">newSessionLockManager = do</span>
+<span class="lineno">   35 </span><span class="spaces">  </span><span class="istickedoff">locks &lt;- newTVarIO Map.empty</span>
+<span class="lineno">   36 </span><span class="spaces">  </span><span class="istickedoff">overflowLock &lt;- newMVar <span class="nottickedoff">()</span></span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">cap &lt;- resolveMaxTrackedLocks</span>
+<span class="lineno">   38 </span><span class="spaces">  </span><span class="istickedoff">pure SessionLockManager</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">{ slmLocks = locks</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">, slmOverflowLock = overflowLock</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">, slmMaxTrackedLocks = cap</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>resolveMaxTrackedLocks :: IO Int
+<span class="lineno">   45 </span><span class="decl"><span class="istickedoff">resolveMaxTrackedLocks = do</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">mEnv &lt;- lookupEnv &quot;QXFX0_MAX_SESSION_LOCKS&quot;</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">case mEnv of</span>
+<span class="lineno">   48 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; pure defaultMaxTrackedLocks</span>
+<span class="lineno">   49 </span><span class="spaces">    </span><span class="istickedoff">Just raw -&gt;</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">case reads raw of</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="istickedoff">[(n, &quot;&quot;)] | <span class="tickonlytrue">n &gt; 0</span> -&gt; pure n</span>
+<span class="lineno">   52 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">   53 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn stderr $ &quot;QXFX0_MAX_SESSION_LOCKS invalid (&quot; &lt;&gt; raw &lt;&gt; &quot;), using default &quot; &lt;&gt; show defaultMaxTrackedLocks</span></span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure defaultMaxTrackedLocks</span></span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>defaultMaxTrackedLocks :: Int
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">defaultMaxTrackedLocks = 4096</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>withSessionLock :: SessionLockManager -&gt; Text -&gt; IO a -&gt; IO a
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">withSessionLock mgr sessionId action = do</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">lock &lt;- getOrCreateLock mgr sessionId</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">withMVar lock (\_ -&gt; action)</span></span>
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>sessionLockStats :: SessionLockManager -&gt; IO SessionLockStats
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">sessionLockStats mgr = atomically $ do</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">locks &lt;- readTVar (slmLocks mgr)</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">let tracked = Map.size locks</span>
+<span class="lineno">   68 </span><span class="spaces">      </span><span class="istickedoff">maxTracked = slmMaxTrackedLocks mgr</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">pure</span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">SessionLockStats</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">{ slsTrackedLocks = tracked</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">, slsMaxTrackedLocks = maxTracked</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">, slsOverflowActive = tracked &gt;= maxTracked</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>getOrCreateLock :: SessionLockManager -&gt; Text -&gt; IO (MVar ())
+<span class="lineno">   77 </span><span class="decl"><span class="istickedoff">getOrCreateLock mgr sessionId = do</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">mExisting &lt;- atomically $ do</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">locks &lt;- readTVar (slmLocks mgr)</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">pure $ Map.lookup sessionId locks</span>
+<span class="lineno">   81 </span><span class="spaces">  </span><span class="istickedoff">case mExisting of</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">Just lock -&gt; pure lock</span>
+<span class="lineno">   83 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; do</span>
+<span class="lineno">   84 </span><span class="spaces">      </span><span class="istickedoff">newLock &lt;- newMVar <span class="nottickedoff">()</span></span>
+<span class="lineno">   85 </span><span class="spaces">      </span><span class="istickedoff">result &lt;- atomically $ do</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">locks &lt;- readTVar (slmLocks mgr)</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">case Map.lookup sessionId locks of</span>
+<span class="lineno">   88 </span><span class="spaces">          </span><span class="istickedoff">Just existing -&gt; <span class="nottickedoff">pure (Right existing)</span></span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   90 </span><span class="spaces">            </span><span class="istickedoff">if Map.size locks &gt;= slmMaxTrackedLocks mgr</span>
+<span class="lineno">   91 </span><span class="spaces">              </span><span class="istickedoff">then pure (Left (Map.size locks))</span>
+<span class="lineno">   92 </span><span class="spaces">              </span><span class="istickedoff">else do</span>
+<span class="lineno">   93 </span><span class="spaces">                </span><span class="istickedoff">modifyTVar' (slmLocks mgr) (Map.insert sessionId newLock)</span>
+<span class="lineno">   94 </span><span class="spaces">                </span><span class="istickedoff">pure (Right newLock)</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">case result of</span>
+<span class="lineno">   96 </span><span class="spaces">        </span><span class="istickedoff">Right lock -&gt; pure lock</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff">Left tracked -&gt; do</span>
+<span class="lineno">   98 </span><span class="spaces">          </span><span class="istickedoff">hPutStrLn stderr $ &quot;session_lock_overflow: session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; tracked=&quot; &lt;&gt; show tracked &lt;&gt; &quot; cap=&quot; &lt;&gt; show (slmMaxTrackedLocks mgr)</span>
+<span class="lineno">   99 </span><span class="spaces">          </span><span class="istickedoff">pure (slmOverflowLock mgr)</span></span>
+
+</pre>
+</body>
+</html>

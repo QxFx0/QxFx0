@@ -8,6 +8,7 @@ module QxFx0.Bridge.AgdaWitness
   , resolveAgdaWitnessPath
   , readAgdaWitnessReport
   , writeAgdaWitness
+  , writeStubAgdaWitness
   , verifyAgdaWitnessFresh
   ) where
 
@@ -80,6 +81,13 @@ writeAgdaWitness = do
       pure witnessPath
     other ->
       throwQxFx0 (RuntimeInitError ("Cannot write Agda witness: " <> T.pack (renderAgdaFailure other)))
+
+writeStubAgdaWitness :: FilePath -> IO ()
+writeStubAgdaWitness witnessPath = do
+  paths <- resolveResourcePaths
+  hashes <- currentWitnessHashes paths
+  createDirectoryIfMissing True (takeDirectory witnessPath)
+  BL.writeFile witnessPath (encode AgdaWitness { awVersion = witnessVersion, awFiles = hashes })
 
 verifyAgdaWitnessFresh :: IO Bool
 verifyAgdaWitnessFresh = awrFresh <$> readAgdaWitnessReport
@@ -223,4 +231,4 @@ renderAgdaFailure (AgdaNotAvailable detail) = T.unpack detail
 renderAgdaFailure (AgdaSnapshotMismatch mismatches) =
   "snapshot mismatch: "
     <> T.unpack
-      (T.intercalate "; " [T.pack (show fam) <> " -> " <> detail | (fam, detail) <- mismatches])
+      (T.intercalate "; " [fam <> " -> " <> detail | (fam, detail) <- mismatches])

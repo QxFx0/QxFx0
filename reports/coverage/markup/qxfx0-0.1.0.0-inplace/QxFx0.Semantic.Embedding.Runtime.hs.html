@@ -1,0 +1,212 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE TypeApplications #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Runtime embedding selection, health checks, and remote fetch logic. -}
+<span class="lineno">    5 </span>module QxFx0.Semantic.Embedding.Runtime
+<span class="lineno">    6 </span>  ( textToEmbedding
+<span class="lineno">    7 </span>  , textToEmbeddingResult
+<span class="lineno">    8 </span>  , checkApiHealth
+<span class="lineno">    9 </span>  , checkEmbeddingHealth
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import Control.Concurrent.MVar (modifyMVar)
+<span class="lineno">   13 </span>import Control.Exception (try)
+<span class="lineno">   14 </span>import Data.Char (toLower)
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import qualified Data.Aeson as Aeson
+<span class="lineno">   17 </span>import qualified Data.Aeson.Types as Aeson
+<span class="lineno">   18 </span>import qualified Data.ByteString.Char8 as B8
+<span class="lineno">   19 </span>import qualified Data.Text as T
+<span class="lineno">   20 </span>import Data.Time.Clock (diffUTCTime, getCurrentTime)
+<span class="lineno">   21 </span>import qualified Data.Vector as V
+<span class="lineno">   22 </span>import Network.HTTP.Client (HttpException, ResponseTimeout)
+<span class="lineno">   23 </span>import qualified Network.HTTP.Client as HTTPClient
+<span class="lineno">   24 </span>import qualified Network.HTTP.Simple as HTTP
+<span class="lineno">   25 </span>import QxFx0.Semantic.Embedding.Fallback (fallbackEmbedding)
+<span class="lineno">   26 </span>import QxFx0.Semantic.Embedding.Support (embeddingDim)
+<span class="lineno">   27 </span>import QxFx0.Semantic.Embedding.Types
+<span class="lineno">   28 </span>import System.Environment (lookupEnv)
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>data EmbeddingSelection = EmbeddingSelection !EmbeddingBackend !Bool !(Maybe String)
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>checkApiHealth :: APIHealthCache -&gt; IO Bool
+<span class="lineno">   33 </span><span class="decl"><span class="istickedoff">checkApiHealth cache = ehOperational &lt;$&gt; checkEmbeddingHealth <span class="nottickedoff">cache</span></span></span>
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>checkEmbeddingHealth :: APIHealthCache -&gt; IO EmbeddingHealth
+<span class="lineno">   36 </span><span class="decl"><span class="istickedoff">checkEmbeddingHealth cache = do</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">selection &lt;- resolveEmbeddingSelection</span>
+<span class="lineno">   38 </span><span class="spaces">  </span><span class="istickedoff">case selection of</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">EmbeddingSelection EmbeddingBackendLocalDeterministic explicit _ -&gt;</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">pure EmbeddingHealth</span>
+<span class="lineno">   41 </span><span class="spaces">        </span><span class="istickedoff">{ ehBackend = EmbeddingBackendLocalDeterministic</span>
+<span class="lineno">   42 </span><span class="spaces">        </span><span class="istickedoff">, ehQuality = EmbeddingQualityHeuristic</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="istickedoff">, ehExplicit = explicit</span>
+<span class="lineno">   44 </span><span class="spaces">        </span><span class="istickedoff">, ehOperational = True</span>
+<span class="lineno">   45 </span><span class="spaces">        </span><span class="istickedoff">, ehStrictReady = True</span>
+<span class="lineno">   46 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="istickedoff">EmbeddingSelection EmbeddingBackendRemoteHTTP explicit mUrl -&gt;</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff">case mUrl of</span>
+<span class="lineno">   49 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   50 </span><span class="spaces">          </span><span class="istickedoff">pure EmbeddingHealth</span>
+<span class="lineno">   51 </span><span class="spaces">            </span><span class="istickedoff">{ ehBackend = EmbeddingBackendRemoteHTTP</span>
+<span class="lineno">   52 </span><span class="spaces">            </span><span class="istickedoff">, ehQuality = EmbeddingQualityModeled</span>
+<span class="lineno">   53 </span><span class="spaces">            </span><span class="istickedoff">, ehExplicit = explicit</span>
+<span class="lineno">   54 </span><span class="spaces">            </span><span class="istickedoff">, ehOperational = False</span>
+<span class="lineno">   55 </span><span class="spaces">            </span><span class="istickedoff">, ehStrictReady = False</span>
+<span class="lineno">   56 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">   57 </span><span class="spaces">        </span><span class="istickedoff">Just url -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">   58 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">operational &lt;- cachedRemoteHealth cache url</span></span>
+<span class="lineno">   59 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure EmbeddingHealth</span></span>
+<span class="lineno">   60 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">{ ehBackend = EmbeddingBackendRemoteHTTP</span></span>
+<span class="lineno">   61 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, ehQuality = EmbeddingQualityModeled</span></span>
+<span class="lineno">   62 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, ehExplicit = explicit</span></span>
+<span class="lineno">   63 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, ehOperational = operational</span></span>
+<span class="lineno">   64 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, ehStrictReady = explicit &amp;&amp; operational</span></span>
+<span class="lineno">   65 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>textToEmbedding :: String -&gt; IO Embedding
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">textToEmbedding input = erEmbedding &lt;$&gt; textToEmbeddingResult input</span></span>
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>textToEmbeddingResult :: String -&gt; IO EmbeddingResult
+<span class="lineno">   71 </span><span class="decl"><span class="istickedoff">textToEmbeddingResult input = do</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">selection &lt;- resolveEmbeddingSelection</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">case selection of</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="istickedoff">EmbeddingSelection EmbeddingBackendLocalDeterministic explicit _ -&gt;</span>
+<span class="lineno">   75 </span><span class="spaces">      </span><span class="istickedoff">pure EmbeddingResult</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="istickedoff">{ erEmbedding = fallbackEmbedding input</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">, erSource = if explicit then EmbeddingLocalDeterministic else EmbeddingLocalImplicit</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">EmbeddingSelection EmbeddingBackendRemoteHTTP _ (Just url) -&gt;</span>
+<span class="lineno">   80 </span><span class="spaces">      </span><span class="istickedoff">tryRemote url input</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">EmbeddingSelection EmbeddingBackendRemoteHTTP _ Nothing -&gt;</span>
+<span class="lineno">   82 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure EmbeddingResult</span></span>
+<span class="lineno">   83 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">{ erEmbedding = fallbackEmbedding input</span></span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, erSource = EmbeddingRemoteFailureLocalFallback</span></span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   87 </span><span class="spaces">    </span><span class="istickedoff">tryRemote url txt = do</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">res &lt;- fetchRemoteEmbedding url <span class="nottickedoff">txt</span></span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">case res of</span>
+<span class="lineno">   90 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt;</span>
+<span class="lineno">   91 </span><span class="spaces">          </span><span class="istickedoff">pure EmbeddingResult</span>
+<span class="lineno">   92 </span><span class="spaces">            </span><span class="istickedoff">{ erEmbedding = fallbackEmbedding txt</span>
+<span class="lineno">   93 </span><span class="spaces">            </span><span class="istickedoff">, erSource = EmbeddingRemoteFailureLocalFallback</span>
+<span class="lineno">   94 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">Right embedding -&gt;</span>
+<span class="lineno">   96 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure EmbeddingResult</span></span>
+<span class="lineno">   97 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">{ erEmbedding = embedding</span></span>
+<span class="lineno">   98 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, erSource = EmbeddingRemote</span></span>
+<span class="lineno">   99 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>resolveEmbeddingSelection :: IO EmbeddingSelection
+<span class="lineno">  102 </span><span class="decl"><span class="istickedoff">resolveEmbeddingSelection = do</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">mBackend &lt;- fmap normalizeBackend &lt;$&gt; lookupEnv &quot;QXFX0_EMBEDDING_BACKEND&quot;</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">mUrl &lt;- lookupEnv &quot;EMBEDDING_API_URL&quot;</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">pure $</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">case mBackend of</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">Just &quot;local&quot; -&gt; <span class="nottickedoff">EmbeddingSelection EmbeddingBackendLocalDeterministic True Nothing</span></span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">Just &quot;local-deterministic&quot; -&gt; EmbeddingSelection EmbeddingBackendLocalDeterministic True Nothing</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">Just &quot;remote&quot; -&gt; <span class="nottickedoff">EmbeddingSelection EmbeddingBackendRemoteHTTP True mUrl</span></span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">Just &quot;remote-http&quot; -&gt; EmbeddingSelection EmbeddingBackendRemoteHTTP True mUrl</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">_ -&gt; EmbeddingSelection EmbeddingBackendLocalDeterministic False Nothing</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">normalizeBackend = map toLower</span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>cachedRemoteHealth :: APIHealthCache -&gt; String -&gt; IO Bool
+<span class="lineno">  116 </span><span class="decl"><span class="nottickedoff">cachedRemoteHealth cache url = do</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="nottickedoff">now &lt;- getCurrentTime</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="nottickedoff">modifyMVar cache $ \mCache -&gt;</span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="nottickedoff">case mCache of</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="nottickedoff">Just (ts, status) | diffUTCTime now ts &lt; 60 -&gt; pure (mCache, status)</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="nottickedoff">status &lt;- performRealHealthCheck url</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="nottickedoff">pure (Just (now, status), status)</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>performRealHealthCheck :: String -&gt; IO Bool
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">performRealHealthCheck url =</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="nottickedoff">either (const False) (const True)</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">&lt;$&gt; fetchRemoteEmbeddingWithTimeout (HTTPClient.responseTimeoutMicro 2000000) url &quot;healthcheck&quot;</span></span>
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>fetchRemoteEmbedding :: String -&gt; String -&gt; IO (Either Text Embedding)
+<span class="lineno">  131 </span><span class="decl"><span class="istickedoff">fetchRemoteEmbedding =</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">fetchRemoteEmbeddingWithTimeout (HTTPClient.responseTimeoutMicro 5000000)</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>fetchRemoteEmbeddingWithTimeout :: ResponseTimeout -&gt; String -&gt; String -&gt; IO (Either Text Embedding)
+<span class="lineno">  135 </span><span class="decl"><span class="istickedoff">fetchRemoteEmbeddingWithTimeout timeout url txt = do</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">requestResult &lt;- try @HttpException (HTTP.parseRequest url)</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">case requestResult of</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">pure (Left (&quot;invalid embedding url: &quot; &lt;&gt; showText err))</span></span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">Right baseRequest -&gt; do</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">let request =</span>
+<span class="lineno">  141 </span><span class="spaces">            </span><span class="istickedoff">HTTP.setRequestIgnoreStatus $</span>
+<span class="lineno">  142 </span><span class="spaces">              </span><span class="istickedoff">HTTP.setRequestResponseTimeout timeout $</span>
+<span class="lineno">  143 </span><span class="spaces">                </span><span class="istickedoff">HTTP.setRequestBodyJSON <span class="nottickedoff">(Aeson.object [&quot;model&quot; Aeson..= (&quot;all-minilm&quot; :: String), &quot;prompt&quot; Aeson..= txt])</span> $</span>
+<span class="lineno">  144 </span><span class="spaces">                  </span><span class="istickedoff">HTTP.setRequestMethod <span class="nottickedoff">&quot;POST&quot;</span> baseRequest</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">responseResult &lt;- try @HttpException (HTTP.httpBS request)</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">case responseResult of</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; pure (Left <span class="nottickedoff">(&quot;embedding request failed: &quot; &lt;&gt; showText err)</span>)</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">Right response</span>
+<span class="lineno">  149 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">not (successfulStatus response)</span> -&gt;</span>
+<span class="lineno">  150 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">pure (Left (&quot;unexpected embedding status: &quot; &lt;&gt; showText (HTTP.getResponseStatusCode response)))</span></span>
+<span class="lineno">  151 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">not (jsonContentType response)</span> -&gt;</span>
+<span class="lineno">  152 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">pure (Left (&quot;unexpected embedding content-type: &quot; &lt;&gt; renderContentTypes response))</span></span>
+<span class="lineno">  153 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt;</span>
+<span class="lineno">  154 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">pure (parseEmbeddingResponse (HTTP.getResponseBody response))</span></span></span>
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span>successfulStatus :: HTTP.Response a -&gt; Bool
+<span class="lineno">  157 </span><span class="decl"><span class="nottickedoff">successfulStatus response =</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="nottickedoff">let code = HTTP.getResponseStatusCode response</span>
+<span class="lineno">  159 </span><span class="spaces">   </span><span class="nottickedoff">in code &gt;= 200 &amp;&amp; code &lt; 300</span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>jsonContentType :: HTTP.Response a -&gt; Bool
+<span class="lineno">  162 </span><span class="decl"><span class="nottickedoff">jsonContentType response =</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="nottickedoff">any isJsonHeader (HTTP.getResponseHeader &quot;Content-Type&quot; response)</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="nottickedoff">isJsonHeader raw =</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="nottickedoff">let lowered = B8.map toLower raw</span>
+<span class="lineno">  167 </span><span class="spaces">       </span><span class="nottickedoff">in &quot;application/json&quot; `B8.isPrefixOf` B8.dropWhile (== ' ') lowered</span></span>
+<span class="lineno">  168 </span>
+<span class="lineno">  169 </span>renderContentTypes :: HTTP.Response a -&gt; Text
+<span class="lineno">  170 </span><span class="decl"><span class="nottickedoff">renderContentTypes response =</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="nottickedoff">case HTTP.getResponseHeader &quot;Content-Type&quot; response of</span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="nottickedoff">[] -&gt; &quot;&lt;missing&gt;&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">    </span><span class="nottickedoff">headers -&gt; T.intercalate &quot;, &quot; (map (T.pack . B8.unpack) headers)</span></span>
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>parseEmbeddingResponse :: B8.ByteString -&gt; Either Text Embedding
+<span class="lineno">  176 </span><span class="decl"><span class="nottickedoff">parseEmbeddingResponse body = do</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="nottickedoff">value &lt;- case Aeson.eitherDecodeStrict' body of</span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="nottickedoff">Left err -&gt; Left (&quot;invalid embedding json: &quot; &lt;&gt; showText err)</span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="nottickedoff">Right parsed -&gt; Right parsed</span>
+<span class="lineno">  180 </span><span class="spaces">  </span><span class="nottickedoff">case Aeson.parseMaybe (Aeson.withObject &quot;resp&quot; (Aeson..: &quot;embedding&quot;)) value of</span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="nottickedoff">Just list -&gt;</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="nottickedoff">let vec = V.fromList list</span>
+<span class="lineno">  183 </span><span class="spaces">       </span><span class="nottickedoff">in if V.length vec == embeddingDim</span>
+<span class="lineno">  184 </span><span class="spaces">            </span><span class="nottickedoff">then Right vec</span>
+<span class="lineno">  185 </span><span class="spaces">            </span><span class="nottickedoff">else Left (&quot;unexpected embedding dimension: expected &quot; &lt;&gt; showText embeddingDim &lt;&gt; &quot;, got &quot; &lt;&gt; showText (V.length vec))</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; Left &quot;invalid embedding format&quot;</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>showText :: Show a =&gt; a -&gt; Text
+<span class="lineno">  189 </span><span class="decl"><span class="nottickedoff">showText = T.pack . show</span></span>
+
+</pre>
+</body>
+</html>

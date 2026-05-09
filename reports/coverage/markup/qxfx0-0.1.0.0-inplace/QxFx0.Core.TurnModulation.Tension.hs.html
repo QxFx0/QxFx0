@@ -1,0 +1,58 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Tension delta estimation from lexical distress/negative markers. -}
+<span class="lineno">    5 </span>module QxFx0.Core.TurnModulation.Tension
+<span class="lineno">    6 </span>  ( computeTensionDelta
+<span class="lineno">    7 </span>  ) where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>import Data.Text (Text)
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import QxFx0.Core.Policy.ParserKeywords
+<span class="lineno">   12 </span>  ( tensionDistressKeywords
+<span class="lineno">   13 </span>  , tensionNegativeKeywords
+<span class="lineno">   14 </span>  )
+<span class="lineno">   15 </span>import QxFx0.Core.Semantic.KeywordMatch
+<span class="lineno">   16 </span>  ( containsAnyKeywordPhrase
+<span class="lineno">   17 </span>  , tokenizeKeywordText
+<span class="lineno">   18 </span>  )
+<span class="lineno">   19 </span>import QxFx0.Types
+<span class="lineno">   20 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   21 </span>  ( tensionDistressDelta
+<span class="lineno">   22 </span>  , tensionEgoCarryFactor
+<span class="lineno">   23 </span>  , tensionNegativeDelta
+<span class="lineno">   24 </span>  )
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>computeTensionDelta :: Text -&gt; SystemState -&gt; Double
+<span class="lineno">   27 </span><span class="decl"><span class="istickedoff">computeTensionDelta rawText systemState =</span>
+<span class="lineno">   28 </span><span class="spaces">  </span><span class="istickedoff">let tokens = tokenizeKeywordText rawText</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">hasNegative = containsAnyKeywordPhrase tokens tensionNegativeKeywords</span>
+<span class="lineno">   30 </span><span class="spaces">      </span><span class="istickedoff">hasDistress = containsAnyKeywordPhrase tokens tensionDistressKeywords</span>
+<span class="lineno">   31 </span><span class="spaces">      </span><span class="istickedoff">baseDelta =</span>
+<span class="lineno">   32 </span><span class="spaces">        </span><span class="istickedoff">if hasNegative</span>
+<span class="lineno">   33 </span><span class="spaces">          </span><span class="istickedoff">then tensionNegativeDelta</span>
+<span class="lineno">   34 </span><span class="spaces">          </span><span class="istickedoff">else if hasDistress then tensionDistressDelta else 0.0</span>
+<span class="lineno">   35 </span><span class="spaces">   </span><span class="istickedoff">in baseDelta + egoTension (ssEgo systemState) * tensionEgoCarryFactor</span></span>
+
+</pre>
+</body>
+</html>

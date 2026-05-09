@@ -6,6 +6,7 @@ module QxFx0.Bridge.NixGuard
   , getNixGuardStatus
   , nixStringLiteral
   , isSafeChar
+  , normalizeConceptKey
   ) where
 
 import QxFx0.Types (NixGuardStatus(..))
@@ -20,7 +21,7 @@ import Data.Char (isAlphaNum, isAscii, isLetter)
 import Data.Maybe (isJust)
 
 isSafeChar :: Char -> Bool
-isSafeChar c = isAscii c && (isAlphaNum c || c == '-' || c == '_' || c == '/')
+isSafeChar c = isAscii c && (isAlphaNum c || c == '-' || c == '_')
            || (not (isAscii c) && isLetter c)
 
 nixStringLiteral :: Text -> Text
@@ -49,8 +50,8 @@ checkConstitution nixPath concept agency tension =
       let nixExpr = "let agency = " <> T.pack (show agency)
                    <> "; tension = " <> T.pack (show tension)
                    <> "; data = import " <> nixStringLiteral (T.pack nixPath)
-                   <> "; key = " <> nixStringLiteral conceptKey
-                   <> "; match = builtins.filter (c: c.name == key) data.concepts;"
+                    <> "; key = " <> nixStringLiteral conceptKey
+                    <> "; match = builtins.filter (c: builtins.toLower c.name == builtins.toLower key) data.concepts;"
                    <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
                    <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
                    <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"

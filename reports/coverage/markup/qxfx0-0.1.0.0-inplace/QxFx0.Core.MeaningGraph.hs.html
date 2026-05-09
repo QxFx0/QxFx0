@@ -1,0 +1,183 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
+<span class="lineno">    2 </span>{-| Transition graph for response strategy reuse and dream-cycle rewiring. -}
+<span class="lineno">    3 </span>module QxFx0.Core.MeaningGraph
+<span class="lineno">    4 </span>  ( ResonanceBand(..)
+<span class="lineno">    5 </span>  , PressureBand(..)
+<span class="lineno">    6 </span>  , DepthBand(..)
+<span class="lineno">    7 </span>  , DensityBand(..)
+<span class="lineno">    8 </span>  , MeaningState(..)
+<span class="lineno">    9 </span>  , MeaningStateId
+<span class="lineno">   10 </span>  , meaningStateId
+<span class="lineno">   11 </span>  , toDepthBand
+<span class="lineno">   12 </span>  , ResponseDepth(..)
+<span class="lineno">   13 </span>  , ResponseStance(..)
+<span class="lineno">   14 </span>  , ConvMove(..)
+<span class="lineno">   15 </span>  , ResponseStrategy(..)
+<span class="lineno">   16 </span>  , MeaningEdge(..)
+<span class="lineno">   17 </span>  , MeaningGraph(..)
+<span class="lineno">   18 </span>  , emptyMeaningGraph
+<span class="lineno">   19 </span>  , recordTransition
+<span class="lineno">   20 </span>  , predictStrategy
+<span class="lineno">   21 </span>  , rewireMeaningGraphForDreamCycle
+<span class="lineno">   22 </span>  , successRate
+<span class="lineno">   23 </span>  , defaultStrategy
+<span class="lineno">   24 </span>  , graphStats
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import Data.List (find)
+<span class="lineno">   28 </span>import Data.Text (Text)
+<span class="lineno">   29 </span>import qualified Data.Text as T
+<span class="lineno">   30 </span>import Data.Time (UTCTime)
+<span class="lineno">   31 </span>import QxFx0.Types
+<span class="lineno">   32 </span>  ( ConvMove(..)
+<span class="lineno">   33 </span>  , DensityBand(..)
+<span class="lineno">   34 </span>  , DepthBand(..)
+<span class="lineno">   35 </span>  , MeaningEdge(..)
+<span class="lineno">   36 </span>  , MeaningGraph(..)
+<span class="lineno">   37 </span>  , MeaningState(..)
+<span class="lineno">   38 </span>  , MeaningStateId
+<span class="lineno">   39 </span>  , PressureBand(..)
+<span class="lineno">   40 </span>  , ResonanceBand(..)
+<span class="lineno">   41 </span>  , ResponseDepth(..)
+<span class="lineno">   42 </span>  , ResponseStance(..)
+<span class="lineno">   43 </span>  , ResponseStrategy(..)
+<span class="lineno">   44 </span>  )
+<span class="lineno">   45 </span>import QxFx0.Types.Text (textShow)
+<span class="lineno">   46 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   47 </span>  ( meaningGraphDreamBiasLimit
+<span class="lineno">   48 </span>  , meaningGraphRoutingThreshold
+<span class="lineno">   49 </span>  )
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>-- | Stable identifier for a meaning state used as graph node key.
+<span class="lineno">   52 </span>meaningStateId :: MeaningState -&gt; MeaningStateId
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">meaningStateId ms = concat</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">[ show (msResonance ms), &quot;_&quot;</span>
+<span class="lineno">   55 </span><span class="spaces">  </span><span class="istickedoff">, show (msPressure ms), &quot;_&quot;</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">, show (msDepth ms)</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>toDepthBand :: Int -&gt; DepthBand
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">toDepthBand d</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">d &lt;= 1</span>    = DepthShallow</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">d == 2</span>    = <span class="nottickedoff">DepthMech</span></span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">d == 3</span>    = <span class="nottickedoff">DepthPattern</span></span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">DepthAxiom</span></span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>emptyMeaningGraph :: MeaningGraph
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">emptyMeaningGraph = MeaningGraph [] 0</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>maxEdges :: Int
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">maxEdges = 300</span></span>
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>successRate :: MeaningEdge -&gt; Double
+<span class="lineno">   73 </span><span class="decl"><span class="istickedoff">successRate e</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">meCount e == 0</span> = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>       = fromIntegral (meWins e) / fromIntegral (meCount e)</span></span>
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>-- | Record one observed transition and update edge counters.
+<span class="lineno">   78 </span>recordTransition :: MeaningState -&gt; MeaningState -&gt; ResponseStrategy -&gt; Bool -&gt; MeaningGraph -&gt; MeaningGraph
+<span class="lineno">   79 </span><span class="decl"><span class="istickedoff">recordTransition fromState toState strat win g =</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">let fid = meaningStateId fromState</span>
+<span class="lineno">   81 </span><span class="spaces">      </span><span class="istickedoff">tid = meaningStateId toState</span>
+<span class="lineno">   82 </span><span class="spaces">      </span><span class="istickedoff">mEdge = find (\e -&gt; meFromId e == fid &amp;&amp; meToId e == tid) (mgEdges g)</span>
+<span class="lineno">   83 </span><span class="spaces">  </span><span class="istickedoff">in case mEdge of</span>
+<span class="lineno">   84 </span><span class="spaces">       </span><span class="istickedoff">Just edge -&gt;</span>
+<span class="lineno">   85 </span><span class="spaces">         </span><span class="istickedoff">let updated = edge</span>
+<span class="lineno">   86 </span><span class="spaces">               </span><span class="istickedoff">{ meCount = meCount edge + 1</span>
+<span class="lineno">   87 </span><span class="spaces">               </span><span class="istickedoff">, meWins  = meWins edge + if win then 1 else 0</span>
+<span class="lineno">   88 </span><span class="spaces">               </span><span class="istickedoff">}</span>
+<span class="lineno">   89 </span><span class="spaces">         </span><span class="istickedoff">in g { mgEdges = replaceEdge (mgEdges g) updated }</span>
+<span class="lineno">   90 </span><span class="spaces">       </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   91 </span><span class="spaces">         </span><span class="istickedoff">let newEdge = MeaningEdge</span>
+<span class="lineno">   92 </span><span class="spaces">               </span><span class="istickedoff">{ meFromId = fid</span>
+<span class="lineno">   93 </span><span class="spaces">               </span><span class="istickedoff">, meToId = tid</span>
+<span class="lineno">   94 </span><span class="spaces">               </span><span class="istickedoff">, meFrom = fromState</span>
+<span class="lineno">   95 </span><span class="spaces">               </span><span class="istickedoff">, meTo = toState</span>
+<span class="lineno">   96 </span><span class="spaces">               </span><span class="istickedoff">, meStrategy = strat</span>
+<span class="lineno">   97 </span><span class="spaces">               </span><span class="istickedoff">, meCount = 1</span>
+<span class="lineno">   98 </span><span class="spaces">               </span><span class="istickedoff">, meWins = if win then 1 else 0</span>
+<span class="lineno">   99 </span><span class="spaces">               </span><span class="istickedoff">, meDreamBias = 0.0</span>
+<span class="lineno">  100 </span><span class="spaces">               </span><span class="istickedoff">, meLastRewiredAt = Nothing</span>
+<span class="lineno">  101 </span><span class="spaces">               </span><span class="istickedoff">}</span>
+<span class="lineno">  102 </span><span class="spaces">         </span><span class="istickedoff">in g { mgEdges = take maxEdges (newEdge : mgEdges g)</span>
+<span class="lineno">  103 </span><span class="spaces">              </span><span class="istickedoff">, mgTurnCount = mgTurnCount g + 1 }</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>replaceEdge :: [MeaningEdge] -&gt; MeaningEdge -&gt; [MeaningEdge]
+<span class="lineno">  106 </span><span class="decl"><span class="istickedoff">replaceEdge edges newE = map (\e -&gt; if <span class="tickonlytrue">meFromId e == meFromId newE &amp;&amp; meToId e == meToId newE</span> then newE else <span class="nottickedoff">e</span>) edges</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>-- | Predict a reusable strategy when the edge routing score is above threshold.
+<span class="lineno">  109 </span>predictStrategy :: MeaningState -&gt; MeaningState -&gt; MeaningGraph -&gt; Maybe ResponseStrategy
+<span class="lineno">  110 </span><span class="decl"><span class="istickedoff">predictStrategy fromState toState g =</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">let fid = meaningStateId fromState</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">tid = meaningStateId toState</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">in case find (\e -&gt; meFromId e == fid &amp;&amp; meToId e == tid) (mgEdges g) of</span>
+<span class="lineno">  114 </span><span class="spaces">     </span><span class="istickedoff">Just edge</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">edgeRoutingScore edge &gt; meaningGraphRoutingThreshold</span> -&gt; Just (meStrategy edge)</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  117 </span><span class="spaces">     </span><span class="istickedoff">Nothing -&gt; Nothing</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>-- | Apply dream-cycle deltas to edge biases and return emitted rewire events.
+<span class="lineno">  120 </span>rewireMeaningGraphForDreamCycle :: UTCTime -&gt; [(MeaningEdge, Double)] -&gt; MeaningGraph -&gt; (MeaningGraph, [Text])
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">rewireMeaningGraphForDreamCycle now edgeDeltas g =</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">let (newEdges, events) = unzip (map (rewireMeaningEdge now) edgeDeltas)</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">g' = g { mgEdges = mergeEdges (mgEdges g) newEdges }</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">in (g', concat events)</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>rewireMeaningEdge :: UTCTime -&gt; (MeaningEdge, Double) -&gt; (MeaningEdge, [Text])
+<span class="lineno">  127 </span><span class="decl"><span class="istickedoff">rewireMeaningEdge now (edge, delta) =</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">let newBias = clampSymmetric meaningGraphDreamBiasLimit (meDreamBias edge + delta)</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">actualDelta = newBias - meDreamBias edge</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">edge' = edge</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">{ meDreamBias = newBias</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">, meLastRewiredAt = Just now</span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">event = if <span class="tickonlytrue">abs actualDelta &gt; 1e-6</span></span>
+<span class="lineno">  135 </span><span class="spaces">              </span><span class="istickedoff">then [<span class="nottickedoff">T.pack (meFromId edge) &lt;&gt; &quot;-&gt;&quot; &lt;&gt; T.pack (meToId edge) &lt;&gt; &quot; bias:&quot; &lt;&gt; textShow newBias</span>]</span>
+<span class="lineno">  136 </span><span class="spaces">              </span><span class="istickedoff">else <span class="nottickedoff">[]</span></span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">in (edge', event)</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>mergeEdges :: [MeaningEdge] -&gt; [MeaningEdge] -&gt; [MeaningEdge]
+<span class="lineno">  140 </span><span class="decl"><span class="istickedoff">mergeEdges existing newEdges = foldl (\es ne -&gt; replaceEdge es ne) existing newEdges</span></span>
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>defaultStrategy :: MeaningState -&gt; ResponseStrategy
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">defaultStrategy ms = ResponseStrategy</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">{ rsDepth    = case msResonance ms of ResonanceHigh -&gt; DeepResp; ResonanceMed -&gt; ModerateResp; ResonanceLow -&gt; ShallowResp</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">, rsStance   = case msPressure ms of PressHeavy -&gt; HoldStance; PressLight -&gt; AcknowledgeStance; PressNone -&gt; OpenStance</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">, rsMove     = case msPressure ms of PressHeavy -&gt; CounterMove; PressLight -&gt; ReframeMove; PressNone -&gt; ValidateMove</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">, rsDensityT = case msDepth ms of DepthShallow -&gt; DensityMed; DepthMech -&gt; DensityMed; DepthPattern -&gt; DensityHigh; DepthAxiom -&gt; DensityHigh</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>graphStats :: MeaningGraph -&gt; Text
+<span class="lineno">  151 </span><span class="decl"><span class="nottickedoff">graphStats mg =</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="nottickedoff">let nEdges = length (mgEdges mg)</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="nottickedoff">avgRate = if nEdges == 0 then 0.0 else sum (map successRate (mgEdges mg)) / fromIntegral nEdges</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="nottickedoff">in textShow nEdges &lt;&gt; &quot; edges, avg success &quot; &lt;&gt; textShow avgRate</span></span>
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span>edgeRoutingScore :: MeaningEdge -&gt; Double
+<span class="lineno">  157 </span><span class="decl"><span class="istickedoff">edgeRoutingScore edge = successRate edge + meDreamBias edge</span></span>
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>clampSymmetric :: Double -&gt; Double -&gt; Double
+<span class="lineno">  160 </span><span class="decl"><span class="istickedoff">clampSymmetric limit v = max (-limit) (min limit v)</span></span>
+
+</pre>
+</body>
+</html>

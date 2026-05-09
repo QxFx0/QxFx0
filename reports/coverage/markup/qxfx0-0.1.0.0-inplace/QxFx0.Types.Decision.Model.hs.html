@@ -1,0 +1,319 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Decision.Model
+<span class="lineno">    7 </span>  ( ClaimAst(..)
+<span class="lineno">    8 </span>  , GfModifier(..)
+<span class="lineno">    9 </span>  , GfVP(..)
+<span class="lineno">   10 </span>  , GfNP(..)
+<span class="lineno">   11 </span>  , GfRelation(..)
+<span class="lineno">   12 </span>  , GfMechanism(..)
+<span class="lineno">   13 </span>  , GfNumber(..)
+<span class="lineno">   14 </span>  , ResponseMeaningPlan(..)
+<span class="lineno">   15 </span>  , ResponseContentPlan(..)
+<span class="lineno">   16 </span>  , InputPropositionFrame(..)
+<span class="lineno">   17 </span>  , emptyInputPropositionFrame
+<span class="lineno">   18 </span>  , SemanticAnchor(..)
+<span class="lineno">   19 </span>  , IdentitySignalSnapshot(..)
+<span class="lineno">   20 </span>  , TurnDecision(..)
+<span class="lineno">   21 </span>  , LegitimacyOutcome(..)
+<span class="lineno">   22 </span>  , classifyLegitimacyOutcome
+<span class="lineno">   23 </span>  , SubjectState(..)
+<span class="lineno">   24 </span>  , IsLegit(..)
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   28 </span>import Data.Aeson
+<span class="lineno">   29 </span>  ( FromJSON(..)
+<span class="lineno">   30 </span>  , ToJSON(..)
+<span class="lineno">   31 </span>  , defaultOptions
+<span class="lineno">   32 </span>  , genericParseJSON
+<span class="lineno">   33 </span>  , genericToJSON
+<span class="lineno">   34 </span>  , object
+<span class="lineno">   35 </span>  , withObject
+<span class="lineno">   36 </span>  , (.:)
+<span class="lineno">   37 </span>  , (.:?)
+<span class="lineno">   38 </span>  , (.=)
+<span class="lineno">   39 </span>  )
+<span class="lineno">   40 </span>import Data.Text (Text)
+<span class="lineno">   41 </span>import GHC.Generics (Generic)
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>import QxFx0.Types.Config.Decision (defaultInputPropositionConfidence)
+<span class="lineno">   44 </span>import QxFx0.Types.ClaimAst
+<span class="lineno">   45 </span>  ( ClaimAst(..)
+<span class="lineno">   46 </span>  , GfModifier(..)
+<span class="lineno">   47 </span>  , GfVP(..)
+<span class="lineno">   48 </span>  , GfNP(..)
+<span class="lineno">   49 </span>  , GfRelation(..)
+<span class="lineno">   50 </span>  , GfMechanism(..)
+<span class="lineno">   51 </span>  , GfNumber(..)
+<span class="lineno">   52 </span>  )
+<span class="lineno">   53 </span>import QxFx0.Types.Decision.Enums
+<span class="lineno">   54 </span>import QxFx0.Types.Domain
+<span class="lineno">   55 </span>  ( CanonicalMoveFamily(..)
+<span class="lineno">   56 </span>  , ClauseForm(..)
+<span class="lineno">   57 </span>  , IllocutionaryForce(..)
+<span class="lineno">   58 </span>  , NixGuardStatus
+<span class="lineno">   59 </span>  , Register(..)
+<span class="lineno">   60 </span>  , SemanticLayer(..)
+<span class="lineno">   61 </span>  , WarrantedMoveMode(..)
+<span class="lineno">   62 </span>  )
+<span class="lineno">   63 </span>import QxFx0.Types.IdentityGuard (IdentityGuardReport)
+<span class="lineno">   64 </span>import QxFx0.Types.Observability (ContractProvenance, ResponseStrategy)
+<span class="lineno">   65 </span>import QxFx0.Types.Orbital
+<span class="lineno">   66 </span>  ( DirectiveMoveBias
+<span class="lineno">   67 </span>  , EncounterMode
+<span class="lineno">   68 </span>  , OrbitalPhase
+<span class="lineno">   69 </span>  )
+<span class="lineno">   70 </span>import QxFx0.Types.Thresholds (DepthMode, LegitimacyStatus(..))
+<span class="lineno">   71 </span>import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>data ResponseMeaningPlan = ResponseMeaningPlan
+<span class="lineno">   74 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   75 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpForce</span></span></span> :: !IllocutionaryForce
+<span class="lineno">   76 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpSpeechAct</span></span></span> :: !SpeechAct
+<span class="lineno">   77 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpRelation</span></span></span> :: !SemanticRelation
+<span class="lineno">   78 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpStrategy</span></span></span> :: !AnswerStrategy
+<span class="lineno">   79 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpStance</span></span></span> :: !StanceMarker
+<span class="lineno">   80 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpEpistemic</span></span></span> :: !EpistemicStatus
+<span class="lineno">   81 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpTopic</span></span></span> :: !Text
+<span class="lineno">   82 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpPrimaryClaim</span></span></span> :: !Text
+<span class="lineno">   83 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpPrimaryClaimAst</span></span></span> :: !(Maybe ClaimAst)
+<span class="lineno">   84 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpContrastAxis</span></span></span> :: !Text
+<span class="lineno">   85 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpImplicationDirection</span></span></span> :: !Text
+<span class="lineno">   86 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpProvenance</span></span></span> :: !ContractProvenance
+<span class="lineno">   87 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rmpCommitmentStrength</span></span></span> :: !Double
+<span class="lineno">   88 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rmpDepthMode</span></span></span> :: !DepthMode
+<span class="lineno">   89 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   90 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResponseMeaningPlan</span></span></span></span></span></span></span></span> where
+<span class="lineno">   93 </span>  <span class="decl"><span class="nottickedoff">toJSON rmp = object</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;rmpFamily&quot; .= rmpFamily rmp</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpForce&quot; .= rmpForce rmp</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpSpeechAct&quot; .= rmpSpeechAct rmp</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpRelation&quot; .= rmpRelation rmp</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpStrategy&quot; .= rmpStrategy rmp</span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpStance&quot; .= rmpStance rmp</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpEpistemic&quot; .= rmpEpistemic rmp</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpTopic&quot; .= rmpTopic rmp</span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpPrimaryClaim&quot; .= rmpPrimaryClaim rmp</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpPrimaryClaimAst&quot; .= rmpPrimaryClaimAst rmp</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpContrastAxis&quot; .= rmpContrastAxis rmp</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpImplicationDirection&quot; .= rmpImplicationDirection rmp</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpProvenance&quot; .= rmpProvenance rmp</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpCommitmentStrength&quot; .= rmpCommitmentStrength rmp</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;rmpDepthMode&quot; .= rmpDepthMode rmp</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ResponseMeaningPlan</span></span></span></span> where
+<span class="lineno">  112 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withObject &quot;ResponseMeaningPlan&quot; $ \o -&gt;</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="nottickedoff">ResponseMeaningPlan</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="nottickedoff">&lt;$&gt; o .: &quot;rmpFamily&quot;</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpForce&quot;</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpSpeechAct&quot;</span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpRelation&quot;</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpStrategy&quot;</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpStance&quot;</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpEpistemic&quot;</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpTopic&quot;</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpPrimaryClaim&quot;</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .:? &quot;rmpPrimaryClaimAst&quot;</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpContrastAxis&quot;</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpImplicationDirection&quot;</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpProvenance&quot;</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpCommitmentStrength&quot;</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o .: &quot;rmpDepthMode&quot;</span></span>
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>data ResponseContentPlan = ResponseContentPlan
+<span class="lineno">  131 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rcpFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">  132 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rcpOpening</span></span></span> :: !ContentMove
+<span class="lineno">  133 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rcpCore</span></span></span> :: !ContentMove
+<span class="lineno">  134 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rcpLimit</span></span></span> :: !ContentMove
+<span class="lineno">  135 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rcpContinuation</span></span></span> :: !ContentMove
+<span class="lineno">  136 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rcpStyle</span></span></span> :: !RenderStyle
+<span class="lineno">  137 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  138 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ResponseContentPlan</span></span></span></span></span></span></span></span> where
+<span class="lineno">  141 </span>  <span class="decl"><span class="nottickedoff">toJSON responseContentPlan = object</span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;family&quot; .= rcpFamily responseContentPlan</span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;opening&quot; .= rcpOpening responseContentPlan</span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;core&quot; .= rcpCore responseContentPlan</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;limit&quot; .= rcpLimit responseContentPlan</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;continuation&quot; .= rcpContinuation responseContentPlan</span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;style&quot; .= renderStyleText (rcpStyle responseContentPlan)</span>
+<span class="lineno">  148 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ResponseContentPlan</span></span></span></span> where
+<span class="lineno">  151 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withObject &quot;ResponseContentPlan&quot; $ \objectValue -&gt;</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="nottickedoff">ResponseContentPlan</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="nottickedoff">&lt;$&gt; objectValue .: &quot;family&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; objectValue .: &quot;opening&quot;</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; objectValue .: &quot;core&quot;</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; objectValue .: &quot;limit&quot;</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; objectValue .: &quot;continuation&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; (parseRenderStyle &lt;$&gt; objectValue .: &quot;style&quot;)</span></span>
+<span class="lineno">  159 </span>
+<span class="lineno">  160 </span>data InputPropositionFrame = InputPropositionFrame
+<span class="lineno">  161 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfRawText</span></span></span> :: !Text
+<span class="lineno">  162 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfPropositionType</span></span></span> :: !Text
+<span class="lineno">  163 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfFocusEntity</span></span></span> :: !Text
+<span class="lineno">  164 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfFocusNominative</span></span></span> :: !Text
+<span class="lineno">  165 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfSemanticSubject</span></span></span> :: !Text
+<span class="lineno">  166 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfSemanticTarget</span></span></span> :: !Text
+<span class="lineno">  167 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfSemanticCandidates</span></span></span> :: ![Text]
+<span class="lineno">  168 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfSemanticEvidence</span></span></span> :: ![Text]
+<span class="lineno">  169 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfCanonicalFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">  170 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ipfIllocutionaryForce</span></span></span> :: !IllocutionaryForce
+<span class="lineno">  171 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfClauseForm</span></span></span> :: !ClauseForm
+<span class="lineno">  172 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfSemanticLayer</span></span></span> :: !SemanticLayer
+<span class="lineno">  173 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ipfKeyPhrases</span></span></span> :: ![Text]
+<span class="lineno">  174 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfEmotionalTone</span></span></span> :: !EmotionalTone
+<span class="lineno">  175 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfConfidence</span></span></span> :: !Double
+<span class="lineno">  176 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfIsQuestion</span></span></span> :: !Bool
+<span class="lineno">  177 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfIsNegated</span></span></span> :: !Bool
+<span class="lineno">  178 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ipfRegisterHint</span></span></span> :: !Register
+<span class="lineno">  179 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  180 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON InputPropositionFrame</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  183 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON InputPropositionFrame</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  184 </span>
+<span class="lineno">  185 </span>emptyInputPropositionFrame :: InputPropositionFrame
+<span class="lineno">  186 </span><span class="decl"><span class="istickedoff">emptyInputPropositionFrame = InputPropositionFrame</span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="istickedoff">{ ipfRawText = &quot;&quot;</span>
+<span class="lineno">  188 </span><span class="spaces">  </span><span class="istickedoff">, ipfPropositionType = &quot;Unknown&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">, ipfFocusEntity = &quot;&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">, ipfFocusNominative = &quot;&quot;</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">, ipfSemanticSubject = &quot;&quot;</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">, ipfSemanticTarget = &quot;&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">, ipfSemanticCandidates = []</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">, ipfSemanticEvidence = []</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">, ipfCanonicalFamily = CMGround</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">, ipfIllocutionaryForce = IFAssert</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">, ipfClauseForm = Declarative</span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">, ipfSemanticLayer = ContentLayer</span>
+<span class="lineno">  199 </span><span class="spaces">  </span><span class="istickedoff">, ipfKeyPhrases = []</span>
+<span class="lineno">  200 </span><span class="spaces">  </span><span class="istickedoff">, ipfEmotionalTone = ToneNeutral</span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">, ipfConfidence = defaultInputPropositionConfidence</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">, ipfIsQuestion = False</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">, ipfIsNegated = False</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">, ipfRegisterHint = Neutral</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  206 </span>
+<span class="lineno">  207 </span>data SemanticAnchor = SemanticAnchor
+<span class="lineno">  208 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">saDominantChannel</span></span></span> :: !DominantChannel
+<span class="lineno">  209 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">saSecondaryChannel</span></span></span> :: !(Maybe Text)
+<span class="lineno">  210 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">saEstablishedAtTurn</span></span></span> :: !Int
+<span class="lineno">  211 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">saStrength</span></span></span> :: !Double
+<span class="lineno">  212 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">saStability</span></span></span> :: !Double
+<span class="lineno">  213 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  214 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  215 </span>
+<span class="lineno">  216 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON SemanticAnchor</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  217 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON SemanticAnchor</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>data IdentitySignalSnapshot = IdentitySignalSnapshot
+<span class="lineno">  220 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issOrbitalPhase</span></span></span> :: !OrbitalPhase
+<span class="lineno">  221 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issEncounterMode</span></span></span> :: !EncounterMode
+<span class="lineno">  222 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issContactStrength</span></span></span> :: !Double
+<span class="lineno">  223 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issBoundaryStrength</span></span></span> :: !Double
+<span class="lineno">  224 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issAbstractionBudget</span></span></span> :: !Int
+<span class="lineno">  225 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issMoveBias</span></span></span> :: !DirectiveMoveBias
+<span class="lineno">  226 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issRegister</span></span></span> :: !Register
+<span class="lineno">  227 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">issNeedLayer</span></span></span> :: !SemanticLayer
+<span class="lineno">  228 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  229 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON IdentitySignalSnapshot</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  232 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON IdentitySignalSnapshot</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>data TurnDecision = TurnDecision
+<span class="lineno">  235 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tdFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">  236 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdForce</span></span></span> :: !IllocutionaryForce
+<span class="lineno">  237 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tdRenderStrategy</span></span></span> :: !ResponseStrategy
+<span class="lineno">  238 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdRenderStyle</span></span></span> :: !RenderStyle
+<span class="lineno">  239 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdGuardStatus</span></span></span> :: !NixGuardStatus
+<span class="lineno">  240 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tdGuardReport</span></span></span> :: !IdentityGuardReport
+<span class="lineno">  241 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tdLegitimacy</span></span></span> :: !Double
+<span class="lineno">  242 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tdIdentity</span></span></span> :: !IdentitySignalSnapshot
+<span class="lineno">  243 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tdSemanticAnchor</span></span></span> :: !(Maybe SemanticAnchor)
+<span class="lineno">  244 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  245 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  246 </span>
+<span class="lineno">  247 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON TurnDecision</span></span></span></span></span></span></span></span> where <span class="decl"><span class="istickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  248 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON TurnDecision</span></span></span></span> where <span class="decl"><span class="istickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  249 </span>
+<span class="lineno">  250 </span>data LegitimacyOutcome = LegitimacyOutcome
+<span class="lineno">  251 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">loDisposition</span></span></span> :: !DecisionDisposition
+<span class="lineno">  252 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">loStatus</span></span></span> :: !LegitimacyStatus
+<span class="lineno">  253 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">loReason</span></span></span> :: !LegitimacyReason
+<span class="lineno">  254 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">loWarrantedMode</span></span></span> :: !WarrantedMoveMode
+<span class="lineno">  255 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  256 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  257 </span>
+<span class="lineno">  258 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LegitimacyOutcome</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  259 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON LegitimacyOutcome</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  260 </span>
+<span class="lineno">  261 </span>classifyLegitimacyOutcome :: LegitimacyStatus -&gt; LegitimacyReason -&gt; WarrantedMoveMode -&gt; ShadowStatus -&gt; ShadowDivergenceSeverity -&gt; LegitimacyOutcome
+<span class="lineno">  262 </span><span class="decl"><span class="istickedoff">classifyLegitimacyOutcome status reason warrantedMode shadowStatus shadowSeverity =</span>
+<span class="lineno">  263 </span><span class="spaces">  </span><span class="istickedoff">LegitimacyOutcome</span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="istickedoff">{ loDisposition = disposition</span>
+<span class="lineno">  265 </span><span class="spaces">    </span><span class="istickedoff">, loStatus = status</span>
+<span class="lineno">  266 </span><span class="spaces">    </span><span class="istickedoff">, loReason = reason</span>
+<span class="lineno">  267 </span><span class="spaces">    </span><span class="istickedoff">, loWarrantedMode = warrantedMode</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  269 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">disposition</span>
+<span class="lineno">  271 </span><span class="spaces">      </span><span class="istickedoff">| warrantedMode == NeverWarranted = DispositionDeny</span>
+<span class="lineno">  272 </span><span class="spaces">      </span><span class="istickedoff">| shadowStatus == ShadowDiverged &amp;&amp; shadowSeverity /= ShadowSeverityAdvisory = DispositionRepair</span>
+<span class="lineno">  273 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">status == LegitimacyRecovery</span> = <span class="nottickedoff">DispositionRepair</span></span>
+<span class="lineno">  274 </span><span class="spaces">      </span><span class="istickedoff">| reason == ReasonShadowDivergence = DispositionRepair</span>
+<span class="lineno">  275 </span><span class="spaces">      </span><span class="istickedoff">| reason == ReasonShadowUnavailable = DispositionAdvisory</span>
+<span class="lineno">  276 </span><span class="spaces">      </span><span class="istickedoff">| reason == ReasonLowParserConfidence = DispositionAdvisory</span>
+<span class="lineno">  277 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = DispositionPermit</span></span>
+<span class="lineno">  278 </span>
+<span class="lineno">  279 </span>data SubjectState = SubjectState
+<span class="lineno">  280 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ssAgency</span></span></span> :: !Double
+<span class="lineno">  281 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssTension</span></span></span> :: !Double
+<span class="lineno">  282 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  283 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  284 </span>
+<span class="lineno">  285 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON SubjectState</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  286 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON SubjectState</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+<span class="lineno">  287 </span>
+<span class="lineno">  288 </span>data IsLegit a
+<span class="lineno">  289 </span>  = LegitAcknowledge a
+<span class="lineno">  290 </span>  | LegitClarify a
+<span class="lineno">  291 </span>  | LegitInsight a
+<span class="lineno">  292 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  293 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  294 </span>
+<span class="lineno">  295 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON a =&gt; ToJSON (IsLegit a)</span></span></span></span></span></span></span></span> where <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span></span>
+<span class="lineno">  296 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON a =&gt; FromJSON (IsLegit a)</span></span></span></span> where <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span></span>
+
+</pre>
+</body>
+</html>

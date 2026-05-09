@@ -1,0 +1,105 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE RecordWildCards #-}
+<span class="lineno">    2 </span>{-| Facade for routing-phase synthesis, family hints, and guard-aware cascade. -}
+<span class="lineno">    3 </span>module QxFx0.Core.TurnRouting
+<span class="lineno">    4 </span>  ( routeFamily
+<span class="lineno">    5 </span>  , mergeFamilySignals
+<span class="lineno">    6 </span>  , preferFamily
+<span class="lineno">    7 </span>  , semanticInputFamilyHint
+<span class="lineno">    8 </span>  , strategyFamilyHint
+<span class="lineno">    9 </span>  , identityFamilyHint
+<span class="lineno">   10 </span>  , applyPrincipledFamily
+<span class="lineno">   11 </span>  , applyGuardGating
+<span class="lineno">   12 </span>  , RoutingPhase(..)
+<span class="lineno">   13 </span>  , FamilyCascade(..)
+<span class="lineno">   14 </span>  , computeRoutingPhase
+<span class="lineno">   15 </span>  , runFamilyCascade
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import QxFx0.Types
+<span class="lineno">   19 </span>import QxFx0.Core.TurnPipeline.Types (RoutingDecision(..))
+<span class="lineno">   20 </span>import QxFx0.Core.Ego (updateEgoFromTurn)
+<span class="lineno">   21 </span>import QxFx0.Core.IdentitySignal (buildIdentitySignalSimple)
+<span class="lineno">   22 </span>import QxFx0.Core.Semantic.SemanticInput (buildSemanticInputSimple)
+<span class="lineno">   23 </span>import QxFx0.Core.TurnModulation (computeTensionDelta)
+<span class="lineno">   24 </span>import QxFx0.Core.TurnRender
+<span class="lineno">   25 </span>  ( deriveSemanticAnchor
+<span class="lineno">   26 </span>  , renderStyleFromDecision
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
+<span class="lineno">   29 </span>import QxFx0.Core.TurnRouting.Cascade
+<span class="lineno">   30 </span>  ( applyGuardGating
+<span class="lineno">   31 </span>  , applyPrincipledFamily
+<span class="lineno">   32 </span>  , buildGuardReport
+<span class="lineno">   33 </span>  , runFamilyCascade
+<span class="lineno">   34 </span>  )
+<span class="lineno">   35 </span>import QxFx0.Core.TurnRouting.Phase
+<span class="lineno">   36 </span>  ( computeRoutingPhase
+<span class="lineno">   37 </span>  , identityFamilyHint
+<span class="lineno">   38 </span>  , mergeFamilySignals
+<span class="lineno">   39 </span>  , preferFamily
+<span class="lineno">   40 </span>  , semanticInputFamilyHint
+<span class="lineno">   41 </span>  , strategyFamilyHint
+<span class="lineno">   42 </span>  )
+<span class="lineno">   43 </span>import QxFx0.Core.TurnRouting.Types
+<span class="lineno">   44 </span>  ( FamilyCascade(..)
+<span class="lineno">   45 </span>  , RoutingPhase(..)
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>import Data.Text (Text)
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>routeFamily :: CanonicalMoveFamily -&gt; InputPropositionFrame -&gt; AtomSet -&gt; UserState
+<span class="lineno">   51 </span>            -&gt; SystemState -&gt; [Text] -&gt; Text -&gt; Bool -&gt; Text
+<span class="lineno">   52 </span>            -&gt; Maybe ConsciousnessNarrative -&gt; Double
+<span class="lineno">   53 </span>            -&gt; RoutingDecision
+<span class="lineno">   54 </span><span class="decl"><span class="istickedoff">routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior =</span>
+<span class="lineno">   55 </span><span class="spaces">  </span><span class="istickedoff">let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input</span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff">cascade = runFamilyCascade phase ss <span class="nottickedoff">nextUserState</span> frame <span class="nottickedoff">atomSet</span> <span class="nottickedoff">history</span> <span class="nottickedoff">input</span> mNarrative intuitPosterior isNixBlocked</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff">FamilyCascade{..} = cascade</span>
+<span class="lineno">   58 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   59 </span><span class="spaces">      </span><span class="istickedoff">newEgo = updateEgoFromTurn (ssEgo ss) fcFinalFamily (computeTensionDelta input ss)</span>
+<span class="lineno">   60 </span><span class="spaces">      </span><span class="istickedoff">identitySignal = buildIdentitySignalSimple rpOrbitalPhase rpEncounterMode rpPrevDirective</span>
+<span class="lineno">   61 </span><span class="spaces">                         </span><span class="istickedoff">(asRegister atomSet) (usNeedLayer nextUserState) fcFinalFamily (forceForFamily fcFinalFamily)</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">guardReport = buildGuardReport (ssLastGuardReport ss) <span class="nottickedoff">(ssEgo ss)</span> newEgo</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">semanticInput = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)</span>
+<span class="lineno">   64 </span><span class="spaces">      </span><span class="istickedoff">semanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) semanticInput currentTopic (ssTurnCount ss + 1)</span>
+<span class="lineno">   65 </span><span class="spaces">      </span><span class="istickedoff">renderStrategy = rpChosenStrategy</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">renderStyle = renderStyleFromDecision renderStrategy rpPrincipledModeResult identitySignal semanticAnchor semanticInput</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">in RoutingDecision</span>
+<span class="lineno">   68 </span><span class="spaces">       </span><span class="istickedoff">{ rdFamily = fcFinalFamily</span>
+<span class="lineno">   69 </span><span class="spaces">       </span><span class="istickedoff">, rdNewEgo = newEgo</span>
+<span class="lineno">   70 </span><span class="spaces">       </span><span class="istickedoff">, rdIdentitySignal = identitySignal</span>
+<span class="lineno">   71 </span><span class="spaces">       </span><span class="istickedoff">, rdGuardReport = guardReport</span>
+<span class="lineno">   72 </span><span class="spaces">       </span><span class="istickedoff">, rdSemanticInput = semanticInput</span>
+<span class="lineno">   73 </span><span class="spaces">       </span><span class="istickedoff">, rdSemanticAnchor = semanticAnchor</span>
+<span class="lineno">   74 </span><span class="spaces">       </span><span class="istickedoff">, rdRenderStrategy = renderStrategy</span>
+<span class="lineno">   75 </span><span class="spaces">       </span><span class="istickedoff">, rdRenderStyle = renderStyle</span>
+<span class="lineno">   76 </span><span class="spaces">       </span><span class="istickedoff">, rdPrincipledMode = rpPrincipledModeResult</span>
+<span class="lineno">   77 </span><span class="spaces">       </span><span class="istickedoff">, rdPressure = rpMPressure</span>
+<span class="lineno">   78 </span><span class="spaces">       </span><span class="istickedoff">, rdUpdatedOrbital = rpUpdatedOrbital</span>
+<span class="lineno">   79 </span><span class="spaces">       </span><span class="istickedoff">, rdFromMs = rpFromMs</span>
+<span class="lineno">   80 </span><span class="spaces">       </span><span class="istickedoff">, rdToMs = rpToMs</span>
+<span class="lineno">   81 </span><span class="spaces">       </span><span class="istickedoff">, rdStrategyFamily = rpStrategyFamily</span>
+<span class="lineno">   82 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

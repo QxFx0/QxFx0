@@ -84,11 +84,7 @@ checkHealth ctx = do
   readiness <- assessResourceReadiness dbPath
   runtimeMode <- resolveRuntimeMode
   backendResult <- tryIO (wireRuntimeReadiness ctx)
-  let backend =
-        either
-          (const (BackendReadiness False False False "unknown" "unknown" False ["backend_probe_failed"] False ["backend_probe_failed"] AgdaInvalid "" ["backend_probe_failed"]))
-          id
-          backendResult
+  let backend = either (const backendProbeFailedReadiness) id backendResult
   mkSystemHealth runtimeMode dbPath readiness backend
 
 probeRuntimeReadiness :: IO SystemHealth
@@ -96,13 +92,25 @@ probeRuntimeReadiness = do
   dbPath <- resolveDbPath
   readiness <- assessResourceReadiness dbPath
   backendResult <- tryIO probeBackendReadiness
-  let backend =
-        either
-          (const (BackendReadiness False False False "unknown" "unknown" False ["backend_probe_failed"] False ["backend_probe_failed"] AgdaInvalid "" ["backend_probe_failed"]))
-          id
-          backendResult
+  let backend = either (const backendProbeFailedReadiness) id backendResult
   runtimeMode <- resolveRuntimeMode
   mkSystemHealth runtimeMode dbPath readiness backend
+
+backendProbeFailedReadiness :: BackendReadiness
+backendProbeFailedReadiness = BackendReadiness
+  { brEmbeddingAlive = False
+  , brEmbeddingOperational = False
+  , brEmbeddingExplicit = False
+  , brEmbeddingBackend = "unknown"
+  , brEmbeddingQuality = "unknown"
+  , brNixOperational = False
+  , brNixIssues = ["backend_probe_failed"]
+  , brDatalogReady = False
+  , brDatalogIssues = ["backend_probe_failed"]
+  , brAgdaStatus = AgdaInvalid
+  , brAgdaWitnessPath = ""
+  , brAgdaIssues = ["backend_probe_failed"]
+  }
 
 mkSystemHealth :: RuntimeMode -> FilePath -> ReadinessStatus -> BackendReadiness -> IO SystemHealth
 mkSystemHealth runtimeMode dbPath readiness backend = do
@@ -169,7 +177,7 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shMorphBackendLocal = morphBackendLocal
     , shDecisionPathLocalOnly = decisionPathLocalOnly
     , shNetworkOptionalOnly = networkOptionalOnly
-    , shLlmDecisionPath = False
+    , shLlmDecisionPath = not decisionPathLocalOnly
     , shAgdaReady = agdaOk
     , shAgdaStatus = agdaStatus
     , shAgdaWitnessPath = brAgdaWitnessPath backend
@@ -225,12 +233,14 @@ inspectDatabaseHealth dbPath = do
 checkExistingDatabase :: FilePath -> IO Bool
 checkExistingDatabase dbPath = do
   result <- NSQL.withDatabase dbPath $ \db -> do
-    mStmt <- NSQL.prepare db "SELECT 1"
-    case mStmt of
-      Left _ -> pure False
-      Right stmt -> do
-        hasRow <- NSQL.stepRow stmt
-        _ <- if hasRow then NSQL.columnInt stmt 0 else pure 0
-        NSQL.finalize stmt
-        pure hasRow
-  pure (either (const False) id result)
+    NSQL.withStatement db "SELECT 1" $ \stmt -> do
+      mStepResult <- NSQL.step stmt
+      case mStepResult of
+        Right rc | rc == 100 -> do
+          _ <- NSQL.columnInt stmt 0
+          pure True
+        _ -> pure False
+  case result of
+    Left _   -> pure False
+    Right (Left _) -> pure False
+    Right (Right alive) -> pure alive

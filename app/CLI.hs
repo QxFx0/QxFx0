@@ -21,10 +21,12 @@ import System.Exit (exitFailure)
 import System.FilePath (takeDirectory)
 import System.IO (BufferMode(..), hPutStrLn, hSetBuffering, stderr, stdout)
 import qualified Data.ByteString.Lazy.Char8 as BLC
+import Control.Exception (try)
 
 import qualified QxFx0.Runtime as Runtime
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.CLI.Parser (extractSessionArgs)
+import QxFx0.ExceptionPolicy (QxFx0Exception)
 
 main :: IO ()
 main = do
@@ -97,8 +99,12 @@ handleWorkerStdio sessionId = runWorkerStdio sessionId
 
 handleWriteAgdaWitness :: IO ()
 handleWriteAgdaWitness = do
-  witnessPath <- Runtime.writeAgdaWitness
-  T.putStrLn (T.pack witnessPath)
+  result <- try Runtime.writeAgdaWitness
+  case result of
+    Right witnessPath -> T.putStrLn (T.pack witnessPath)
+    Left err -> do
+      hPutStrLn stderr $ "Error writing Agda witness: " ++ show (err :: QxFx0Exception)
+      exitFailure
 
 interactiveMain :: Text -> IO ()
 interactiveMain sessionId =

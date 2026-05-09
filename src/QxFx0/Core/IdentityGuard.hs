@@ -25,14 +25,12 @@ buildIdentityGuardReportSimple calib prevAgency curAgency prevTension curTension
   let agencyDelta = curAgency - prevAgency
       tensionDelta = curTension - prevTension
       absTensionDelta = abs tensionDelta
-      warnings = []
-               ++ [ GuardTransitionOutsideManifold | absTensionDelta > igcTensionDriftThreshold calib ]
-               ++ [ GuardHighTensionDrift          | curTension > igcTensionCeiling calib ]
-               ++ [ GuardAgencyCollapse             | curAgency < igcAgencyFloor calib ]
-      withinBounds = null warnings
+      warnings = [ GuardTransitionOutsideManifold | absTensionDelta > igcTensionDriftThreshold calib ]
+                  ++ [ GuardHighTensionDrift          | curTension > igcTensionCeiling calib ]
+                  ++ [ GuardAgencyCollapse             | curAgency < igcAgencyFloor calib ]
   in IdentityGuardReport
      { igrAgencyDelta  = agencyDelta
      , igrTensionDelta = tensionDelta
-     , igrWithinBounds = withinBounds
+     , igrWithinBounds = null warnings
      , igrWarnings     = warnings
      }

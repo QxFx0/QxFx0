@@ -1,0 +1,164 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    4 </span>{-# LANGUAGE TypeApplications #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Bridge.Morphology
+<span class="lineno">    7 </span>  ( MorphRemoteToken(..)
+<span class="lineno">    8 </span>  , MorphBackend(..)
+<span class="lineno">    9 </span>  , resolveMorphBackend
+<span class="lineno">   10 </span>  , analyzeMorphRemote
+<span class="lineno">   11 </span>  , checkMorphHealth
+<span class="lineno">   12 </span>  ) where
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>import Control.Exception (try)
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import qualified Data.Text as T
+<span class="lineno">   17 </span>import qualified Data.Aeson as Aeson
+<span class="lineno">   18 </span>import qualified Data.Aeson.Types as Aeson
+<span class="lineno">   19 </span>import qualified Data.ByteString.Char8 as B8
+<span class="lineno">   20 </span>import qualified Data.Char as Char
+<span class="lineno">   21 </span>import Network.HTTP.Client (HttpException)
+<span class="lineno">   22 </span>import qualified Network.HTTP.Client as HTTPClient
+<span class="lineno">   23 </span>import qualified Network.HTTP.Simple as HTTP
+<span class="lineno">   24 </span>import System.Environment (lookupEnv)
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>data MorphRemoteToken = MorphRemoteToken
+<span class="lineno">   27 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtWord</span></span></span>   :: !Text
+<span class="lineno">   28 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtLemma</span></span></span>  :: !Text
+<span class="lineno">   29 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtPos</span></span></span>    :: !(Maybe Text)
+<span class="lineno">   30 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtCase</span></span></span>   :: !(Maybe Text)
+<span class="lineno">   31 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtNumber</span></span></span> :: !(Maybe Text)
+<span class="lineno">   32 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtGender</span></span></span> :: !(Maybe Text)
+<span class="lineno">   33 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtTense</span></span></span>  :: !(Maybe Text)
+<span class="lineno">   34 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtMood</span></span></span>   :: !(Maybe Text)
+<span class="lineno">   35 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mrtPerson</span></span></span> :: !(Maybe Text)
+<span class="lineno">   36 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Aeson.FromJSON MorphRemoteToken</span></span></span></span> where
+<span class="lineno">   39 </span>  <span class="decl"><span class="nottickedoff">parseJSON = Aeson.withObject &quot;MorphRemoteToken&quot; $ \o -&gt;</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="nottickedoff">MorphRemoteToken</span>
+<span class="lineno">   41 </span><span class="spaces">      </span><span class="nottickedoff">&lt;$&gt; o Aeson..:  &quot;word&quot;</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:  &quot;lemma&quot;</span>
+<span class="lineno">   43 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;pos&quot;</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;case&quot;</span>
+<span class="lineno">   45 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;number&quot;</span>
+<span class="lineno">   46 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;gender&quot;</span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;tense&quot;</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;mood&quot;</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="nottickedoff">&lt;*&gt; o Aeson..:! &quot;person&quot;</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>data MorphBackend
+<span class="lineno">   52 </span>  = MorphBackendLocal
+<span class="lineno">   53 </span>  | MorphBackendRemote
+<span class="lineno">   54 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>resolveMorphBackend :: IO MorphBackend
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">resolveMorphBackend = do</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">mBackend &lt;- fmap (fmap <span class="nottickedoff">(T.toLower . T.pack)</span>) (lookupEnv &quot;QXFX0_MORPH_BACKEND&quot;)</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">pure $ case mBackend of</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;remote&quot; -&gt; <span class="nottickedoff">MorphBackendRemote</span></span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; MorphBackendLocal</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>morphApiUrl :: IO (Maybe String)
+<span class="lineno">   64 </span><span class="decl"><span class="nottickedoff">morphApiUrl = lookupEnv &quot;MORPH_API_URL&quot;</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>analyzeMorphRemote :: Text -&gt; IO (Either Text [MorphRemoteToken])
+<span class="lineno">   67 </span><span class="decl"><span class="nottickedoff">analyzeMorphRemote text = do</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="nottickedoff">mUrl &lt;- morphApiUrl</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="nottickedoff">case mUrl of</span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pure (Left &quot;MORPH_API_URL not set&quot;)</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="nottickedoff">Just url -&gt; fetchRemoteMorph url text</span></span>
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>fetchRemoteMorph :: String -&gt; Text -&gt; IO (Either Text [MorphRemoteToken])
+<span class="lineno">   74 </span><span class="decl"><span class="nottickedoff">fetchRemoteMorph url txt = do</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="nottickedoff">requestResult &lt;- try @HttpException (HTTP.parseRequest url)</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="nottickedoff">case requestResult of</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="nottickedoff">Left err -&gt; pure (Left (&quot;invalid morph url: &quot; &lt;&gt; showText err))</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="nottickedoff">Right baseRequest -&gt; do</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="nottickedoff">let request =</span>
+<span class="lineno">   80 </span><span class="spaces">            </span><span class="nottickedoff">HTTP.setRequestIgnoreStatus $</span>
+<span class="lineno">   81 </span><span class="spaces">              </span><span class="nottickedoff">HTTP.setRequestResponseTimeout (HTTPClient.responseTimeoutMicro 5000000) $</span>
+<span class="lineno">   82 </span><span class="spaces">                </span><span class="nottickedoff">HTTP.setRequestBodyJSON (Aeson.object [&quot;text&quot; Aeson..= txt]) $</span>
+<span class="lineno">   83 </span><span class="spaces">                  </span><span class="nottickedoff">HTTP.setRequestMethod &quot;POST&quot; baseRequest</span>
+<span class="lineno">   84 </span><span class="spaces">      </span><span class="nottickedoff">responseResult &lt;- try @HttpException (HTTP.httpBS request)</span>
+<span class="lineno">   85 </span><span class="spaces">      </span><span class="nottickedoff">case responseResult of</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; pure (Left (&quot;morph request failed: &quot; &lt;&gt; showText err))</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="nottickedoff">Right response</span>
+<span class="lineno">   88 </span><span class="spaces">          </span><span class="nottickedoff">| not (successfulStatus response) -&gt;</span>
+<span class="lineno">   89 </span><span class="spaces">              </span><span class="nottickedoff">pure (Left (&quot;unexpected morph status: &quot; &lt;&gt; showText (HTTP.getResponseStatusCode response)))</span>
+<span class="lineno">   90 </span><span class="spaces">          </span><span class="nottickedoff">| not (jsonContentType response) -&gt;</span>
+<span class="lineno">   91 </span><span class="spaces">              </span><span class="nottickedoff">pure (Left (&quot;unexpected morph content-type: &quot; &lt;&gt; renderContentTypes response))</span>
+<span class="lineno">   92 </span><span class="spaces">          </span><span class="nottickedoff">| otherwise -&gt;</span>
+<span class="lineno">   93 </span><span class="spaces">              </span><span class="nottickedoff">pure (parseMorphResponse (HTTP.getResponseBody response))</span></span>
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>checkMorphHealth :: IO Bool
+<span class="lineno">   96 </span><span class="decl"><span class="nottickedoff">checkMorphHealth = do</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="nottickedoff">mUrl &lt;- morphApiUrl</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="nottickedoff">case mUrl of</span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pure False</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="nottickedoff">Just url -&gt; do</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="nottickedoff">requestResult &lt;- try @HttpException (HTTP.parseRequest (url &lt;&gt; &quot;/health&quot;))</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="nottickedoff">case requestResult of</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="nottickedoff">Left _ -&gt; pure False</span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="nottickedoff">Right baseRequest -&gt; do</span>
+<span class="lineno">  105 </span><span class="spaces">          </span><span class="nottickedoff">let request = HTTP.setRequestResponseTimeout (HTTPClient.responseTimeoutMicro 2000000) $</span>
+<span class="lineno">  106 </span><span class="spaces">                        </span><span class="nottickedoff">HTTP.setRequestMethod &quot;GET&quot; baseRequest</span>
+<span class="lineno">  107 </span><span class="spaces">          </span><span class="nottickedoff">responseResult &lt;- try @HttpException (HTTP.httpBS request)</span>
+<span class="lineno">  108 </span><span class="spaces">          </span><span class="nottickedoff">pure $ case responseResult of</span>
+<span class="lineno">  109 </span><span class="spaces">            </span><span class="nottickedoff">Right response -&gt; successfulStatus response</span>
+<span class="lineno">  110 </span><span class="spaces">            </span><span class="nottickedoff">Left _ -&gt; False</span></span>
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>successfulStatus :: HTTP.Response a -&gt; Bool
+<span class="lineno">  113 </span><span class="decl"><span class="nottickedoff">successfulStatus response =</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="nottickedoff">let code = HTTP.getResponseStatusCode response</span>
+<span class="lineno">  115 </span><span class="spaces">   </span><span class="nottickedoff">in code &gt;= 200 &amp;&amp; code &lt; 300</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>jsonContentType :: HTTP.Response a -&gt; Bool
+<span class="lineno">  118 </span><span class="decl"><span class="nottickedoff">jsonContentType response =</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="nottickedoff">any isJsonHeader (HTTP.getResponseHeader &quot;Content-Type&quot; response)</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  121 </span><span class="spaces">    </span><span class="nottickedoff">isJsonHeader raw =</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="nottickedoff">let lowered = B8.map Char.toLower raw</span>
+<span class="lineno">  123 </span><span class="spaces">       </span><span class="nottickedoff">in &quot;application/json&quot; `B8.isPrefixOf` B8.dropWhile (== ' ') lowered</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>renderContentTypes :: HTTP.Response a -&gt; Text
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">renderContentTypes response =</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="nottickedoff">case HTTP.getResponseHeader &quot;Content-Type&quot; response of</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">[] -&gt; &quot;&lt;missing&gt;&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="nottickedoff">headers -&gt; T.intercalate &quot;, &quot; (map (T.pack . B8.unpack) headers)</span></span>
+<span class="lineno">  130 </span>
+<span class="lineno">  131 </span>parseMorphResponse :: B8.ByteString -&gt; Either Text [MorphRemoteToken]
+<span class="lineno">  132 </span><span class="decl"><span class="nottickedoff">parseMorphResponse body = do</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="nottickedoff">value &lt;- case Aeson.eitherDecodeStrict' body of</span>
+<span class="lineno">  134 </span><span class="spaces">    </span><span class="nottickedoff">Left err -&gt; Left (&quot;invalid morph json: &quot; &lt;&gt; showText err)</span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="nottickedoff">Right parsed -&gt; Right parsed</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="nottickedoff">case Aeson.parseMaybe (Aeson.withObject &quot;resp&quot; (Aeson..: &quot;tokens&quot;)) value of</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="nottickedoff">Just tokens -&gt; Right tokens</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; Left &quot;invalid morph response format: missing 'tokens' field&quot;</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>showText :: Show a =&gt; a -&gt; Text
+<span class="lineno">  141 </span><span class="decl"><span class="nottickedoff">showText = T.pack . show</span></span>
+
+</pre>
+</body>
+</html>

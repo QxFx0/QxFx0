@@ -214,6 +214,15 @@ Readiness probe semantics:
   turns use local recovery and persist typed recovery cause/strategy/evidence in
   replay traces.
 
+## Known Limitations
+
+- **Consciousness/intuition are state-machine metaphors**, not adaptive AI. The "consciousness loop" tracks dialogue state, surfacing pressure channels, and narrative fragments through deterministic updates. The "intuition" layer is a Bayesian-scoring state machine with static priors. Neither layer learns or adapts dynamically at runtime.
+- **Nix guard is partially stubbed.** `resolvePipelineNixPath` always returns `Nothing`, meaning the constitutional Nix evaluator is not dynamically resolved in production. The Nix policy file is validated at readiness time but not re-evaluated per turn.
+- **GF linearization fallback.** When the Grammar Framework PGF runtime is unavailable, `linearizeClaimAstRus` falls back to hardcoded Russian text templates in `Render/Dialogue.hs`. These are deterministic fallback strings, not generated output. The system degrades gracefully but loses grammatical guarantees in this mode.
+- **Test coverage gaps.** The default test interpreter stubs all external effects (Nix, Agda, Shadow verification). Happy-path integration with real external systems is untested.
+- **Non-determinism in production.** While the test harness uses fixed time, the production runtime calls `getCurrentTime`, `threadDelay`, and UUID generation, meaning turn surfacing and request tracing are not fully deterministic in production.
+- **Session lock cap is a soft limit.** Past 4096 tracked sessions, new sessions bypass the per-session lock registry and use a shared overflow lock. This prevents unbounded memory growth but reduces isolation for overflow sessions.
+
 ## Notes
 
 - Post-render safety guard is enforced before final output.

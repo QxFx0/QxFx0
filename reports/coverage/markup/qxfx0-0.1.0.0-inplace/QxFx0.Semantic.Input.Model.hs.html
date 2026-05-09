@@ -1,0 +1,262 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>module QxFx0.Semantic.Input.Model
+<span class="lineno">    8 </span>  ( InputPartOfSpeech(..)
+<span class="lineno">    9 </span>  , InputMorphFeature(..)
+<span class="lineno">   10 </span>  , InputSyntacticRole(..)
+<span class="lineno">   11 </span>  , InputSemanticClass(..)
+<span class="lineno">   12 </span>  , InputDiscourseFunction(..)
+<span class="lineno">   13 </span>  , InputClauseType(..)
+<span class="lineno">   14 </span>  , InputSpeechAct(..)
+<span class="lineno">   15 </span>  , InputPolarity(..)
+<span class="lineno">   16 </span>  , InputRouteType(..)
+<span class="lineno">   17 </span>  , InputRouteHint(..)
+<span class="lineno">   18 </span>  , WordMeaningUnit(..)
+<span class="lineno">   19 </span>  , UtteranceSemanticFrame(..)
+<span class="lineno">   20 </span>  ) where
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   23 </span>import Data.Aeson
+<span class="lineno">   24 </span>  ( FromJSON(..)
+<span class="lineno">   25 </span>  , ToJSON(..)
+<span class="lineno">   26 </span>  , object
+<span class="lineno">   27 </span>  , withObject
+<span class="lineno">   28 </span>  , (.:)
+<span class="lineno">   29 </span>  , (.:?)
+<span class="lineno">   30 </span>  , (.!=)
+<span class="lineno">   31 </span>  , (.=)
+<span class="lineno">   32 </span>  )
+<span class="lineno">   33 </span>import Data.Text (Text)
+<span class="lineno">   34 </span>import GHC.Generics (Generic)
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>data InputPartOfSpeech
+<span class="lineno">   37 </span>  = PosNoun
+<span class="lineno">   38 </span>  | PosAdjective
+<span class="lineno">   39 </span>  | PosVerb
+<span class="lineno">   40 </span>  | PosAdverb
+<span class="lineno">   41 </span>  | PosPronoun
+<span class="lineno">   42 </span>  | PosNumeral
+<span class="lineno">   43 </span>  | PosPreposition
+<span class="lineno">   44 </span>  | PosConjunction
+<span class="lineno">   45 </span>  | PosParticle
+<span class="lineno">   46 </span>  | PosInterjection
+<span class="lineno">   47 </span>  | PosUnknown
+<span class="lineno">   48 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   49 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>data InputMorphFeature
+<span class="lineno">   52 </span>  = FeatCaseNom
+<span class="lineno">   53 </span>  | FeatCaseGen
+<span class="lineno">   54 </span>  | FeatCaseDat
+<span class="lineno">   55 </span>  | FeatCaseAcc
+<span class="lineno">   56 </span>  | FeatCaseIns
+<span class="lineno">   57 </span>  | FeatCaseLoc
+<span class="lineno">   58 </span>  | FeatTensePast
+<span class="lineno">   59 </span>  | FeatTensePres
+<span class="lineno">   60 </span>  | FeatTenseFut
+<span class="lineno">   61 </span>  | FeatMoodInd
+<span class="lineno">   62 </span>  | FeatMoodImp
+<span class="lineno">   63 </span>  | FeatPerson1
+<span class="lineno">   64 </span>  | FeatPerson2
+<span class="lineno">   65 </span>  | FeatPerson3
+<span class="lineno">   66 </span>  | FeatNumberSing
+<span class="lineno">   67 </span>  | FeatNumberPlur
+<span class="lineno">   68 </span>  | FeatNegated
+<span class="lineno">   69 </span>  | FeatQuestion
+<span class="lineno">   70 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   71 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>data InputSyntacticRole
+<span class="lineno">   74 </span>  = SynRoot
+<span class="lineno">   75 </span>  | SynSubject
+<span class="lineno">   76 </span>  | SynPredicate
+<span class="lineno">   77 </span>  | SynObject
+<span class="lineno">   78 </span>  | SynAttribute
+<span class="lineno">   79 </span>  | SynCircumstance
+<span class="lineno">   80 </span>  | SynMarker
+<span class="lineno">   81 </span>  | SynUnknown
+<span class="lineno">   82 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   83 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>data InputSemanticClass
+<span class="lineno">   86 </span>  = SemWorldObject
+<span class="lineno">   87 </span>  | SemPhysicalObject
+<span class="lineno">   88 </span>  | SemWorldPhenomenon
+<span class="lineno">   89 </span>  | SemMentalObject
+<span class="lineno">   90 </span>  | SemAbstractConcept
+<span class="lineno">   91 </span>  | SemQualityProperty
+<span class="lineno">   92 </span>  | SemPurposeFunction
+<span class="lineno">   93 </span>  | SemRelation
+<span class="lineno">   94 </span>  | SemAction
+<span class="lineno">   95 </span>  | SemState
+<span class="lineno">   96 </span>  | SemCause
+<span class="lineno">   97 </span>  | SemComparison
+<span class="lineno">   98 </span>  | SemIdentity
+<span class="lineno">   99 </span>  | SemKnowledge
+<span class="lineno">  100 </span>  | SemDialogueRepair
+<span class="lineno">  101 </span>  | SemDialogueInvitation
+<span class="lineno">  102 </span>  | SemSelfReference
+<span class="lineno">  103 </span>  | SemUserReference
+<span class="lineno">  104 </span>  | SemContemplative
+<span class="lineno">  105 </span>  | SemUnknown
+<span class="lineno">  106 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  107 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>data InputDiscourseFunction
+<span class="lineno">  110 </span>  = DiscNegation
+<span class="lineno">  111 </span>  | DiscQuestion
+<span class="lineno">  112 </span>  | DiscContrast
+<span class="lineno">  113 </span>  | DiscCondition
+<span class="lineno">  114 </span>  | DiscCause
+<span class="lineno">  115 </span>  | DiscResult
+<span class="lineno">  116 </span>  | DiscInvitation
+<span class="lineno">  117 </span>  | DiscClarification
+<span class="lineno">  118 </span>  | DiscEmphasis
+<span class="lineno">  119 </span>  | DiscUnknown
+<span class="lineno">  120 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  121 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>data InputClauseType
+<span class="lineno">  124 </span>  = ClauseDeclarativeInput
+<span class="lineno">  125 </span>  | ClauseInterrogativeInput
+<span class="lineno">  126 </span>  | ClauseImperativeInput
+<span class="lineno">  127 </span>  | ClauseFragmentInput
+<span class="lineno">  128 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  129 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  130 </span>
+<span class="lineno">  131 </span>data InputSpeechAct
+<span class="lineno">  132 </span>  = ActAssert
+<span class="lineno">  133 </span>  | ActAsk
+<span class="lineno">  134 </span>  | ActRequest
+<span class="lineno">  135 </span>  | ActInvite
+<span class="lineno">  136 </span>  | ActReport
+<span class="lineno">  137 </span>  | ActUnknown
+<span class="lineno">  138 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  139 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>data InputPolarity
+<span class="lineno">  142 </span>  = PolarityPositive
+<span class="lineno">  143 </span>  | PolarityNegative
+<span class="lineno">  144 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  145 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>data InputRouteType
+<span class="lineno">  148 </span>  = RouteTypeDefine
+<span class="lineno">  149 </span>  | RouteTypeDescribe
+<span class="lineno">  150 </span>  | RouteTypeDeepen
+<span class="lineno">  151 </span>  | RouteTypeGround
+<span class="lineno">  152 </span>  | RouteTypeDistinguish
+<span class="lineno">  153 </span>  | RouteTypeRepair
+<span class="lineno">  154 </span>  | RouteTypeClarify
+<span class="lineno">  155 </span>  | RouteTypeContact
+<span class="lineno">  156 </span>  | RouteTypeUnknown
+<span class="lineno">  157 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  158 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  159 </span>
+<span class="lineno">  160 </span>data InputRouteHint = InputRouteHint
+<span class="lineno">  161 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">irhType</span></span></span> :: !InputRouteType
+<span class="lineno">  162 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhTag</span></span></span> :: !Text
+<span class="lineno">  163 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhReason</span></span></span> :: !Text
+<span class="lineno">  164 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhRuleScore</span></span></span> :: !Double
+<span class="lineno">  165 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhSemanticScore</span></span></span> :: !Double
+<span class="lineno">  166 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhSyntacticScore</span></span></span> :: !Double
+<span class="lineno">  167 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhEmbeddingScore</span></span></span> :: !Double
+<span class="lineno">  168 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhEvidence</span></span></span> :: ![Text]
+<span class="lineno">  169 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">irhConfidence</span></span></span> :: !Double
+<span class="lineno">  170 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  171 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON InputRouteHint</span></span></span></span></span></span></span></span> where
+<span class="lineno">  174 </span>  <span class="decl"><span class="nottickedoff">toJSON hint =</span>
+<span class="lineno">  175 </span><span class="spaces">    </span><span class="nottickedoff">object</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="nottickedoff">[ &quot;irhType&quot; .= irhType hint</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhTag&quot; .= irhTag hint</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhReason&quot; .= irhReason hint</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhRuleScore&quot; .= irhRuleScore hint</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhSemanticScore&quot; .= irhSemanticScore hint</span>
+<span class="lineno">  181 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhSyntacticScore&quot; .= irhSyntacticScore hint</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhEmbeddingScore&quot; .= irhEmbeddingScore hint</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhEvidence&quot; .= irhEvidence hint</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;irhConfidence&quot; .= irhConfidence hint</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON InputRouteHint</span></span></span></span> where
+<span class="lineno">  188 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withObject &quot;InputRouteHint&quot; $ \o -&gt; do</span>
+<span class="lineno">  189 </span><span class="spaces">    </span><span class="nottickedoff">hintType &lt;- o .: &quot;irhType&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">    </span><span class="nottickedoff">hintTag &lt;- o .: &quot;irhTag&quot;</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="nottickedoff">hintReason &lt;- o .: &quot;irhReason&quot;</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="nottickedoff">hintConfidence &lt;- o .: &quot;irhConfidence&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="nottickedoff">hintRule &lt;- o .:? &quot;irhRuleScore&quot; .!= hintConfidence</span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="nottickedoff">hintSemantic &lt;- o .:? &quot;irhSemanticScore&quot; .!= 0.0</span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="nottickedoff">hintSyntactic &lt;- o .:? &quot;irhSyntacticScore&quot; .!= 0.0</span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="nottickedoff">hintEmbedding &lt;- o .:? &quot;irhEmbeddingScore&quot; .!= 0.0</span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="nottickedoff">hintEvidence &lt;- o .:? &quot;irhEvidence&quot; .!= []</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="nottickedoff">pure InputRouteHint</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="nottickedoff">{ irhType = hintType</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="nottickedoff">, irhTag = hintTag</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="nottickedoff">, irhReason = hintReason</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="nottickedoff">, irhRuleScore = hintRule</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="nottickedoff">, irhSemanticScore = hintSemantic</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="nottickedoff">, irhSyntacticScore = hintSyntactic</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="nottickedoff">, irhEmbeddingScore = hintEmbedding</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="nottickedoff">, irhEvidence = hintEvidence</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="nottickedoff">, irhConfidence = hintConfidence</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>data WordMeaningUnit = WordMeaningUnit
+<span class="lineno">  211 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuSurfaceForm</span></span></span> :: !Text
+<span class="lineno">  212 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuLemma</span></span></span> :: !Text
+<span class="lineno">  213 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuPartOfSpeech</span></span></span> :: !InputPartOfSpeech
+<span class="lineno">  214 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuMorphFeatures</span></span></span> :: ![InputMorphFeature]
+<span class="lineno">  215 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuSyntacticRole</span></span></span> :: !InputSyntacticRole
+<span class="lineno">  216 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuSemanticClasses</span></span></span> :: ![InputSemanticClass]
+<span class="lineno">  217 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuDiscourseFunctions</span></span></span> :: ![InputDiscourseFunction]
+<span class="lineno">  218 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuAmbiguityCandidates</span></span></span> :: ![Text]
+<span class="lineno">  219 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">wmuConfidence</span></span></span> :: !Double
+<span class="lineno">  220 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  221 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  222 </span>
+<span class="lineno">  223 </span>data UtteranceSemanticFrame = UtteranceSemanticFrame
+<span class="lineno">  224 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfRawText</span></span></span> :: !Text
+<span class="lineno">  225 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfNormalizedText</span></span></span> :: !Text
+<span class="lineno">  226 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfWordUnits</span></span></span> :: ![WordMeaningUnit]
+<span class="lineno">  227 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfClauseType</span></span></span> :: !InputClauseType
+<span class="lineno">  228 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfSpeechAct</span></span></span> :: !InputSpeechAct
+<span class="lineno">  229 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfPolarity</span></span></span> :: !InputPolarity
+<span class="lineno">  230 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfTopic</span></span></span> :: !Text
+<span class="lineno">  231 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfFocus</span></span></span> :: !Text
+<span class="lineno">  232 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">usfAgent</span></span></span> :: !(Maybe Text)
+<span class="lineno">  233 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfTarget</span></span></span> :: !(Maybe Text)
+<span class="lineno">  234 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfSemanticCandidates</span></span></span> :: ![Text]
+<span class="lineno">  235 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfAmbiguityLevel</span></span></span> :: !Text
+<span class="lineno">  236 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfRouteHint</span></span></span> :: !InputRouteHint
+<span class="lineno">  237 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">usfConfidence</span></span></span> :: !Double
+<span class="lineno">  238 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  239 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+
+</pre>
+</body>
+</html>

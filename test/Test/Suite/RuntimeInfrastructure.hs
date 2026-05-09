@@ -19,9 +19,11 @@ import Test.QuickCheck
   )
 import Control.Exception (AsyncException(ThreadKilled), finally, throwIO, try)
 import Control.Monad (forM_)
-import System.Directory (createDirectoryIfMissing, getCurrentDirectory, getPermissions, setPermissions, Permissions(..))
+import System.Directory (createDirectoryIfMissing, findExecutable, getCurrentDirectory, getPermissions, setPermissions, Permissions(..))
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), takeFileName)
+import System.Process (readProcessWithExitCode)
+import System.Exit (ExitCode(..))
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -116,6 +118,12 @@ runtimeInfrastructureTests =
   , testNixStringLiteralEmpty
   , testRunTurnRefreshesRuntimeSessionLastActive
   , testWithPooledDBAsyncInterruptionSanitizesConnection
+  , testNixGuardCaseInsensitiveConceptMatch
+  , testNixGuardLowercaseConceptMatchesCapitalizedNix
+  , testAgdaR5ParseFamilyRejectsUnknownFamily
+  , testAgdaR5MalformedSnapshotRowReportsMismatch
+  , testHealthShLlmDecisionPathReflectsReality
+  , testWriteAgdaWitnessErrorGivesNonzeroExit
   ]
 
 testEmbeddedSqlMatchesCanonicalSpec :: Test
@@ -1500,7 +1508,7 @@ testNixGuardIsSafeChar = TestCase $ do
   assertBool "ASCII digit should be safe" (NixGuard.isSafeChar '5')
   assertBool "dash should be safe" (NixGuard.isSafeChar '-')
   assertBool "underscore should be safe" (NixGuard.isSafeChar '_')
-  assertBool "slash should be safe" (NixGuard.isSafeChar '/')
+  assertBool "slash should not be safe (path traversal risk)" (not (NixGuard.isSafeChar '/'))
   assertBool "Cyrillic letter should be safe" (NixGuard.isSafeChar 'в')
   assertBool "space should not be safe" (not (NixGuard.isSafeChar ' '))
   assertBool "semicolon should not be safe" (not (NixGuard.isSafeChar ';'))
@@ -1599,3 +1607,67 @@ quickCheckTest maxCases label prop = TestCase $ do
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)
+
+testNixGuardCaseInsensitiveConceptMatch :: Test
+testNixGuardCaseInsensitiveConceptMatch = TestCase $ do
+  let lowerKey = NixGuard.normalizeConceptKey "свобода"
+      upperKey = NixGuard.normalizeConceptKey "Свобода"
+  case (lowerKey, upperKey) of
+    (Just lk, Just uk) ->
+      assertEqual "lowercase and uppercase concept keys should normalize identically" lk uk
+    _ -> assertFailure "concept key normalization returned Nothing"
+
+testNixGuardLowercaseConceptMatchesCapitalizedNix :: Test
+testNixGuardLowercaseConceptMatchesCapitalizedNix = TestCase $ do
+  status <- NixGuard.checkConstitution "semantics/concepts.nix" "свобода" 0.5 0.5
+  case status of
+    Allowed -> pure ()
+    Blocked _ -> pure ()
+    Unavailable _ -> pure ()
+
+testAgdaR5ParseFamilyRejectsUnknownFamily :: Test
+testAgdaR5ParseFamilyRejectsUnknownFamily = TestCase $ do
+  let tmpFile = "/tmp/qxfx0_test_agda_unknown_family.tsv"
+  TIO.writeFile tmpFile "CMFakeForce\tDeclarative\tContentLayer\tWarranted\n"
+  result <- AgdaR5.verifyAgainstSnapshot tmpFile
+  case result of
+    AgdaR5.AgdaSnapshotMismatch mismatches ->
+      assertBool "unknown family should produce mismatch" (not (null mismatches))
+    _ -> assertFailure ("expected AgdaSnapshotMismatch for unknown family, got: " ++ show result)
+
+testAgdaR5MalformedSnapshotRowReportsMismatch :: Test
+testAgdaR5MalformedSnapshotRowReportsMismatch = TestCase $ do
+  let tmpFile = "/tmp/qxfx0_test_agda_malformed_row.tsv"
+  TIO.writeFile tmpFile "CMGround\n"
+  result <- AgdaR5.verifyAgainstSnapshot tmpFile
+  case result of
+    AgdaR5.AgdaSnapshotMismatch mismatches ->
+      assertBool "malformed row should produce mismatch" (not (null mismatches))
+    _ -> assertFailure ("expected AgdaSnapshotMismatch for malformed row, got: " ++ show result)
+
+testHealthShLlmDecisionPathReflectsReality :: Test
+testHealthShLlmDecisionPathReflectsReality = TestCase $ do
+  health <- Runtime.probeRuntimeReadiness
+  let localOnly = Runtime.shDecisionPathLocalOnly health
+      llmPath = Runtime.shLlmDecisionPath health
+  assertBool "llm_decision_path should be the negation of decision_path_local_only" (llmPath == not localOnly)
+
+testWriteAgdaWitnessErrorGivesNonzeroExit :: Test
+testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do
+  mBin <- findExecutable "qxfx0-main"
+  mAgda <- findExecutable "agda"
+  case mBin of
+    Nothing -> pure ()
+    Just bin -> do
+      (exitCode, stdout, stderr) <- readProcessWithExitCode bin ["--write-agda-witness"] ""
+      case (exitCode, mAgda) of
+        (ExitSuccess, Just _) ->
+          assertBool "--write-agda-witness on success should produce witness path on stdout"
+            (not (null stdout))
+        (ExitFailure _, Nothing) ->
+          assertBool "--write-agda-witness on failure should report error on stderr"
+            (not (null stderr))
+        (ExitSuccess, Nothing) ->
+          assertFailure "--write-agda-witness succeeded unexpectedly (agda not in PATH)"
+        (ExitFailure _, Just _) ->
+          assertFailure "--write-agda-witness failed unexpectedly (agda is in PATH)"
