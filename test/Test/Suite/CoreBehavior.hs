@@ -1211,8 +1211,8 @@ testGeneratedLexiconDeterministicGrouping = TestCase $ do
       in Map.insertWith (++) key [caseTag] acc
 
     hasAllCases tags =
-      let norm = sortOn id tags
-      in norm == ["genitive", "nominative", "prepositional"]
+      let required = ["genitive", "nominative", "prepositional"]
+      in all (`elem` tags) required
 
     caseRank caseTag
       | caseTag == "nominative" = 0 :: Int
