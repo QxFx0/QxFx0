@@ -1,0 +1,15 @@
+lexicon check passed (score=10.00, lemmas=156)
+Checking auto-source quality metrics...
+Auto-source quality metrics PASSED
+  p1_lemma_count: 3997 (range: 3000-5000)
+  p2_lemma_count: 17498 (range: 15000-20000)
+  p1_mostly_proper_count: 0 (max: 0)
+  p1_patronymic_like_count: 0 (max: 0)
+  p1_long_lemma_count: 0 (max: 15)
+  p1_technical_compound_count: 0 (max: 15)
+  p2_patronymic_like_count: 0 (max: 50)
+  p1_domain_seed_hit_count: 188 (min: 100)
+  dangerous_collision_count: 0 (max: 0)
+  noun_ins_eq_nom_count: 0 (max: 0)
+  feminine_like_acc_eq_nom_count: 0 (max: 0)
+  soft_sign_ins_eq_nom_count: 0 (max: 0)
