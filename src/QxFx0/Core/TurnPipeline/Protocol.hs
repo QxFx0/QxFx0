@@ -81,6 +81,7 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnSignals(..)
   )
 import QxFx0.Core.Observability (TurnMetrics)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
 import QxFx0.Core.TurnPipeline.Prepare (PrepareEffectResults(..))
 import qualified QxFx0.Core.TurnPipeline.Prepare as Prepare
 import QxFx0.Core.TurnPipeline.Route
@@ -134,7 +135,7 @@ buildRouteTurnPlan :: ShadowPolicy -> SystemState -> TurnInput -> TurnSignals ->
 buildRouteTurnPlan = Route.buildRouteTurnPlan
 
 planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
-planRenderEffects = Route.planRenderEffects
+planRenderEffects = Route.planRenderEffects emptyRuntimeParadigms
 
 planRenderEffectsForRuntime :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
 planRenderEffectsForRuntime = Route.planRenderEffectsForRuntime

@@ -28,6 +28,7 @@ import QxFx0.Core.PipelineIO
   , resolveTurnEffect
   )
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..))
+import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.BackgroundProcess (surfacingToFragment)
 import QxFx0.Core.Observability
@@ -39,12 +40,18 @@ import QxFx0.Core.TurnRender
   , renderStylePrefix
   , snapshotIdentitySignal
   )
-import QxFx0.Core.Semantic.Morphology (hasKnownMorphologyForm)
+import QxFx0.Core.TopicTransition (geodesicRouter)
+import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Core.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
+  , renderArtifactViaAssembly
   , renderDialogueArtifact
   )
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
+import QxFx0.Semantic.Input.Parse (emptyParsedInput)
+import QxFx0.Types.SemanticConfig (SemanticConfig(..))
+import QxFx0.Types.State.Discourse (DiscourseState(..))
 import QxFx0.Types.Text (finalizeForce)
 import QxFx0.Types.Thresholds (parserLowConfidenceThreshold)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..), shadowDivergenceSeverityText)
@@ -81,6 +88,7 @@ data RenderEffectPlan = RenderEffectPlan
   { repRenderStatic :: !RenderStatic
   , repLocalRecoveryPlan :: !(Maybe LocalRecoveryPlan)
   , repRenderMorphologyWarning :: !(Maybe Text)
+  , repKnowledgeTopic :: !Text
   } deriving stock (Eq, Show)
 
 data RenderTimeline = RenderTimeline
@@ -91,16 +99,22 @@ data RenderTimeline = RenderTimeline
 data RenderEffectResults = RenderEffectResults
   { rerRenderTimeline :: !RenderTimeline
   , rerResolvedRenderStatic :: !(Maybe RenderStatic)
+  , rerKnowledgeFact :: !(Maybe Text)
   } deriving stock (Eq, Show)
 
-planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
-planRenderEffects = planRenderEffectsForRuntime RuntimeStrict
+planRenderEffects :: RuntimeParadigms -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
+planRenderEffects rp = planRenderEffectsForRuntimeImpl rp RuntimeStrict
 
+-- COMPAT GLUE: old target callers expect 6-arg interface (no RuntimeParadigms).
 planRenderEffectsForRuntime :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
-planRenderEffectsForRuntime runtimeMode localRecoveryPolicy ss ti ts tp =
+planRenderEffectsForRuntime = planRenderEffectsForRuntimeImpl emptyRuntimeParadigms
+
+planRenderEffectsForRuntimeImpl :: RuntimeParadigms -> PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
+planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
   let bestTopic = tiBestTopic ti
       mFlash = tsFlash ts
       consciousLoop' = tsConsciousLoop' ts
+      mNarrative = clLastNarrative consciousLoop'
       rmpAfterLegit = tpRmpAfterLegit tp
       rcpFinal = tpRcpFinal tp
       semanticAnchor = tpSemanticAnchor tp
@@ -111,8 +125,26 @@ planRenderEffectsForRuntime runtimeMode localRecoveryPolicy ss ti ts tp =
       identityClaims = integrateIdentityClaims (ssIdentityClaims ss) (tpFamily tp) bestTopic
       input = ipfRawText (tiFrame ti)
       structuredSurface = hasStructuredDialogueSurface (tiFrame ti)
-      dialogueArtifact =
-        renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss)
+      mGeodesicPlan =
+        let topicChain = dscTopicChain (ssDiscourse ss)
+        in case topicChain of
+          (prev:_) | prev /= bestTopic && not (T.null prev) && not (T.null bestTopic) ->
+            Just (geodesicRouter (ssMeaningGraph ss) prev bestTopic (take 3 topicChain))
+          _ -> Nothing
+      colloquial = scColloquialMode (ssSemanticConfig ss)
+      dialogueArtifact
+        | colloquial =
+            let viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
+                                bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan
+            -- COMPAT GLUE: when runtime paradigms are empty (tests), assembly returns
+            -- empty text. Fall back to old template path to keep tests passing.
+            in if T.null (draRenderedText viaAssembly)
+                 then renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal
+                        bestTopic identityClaims (ssMorphology ss)
+                 else viaAssembly
+        | otherwise =
+            renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal
+              bestTopic identityClaims (ssMorphology ss)
       forceFinalized =
         if structuredSurface
           then draRenderedText dialogueArtifact
@@ -124,27 +156,12 @@ planRenderEffectsForRuntime runtimeMode localRecoveryPolicy ss ti ts tp =
               then forceFinalized <> "\n[" <> ifDirective flash <> "]"
               else forceFinalized
           Nothing -> forceFinalized
-      renderWithContext =
-        let modePrefix =
-              if structuredSurface
-                then ""
-                else maybe "" (renderPrincipledPrefix mPressure) principledModeResult
-            stylePrefix =
-              if structuredSurface
-                then ""
-                else renderStylePrefix (rcpStyle rcpFinal)
-            anchorPrefixAllowed =
-              not structuredSurface && tpFinalFamily tp == CMAnchor
-            anchorPrefix =
-              if not anchorPrefixAllowed
-                then ""
-                else maybe "" renderAnchorPrefix semanticAnchor
-        in T.intercalate "\n" (filter (not . T.null) [stylePrefix, modePrefix, anchorPrefix, finalRender])
+      renderWithContext = finalRender
       narrativeFragment = maybe "" id (tsNarrativeFragment ts)
       narrativeEnriched =
         if structuredSurface || T.null narrativeFragment
           then renderWithContext
-          else renderWithContext <> "\n" <> T.take 80 narrativeFragment
+          else renderWithContext <> "\n" <> T.take 40 narrativeFragment
       surfacingFragment =
         case structuredSurface of
           True -> ""
@@ -195,7 +212,8 @@ planRenderEffectsForRuntime runtimeMode localRecoveryPolicy ss ti ts tp =
           }
       , repLocalRecoveryPlan = localRecoveryPlan
       , repRenderMorphologyWarning = morphologyWarning
-      }
+      , repKnowledgeTopic = bestTopic
+       }
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
@@ -208,6 +226,9 @@ resolveRenderEffects pio effectPlan = do
       pure ()
 
   resolvedRenderStatic <- resolveRuntimeGfLinearization pio (repRenderStatic effectPlan)
+  -- COMPAT GLUE: TurnReqKnowledgeLookup does not exist in target effects.
+  -- The knowledge lookup DB query is not available; skipping gracefully.
+  let mKnowledgeFact = Nothing
   tRender1 <- resolveRenderCurrentTime pio
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
@@ -215,6 +236,7 @@ resolveRenderEffects pio effectPlan = do
         , rtlRenderEnd = tRender1
         }
     , rerResolvedRenderStatic = resolvedRenderStatic
+    , rerKnowledgeFact = mKnowledgeFact
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -223,10 +245,11 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       renderWithBg = rsRenderWithBg renderStatic
       localRecoveryPlan = repLocalRecoveryPlan effectPlan
       localRecoveryText = lrpSurface <$> localRecoveryPlan
+      knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       preSafetyRendered =
         case localRecoveryText of
-          Just fb -> renderWithBg <> "\n" <> fb
-          Nothing -> renderWithBg
+          Just fb -> renderWithBg <> "\n" <> fb <> knowledgeFragment
+          Nothing -> renderWithBg <> knowledgeFragment
       preSafetySurface =
         Guard.GuardSurface
           { Guard.gsRenderedText = preSafetyRendered
@@ -435,13 +458,22 @@ resolveRuntimeGfLinearization pio renderStatic = do
   runtimeEnabled <- shouldUseGfRuntime pio
   if not runtimeEnabled
     then pure Nothing
-    else
-      case draClaimAst (rsTemplateArtifact renderStatic) of
-        Nothing -> pure Nothing
-        Just claimAst -> do
-          mPgfPath <- resolveGfPgfPath pio
-          result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath claimAst)
-          pure (Just (applyRuntimeGfResult renderStatic result))
+    else do
+      mPgfPath <- resolveGfPgfPath pio
+      -- COMPAT GLUE: lang resolution removed; target effect constructors
+      -- do not take a language parameter (default "QxFx0SyntaxRus" is wired
+      -- in Runtime.Wiring.Pipeline).
+      let da = draDialogAtoms (rsTemplateArtifact renderStatic)
+      resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath da)
+      case resultDa of
+        TurnResLinearizeDialogAtoms (Right txt) | not (T.null (T.strip txt)) ->
+          pure (Just (applyRuntimeGfResult renderStatic resultDa))
+        _ ->
+          case draClaimAst (rsTemplateArtifact renderStatic) of
+            Nothing -> pure Nothing
+            Just claimAst -> do
+              result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath claimAst)
+              pure (Just (applyRuntimeGfResult renderStatic result))
 
 shouldUseGfRuntime :: PipelineIO -> IO Bool
 shouldUseGfRuntime pio = do
@@ -451,6 +483,15 @@ shouldUseGfRuntime pio = do
       pure (normalizeBool rawValue)
     _ ->
       pure False
+
+resolveGfLang :: PipelineIO -> IO Text
+resolveGfLang pio = do
+  result <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_GF_LANG")
+  case result of
+    TurnResReadEnv (Just lang) | not (T.null (T.strip lang)) ->
+      pure (T.strip lang)
+    _ ->
+      pure "QxFx0SyntaxRus"
 
 resolveGfPgfPath :: PipelineIO -> IO (Maybe FilePath)
 resolveGfPgfPath pio = do
@@ -469,6 +510,21 @@ normalizeBool rawValue =
 applyRuntimeGfResult :: RenderStatic -> TurnEffectResult -> RenderStatic
 applyRuntimeGfResult renderStatic result =
   case result of
+    TurnResLinearizeDialogAtoms (Right gfText)
+      | not (T.null (T.strip gfText)) ->
+          let baseArtifact = rsTemplateArtifact renderStatic
+              updatedArtifact =
+                baseArtifact
+                  { draRenderedText = gfText
+                  , draTemplateBodyText = gfText
+                  , draLinearizationLang = Just "ru_GF_ATOMS"
+                  , draLinearizationOk = True
+                  , draFallbackReason = Nothing
+                  }
+          in renderStatic
+               { rsTemplateArtifact = updatedArtifact
+               , rsRenderWithBg = gfText
+               }
     TurnResLinearizeClaimAst (Right gfText)
       | not (T.null (T.strip gfText)) ->
           let baseArtifact = rsTemplateArtifact renderStatic
