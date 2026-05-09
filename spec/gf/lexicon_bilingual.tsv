@@ -1,0 +1,765 @@
+fun_id	lemma	lang	pos	nominative	genitive	prepositional	accusative	instrumental	nom_pl	gen_pl	prep_pl	acc_pl	ins_pl	v1sg	v2sg	v3sg	v1pl	v2pl	v3pl
+absurd_N	абсурд	ru	noun	абсурд	абсурда	абсурде	абсурд	абсурдом											
+absurd_N	absurd	en	noun	absurd															
+avtonomiya_N	автономия	ru	noun	автономия	автономии	автономии	автономию	автономией											
+avtonomiya_N	autonomy	en	noun	autonomy															
+agentnost_N	агентность	ru	noun	агентность	агентности	агентности	агентность	агентностью											
+agentnost_N	agency	en	noun	agency															
+aksioma_N	аксиома	ru	noun	аксиома	аксиомы	аксиоме	аксиому	аксиомой											
+aksioma_N	axiom	en	noun	axiom															
+antitezis_N	антитезис	ru	noun	антитезис	антитезиса	антитезисе	антитезис	антитезисом											
+antitezis_N	antithesis	en	noun	antithesis															
+argument_N	аргумент	ru	noun	аргумент	аргумента	аргументе	аргумент	аргументом											
+argument_N	argument	en	noun	argument															
+bol_N	боль	ru	noun	боль	боли	боли	боль	болью											
+bol_N	pain	en	noun	pain															
+validnost_N	валидность	ru	noun	валидность	валидности	валидности	валидность	валидностью											
+validnost_N	validity	en	noun	validity															
+veroyatnost_N	вероятность	ru	noun	вероятность	вероятности	вероятности	вероятность	вероятностью											
+veroyatnost_N	probability	en	noun	probability															
+vechnost_N	вечность	ru	noun	вечность	вечности	вечности	вечность	вечностью											
+vechnost_N	eternity	en	noun	eternity															
+vina_N	вина	ru	noun	вина	вины	вине	вину	виной											
+vina_N	guilt	en	noun	guilt															
+vozmozhnost_N	возможность	ru	noun	возможность	возможности	возможности	возможность	возможностью											
+vozmozhnost_N	possibility	en	noun	possibility															
+volya_N	воля	ru	noun	воля	воли	воле	волю	волей											
+volya_N	will	en	noun	will															
+vopros_N	вопрос	ru	noun	вопрос	вопроса	вопросе	вопрос	вопросом											
+vopros_N	question	en	noun	question															
+vremya_N	время	ru	noun	время	времени	времени	время	временем											
+vremya_N	time	en	noun	time															
+vybor_N	выбор	ru	noun	выбор	выбора	выборе	выбор	выбором											
+vybor_N	choice	en	noun	choice															
+vyvod_N	вывод	ru	noun	вывод	вывода	выводе	вывод	выводом											
+vyvod_N	conclusion	en	noun	conclusion															
+vyvodimost_N	выводимость	ru	noun	выводимость	выводимости	выводимости	выводимость	выводимостью											
+vyvodimost_N	deducibility	en	noun	deducibility															
+vyskazyvanie_N	высказывание	ru	noun	высказывание	высказывания	высказывании	высказывание	высказыванием											
+vyskazyvanie_N	statement	en	noun	statement															
+gipoteza_N	гипотеза	ru	noun	гипотеза	гипотезы	гипотезе	гипотезу	гипотезой											
+gipoteza_N	hypothesis	en	noun	hypothesis															
+gnev_N	гнев	ru	noun	гнев	гнева	гневе	гнев	гневом											
+gnev_N	anger	en	noun	anger															
+gordost_N	гордость	ru	noun	гордость	гордости	гордости	гордость	гордостью											
+gordost_N	pride	en	noun	pride															
+granitsa_N	граница	ru	noun	граница	границы	границе	границу	границей											
+granitsa_N	border	en	noun	border															
+delat_V	делать	ru	verb	делать	делать	делать	делать	делать											
+delat_V	do	en	verb	do															
+definitsiya_N	дефиниция	ru	noun	дефиниция	дефиниции	дефиниции	дефиницию	дефиницией											
+definitsiya_N	definition	en	noun	definition															
+dialog_N	диалог	ru	noun	диалог	диалога	диалоге	диалог	диалогом											
+dialog_N	dialogue	en	noun	dialogue															
+distinktsiya_N	дистинкция	ru	noun	дистинкция	дистинкции	дистинкции	дистинкцию	дистинкцией											
+distinktsiya_N	distinction	en	noun	distinction															
+doverie_N	доверие	ru	noun	доверие	доверия	доверии	доверие	доверием											
+doverie_N	trust	en	noun	trust															
+dovod_N	довод	ru	noun	довод	довода	доводе	довод	доводом											
+dovod_N	argument	en	noun	argument															
+dokazatelstvo_N	доказательство	ru	noun	доказательство	доказательства	доказательстве	доказательство	доказательством											
+dokazatelstvo_N	proof	en	noun	proof															
+dolg_N	долг	ru	noun	долг	долга	долге	долг	долгом											
+dolg_N	debt	en	noun	debt															
+dopushchenie_N	допущение	ru	noun	допущение	допущения	допущении	допущение	допущением											
+dopushchenie_N	assumption	en	noun	assumption															
+dostatochnost_N	достаточность	ru	noun	достаточность	достаточности	достаточности	достаточность	достаточностью											
+dostatochnost_N	sufficiency	en	noun	sufficiency															
+dostovernost_N	достоверность	ru	noun	достоверность	достоверности	достоверности	достоверность	достоверностью											
+dostovernost_N	reliability	en	noun	reliability															
+zhizn_N	жизнь	ru	noun	жизнь	жизни	жизни	жизнь	жизнью											
+zhizn_N	life	en	noun	life															
+zadacha_N	задача	ru	noun	задача	задачи	задаче	задачу	задачей											
+zadacha_N	task	en	noun	task															
+zaklyuchenie_N	заключение	ru	noun	заключение	заключения	заключении	заключение	заключением											
+zaklyuchenie_N	conclusion	en	noun	conclusion															
+zapret_N	запрет	ru	noun	запрет	запрета	запрете	запрет	запретом											
+zapret_N	prohibition	en	noun	prohibition															
+znat_V	знать	ru	verb	знать	знать	знать	знать	знать											
+znat_V	know	en	verb	know															
+identichnost_N	идентичность	ru	noun	идентичность	идентичности	идентичности	идентичность	идентичностью											
+identichnost_N	identity	en	noun	identity															
+illyuziya_N	иллюзия	ru	noun	иллюзия	иллюзии	иллюзии	иллюзию	иллюзией											
+illyuziya_N	illusion	en	noun	illusion															
+implikatsiya_N	импликация	ru	noun	импликация	импликации	импликации	импликацию	импликацией											
+implikatsiya_N	implication	en	noun	implication															
+interpretatsiya_N	интерпретация	ru	noun	интерпретация	интерпретации	интерпретации	интерпретацию	интерпретацией											
+interpretatsiya_N	interpretation	en	noun	interpretation															
+inferentsiya_N	инференция	ru	noun	инференция	инференции	инференции	инференцию	инференцией											
+inferentsiya_N	inference	en	noun	inference															
+isklyuchenie_N	исключение	ru	noun	исключение	исключения	исключении	исключение	исключением											
+isklyuchenie_N	exception	en	noun	exception															
+istina_N	истина	ru	noun	истина	истины	истине	истину	истиной											
+istina_N	truth	en	noun	truth															
+istinnost_N	истинность	ru	noun	истинность	истинности	истинности	истинность	истинностью											
+istinnost_N	truthfulness	en	noun	truthfulness															
+kvantor_N	квантор	ru	noun	квантор	квантора	кванторе	квантор	квантором											
+kvantor_N	quantifier	en	noun	quantifier															
+kontakt_N	контакт	ru	noun	контакт	контакта	контакте	контакт	контактом											
+kontakt_N	contact	en	noun	contact															
+kontrprimer_N	контрпример	ru	noun	контрпример	контрпримера	контрпримере	контрпример	контрпримером											
+kontrprimer_N	counterexample	en	noun	counterexample															
+konflikt_N	конфликт	ru	noun	конфликт	конфликта	конфликте	конфликт	конфликтом											
+konflikt_N	conflict	en	noun	conflict															
+konfrontatsiya_N	конфронтация	ru	noun	конфронтация	конфронтации	конфронтации	конфронтацию	конфронтацией											
+konfrontatsiya_N	confrontation	en	noun	confrontation															
+korollarij_N	королларий	ru	noun	королларий	короллария	королларии	королларий	королларием											
+korollarij_N	corollary	en	noun	corollary															
+korrektnost_N	корректность	ru	noun	корректность	корректности	корректности	корректность	корректностью											
+korrektnost_N	correctness	en	noun	correctness															
+kriterij_N	критерий	ru	noun	критерий	критерия	критерии	критерий	критерием											
+kriterij_N	criterion	en	noun	criterion															
+lemma_N	лемма	ru	noun	лемма	леммы	лемме	лемму	леммой											
+lemma_N	lemma	en	noun	lemma															
+logika_N	логика	ru	noun	логика	логики	логике	логику	логикой											
+logika_N	logic	en	noun	logic															
+lozh_N	ложь	ru	noun	ложь	лжи	лжи	ложь	ложью											
+lozh_N	lie	en	noun	lie															
+lyubov_N	любовь	ru	noun	любовь	любви	любви	любовь	любовью											
+lyubov_N	love	en	noun	love															
+modalnost_N	модальность	ru	noun	модальность	модальности	модальности	модальность	модальностью											
+modalnost_N	modality	en	noun	modality															
+molchanie_N	молчание	ru	noun	молчание	молчания	молчании	молчание	молчанием											
+molchanie_N	silence	en	noun	silence															
+myslit_V	мыслить	ru	verb	мыслить	мыслить	мыслить	мыслить	мыслить											
+myslit_V	think	en	verb	think															
+nadezhda_N	надежда	ru	noun	надежда	надежды	надежде	надежду	надеждой											
+nadezhda_N	hope	en	noun	hope															
+nadezhnost_N	надежность	ru	noun	надежность	надежности	надежности	надежность	надежностью											
+nadezhnost_N	reliability	en	noun	reliability															
+naznachenie_N	назначение	ru	noun	назначение	назначения	назначении	назначение	назначением											
+naznachenie_N	purpose	en	noun	purpose															
+neobhodimost_N	необходимость	ru	noun	необходимость	необходимости	необходимости	необходимость	необходимостью											
+neobhodimost_N	necessity	en	noun	necessity															
+neprotivorechivost_N	непротиворечивость	ru	noun	непротиворечивость	непротиворечивости	непротиворечивости	непротиворечивость	непротиворечивостью											
+neprotivorechivost_N	consistency	en	noun	consistency															
+nesovmestimost_N	несовместимость	ru	noun	несовместимость	несовместимости	несовместимости	несовместимость	несовместимостью											
+nesovmestimost_N	incompatibility	en	noun	incompatibility															
+nichto_N	ничто	ru	noun	ничто	ничего	ничем	ничто	ничтом											
+nichto_N	nothing	en	noun	nothing															
+obida_N	обида	ru	noun	обида	обиды	обиде	обиду	обидой											
+obida_N	offense	en	noun	offense															
+obosnovanie_N	обоснование	ru	noun	обоснование	обоснования	обосновании	обоснование	обоснованием											
+obosnovanie_N	justification	en	noun	justification															
+obyasnenie_N	объяснение	ru	noun	объяснение	объяснения	объяснении	объяснение	объяснением											
+obyasnenie_N	explanation	en	noun	explanation															
+obyazannost_N	обязанность	ru	noun	обязанность	обязанности	обязанности	обязанность	обязанностью											
+obyazannost_N	duty	en	noun	duty															
+obyazatelstvo_N	обязательство	ru	noun	обязательство	обязательства	обязательстве	обязательство	обязательством											
+obyazatelstvo_N	obligation	en	noun	obligation															
+ogranichenie_N	ограничение	ru	noun	ограничение	ограничения	ограничении	ограничение	ограничением											
+ogranichenie_N	limitation	en	noun	limitation															
+odinochestvo_N	одиночество	ru	noun	одиночество	одиночества	одиночестве	одиночество	одиночеством											
+odinochestvo_N	loneliness	en	noun	loneliness															
+opisanie_N	описание	ru	noun	описание	описания	описании	описание	описанием											
+opisanie_N	description	en	noun	description															
+opredelenie_N	определение	ru	noun	определение	определения	определении	определение	определением											
+opredelenie_N	definition	en	noun	definition															
+oproverzhenie_N	опровержение	ru	noun	опровержение	опровержения	опровержении	опровержение	опровержением											
+oproverzhenie_N	refutation	en	noun	refutation															
+osnovanie_N	основание	ru	noun	основание	основания	основании	основание	основанием											
+osnovanie_N	basis	en	noun	basis															
+osnovyvat_V	основывать	ru	verb	основывать	основывать	основывать	основывать	основывать											
+osnovyvat_V	found	en	verb	found															
+otvet_N	ответ	ru	noun	ответ	ответа	ответе	ответ	ответом											
+otvet_N	answer	en	noun	answer															
+otvetstvennost_N	ответственность	ru	noun	ответственность	ответственности	ответственности	ответственность	ответственностью											
+otvetstvennost_N	responsibility	en	noun	responsibility															
+otrazhenie_N	отражение	ru	noun	отражение	отражения	отражении	отражение	отражением											
+otrazhenie_N	reflection	en	noun	reflection															
+oshibka_N	ошибка	ru	noun	ошибка	ошибки	ошибке	ошибку	ошибкой											
+oshibka_N	error	en	noun	error															
+pamyat_N	память	ru	noun	память	памяти	памяти	память	памятью											
+pamyat_N	memory	en	noun	memory															
+pozitsiya_N	позиция	ru	noun	позиция	позиции	позиции	позицию	позицией											
+pozitsiya_N	position	en	noun	position															
+ponimanie_N	понимание	ru	noun	понимание	понимания	понимании	понимание	пониманием											
+ponimanie_N	understanding	en	noun	understanding															
+ponimat_V	понимать	ru	verb	понимать	понимать	понимать	понимать	понимать											
+ponimat_V	understand	en	verb	understand															
+ponyatie_N	понятие	ru	noun	понятие	понятия	понятии	понятие	понятием											
+ponyatie_N	concept	en	noun	concept															
+posylka_N	посылка	ru	noun	посылка	посылки	посылке	посылку	посылкой											
+posylka_N	premise	en	noun	premise															
+pravda_N	правда	ru	noun	правда	правды	правде	правду	правдой											
+pravda_N	truth	en	noun	truth															
+pravo_N	право	ru	noun	право	права	праве	право	правом											
+pravo_N	right	en	noun	right															
+predpolozhenie_N	предположение	ru	noun	предположение	предположения	предположении	предположение	предположением											
+predpolozhenie_N	assumption	en	noun	assumption															
+predposylka_N	предпосылка	ru	noun	предпосылка	предпосылки	предпосылке	предпосылку	предпосылкой											
+predposylka_N	prerequisite	en	noun	prerequisite															
+prinuzhdenie_N	принуждение	ru	noun	принуждение	принуждения	принуждении	принуждение	принуждением											
+prinuzhdenie_N	coercion	en	noun	coercion															
+prisutstvie_N	присутствие	ru	noun	присутствие	присутствия	присутствии	присутствие	присутствием											
+prisutstvie_N	presence	en	noun	presence															
+prichina_N	причина	ru	noun	причина	причины	причине	причину	причиной											
+prichina_N	reason	en	noun	reason															
+proverka_N	проверка	ru	noun	проверка	проверки	проверке	проверку	проверкой											
+proverka_N	check	en	noun	check															
+proniknut_V	проникнуть	ru	verb	проникнуть	проникнуть	проникнуть	проникнуть	проникнуть											
+proniknut_V	penetrate	en	verb	penetrate															
+protivorechie_N	противоречие	ru	noun	противоречие	противоречия	противоречии	противоречие	противоречием											
+protivorechie_N	contradiction	en	noun	contradiction															
+pustota_N	пустота	ru	noun	пустота	пустоты	пустоте	пустоту	пустотой											
+pustota_N	emptiness	en	noun	emptiness															
+ravnosilnost_N	равносильность	ru	noun	равносильность	равносильности	равносильности	равносильность	равносильностью											
+ravnosilnost_N	equivalence	en	noun	equivalence															
+radost_N	радость	ru	noun	радость	радости	радости	радость	радостью											
+radost_N	joy	en	noun	joy															
+razgranichenie_N	разграничение	ru	noun	разграничение	разграничения	разграничении	разграничение	разграничением											
+razgranichenie_N	delimitation	en	noun	delimitation															
+razlichat_V	различать	ru	verb	различать	различать	различать	различать	различать											
+razlichat_V	distinguish	en	verb	distinguish															
+razlichie_N	различие	ru	noun	различие	различия	различии	различие	различием											
+razlichie_N	difference	en	noun	difference															
+raznitsa_N	разница	ru	noun	разница	разницы	разнице	разницу	разницей											
+raznitsa_N	difference	en	noun	difference															
+razreshenie_N	разрешение	ru	noun	разрешение	разрешения	разрешении	разрешение	разрешением											
+razreshenie_N	resolution	en	noun	resolution															
+razum_N	разум	ru	noun	разум	разума	разуме	разум	разумом											
+razum_N	mind	en	noun	mind															
+rakurs_N	ракурс	ru	noun	ракурс	ракурса	ракурсе	ракурс	ракурсом											
+rakurs_N	angle	en	noun	angle															
+remont_N	ремонт	ru	noun	ремонт	ремонта	ремонте	ремонт	ремонтом											
+remont_N	repair	en	noun	repair															
+reshenie_N	решение	ru	noun	решение	решения	решении	решение	решением											
+reshenie_N	solution	en	noun	solution															
+svidetelstvo_N	свидетельство	ru	noun	свидетельство	свидетельства	свидетельстве	свидетельство	свидетельством											
+svidetelstvo_N	evidence	en	noun	evidence															
+svoboda_N	свобода	ru	noun	свобода	свободы	свободе	свободу	свободой											
+svoboda_N	freedom	en	noun	freedom															
+sillogizm_N	силлогизм	ru	noun	силлогизм	силлогизма	силлогизме	силлогизм	силлогизмом											
+sillogizm_N	syllogism	en	noun	syllogism															
+skazat_V	сказать	ru	verb	сказать	сказать	сказать	сказать	сказать											
+skazat_V	say	en	verb	say															
+sledstvie_N	следствие	ru	noun	следствие	следствия	следствии	следствие	следствием											
+sledstvie_N	consequence	en	noun	consequence															
+smert_N	смерть	ru	noun	смерть	смерти	смерти	смерть	смертью											
+smert_N	death	en	noun	death															
+smirenie_N	смирение	ru	noun	смирение	смирения	смирении	смирение	смирением											
+smirenie_N	humility	en	noun	humility															
+smysl_N	смысл	ru	noun	смысл	смысла	смысле	смысл	смыслом											
+smysl_N	meaning	en	noun	meaning															
+soglasie_N	согласие	ru	noun	согласие	согласия	согласии	согласие	согласием											
+soglasie_N	consent	en	noun	consent															
+soglasovannost_N	согласованность	ru	noun	согласованность	согласованности	согласованности	согласованность	согласованностью											
+soglasovannost_N	coordination	en	noun	coordination															
+soznanie_N	сознание	ru	noun	сознание	сознания	сознании	сознание	сознанием											
+soznanie_N	consciousness	en	noun	consciousness															
+somnenie_N	сомнение	ru	noun	сомнение	сомнения	сомнении	сомнение	сомнением											
+somnenie_N	doubt	en	noun	doubt															
+sposobnost_N	способность	ru	noun	способность	способности	способности	способность	способностью											
+sposobnost_N	ability	en	noun	ability															
+spravedlivost_N	справедливость	ru	noun	справедливость	справедливости	справедливости	справедливость	справедливостью											
+spravedlivost_N	justice	en	noun	justice															
+stradanie_N	страдание	ru	noun	страдание	страдания	страдании	страдание	страданием											
+stradanie_N	suffering	en	noun	suffering															
+strah_N	страх	ru	noun	страх	страха	страхе	страх	страхом											
+strah_N	fear	en	noun	fear															
+styd_N	стыд	ru	noun	стыд	стыда	стыде	стыд	стыдом											
+styd_N	shame	en	noun	shame															
+sudba_N	судьба	ru	noun	судьба	судьбы	судьбе	судьбу	судьбой											
+sudba_N	fate	en	noun	fate															
+suzhdenie_N	суждение	ru	noun	суждение	суждения	суждении	суждение	суждением											
+suzhdenie_N	judgment	en	noun	judgment															
+sushchestvovanie_N	существование	ru	noun	существование	существования	существовании	существование	существованием											
+sushchestvovanie_N	existence	en	noun	existence															
+sushchestvovat_V	существовать	ru	verb	существовать	существовать	существовать	существовать	существовать											
+sushchestvovat_V	exist	en	verb	exist															
+tezis_N	тезис	ru	noun	тезис	тезиса	тезисе	тезис	тезисом											
+tezis_N	thesis	en	noun	thesis															
+telo_N	тело	ru	noun	тело	тела	теле	тело	телом											
+telo_N	body	en	noun	body															
+teorema_N	теорема	ru	noun	теорема	теоремы	теореме	теорему	теоремой											
+teorema_N	theorem	en	noun	theorem															
+termin_N	термин	ru	noun	термин	термина	термине	термин	термином											
+termin_N	term	en	noun	term															
+toska_N	тоска	ru	noun	тоска	тоски	тоске	тоску	тоской											
+toska_N	longing	en	noun	longing															
+trevoga_N	тревога	ru	noun	тревога	тревоги	тревоге	тревогу	тревогой											
+trevoga_N	anxiety	en	noun	anxiety															
+uslovie_N	условие	ru	noun	условие	условия	условии	условие	условием											
+uslovie_N	condition	en	noun	condition															
+utverzhdenie_N	утверждение	ru	noun	утверждение	утверждения	утверждении	утверждение	утверждением											
+utverzhdenie_N	statement	en	noun	statement															
+utochnyat_V	уточнять	ru	verb	уточнять	уточнять	уточнять	уточнять	уточнять											
+utochnyat_V	clarify	en	verb	clarify															
+utrata_N	утрата	ru	noun	утрата	утраты	утрате	утрату	утратой											
+utrata_N	loss	en	noun	loss															
+uhod_N	уход	ru	noun	уход	ухода	уходе	уход	уходом											
+uhod_N	care	en	noun	care															
+fakt_N	факт	ru	noun	факт	факта	факте	факт	фактом											
+fakt_N	fact	en	noun	fact															
+filosofiya_N	философия	ru	noun	философия	философии	философии	философию	философией											
+filosofiya_N	philosophy	en	noun	philosophy															
+hrupkost_N	хрупкость	ru	noun	хрупкость	хрупкости	хрупкости	хрупкость	хрупкостью											
+hrupkost_N	fragility	en	noun	fragility															
+tsel_N	цель	ru	noun	цель	цели	цели	цель	целью											
+tsel_N	goal	en	noun	goal															
+tsifra_N	цифра	ru	noun	цифра	цифры	цифре	цифру	цифрой											
+tsifra_N	digit	en	noun	digit															
+chestnost_N	честность	ru	noun	честность	честности	честности	честность	честностью											
+chestnost_N	honesty	en	noun	honesty															
+ekvivalentsiya_N	эквиваленция	ru	noun	эквиваленция	эквиваленции	эквиваленции	эквиваленцию	эквиваленцией											
+ekvivalentsiya_N	equivalence	en	noun	equivalence															
+eksplikatsiya_N	экспликация	ru	noun	экспликация	экспликации	экспликации	экспликацию	экспликацией											
+eksplikatsiya_N	explication	en	noun	explication															
+entejlment_N	энтейлмент	ru	noun	энтейлмент	энтейлмента	энтейлменте	энтейлмент	энтейлментом											
+entejlment_N	entailment	en	noun	entailment															
+yazyk_N	язык	ru	noun	язык	языка	языке	язык	языком											
+yazyk_N	language	en	noun	language															
+yakor_N	якорь	ru	noun	якорь	якоря	якоре	якорь	якорем											
+yakor_N	anchor	en	noun	anchor															
+absolyut_N	абсолют	ru	noun	абсолют															
+absolyut_N	absolute	en	noun	absolute															
+analiz_N	анализ	ru	noun	анализ															
+analiz_N	analysis	en	noun	analysis															
+antinomiya_N	антиномия	ru	noun	антиномия															
+antinomiya_N	antinomy	en	noun	antinomy															
+apriori_N	априори	ru	noun	априори															
+apriori_N	a-priori	en	noun	a-priori															
+arhitektura_N	архитектура	ru	noun	архитектура															
+arhitektura_N	architecture	en	noun	architecture															
+atribut_N	атрибут	ru	noun	атрибут															
+atribut_N	attribute	en	noun	attribute															
+autentichnost_N	аутентичность	ru	noun	аутентичность															
+autentichnost_N	authenticity	en	noun	authenticity															
+bezuslovnost_N	безусловность	ru	noun	безусловность															
+bezuslovnost_N	unconditionality	en	noun	unconditionality															
+beskonechnost_N	бесконечность	ru	noun	бесконечность															
+beskonechnost_N	infinity	en	noun	infinity															
+variant_N	вариант	ru	noun	вариант															
+variant_N	variant	en	noun	variant															
+vlast_N	власть	ru	noun	власть															
+vlast_N	power	en	noun	power															
+vzaimodejstvie_N	взаимодействие	ru	noun	взаимодействие															
+vzaimodejstvie_N	interaction	en	noun	interaction															
+vzaimosvyaz_N	взаимосвязь	ru	noun	взаимосвязь															
+vzaimosvyaz_N	interconnection	en	noun	interconnection															
+vkluchenie_N	включение	ru	noun	включение															
+vkluchenie_N	inclusion	en	noun	inclusion															
+vneshnost_N	внешность	ru	noun	внешность															
+vneshnost_N	appearance	en	noun	appearance															
+vnutrennost_N	внутренность	ru	noun	внутренность															
+vnutrennost_N	interiority	en	noun	interiority															
+vozdejstvie_N	воздействие	ru	noun	воздействие															
+vozdejstvie_N	impact	en	noun	impact															
+vozniknovenie_N	возникновение	ru	noun	возникновение															
+vozniknovenie_N	emergence	en	noun	emergence															
+vosprinimanie_N	воспринимание	ru	noun	воспринимание															
+vosprinimanie_N	perception	en	noun	perception															
+vospriyatie_N	восприятие	ru	noun	восприятие															
+vospriyatie_N	reception	en	noun	reception															
+vremennost_N	временность	ru	noun	временность															
+vremennost_N	temporality	en	noun	temporality															
+vselennaya_N	вселенная	ru	noun	вселенная															
+vselennaya_N	universe	en	noun	universe															
+vyzov_N	вызов	ru	noun	вызов															
+vyzov_N	challenge	en	noun	challenge															
+glubina_N	глубина	ru	noun	глубина															
+glubina_N	depth	en	noun	depth															
+gravitaciya_N	гравитация	ru	noun	гравитация															
+gravitaciya_N	gravity	en	noun	gravity															
+gran_N	грань	ru	noun	грань															
+gran_N	edge	en	noun	edge															
+dedukciya_N	дедукция	ru	noun	дедукция															
+dedukciya_N	deduction	en	noun	deduction															
+dialektika_N	диалектика	ru	noun	диалектика															
+dialektika_N	dialectics	en	noun	dialectics															
+differenciya_N	дифференция	ru	noun	дифференция															
+differenciya_N	difference	en	noun	difference															
+dinamika_N	динамика	ru	noun	динамика															
+dinamika_N	dynamics	en	noun	dynamics															
+disciplina_N	дисциплина	ru	noun	дисциплина															
+disciplina_N	discipline	en	noun	discipline															
+doktrina_N	доктрина	ru	noun	доктрина															
+doktrina_N	doctrine	en	noun	doctrine															
+dominanta_N	доминанта	ru	noun	доминанта															
+dominanta_N	dominant	en	noun	dominant															
+dostizhenie_N	достижение	ru	noun	достижение															
+dostizhenie_N	achievement	en	noun	achievement															
+edinstvo_N	единство	ru	noun	единство															
+edinstvo_N	unity	en	noun	unity															
+emociya_N	эмоция	ru	noun	эмоция															
+emociya_N	emotion	en	noun	emotion															
+empiriya_N	эмпирия	ru	noun	эмпирия															
+empiriya_N	empiria	en	noun	empiria															
+energiya_N	энергия	ru	noun	энергия															
+energiya_N	energy	en	noun	energy															
+epistemologiya_N	эпистемология	ru	noun	эпистемология															
+epistemologiya_N	epistemology	en	noun	epistemology															
+epoha_N	эпоха	ru	noun	эпоха															
+epoha_N	epoch	en	noun	epoch															
+erudiciya_N	эрудиция	ru	noun	эрудиция															
+erudiciya_N	erudition	en	noun	erudition															
+esencia_N	эссенция	ru	noun	эссенция															
+esencia_N	essence	en	noun	essence															
+etika_N	этика	ru	noun	этика															
+etika_N	ethics	en	noun	ethics															
+effekt_N	эффект	ru	noun	эффект															
+effekt_N	effect	en	noun	effect															
+zhelaniye_N	желание	ru	noun	желание															
+zhelaniye_N	desire	en	noun	desire															
+znaniye_N	знание	ru	noun	знание															
+znaniye_N	knowledge	en	noun	knowledge															
+zrelnost_N	зрелость	ru	noun	зрелость															
+zrelnost_N	maturity	en	noun	maturity															
+ideologiya_N	идеология	ru	noun	идеология															
+ideologiya_N	ideology	en	noun	ideology															
+illuziya_N	иллюзия	ru	noun	иллюзия															
+illuziya_N	illusion	en	noun	illusion															
+immanenciya_N	имманенция	ru	noun	имманенция															
+immanenciya_N	immanence	en	noun	immanence															
+impuls_N	импульс	ru	noun	импульс															
+impuls_N	impulse	en	noun	impulse															
+individ_N	индивид	ru	noun	индивид															
+individ_N	individual	en	noun	individual															
+informaciya_N	информация	ru	noun	информация															
+informaciya_N	information	en	noun	information															
+instinkt_N	инстинкт	ru	noun	инстинкт															
+instinkt_N	instinct	en	noun	instinct															
+intellekt_N	интеллект	ru	noun	интеллект															
+intellekt_N	intellect	en	noun	intellect															
+intenciya_N	интенция	ru	noun	интенция															
+intenciya_N	intention	en	noun	intention															
+intuiciya_N	интуиция	ru	noun	интуиция															
+intuiciya_N	intuition	en	noun	intuition															
+inversiya_N	инверсия	ru	noun	инверсия															
+inversiya_N	inversion	en	noun	inversion															
+iskusstvo_N	искусство	ru	noun	искусство															
+iskusstvo_N	art	en	noun	art															
+issledovanie_N	исследование	ru	noun	исследование															
+issledovanie_N	research	en	noun	research															
+istoriya_N	история	ru	noun	история															
+istoriya_N	history	en	noun	history															
+kachestvo_N	качество	ru	noun	качество															
+kachestvo_N	quality	en	noun	quality															
+kategoriya_N	категория	ru	noun	категория															
+kategoriya_N	category	en	noun	category															
+klassifikaciya_N	классификация	ru	noun	классификация															
+klassifikaciya_N	classification	en	noun	classification															
+kod_N	код	ru	noun	код															
+kod_N	code	en	noun	code															
+kollektiv_N	коллектив	ru	noun	коллектив															
+kollektiv_N	collective	en	noun	collective															
+kolichestvo_N	количество	ru	noun	количество															
+kolichestvo_N	quantity	en	noun	quantity															
+kommunikaciya_N	коммуникация	ru	noun	коммуникация															
+kommunikaciya_N	communication	en	noun	communication															
+kompleks_N	комплекс	ru	noun	комплекс															
+kompleks_N	complex	en	noun	complex															
+koncept_N	концепт	ru	noun	концепт															
+koncept_N	concept	en	noun	concept															
+koncepciya_N	концепция	ru	noun	концепция															
+koncepciya_N	conception	en	noun	conception															
+konkretnost_N	конкретность	ru	noun	конкретность															
+konkretnost_N	concreteness	en	noun	concreteness															
+konstrukt_N	конструкт	ru	noun	конструкт															
+konstrukt_N	construct	en	noun	construct															
+kontekst_N	контекст	ru	noun	контекст															
+kontekst_N	context	en	noun	context															
+kontinuum_N	континуум	ru	noun	континуум															
+kontinuum_N	continuum	en	noun	continuum															
+kontrakt_N	контракт	ru	noun	контракт															
+kontrakt_N	contract	en	noun	contract															
+koordinata_N	координата	ru	noun	координата															
+koordinata_N	coordinate	en	noun	coordinate															
+korelaciya_N	кореляция	ru	noun	кореляция															
+korelaciya_N	correlation	en	noun	correlation															
+kosmos_N	космос	ru	noun	космос															
+kosmos_N	cosmos	en	noun	cosmos															
+krasota_N	красота	ru	noun	красота															
+krasota_N	beauty	en	noun	beauty															
+kreativnost_N	креативность	ru	noun	креативность															
+kreativnost_N	creativity	en	noun	creativity															
+krizis_N	кризис	ru	noun	кризис															
+krizis_N	crisis	en	noun	crisis															
+kulminaciya_N	кульминация	ru	noun	кульминация															
+kulminaciya_N	culmination	en	noun	culmination															
+kultura_N	культура	ru	noun	культура															
+kultura_N	culture	en	noun	culture															
+lokalnost_N	локальность	ru	noun	локальность															
+lokalnost_N	locality	en	noun	locality															
+masshtab_N	масштаб	ru	noun	масштаб															
+masshtab_N	scale	en	noun	scale															
+metafizika_N	метафизика	ru	noun	метафизика															
+metafizika_N	metaphysics	en	noun	metaphysics															
+metoda_N	метода	ru	noun	метода															
+metoda_N	method	en	noun	method															
+metodologiya_N	методология	ru	noun	методология															
+metodologiya_N	methodology	en	noun	methodology															
+model_N	модель	ru	noun	модель															
+model_N	model	en	noun	model															
+moment_N	момент	ru	noun	момент															
+moment_N	moment	en	noun	moment															
+morale_N	мораль	ru	noun	мораль															
+morale_N	moral	en	noun	moral															
+nablyudenie_N	наблюдение	ru	noun	наблюдение															
+nablyudenie_N	observation	en	noun	observation															
+napravlenie_N	направление	ru	noun	направление															
+napravlenie_N	direction	en	noun	direction															
+naskok_N	наскок	ru	noun	наскок															
+naskok_N	onslaught	en	noun	onslaught															
+nastroenie_N	настроение	ru	noun	настроение															
+nastroenie_N	mood	en	noun	mood															
+nauka_N	наука	ru	noun	наука															
+nauka_N	science	en	noun	science															
+nevezhestvo_N	невежество	ru	noun	невежество															
+nevezhestvo_N	ignorance	en	noun	ignorance															
+neposredstvennost_N	непосредственность	ru	noun	непосредственность															
+neposredstvennost_N	immediacy	en	noun	immediacy															
+obekt_N	объект	ru	noun	объект															
+obekt_N	object	en	noun	object															
+oblast_N	область	ru	noun	область															
+oblast_N	region	en	noun	region															
+obshestvo_N	общество	ru	noun	общество															
+obshestvo_N	society	en	noun	society															
+obraz_N	образ	ru	noun	образ															
+obraz_N	image	en	noun	image															
+obrazovanie_N	образование	ru	noun	образование															
+obrazovanie_N	education	en	noun	education															
+obuslovlennost_N	обусловленность	ru	noun	обусловленность															
+obuslovlennost_N	conditionality	en	noun	conditionality															
+odinakovost_N	одинаковость	ru	noun	одинаковость															
+odinakovost_N	sameness	en	noun	sameness															
+opredelennost_N	определенность	ru	noun	определенность															
+opredelennost_N	determinacy	en	noun	determinacy															
+opasnost_N	опасность	ru	noun	опасность															
+opasnost_N	danger	en	noun	danger															
+optimizm_N	оптимизм	ru	noun	оптимизм															
+optimizm_N	optimism	en	noun	optimism															
+organizm_N	организм	ru	noun	организм															
+organizm_N	organism	en	noun	organism															
+orientaciya_N	ориентация	ru	noun	ориентация															
+orientaciya_N	orientation	en	noun	orientation															
+osoznanie_N	осознание	ru	noun	осознание															
+osoznanie_N	awareness	en	noun	awareness															
+osnova_N	основа	ru	noun	основа															
+osnova_N	basis	en	noun	basis															
+otkrytie_N	открытие	ru	noun	открытие															
+otkrytie_N	discovery	en	noun	discovery															
+otnoshenie_N	отношение	ru	noun	отношение															
+otnoshenie_N	relation	en	noun	relation															
+otsutstvie_N	отсутствие	ru	noun	отсутствие															
+otsutstvie_N	absence	en	noun	absence															
+paradigma_N	парадигма	ru	noun	парадигма															
+paradigma_N	paradigm	en	noun	paradigm															
+parametr_N	параметр	ru	noun	параметр															
+parametr_N	parameter	en	noun	parameter															
+patern_N	патерн	ru	noun	патерн															
+patern_N	pattern	en	noun	pattern															
+perspektiva_N	перспектива	ru	noun	перспектива															
+perspektiva_N	perspective	en	noun	perspective															
+pitanie_N	питание	ru	noun	питание															
+pitanie_N	nutrition	en	noun	nutrition															
+pluralizm_N	плюрализм	ru	noun	плюрализм															
+pluralizm_N	pluralism	en	noun	pluralism															
+poznanie_N	познание	ru	noun	познание															
+poznanie_N	cognition	en	noun	cognition															
+pole_N	поле	ru	noun	поле															
+pole_N	field	en	noun	field															
+polnost_N	полнота	ru	noun	полнота															
+polnost_N	completeness	en	noun	completeness															
+porjadok_N	порядок	ru	noun	порядок															
+porjadok_N	order	en	noun	order															
+potencial_N	потенциал	ru	noun	потенциал															
+potencial_N	potential	en	noun	potential															
+praktika_N	практика	ru	noun	практика															
+praktika_N	practice	en	noun	practice															
+predel_N	предел	ru	noun	предел															
+predel_N	limit	en	noun	limit															
+predstavlenie_N	представление	ru	noun	представление															
+predstavlenie_N	representation	en	noun	representation															
+preemstvennost_N	преемственность	ru	noun	преемственность															
+preemstvennost_N	continuity	en	noun	continuity															
+princip_N	принцип	ru	noun	принцип															
+princip_N	principle	en	noun	principle															
+prioritet_N	приоритет	ru	noun	приоритет															
+prioritet_N	priority	en	noun	priority															
+problema_N	проблема	ru	noun	проблема															
+problema_N	problem	en	noun	problem															
+prostranstvo_N	пространство	ru	noun	пространство															
+prostranstvo_N	space	en	noun	space															
+process_N	процесс	ru	noun	процесс															
+process_N	process	en	noun	process															
+psihika_N	психика	ru	noun	психика															
+psihika_N	psyche	en	noun	psyche															
+puls_N	пульс	ru	noun	пульс															
+puls_N	pulse	en	noun	pulse															
+rabota_N	работа	ru	noun	работа															
+rabota_N	work	en	noun	work															
+realnost_N	реальность	ru	noun	реальность															
+realnost_N	reality	en	noun	reality															
+refleksiya_N	рефлексия	ru	noun	рефлексия															
+refleksiya_N	reflection	en	noun	reflection															
+rezonans_N	резонанс	ru	noun	резонанс															
+rezonans_N	resonance	en	noun	resonance															
+ritm_N	ритм	ru	noun	ритм															
+ritm_N	rhythm	en	noun	rhythm															
+rol_N	роль	ru	noun	роль															
+rol_N	role	en	noun	role															
+sistema_N	система	ru	noun	система															
+sistema_N	system	en	noun	system															
+slojnost_N	сложность	ru	noun	сложность															
+slojnost_N	complexity	en	noun	complexity															
+slovo_N	слово	ru	noun	слово															
+slovo_N	word	en	noun	word															
+sobytie_N	событие	ru	noun	событие															
+sobytie_N	event	en	noun	event															
+soderzhanie_N	содержание	ru	noun	содержание															
+soderzhanie_N	content	en	noun	content															
+sostoyanie_N	состояние	ru	noun	состояние															
+sostoyanie_N	state	en	noun	state															
+sovet_N	совет	ru	noun	совет															
+sovet_N	advice	en	noun	advice															
+spektr_N	спектр	ru	noun	спектр															
+spektr_N	spectrum	en	noun	spectrum															
+spiral_N	спираль	ru	noun	спираль															
+spiral_N	spiral	en	noun	spiral															
+sreda_N	среда	ru	noun	среда															
+sreda_N	environment	en	noun	environment															
+ssylka_N	ссылка	ru	noun	ссылка															
+ssylka_N	reference	en	noun	reference															
+stadiya_N	стадия	ru	noun	стадия															
+stadiya_N	stage	en	noun	stage															
+standart_N	стандарт	ru	noun	стандарт															
+standart_N	standard	en	noun	standard															
+struktura_N	структура	ru	noun	структура															
+struktura_N	structure	en	noun	structure															
+subekt_N	субъект	ru	noun	субъект															
+subekt_N	subject	en	noun	subject															
+sud_N	суд	ru	noun	суд															
+sud_N	judgment	en	noun	judgment															
+suschestvo_N	существо	ru	noun	существо															
+suschestvo_N	creature	en	noun	creature															
+suschestvovanie_N	существование	ru	noun	существование															
+suschestvovanie_N	existence	en	noun	existence															
+scena_N	сцена	ru	noun	сцена															
+scena_N	scene	en	noun	scene															
+taktika_N	тактика	ru	noun	тактика															
+taktika_N	tactics	en	noun	tactics															
+teoriya_N	теория	ru	noun	теория															
+teoriya_N	theory	en	noun	theory															
+tekst_N	текст	ru	noun	текст															
+tekst_N	text	en	noun	text															
+temp_N	темп	ru	noun	темп															
+temp_N	pace	en	noun	pace															
+tendenciya_N	тенденция	ru	noun	тенденция															
+tendenciya_N	tendency	en	noun	tendency															
+tip_N	тип	ru	noun	тип															
+tip_N	type	en	noun	type															
+ton_N	тон	ru	noun	тон															
+ton_N	tone	en	noun	tone															
+tochka_N	точка	ru	noun	точка															
+tochka_N	point	en	noun	point															
+tradiciya_N	традиция	ru	noun	традиция															
+tradiciya_N	tradition	en	noun	tradition															
+transformaciya_N	трансформация	ru	noun	трансформация															
+transformaciya_N	transformation	en	noun	transformation															
+trudnost_N	трудность	ru	noun	трудность															
+trudnost_N	difficulty	en	noun	difficulty															
+universalnost_N	универсальность	ru	noun	универсальность															
+universalnost_N	universality	en	noun	universality															
+uporjadochennost_N	упорядоченность	ru	noun	упорядоченность															
+uporjadochennost_N	orderliness	en	noun	orderliness															
+ustanovlenie_N	установление	ru	noun	установление															
+ustanovlenie_N	establishment	en	noun	establishment															
+usilennost_N	усиленность	ru	noun	усиленность															
+usilennost_N	intensification	en	noun	intensification															
+uchebnik_N	учебник	ru	noun	учебник															
+uchebnik_N	textbook	en	noun	textbook															
+forma_N	форма	ru	noun	форма															
+forma_N	form	en	noun	form															
+funkciya_N	функция	ru	noun	функция															
+funkciya_N	function	en	noun	function															
+celostnost_N	целостность	ru	noun	целостность															
+celostnost_N	integrity	en	noun	integrity															
+cennost_N	ценность	ru	noun	ценность															
+cennost_N	value	en	noun	value															
+cikl_N	цикл	ru	noun	цикл															
+cikl_N	cycle	en	noun	cycle															
+chastica_N	частица	ru	noun	частица															
+chastica_N	particle	en	noun	particle															
+chastnost_N	частность	ru	noun	частность															
+chastnost_N	particularity	en	noun	particularity															
+chuvstvo_N	чувство	ru	noun	чувство															
+chuvstvo_N	feeling	en	noun	feeling															
+ekzistenciya_N	экзистенция	ru	noun	экзистенция															
+ekzistenciya_N	existence	en	noun	existence															
+ekzemplar_N	экземпляр	ru	noun	экземпляр															
+ekzemplar_N	specimen	en	noun	specimen															
+ekran_N	экран	ru	noun	экран															
+ekran_N	screen	en	noun	screen															
+element_N	элемент	ru	noun	элемент															
+element_N	element	en	noun	element															
+emergenciya_N	эмергенция	ru	noun	эмергенция															
+emergenciya_N	emergence	en	noun	emergence															
+entropiya_N	энтропия	ru	noun	энтропия															
+entropiya_N	entropy	en	noun	entropy															
+estestvo_N	естество	ru	noun	естество															
+estestvo_N	nature	en	noun	nature															
+yadro_N	ядро	ru	noun	ядро															
+yadro_N	core	en	noun	core															
+yavlenie_N	явление	ru	noun	явление															
+yavlenie_N	phenomenon	en	noun	phenomenon															
+chuvstvovat_V	чувствовать	ru	verb	чувствовать															
+chuvstvovat_V	feel	en	verb	feel															
+dokazyvat_V	доказывать	ru	verb	доказывать															
+dokazyvat_V	prove	en	verb	prove															
+izmenyat_V	изменять	ru	verb	изменять															
+izmenyat_V	change	en	verb	change															
+ispolzovat_V	использовать	ru	verb	использовать															
+ispolzovat_V	use	en	verb	use															
+issledovat_V	исследовать	ru	verb	исследовать															
+issledovat_V	research	en	verb	research															
+nabljudat_V	наблюдать	ru	verb	наблюдать															
+nabljudat_V	observe	en	verb	observe															
+obshchatysya_V	общаться	ru	verb	общаться															
+obshchatysya_V	communicate	en	verb	communicate															
+poznavat_V	познавать	ru	verb	познавать															
+poznavat_V	cognize	en	verb	cognize															
+razvivat_V	развивать	ru	verb	развивать															
+razvivat_V	develop	en	verb	develop															
+soznavat_V	сознавать	ru	verb	сознавать															
+soznavat_V	realize	en	verb	realize															
+vospriyimat_V	воспринимать	ru	verb	воспринимать															
+vospriyimat_V	perceive	en	verb	perceive															
+vydelyat_V	выделять	ru	verb	выделять															
+vydelyat_V	highlight	en	verb	highlight															
+vyraghat_V	выражать	ru	verb	выражать															
+vyraghat_V	express	en	verb	express															
+bolshoj_A	большой	ru	adj	большой	большого	большом	большой	большим											
+bolshoj_A	big	en	adj	big																
+vazhnyj_A	важный	ru	adj	важный	важного	важном	важный	важным											
+vazhnyj_A	important	en	adj	important																
+novyj_A	новый	ru	adj	новый	нового	новом	новый	новым											
+novyj_A	new	en	adj	new																
+staryj_A	старый	ru	adj	старый	старого	старом	старый	старым											
+staryj_A	old	en	adj	old																
+silnyj_A	сильный	ru	adj	сильный	сильного	сильном	сильный	сильным											
+silnyj_A	strong	en	adj	strong																
+slabyj_A	слабый	ru	adj	слабый	слабого	слабом	слабый	слабым											
+slabyj_A	weak	en	adj	weak																
+bystro_Adv	быстро	ru	adv	быстро																
+bystro_Adv	quickly	en	adv	quickly																
+medlenno_Adv	медленно	ru	adv	медленно																
+medlenno_Adv	slowly	en	adv	slowly																
+sejchas_Adv	сейчас	ru	adv	сейчас																
+sejchas_Adv	now	en	adv	now																
+vsegda_Adv	всегда	ru	adv	всегда																
+vsegda_Adv	always	en	adv	always																
+nikogda_Adv	никогда	ru	adv	никогда																
+nikogda_Adv	never	en	adv	never																
+v_Prep	в	ru	prep	в																
+v_Prep	in	en	prep	in																
+na_Prep	на	ru	prep	на																
+na_Prep	on	en	prep	on																
+o_Prep	о	ru	prep	о																
+o_Prep	about	en	prep	about																
+i_Conj	и	ru	conj	и																
+i_Conj	and	en	conj	and																
+no_Conj	но	ru	conj	но																
+no_Conj	but	en	conj	but																
+ili_Conj	или	ru	conj	или																
+ili_Conj	or	en	conj	or																
