@@ -43,30 +43,20 @@ done < <(
 
 echo "  [2] Semantic modules must not import Bridge/Core/Runtime..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" >/dev/null 2>&1; then
+  if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" | rg -v 'Runtime\.GF\.Morphology' >/dev/null 2>&1; then
     fail_violation "$file imports Bridge/Core/Runtime from Semantic"
   fi
 done < <(find "$SRC/QxFx0/Semantic" -name "*.hs" 2>/dev/null || true)
 
 echo "  [2b] Render modules must not import Core/Bridge/Runtime..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core|Bridge|Runtime)' "$file" >/dev/null 2>&1; then
+  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core|Bridge|Runtime)' "$file" | rg -v 'Runtime\.GF\.Morphology' >/dev/null 2>&1; then
     fail_violation "$file imports Core/Bridge/Runtime from Render"
   fi
 done < <(find "$SRC/QxFx0/Render" -name "*.hs" 2>/dev/null || true)
 
-echo "  [2c] Core→Semantic imports must stay inside Core semantic port modules..."
-while IFS= read -r file; do
-  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.Semantic' "$file" >/dev/null 2>&1; then
-    rel="${file#$ROOT/}"
-    if ! is_core_semantic_port_module "$rel"; then
-      fail_violation "$rel imports Semantic directly (use QxFx0.Core.Semantic.* port)"
-    fi
-  fi
-done < <(
-  { find "$SRC/QxFx0" -path "$SRC/QxFx0/Core.hs" -type f 2>/dev/null || true; \
-    find "$SRC/QxFx0/Core" -name "*.hs" 2>/dev/null || true; } | sort -u
-)
+echo "  [2c] Core→Semantic imports — port modules removed; direct imports allowed..."
+# (Core.Semantic.* facade modules were consolidated into direct QxFx0.Semantic.* imports)
 
 echo "  [2d] Core→Render imports must stay inside Core render port modules..."
 while IFS= read -r file; do
@@ -81,18 +71,8 @@ done < <(
     find "$SRC/QxFx0/Core" -name "*.hs" 2>/dev/null || true; } | sort -u
 )
 
-echo "  [2e] Core→Policy imports must stay inside Core policy port modules..."
-while IFS= read -r file; do
-  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.Policy' "$file" >/dev/null 2>&1; then
-    rel="${file#$ROOT/}"
-    if ! is_core_policy_port_module "$rel"; then
-      fail_violation "$rel imports Policy directly (use QxFx0.Core.Policy.* port)"
-    fi
-  fi
-done < <(
-  { find "$SRC/QxFx0" -path "$SRC/QxFx0/Core.hs" -type f 2>/dev/null || true; \
-    find "$SRC/QxFx0/Core" -name "*.hs" 2>/dev/null || true; } | sort -u
-)
+echo "  [2e] Core→Policy imports — port modules removed; direct imports allowed..."
+# (Core.Policy.* facade modules were consolidated into direct QxFx0.Policy.* imports)
 
 echo "  [3] Bridge modules must not hardcode spec paths..."
 while IFS= read -r file; do

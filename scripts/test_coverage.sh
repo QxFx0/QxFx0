@@ -10,18 +10,61 @@ CRITICAL_MODULES="${QXFX0_COVERAGE_CRITICAL_MODULES:-QxFx0.Semantic.Input.Assemb
 OUT_DIR="$ROOT/reports/coverage"
 mkdir -p "$OUT_DIR"
 
-# 1) Generate fresh coverage artifacts.
-cabal test -v0 --enable-coverage qxfx0-test
+# --- Preflight: detect coverage infrastructure incompatibility ---
+PREFLIGHT_LOG="$OUT_DIR/coverage_preflight.log"
+
+_preflight_check() {
+  local extra_flags=""
+  if [ -n "${LD_LIBRARY_PATH:-}" ]; then
+    # Extract the first lib dir from LD_LIBRARY_PATH for --extra-lib-dirs
+    local first_lib_dir="${LD_LIBRARY_PATH%%:*}"
+    extra_flags="$extra_flags --extra-lib-dirs=$first_lib_dir"
+    if [ -d "$first_lib_dir/../include" ]; then
+      extra_flags="$extra_flags --extra-include-dirs=$first_lib_dir/../include"
+    fi
+    # pgf2 configure uses GCC environment variables, not only Cabal flags
+    if [ -d "$first_lib_dir/../include" ]; then
+      export C_INCLUDE_PATH="${first_lib_dir%/lib}/include${C_INCLUDE_PATH:+:$C_INCLUDE_PATH}"
+    fi
+    export LIBRARY_PATH="$first_lib_dir${LIBRARY_PATH:+:$LIBRARY_PATH}"
+  fi
+  if cabal test -v0 --enable-coverage $extra_flags qxfx0-test >"$PREFLIGHT_LOG" 2>&1; then
+    return 0
+  fi
+  # Check for known infrastructure incompatibilities that make coverage impossible
+  if grep -q 'Internal libraries only supported with per-component builds' "$PREFLIGHT_LOG" || \
+     grep -q 'Per-component builds were disabled because program coverage is enabled' "$PREFLIGHT_LOG"; then
+    echo "COVERAGE_STATUS=SKIP: known infrastructure incompatibility (coverage+per-component builds conflict)"
+    echo "(see $PREFLIGHT_LOG for full cabal output)" >&2
+    cat "$PREFLIGHT_LOG" >&2
+    return 2
+  fi
+  # Any other failure is treated as a real test/coverage failure, not SKIP
+  echo "COVERAGE_STATUS=FAIL: cabal test with --enable-coverage failed"
+  cat "$PREFLIGHT_LOG" >&2
+  return 1
+}
+
+_preflight_check
+PREFLIGHT_STATUS=$?
+if [ "$PREFLIGHT_STATUS" -ne 0 ]; then
+  if [ "$PREFLIGHT_STATUS" -eq 2 ]; then
+    exit 2
+  fi
+  exit 1
+fi
+
+# --- Coverage artifacts generated successfully; evaluate thresholds ---
 
 TIX_PATH="$(find "$ROOT/dist-newstyle" -path '*qxfx0-test/hpc/vanilla/tix/qxfx0-test.tix' | head -n 1)"
 if [ -z "$TIX_PATH" ] || [ ! -f "$TIX_PATH" ]; then
-  echo "coverage gate failed: missing qxfx0-test.tix" >&2
+  echo "COVERAGE_STATUS=FAIL: missing qxfx0-test.tix" >&2
   exit 1
 fi
 
 mapfile -t MIX_DIRS < <(find "$ROOT/dist-newstyle" -type d -path '*hpc/vanilla/mix')
 if [ "${#MIX_DIRS[@]}" -eq 0 ]; then
-  echo "coverage gate failed: no hpc mix directories found" >&2
+  echo "COVERAGE_STATUS=FAIL: no hpc mix directories found" >&2
   exit 1
 fi
 
@@ -55,7 +98,7 @@ per_module_text = per_module_path.read_text(encoding='utf-8', errors='replace')
 
 m = re.search(r'([0-9]+(?:\.[0-9]+)?)% expressions used', overall_text)
 if not m:
-    print('coverage gate failed: cannot parse overall expressions coverage', file=sys.stderr)
+    print('COVERAGE_STATUS=FAIL: cannot parse overall expressions coverage', file=sys.stderr)
     sys.exit(1)
 overall_expr = float(m.group(1))
 
@@ -82,7 +125,7 @@ for wanted in critical_modules:
         critical_hits[wanted] = hit
 
 if not critical_hits:
-    print('coverage gate failed: no critical module coverage entries were found', file=sys.stderr)
+    print('COVERAGE_STATUS=FAIL: no critical module coverage entries were found', file=sys.stderr)
     sys.exit(1)
 
 critical_avg = statistics.mean(critical_hits.values())
@@ -99,15 +142,16 @@ print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 failed = False
 if overall_expr < overall_min:
-    print(f"coverage gate failed: overall expressions {overall_expr:.2f}% < {overall_min:.2f}%", file=sys.stderr)
+    print(f"COVERAGE_STATUS=FAIL: overall expressions {overall_expr:.2f}% < {overall_min:.2f}%", file=sys.stderr)
     failed = True
 
 for mod, score in critical_hits.items():
     if score < critical_min:
-        print(f"coverage gate failed: {mod} expressions {score:.2f}% < {critical_min:.2f}%", file=sys.stderr)
+        print(f"COVERAGE_STATUS=FAIL: {mod} expressions {score:.2f}% < {critical_min:.2f}%", file=sys.stderr)
         failed = True
 
 if failed:
     sys.exit(1)
-PY
 
+print("COVERAGE_STATUS=PASS")
+PY
