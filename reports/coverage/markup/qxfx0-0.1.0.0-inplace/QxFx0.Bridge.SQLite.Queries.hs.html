@@ -1,0 +1,168 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Runtime query helpers over identity claims, scenes, and maintenance operations. -}
+<span class="lineno">    4 </span>module QxFx0.Bridge.SQLite.Queries
+<span class="lineno">    5 </span>  ( queryIdentityClaimsByFocus
+<span class="lineno">    6 </span>  , maybeCheckpoint
+<span class="lineno">    7 </span>  , loadScenes
+<span class="lineno">    8 </span>  , loadClusters
+<span class="lineno">    9 </span>  ) where
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import Data.Text (Text)
+<span class="lineno">   12 </span>import qualified Data.Text as T
+<span class="lineno">   13 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   14 </span>import QxFx0.ExceptionPolicy (QxFx0Exception(SQLiteError), throwQxFx0)
+<span class="lineno">   15 </span>import QxFx0.Types
+<span class="lineno">   16 </span>  ( ClusterDef(..)
+<span class="lineno">   17 </span>  , IdentityClaimRef(..)
+<span class="lineno">   18 </span>  , SemanticScene(..)
+<span class="lineno">   19 </span>  )
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>queryIdentityClaimsByFocus :: NSQL.Database -&gt; [Text] -&gt; IO [IdentityClaimRef]
+<span class="lineno">   22 </span><span class="decl"><span class="istickedoff">queryIdentityClaimsByFocus db keywords =</span>
+<span class="lineno">   23 </span><span class="spaces">  </span><span class="istickedoff">case keywords of</span>
+<span class="lineno">   24 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">queryTopClaims db</span></span>
+<span class="lineno">   25 </span><span class="spaces">    </span><span class="istickedoff">keyword : rest -&gt; do</span>
+<span class="lineno">   26 </span><span class="spaces">      </span><span class="istickedoff">claims &lt;- queryExactTrigger db keyword</span>
+<span class="lineno">   27 </span><span class="spaces">      </span><span class="istickedoff">if <span class="tickonlyfalse">not (null claims)</span></span>
+<span class="lineno">   28 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">pure claims</span></span>
+<span class="lineno">   29 </span><span class="spaces">        </span><span class="istickedoff">else do</span>
+<span class="lineno">   30 </span><span class="spaces">          </span><span class="istickedoff">ftsClaims &lt;- queryFTS5 db keyword</span>
+<span class="lineno">   31 </span><span class="spaces">          </span><span class="istickedoff">if <span class="tickonlyfalse">not (null ftsClaims)</span></span>
+<span class="lineno">   32 </span><span class="spaces">            </span><span class="istickedoff">then <span class="nottickedoff">pure ftsClaims</span></span>
+<span class="lineno">   33 </span><span class="spaces">            </span><span class="istickedoff">else do</span>
+<span class="lineno">   34 </span><span class="spaces">              </span><span class="istickedoff">topicClaims &lt;- queryTopicFallback db keyword</span>
+<span class="lineno">   35 </span><span class="spaces">              </span><span class="istickedoff">if <span class="tickonlytrue">not (null topicClaims)</span></span>
+<span class="lineno">   36 </span><span class="spaces">                </span><span class="istickedoff">then pure topicClaims</span>
+<span class="lineno">   37 </span><span class="spaces">                </span><span class="istickedoff">else <span class="nottickedoff">queryIdentityClaimsByFocus db rest</span></span></span>
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>queryExactTrigger :: NSQL.Database -&gt; Text -&gt; IO [IdentityClaimRef]
+<span class="lineno">   40 </span><span class="decl"><span class="istickedoff">queryExactTrigger db keyword = do</span>
+<span class="lineno">   41 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT concept, text, confidence, source, topic FROM identity_claims WHERE concept = ? LIMIT 10&quot;</span>
+<span class="lineno">   42 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- prepareQuery db <span class="nottickedoff">&quot;queryExactTrigger&quot;</span> sql</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 keyword</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">claims &lt;- collectClaims stmt</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">pure claims</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>queryFTS5 :: NSQL.Database -&gt; Text -&gt; IO [IdentityClaimRef]
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">queryFTS5 db keyword = do</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT concept, text, confidence, source, topic FROM identity_claims WHERE id IN (SELECT rowid FROM identity_claims_fts WHERE text MATCH ? LIMIT 10)&quot;</span>
+<span class="lineno">   51 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- prepareQuery db <span class="nottickedoff">&quot;queryFTS5&quot;</span> sql</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 keyword</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">claims &lt;- collectClaims stmt</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">   55 </span><span class="spaces">  </span><span class="istickedoff">pure claims</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>queryTopicFallback :: NSQL.Database -&gt; Text -&gt; IO [IdentityClaimRef]
+<span class="lineno">   58 </span><span class="decl"><span class="istickedoff">queryTopicFallback db topic = do</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT concept, text, confidence, source, topic FROM identity_claims WHERE topic = ? LIMIT 10&quot;</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- prepareQuery db <span class="nottickedoff">&quot;queryTopicFallback&quot;</span> sql</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 topic</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">claims &lt;- collectClaims stmt</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">pure claims</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>queryTopClaims :: NSQL.Database -&gt; IO [IdentityClaimRef]
+<span class="lineno">   67 </span><span class="decl"><span class="nottickedoff">queryTopClaims db = do</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="nottickedoff">let sql = &quot;SELECT concept, text, confidence, source, topic FROM identity_claims ORDER BY confidence DESC, id ASC LIMIT 10&quot;</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="nottickedoff">stmt &lt;- prepareQuery db &quot;queryTopClaims&quot; sql</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="nottickedoff">claims &lt;- collectClaims stmt</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="nottickedoff">NSQL.finalize stmt</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="nottickedoff">pure claims</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>collectClaims :: NSQL.Statement -&gt; IO [IdentityClaimRef]
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">collectClaims stmt = go []</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">go acc = do</span>
+<span class="lineno">   78 </span><span class="spaces">      </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">if hasRow</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">then do</span>
+<span class="lineno">   81 </span><span class="spaces">          </span><span class="istickedoff">concept &lt;- NSQL.columnText stmt 0</span>
+<span class="lineno">   82 </span><span class="spaces">          </span><span class="istickedoff">text_ &lt;- NSQL.columnText stmt 1</span>
+<span class="lineno">   83 </span><span class="spaces">          </span><span class="istickedoff">conf &lt;- NSQL.columnDouble stmt 2</span>
+<span class="lineno">   84 </span><span class="spaces">          </span><span class="istickedoff">source &lt;- NSQL.columnText stmt 3</span>
+<span class="lineno">   85 </span><span class="spaces">          </span><span class="istickedoff">topic &lt;- NSQL.columnText stmt 4</span>
+<span class="lineno">   86 </span><span class="spaces">          </span><span class="istickedoff">go (IdentityClaimRef concept text_ conf source topic : acc)</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">else pure (reverse acc)</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>maybeCheckpoint :: NSQL.Database -&gt; Int -&gt; IO ()
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">maybeCheckpoint db turnCount =</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">when (turnCount &gt; 0 &amp;&amp; turnCount `mod` 100 == 0) $ <span class="nottickedoff">do</span></span>
+<span class="lineno">   92 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">_ &lt;- NSQL.execSql db &quot;PRAGMA wal_checkpoint(TRUNCATE);&quot;</span></span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">pure ()</span></span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">when True action = <span class="nottickedoff">action</span></span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">when False _ = pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>loadScenes :: NSQL.Database -&gt; IO [SemanticScene]
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">loadScenes db = do</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT MIN(confidence), MAX(confidence), topic, topic FROM identity_claims GROUP BY topic&quot;</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- prepareQuery db <span class="nottickedoff">&quot;loadScenes&quot;</span> sql</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">scenes &lt;- collectScenes stmt</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">pure scenes</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">collectScenes stmt = go []</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">go acc = do</span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff">if hasRow</span>
+<span class="lineno">  111 </span><span class="spaces">            </span><span class="istickedoff">then do</span>
+<span class="lineno">  112 </span><span class="spaces">              </span><span class="istickedoff">minC &lt;- NSQL.columnDouble stmt 0</span>
+<span class="lineno">  113 </span><span class="spaces">              </span><span class="istickedoff">maxC &lt;- NSQL.columnDouble stmt 1</span>
+<span class="lineno">  114 </span><span class="spaces">              </span><span class="istickedoff">desc &lt;- NSQL.columnText stmt 2</span>
+<span class="lineno">  115 </span><span class="spaces">              </span><span class="istickedoff">_ &lt;- NSQL.columnText stmt 3</span>
+<span class="lineno">  116 </span><span class="spaces">              </span><span class="istickedoff">go (SemanticScene minC maxC [] desc : acc)</span>
+<span class="lineno">  117 </span><span class="spaces">            </span><span class="istickedoff">else pure (reverse acc)</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>loadClusters :: NSQL.Database -&gt; IO [ClusterDef]
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">loadClusters db = do</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT name, keywords, priority FROM semantic_clusters ORDER BY priority DESC&quot;</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- prepareQuery db <span class="nottickedoff">&quot;loadClusters&quot;</span> sql</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">clusters &lt;- collectClusters stmt</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">pure clusters</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">collectClusters stmt = go []</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">go acc = do</span>
+<span class="lineno">  130 </span><span class="spaces">          </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  131 </span><span class="spaces">          </span><span class="istickedoff">if hasRow</span>
+<span class="lineno">  132 </span><span class="spaces">            </span><span class="istickedoff">then do</span>
+<span class="lineno">  133 </span><span class="spaces">              </span><span class="istickedoff">name &lt;- NSQL.columnText stmt 0</span>
+<span class="lineno">  134 </span><span class="spaces">              </span><span class="istickedoff">kwText &lt;- NSQL.columnText stmt 1</span>
+<span class="lineno">  135 </span><span class="spaces">              </span><span class="istickedoff">prio &lt;- NSQL.columnDouble stmt 2</span>
+<span class="lineno">  136 </span><span class="spaces">              </span><span class="istickedoff">let kws = T.splitOn &quot;,&quot; kwText</span>
+<span class="lineno">  137 </span><span class="spaces">              </span><span class="istickedoff">go (ClusterDef name kws prio : acc)</span>
+<span class="lineno">  138 </span><span class="spaces">            </span><span class="istickedoff">else pure (reverse acc)</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>prepareQuery :: NSQL.Database -&gt; Text -&gt; Text -&gt; IO NSQL.Statement
+<span class="lineno">  141 </span><span class="decl"><span class="istickedoff">prepareQuery db ctx sql = do</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">throwQxFx0 (SQLiteError (&quot;prepare &quot; &lt;&gt; ctx &lt;&gt; &quot; failed: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">Right stmt -&gt; pure stmt</span></span>
+
+</pre>
+</body>
+</html>

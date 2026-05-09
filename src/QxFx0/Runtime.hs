@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies, OverloadedStrings, BangPatterns, StrictData #-}
 module QxFx0.Runtime
   ( RuntimeOutputMode(..)
   , RuntimeMode(..)

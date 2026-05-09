@@ -14,7 +14,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.IO as TIO
 import System.Environment (lookupEnv)
-import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode, readProcessWithExitCode)
+import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.FilePath (takeDirectory, takeFileName)
 import System.Timeout (timeout)
@@ -26,7 +26,7 @@ data AgdaVerificationResult
   = AgdaPass
   | AgdaTypeCheckFailed !Text
   | AgdaNotAvailable !Text
-  | AgdaSnapshotMismatch ![(CanonicalMoveFamily, Text)]
+  | AgdaSnapshotMismatch ![(Text, Text)]
   deriving stock (Eq, Show)
 
 agdaTypeCheck :: IO AgdaVerificationResult
@@ -78,15 +78,15 @@ verifyAgainstSnapshot snapshotPath = do
         then return AgdaPass
         else return $ AgdaSnapshotMismatch mismatches
   where
-    checkRow :: Text -> Maybe (CanonicalMoveFamily, Text)
+    checkRow :: Text -> Maybe (Text, Text)
     checkRow line =
       let fields = T.splitOn "\t" line
       in case fields of
         ("family":_) -> Nothing
         (famStr:forceStr:thirdStr:fourthStr:rest) ->
-          case parseFamily famStr of
-            Nothing -> Nothing
-            Just fam ->
+          (case parseFamily famStr of
+            Left err -> Just (famStr, err)
+            Right fam ->
               let expectedForce = T.pack (show (forceForFamily fam))
                   expectedClause = T.pack (show (clauseFormForIF (forceForFamily fam)))
                   expectedLayer = T.pack (show (layerForFamily fam))
@@ -101,7 +101,7 @@ verifyAgainstSnapshot snapshotPath = do
                               && warrantedStr == expectedWarranted
                            then Nothing
                            else Just
-                             ( fam
+                             ( famStr
                              , "expected(" <> T.intercalate "/" [expectedForce, expectedClause, expectedLayer, expectedWarranted]
                                  <> ") got(" <> T.intercalate "/" [forceStr, clauseStr, layerStr, warrantedStr] <> ")"
                              )
@@ -112,29 +112,19 @@ verifyAgainstSnapshot snapshotPath = do
                               && warrantedStr == expectedWarranted
                            then Nothing
                            else Just
-                             ( fam
+                             ( famStr
                              , "expected(" <> T.intercalate "/" [expectedForce, expectedLayer, expectedWarranted]
                                  <> ") got(" <> T.intercalate "/" [forceStr, layerStr, warrantedStr] <> ")"
                              )
-                   _ -> Just (fam, "unrecognized snapshot row: " <> line)
-        _ -> Nothing
+                   _ -> Just (famStr, "unrecognized snapshot row format: " <> line))
+        [famStr] -> Just (famStr, "malformed snapshot row (too few fields): " <> line)
+        (_:_)    -> Just ("<unknown>", "malformed snapshot row (too few fields): " <> line)
+        [] -> Nothing
 
-    parseFamily :: Text -> Maybe CanonicalMoveFamily
-    parseFamily "CMGround"     = Just CMGround
-    parseFamily "CMDefine"     = Just CMDefine
-    parseFamily "CMDistinguish" = Just CMDistinguish
-    parseFamily "CMReflect"    = Just CMReflect
-    parseFamily "CMDescribe"   = Just CMDescribe
-    parseFamily "CMPurpose"    = Just CMPurpose
-    parseFamily "CMHypothesis" = Just CMHypothesis
-    parseFamily "CMRepair"     = Just CMRepair
-    parseFamily "CMContact"    = Just CMContact
-    parseFamily "CMAnchor"     = Just CMAnchor
-    parseFamily "CMClarify"    = Just CMClarify
-    parseFamily "CMDeepen"     = Just CMDeepen
-    parseFamily "CMConfront"   = Just CMConfront
-    parseFamily "CMNextStep"   = Just CMNextStep
-    parseFamily _ = Nothing
+    parseFamily :: Text -> Either Text CanonicalMoveFamily
+    parseFamily txt = case readMaybe (T.unpack txt) of
+      Just fam -> Right fam
+      Nothing  -> Left ("unrecognized_family: " <> txt)
 
 verifyR5WithAgda :: IO AgdaVerificationResult
 verifyR5WithAgda = do

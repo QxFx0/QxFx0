@@ -16,6 +16,7 @@ import System.Directory
   ( Permissions(..)
   , createDirectoryIfMissing
   , doesFileExist
+  , findExecutable
   , getCurrentDirectory
   , getPermissions
   , removeFile
@@ -26,6 +27,7 @@ import System.FilePath ((</>))
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Data.Text as T
 
+import qualified QxFx0.Bridge.AgdaWitness as AW
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Runtime as Runtime
 
@@ -135,8 +137,14 @@ withStrictRuntimeEnv dbName action = do
               withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
                 withEnvVar "EMBEDDING_API_URL" Nothing $
                   withEnvVar "QXFX0_AGDA_WITNESS" (Just witnessPath) $ do
-                    _ <- Runtime.writeAgdaWitness
-                    action
+                    mAgda <- findExecutable "agda"
+                    case mAgda of
+                      Just _  -> do
+                        _ <- Runtime.writeAgdaWitness
+                        action
+                      Nothing -> do
+                        AW.writeStubAgdaWitness witnessPath
+                        action
 
 withEnvVar :: String -> Maybe String -> IO a -> IO a
 withEnvVar key mValue action = do

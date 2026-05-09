@@ -1,0 +1,247 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>module Test.Suite.LexiconTests
+<span class="lineno">    6 </span>  ( lexiconTests
+<span class="lineno">    7 </span>  ) where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>import Test.HUnit
+<span class="lineno">   10 </span>import Data.Aeson (eitherDecodeStrict')
+<span class="lineno">   11 </span>import Data.Text (Text)
+<span class="lineno">   12 </span>import qualified Data.Text as T
+<span class="lineno">   13 </span>import qualified Data.Text.IO as TIO
+<span class="lineno">   14 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   15 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">   16 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   17 </span>import System.Directory (doesFileExist)
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>import QxFx0.Types (MorphologyData(..))
+<span class="lineno">   20 </span>import QxFx0.Types.Domain.Atoms
+<span class="lineno">   21 </span>  ( LexemeForm(..)
+<span class="lineno">   22 </span>  , LexemeCase(..)
+<span class="lineno">   23 </span>  , LexemeNumber(..)
+<span class="lineno">   24 </span>  , SourceTier(..)
+<span class="lineno">   25 </span>  )
+<span class="lineno">   26 </span>import QxFx0.Lexicon.Inflection (toNominative, genitiveForm, accusativeForm, prepositionalForm)
+<span class="lineno">   27 </span>import QxFx0.Lexicon.Resolver (resolveLexemeForm, tierPriority)
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>lexiconTests :: [Test]
+<span class="lineno">   30 </span><span class="decl"><span class="istickedoff">lexiconTests =</span>
+<span class="lineno">   31 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;resolver priority: curated beats auto-verified&quot;</span> (TestCase testResolverPriorityCuratedBeatsAutoVerified)</span>
+<span class="lineno">   32 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;resolver priority: brain-kb-reviewed beats auto-verified&quot;</span> (TestCase testResolverPriorityBrainReviewedBeatsAutoVerified)</span>
+<span class="lineno">   33 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;resolver priority: auto-verified beats auto-coverage&quot;</span> (TestCase testResolverPriorityAutoVerifiedBeatsAutoCoverage)</span>
+<span class="lineno">   34 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;resolver priority: curated beats auto-coverage&quot;</span> (TestCase testResolverPriorityCuratedBeatsAutoCoverage)</span>
+<span class="lineno">   35 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;resolver priority: curated beats brain-kb-reviewed&quot;</span> (TestCase testResolverPriorityCuratedBeatsBrainReviewed)</span>
+<span class="lineno">   36 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;resolver priority: higher quality wins within same tier&quot;</span> (TestCase testResolverPriorityHigherQualityWithinTier)</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;ambiguity fallback: same tier and quality returns raw surface&quot;</span> (TestCase testAmbiguityFallbackSameTierQuality)</span>
+<span class="lineno">   38 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;ambiguity fallback: different tier resolves&quot;</span> (TestCase testAmbiguityFallbackDifferentTier)</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;old morphology maps: toNominative uses mdNominative first&quot;</span> (TestCase testOldMorphologyToNominative)</span>
+<span class="lineno">   40 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;old morphology maps: genitiveForm uses mdGenitive first&quot;</span> (TestCase testOldMorphologyGenitive)</span>
+<span class="lineno">   41 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;old morphology maps: prepositionalForm uses mdPrepositional first&quot;</span> (TestCase testOldMorphologyPrepositional)</span>
+<span class="lineno">   42 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;candidate fallback: genitiveForm uses mdFormsBySurface&quot;</span> (TestCase testCandidateGenitiveFallback)</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;candidate fallback: accusativeForm inherits genitive fallback&quot;</span> (TestCase testCandidateAccusativeFallback)</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;JSON backward compatibility: MorphologyData parses without mdFormsBySurface&quot;</span> (TestCase testJsonBackwardCompatibility)</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;generated artifact: forms_by_surface.json is valid JSON&quot;</span> (TestCase testFormsBySurfaceValidJson)</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;generated artifact: forms_by_surface.json has expected object structure&quot;</span> (TestCase testFormsBySurfaceStructure)</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;tierPriority: curated=4, brainReviewed=3, autoVerified=2, autoCoverage=1&quot;</span> (TestCase testTierPriorityValues)</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>-- 1. Resolver priority: curated &gt; auto-verified &gt; auto-coverage
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>testResolverPriorityCuratedBeatsAutoVerified :: Assertion
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">testResolverPriorityCuratedBeatsAutoVerified = do</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">let autoVerifiedForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber AutoVerifiedTier 0.9</span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">curatedForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.8</span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;свобода&quot;, [autoVerifiedForm, curatedForm])])</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;свобода&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;curated tier should beat auto-verified even with lower quality&quot;</span> (Just curatedForm) result</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>testResolverPriorityBrainReviewedBeatsAutoVerified :: Assertion
+<span class="lineno">   61 </span><span class="decl"><span class="istickedoff">testResolverPriorityBrainReviewedBeatsAutoVerified = do</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">let autoVerifiedForm = LexemeForm &quot;рамка&quot; &quot;рамка&quot; &quot;noun&quot; NominativeCase SingularNumber AutoVerifiedTier 0.95</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">brainReviewedForm = LexemeForm &quot;рамка&quot; &quot;рамка&quot; &quot;noun&quot; NominativeCase SingularNumber BrainKbReviewedTier 0.8</span>
+<span class="lineno">   64 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;рамка&quot;, [autoVerifiedForm, brainReviewedForm])])</span>
+<span class="lineno">   65 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;рамка&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;brain-kb-reviewed tier should beat auto-verified&quot;</span> (Just brainReviewedForm) result</span></span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>testResolverPriorityAutoVerifiedBeatsAutoCoverage :: Assertion
+<span class="lineno">   69 </span><span class="decl"><span class="istickedoff">testResolverPriorityAutoVerifiedBeatsAutoCoverage = do</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="istickedoff">let autoCoverageForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber AutoCoverageTier 0.95</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">autoVerifiedForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber AutoVerifiedTier 0.85</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;свобода&quot;, [autoCoverageForm, autoVerifiedForm])])</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;свобода&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;auto-verified tier should beat auto-coverage even with lower quality&quot;</span> (Just autoVerifiedForm) result</span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>testResolverPriorityCuratedBeatsAutoCoverage :: Assertion
+<span class="lineno">   77 </span><span class="decl"><span class="istickedoff">testResolverPriorityCuratedBeatsAutoCoverage = do</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">let autoCoverageForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber AutoCoverageTier 0.99</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">curatedForm = LexemeForm &quot;свобода&quot; &quot;свобода&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.5</span>
+<span class="lineno">   80 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;свобода&quot;, [autoCoverageForm, curatedForm])])</span>
+<span class="lineno">   81 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;свобода&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;curated tier should beat auto-coverage regardless of quality&quot;</span> (Just curatedForm) result</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>testResolverPriorityCuratedBeatsBrainReviewed :: Assertion
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">testResolverPriorityCuratedBeatsBrainReviewed = do</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">let brainReviewedForm = LexemeForm &quot;смысл&quot; &quot;смысл&quot; &quot;noun&quot; NominativeCase SingularNumber BrainKbReviewedTier 0.99</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">curatedForm = LexemeForm &quot;смысл&quot; &quot;смысл&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.7</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;смысл&quot;, [brainReviewedForm, curatedForm])])</span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;смысл&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;curated tier should beat brain-kb-reviewed tier&quot;</span> (Just curatedForm) result</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>testResolverPriorityHigherQualityWithinTier :: Assertion
+<span class="lineno">   93 </span><span class="decl"><span class="istickedoff">testResolverPriorityHigherQualityWithinTier = do</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">let lowQualityForm = LexemeForm &quot;форма&quot; &quot;низкая&quot; &quot;noun&quot; NominativeCase SingularNumber AutoVerifiedTier 0.6</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">highQualityForm = LexemeForm &quot;форма&quot; &quot;высокая&quot; &quot;noun&quot; NominativeCase SingularNumber AutoVerifiedTier 0.9</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;форма&quot;, [lowQualityForm, highQualityForm])])</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;форма&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;higher quality should win within the same tier&quot;</span> (Just highQualityForm) result</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>-- 2. Ambiguity fallback: same tier and quality returns raw surface (Nothing from resolver)
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>testAmbiguityFallbackSameTierQuality :: Assertion
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">testAmbiguityFallbackSameTierQuality = do</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">let form1 = LexemeForm &quot;боли&quot; &quot;боль&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.9</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">form2 = LexemeForm &quot;боли&quot; &quot;боля&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.9</span>
+<span class="lineno">  106 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;боли&quot;, [form1, form2])])</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;боли&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;same tier and quality should be ambiguous, returning Nothing&quot;</span> Nothing result</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>testAmbiguityFallbackDifferentTier :: Assertion
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">testAmbiguityFallbackDifferentTier = do</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">let form1 = LexemeForm &quot;боли&quot; &quot;боль&quot; &quot;noun&quot; NominativeCase SingularNumber CuratedTier 0.9</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">form2 = LexemeForm &quot;боли&quot; &quot;боля&quot; &quot;noun&quot; NominativeCase SingularNumber AutoCoverageTier 0.9</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;боли&quot;, [form1, form2])])</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">result = resolveLexemeForm md &quot;боли&quot; (Just NominativeCase) (Just SingularNumber)</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;different tiers should resolve to curated candidate&quot;</span> (Just form1) result</span></span>
+<span class="lineno">  117 </span>
+<span class="lineno">  118 </span>-- 3. Old morphology maps still work: toNominative, genitiveForm, prepositionalForm
+<span class="lineno">  119 </span>--    use mdNominative/mdGenitive/mdPrepositional first
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>testOldMorphologyToNominative :: Assertion
+<span class="lineno">  122 </span><span class="decl"><span class="istickedoff">testOldMorphologyToNominative = do</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">let nomMap = Map.fromList [(&quot;свободе&quot;, &quot;свобода&quot;), (&quot;диалога&quot;, &quot;диалог&quot;)]</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty nomMap Map.empty</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;toNominative should use mdNominative direct lookup&quot;</span> &quot;свобода&quot; (toNominative md &quot;свободе&quot;)</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;toNominative should use mdNominative direct lookup&quot;</span> &quot;диалог&quot; (toNominative md &quot;диалога&quot;)</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;toNominative should fallback to surface for unknown&quot;</span> &quot;неизвестно&quot; (toNominative md &quot;неизвестно&quot;)</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>testOldMorphologyGenitive :: Assertion
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">testOldMorphologyGenitive = do</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">let genMap = Map.fromList [(&quot;свобода&quot;, &quot;свободы&quot;), (&quot;диалог&quot;, &quot;диалога&quot;)]</span>
+<span class="lineno">  132 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty genMap Map.empty Map.empty</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;genitiveForm should use mdGenitive direct lookup&quot;</span> &quot;свободы&quot; (genitiveForm md &quot;свобода&quot;)</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;genitiveForm should use mdGenitive direct lookup&quot;</span> &quot;диалога&quot; (genitiveForm md &quot;диалог&quot;)</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;genitiveForm should fallback to surface for unknown&quot;</span> &quot;неизвестно&quot; (genitiveForm md &quot;неизвестно&quot;)</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>testOldMorphologyPrepositional :: Assertion
+<span class="lineno">  138 </span><span class="decl"><span class="istickedoff">testOldMorphologyPrepositional = do</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">let prepMap = Map.fromList [(&quot;свобода&quot;, &quot;свободе&quot;), (&quot;диалог&quot;, &quot;диалоге&quot;)]</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData prepMap Map.empty Map.empty Map.empty</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;prepositionalForm should use mdPrepositional direct lookup&quot;</span> &quot;свободе&quot; (prepositionalForm md &quot;свобода&quot;)</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;prepositionalForm should use mdPrepositional direct lookup&quot;</span> &quot;диалоге&quot; (prepositionalForm md &quot;диалог&quot;)</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;prepositionalForm should fallback to surface for unknown&quot;</span> &quot;неизвестно&quot; (prepositionalForm md &quot;неизвестно&quot;)</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>testCandidateGenitiveFallback :: Assertion
+<span class="lineno">  146 </span><span class="decl"><span class="istickedoff">testCandidateGenitiveFallback = do</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">let genForm = LexemeForm &quot;человека&quot; &quot;человек&quot; &quot;noun&quot; GenitiveCase SingularNumber AutoVerifiedTier 0.9</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;человек&quot;, [genForm])])</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;genitiveForm should use candidate forms when flat map misses&quot;</span> &quot;человека&quot; (genitiveForm md &quot;человек&quot;)</span></span>
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>testCandidateAccusativeFallback :: Assertion
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">testCandidateAccusativeFallback = do</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">let accForm = LexemeForm &quot;человека&quot; &quot;человек&quot; &quot;noun&quot; AccusativeCase SingularNumber AutoVerifiedTier 0.9</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [(&quot;человек&quot;, [accForm])])</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;accusativeForm should prefer explicit candidate accusative form&quot;</span> &quot;человека&quot; (accusativeForm md &quot;человек&quot;)</span></span>
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>-- 4. JSON backward compatibility: MorphologyData can be parsed from JSON without mdFormsBySurface field
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>testJsonBackwardCompatibility :: Assertion
+<span class="lineno">  160 </span><span class="decl"><span class="istickedoff">testJsonBackwardCompatibility = do</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">let jsonWithoutFormsBySurface = T.unlines</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">[ &quot;{&quot;</span>
+<span class="lineno">  163 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdPrepositional\&quot;: {\&quot;свобода\&quot;: \&quot;свободе\&quot;},&quot;</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdGenitive\&quot;: {\&quot;свобода\&quot;: \&quot;свободы\&quot;},&quot;</span>
+<span class="lineno">  165 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdNominative\&quot;: {\&quot;свободе\&quot;: \&quot;свобода\&quot;}&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="istickedoff">, &quot;}&quot;</span>
+<span class="lineno">  167 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">jsonWithEmptyFormsBySurface = T.unlines</span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="istickedoff">[ &quot;{&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdPrepositional\&quot;: {\&quot;свобода\&quot;: \&quot;свободе\&quot;},&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdGenitive\&quot;: {\&quot;свобода\&quot;: \&quot;свободы\&quot;},&quot;</span>
+<span class="lineno">  172 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdNominative\&quot;: {\&quot;свободе\&quot;: \&quot;свобода\&quot;},&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff">, &quot;  \&quot;mdFormsBySurface\&quot;: {}&quot;</span>
+<span class="lineno">  174 </span><span class="spaces">        </span><span class="istickedoff">, &quot;}&quot;</span>
+<span class="lineno">  175 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 jsonWithoutFormsBySurface) of</span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;MorphologyData should parse without mdFormsBySurface: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">Right (md :: MorphologyData) -&gt; do</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;mdNominative should be populated&quot;</span> (Map.fromList [(&quot;свободе&quot;, &quot;свобода&quot;)]) (mdNominative md)</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;mdGenitive should be populated&quot;</span> (Map.fromList [(&quot;свобода&quot;, &quot;свободы&quot;)]) (mdGenitive md)</span>
+<span class="lineno">  181 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;mdPrepositional should be populated&quot;</span> (Map.fromList [(&quot;свобода&quot;, &quot;свободе&quot;)]) (mdPrepositional md)</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;mdFormsBySurface should default to empty&quot;</span> Map.empty (mdFormsBySurface md)</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 jsonWithEmptyFormsBySurface) of</span>
+<span class="lineno">  184 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;MorphologyData should parse with empty mdFormsBySurface: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">Right (md :: MorphologyData) -&gt;</span>
+<span class="lineno">  186 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;mdFormsBySurface should be empty map&quot;</span> Map.empty (mdFormsBySurface md)</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>-- 5. Generated artifact check: forms_by_surface.json is valid and contains expected structure
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>testFormsBySurfaceValidJson :: Assertion
+<span class="lineno">  191 </span><span class="decl"><span class="istickedoff">testFormsBySurfaceValidJson = do</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">let formsPath = &quot;resources&quot; &lt;/&gt; &quot;morphology&quot; &lt;/&gt; &quot;forms_by_surface.json&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">exists &lt;- doesFileExist formsPath</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">not exists</span></span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">assertFailure (&quot;forms_by_surface.json not found at &quot; &lt;&gt; formsPath)</span></span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="istickedoff">else do</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">raw &lt;- TIO.readFile formsPath</span>
+<span class="lineno">  198 </span><span class="spaces">      </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 raw) of</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;forms_by_surface.json is not valid JSON: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  200 </span><span class="spaces">        </span><span class="istickedoff">Right (_ :: Map.Map Text [LexemeForm]) -&gt; pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  201 </span>
+<span class="lineno">  202 </span>testFormsBySurfaceStructure :: Assertion
+<span class="lineno">  203 </span><span class="decl"><span class="istickedoff">testFormsBySurfaceStructure = do</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">let formsPath = &quot;resources&quot; &lt;/&gt; &quot;morphology&quot; &lt;/&gt; &quot;forms_by_surface.json&quot;</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">exists &lt;- doesFileExist formsPath</span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">not exists</span></span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">assertFailure (&quot;forms_by_surface.json not found at &quot; &lt;&gt; formsPath)</span></span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">else do</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="istickedoff">raw &lt;- TIO.readFile formsPath</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 raw) of</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;forms_by_surface.json parse error: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="istickedoff">Right (m :: Map.Map Text [LexemeForm]) -&gt; do</span>
+<span class="lineno">  213 </span><span class="spaces">          </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;forms_by_surface.json should be a JSON object (Map)&quot;</span> True</span>
+<span class="lineno">  214 </span><span class="spaces">          </span><span class="istickedoff">let allFormsNonEmpty = all (not . null) (Map.elems m)</span>
+<span class="lineno">  215 </span><span class="spaces">          </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;each surface key should have at least one form&quot;</span> allFormsNonEmpty</span></span>
+<span class="lineno">  216 </span>
+<span class="lineno">  217 </span>-- Additional: tier priority values are correct
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>testTierPriorityValues :: Assertion
+<span class="lineno">  220 </span><span class="decl"><span class="istickedoff">testTierPriorityValues = do</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;CuratedTier priority should be 4&quot;</span> 4 (tierPriority CuratedTier)</span>
+<span class="lineno">  222 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;BrainKbReviewedTier priority should be 3&quot;</span> 3 (tierPriority BrainKbReviewedTier)</span>
+<span class="lineno">  223 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;AutoVerifiedTier priority should be 2&quot;</span> 2 (tierPriority AutoVerifiedTier)</span>
+<span class="lineno">  224 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;AutoCoverageTier priority should be 1&quot;</span> 1 (tierPriority AutoCoverageTier)</span></span>
+
+</pre>
+</body>
+</html>

@@ -11,7 +11,7 @@ module CLI.Turn
   ) where
 
 import CLI.Protocol (RuntimeOutputMode(..))
-import Data.Aeson (ToJSON(..), object, (.=))
+import Data.Aeson (ToJSON(..), object, (.=), Value, Key)
 import Data.Text (Text)
 import QxFx0.Render.Text (textShow)
 import GHC.Generics (Generic)
@@ -45,18 +45,12 @@ data TurnJsonResponse = TurnJsonResponse
   } deriving stock (Generic)
 
 instance ToJSON TurnJsonResponse where
-  toJSON r = object
+  toJSON r = object $
     [ "status"     .= tjrStatus r
     , "session_id" .= tjrSessionId r
     , "input"      .= tjrInput r
-    , "surface"    .= tjrOutput r
-    , "text"       .= tjrOutput r
-    , "response"   .= tjrOutput r
-    , "family"     .= tjrFamily r
-    , "move_family" .= tjrFamily r
-    , "force"      .= tjrForce r
-    , "illocutionary_force" .= tjrForce r
-    , "render_strategy" .= tjrRenderStrategy r
+    ] ++ backwardCompatAliases r ++
+    [ "render_strategy" .= tjrRenderStrategy r
     , "render_style" .= tjrRenderStyle r
     , "legitimacy" .= tjrLegitimacy r
     , "guard_status" .= tjrGuardStatus r
@@ -71,6 +65,17 @@ instance ToJSON TurnJsonResponse where
     , "runtime_turn_index" .= tjrRuntimeTurnIndex r
     , "worker_mode" .= tjrWorkerMode r
     ]
+
+backwardCompatAliases :: TurnJsonResponse -> [(Data.Aeson.Key, Data.Aeson.Value)]
+backwardCompatAliases r =
+  [ "surface"    .= tjrOutput r
+  , "text"       .= tjrOutput r
+  , "response"   .= tjrOutput r
+  , "family"     .= tjrFamily r
+  , "move_family" .= tjrFamily r
+  , "force"      .= tjrForce r
+  , "illocutionary_force" .= tjrForce r
+  ]
 
 runTurnJson :: Text -> RuntimeOutputMode -> Text -> IO TurnJsonResponse
 runTurnJson sessionId mode inputText =

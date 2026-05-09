@@ -12,7 +12,7 @@ module QxFx0.Bridge.Datalog.Runtime
 import Control.Exception (finally)
 import Control.Monad (filterM)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, nub)
+import Data.List (nub)
 import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -28,10 +28,11 @@ import System.Directory
 import qualified System.Directory as Directory (executable)
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
-import System.FilePath ((</>), isPathSeparator, normalise, splitDirectories, takeDirectory, takeFileName)
+import System.FilePath ((</>), isPathSeparator, takeDirectory, takeFileName)
 import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode, readProcessWithExitCode)
 import System.Timeout (timeout)
 
+import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Bridge.Datalog.Compare (compareShadowOutput)
 import QxFx0.Bridge.Datalog.Support
   ( DatalogExecution(..)
@@ -177,12 +178,6 @@ resolveSouffleTrustedRoots = do
       candidates = nub (configuredRoots <> discoveredRoots)
   existing <- filterM doesDirectoryExist candidates
   mapM canonicalizePath existing
-
-isPathWithin :: FilePath -> FilePath -> Bool
-isPathWithin root candidate =
-  let rootParts = splitDirectories (normalise root)
-      candidateParts = splitDirectories (normalise candidate)
-  in rootParts `isPrefixOf` candidateParts
 
 stripWhitespace :: String -> String
 stripWhitespace = reverse . dropWhile isSpace . reverse . dropWhile isSpace

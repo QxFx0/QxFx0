@@ -19,7 +19,6 @@ import Control.Exception (AsyncException(ThreadKilled), fromException, throwIO)
 import Control.Monad (unless, when)
 import Data.Aeson (ToJSON, Value, encode, object, (.=))
 import Data.Char (isAlphaNum)
-import Data.List (isPrefixOf)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Render.Text (textShow)
@@ -33,13 +32,14 @@ import System.Directory
   , doesDirectoryExist
   )
 import System.Environment (lookupEnv)
-import System.FilePath ((</>), isAbsolute, normalise, splitDirectories, takeDirectory, takeFileName)
+import System.FilePath ((</>), isAbsolute, normalise, takeDirectory, takeFileName)
 import System.IO (BufferMode(..), hClose, hGetLine, hIsEOF, hPutStr, hSetBuffering, stdin, stdout)
 import System.Posix.Files (ownerReadMode, ownerWriteMode, unionFileModes)
 import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), defaultFileFlags, fdToHandle, openFd)
 import System.Posix.Types (FileMode)
 
 import qualified QxFx0.Runtime as Runtime
+import QxFx0.Internal.FilePath (isPathWithin)
 
 import qualified Data.ByteString.Lazy as BL
 
@@ -260,12 +260,6 @@ resolveAbsoluteMarkerPath canonicalTmp canonicalStateDir absoluteCandidate = do
         if isPathWithin canonicalTmp canonicalCandidate || isPathWithin canonicalStateDir canonicalCandidate
           then Just canonicalCandidate
           else Nothing
-
-isPathWithin :: FilePath -> FilePath -> Bool
-isPathWithin root candidate =
-  let rootParts = splitDirectories (normalise root)
-      pathParts = splitDirectories (normalise candidate)
-  in rootParts `isPrefixOf` pathParts
 
 isSafeRelativeMarker :: FilePath -> Bool
 isSafeRelativeMarker relPath =

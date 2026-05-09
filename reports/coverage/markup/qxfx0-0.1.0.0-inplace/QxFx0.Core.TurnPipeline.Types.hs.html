@@ -1,0 +1,151 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    2 </span>{-| Shared turn-pipeline phase types for input/signals/plans/artifacts/results. -}
+<span class="lineno">    3 </span>module QxFx0.Core.TurnPipeline.Types
+<span class="lineno">    4 </span>  ( TurnInput(..)
+<span class="lineno">    5 </span>  , TurnSignals(..)
+<span class="lineno">    6 </span>  , TurnPlan(..)
+<span class="lineno">    7 </span>  , TurnArtifacts(..)
+<span class="lineno">    8 </span>  , TurnResult(..)
+<span class="lineno">    9 </span>  , RoutingDecision(..)
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import QxFx0.Types
+<span class="lineno">   13 </span>import QxFx0.Types.Orbital (OrbitalMemory)
+<span class="lineno">   14 </span>import QxFx0.Core.PrincipledCore (PrincipledMode, PressureSignal)
+<span class="lineno">   15 </span>import QxFx0.Core.IdentitySignal (IdentitySignal)
+<span class="lineno">   16 </span>import QxFx0.Types.IdentityGuard (IdentityGuardReport)
+<span class="lineno">   17 </span>import QxFx0.Core.Consciousness (ConsciousnessNarrative)
+<span class="lineno">   18 </span>import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
+<span class="lineno">   19 </span>import QxFx0.Core.Intuition (IntuitiveFlash)
+<span class="lineno">   20 </span>import QxFx0.Core.Observability (TurnMetrics)
+<span class="lineno">   21 </span>import qualified QxFx0.Core.Guard as Guard
+<span class="lineno">   22 </span>import QxFx0.Core.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
+<span class="lineno">   23 </span>import QxFx0.Core.Semantic.SemanticInput (SemanticInput)
+<span class="lineno">   24 </span>import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>import Data.Text (Text)
+<span class="lineno">   27 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>data RoutingDecision = RoutingDecision
+<span class="lineno">   30 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rdFamily</span></span></span>         :: !CanonicalMoveFamily
+<span class="lineno">   31 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdNewEgo</span></span></span>         :: !EgoState
+<span class="lineno">   32 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdIdentitySignal</span></span></span> :: !IdentitySignal
+<span class="lineno">   33 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdGuardReport</span></span></span>    :: !IdentityGuardReport
+<span class="lineno">   34 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdSemanticInput</span></span></span>  :: !SemanticInput
+<span class="lineno">   35 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdSemanticAnchor</span></span></span> :: !(Maybe SemanticAnchor)
+<span class="lineno">   36 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdRenderStrategy</span></span></span> :: !ResponseStrategy
+<span class="lineno">   37 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdRenderStyle</span></span></span>    :: !RenderStyle
+<span class="lineno">   38 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdPrincipledMode</span></span></span> :: !(Maybe PrincipledMode)
+<span class="lineno">   39 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdPressure</span></span></span>       :: !(Maybe PressureSignal)
+<span class="lineno">   40 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdUpdatedOrbital</span></span></span> :: !OrbitalMemory
+<span class="lineno">   41 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdFromMs</span></span></span>         :: !MeaningState
+<span class="lineno">   42 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdToMs</span></span></span>           :: !MeaningState
+<span class="lineno">   43 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rdStrategyFamily</span></span></span> :: !(Maybe CanonicalMoveFamily)
+<span class="lineno">   44 </span>  }
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>data TurnInput = TurnInput
+<span class="lineno">   47 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tiStartTime</span></span></span> :: !UTCTime
+<span class="lineno">   48 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiEmbedding</span></span></span> :: !Embedding
+<span class="lineno">   49 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tiEmbeddingSource</span></span></span> :: !EmbeddingSource
+<span class="lineno">   50 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiEmbeddingQuality</span></span></span> :: !EmbeddingQuality
+<span class="lineno">   51 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tiEmbSimilarity</span></span></span> :: !Double
+<span class="lineno">   52 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiAtomSet</span></span></span> :: !AtomSet
+<span class="lineno">   53 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiNewTrace</span></span></span> :: !AtomTrace
+<span class="lineno">   54 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiNextUserState</span></span></span> :: !UserState
+<span class="lineno">   55 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiRecommendedFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   56 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiFrame</span></span></span> :: !InputPropositionFrame
+<span class="lineno">   57 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiNixStatus</span></span></span> :: !NixGuardStatus
+<span class="lineno">   58 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiNixAvailable</span></span></span> :: !Bool
+<span class="lineno">   59 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiIsNixBlocked</span></span></span> :: !Bool
+<span class="lineno">   60 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiConceptToCheck</span></span></span> :: !Text
+<span class="lineno">   61 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiBestTopic</span></span></span> :: !Text
+<span class="lineno">   62 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tiMetrics</span></span></span> :: !TurnMetrics
+<span class="lineno">   63 </span>  }
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>data TurnSignals = TurnSignals
+<span class="lineno">   66 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tsConsciousLoop'</span></span></span> :: !ConsciousnessLoop
+<span class="lineno">   67 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsCurrentNarrative</span></span></span> :: !(Maybe ConsciousnessNarrative)
+<span class="lineno">   68 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsNarrativeFragment</span></span></span> :: !(Maybe Text)
+<span class="lineno">   69 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsFlash</span></span></span> :: !(Maybe IntuitiveFlash)
+<span class="lineno">   70 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsIntuitPosterior</span></span></span> :: !Double
+<span class="lineno">   71 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsIntuitionState</span></span></span> :: !IntuitiveState
+<span class="lineno">   72 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tsApiHealthy</span></span></span> :: !Bool
+<span class="lineno">   73 </span>  }
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>data TurnPlan = TurnPlan
+<span class="lineno">   76 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tpFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   77 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpNewEgo</span></span></span> :: !EgoState
+<span class="lineno">   78 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpIdentitySignal</span></span></span> :: !IdentitySignal
+<span class="lineno">   79 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpGuardReport</span></span></span> :: !IdentityGuardReport
+<span class="lineno">   80 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpSemanticAnchor</span></span></span> :: !(Maybe SemanticAnchor)
+<span class="lineno">   81 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpRenderStrategy</span></span></span> :: !ResponseStrategy
+<span class="lineno">   82 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tpRenderStyle</span></span></span> :: !Text
+<span class="lineno">   83 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpPrincipledMode</span></span></span> :: !(Maybe (PressureSignal, PrincipledMode))
+<span class="lineno">   84 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpUpdatedOrbital</span></span></span> :: !OrbitalMemory
+<span class="lineno">   85 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpFromMs</span></span></span> :: !MeaningState
+<span class="lineno">   86 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpToMs</span></span></span> :: !MeaningState
+<span class="lineno">   87 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpStrategyFamily</span></span></span> :: !(Maybe CanonicalMoveFamily)
+<span class="lineno">   88 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpPreShadowFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   89 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpRmpAfterLegit</span></span></span> :: !ResponseMeaningPlan
+<span class="lineno">   90 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpRcpFinal</span></span></span> :: !ResponseContentPlan
+<span class="lineno">   91 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpFinalFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpFinalForce</span></span></span> :: !IllocutionaryForce
+<span class="lineno">   93 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpLegitScore</span></span></span> :: !Double
+<span class="lineno">   94 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpActiveScene</span></span></span> :: !SemanticScene
+<span class="lineno">   95 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowStatus</span></span></span> :: !ShadowStatus
+<span class="lineno">   96 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowDivergence</span></span></span> :: !Bool
+<span class="lineno">   97 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowDivergenceKind</span></span></span> :: !ShadowDivergenceKind
+<span class="lineno">   98 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowDivergenceSeverity</span></span></span> :: !ShadowDivergenceSeverity
+<span class="lineno">   99 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowGateTriggered</span></span></span> :: !Bool
+<span class="lineno">  100 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowSnapshotId</span></span></span> :: !ShadowSnapshotId
+<span class="lineno">  101 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowFamily</span></span></span> :: !(Maybe CanonicalMoveFamily)
+<span class="lineno">  102 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowForce</span></span></span> :: !(Maybe IllocutionaryForce)
+<span class="lineno">  103 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpShadowMessage</span></span></span> :: !Text
+<span class="lineno">  104 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpMetrics</span></span></span> :: !TurnMetrics
+<span class="lineno">  105 </span>  }
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>data TurnArtifacts = TurnArtifacts
+<span class="lineno">  108 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">taPreSafetyRendered</span></span></span> :: !Text
+<span class="lineno">  109 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taGuardSurface</span></span></span> :: !Guard.GuardSurface
+<span class="lineno">  110 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taRendered</span></span></span> :: !Text
+<span class="lineno">  111 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taSurfaceProv</span></span></span> :: !SurfaceProvenance
+<span class="lineno">  112 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taFinalRendered</span></span></span> :: !Text
+<span class="lineno">  113 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taClaimAst</span></span></span> :: !(Maybe ClaimAst)
+<span class="lineno">  114 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLinearizationLang</span></span></span> :: !(Maybe Text)
+<span class="lineno">  115 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLinearizationOk</span></span></span> :: !Bool
+<span class="lineno">  116 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLinearizationFallbackReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">  117 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taDecision</span></span></span> :: !TurnDecision
+<span class="lineno">  118 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLocalRecoveryCause</span></span></span> :: !(Maybe LocalRecoveryCause)
+<span class="lineno">  119 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLocalRecoveryStrategy</span></span></span> :: !(Maybe LocalRecoveryStrategy)
+<span class="lineno">  120 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taLocalRecoveryEvidence</span></span></span> :: ![Text]
+<span class="lineno">  121 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">taMetrics</span></span></span> :: !TurnMetrics
+<span class="lineno">  122 </span>  }
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>data TurnResult = TurnResult
+<span class="lineno">  125 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">trNextSs</span></span></span> :: !SystemState
+<span class="lineno">  126 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trOutput</span></span></span> :: !Text
+<span class="lineno">  127 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trMetrics</span></span></span> :: !TurnMetrics
+<span class="lineno">  128 </span>  }
+
+</pre>
+</body>
+</html>

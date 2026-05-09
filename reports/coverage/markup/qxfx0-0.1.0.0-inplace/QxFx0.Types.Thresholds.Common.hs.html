@@ -1,0 +1,141 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>module QxFx0.Types.Thresholds.Common
+<span class="lineno">    2 </span>  ( atomTraceAlphaDefault
+<span class="lineno">    3 </span>  , kernelPulseCoherenceDefault
+<span class="lineno">    4 </span>  , kernelPulseAgencySignalDefault
+<span class="lineno">    5 </span>  , constitutionalAgencyMinDefault
+<span class="lineno">    6 </span>  , constitutionalTensionMaxDefault
+<span class="lineno">    7 </span>  , constitutionalAmbiguityPenaltyDefault
+<span class="lineno">    8 </span>  , constitutionalShadowDivergencePenaltyDefault
+<span class="lineno">    9 </span>  , constitutionalLocalRecoveryThresholdDefault
+<span class="lineno">   10 </span>  , historyRetentionLimit
+<span class="lineno">   11 </span>  , recentFamiliesLimit
+<span class="lineno">   12 </span>  , rawInputHistoryLimit
+<span class="lineno">   13 </span>  , blockedConceptsRetentionLimit
+<span class="lineno">   14 </span>  , nixCacheMaxSize
+<span class="lineno">   15 </span>  , maxInputLength
+<span class="lineno">   16 </span>  , agdaTypecheckTimeoutMsDefault
+<span class="lineno">   17 </span>  , egoAgencyDeltaGround
+<span class="lineno">   18 </span>  , egoAgencyDeltaDefine
+<span class="lineno">   19 </span>  , egoAgencyDeltaDistinguish
+<span class="lineno">   20 </span>  , egoAgencyDeltaReflect
+<span class="lineno">   21 </span>  , egoAgencyDeltaDescribe
+<span class="lineno">   22 </span>  , egoAgencyDeltaPurpose
+<span class="lineno">   23 </span>  , egoAgencyDeltaHypothesis
+<span class="lineno">   24 </span>  , egoAgencyDeltaRepair
+<span class="lineno">   25 </span>  , egoAgencyDeltaContact
+<span class="lineno">   26 </span>  , egoAgencyDeltaAnchor
+<span class="lineno">   27 </span>  , egoAgencyDeltaClarify
+<span class="lineno">   28 </span>  , egoAgencyDeltaDeepen
+<span class="lineno">   29 </span>  , egoAgencyDeltaConfront
+<span class="lineno">   30 </span>  , egoAgencyDeltaNextStep
+<span class="lineno">   31 </span>  ) where
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>atomTraceAlphaDefault :: Double
+<span class="lineno">   34 </span><span class="decl"><span class="istickedoff">atomTraceAlphaDefault = 0.2</span></span>
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>kernelPulseCoherenceDefault :: Double
+<span class="lineno">   37 </span><span class="decl"><span class="istickedoff">kernelPulseCoherenceDefault = 0.5</span></span>
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>kernelPulseAgencySignalDefault :: Double
+<span class="lineno">   40 </span><span class="decl"><span class="istickedoff">kernelPulseAgencySignalDefault = 0.7</span></span>
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>constitutionalAgencyMinDefault :: Double
+<span class="lineno">   43 </span><span class="decl"><span class="istickedoff">constitutionalAgencyMinDefault = 0.3</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>constitutionalTensionMaxDefault :: Double
+<span class="lineno">   46 </span><span class="decl"><span class="istickedoff">constitutionalTensionMaxDefault = 0.8</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>constitutionalAmbiguityPenaltyDefault :: Double
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">constitutionalAmbiguityPenaltyDefault = 0.15</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>constitutionalShadowDivergencePenaltyDefault :: Double
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">constitutionalShadowDivergencePenaltyDefault = 0.2</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>constitutionalLocalRecoveryThresholdDefault :: Double
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">constitutionalLocalRecoveryThresholdDefault = 0.3</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>historyRetentionLimit :: Int
+<span class="lineno">   58 </span><span class="decl"><span class="nottickedoff">historyRetentionLimit = 50</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>recentFamiliesLimit :: Int
+<span class="lineno">   61 </span><span class="decl"><span class="istickedoff">recentFamiliesLimit = 10</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>rawInputHistoryLimit :: Int
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">rawInputHistoryLimit = 50</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>blockedConceptsRetentionLimit :: Int
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">blockedConceptsRetentionLimit = 64</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>nixCacheMaxSize :: Int
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">nixCacheMaxSize = 64</span></span>
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>maxInputLength :: Int
+<span class="lineno">   73 </span><span class="decl"><span class="istickedoff">maxInputLength = 10000</span></span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>agdaTypecheckTimeoutMsDefault :: Int
+<span class="lineno">   76 </span><span class="decl"><span class="istickedoff">agdaTypecheckTimeoutMsDefault = 30000</span></span>
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>egoAgencyDeltaGround :: Double
+<span class="lineno">   79 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaGround = 0.05</span></span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>egoAgencyDeltaDefine :: Double
+<span class="lineno">   82 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaDefine = 0.03</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>egoAgencyDeltaDistinguish :: Double
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaDistinguish = 0.02</span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>egoAgencyDeltaReflect :: Double
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaReflect = 0.0</span></span>
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>egoAgencyDeltaDescribe :: Double
+<span class="lineno">   91 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaDescribe = 0.01</span></span>
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>egoAgencyDeltaPurpose :: Double
+<span class="lineno">   94 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaPurpose = 0.02</span></span>
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>egoAgencyDeltaHypothesis :: Double
+<span class="lineno">   97 </span><span class="decl"><span class="nottickedoff">egoAgencyDeltaHypothesis = -0.01</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>egoAgencyDeltaRepair :: Double
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaRepair = 0.03</span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>egoAgencyDeltaContact :: Double
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaContact = 0.04</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>egoAgencyDeltaAnchor :: Double
+<span class="lineno">  106 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaAnchor = 0.05</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>egoAgencyDeltaClarify :: Double
+<span class="lineno">  109 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaClarify = 0.0</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>egoAgencyDeltaDeepen :: Double
+<span class="lineno">  112 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaDeepen = -0.02</span></span>
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>egoAgencyDeltaConfront :: Double
+<span class="lineno">  115 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaConfront = -0.05</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>egoAgencyDeltaNextStep :: Double
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">egoAgencyDeltaNextStep = 0.02</span></span>
+
+</pre>
+</body>
+</html>

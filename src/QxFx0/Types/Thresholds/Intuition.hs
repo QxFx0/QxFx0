@@ -29,6 +29,7 @@ module QxFx0.Types.Thresholds.Intuition
   , intuitionCoreVecSteadiness
   , intuitionSteadinessBaseline
   , intuitionSignalSteadyBonusScale
+  , intuitionCooldownTurns
   ) where
 
 intuitionFlashThreshold :: Double
@@ -120,3 +121,6 @@ intuitionSteadinessBaseline = 0.50
 
 intuitionSignalSteadyBonusScale :: Double
 intuitionSignalSteadyBonusScale = 0.20
+
+intuitionCooldownTurns :: Int
+intuitionCooldownTurns = 2

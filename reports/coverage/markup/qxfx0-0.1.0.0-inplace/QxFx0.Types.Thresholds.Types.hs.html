@@ -1,0 +1,121 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Thresholds.Types
+<span class="lineno">    7 </span>  ( DepthMode(..)
+<span class="lineno">    8 </span>  , depthModeText
+<span class="lineno">    9 </span>  , parseDepthModeText
+<span class="lineno">   10 </span>  , ScenePressure(..)
+<span class="lineno">   11 </span>  , scenePressureText
+<span class="lineno">   12 </span>  , LegitimacyStatus(..)
+<span class="lineno">   13 </span>  , legitimacyStatusText
+<span class="lineno">   14 </span>  , clamp01
+<span class="lineno">   15 </span>  ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   18 </span>import Data.Aeson (FromJSON(..), ToJSON(..), Value(String), withText)
+<span class="lineno">   19 </span>import Data.Text (Text)
+<span class="lineno">   20 </span>import qualified Data.Text as T
+<span class="lineno">   21 </span>import GHC.Generics (Generic)
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>data DepthMode
+<span class="lineno">   24 </span>  = SurfaceDepth
+<span class="lineno">   25 </span>  | MediumDepth
+<span class="lineno">   26 </span>  | DeepDepth
+<span class="lineno">   27 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   28 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>depthModeText :: DepthMode -&gt; Text
+<span class="lineno">   31 </span><span class="decl"><span class="nottickedoff">depthModeText SurfaceDepth = &quot;surface&quot;</span>
+<span class="lineno">   32 </span><span class="spaces"></span><span class="nottickedoff">depthModeText MediumDepth = &quot;medium&quot;</span>
+<span class="lineno">   33 </span><span class="spaces"></span><span class="nottickedoff">depthModeText DeepDepth = &quot;deep&quot;</span></span>
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>parseDepthModeText :: Text -&gt; Maybe DepthMode
+<span class="lineno">   36 </span><span class="decl"><span class="nottickedoff">parseDepthModeText txt = case T.toLower (T.strip txt) of</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="nottickedoff">&quot;surface&quot; -&gt; Just SurfaceDepth</span>
+<span class="lineno">   38 </span><span class="spaces">  </span><span class="nottickedoff">&quot;medium&quot; -&gt; Just MediumDepth</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="nottickedoff">&quot;deep&quot; -&gt; Just DeepDepth</span>
+<span class="lineno">   40 </span><span class="spaces">  </span><span class="nottickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON DepthMode</span></span></span></span></span></span></span></span> where
+<span class="lineno">   43 </span>  <span class="decl"><span class="nottickedoff">toJSON = String . depthModeText</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON DepthMode</span></span></span></span> where
+<span class="lineno">   46 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withText &quot;DepthMode&quot; $ \txt -&gt;</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="nottickedoff">case parseDepthModeText txt of</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="nottickedoff">Just mode -&gt; pure mode</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="nottickedoff">Nothing -&gt; fail (&quot;unknown DepthMode: &quot; ++ T.unpack txt)</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>data ScenePressure
+<span class="lineno">   52 </span>  = PressureLow
+<span class="lineno">   53 </span>  | PressureMedium
+<span class="lineno">   54 </span>  | PressureHigh
+<span class="lineno">   55 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   56 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>scenePressureText :: ScenePressure -&gt; Text
+<span class="lineno">   59 </span><span class="decl"><span class="istickedoff">scenePressureText PressureLow = <span class="nottickedoff">&quot;low&quot;</span></span>
+<span class="lineno">   60 </span><span class="spaces"></span><span class="istickedoff">scenePressureText PressureMedium = &quot;medium&quot;</span>
+<span class="lineno">   61 </span><span class="spaces"></span><span class="istickedoff">scenePressureText PressureHigh = &quot;high&quot;</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON ScenePressure</span></span></span></span></span></span></span></span> where
+<span class="lineno">   64 </span>  <span class="decl"><span class="nottickedoff">toJSON = String . scenePressureText</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ScenePressure</span></span></span></span> where
+<span class="lineno">   67 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withText &quot;ScenePressure&quot; $ \txt -&gt;</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="nottickedoff">case T.toLower (T.strip txt) of</span>
+<span class="lineno">   69 </span><span class="spaces">      </span><span class="nottickedoff">&quot;low&quot; -&gt; pure PressureLow</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="nottickedoff">&quot;medium&quot; -&gt; pure PressureMedium</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="nottickedoff">&quot;high&quot; -&gt; pure PressureHigh</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; fail (&quot;unknown ScenePressure: &quot; ++ T.unpack txt)</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>data LegitimacyStatus
+<span class="lineno">   75 </span>  = LegitimacyPass
+<span class="lineno">   76 </span>  | LegitimacyDegraded
+<span class="lineno">   77 </span>  | LegitimacyRecovery
+<span class="lineno">   78 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   79 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>legitimacyStatusText :: LegitimacyStatus -&gt; Text
+<span class="lineno">   82 </span><span class="decl"><span class="istickedoff">legitimacyStatusText LegitimacyPass = &quot;pass&quot;</span>
+<span class="lineno">   83 </span><span class="spaces"></span><span class="istickedoff">legitimacyStatusText LegitimacyDegraded = &quot;degraded&quot;</span>
+<span class="lineno">   84 </span><span class="spaces"></span><span class="istickedoff">legitimacyStatusText LegitimacyRecovery = &quot;recovery&quot;</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LegitimacyStatus</span></span></span></span></span></span></span></span> where
+<span class="lineno">   87 </span>  <span class="decl"><span class="nottickedoff">toJSON = String . legitimacyStatusText</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON LegitimacyStatus</span></span></span></span> where
+<span class="lineno">   90 </span>  <span class="decl"><span class="nottickedoff">parseJSON = withText &quot;LegitimacyStatus&quot; $ \txt -&gt;</span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="nottickedoff">case T.toLower (T.strip txt) of</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="nottickedoff">&quot;pass&quot; -&gt; pure LegitimacyPass</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="nottickedoff">&quot;degraded&quot; -&gt; pure LegitimacyDegraded</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="nottickedoff">&quot;recovery&quot; -&gt; pure LegitimacyRecovery</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; fail (&quot;unknown LegitimacyStatus: &quot; ++ T.unpack txt)</span></span>
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>clamp01 :: Double -&gt; Double
+<span class="lineno">   98 </span><span class="decl"><span class="istickedoff">clamp01 = max 0.0 . min 1.0</span></span>
+
+</pre>
+</body>
+</html>

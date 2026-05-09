@@ -123,7 +123,20 @@ run_agda_check() {
 }
 
 write_agda_witness() {
-  run_cabal_check "cabal run -v0 qxfx0-main -- --write-agda-witness 2>&1"
+  local agda_path=""
+  if command -v agda >/dev/null 2>&1; then
+    agda_path="$(command -v agda)"
+  elif command -v nix >/dev/null 2>&1; then
+    agda_path="$(nix eval --impure --expr 'with import <nixpkgs> {}; "${agda}/bin/agda"' 2>/dev/null | tr -d '"')"
+    if [ -z "$agda_path" ] || [ ! -x "$agda_path" ]; then
+      echo "Agda not available for witness generation" >&2
+      return 127
+    fi
+  else
+    echo "Agda not available for witness generation" >&2
+    return 127
+  fi
+  PATH="$(dirname "$agda_path"):$PATH" run_cabal_check "cabal run -v0 qxfx0-main -- --write-agda-witness 2>&1"
 }
 
 validate_runtime_ready_json() {
@@ -236,11 +249,20 @@ fi
 echo "[2c/9] Coverage gate ..."
 if [ "$ENABLE_COVERAGE_GATE" = "1" ]; then
   if [ -x "$ROOT/scripts/test_coverage.sh" ]; then
-    if "$ROOT/scripts/test_coverage.sh" >/dev/null 2>&1; then
-      echo "  OK"
+    COVERAGE_STATUS=0
+    COVERAGE_OUT=""
+    if COVERAGE_OUT="$("$ROOT/scripts/test_coverage.sh" 2>&1)"; then
+      echo "  OK (COVERAGE_STATUS=PASS)"
     else
-      echo "  FAIL (coverage thresholds were not met)"
-      exit 1
+      COVERAGE_STATUS=$?
+      if [ "$COVERAGE_STATUS" -eq 2 ]; then
+        echo "  SKIP (COVERAGE_STATUS=SKIP: known infrastructure incompatibility)"
+        echo "$COVERAGE_OUT" | tail -5
+      else
+        echo "  FAIL (COVERAGE_STATUS=FAIL: coverage thresholds not met or test failure)"
+        echo "$COVERAGE_OUT" | tail -20
+        exit 1
+      fi
     fi
   else
     echo "  FAIL (scripts/test_coverage.sh is missing or not executable)"

@@ -1,0 +1,101 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Public embedding types and user-facing codecs. -}
+<span class="lineno">    5 </span>module QxFx0.Semantic.Embedding.Types
+<span class="lineno">    6 </span>  ( Embedding
+<span class="lineno">    7 </span>  , APIHealthCache
+<span class="lineno">    8 </span>  , EmbeddingBackend(..)
+<span class="lineno">    9 </span>  , EmbeddingQuality(..)
+<span class="lineno">   10 </span>  , EmbeddingHealth(..)
+<span class="lineno">   11 </span>  , EmbeddingSource(..)
+<span class="lineno">   12 </span>  , EmbeddingResult(..)
+<span class="lineno">   13 </span>  , embeddingBackendText
+<span class="lineno">   14 </span>  , embeddingQualityText
+<span class="lineno">   15 </span>  , embeddingSourceText
+<span class="lineno">   16 </span>  , embeddingSourceQuality
+<span class="lineno">   17 </span>  ) where
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>import Control.Concurrent.MVar (MVar)
+<span class="lineno">   20 </span>import Data.Text (Text)
+<span class="lineno">   21 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   22 </span>import qualified Data.Vector as V
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>type Embedding = V.Vector Float
+<span class="lineno">   25 </span>type APIHealthCache = MVar (Maybe (UTCTime, Bool))
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>data EmbeddingBackend
+<span class="lineno">   28 </span>  = EmbeddingBackendLocalDeterministic
+<span class="lineno">   29 </span>  | EmbeddingBackendRemoteHTTP
+<span class="lineno">   30 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>data EmbeddingQuality
+<span class="lineno">   33 </span>  = EmbeddingQualityHeuristic
+<span class="lineno">   34 </span>  | EmbeddingQualityModeled
+<span class="lineno">   35 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>data EmbeddingHealth = EmbeddingHealth
+<span class="lineno">   38 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ehBackend</span></span></span> :: !EmbeddingBackend
+<span class="lineno">   39 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ehQuality</span></span></span> :: !EmbeddingQuality
+<span class="lineno">   40 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ehExplicit</span></span></span> :: !Bool
+<span class="lineno">   41 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ehOperational</span></span></span> :: !Bool
+<span class="lineno">   42 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ehStrictReady</span></span></span> :: !Bool
+<span class="lineno">   43 </span>  }
+<span class="lineno">   44 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>data EmbeddingSource
+<span class="lineno">   47 </span>  = EmbeddingRemote
+<span class="lineno">   48 </span>  | EmbeddingLocalDeterministic
+<span class="lineno">   49 </span>  | EmbeddingLocalImplicit
+<span class="lineno">   50 </span>  | EmbeddingRemoteFailureLocalFallback
+<span class="lineno">   51 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>data EmbeddingResult = EmbeddingResult
+<span class="lineno">   54 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">erEmbedding</span></span></span> :: !Embedding
+<span class="lineno">   55 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">erSource</span></span></span> :: !EmbeddingSource
+<span class="lineno">   56 </span>  }
+<span class="lineno">   57 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>embeddingBackendText :: EmbeddingBackend -&gt; Text
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">embeddingBackendText EmbeddingBackendLocalDeterministic = &quot;local_deterministic&quot;</span>
+<span class="lineno">   61 </span><span class="spaces"></span><span class="istickedoff">embeddingBackendText EmbeddingBackendRemoteHTTP = &quot;remote_http&quot;</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>embeddingQualityText :: EmbeddingQuality -&gt; Text
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">embeddingQualityText EmbeddingQualityHeuristic = &quot;heuristic&quot;</span>
+<span class="lineno">   65 </span><span class="spaces"></span><span class="istickedoff">embeddingQualityText EmbeddingQualityModeled = &quot;modeled&quot;</span></span>
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>embeddingSourceText :: EmbeddingSource -&gt; Text
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">embeddingSourceText EmbeddingRemote = <span class="nottickedoff">&quot;remote_http&quot;</span></span>
+<span class="lineno">   69 </span><span class="spaces"></span><span class="istickedoff">embeddingSourceText EmbeddingLocalDeterministic = &quot;local_deterministic&quot;</span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="istickedoff">embeddingSourceText EmbeddingLocalImplicit = &quot;local_implicit&quot;</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="istickedoff">embeddingSourceText EmbeddingRemoteFailureLocalFallback = <span class="nottickedoff">&quot;remote_failure_local_fallback&quot;</span></span></span>
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>embeddingSourceQuality :: EmbeddingSource -&gt; EmbeddingQuality
+<span class="lineno">   74 </span><span class="decl"><span class="istickedoff">embeddingSourceQuality source = case source of</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">EmbeddingRemote -&gt; EmbeddingQualityModeled</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">EmbeddingLocalDeterministic -&gt; EmbeddingQualityHeuristic</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">EmbeddingLocalImplicit -&gt; EmbeddingQualityHeuristic</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">EmbeddingRemoteFailureLocalFallback -&gt; <span class="nottickedoff">EmbeddingQualityHeuristic</span></span></span>
+
+</pre>
+</body>
+</html>

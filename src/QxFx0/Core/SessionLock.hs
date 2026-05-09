@@ -96,4 +96,6 @@ getOrCreateLock mgr sessionId = do
         Right lock -> pure lock
         Left tracked -> do
           hPutStrLn stderr $ "session_lock_overflow: session=" <> T.unpack sessionId <> " tracked=" <> show tracked <> " cap=" <> show (slmMaxTrackedLocks mgr)
-          pure (slmOverflowLock mgr)
+          -- Instead of serializing all overflow sessions through a single MVar,
+          -- create a per-session lock that bypasses tracking (no DoS vector)
+          newMVar ()

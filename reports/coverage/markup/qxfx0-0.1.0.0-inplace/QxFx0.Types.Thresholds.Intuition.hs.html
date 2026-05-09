@@ -1,0 +1,149 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>module QxFx0.Types.Thresholds.Intuition
+<span class="lineno">    2 </span>  ( intuitionFlashThreshold
+<span class="lineno">    3 </span>  , intuitionHighResonanceThreshold
+<span class="lineno">    4 </span>  , intuitionElevatedResonanceThreshold
+<span class="lineno">    5 </span>  , intuitionDeepResonanceThreshold
+<span class="lineno">    6 </span>  , intuitionHighTensionThreshold
+<span class="lineno">    7 </span>  , intuitionElevatedTensionThreshold
+<span class="lineno">    8 </span>  , intuitionCrisisTensionThreshold
+<span class="lineno">    9 </span>  , intuitionNoFlashBaselineLikelihood
+<span class="lineno">   10 </span>  , intuitionBasePriorDefault
+<span class="lineno">   11 </span>  , intuitionEffectivePosteriorShortWeight
+<span class="lineno">   12 </span>  , intuitionEffectivePosteriorLongWeight
+<span class="lineno">   13 </span>  , intuitionFlashLikelihoodConvergent
+<span class="lineno">   14 </span>  , intuitionFlashLikelihoodElevated
+<span class="lineno">   15 </span>  , intuitionFlashLikelihoodDeep
+<span class="lineno">   16 </span>  , intuitionFlashLikelihoodBaseline
+<span class="lineno">   17 </span>  , intuitionNoFlashLikelihoodConvergent
+<span class="lineno">   18 </span>  , intuitionNoFlashLikelihoodElevated
+<span class="lineno">   19 </span>  , intuitionNoFlashLikelihoodDeep
+<span class="lineno">   20 </span>  , intuitionPosteriorAfterFlashDecayFactor
+<span class="lineno">   21 </span>  , intuitionLongPosteriorAfterFlashDecayFactor
+<span class="lineno">   22 </span>  , intuitionLongPosteriorPriorWeight
+<span class="lineno">   23 </span>  , intuitionLongPosteriorCurrentWeight
+<span class="lineno">   24 </span>  , intuitionFlashOverrideStrengthThreshold
+<span class="lineno">   25 </span>  , intuitionCoreVecPresence
+<span class="lineno">   26 </span>  , intuitionCoreVecDepth
+<span class="lineno">   27 </span>  , intuitionCoreVecAutonomy
+<span class="lineno">   28 </span>  , intuitionCoreVecDirectiveness
+<span class="lineno">   29 </span>  , intuitionCoreVecSteadiness
+<span class="lineno">   30 </span>  , intuitionSteadinessBaseline
+<span class="lineno">   31 </span>  , intuitionSignalSteadyBonusScale
+<span class="lineno">   32 </span>  , intuitionCooldownTurns
+<span class="lineno">   33 </span>  ) where
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>intuitionFlashThreshold :: Double
+<span class="lineno">   36 </span><span class="decl"><span class="istickedoff">intuitionFlashThreshold = 0.65</span></span>
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>intuitionHighResonanceThreshold :: Double
+<span class="lineno">   39 </span><span class="decl"><span class="istickedoff">intuitionHighResonanceThreshold = 0.80</span></span>
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>intuitionElevatedResonanceThreshold :: Double
+<span class="lineno">   42 </span><span class="decl"><span class="istickedoff">intuitionElevatedResonanceThreshold = 0.70</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>intuitionDeepResonanceThreshold :: Double
+<span class="lineno">   45 </span><span class="decl"><span class="istickedoff">intuitionDeepResonanceThreshold = 0.55</span></span>
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>intuitionHighTensionThreshold :: Double
+<span class="lineno">   48 </span><span class="decl"><span class="istickedoff">intuitionHighTensionThreshold = 0.60</span></span>
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>intuitionElevatedTensionThreshold :: Double
+<span class="lineno">   51 </span><span class="decl"><span class="istickedoff">intuitionElevatedTensionThreshold = 0.65</span></span>
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>intuitionCrisisTensionThreshold :: Double
+<span class="lineno">   54 </span><span class="decl"><span class="nottickedoff">intuitionCrisisTensionThreshold = 0.75</span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>intuitionNoFlashBaselineLikelihood :: Double
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">intuitionNoFlashBaselineLikelihood = 0.72</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>intuitionBasePriorDefault :: Double
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">intuitionBasePriorDefault = 0.06</span></span>
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>intuitionEffectivePosteriorShortWeight :: Double
+<span class="lineno">   63 </span><span class="decl"><span class="istickedoff">intuitionEffectivePosteriorShortWeight = 0.35</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>intuitionEffectivePosteriorLongWeight :: Double
+<span class="lineno">   66 </span><span class="decl"><span class="istickedoff">intuitionEffectivePosteriorLongWeight = 0.65</span></span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>intuitionFlashLikelihoodConvergent :: Double
+<span class="lineno">   69 </span><span class="decl"><span class="istickedoff">intuitionFlashLikelihoodConvergent = 0.82</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>intuitionFlashLikelihoodElevated :: Double
+<span class="lineno">   72 </span><span class="decl"><span class="istickedoff">intuitionFlashLikelihoodElevated = 0.65</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>intuitionFlashLikelihoodDeep :: Double
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">intuitionFlashLikelihoodDeep = 0.45</span></span>
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>intuitionFlashLikelihoodBaseline :: Double
+<span class="lineno">   78 </span><span class="decl"><span class="istickedoff">intuitionFlashLikelihoodBaseline = 0.18</span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>intuitionNoFlashLikelihoodConvergent :: Double
+<span class="lineno">   81 </span><span class="decl"><span class="istickedoff">intuitionNoFlashLikelihoodConvergent = 0.25</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>intuitionNoFlashLikelihoodElevated :: Double
+<span class="lineno">   84 </span><span class="decl"><span class="istickedoff">intuitionNoFlashLikelihoodElevated = 0.38</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>intuitionNoFlashLikelihoodDeep :: Double
+<span class="lineno">   87 </span><span class="decl"><span class="istickedoff">intuitionNoFlashLikelihoodDeep = 0.48</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>intuitionPosteriorAfterFlashDecayFactor :: Double
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">intuitionPosteriorAfterFlashDecayFactor = 0.55</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>intuitionLongPosteriorAfterFlashDecayFactor :: Double
+<span class="lineno">   93 </span><span class="decl"><span class="istickedoff">intuitionLongPosteriorAfterFlashDecayFactor = 0.92</span></span>
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>intuitionLongPosteriorPriorWeight :: Double
+<span class="lineno">   96 </span><span class="decl"><span class="istickedoff">intuitionLongPosteriorPriorWeight = 0.85</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>intuitionLongPosteriorCurrentWeight :: Double
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">intuitionLongPosteriorCurrentWeight = 0.15</span></span>
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>intuitionFlashOverrideStrengthThreshold :: Double
+<span class="lineno">  102 </span><span class="decl"><span class="istickedoff">intuitionFlashOverrideStrengthThreshold = 0.55</span></span>
+<span class="lineno">  103 </span>
+<span class="lineno">  104 </span>intuitionCoreVecPresence :: Double
+<span class="lineno">  105 </span><span class="decl"><span class="nottickedoff">intuitionCoreVecPresence = 0.85</span></span>
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>intuitionCoreVecDepth :: Double
+<span class="lineno">  108 </span><span class="decl"><span class="nottickedoff">intuitionCoreVecDepth = 0.10</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>intuitionCoreVecAutonomy :: Double
+<span class="lineno">  111 </span><span class="decl"><span class="nottickedoff">intuitionCoreVecAutonomy = 0.75</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>intuitionCoreVecDirectiveness :: Double
+<span class="lineno">  114 </span><span class="decl"><span class="nottickedoff">intuitionCoreVecDirectiveness = 0.70</span></span>
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>intuitionCoreVecSteadiness :: Double
+<span class="lineno">  117 </span><span class="decl"><span class="nottickedoff">intuitionCoreVecSteadiness = 0.80</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>intuitionSteadinessBaseline :: Double
+<span class="lineno">  120 </span><span class="decl"><span class="nottickedoff">intuitionSteadinessBaseline = 0.50</span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>intuitionSignalSteadyBonusScale :: Double
+<span class="lineno">  123 </span><span class="decl"><span class="nottickedoff">intuitionSignalSteadyBonusScale = 0.20</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>intuitionCooldownTurns :: Int
+<span class="lineno">  126 </span><span class="decl"><span class="istickedoff">intuitionCooldownTurns = 2</span></span>
+
+</pre>
+</body>
+</html>

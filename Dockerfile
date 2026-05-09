@@ -1,4 +1,4 @@
-FROM haskell:9.6.6-slim AS builder
+FROM haskell:9.6.7-slim AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     agda \

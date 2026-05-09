@@ -25,30 +25,34 @@ in {
     };
 
     conceptsPath = lib.mkOption {
-      type = lib.types.str;
-      default = "/etc/qxfx0/concepts.nix";
-      description = "Path to the constitutional concepts.nix file.";
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Optional override for constitutional concepts.nix path. When null, QXFX0_ROOT/semantics/concepts.nix is used.";
     };
   };
 
   config = lib.mkIf cfg.enable {
     environment.etc."qxfx0/concepts.nix".source = ../../semantics/concepts.nix;
 
-    systemd.services.qxfx0 = {
+    systemd.services.qxfx0 = let
+      envConcepts = lib.optionalAttrs (cfg.conceptsPath != null) {
+        QXFX0_CONCEPTS_PATH = cfg.conceptsPath;
+      };
+    in
       description = "QxFx0 Philosophical Dialogue Thinking System";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
 
       environment = {
         QXFX0_ROOT = "/var/lib/qxfx0";
-        QXFX0_DB_PATH = cfg.dbPath;
-        QXFX0_CONCEPTS_PATH = cfg.conceptsPath;
-        QXFX0_PORT = toString cfg.port;
-      };
+        QXFX0_DB = cfg.dbPath;
+        QXFX0_HTTP_PORT = toString cfg.port;
+        QXFX0_HTTP_HOST = "127.0.0.1";
+      } // envConcepts;
 
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${cfg.package}/bin/qxfx0-main";
+        ExecStart = "${cfg.package}/bin/qxfx0-main --serve-http ${toString cfg.port}";
 
         DynamicUser = true;
         User = "qxfx0";
@@ -83,6 +87,7 @@ in {
         BindReadOnlyPaths = [
           "/etc/qxfx0/concepts.nix"
           "${cfg.package}/"
+          "${../../semantics/concepts.nix}"
         ];
         ReadWritePaths = [ "/var/lib/qxfx0" ];
 

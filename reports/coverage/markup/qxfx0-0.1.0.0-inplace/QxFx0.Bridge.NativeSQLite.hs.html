@@ -1,0 +1,249 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>{-# LANGUAGE EmptyDataDecls #-}
+<span class="lineno">    4 </span>{-# LANGUAGE ForeignFunctionInterface #-}
+<span class="lineno">    5 </span>module QxFx0.Bridge.NativeSQLite
+<span class="lineno">    6 </span>  ( Database
+<span class="lineno">    7 </span>  , Statement
+<span class="lineno">    8 </span>  , open
+<span class="lineno">    9 </span>  , close
+<span class="lineno">   10 </span>  , prepare
+<span class="lineno">   11 </span>  , step
+<span class="lineno">   12 </span>  , stepRow
+<span class="lineno">   13 </span>  , bindText
+<span class="lineno">   14 </span>  , bindInt
+<span class="lineno">   15 </span>  , bindDouble
+<span class="lineno">   16 </span>  , columnText
+<span class="lineno">   17 </span>  , columnInt
+<span class="lineno">   18 </span>  , columnDouble
+<span class="lineno">   19 </span>  , columnIsNull
+<span class="lineno">   20 </span>  , finalize
+<span class="lineno">   21 </span>  , execSql
+<span class="lineno">   22 </span>  , withStatement
+<span class="lineno">   23 </span>  , withDatabase
+<span class="lineno">   24 </span>  , sqliteTransient
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import Control.Exception (finally)
+<span class="lineno">   28 </span>import Data.Text (Text)
+<span class="lineno">   29 </span>import qualified Data.Text as T
+<span class="lineno">   30 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   31 </span>import Data.Text.Encoding.Error (lenientDecode)
+<span class="lineno">   32 </span>import qualified Data.ByteString as BS
+<span class="lineno">   33 </span>import Foreign hiding (void)
+<span class="lineno">   34 </span>import Foreign.C.Types (CInt(..), CDouble(..))
+<span class="lineno">   35 </span>import Foreign.C.String (CString, withCString, peekCString)
+<span class="lineno">   36 </span>import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(SQLiteError))
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>data CDatabase
+<span class="lineno">   39 </span>data CStatement
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>type Database = Ptr CDatabase
+<span class="lineno">   42 </span>type Statement = Ptr CStatement
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>foreign import ccall unsafe &quot;sqlite3_open&quot;
+<span class="lineno">   45 </span>  c_sqlite3_open :: CString -&gt; Ptr Database -&gt; IO CInt
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>foreign import ccall unsafe &quot;sqlite3_close&quot;
+<span class="lineno">   48 </span>  c_sqlite3_close :: Database -&gt; IO CInt
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>foreign import ccall unsafe &quot;sqlite3_prepare_v2&quot;
+<span class="lineno">   51 </span>  c_sqlite3_prepare_v2 :: Database -&gt; CString -&gt; CInt -&gt; Ptr Statement -&gt; Ptr CString -&gt; IO CInt
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>foreign import ccall unsafe &quot;sqlite3_step&quot;
+<span class="lineno">   54 </span>  c_sqlite3_step :: Statement -&gt; IO CInt
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>foreign import ccall unsafe &quot;sqlite3_finalize&quot;
+<span class="lineno">   57 </span>  c_sqlite3_finalize :: Statement -&gt; IO CInt
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>foreign import ccall unsafe &quot;sqlite3_bind_text&quot;
+<span class="lineno">   60 </span>  c_sqlite3_bind_text :: Statement -&gt; CInt -&gt; CString -&gt; CInt -&gt; Ptr () -&gt; IO CInt
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>foreign import ccall unsafe &quot;sqlite3_bind_int&quot;
+<span class="lineno">   63 </span>  c_sqlite3_bind_int :: Statement -&gt; CInt -&gt; CInt -&gt; IO CInt
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>foreign import ccall unsafe &quot;sqlite3_bind_double&quot;
+<span class="lineno">   66 </span>  c_sqlite3_bind_double :: Statement -&gt; CInt -&gt; CDouble -&gt; IO CInt
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>foreign import ccall unsafe &quot;sqlite3_column_text&quot;
+<span class="lineno">   69 </span>  c_sqlite3_column_text :: Statement -&gt; CInt -&gt; IO CString
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>foreign import ccall unsafe &quot;sqlite3_column_int&quot;
+<span class="lineno">   72 </span>  c_sqlite3_column_int :: Statement -&gt; CInt -&gt; IO CInt
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>foreign import ccall unsafe &quot;sqlite3_column_double&quot;
+<span class="lineno">   75 </span>  c_sqlite3_column_double :: Statement -&gt; CInt -&gt; IO CDouble
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>foreign import ccall unsafe &quot;sqlite3_column_type&quot;
+<span class="lineno">   78 </span>  c_sqlite3_column_type :: Statement -&gt; CInt -&gt; IO CInt
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>foreign import ccall unsafe &quot;sqlite3_column_bytes&quot;
+<span class="lineno">   81 </span>  c_sqlite3_column_bytes :: Statement -&gt; CInt -&gt; IO CInt
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>foreign import ccall unsafe &quot;sqlite3_exec&quot;
+<span class="lineno">   84 </span>  c_sqlite3_exec :: Database -&gt; CString -&gt; Ptr () -&gt; Ptr () -&gt; Ptr CString -&gt; IO CInt
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>foreign import ccall unsafe &quot;sqlite3_errmsg&quot;
+<span class="lineno">   87 </span>  c_sqlite3_errmsg :: Database -&gt; IO CString
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>sqliteTransient :: Ptr ()
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">sqliteTransient = nullPtr `plusPtr` (-1)</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>sqlOk, sqlRow, sqlDone :: CInt
+<span class="lineno">   93 </span><span class="decl"><span class="istickedoff">sqlOk   = 0</span></span>
+<span class="lineno">   94 </span><span class="decl"><span class="istickedoff">sqlRow  = 100</span></span>
+<span class="lineno">   95 </span><span class="decl"><span class="istickedoff">sqlDone = 101</span></span>
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>sqlNullType :: CInt
+<span class="lineno">   98 </span><span class="decl"><span class="nottickedoff">sqlNullType = 5</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>open :: FilePath -&gt; IO (Either Text Database)
+<span class="lineno">  101 </span><span class="decl"><span class="istickedoff">open path = alloca $ \ppDb -&gt; do</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- withCString path $ \cPath -&gt; c_sqlite3_open cPath ppDb</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">rc == sqlOk</span></span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">then do db &lt;- peek ppDb</span>
+<span class="lineno">  105 </span><span class="spaces">            </span><span class="istickedoff">return (Right db)</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">return (Left $ &quot;sqlite3_open failed: &quot; &lt;&gt; T.pack (show rc))</span></span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>close :: Database -&gt; IO ()
+<span class="lineno">  109 </span><span class="decl"><span class="istickedoff">close db = do</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_close db</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">rc /= sqlOk</span></span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">throwQxFx0 (SQLiteError $ T.pack $ &quot;sqlite3_close failed: &quot; ++ show rc)</span></span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">else return <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>prepare :: Database -&gt; Text -&gt; IO (Either Text Statement)
+<span class="lineno">  116 </span><span class="decl"><span class="istickedoff">prepare db sql = alloca $ \ppStmt -&gt; alloca $ \ppTail -&gt; do</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">let sqlBs = TE.encodeUtf8 sql</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- BS.useAsCString sqlBs $ \cSql -&gt;</span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="istickedoff">c_sqlite3_prepare_v2 db cSql (-1) ppStmt ppTail</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">if rc == sqlOk</span>
+<span class="lineno">  121 </span><span class="spaces">    </span><span class="istickedoff">then do stmt &lt;- peek ppStmt</span>
+<span class="lineno">  122 </span><span class="spaces">            </span><span class="istickedoff">if <span class="tickonlyfalse">stmt == nullPtr</span></span>
+<span class="lineno">  123 </span><span class="spaces">              </span><span class="istickedoff">then <span class="nottickedoff">return (Left &quot;sqlite3_prepare_v2 returned null statement&quot;)</span></span>
+<span class="lineno">  124 </span><span class="spaces">              </span><span class="istickedoff">else return (Right stmt)</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">else do errMsg &lt;- getErrMsg db</span>
+<span class="lineno">  126 </span><span class="spaces">            </span><span class="istickedoff">return (Left $ &quot;prepare failed: &quot; &lt;&gt; errMsg)</span></span>
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>getErrMsg :: Database -&gt; IO Text
+<span class="lineno">  129 </span><span class="decl"><span class="istickedoff">getErrMsg db = do</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">cStr &lt;- c_sqlite3_errmsg db</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">cStr == nullPtr</span></span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">return &quot;&lt;no error message&gt;&quot;</span></span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">else T.pack &lt;$&gt; peekCString cStr</span></span>
+<span class="lineno">  134 </span>
+<span class="lineno">  135 </span>step :: Statement -&gt; IO (Either Text CInt)
+<span class="lineno">  136 </span><span class="decl"><span class="istickedoff">step stmt = do</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_step stmt</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">if rc == sqlRow</span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">then return (Right sqlRow)</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">else if <span class="tickonlytrue">rc == sqlDone</span></span>
+<span class="lineno">  141 </span><span class="spaces">         </span><span class="istickedoff">then return (Right <span class="nottickedoff">sqlDone</span>)</span>
+<span class="lineno">  142 </span><span class="spaces">         </span><span class="istickedoff">else <span class="nottickedoff">return (Left $ &quot;step failed: &quot; &lt;&gt; T.pack (show rc))</span></span></span>
+<span class="lineno">  143 </span>
+<span class="lineno">  144 </span>stepRow :: Statement -&gt; IO Bool
+<span class="lineno">  145 </span><span class="decl"><span class="istickedoff">stepRow stmt = do</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_step stmt</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">return (rc == sqlRow)</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>bindText :: Statement -&gt; CInt -&gt; Text -&gt; IO (Either Text ())
+<span class="lineno">  150 </span><span class="decl"><span class="istickedoff">bindText stmt idx val = do</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">let bs = TE.encodeUtf8 val</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- BS.useAsCString bs $ \cStr -&gt;</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff">c_sqlite3_bind_text stmt idx cStr (fromIntegral (BS.length bs)) sqliteTransient</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">rc == sqlOk</span></span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">then return (Right <span class="nottickedoff">()</span>)</span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">return (Left $ &quot;bindText failed: &quot; &lt;&gt; T.pack (show rc))</span></span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>bindInt :: Statement -&gt; CInt -&gt; Int -&gt; IO (Either Text ())
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">bindInt stmt idx val = do</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_bind_int stmt idx (fromIntegral val)</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">rc == sqlOk</span></span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">then return (Right <span class="nottickedoff">()</span>)</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">return (Left $ &quot;bindInt failed: &quot; &lt;&gt; T.pack (show rc))</span></span></span>
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>bindDouble :: Statement -&gt; CInt -&gt; Double -&gt; IO (Either Text ())
+<span class="lineno">  166 </span><span class="decl"><span class="istickedoff">bindDouble stmt idx val = do</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_bind_double stmt idx (realToFrac val)</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">rc == sqlOk</span></span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">then return (Right <span class="nottickedoff">()</span>)</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">return (Left $ &quot;bindDouble failed: &quot; &lt;&gt; T.pack (show rc))</span></span></span>
+<span class="lineno">  171 </span>
+<span class="lineno">  172 </span>columnText :: Statement -&gt; CInt -&gt; IO Text
+<span class="lineno">  173 </span><span class="decl"><span class="istickedoff">columnText stmt idx = do</span>
+<span class="lineno">  174 </span><span class="spaces">  </span><span class="istickedoff">cStr &lt;- c_sqlite3_column_text stmt idx</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">cStr == nullPtr</span></span>
+<span class="lineno">  176 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">return &quot;&quot;</span></span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="istickedoff">else do</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="istickedoff">cLen &lt;- c_sqlite3_column_bytes stmt idx</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff">bs &lt;- BS.packCStringLen (cStr, fromIntegral cLen)</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">return (TE.decodeUtf8With <span class="nottickedoff">lenientDecode</span> bs)</span></span>
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>columnInt :: Statement -&gt; CInt -&gt; IO Int
+<span class="lineno">  183 </span><span class="decl"><span class="istickedoff">columnInt stmt idx = fromIntegral &lt;$&gt; c_sqlite3_column_int stmt idx</span></span>
+<span class="lineno">  184 </span>
+<span class="lineno">  185 </span>columnDouble :: Statement -&gt; CInt -&gt; IO Double
+<span class="lineno">  186 </span><span class="decl"><span class="istickedoff">columnDouble stmt idx = realToFrac &lt;$&gt; c_sqlite3_column_double stmt idx</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>columnIsNull :: Statement -&gt; CInt -&gt; IO Bool
+<span class="lineno">  189 </span><span class="decl"><span class="nottickedoff">columnIsNull stmt idx = do</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="nottickedoff">ty &lt;- c_sqlite3_column_type stmt idx</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="nottickedoff">return (ty == sqlNullType)</span></span>
+<span class="lineno">  192 </span>
+<span class="lineno">  193 </span>finalize :: Statement -&gt; IO ()
+<span class="lineno">  194 </span><span class="decl"><span class="istickedoff">finalize stmt = do</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- c_sqlite3_finalize stmt</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">rc /= sqlOk</span></span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">throwQxFx0 (SQLiteError $ T.pack $ &quot;sqlite3_finalize failed: &quot; ++ show rc)</span></span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">else return <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>execSql :: Database -&gt; Text -&gt; IO (Either Text ())
+<span class="lineno">  201 </span><span class="decl"><span class="istickedoff">execSql db sql = do</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">let sqlBs = TE.encodeUtf8 sql</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">rc &lt;- BS.useAsCString sqlBs $ \cSql -&gt;</span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">c_sqlite3_exec db cSql nullPtr nullPtr nullPtr</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">if rc == sqlOk</span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="istickedoff">then return (Right <span class="nottickedoff">()</span>)</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">else do errMsg &lt;- getErrMsg db</span>
+<span class="lineno">  208 </span><span class="spaces">            </span><span class="istickedoff">return (Left $ &quot;exec failed: &quot; &lt;&gt; errMsg)</span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>withStatement :: Database -&gt; Text -&gt; (Statement -&gt; IO a) -&gt; IO (Either Text a)
+<span class="lineno">  211 </span><span class="decl"><span class="istickedoff">withStatement db sql action = do</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- prepare db sql</span>
+<span class="lineno">  213 </span><span class="spaces">  </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">return (Left err)</span></span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  216 </span><span class="spaces">      </span><span class="istickedoff">result &lt;- action stmt `finally` finalize stmt</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="istickedoff">return (Right result)</span></span>
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>withDatabase :: FilePath -&gt; (Database -&gt; IO a) -&gt; IO (Either Text a)
+<span class="lineno">  220 </span><span class="decl"><span class="istickedoff">withDatabase path action = do</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">mDb &lt;- open path</span>
+<span class="lineno">  222 </span><span class="spaces">  </span><span class="istickedoff">case mDb of</span>
+<span class="lineno">  223 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">return (Left err)</span></span>
+<span class="lineno">  224 </span><span class="spaces">    </span><span class="istickedoff">Right db -&gt; do</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">result &lt;- action db `finally` close db</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">return (Right result)</span></span>
+
+</pre>
+</body>
+</html>

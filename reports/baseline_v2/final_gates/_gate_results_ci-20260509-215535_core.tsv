@@ -1,0 +1,4 @@
+gate	exit_code	verdict	details
+cabal build all	0	PASS	clean compile
+cabal test fast	0	PASS	0 errors, 0 failures
+check_architecture.sh	1	FAIL	boundary violation

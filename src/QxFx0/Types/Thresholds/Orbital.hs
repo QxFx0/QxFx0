@@ -29,6 +29,8 @@ module QxFx0.Types.Thresholds.Orbital
   , directiveDefaultAssertionForce
   , directiveDefaultCounterpressureStrength
   , directiveDefaultStabilityUnderTension
+  , directiveDefaultAbstractionBudget
+  , directiveDefaultMaxWordsHint
   ) where
 
 orbitalHighRiskThreshold :: Double
@@ -120,3 +122,9 @@ directiveDefaultCounterpressureStrength = 0.5
 
 directiveDefaultStabilityUnderTension :: Double
 directiveDefaultStabilityUnderTension = 0.5
+
+directiveDefaultAbstractionBudget :: Int
+directiveDefaultAbstractionBudget = 1
+
+directiveDefaultMaxWordsHint :: Int
+directiveDefaultMaxWordsHint = 48

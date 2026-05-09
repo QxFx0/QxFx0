@@ -1,0 +1,71 @@
+ M Dockerfile
+ M README.md
+ M app/CLI.hs
+ M app/CLI/Http.hs
+ M app/CLI/Turn.hs
+ M app/CLI/Worker.hs
+ M nix/module.nix
+ M scripts/verify.sh
+ M src/QxFx0/Bridge/AgdaR5.hs
+ M src/QxFx0/Bridge/AgdaWitness.hs
+ M src/QxFx0/Bridge/Datalog/Runtime.hs
+ M src/QxFx0/Bridge/NixGuard.hs
+ M src/QxFx0/Core.hs
+ M src/QxFx0/Core/IdentityGuard.hs
+ M src/QxFx0/Core/Intuition.hs
+ M src/QxFx0/Core/R5Dynamics.hs
+ M src/QxFx0/Core/SessionLock.hs
+ M src/QxFx0/Runtime.hs
+ M src/QxFx0/Runtime/Health.hs
+ M src/QxFx0/Types/Domain.hs
+ M src/QxFx0/Types/Thresholds/Intuition.hs
+ M src/QxFx0/Types/Thresholds/Orbital.hs
+ M test/Test/Suite/RuntimeInfrastructure.hs
+ M test/Test/Support.hs
+?? LICENSE
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-215439_core.log
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-215454_core.log
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-215535_core.log
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/01_cabal_build_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-215439_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-215454_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-215535_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-215535_core.log
+?? reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/03_check_architecture_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/04_gf_quality_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/04_gf_quality_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/04_gf_quality_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/05_check_haddock_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/05_check_haddock_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/05_check_haddock_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/10_check_lexicon_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/10_check_lexicon_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/10_check_lexicon_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/11_release_smoke_ci-20260509-220054_core.log
+?? reports/baseline_v2/final_gates/11_release_smoke_ci-20260509-222710_core.log
+?? reports/baseline_v2/final_gates/11_release_smoke_ci-20260509-223756_core.log
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215439_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215439_core.tsv
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215454_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215454_core.tsv
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215535_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-215535_core.tsv
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-220054_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-220054_core.tsv
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-222710_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-222710_core.tsv
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-223756_core.md
+?? reports/baseline_v2/final_gates/_gate_results_ci-20260509-223756_core.tsv
+?? reports/coverage/
+?? reports/transfer/
+?? scripts/test_coverage_smoke.sh

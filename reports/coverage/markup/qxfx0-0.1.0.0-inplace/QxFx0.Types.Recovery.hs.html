@@ -1,0 +1,94 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Recovery
+<span class="lineno">    7 </span>  ( LocalRecoveryPolicy(..)
+<span class="lineno">    8 </span>  , LocalRecoveryCause(..)
+<span class="lineno">    9 </span>  , LocalRecoveryStrategy(..)
+<span class="lineno">   10 </span>  , renderLocalRecoveryPolicy
+<span class="lineno">   11 </span>  , renderLocalRecoveryCause
+<span class="lineno">   12 </span>  , renderLocalRecoveryStrategy
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import Data.Aeson (FromJSON, ToJSON(..))
+<span class="lineno">   16 </span>import Data.Text (Text)
+<span class="lineno">   17 </span>import GHC.Generics (Generic)
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>data LocalRecoveryPolicy
+<span class="lineno">   20 </span>  = LocalRecoveryEnabled
+<span class="lineno">   21 </span>  | LocalRecoveryDisabled
+<span class="lineno">   22 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   23 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>data LocalRecoveryCause
+<span class="lineno">   26 </span>  = RecoveryLowLegitimacy
+<span class="lineno">   27 </span>  | RecoveryParserLowConfidence
+<span class="lineno">   28 </span>  | RecoveryShadowUnavailable
+<span class="lineno">   29 </span>  | RecoveryShadowDivergence
+<span class="lineno">   30 </span>  | RecoveryRenderBlocked
+<span class="lineno">   31 </span>  | RecoveryUnknownTopic
+<span class="lineno">   32 </span>  | RecoveryRuntimeDegraded
+<span class="lineno">   33 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   34 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LocalRecoveryCause</span></span></span></span></span></span></span></span> where
+<span class="lineno">   37 </span>  <span class="decl"><span class="istickedoff">toJSON = toJSON . renderLocalRecoveryCause</span></span>
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>data LocalRecoveryStrategy
+<span class="lineno">   40 </span>  = StrategyAskClarification
+<span class="lineno">   41 </span>  | StrategyNarrowScope
+<span class="lineno">   42 </span>  | StrategyDefineKnownTerms
+<span class="lineno">   43 </span>  | StrategyDistinguishCandidates
+<span class="lineno">   44 </span>  | StrategyExposeUncertainty
+<span class="lineno">   45 </span>  | StrategySafeRecovery
+<span class="lineno">   46 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   47 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LocalRecoveryStrategy</span></span></span></span></span></span></span></span> where
+<span class="lineno">   50 </span>  <span class="decl"><span class="istickedoff">toJSON = toJSON . renderLocalRecoveryStrategy</span></span>
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>renderLocalRecoveryPolicy :: LocalRecoveryPolicy -&gt; Text
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryPolicy LocalRecoveryEnabled = &quot;enabled&quot;</span>
+<span class="lineno">   54 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryPolicy LocalRecoveryDisabled = <span class="nottickedoff">&quot;disabled&quot;</span></span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>renderLocalRecoveryCause :: LocalRecoveryCause -&gt; Text
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryCause RecoveryLowLegitimacy = <span class="nottickedoff">&quot;low_legitimacy&quot;</span></span>
+<span class="lineno">   58 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryParserLowConfidence = <span class="nottickedoff">&quot;parser_low_confidence&quot;</span></span>
+<span class="lineno">   59 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryShadowUnavailable = &quot;shadow_unavailable&quot;</span>
+<span class="lineno">   60 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryShadowDivergence = &quot;shadow_divergence&quot;</span>
+<span class="lineno">   61 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryRenderBlocked = <span class="nottickedoff">&quot;render_blocked&quot;</span></span>
+<span class="lineno">   62 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryUnknownTopic = &quot;unknown_topic&quot;</span>
+<span class="lineno">   63 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryRuntimeDegraded = &quot;runtime_degraded&quot;</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>renderLocalRecoveryStrategy :: LocalRecoveryStrategy -&gt; Text
+<span class="lineno">   66 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryStrategy StrategyAskClarification = <span class="nottickedoff">&quot;ask_clarification&quot;</span></span>
+<span class="lineno">   67 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyNarrowScope = &quot;narrow_scope&quot;</span>
+<span class="lineno">   68 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyDefineKnownTerms = &quot;define_known_terms&quot;</span>
+<span class="lineno">   69 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyDistinguishCandidates = <span class="nottickedoff">&quot;distinguish_candidates&quot;</span></span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyExposeUncertainty = &quot;expose_uncertainty&quot;</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategySafeRecovery = <span class="nottickedoff">&quot;safe_recovery&quot;</span></span></span>
+
+</pre>
+</body>
+</html>
