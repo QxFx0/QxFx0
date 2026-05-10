@@ -1,0 +1,28 @@
+=== QxFx0 CI Gate Contract ===
+Profile:  core
+Run ID:   ci-20260511-000108
+Timestamp: 2026-05-11T00:01:08+03:00
+
+| Gate | Exit | Verdict | Details |
+|------|------|---------|---------|
+| cabal build all | 0 | PASS | clean compile |
+| cabal test fast | 0 | PASS | 0 errors, 0 failures |
+| check_architecture.sh | 0 | PASS | boundary checks ok |
+| gf_quality_gate.sh | 0 | PASS | GF grammar quality OK |
+| check_haddock.sh | 0 | PASS | module headers ok |
+| sync_embedded_sql.py | 0 | PASS | EmbeddedSQL.hs in sync |
+| check_schema_consistency.py | 0 | PASS | cumulative migrations match schema |
+| check_schema_contract.py | 0 | PASS | runtime contract manifest valid |
+| check_generated_artifacts.sh | 0 | PASS | artifacts in sync |
+| check_lexicon.sh | 0 | PASS | lexicon contour OK |
+| release-smoke degraded-local | 0 | PASS | ACCEPT_WITH_SKIPS (infra skips allowed in core) |
+
+=== CI Gate Contract VERDICT ===
+Profile:    core
+Run ID:     ci-20260511-000108
+Commit:     9d3be22c2b41e3617f3059ac5a760c0c7ddc52cd
+Timestamp:  2026-05-11T00:18:38+03:00
+All core contract gates: PASS
+CONTRACT_VERDICT: PROD_GO
+
+For FULL_SCIENTIFIC_GO, run with QXFX0_CONTRACT_PROFILE=extended on a high-mem runner (>=32 GB RAM, >=45 min timeout).

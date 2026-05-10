@@ -1,0 +1,31 @@
+Build profile: -w ghc-9.6.6 -O1
+In order, the following will be built (use -v for more details):
+ - qxfx0-0.1.0.0 (lib) (configuration changed)
+ - qxfx0-0.1.0.0 (exe:qxfx0-main) (configuration changed)
+ - qxfx0-0.1.0.0 (test:qxfx0-test) (configuration changed)
+Warning: qxfx0.cabal:18:1: Ignoring trailing fields after sections:
+"data-files"
+Warning: qxfx0.cabal:14:1: Unknown field: "default-language"
+Configuring library for qxfx0-0.1.0.0..
+Preprocessing library for qxfx0-0.1.0.0..
+Building library for qxfx0-0.1.0.0..
+[  1 of 239] Compiling Paths_qxfx0      ( /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/autogen/Paths_qxfx0.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/Paths_qxfx0.o, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/Paths_qxfx0.dyn_o ) [Source file changed]
+[ 10 of 239] Compiling QxFx0.Lexicon.GfMap ( src/QxFx0/Lexicon/GfMap.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Lexicon/GfMap.o, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Lexicon/GfMap.dyn_o ) [Paths_qxfx0 changed]
+[108 of 239] Compiling QxFx0.Resources.Paths ( src/QxFx0/Resources/Paths.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Resources/Paths.o, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Resources/Paths.dyn_o ) [Paths_qxfx0 changed]
+[135 of 239] Compiling QxFx0.Resources  ( src/QxFx0/Resources.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Resources.o, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/build/QxFx0/Resources.dyn_o ) [QxFx0.Resources.Paths changed]
+Warning: qxfx0.cabal:18:1: Ignoring trailing fields after sections:
+"data-files"
+Warning: qxfx0.cabal:14:1: Unknown field: "default-language"
+Configuring executable 'qxfx0-main' for qxfx0-0.1.0.0..
+Preprocessing executable 'qxfx0-main' for qxfx0-0.1.0.0..
+Building executable 'qxfx0-main' for qxfx0-0.1.0.0..
+[6 of 9] Compiling Paths_qxfx0      ( /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/autogen/Paths_qxfx0.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main-tmp/Paths_qxfx0.o ) [Source file changed]
+[7 of 9] Compiling CLI.Http         ( app/CLI/Http.hs, /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main-tmp/CLI/Http.o ) [Paths_qxfx0 changed]
+[10 of 10] Linking /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main [Objects changed]
+Warning: qxfx0.cabal:18:1: Ignoring trailing fields after sections:
+"data-files"
+Warning: qxfx0.cabal:14:1: Unknown field: "default-language"
+Configuring test suite 'qxfx0-test' for qxfx0-0.1.0.0..
+Preprocessing test suite 'qxfx0-test' for qxfx0-0.1.0.0..
+Building test suite 'qxfx0-test' for qxfx0-0.1.0.0..
+[11 of 11] Linking /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test/build/qxfx0-test/qxfx0-test [Library changed]

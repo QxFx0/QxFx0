@@ -152,11 +152,12 @@ library
     QxFx0.Semantic.SemanticScene
     QxFx0.Semantic.SemanticInput
     QxFx0.Semantic.Input
-    QxFx0.Render.Dialogue
-    QxFx0.Render.Semantic
-    QxFx0.Render.Text
-     QxFx0.Core.TurnPipeline.Route.Render
-     QxFx0.Internal.FilePath
+     QxFx0.Render.Dialogue
+     QxFx0.Render.Semantic
+     QxFx0.Render.Text
+      QxFx0.Core.TurnPipeline.Route.Render
+      QxFx0.Internal.FilePath
+      QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
     QxFx0.Types.Decision.Enums
@@ -342,6 +343,8 @@ test-suite qxfx0-test
     Test.Suite.HttpRuntime
     Test.Suite.SemanticCorpus
     Test.Suite.LexiconTests
+    Test.Suite.LegalAdapter
+    Test.Suite.RenderDialogueCoverage
   hs-source-dirs: test
   build-tool-depends:
     qxfx0:qxfx0-main

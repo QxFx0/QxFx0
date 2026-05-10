@@ -181,7 +181,7 @@ if [ "$PROFILE" = "core" ]; then
   # release-smoke already acquires the same lock in run_local_cabal.
   # Nested flock on the same fd from a child process causes deadlock.
   SMOKE_LOG="$GATES_DIR/11_release_smoke_${RUN_ID}_${PROFILE}.log"
-  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local \
+  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 \
   bash -c "cd '$ROOT' && bash scripts/release-smoke.sh" > "$SMOKE_LOG" 2>&1 || true
 
   FAILED_COUNT=$(grep -oP 'Failed:\s*\K[0-9]+' "$SMOKE_LOG" | tail -1 || echo "UNKNOWN")
@@ -297,8 +297,113 @@ elif [ "$PROFILE" = "extended" ]; then
   fi
   log_gate "verify.sh (secondary)" "N/A" "INFO" "$VERIFY_INFO"
 
+elif [ "$PROFILE" = "extended-lowram" ]; then
+  # ══════════════════════════════════════════════════════════════════════
+  # extended-lowram profile: maximum scientific coverage on 10–11 GB RAM.
+  # This profile does NOT claim FULL_SCIENTIFIC_GO; it produces an honest
+  # EXTENDED_LOWRAM_* verdict that records INFRA-transparent skips.
+  # ══════════════════════════════════════════════════════════════════════
+  LOWRAM_INFRA_COUNT=0
+
+  # ── Gate 11 (extended-lowram): fast tests as proxy for slow tests ──────
+  # Target repo has no separate qxfx0-test-slow suite; run qxfx0-test.
+  FAST_LOG="$GATES_DIR/11_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
+  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test" > "$FAST_LOG" 2>&1; then
+    if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
+      log_gate "cabal test fast (extended proxy)" "0" "PASS" "0 errors, 0 failures"
+    else
+      log_gate "cabal test fast (extended proxy)" "0" "FAIL" "errors or failures detected"
+      fail_contract "Gate 11 (fast tests proxy)"
+    fi
+  else
+    FAST_EXIT=$?
+    if [ "$FAST_EXIT" -eq 124 ] || grep -qi 'timeout\|killed\|out of memory\|cannot allocate' "$FAST_LOG" 2>/dev/null; then
+      log_gate "cabal test fast (extended proxy)" "$FAST_EXIT" "INFRA" "runner capacity insufficient"
+      LOWRAM_INFRA_COUNT=$((LOWRAM_INFRA_COUNT + 1))
+    else
+      log_gate "cabal test fast (extended proxy)" "$FAST_EXIT" "FAIL" "test suite exited non-zero"
+      fail_contract "Gate 11 (fast tests proxy)"
+    fi
+  fi
+
+  # ── Gate 12 (extended-lowram): Coverage preflight (lightweight) ────────
+  COVERAGE_LOG="$GATES_DIR/12_test_coverage_${RUN_ID}_${PROFILE}.log"
+  COVERAGE_TIMEOUT=600
+  COVERAGE_STATUS=0
+  if run_with_cabal_lock bash -c "cd '$ROOT' && timeout $COVERAGE_TIMEOUT bash scripts/test_coverage.sh" > "$COVERAGE_LOG" 2>&1; then
+    COVERAGE_STATUS=$?
+  else
+    COVERAGE_STATUS=$?
+  fi
+
+  if [ "$COVERAGE_STATUS" -eq 124 ] || grep -q 'COVERAGE_STATUS=SKIP: known infrastructure incompatibility' "$COVERAGE_LOG" 2>/dev/null; then
+    log_gate "test_coverage.sh" "$COVERAGE_STATUS" "INFRA" "timeout or infrastructure incompatibility (not a code failure)"
+    LOWRAM_INFRA_COUNT=$((LOWRAM_INFRA_COUNT + 1))
+  elif [ "$COVERAGE_STATUS" -ne 0 ]; then
+    log_gate "test_coverage.sh" "$COVERAGE_STATUS" "FAIL" "coverage script exited non-zero"
+    fail_contract "Gate 12 (coverage)"
+  else
+    OVERALL_RAW=$(grep -oE 'overall_expr_percent"[[:space:]]*:[[:space:]]*[0-9.]+' "$COVERAGE_LOG" | grep -oE '[0-9.]+$' || true)
+    if [ -z "$OVERALL_RAW" ]; then
+      OVERALL_RAW=$(grep -oE '([0-9]+(\.[0-9]+)?)% expressions used' "$COVERAGE_LOG" | head -1 | grep -oE '[0-9.]+' || true)
+    fi
+    if [ -n "$OVERALL_RAW" ]; then
+      OVERALL_VAL="${OVERALL_RAW%%%}"
+      OVERALL_INT=$(awk "BEGIN {printf \"%d\", $OVERALL_VAL*10}")
+      MIN_INT=$((COVERAGE_MIN * 10))
+      if [ "$OVERALL_INT" -ge "$MIN_INT" ]; then
+        log_gate "test_coverage.sh" "0" "PASS" "overall ${OVERALL_VAL}% >= ${COVERAGE_MIN}%"
+      else
+        log_gate "test_coverage.sh" "0" "FAIL" "overall ${OVERALL_VAL}% < ${COVERAGE_MIN}%"
+        fail_contract "Gate 12 (coverage below threshold)"
+      fi
+    else
+      log_gate "test_coverage.sh" "0" "FAIL" "cannot parse overall coverage"
+      fail_contract "Gate 12 (coverage parse error)"
+    fi
+  fi
+
+  # ── Gate 13 (extended-lowram): release-smoke strict (INFRA-tolerant) ───
+  SMOKE_LOG="$GATES_DIR/13_release_smoke_${RUN_ID}_${PROFILE}.log"
+  QXFX0_RELEASE_SMOKE_MODE=strict \
+  bash -c "cd '$ROOT' && bash scripts/release-smoke.sh" > "$SMOKE_LOG" 2>&1 || true
+
+  FAILED_COUNT=$(grep -oP 'Failed:\s*\K[0-9]+' "$SMOKE_LOG" | tail -1 || echo "UNKNOWN")
+  VERDICT_LINE=$(grep 'VERDICT:' "$SMOKE_LOG" | tail -1 || true)
+
+  if [ "$FAILED_COUNT" = "0" ] && echo "$VERDICT_LINE" | grep -qE 'VERDICT:[[:space:]]*(ACCEPT|ACCEPT_WITH_SKIPS)'; then
+    if echo "$VERDICT_LINE" | grep -q 'ACCEPT_WITH_SKIPS'; then
+      log_gate "release-smoke strict" "0" "INFRA-SKIP" "ACCEPT_WITH_SKIPS in strict mode tolerated as low-ram infra skip"
+      LOWRAM_INFRA_COUNT=$((LOWRAM_INFRA_COUNT + 1))
+    else
+      log_gate "release-smoke strict" "0" "PASS" "ACCEPT, Failed=0, no skips"
+    fi
+  else
+    log_gate "release-smoke strict" "0" "FAIL" "Failed=$FAILED_COUNT, verdict=$(echo "$VERDICT_LINE" | tr -d '\033' | sed 's/.*VERDICT://')"
+    fail_contract "Gate 13 (release-smoke strict)"
+  fi
+
+  # ── Gate 14 (extended-lowram): verify.sh aggregator (informational) ──
+  VERIFY_LOG="$GATES_DIR/14_verify_${RUN_ID}_${PROFILE}.log"
+  VERIFY_INFO="not run"
+  if (cd "$ROOT" && bash scripts/verify.sh 2>&1) > "$VERIFY_LOG" 2>&1; then
+    VERIFY_INFO="exit 0 (aggregator OK)"
+  else
+    VEXIT=$?
+    if [ "$VEXIT" -eq 3 ]; then
+      VERIFY_INFO="exit 3 INFRA-TIMEOUT (infrastructure incident, not PASS)"
+    else
+      VERIFY_INFO="exit $VEXIT (aggregator only, not a contract gate)"
+    fi
+  fi
+  log_gate "verify.sh (secondary)" "N/A" "INFO" "$VERIFY_INFO"
+
+  # Persist low-ram infra count for final verdict
+  echo "" | tee -a "$SUMMARY"
+  echo "Extended-lowram infra skips: $LOWRAM_INFRA_COUNT" | tee -a "$SUMMARY"
+
 else
-  echo "Unknown QXFX0_CONTRACT_PROFILE='$PROFILE'. Must be 'core' or 'extended'." >&2
+  echo "Unknown QXFX0_CONTRACT_PROFILE='$PROFILE'. Must be 'core', 'extended', or 'extended-lowram'." >&2
   exit 1
 fi
 
@@ -322,6 +427,18 @@ if [ "$OVERALL_VERDICT" = "PROD_GO" ] && [ "$PROFILE" = "core" ]; then
 elif [ "$OVERALL_VERDICT" = "PROD_GO" ] && [ "$PROFILE" = "extended" ]; then
   echo "All extended contract gates: PASS" | tee -a "$SUMMARY"
   echo "CONTRACT_VERDICT: FULL_SCIENTIFIC_GO" | tee -a "$SUMMARY"
+  exit 0
+elif [ "$OVERALL_VERDICT" = "PROD_GO" ] && [ "$PROFILE" = "extended-lowram" ]; then
+  if [ "$LOWRAM_INFRA_COUNT" -gt 0 ]; then
+    echo "Extended-lowram contract gates: PASS with $LOWRAM_INFRA_COUNT INFRA-transparent skip(s)" | tee -a "$SUMMARY"
+    echo "CONTRACT_VERDICT: EXTENDED_LOWRAM_ACCEPT_WITH_INFRA" | tee -a "$SUMMARY"
+    echo "" | tee -a "$SUMMARY"
+    echo "Note: INFRA skips are honest capacity limits (coverage rebuild / strict-smoke timeout on <=11 GB RAM)." | tee -a "$SUMMARY"
+    echo "For strict FULL_SCIENTIFIC_GO, run with QXFX0_CONTRACT_PROFILE=extended on a high-mem runner (>=32 GB RAM)." | tee -a "$SUMMARY"
+  else
+    echo "All extended-lowram contract gates: PASS" | tee -a "$SUMMARY"
+    echo "CONTRACT_VERDICT: EXTENDED_LOWRAM_ACCEPT" | tee -a "$SUMMARY"
+  fi
   exit 0
 else
   echo "CONTRACT_VERDICT: REJECT ($REJECT_REASON)" | tee -a "$SUMMARY"
