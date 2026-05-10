@@ -50,6 +50,11 @@ import QxFx0.Core.Render.Dialogue
   )
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
+import QxFx0.Legal.Adapter
+  ( retrieveLegalFact
+  , legalFactToKnowledgeFragment
+  , lfSourceId
+  )
 import QxFx0.Types.SemanticConfig (SemanticConfig(..))
 import QxFx0.Types.State.Discourse (DiscourseState(..))
 import QxFx0.Types.Text (finalizeForce)
@@ -100,6 +105,7 @@ data RenderEffectResults = RenderEffectResults
   { rerRenderTimeline :: !RenderTimeline
   , rerResolvedRenderStatic :: !(Maybe RenderStatic)
   , rerKnowledgeFact :: !(Maybe Text)
+  , rerKnowledgeFactSource :: !(Maybe Text)
   } deriving stock (Eq, Show)
 
 planRenderEffects :: RuntimeParadigms -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
@@ -221,9 +227,11 @@ resolveRenderEffects pio effectPlan = do
       pure ()
 
   resolvedRenderStatic <- resolveRuntimeGfLinearization pio (repRenderStatic effectPlan)
-  -- COMPAT GLUE: TurnReqKnowledgeLookup does not exist in target effects.
-  -- The knowledge lookup DB query is not available; skipping gracefully.
-  let mKnowledgeFact = Nothing
+  -- WP3: Minimal legal DB adapter. Try legal lookup on the knowledge topic.
+  -- For non-legal topics retrieveLegalFact returns Nothing; behavior is unchanged.
+  mLegalFact <- retrieveLegalFact (repKnowledgeTopic effectPlan)
+  let mKnowledgeFact = legalFactToKnowledgeFragment <$> mLegalFact
+      mKnowledgeSource = lfSourceId <$> mLegalFact
   tRender1 <- resolveRenderCurrentTime pio
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
@@ -232,6 +240,7 @@ resolveRenderEffects pio effectPlan = do
         }
     , rerResolvedRenderStatic = resolvedRenderStatic
     , rerKnowledgeFact = mKnowledgeFact
+    , rerKnowledgeFactSource = mKnowledgeSource
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -306,6 +315,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       , taLocalRecoveryStrategy = recoveryStrategy
       , taLocalRecoveryEvidence = recoveryEvidence
       , taMetrics = metrics4
+      , taKnowledgeSource = rerKnowledgeFactSource effectResults
       }
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan

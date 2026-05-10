@@ -119,6 +119,7 @@ data TurnArtifacts = TurnArtifacts
   , taLocalRecoveryStrategy :: !(Maybe LocalRecoveryStrategy)
   , taLocalRecoveryEvidence :: ![Text]
   , taMetrics :: !TurnMetrics
+  , taKnowledgeSource :: !(Maybe Text)
   }
 
 data TurnResult = TurnResult
