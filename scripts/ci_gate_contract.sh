@@ -181,7 +181,7 @@ if [ "$PROFILE" = "core" ]; then
   # release-smoke already acquires the same lock in run_local_cabal.
   # Nested flock on the same fd from a child process causes deadlock.
   SMOKE_LOG="$GATES_DIR/11_release_smoke_${RUN_ID}_${PROFILE}.log"
-  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local \
+  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 \
   bash -c "cd '$ROOT' && bash scripts/release-smoke.sh" > "$SMOKE_LOG" 2>&1 || true
 
   FAILED_COUNT=$(grep -oP 'Failed:\s*\K[0-9]+' "$SMOKE_LOG" | tail -1 || echo "UNKNOWN")

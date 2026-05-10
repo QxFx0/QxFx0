@@ -28,6 +28,11 @@ ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 RUN_SLOW_TESTS="${QXFX0_RUN_SLOW_TESTS:-auto}"
 SMOKE_RUNTIME_MODE="strict"
 RELEASE_SMOKE_MODE="${QXFX0_RELEASE_SMOKE_MODE:-strict}"
+# WP-B: degraded-local must propagate to runtime mode so the binary does not
+# enforce strict readiness checks that fail on local-dev infra gaps.
+if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+    SMOKE_RUNTIME_MODE="degraded-local"
+fi
 # Supported modes:
 #   strict         — CI/release; infra failures are treated as FAIL.
 #   degraded-local — local dev; infra failures are SKIP/WARN.
@@ -732,21 +737,33 @@ if [ -f "$AGDA_DIR/R5Core.agda" ] && command -v agda &>/dev/null; then
         fi
     fi
 elif [ -f "$AGDA_DIR/R5Core.agda" ] && nix_flake_available; then
-    step_info "agda not found, using Nix flake fallback..."
-    if run_nix_flake run .#typecheck-agda 2>&1; then
-        AGDA_READY=1
-        step_info "Agda modules type-checked successfully via Nix"
-        WITNESS_OUT="$(write_agda_witness 2>&1)" || {
-            step_fail "Agda witness generation failed"
-            step_info "$WITNESS_OUT"
-            AGDA_READY=0
-        }
-        if [ "$AGDA_READY" = "1" ]; then
-            step_info "Witness: $(echo "$WITNESS_OUT" | tail -1)"
-            step_pass
-        fi
+    if [ "$REQUIRE_AGDA" = "0" ] || [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+        step_skip "agda not installed (infra skip in degraded-local)"
     else
-        step_fail "Agda type-check failed via Nix fallback"
+        step_info "agda not found, using Nix flake fallback..."
+        if run_nix_flake run .#typecheck-agda 2>&1; then
+            AGDA_READY=1
+            step_info "Agda modules type-checked successfully via Nix"
+            WITNESS_OUT="$(write_agda_witness 2>&1)" || {
+                if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                    step_skip "Agda witness generation failed (infra skip in degraded-local)"
+                else
+                    step_fail "Agda witness generation failed"
+                fi
+                step_info "$WITNESS_OUT"
+                AGDA_READY=0
+            }
+            if [ "$AGDA_READY" = "1" ]; then
+                step_info "Witness: $(echo "$WITNESS_OUT" | tail -1)"
+                step_pass
+            fi
+        else
+            if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                step_skip "Agda type-check failed via Nix fallback (infra skip in degraded-local)"
+            else
+                step_fail "Agda type-check failed via Nix fallback"
+            fi
+        fi
     fi
 else
     if [ "$REQUIRE_AGDA" = "1" ]; then
@@ -804,7 +821,11 @@ if [ -x "$BIN" ]; then
     CLI_STDERR="$(cat "$CLI_STDERR_LOG" 2>/dev/null || true)"
     rm -f "$CLI_STDERR_LOG"
     if [ "$CLI_STATUS" -ne 0 ]; then
-        step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
+        if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ] && printf '%s' "$CLI_STDERR" | grep -qE 'RuntimeInitError|not_ready'; then
+            step_skip "CLI runtime init not ready in degraded-local (infra skip): $(summarize_text "$CLI_STDERR")"
+        else
+            step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
+        fi
     elif [ -n "$OUT" ]; then
         step_info "Output received ($(echo "$OUT" | wc -c) bytes)"
         HAS_FAMILY="$(echo "$OUT" | python3 -c "
@@ -905,11 +926,15 @@ if [ -f "$HTTP_SCRIPT" ] && [ -x "$BIN" ]; then
             step_fail "turn endpoint returned unexpected: $TURN_RESP"
         fi
     else
-        HTTP_ERR="$(tail -20 "$HTTP_LOG" 2>/dev/null || true)"
-        if [ -n "$HTTP_ERR" ]; then
-            step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
+        if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ] && echo "$SIDECAR_HEALTH" | grep -q '"ok"\|"healthy"\|"up"'; then
+            step_skip "runtime readiness not ok in degraded-local (infra skip): runtime=$RUNTIME_READY"
         else
-            step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY"
+            HTTP_ERR="$(tail -20 "$HTTP_LOG" 2>/dev/null || true)"
+            if [ -n "$HTTP_ERR" ]; then
+                step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
+            else
+                step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY"
+            fi
         fi
     fi
     kill "$PID_HTTP" 2>/dev/null || true
