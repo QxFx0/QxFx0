@@ -1,0 +1,138 @@
+╔════════════════════════════════════════════════════════════╗
+║   QxFx0 Release Smoke Test — 10 Constitutional Gates      ║
+║   Конституционная Монархия Языков                         ║
+╚════════════════════════════════════════════════════════════╝
+
+  [1m→[0m Profile context: release-smoke | Runtime mode: degraded-local | Script mode: degraded-local
+  [1m→[0m Profile semantics: strict=REJECT on any skip; degraded-local=ACCEPT_WITH_SKIPS on infra skips
+  [1m→[0m Runtime mode for release gates: degraded-local
+─────────────────────────────────────────────────────────────
+[1/10] Cabal build
+─────────────────────────────────────────────────────────────
+  [1m→[0m Running cabal build all...
+Preprocessing test suite 'qxfx0-test' for qxfx0-0.1.0.0..
+Building test suite 'qxfx0-test' for qxfx0-0.1.0.0..
+[11 of 11] Linking /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test/build/qxfx0-test/qxfx0-test [Library changed]
+  [1m→[0m Binary: /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main
+  [0;32m✓ PASS[0m
+─────────────────────────────────────────────────────────────
+[2/10] Unit tests (cabal test)
+─────────────────────────────────────────────────────────────
+  [1m→[0m Running cabal test qxfx0-test...
+{"ts":"2026-05-11 00:11:24,048","level":"INFO","msg":"{"event": "shutdown_signal", "signal": 15}"}
+{"ts":"2026-05-11 00:11:24,162","level":"INFO","msg":"{"event": "worker_stopped", "session": "se", "reason": "sidecar_shutdown"}"}
+{"ts":"2026-05-11 00:11:24,162","level":"INFO","msg":"{"event": "stopped"}"}
+Cases: 438  Tried: 397  Errors: 0  Failures: 0Cases: 438  Tried: 398  Errors: 0  Failures: 0Cases: 438  Tried: 399  Errors: 0  Failures: 0Cases: 438  Tried: 400  Errors: 0  Failures: 0Cases: 438  Tried: 401  Errors: 0  Failures: 0Cases: 438  Tried: 402  Errors: 0  Failures: 0Cases: 438  Tried: 403  Errors: 0  Failures: 0Cases: 438  Tried: 404  Errors: 0  Failures: 0Cases: 438  Tried: 405  Errors: 0  Failures: 0Cases: 438  Tried: 406  Errors: 0  Failures: 0Cases: 438  Tried: 407  Errors: 0  Failures: 0Cases: 438  Tried: 408  Errors: 0  Failures: 0Cases: 438  Tried: 409  Errors: 0  Failures: 0Cases: 438  Tried: 410  Errors: 0  Failures: 0Cases: 438  Tried: 411  Errors: 0  Failures: 0Cases: 438  Tried: 412  Errors: 0  Failures: 0Cases: 438  Tried: 413  Errors: 0  Failures: 0Cases: 438  Tried: 414  Errors: 0  Failures: 0Cases: 438  Tried: 415  Errors: 0  Failures: 0Cases: 438  Tried: 416  Errors: 0  Failures: 0Cases: 438  Tried: 417  Errors: 0  Failures: 0Cases: 438  Tried: 418  Errors: 0  Failures: 0Cases: 438  Tried: 419  Errors: 0  Failures: 0Cases: 438  Tried: 420  Errors: 0  Failures: 0Cases: 438  Tried: 421  Errors: 0  Failures: 0Cases: 438  Tried: 422  Errors: 0  Failures: 0Cases: 438  Tried: 423  Errors: 0  Failures: 0Cases: 438  Tried: 424  Errors: 0  Failures: 0Cases: 438  Tried: 425  Errors: 0  Failures: 0Cases: 438  Tried: 426  Errors: 0  Failures: 0Cases: 438  Tried: 427  Errors: 0  Failures: 0Cases: 438  Tried: 428  Errors: 0  Failures: 0Cases: 438  Tried: 429  Errors: 0  Failures: 0Cases: 438  Tried: 430  Errors: 0  Failures: 0Cases: 438  Tried: 431  Errors: 0  Failures: 0Cases: 438  Tried: 432  Errors: 0  Failures: 0Cases: 438  Tried: 433  Errors: 0  Failures: 0Cases: 438  Tried: 434  Errors: 0  Failures: 0Cases: 438  Tried: 435  Errors: 0  Failures: 0Cases: 438  Tried: 436  Errors: 0  Failures: 0Cases: 438  Tried: 437  Errors: 0  Failures: 0                                              Cases: 438  Tried: 438  Errors: 0  Failures: 0
+Test suite qxfx0-test: PASS
+Test suite logged to:
+/home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test/test/qxfx0-0.1.0.0-qxfx0-test.log
+1 of 1 test suites (1 of 1 test cases) passed.
+  [0;32m✓ PASS[0m
+  [0;33m⊘ SKIP: slow suite disabled (QXFX0_RUN_SLOW_TESTS=0)[0m
+  [1m→[0m Running architecture boundary checker...
+  [1m→[0m Architecture boundaries: OK
+  [1m→[0m Running lexical gate...
+  [1m→[0m Lexical gate: OK
+  [1m→[0m Running generated-artifact drift gate...
+  [1m→[0m Generated artifacts: OK
+─────────────────────────────────────────────────────────────
+[3/10] Schema migration check
+─────────────────────────────────────────────────────────────
+  [1m→[0m Applying migration: 001_initial_schema.sql
+wal
+  [1m→[0m Applying migration: 002_turn_quality_trace_columns.sql
+wal
+  [1m→[0m Applying migration: 003_shadow_divergence_trace_columns.sql
+wal
+  [1m→[0m Applied 3 migrations, 13 tables
+  [1m→[0m Cumulative migration schema matches canonical schema.sql
+  [0;32m✓ PASS[0m
+─────────────────────────────────────────────────────────────
+[4/10] Seed data verification
+─────────────────────────────────────────────────────────────
+  [1m→[0m Loading schema from schema.sql
+  [1m→[0m wal
+  [1m→[0m Loading seed: seed_clusters.sql
+  [1m→[0m Loading seed: seed_identity.sql
+  [1m→[0m Loading seed: seed_templates.sql
+  [1m→[0m Applied 3 seed files
+  [1m→[0m identity_claims rows: 24
+  [1m→[0m semantic_clusters rows: 18
+  [1m→[0m realization_templates rows: 24
+  [0;32m✓ PASS[0m
+  [1m→[0m Running lexical contour gate (SQL -> morphology artifacts)...
+  [1m→[0m Lexicon contour: OK
+─────────────────────────────────────────────────────────────
+[5/10] Nix guard evaluation test
+─────────────────────────────────────────────────────────────
+  [1m→[0m Evaluating concepts.nix...
+  [1m→[0m Concept count: 36 (mode=unrestricted_fallback)
+  [1m→[0m Checking constitutional thresholds...
+  [1m→[0m Agency floor: 0.3, Tension ceiling: 0.8
+  [0;32m✓ PASS[0m
+─────────────────────────────────────────────────────────────
+[6/10] Datalog shadow compilation test
+─────────────────────────────────────────────────────────────
+  [1m→[0m Testing Datalog: semantic_rules.dl
+  [1m→[0m Using souffle binary: /nix/store/akv2jnm3cxprrdkxf3a7djy07xhga0nn-souffle-2.5/bin/souffle
+  [0;32m✓ PASS[0m
+─────────────────────────────────────────────────────────────
+[7/10] Agda type-check + witness
+─────────────────────────────────────────────────────────────
+  [0;33m⊘ SKIP: agda not installed (infra skip in degraded-local)[0m
+─────────────────────────────────────────────────────────────
+[8/10] Policy catalog sync verification
+─────────────────────────────────────────────────────────────
+  [1m→[0m Running verify_agda_sync.py...
+OK[CanonicalMoveFamily[Sovereignty]]: 14 constructors in sync: ['CMAnchor', 'CMClarify', 'CMConfront', 'CMContact', 'CMDeepen', 'CMDefine', 'CMDescribe', 'CMDistinguish', 'CMGround', 'CMHypothesis', 'CMNextStep', 'CMPurpose', 'CMReflect', 'CMRepair']
+OK[CanonicalMoveFamily[R5Core]]: 14 constructors in sync: ['CMAnchor', 'CMClarify', 'CMConfront', 'CMContact', 'CMDeepen', 'CMDefine', 'CMDescribe', 'CMDistinguish', 'CMGround', 'CMHypothesis', 'CMNextStep', 'CMPurpose', 'CMReflect', 'CMRepair']
+OK[CanonicalMoveFamily[Sovereignty↔R5Core]]: 14 constructors in sync: ['CMAnchor', 'CMClarify', 'CMConfront', 'CMContact', 'CMDeepen', 'CMDefine', 'CMDescribe', 'CMDistinguish', 'CMGround', 'CMHypothesis', 'CMNextStep', 'CMPurpose', 'CMReflect', 'CMRepair']
+OK[IllocutionaryForce[Trace]]: 5 constructors in sync: ['IFAsk', 'IFAssert', 'IFConfront', 'IFContact', 'IFOffer']
+OK[SemanticLayer[Trace]]: 3 constructors in sync: ['ContactLayer', 'ContentLayer', 'MetaLayer']
+OK[ClauseForm[Trace]]: 4 constructors in sync: ['Declarative', 'Hortative', 'Imperative', 'Interrogative']
+OK[WarrantedMoveMode[Legitimacy]]: 3 constructors in sync: ['AlwaysWarranted', 'ConditionallyWarranted', 'NeverWarranted']
+OK[IsLegit[Legitimacy]]: 3 constructors in sync: ['LegitAcknowledge', 'LegitClarify', 'LegitInsight']
+OK[LegitimacyReason[Legitimacy]]: 4 constructors in sync: ['ReasonLowParserConfidence', 'ReasonOk', 'ReasonShadowDivergence', 'ReasonShadowUnavailable']
+OK[DecisionDisposition[Legitimacy]]: 4 constructors in sync: ['DispositionAdvisory', 'DispositionDeny', 'DispositionPermit', 'DispositionRepair']
+OK[forceForFamily]: 14 mapping entries in sync
+OK[clauseFormForIF]: 5 mapping entries in sync
+OK[layerForFamily]: 14 mapping entries in sync
+OK[warrantedForFamily]: 14 mapping entries in sync
+  [1m→[0m Agda–Haskell constructor sync verified
+  [0;32m✓ PASS[0m
+─────────────────────────────────────────────────────────────
+[9/10] CLI smoke test (turn execution)
+─────────────────────────────────────────────────────────────
+  [1m→[0m Binary: /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main
+  [1m→[0m Executing: /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main --session smoke1 --input 'Что такое свобода?' --json
+  [0;33m⊘ SKIP: CLI runtime init not ready in degraded-local (infra skip): qxfx0-main: RuntimeInitError "Strict runtime requires status=ok, got not_ready [ready]; db=True; schema=True(v=3); agda=False; datalog=True; embed=True; decision_local_only=True; network_optional_only=True; llm_decision_path=False; morpho=T[0m
+─────────────────────────────────────────────────────────────
+[10/10] HTTP sidecar smoke test
+─────────────────────────────────────────────────────────────
+  [1m→[0m Starting HTTP sidecar on port 19170...
+  [1m→[0m Polling sidecar readiness (PID: 279583)...
+  [1m→[0m Checking /sidecar-health endpoint...
+  [1m→[0m Sidecar health response: {"status": "ok", "endpoint": "sidecar-health", "semantics": "sidecar_liveness_only", "sessions_active": 0, "max_sessions": 128, "sessions_capacity_remaining": 128, "session_ttl_seconds": 900.0, "worker_timeout_seconds": 12.0}
+  [1m→[0m Checking /runtime-ready endpoint...
+  [1m→[0m Runtime readiness response: {"status":"unreachable"}
+  [0;33m⊘ SKIP: runtime readiness not ok in degraded-local (infra skip): runtime={"status":"unreachable"}[0m
+
+════════════════════════════════════════════════════════════
+  POST-SMOKE CLEANLINESS CHECK
+════════════════════════════════════════════════════════════
+  [0;32m✓ PASS[0m — working tree clean after smoke
+
+════════════════════════════════════════════════════════════
+  RELEASE GATE COMPLETE
+════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════
+  RELEASE GATE RESULTS
+════════════════════════════════════════════════════════════
+  Mode:     degraded-local
+  Passed:   7
+  Failed:   0
+  Skipped:  4
+  Elapsed:  604s
+════════════════════════════════════════════════════════════
+  [0;33m[1mVERDICT: ACCEPT_WITH_SKIPS[0m — 4 infra/opt-out gate(s) skipped in degraded-local
