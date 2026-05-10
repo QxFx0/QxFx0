@@ -1,0 +1,13 @@
+COVERAGE_STATUS=FAIL: overall expressions 48.00% < 50.00%
+COVERAGE_STATUS=FAIL: QxFx0.Render.Dialogue expressions 53.00% < 55.00%
+{
+  "overall_expr_percent": 48.0,
+  "overall_threshold": 50.0,
+  "critical_expr_percent_by_module": {
+    "QxFx0.Semantic.Input.Assemble": 80.0,
+    "QxFx0.Semantic.Proposition": 72.0,
+    "QxFx0.Render.Dialogue": 53.0
+  },
+  "critical_avg_percent": 68.33333333333333,
+  "critical_threshold": 55.0
+}
