@@ -72,7 +72,7 @@
 | `QXFX0_REQUIRE_STRICT_RUNTIME` | `0` | `1` | Enforce strict runtime readiness |
 | `QXFX0_RELEASE_SMOKE_MODE` | `degraded-local` | `strict` | Smoke test mode |
 | `QXFX0_SKIP_AGDA` | `1` (implied) | `0` | Run Agda typecheck |
-| `QXFX0_GF_RUNTIME` | `0` | `1` | Enable GF primary render path |
+| `QXFX0_GF_RUNTIME` | `1` | `1` | Enable GF primary render path |
 | `QXFX0_SHARED_CABAL_STORE` | `~/.cabal/store` | `~/.cabal/store` | Shared cabal store for parallel jobs |
 
 ---
@@ -91,7 +91,7 @@
 2. Setup Haskell (GHC 9.6.6, Cabal 3.10)
 3. Cache cabal store + dist-newstyle
 4. Install Python deps
-5. `bash scripts/ci_gate_contract.sh` (profile=core)
+5. `bash scripts/ci_gate_contract.sh` (profile=core, includes `check_gf_render_path.sh`)
 
 **Semantics:**
 - `release-smoke.sh` runs in `degraded-local` mode.
