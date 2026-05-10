@@ -1081,17 +1081,22 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
    let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
        da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
        dialogText = case assembleTurn rp da style (ssDiscourse ss) of
-                      Right txt | not (T.null (T.strip txt)) -> Just txt
-                      _ -> Nothing
+                       Right txt | not (T.null (T.strip txt)) -> Just txt
+                       _ -> Nothing
        factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
-       -- COMPAT GLUE: old template path fallback for test contexts where paradigms are empty.
-       -- Fallback chain: dialogText -> factualText -> templateArtifact(draTemplateBodyText) -> structuredFallback.
+       -- WP2: GF-first with telemetry. Fallback chain records exact reason.
        templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
        templateText = let txt = draTemplateBodyText templateArtifact
-                      in if T.null (T.strip txt) then Nothing else Just txt
+                       in if T.null (T.strip txt) then Nothing else Just txt
        structuredFallback
          | hasStructuredDialogueSurface frame = fallbackStructuredText frame
          | otherwise                          = Nothing
+       fallbackReason
+         | isJust dialogText   = Nothing
+         | isJust factualText  = Nothing
+         | isJust templateText = Just "gf_template_fallback"
+         | isJust structuredFallback = Just "gf_structured_fallback"
+         | otherwise           = Just "gf_no_output"
        rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
        -- COMPAT GLUE: preserve old template path finalization when falling back.
        -- Assembly-generated text is finalized with rmpForce; fallback text is
@@ -1100,8 +1105,9 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
        finalRendered
          | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
          | otherwise       = draRenderedText templateArtifact
-    in templateArtifact
-         { draRenderedText = finalRendered
-         , draTemplateBodyText = rendered
-         , draDialogAtoms = da
-         }
+   in templateArtifact
+          { draRenderedText = finalRendered
+          , draTemplateBodyText = rendered
+          , draDialogAtoms = da
+          , draFallbackReason = fallbackReason
+          }

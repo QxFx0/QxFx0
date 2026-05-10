@@ -131,20 +131,15 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           (prev:_) | prev /= bestTopic && not (T.null prev) && not (T.null bestTopic) ->
             Just (geodesicRouter (ssMeaningGraph ss) prev bestTopic (take 3 topicChain))
           _ -> Nothing
-      colloquial = scColloquialMode (ssSemanticConfig ss)
+      -- WP2: GF-first rendering. Assembly path is primary for all dialogue branches.
+      -- Template fallback is only used when assembly produces empty text (no PGF/runtime).
+      viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
+                        bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan
       dialogueArtifact
-        | colloquial =
-            let viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
-                                bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan
-            -- COMPAT GLUE: when runtime paradigms are empty (tests), assembly returns
-            -- empty text. Fall back to old template path to keep tests passing.
-            in if T.null (draRenderedText viaAssembly)
-                 then renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal
-                        bestTopic identityClaims (ssMorphology ss)
-                 else viaAssembly
+        | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
-            renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal
-              bestTopic identityClaims (ssMorphology ss)
+            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss))
+              { draFallbackReason = Just "assembly_empty_fallback" }
       forceFinalized =
         if structuredSurface
           then draRenderedText dialogueArtifact
