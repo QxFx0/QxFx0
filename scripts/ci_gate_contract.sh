@@ -120,6 +120,23 @@ else
   fail_contract "Gate 4 (GF quality)"
 fi
 
+# ── Gate 4a: GF render path distribution ───────────────────────────────
+GF_PATH_LOG="$GATES_DIR/06a_gf_render_path_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && RUN_ID="$RUN_ID" PROFILE="$PROFILE" QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" bash scripts/check_gf_render_path.sh) > "$GF_PATH_LOG" 2>&1; then
+  FALLBACK_RATE=$(grep -oE 'fallback_rate=[0-9.]+' "$GF_PATH_LOG" | tail -1 | cut -d= -f2 || true)
+  GF_ATOMS_RATE=$(grep -oE 'gf_atoms_rate=[0-9.]+' "$GF_PATH_LOG" | tail -1 | cut -d= -f2 || true)
+  log_gate "check_gf_render_path.sh" "0" "PASS" "fallback_rate=${FALLBACK_RATE:-n/a}, gf_atoms_rate=${GF_ATOMS_RATE:-n/a}"
+else
+  GF_PATH_EXIT=$?
+  if [ "$GF_PATH_EXIT" -eq 2 ]; then
+    log_gate "check_gf_render_path.sh" "$GF_PATH_EXIT" "INFRA" "unable to measure GF path in this environment"
+    fail_contract "Gate 4a (GF render path INFRA)"
+  else
+    log_gate "check_gf_render_path.sh" "$GF_PATH_EXIT" "FAIL" "GF path thresholds violated"
+    fail_contract "Gate 4a (GF render path)"
+  fi
+fi
+
 # ── Gate 5: Haddock ─────────────────────────────────────────────────────
 HADDOCK_LOG="$GATES_DIR/05_check_haddock_${RUN_ID}_${PROFILE}.log"
 if (cd "$ROOT" && bash scripts/check_haddock.sh 2>&1) > "$HADDOCK_LOG" 2>&1; then
@@ -181,7 +198,7 @@ if [ "$PROFILE" = "core" ]; then
   # release-smoke already acquires the same lock in run_local_cabal.
   # Nested flock on the same fd from a child process causes deadlock.
   SMOKE_LOG="$GATES_DIR/11_release_smoke_${RUN_ID}_${PROFILE}.log"
-  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 \
+  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" \
   bash -c "cd '$ROOT' && bash scripts/release-smoke.sh" > "$SMOKE_LOG" 2>&1 || true
 
   FAILED_COUNT=$(grep -oP 'Failed:\s*\K[0-9]+' "$SMOKE_LOG" | tail -1 || echo "UNKNOWN")
