@@ -16,25 +16,25 @@
   "case_surface_metrics": {
     "feminine_like_acc_eq_nom_count": 0,
     "feminine_like_acc_eq_nom_ratio": 0.0,
-    "feminine_like_noun_count": 201,
-    "noun_acc_eq_nom_count": 804,
-    "noun_acc_eq_nom_ratio": 0.7992047713717694,
-    "noun_count": 1006,
+    "feminine_like_noun_count": 226,
+    "noun_acc_eq_nom_count": 911,
+    "noun_acc_eq_nom_ratio": 0.8005272407732865,
+    "noun_count": 1138,
     "noun_ins_eq_nom_count": 0,
     "noun_ins_eq_nom_ratio": 0.0,
     "soft_sign_ins_eq_nom_count": 0,
     "soft_sign_ins_eq_nom_ratio": 0.0,
-    "soft_sign_noun_count": 730
+    "soft_sign_noun_count": 837
   },
   "collision_count": 0,
-  "complete_rows": 1016,
+  "complete_rows": 1148,
   "dangerous_collision_count": 0,
-  "dataset_sha256": "3c8ddd9d750328e3e53079f6ba68cbf192ddf67fce616426b1937dd8ad2a9df5",
+  "dataset_sha256": "d31379c802e13231b0bec6e178a614f1f1e24faae420a6c8968eb72fbe69a14c",
   "drift_check": {
     "auto_manifest_present": true,
     "schema_sha256": "f5899715476dc6af",
     "seed_brain_kb_reviewed_sha256": "0396a6aa2b2027bc",
-    "seed_sha256": "2ecfc480b6ff9a35"
+    "seed_sha256": "ac0a931badafef09"
   },
   "forms_by_surface": {
     "dangerous_collision_count": 0,
@@ -64,7 +64,7 @@
   ],
   "harmless_collision_count": 0,
   "invalid_rows": 0,
-  "lemma_count": 1016,
+  "lemma_count": 1148,
   "score": 10.0,
   "sources": [
     "spec/sql/lexicon/schema.sql",

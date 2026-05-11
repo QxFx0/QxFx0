@@ -66,6 +66,7 @@ def get_candidates(limit=860):
     
     # Sort for determinism
     valid.sort()
+    print(f"DEBUG: Found {len(valid)} valid candidates with 5 cases before filtering for collisions")
     return valid[:limit]
 
 def main():
