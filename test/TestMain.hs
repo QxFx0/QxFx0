@@ -13,10 +13,11 @@ import Test.Suite.SemanticCorpus (semanticCorpusTests)
 import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.LegalAdapter (legalAdapterTests)
 import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
+import Test.Suite.RussianQuality (russianQualityTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

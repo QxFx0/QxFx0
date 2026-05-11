@@ -192,7 +192,7 @@ structuredBody propositionType frame rmp renderStyle morph =
             , "Я работаю. Запуск в норме; основной риск сейчас в маршрутизации: иногда вопрос схлопывается до слишком общей трактовки."
             , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
             ]
-          claim = linearizeOrFallback ast renderStyle morph fallback
+          claim = linearizeOrFallbackTagged "operational_status" ast renderStyle morph fallback
       in withClaim (clText claim) ast claim
     OperationalCauseQ ->
       let ast = claimAstOrFallback MoveOperationalCause (rmpPrimaryClaimAst rmp)
@@ -202,18 +202,18 @@ structuredBody propositionType frame rmp renderStyle morph =
             , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: ранний выбор семейства ответа делает реплику шаблонной."
             , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: при потере нюансов ответ уходит в слишком универсальную формулу."
             ]
-          claim = linearizeOrFallback ast renderStyle morph fallback
+          claim = linearizeOrFallbackTagged "operational_cause" ast renderStyle morph fallback
       in withClaim (clText claim) ast claim
     GroundQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) "ситуация"
           topicPrep = structuredPrepositional morph topicRef
           ast = claimAstOrFallback (MoveGround (MkNP (topicToGfLexemeId topicRef))) (rmpPrimaryClaimAst rmp)
           fallback = "Держу это как устойчивую опору для дальнейшего разбора."
-          claim = linearizeOrFallback ast renderStyle morph fallback
+          claim = linearizeOrFallbackTagged "ground" ast renderStyle morph fallback
       in withClaim ("Если говорить " <> aboutWithTopic topicPrep <> ", то " <> clText claim) ast claim
     SystemLogicQ ->
       let ast = claimAstOrFallback MoveSystemLogic (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph (systemLogicSurface frame)
+          claim = linearizeOrFallbackTagged "system_logic" ast renderStyle morph (systemLogicSurface frame)
       in withClaim (clText claim) ast claim
     SelfKnowledgeQ
       | asksThoughtCapacityQuestion frame ->
@@ -234,7 +234,7 @@ structuredBody propositionType frame rmp renderStyle morph =
                   then selfKnowledgeFallbackAst frame
                   else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
               fallback = "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
-              claim = linearizeOrFallback ast renderStyle morph fallback
+              claim = linearizeOrFallbackTagged "self_knowledge" ast renderStyle morph fallback
           in withClaim (selfKnowledgeSurfaceByTarget target (clText claim)) ast claim
     DialogueInvitationQ ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "тема")
@@ -316,7 +316,7 @@ structuredBody propositionType frame rmp renderStyle morph =
       in withClaim (clText claim) ast claim
     GenerativePrompt ->
       let ast = claimAstOrFallback MoveGenerativeThought (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph (generativeThought frame)
+          claim = linearizeOrFallbackTagged "generative_prompt" ast renderStyle morph (generativeThought frame)
       in withClaim (clText claim) ast claim
     ContemplativeTopic ->
       let fallbackAst = MoveContemplative (MkNP (topicToGfLexemeId (nonEmptyOr (ipfSemanticSubject frame) "тема")))
@@ -363,7 +363,11 @@ claimAstOrFallback fallbackAst maybeAst =
     Nothing -> fallbackAst
 
 linearizeOrFallback :: ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
-linearizeOrFallback ast renderStyle morph fallbackText =
+linearizeOrFallback =
+  linearizeOrFallbackTagged "unspecified"
+
+linearizeOrFallbackTagged :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
+linearizeOrFallbackTagged reasonTag ast renderStyle morph fallbackText =
   case linearizeClaimAstRus ast renderStyle morph of
     Just txt ->
       ClaimLinearization
@@ -375,7 +379,7 @@ linearizeOrFallback ast renderStyle morph fallbackText =
       ClaimLinearization
         { clText = fallbackText
         , clOk = False
-        , clFallbackReason = Just "gf_linearization_failed"
+        , clFallbackReason = Just ("gf_linearization_failed:" <> reasonTag)
         }
 
 linearizeClaimAstRus :: ClaimAst -> RenderStyle -> MorphologyData -> Maybe Text
@@ -424,7 +428,12 @@ linearizeClaimAstRus ast renderStyle morph =
       let topicGen = maybe "смысла" glfGen (lookupGfLexemeForms gfTopic)
       in Just ("Функция " <> topicGen <> " проявляется через повторяемую роль в действии.")
     MoveSelfState ->
-      Just "Мой текущий ход строится из разбора реплики, выбора семейства ответа и ограничений сессии."
+      let seed = "move_self_state"
+      in Just (pickDeterministic seed
+        [ "Мой текущий ход строится из разбора реплики, выбора семейства ответа и ограничений сессии."
+        , "Сейчас я держу локальный контур: разбор входа, выбор семейства хода и проверка ограничений текущей сессии."
+        , "Внутренний ход сейчас собирается как цепочка: входная реплика -> выбор семейства -> контроль ограничений сессии."
+        ])
     MoveCompare (MkNP gfLeft) (MkNP gfRight) ->
       let leftGen = maybe "первого" glfGen (lookupGfLexemeForms gfLeft)
           rightGen = maybe "второго" glfGen (lookupGfLexemeForms gfRight)
@@ -454,7 +463,12 @@ linearizeClaimAstRus ast renderStyle morph =
       in Just ("Если держаться слова " <> openGuillemet <> topicNom <> closeGuillemet <> ", я слышу в нём не только предмет, но и поле смыслов, включая субъектность как способ удерживать внутреннюю форму.")
     MoveGround (MkNP gfTopic) ->
       let topicAcc = maybe "это" glfAcc (lookupGfLexemeForms gfTopic)
-      in Just ("Держу " <> topicAcc <> " как устойчивую опору для дальнейшего разбора.")
+          seed = "move_ground|" <> topicAcc
+      in Just (pickDeterministic seed
+        [ "Держу " <> topicAcc <> " как устойчивую опору для дальнейшего разбора."
+        , "Фиксирую " <> topicAcc <> " как рабочую опору и продолжаю разбор от этой точки."
+        , "Беру " <> topicAcc <> " как опорный узел, чтобы не потерять связность следующего шага."
+        ])
     MoveContact (MkNP gfTopic) ->
       let topicPrep = maybe "теме" glfPrep (lookupGfLexemeForms gfTopic)
       in Just ("Слышу запрос на контакт по теме " <> topicPrep <> ".")
@@ -994,6 +1008,8 @@ dedupeText =
 fallbackStructuredText :: InputPropositionFrame -> Maybe Text
 fallbackStructuredText frame = do
   pt <- propositionTypeFromText (ipfPropositionType frame)
+  let subject = nonEmptyOr (T.toLower (T.strip (ipfSemanticSubject frame))) "тема"
+      seed suffix = T.toLower (T.strip (ipfRawText frame)) <> "|" <> suffix
   case pt of
     RepairSignal ->
       Just "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
@@ -1006,9 +1022,13 @@ fallbackStructuredText frame = do
     OperationalCauseQ ->
       Just "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: вопрос может быть слишком рано схлопнут до упрощённого ядра."
     GroundQ ->
-      Just "Держу это как устойчивую опору для дальнейшего разбора."
+      Just (pickDeterministic (seed "ground_fallback")
+        [ "Держу это как устойчивую опору для дальнейшего разбора."
+        , "Фиксирую это как рабочую опору и продолжаю от неё без лишних скачков."
+        , "Беру это как опорную точку, чтобы удержать связность дальнейшего хода."
+        ])
     SystemLogicQ ->
-      Just "Моя текущая логика локальная: я разбираю вопрос, выбираю семейство хода, сверяюсь с shadow-контуром и затем рендерю ответ."
+      Just (systemLogicSurface frame)
     SelfKnowledgeQ ->
       Just "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора."
     DialogueInvitationQ ->
@@ -1028,9 +1048,13 @@ fallbackStructuredText frame = do
     MisunderstandingReport ->
       Just "Я принимаю это как сигнал сбоя взаимопонимания. Давай уточним, где именно ответ разошёлся с твоим запросом."
     GenerativePrompt ->
-      Just "Одна мысль: смысл держится на связи между словами и опытом."
+      Just (generativeThought frame)
     ContemplativeTopic ->
-      Just "Я слышу в этом не только предмет, но и поле смыслов."
+      Just (pickDeterministic (seed "contemplative_fallback")
+        [ "Я слышу в этом не только предмет, но и поле смыслов."
+        , "Здесь важен не только предмет, но и рамка, в которой этот предмет становится смыслом."
+        , "В этом слышится не только тема, но и способ, которым тема собирает внутренние связи."
+        ])
     NextStepQ ->
       Just "Следующий шаг: конкретизировать задачу в одном действии."
     _ -> Nothing

@@ -345,6 +345,7 @@ test-suite qxfx0-test
     Test.Suite.LexiconTests
     Test.Suite.LegalAdapter
     Test.Suite.RenderDialogueCoverage
+    Test.Suite.RussianQuality
   hs-source-dirs: test
   build-tool-depends:
     qxfx0:qxfx0-main
