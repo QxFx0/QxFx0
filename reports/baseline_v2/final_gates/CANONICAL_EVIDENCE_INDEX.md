@@ -12,7 +12,7 @@
 ### Primary Contract Run — Post-GF Path Contract Enforcement
 
 **RUN_ID:** `ci-20260511-022550`  
-**Commit:** `67d9205` (core contract includes Gate 4a `check_gf_render_path.sh`)  
+**Commit:** `d79c4a71` (merged release commit; includes core contract Gate 4a `check_gf_render_path.sh`)  
 **Verdict:** **CONTRACT_VERDICT: PROD_GO**  
 **All core gates PASS:** build, tests, architecture, GF quality, GF render-path gate, haddock, SQL sync, schema consistency, schema contract, generated artifacts, lexicon, release-smoke degraded-local (ACCEPT_WITH_SKIPS, 0 FAIL).
 
