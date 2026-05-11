@@ -141,11 +141,12 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       -- Template fallback is only used when assembly produces empty text (no PGF/runtime).
       viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
                         bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan
+      assemblyFallbackReason = fromMaybe "assembly_empty_fallback" (draFallbackReason viaAssembly)
       dialogueArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
             (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss))
-              { draFallbackReason = Just "assembly_empty_fallback" }
+              { draFallbackReason = Just assemblyFallbackReason }
       forceFinalized =
         if structuredSurface
           then draRenderedText dialogueArtifact
