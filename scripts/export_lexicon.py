@@ -772,7 +772,8 @@ def make_fun_name(lemma: str, pos: str, used: Dict[str, int]) -> str:
     used[candidate] = count
     if count == 1:
         return candidate
-    return f"{candidate}_{count}"
+    # Keep Agda/GF-safe identifiers: avoid trailing "_<number>" segments.
+    return f"{candidate}v{count}"
 
 
 def gf_quote(text: str) -> str:
