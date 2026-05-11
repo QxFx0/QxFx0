@@ -18,6 +18,45 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GATES_DIR="$ROOT/reports/baseline_v2/final_gates"
 mkdir -p "$GATES_DIR"
 
+# Use writable state paths for hermetic contract runs.
+# Keep default cabal package store/toolchain, but redirect build summary log
+# away from read-only $HOME locations.
+XDG_STATE_HOME="${XDG_STATE_HOME:-$ROOT/.test-tmp/xdg-state}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$ROOT/.test-tmp/xdg-data}"
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-$ROOT/.test-tmp/xdg-cache}"
+QXFX0_STATE_DIR="${QXFX0_STATE_DIR:-$ROOT/.test-tmp/qxfx0-state}"
+
+CABAL_TMP_DIR="${QXFX0_CABAL_TMP_DIR:-$ROOT/.test-tmp/cabal-ci}"
+CABAL_BUILD_SUMMARY="${QXFX0_CABAL_BUILD_SUMMARY:-$CABAL_TMP_DIR/build.log}"
+CABAL_CONFIG="${QXFX0_CABAL_CONFIG:-$CABAL_TMP_DIR/config}"
+DEFAULT_CABAL_CONFIG="${HOME:-/home/liskil}/.cabal/config"
+CABAL_DIR="${CABAL_DIR:-${HOME:-/home/liskil}/.cabal}"
+
+mkdir -p "$CABAL_TMP_DIR"
+if [ -f "$DEFAULT_CABAL_CONFIG" ]; then
+  cp "$DEFAULT_CABAL_CONFIG" "$CABAL_CONFIG"
+else
+  : > "$CABAL_CONFIG"
+fi
+if grep -q '^build-summary:' "$CABAL_CONFIG"; then
+  sed -E -i "s|^build-summary:.*$|build-summary: $CABAL_BUILD_SUMMARY|" "$CABAL_CONFIG"
+else
+  printf '\nbuild-summary: %s\n' "$CABAL_BUILD_SUMMARY" >> "$CABAL_CONFIG"
+fi
+
+export CABAL_DIR
+export CABAL_CONFIG
+export XDG_STATE_HOME
+export XDG_DATA_HOME
+export XDG_CACHE_HOME
+export QXFX0_STATE_DIR
+mkdir -p \
+  "$CABAL_TMP_DIR" \
+  "$XDG_STATE_HOME" \
+  "$XDG_DATA_HOME" \
+  "$XDG_CACHE_HOME" \
+  "$QXFX0_STATE_DIR"
+
 # Prevent parallel cabal operations from racing on dist-newstyle
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
 mkdir -p "$(dirname "$CABAL_LOCK_FILE")"
@@ -81,7 +120,7 @@ echo -e "gate\texit_code\tverdict\tdetails" > "$TSV"
 
 # ── Gate 1: Build ───────────────────────────────────────────────────────
 BUILD_LOG="$GATES_DIR/01_cabal_build_${RUN_ID}_${PROFILE}.log"
-if run_with_cabal_lock bash -c "cd '$ROOT' && cabal build all" > "$BUILD_LOG" 2>&1; then
+if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' build all" > "$BUILD_LOG" 2>&1; then
   log_gate "cabal build all" "0" "PASS" "clean compile"
 else
   log_gate "cabal build all" "$?" "FAIL" "build errors (see $BUILD_LOG)"
@@ -90,7 +129,7 @@ fi
 
 # ── Gate 2: Fast tests ──────────────────────────────────────────────────
 FAST_LOG="$GATES_DIR/02_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
-if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test" > "$FAST_LOG" 2>&1; then
+if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test" > "$FAST_LOG" 2>&1; then
   if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
     log_gate "cabal test fast" "0" "PASS" "0 errors, 0 failures"
   else
@@ -218,7 +257,7 @@ if [ "$PROFILE" = "core" ]; then
 elif [ "$PROFILE" = "extended" ]; then
   # ── Gate 11 (extended): Slow tests (hard required) ──────────────────
   SLOW_LOG="$GATES_DIR/11_cabal_test_slow_${RUN_ID}_${PROFILE}.log"
-  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test-slow" > "$SLOW_LOG" 2>&1; then
+  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test-slow" > "$SLOW_LOG" 2>&1; then
     if grep -q 'Errors: 0  Failures: 0' "$SLOW_LOG"; then
       log_gate "cabal test slow" "0" "PASS" "0 errors, 0 failures"
     else
@@ -325,7 +364,7 @@ elif [ "$PROFILE" = "extended-lowram" ]; then
   # ── Gate 11 (extended-lowram): fast tests as proxy for slow tests ──────
   # Target repo has no separate qxfx0-test-slow suite; run qxfx0-test.
   FAST_LOG="$GATES_DIR/11_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
-  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal test qxfx0-test" > "$FAST_LOG" 2>&1; then
+  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test" > "$FAST_LOG" 2>&1; then
     if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
       log_gate "cabal test fast (extended proxy)" "0" "PASS" "0 errors, 0 failures"
     else
