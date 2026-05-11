@@ -84,10 +84,8 @@ jobs:
   extended-contract:
     name: Extended Contract (FULL_SCIENTIFIC_GO)
     # NOTE: This job requires a high-memory runner (>=32 GB RAM).
-    # If your organization does not have a large runner configured,
-    # use 'runs-on: ubuntu-latest' and accept that slow tests may INFRA-timeout.
-    # For production, configure a runner label such as 'high-mem' or 'ubuntu-32gb'.
-    runs-on: ubuntu-latest
+    # Configure a self-hosted or larger runner label accordingly.
+    runs-on: high-mem
     timeout-minutes: 45
     if: |
       github.event_name == 'schedule' ||
