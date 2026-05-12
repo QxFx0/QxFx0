@@ -168,26 +168,10 @@ dialogAtomsToGfExpr da =
       gfTopic = topicToGfLexemeId buildGfLexemeMap topicStr
       intent = if hasTag TUserIntent da then headAtomValue TUserIntent da else ""
   in if intent == "define"
-     then Right ("MoveDefine (MkNP " <> gfTopic <> ") RelIdentity (MkNP " <> gfTopic <> ")")
-     else if intent == "ground" || intent == "anchor" || intent == "stabilize"
+     then Right ("MoveDefine (MkNP " <> gfTopic <> ") (MkNP " <> gfTopic <> ")")
+     else if intent == "ground"
      then Right ("MoveGround (MkNP " <> gfTopic <> ")")
-     else if intent == "reflect"
-     then Right ("MoveReflect (MkNP " <> gfTopic <> ")")
-     else if intent == "complain" || intent == "repair"
-     then Right "MoveMisunderstanding"
-     else if intent == "deepen"
-     then Right ("MoveDeepen (MkNP " <> gfTopic <> ")")
-     else if intent == "next" || intent == "proceed"
-     then Right ("MoveNextStepLocal (MkNP " <> gfTopic <> ")")
-     else if intent == "clarify"
-     then Right ("MoveClarify (MkNP " <> gfTopic <> ")")
-     else if intent == "confront" || intent == "challenge"
-     then Right ("MoveConfront (MkNP " <> gfTopic <> ")")
-     else if intent == "describe"
-     then Right ("MoveDescribe (MkNP " <> gfTopic <> ")")
-     else if intent == "hypothesize"
-     then Right ("MoveHypothesis (MkNP " <> gfTopic <> ")")
-     else Left ("unmapped_intent:" <> intent)
+     else Right ("MoveGround (MkNP " <> gfTopic <> ")")
 
 sanitizeLegacyLexemeId :: Text -> Text
 sanitizeLegacyLexemeId = LegacyGfMap.topicToGfLexemeId
