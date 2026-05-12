@@ -172,18 +172,25 @@ structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPla
 structuredBody propositionType frame rmp renderStyle morph =
   case propositionType of
     RepairSignal ->
-      plain ("Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. "
-        <> "Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно.")
+      let ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
+          fallback = "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
+          claim = linearizeOrFallbackTagged "repair" ast renderStyle morph fallback
+      in withClaim (clText claim) ast claim
     ContactSignal ->
       if isGreetingSmallTalkFrame frame
         then plain (contactGreetingSurface frame)
-        else plain ("Слышу, что сейчас нужна опора."
-            <> contactContextSentence morph (ipfSemanticSubject frame)
-            <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.")
+        else
+          let topicRef = nonEmptyOr (ipfSemanticSubject frame) "опора"
+              ast = claimAstOrFallback (MoveContact (MkNP (topicToGfLexemeId topicRef))) (rmpPrimaryClaimAst rmp)
+              fallback = "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+              claim = linearizeOrFallbackTagged "contact" ast renderStyle morph fallback
+          in withClaim (clText claim) ast claim
     AffectiveQ ->
-      plain ("Слышу, что сейчас нужна опора."
-        <> contactContextSentence morph (ipfSemanticSubject frame)
-        <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.")
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) "состояние"
+          ast = claimAstOrFallback (MoveContact (MkNP (topicToGfLexemeId topicRef))) (rmpPrimaryClaimAst rmp)
+          fallback = "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+          claim = linearizeOrFallbackTagged "affective" ast renderStyle morph fallback
+      in withClaim (clText claim) ast claim
     OperationalStatusQ ->
       let ast = claimAstOrFallback MoveOperationalStatus (rmpPrimaryClaimAst rmp)
           fallback = pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_status")
