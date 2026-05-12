@@ -1,70 +1,52 @@
 # QxFx0
 
-QxFx0 is a Russian-language philosophical dialogue runtime with:
-- canonical R5 routing (`CanonicalMoveFamily`, `IllocutionaryForce`)
-- constitutional Nix guard
-- session-aware SQLite persistence
-- Agda/Haskell constructor sync checks
-- CLI and HTTP machine interfaces
+Deterministic, spec-first dialogue runtime for Russian reasoning workflows.
 
-## Current Status
+QxFx0 is an open-source alternative to purely probabilistic chat stacks: routing is typed and explicit, output is grammar-constrained, and release decisions are gate-driven with auditable evidence.
 
-- Date: `2026-05-10`
-- Release contour: `PROD_GO` (core contract passed)
-- Extended contour: `FULL_SCIENTIFIC_GO` deferred by infrastructure requirements (high-memory runner, >=32 GB RAM)
-- Canonical evidence index: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+## Why This Project Exists
 
-## What It Is
+Most conversational systems optimize for plausibility. QxFx0 optimizes for:
+- reproducible behavior under explicit contracts
+- traceable decisions (family/force/state transitions)
+- safe degraded behavior without hidden retries
+- verifiable release gates instead of “it seems to work”
 
-QxFx0 is an alternative, spec-first approach to text generation:
-- typed semantic routing first, rendering second
-- grammar-constrained Russian output (GF artifacts + runtime mappings)
-- reproducible local runtime with explicit readiness and trace contracts
+If you need deterministic dialogue infrastructure with strict operational semantics, QxFx0 is built for that.
 
-## What It Is Not
+## What Is Implemented
 
-- not a general-purpose replacement for frontier chat models
-- not a web-scale knowledge engine
-- not a hidden black-box sampler: core behavior is implemented as explicit contracts, typed states, and verifiable gates
-- not a legal or medical advice engine
+- Typed semantic routing (`CanonicalMoveFamily`, `IllocutionaryForce`)
+- Multi-layer runtime: Haskell core + SQLite persistence + GF surface generation
+- Constitutional readiness contour (Nix policy checks)
+- CLI runtime and HTTP sidecar with live-session continuity contract
+- Gate contract for release decisions (`scripts/ci_gate_contract.sh`)
+- Lexicon pipeline with collision/quality controls and generated artifacts sync
 
-## Architecture Map
+## Current Maturity
 
-- `Haskell` (runtime core): typed routing, turn pipeline, rendering, state, and HTTP/CLI surfaces
-  (`src/QxFx0/**`, `app/**`).
-- `Nix` (constitutional/runtime guard): evaluator policy and strict/degraded readiness contour
-  (`semantics/concepts.nix`, `nix/module.nix`).
-- `SQL` (persistent contract): runtime schema, lexicon seeds, and schema invariants
-  (`spec/sql/schema.sql`, `spec/sql/lexicon/**`, `migrations/**`).
-- `Agda` (proof/spec layer): sovereignty and generated lexicon proof/data artifacts
-  (`spec/Sovereignty.agda`, `spec/LexiconData.agda`, `spec/LexiconProof.agda`).
-- `Datalog` (symbolic reasoning bridge): runtime datalog execution and compare/support layers
-  (`src/QxFx0/Bridge/Datalog/**`, `src/QxFx0/Bridge/Datalog.hs`).
-- `GF` (grammar layer): generated lexicon + syntax/concrete grammar used by runtime mappings
-  (`spec/gf/lexicon_bilingual.tsv`, `spec/gf/QxFx0LexiconEng.gf`,
-  `spec/gf/QxFx0SyntaxEng.gf`, `spec/gf/QxFx0SyntaxRusColloquial.gf`,
-  `spec/gf/QxFx0Syntax.pgf`).
+- Core release contour: `PROD_GO` (core contract profile)
+- Extended scientific contour: deferred to high-memory runners
+- Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+- CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
 
-## Canonical Sources
+## Architecture Snapshot
 
-- R5 contract vocabulary: `spec/R5Core.agda`, `src/QxFx0/Types/Domain.hs`
-- Decision/state/observability contracts: `src/QxFx0/Types/Decision.hs`, `src/QxFx0/Types/State.hs`, `src/QxFx0/Types/Observability.hs`
-- Closed sovereignty proof layer: `spec/Sovereignty.agda`
-- Layer-safe shared types: `src/QxFx0/Types/Orbital.hs`, `src/QxFx0/Types/IdentityGuard.hs`
-- SQL contract: `spec/sql/schema.sql`
-- Lexicon raw source: `spec/sql/lexicon/schema.sql`, `spec/sql/lexicon/seed_ru_core.sql`
-- GF lexicon source/artifacts: `spec/gf/lexicon_bilingual.tsv`, `spec/gf/QxFx0LexiconEng.gf`, `spec/gf/QxFx0SyntaxEng.gf`, `spec/gf/QxFx0SyntaxRusColloquial.gf`, `spec/gf/QxFx0Syntax.pgf`
-- Agda lexicon artifacts (generated): `spec/LexiconData.agda`, `spec/LexiconProof.agda`
-- Haskell runtime lexicon map (generated): `src/QxFx0/Lexicon/Generated.hs`
-- Operational policy/template texts: `src/QxFx0/Policy/Templates.hs` (not canonical lexicon contour)
-- Runtime SQL mirror: `src/QxFx0/Bridge/EmbeddedSQL.hs`
-- Runtime-critical schema contract: `spec/sql/runtime_critical_contract.tsv`
-- Runtime invariants: `docs/runtime_invariants.md`
-- Schema contract playbook: `docs/schema_contract_playbook.md`
-- CI/release contract: `docs/CI_PRODUCTION_PROFILE.md`
-- Extended high-mem execution runbook: `docs/EXTENDED_CONTRACT_RUNBOOK.md`
-- Commit preparation guide: `docs/commit_preparation.md`
-- Release gate: `scripts/release-smoke.sh`
+- `src/QxFx0/**`: runtime core, routing, render pipeline, state, observability
+- `app/**`: CLI surfaces
+- `scripts/**`: gates, checks, release orchestration, artifact generators
+- `spec/sql/**`: schema + lexicon seeds + contract tables
+- `spec/gf/**`: GF grammar and bilingual lexicon artifacts
+- `spec/*.agda`: proof/spec layer + generated lexicon artifacts
+- `docs/**`: runtime invariants, CI profile, runbooks
+
+## Core Design Principles
+
+1. Route first, render second.
+2. Keep failure semantics explicit (`unknown outcome` instead of hidden retries).
+3. Keep readiness side-effect free.
+4. Keep generated artifacts synchronized from canonical sources.
+5. Keep release decisions evidence-backed.
 
 ## Quick Start
 
@@ -73,48 +55,20 @@ cabal build all
 cabal test qxfx0-test
 bash scripts/check_architecture.sh
 bash scripts/gf_quality_gate.sh
-python3 scripts/check_schema_contract.py
-bash scripts/check_lexicon.sh
 bash scripts/check_generated_artifacts.sh
-python3 scripts/verify_agda_sync.py
-bash scripts/verify.sh
-QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh
-```
-
-Release smoke modes:
-- `QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUN_SLOW_TESTS=0 bash scripts/release-smoke.sh` for core profile (`PROD_GO`)
-- `QXFX0_RELEASE_SMOKE_MODE=strict bash scripts/release-smoke.sh` for extended profile (`FULL_SCIENTIFIC_GO`, high-memory runner)
-
-Lexicon artifacts are generated from SQL:
-
-```bash
-python3 scripts/export_lexicon.py
 bash scripts/check_lexicon.sh
-```
-
-Canonical direction is strict: `SQL -> morphology JSON + GF + Agda`.
-Do not edit generated GF files manually.
-For release contract details and runner requirements, see `docs/CI_PRODUCTION_PROFILE.md`.
-
-## Auditor Quick Verify (Core Contract)
-
-```bash
-cabal build all
 QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh
-cat reports/baseline_v2/final_gates/_gate_results_*_core.md
 ```
 
-Expected verdict in gate summary: `CONTRACT_VERDICT: PROD_GO`.
+Expected contract result: `CONTRACT_VERDICT: PROD_GO`.
 
-## Quick Demo
-
-Run an interactive Russian dialogue session:
+## Run a Dialogue Session
 
 ```bash
 cabal run -v0 qxfx0-main -- --session demo
 ```
 
-In the REPL:
+Example turns:
 
 ```text
 привет
@@ -124,158 +78,77 @@ In the REPL:
 :quit
 ```
 
-Or one-shot JSON turn from CLI:
+One-shot request:
 
 ```bash
 cabal run -v0 qxfx0-main -- --turn-json "что такое свобода?"
 ```
 
-If you want local guardrails before every commit:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-## CLI
-
-```bash
-cabal run qxfx0-main -- --healthcheck
-cabal run qxfx0-main -- --state-json
-cabal run qxfx0-main -- --turn-json "Что такое свобода?"
-cabal run qxfx0-main -- --turn-json --semantic "Что такое свобода?"
-```
-
-Backward-compatible aliases are supported:
-- `--session` (`--session-id`)
-- `--input` (`--turn-json`)
-- `--json` (`--state-json`)
-- `--health` (`--healthcheck`)
-
 ## HTTP Sidecar
 
-From CLI:
+Start:
 
 ```bash
 cabal run qxfx0-main -- --serve-http 9170
 ```
 
-Direct script launch:
-
-```bash
-QXFX0_BIN="$(cabal list-bin qxfx0-main)" \
-QXFX0_ROOT="$(pwd)" \
-python3 scripts/http_runtime.py --host 127.0.0.1 --port 9170
-```
-
 Endpoints:
-- `GET /sidecar-health` (canonical sidecar liveness endpoint)
-- `GET /runtime-ready` (backend readiness probe via side-effect free `qxfx0-main --runtime-ready`)
-- `GET /health` (deprecated compatibility alias for `/sidecar-health`, returns `X-QXFX0-Deprecated`)
+- `GET /sidecar-health`
+- `GET /runtime-ready`
 - `POST /turn` with `{"session_id":"abc","input":"Что такое свобода?"}`
 
-HTTP auth perimeter:
-- if `QXFX0_API_KEY` is configured, `/sidecar-health`, `/health`,
-  `/runtime-ready`, and `/turn` all require `X-API-Key`
-- non-loopback bind requires explicit `QXFX0_ALLOW_NON_LOOPBACK_HTTP=1`
-  (`0.0.0.0` is treated as non-loopback)
+Operational semantics are documented in this repo and enforced by smoke gates.
 
-Live session contract (`/turn`):
-- `session_id` maps to one live persistent Haskell runtime worker (`--worker-stdio`)
-- first `/turn` for new `session_id` boots a new worker and runtime epoch
-- subsequent `/turn` requests for that `session_id` are handled by the same live worker
-- turn execution is serialized per session (no concurrent turns inside one session)
-- if worker is evicted/crashes, a new worker is created with a new `runtime_epoch`
-- response includes `runtime_epoch`, `runtime_turn_index`, `worker_mode`
-- if API-key-backed session-token enforcement is active, the first successful
-  turn also returns `session_token`; subsequent turns for that session must send
-  `X-QXFX0-Session-Token`
-- invalid input is rejected before a new session token is claimed
+## Lexicon and GF Pipeline
 
-Continuity semantics:
-- live continuity is guaranteed only while the worker epoch is alive
-- persisted `SystemState` restores after restart, but is not equal to live epoch continuity
-- `runtime_turn_index` is monotonic only inside one live `runtime_epoch` for that session
+Canonical flow:
 
-Failure semantics (`/turn`):
-- pre-send failure (worker dead before command send): sidecar may recreate worker and send once
-- post-send failure (timeout/protocol/transport after send attempt): no automatic retry of the same turn
-- post-send uncertainty returns explicit unknown-outcome contract (`error = "turn_outcome_unknown"`, `result_unknown = true`)
-- explicit worker turn error poisons live worker continuity: sidecar drops that worker and next request starts a fresh epoch
+`SQL -> morphology JSON -> GF artifacts -> Agda artifacts -> Haskell generated map`
 
-Readiness probe semantics:
-- `--runtime-ready` / `/runtime-ready` do not bootstrap session and do not write `runtime_sessions`
-- legacy `--health` remains for compatibility and is session-bootstrap based
-- fresh DB readiness reports `schema_bootstrapable_fresh_db`; current DB readiness reports `schema_ok version=N`
-- legacy schema and inconsistent-current-schema cases must be not-ready until bootstrap/migration or explicit repair resolves them
-- strict readiness requires the same effective backend contour as strict turn bootstrap
-- `nix_policy_present=true` means the policy file resolved; `nix_ok=true` means the constitutional evaluator is operational as well
-- `/runtime-ready` JSON exposes `nix_policy_present`, `nix_ok`, and `nix_issues` so operators can separate missing policy from broken Nix infrastructure
-- Nix probe compatibility follows runtime behavior: it tries
-  `nix-instantiate --restricted` first and falls back to plain eval only when
-  `--restricted` is unsupported by the local evaluator
+Key files:
+- `spec/sql/lexicon/seed_ru_curated.sql`
+- `spec/gf/lexicon_bilingual.tsv`
+- `src/QxFx0/Lexicon/Generated.hs`
+- `resources/morphology/lexicon_quality.json`
 
-## Runtime Environment
+Validation:
 
-- `QXFX0_ROOT` project root/resource root (recommended in deployment)
-- `QXFX0_DB` exact database path
-- `QXFX0_STATE_DIR` directory for auto DB path (`qxfx0.db`)
-- `QXFX0_SESSION_ID` default session id
-- `QXFX0_SESSION_LOCK` enable per-session runtime lock
-- `QXFX0_SESSION_TTL_SECONDS` idle TTL for HTTP session workers
-- `QXFX0_WORKER_TIMEOUT_SECONDS` hard timeout for one worker command
-- `QXFX0_HTTP_HOST` canonical HTTP sidecar bind host (`127.0.0.1` by default;
-  direct Python sidecar also accepts legacy `QXFX0_HOST`)
-- `QXFX0_HTTP_PORT` canonical HTTP sidecar port (direct Python sidecar also
-  accepts legacy `QXFX0_PORT`)
-- `QXFX0_API_KEY` shared HTTP API key for `/sidecar-health`, `/health`,
-  `/runtime-ready`, and `/turn`
-- `QXFX0_REQUIRE_SESSION_TOKEN` enforce per-session ownership token on
-  authenticated `/turn` traffic (defaults to `1` when `QXFX0_API_KEY` is set)
-- `QXFX0_HTTP_INPUT_MAX` sidecar input length ceiling; must stay aligned with
-  runtime `maxInputLength`
-- `QXFX0_ALLOW_NON_LOOPBACK_HTTP` explicit opt-in for non-loopback HTTP bind
-- `QXFX0_EMBEDDING_BACKEND` `local-deterministic|remote-http`; remote embedding
-  is enabled only by this explicit switch, not by `EMBEDDING_API_URL` alone.
-  The implicit local deterministic backend is autonomous and strict-ready.
-- LLM completion providers are not part of the turn runtime. Low-confidence
-  turns use local recovery and persist typed recovery cause/strategy/evidence in
-  replay traces.
+```bash
+bash scripts/check_lexicon.sh
+bash scripts/check_generated_artifacts.sh
+```
 
-## Known Limitations
+## What QxFx0 Is Not
 
-- **Consciousness/intuition are state-machine metaphors**, not adaptive AI. The "consciousness loop" tracks dialogue state, surfacing pressure channels, and narrative fragments through deterministic updates. The "intuition" layer is a Bayesian-scoring state machine with static priors. Neither layer learns or adapts dynamically at runtime.
-- **Nix guard is partially stubbed.** `resolvePipelineNixPath` always returns `Nothing`, meaning the constitutional Nix evaluator is not dynamically resolved in production. The Nix policy file is validated at readiness time but not re-evaluated per turn.
-- **GF linearization fallback.** When the Grammar Framework PGF runtime is unavailable, `linearizeClaimAstRus` falls back to hardcoded Russian text templates in `Render/Dialogue.hs`. These are deterministic fallback strings, not generated output. The system degrades gracefully but loses grammatical guarantees in this mode.
-- **Test coverage gaps.** The default test interpreter stubs all external effects (Nix, Agda, Shadow verification). Happy-path integration with real external systems is untested.
-- **Non-determinism in production.** While the test harness uses fixed time, the production runtime calls `getCurrentTime`, `threadDelay`, and UUID generation, meaning turn surfacing and request tracing are not fully deterministic in production.
-- **Session lock cap is a soft limit.** Past 4096 tracked sessions, new sessions bypass the per-session lock registry and use a shared overflow lock. This prevents unbounded memory growth but reduces isolation for overflow sessions.
+- Not a web-scale knowledge engine
+- Not a drop-in replacement for frontier LLM products
+- Not legal/medical advice software
+- Not a black-box stochastic sampler
 
-## Reproducibility and Determinism
+## Known Limits (Honest)
 
-- Contract and gate outputs are reproducible at the build/test/check level when toolchain and inputs are pinned.
-- Runtime dialogue execution is intentionally not fully deterministic in production due to wall-clock time, UUID generation, and live process scheduling.
-- Core release decisions should rely on gate evidence (`scripts/ci_gate_contract.sh`) rather than raw turn-by-turn textual identity.
+- Full extended profile needs high-memory CI runners
+- GF toolchain availability can be infra-dependent
+- Some external integrations are intentionally stubbed in local test contour
+- Production runtime is not bit-for-bit deterministic (time/UUID/process scheduling)
 
-## Transfer Maturity (v2 -> QxFx0)
+## Why This Matters for AI Infrastructure
 
-- Package A (CI/gates/docs): transferred and active.
-- Package B (runtime/render/PGF compatibility): transferred and validated by core gates.
-- Package C (GF bilingual lexicon pipeline + generated artifacts): transferred and validated by core gates.
-- Current release target is core production contour (`PROD_GO`); extended contour remains a separate high-memory execution track.
+QxFx0 demonstrates a different axis of AI system design:
+- explicit contracts over implicit behavior
+- auditable gates over narrative confidence
+- deterministic recovery over opaque fallback chains
 
-## Notes
+This is useful for domains where explainability, control, and reproducibility matter more than pure generative breadth.
 
-- Post-render safety guard is enforced before final output.
-- Local recovery replaces LLM rescue fallback: the system narrows scope,
-  exposes uncertainty, asks clarification, or safely recovers without a model
-  call.
-- User-facing recovery text stays human-readable; typed
-  `recoveryCause/recoveryStrategy/recoveryEvidence` remain in replay trace and
-  observability fields.
-- `scripts/verify.sh` and `scripts/release-smoke.sh` validate replay traces
-  against `trcLocalRecoveryPolicy`, `trcRecoveryCause`,
-  `trcRecoveryStrategy`, and `trcRecoveryEvidence`.
-- `scripts/verify.sh` and `scripts/release-smoke.sh` require Agda by default. Local bypass for `verify.sh` is explicit via `QXFX0_SKIP_AGDA=1`.
-- Embedded SQL fallback is disabled unless `QXFX0_ALLOW_EMBEDDED_SQL_FALLBACK=1`.
-- `saveState` writes canonical `dialogue_state` plus per-turn projections in one transaction (`turn_quality`, `shadow_divergence_log`).
-- Runtime-critical schema objects must be declared in `spec/sql/runtime_critical_contract.tsv` and validated by `scripts/check_schema_contract.py`.
+## Repository References
+
+- Runtime invariants: `docs/runtime_invariants.md`
+- CI profile: `docs/CI_PRODUCTION_PROFILE.md`
+- Extended runbook: `docs/EXTENDED_CONTRACT_RUNBOOK.md`
+- Release smoke: `scripts/release-smoke.sh`
+- Canonical gate evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+
+## License
+
+MIT

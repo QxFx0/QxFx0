@@ -407,8 +407,6 @@ zrelnost_N	зрелость	ru	noun	зрелость
 zrelnost_N	maturity	en	noun	maturity															
 ideologiya_N	идеология	ru	noun	идеология															
 ideologiya_N	ideology	en	noun	ideology															
-illuziya_N	иллюзия	ru	noun	иллюзия															
-illuziya_N	illusion	en	noun	illusion															
 immanenciya_N	имманенция	ru	noun	имманенция															
 immanenciya_N	immanence	en	noun	immanence															
 impuls_N	импульс	ru	noun	импульс															
@@ -633,8 +631,6 @@ sud_N	суд	ru	noun	суд
 sud_N	judgment	en	noun	judgment															
 suschestvo_N	существо	ru	noun	существо															
 suschestvo_N	creature	en	noun	creature															
-suschestvovanie_N	существование	ru	noun	существование															
-suschestvovanie_N	existence	en	noun	existence															
 scena_N	сцена	ru	noun	сцена															
 scena_N	scene	en	noun	scene															
 taktika_N	тактика	ru	noun	тактика															
@@ -730,39 +726,39 @@ vydelyat_V	highlight	en	verb	highlight
 vyraghat_V	выражать	ru	verb	выражать															
 vyraghat_V	express	en	verb	express															
 bolshoj_A	большой	ru	adj	большой	большого	большом	большой	большим											
-bolshoj_A	big	en	adj	big																
+bolshoj_A	big	en	adj	big															
 vazhnyj_A	важный	ru	adj	важный	важного	важном	важный	важным											
-vazhnyj_A	important	en	adj	important																
+vazhnyj_A	important	en	adj	important															
 novyj_A	новый	ru	adj	новый	нового	новом	новый	новым											
-novyj_A	new	en	adj	new																
+novyj_A	new	en	adj	new															
 staryj_A	старый	ru	adj	старый	старого	старом	старый	старым											
-staryj_A	old	en	adj	old																
+staryj_A	old	en	adj	old															
 silnyj_A	сильный	ru	adj	сильный	сильного	сильном	сильный	сильным											
-silnyj_A	strong	en	adj	strong																
+silnyj_A	strong	en	adj	strong															
 slabyj_A	слабый	ru	adj	слабый	слабого	слабом	слабый	слабым											
-slabyj_A	weak	en	adj	weak																
-bystro_Adv	быстро	ru	adv	быстро																
-bystro_Adv	quickly	en	adv	quickly																
-medlenno_Adv	медленно	ru	adv	медленно																
-medlenno_Adv	slowly	en	adv	slowly																
-sejchas_Adv	сейчас	ru	adv	сейчас																
-sejchas_Adv	now	en	adv	now																
-vsegda_Adv	всегда	ru	adv	всегда																
-vsegda_Adv	always	en	adv	always																
-nikogda_Adv	никогда	ru	adv	никогда																
-nikogda_Adv	never	en	adv	never																
-v_Prep	в	ru	prep	в																
-v_Prep	in	en	prep	in																
-na_Prep	на	ru	prep	на																
-na_Prep	on	en	prep	on																
-o_Prep	о	ru	prep	о																
-o_Prep	about	en	prep	about																
-i_Conj	и	ru	conj	и																
-i_Conj	and	en	conj	and																
-no_Conj	но	ru	conj	но																
-no_Conj	but	en	conj	but																
-ili_Conj	или	ru	conj	или																
-ili_Conj	or	en	conj	or																
+slabyj_A	weak	en	adj	weak															
+bystro_Adv	быстро	ru	adv	быстро															
+bystro_Adv	quickly	en	adv	quickly															
+medlenno_Adv	медленно	ru	adv	медленно															
+medlenno_Adv	slowly	en	adv	slowly															
+sejchas_Adv	сейчас	ru	adv	сейчас															
+sejchas_Adv	now	en	adv	now															
+vsegda_Adv	всегда	ru	adv	всегда															
+vsegda_Adv	always	en	adv	always															
+nikogda_Adv	никогда	ru	adv	никогда															
+nikogda_Adv	never	en	adv	never															
+v_Prep	в	ru	prep	в															
+v_Prep	in	en	prep	in															
+na_Prep	на	ru	prep	на															
+na_Prep	on	en	prep	on															
+o_Prep	о	ru	prep	о															
+o_Prep	about	en	prep	about															
+i_Conj	и	ru	conj	и															
+i_Conj	and	en	conj	and															
+no_Conj	но	ru	conj	но															
+no_Conj	but	en	conj	but															
+ili_Conj	или	ru	conj	или															
+ili_Conj	or	en	conj	or															
 abrazivnost_N	абразивность	ru	noun	абразивность	абразивности	абразивности	абразивность	абразивностью											
 abrazivnost_N	abrazivness	en	noun	abrazivness															
 avantazhnost_N	авантажность	ru	noun	авантажность	авантажности	авантажности	авантажность	авантажностью											
@@ -3441,8 +3437,6 @@ blyum_N	блюм	ru	noun	блюм	блюма	блюме	блюм	блюмом
 blyum_N	blyum	en	noun	blyum															
 blyums_N	блюмс	ru	noun	блюмс	блюмса	блюмсе	блюмс	блюмсом											
 blyums_N	blyums	en	noun	blyums															
-blyad_N	блядь	ru	noun	блядь	бляди	бляди	блядь	блядью											
-blyad_N	blyad	en	noun	blyad															
 blyaha_N	бляха	ru	noun	бляха	бляхи	бляхе	бляху	бляхой											
 blyaha_N	blyaha	en	noun	blyaha															
 bober_N	бобер	ru	noun	бобер	бобра	бобре	бобра	бобром											
@@ -4443,8 +4437,6 @@ gobbl_N	гоббл	ru	noun	гоббл	гоббла	гоббле	гоббл	го�
 gobbl_N	gobbl	en	noun	gobbl															
 goboj_N	гобой	ru	noun	гобой	гобоя	гобое	гобой	гобоем											
 goboj_N	goboj	en	noun	goboj															
-govno_N	говно	ru	noun	говно	говна	говне	говно	говном											
-govno_N	govno	en	noun	govno															
 govor_N	говор	ru	noun	говор	говора	говоре	говор	говором											
 govor_N	govor	en	noun	govor															
 gogot_N	гогот	ru	noun	гогот	гогота	гоготе	гогот	гоготом											

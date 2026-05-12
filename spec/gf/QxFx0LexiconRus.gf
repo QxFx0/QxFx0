@@ -468,7 +468,6 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     blyuz_N = { nom = "блюз" ; gen = "блюза" ; prep = "блюзе" ; acc = "блюз" ; ins = "блюзом" } ;
     blyum_N = { nom = "блюм" ; gen = "блюма" ; prep = "блюме" ; acc = "блюм" ; ins = "блюмом" } ;
     blyums_N = { nom = "блюмс" ; gen = "блюмса" ; prep = "блюмсе" ; acc = "блюмс" ; ins = "блюмсом" } ;
-    blyad_N = { nom = "блядь" ; gen = "бляди" ; prep = "бляди" ; acc = "блядь" ; ins = "блядью" } ;
     blyaha_N = { nom = "бляха" ; gen = "бляхи" ; prep = "бляхе" ; acc = "бляху" ; ins = "бляхой" } ;
     bober_N = { nom = "бобер" ; gen = "бобра" ; prep = "бобре" ; acc = "бобра" ; ins = "бобром" } ;
     bobik_N = { nom = "бобик" ; gen = "бобика" ; prep = "бобике" ; acc = "бобика" ; ins = "бобиком" } ;
@@ -1067,7 +1066,6 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     goban_N = { nom = "гобан" ; gen = "гобана" ; prep = "гобане" ; acc = "гобан" ; ins = "гобаном" } ;
     gobbl_N = { nom = "гоббл" ; gen = "гоббла" ; prep = "гоббле" ; acc = "гоббл" ; ins = "гобблом" } ;
     goboj_N = { nom = "гобой" ; gen = "гобоя" ; prep = "гобое" ; acc = "гобой" ; ins = "гобоем" } ;
-    govno_N = { nom = "говно" ; gen = "говна" ; prep = "говне" ; acc = "говно" ; ins = "говном" } ;
     govor_N = { nom = "говор" ; gen = "говора" ; prep = "говоре" ; acc = "говор" ; ins = "говором" } ;
     gogot_N = { nom = "гогот" ; gen = "гогота" ; prep = "гоготе" ; acc = "гогот" ; ins = "гоготом" } ;
     godik_N = { nom = "годик" ; gen = "годика" ; prep = "годике" ; acc = "годик" ; ins = "годиком" } ;

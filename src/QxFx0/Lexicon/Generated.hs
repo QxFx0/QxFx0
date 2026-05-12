@@ -2346,11 +2346,6 @@ generatedLexemeEntries =
     ("блюмсе", "блюмс", "noun", "prepositional"),
     ("блюмс", "блюмс", "noun", "accusative"),
     ("блюмсом", "блюмс", "noun", "instrumental"),
-    ("блядь", "блядь", "noun", "nominative"),
-    ("бляди", "блядь", "noun", "genitive"),
-    ("бляди", "блядь", "noun", "prepositional"),
-    ("блядь", "блядь", "noun", "accusative"),
-    ("блядью", "блядь", "noun", "instrumental"),
     ("бляха", "бляха", "noun", "nominative"),
     ("бляхи", "бляха", "noun", "genitive"),
     ("бляхе", "бляха", "noun", "prepositional"),
@@ -5341,11 +5336,6 @@ generatedLexemeEntries =
     ("гобое", "гобой", "noun", "prepositional"),
     ("гобой", "гобой", "noun", "accusative"),
     ("гобоем", "гобой", "noun", "instrumental"),
-    ("говно", "говно", "noun", "nominative"),
-    ("говна", "говно", "noun", "genitive"),
-    ("говне", "говно", "noun", "prepositional"),
-    ("говно", "говно", "noun", "accusative"),
-    ("говном", "говно", "noun", "instrumental"),
     ("говор", "говор", "noun", "nominative"),
     ("говора", "говор", "noun", "genitive"),
     ("говоре", "говор", "noun", "prepositional"),
@@ -18024,20 +18014,6 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "блюмсом" , lfLemma = "блюмс" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
-    ("бляди",
-      [
-        LexemeForm { lfSurface = "бляди" , lfLemma = "блядь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "бляди" , lfLemma = "блядь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("блядь",
-      [
-        LexemeForm { lfSurface = "блядь" , lfLemma = "блядь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "блядь" , lfLemma = "блядь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("блядью",
-      [
-        LexemeForm { lfSurface = "блядью" , lfLemma = "блядь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
     ("бляха",
       [
         LexemeForm { lfSurface = "бляха" , lfLemma = "бляха" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -28330,23 +28306,6 @@ generatedCandidateForms =
     ("гобоя",
       [
         LexemeForm { lfSurface = "гобоя" , lfLemma = "гобой" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("говна",
-      [
-        LexemeForm { lfSurface = "говна" , lfLemma = "говно" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("говне",
-      [
-        LexemeForm { lfSurface = "говне" , lfLemma = "говно" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("говно",
-      [
-        LexemeForm { lfSurface = "говно" , lfLemma = "говно" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "говно" , lfLemma = "говно" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("говном",
-      [
-        LexemeForm { lfSurface = "говном" , lfLemma = "говно" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("говор",
       [

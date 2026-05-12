@@ -469,7 +469,6 @@ abstract QxFx0Lexicon = {
     blyuz_N : Lexeme ;
     blyum_N : Lexeme ;
     blyums_N : Lexeme ;
-    blyad_N : Lexeme ;
     blyaha_N : Lexeme ;
     bober_N : Lexeme ;
     bobik_N : Lexeme ;
@@ -1068,7 +1067,6 @@ abstract QxFx0Lexicon = {
     goban_N : Lexeme ;
     gobbl_N : Lexeme ;
     goboj_N : Lexeme ;
-    govno_N : Lexeme ;
     govor_N : Lexeme ;
     gogot_N : Lexeme ;
     godik_N : Lexeme ;

@@ -17,6 +17,8 @@ AUTO_TSV = ROOT / "spec" / "sql" / "lexicon" / "seed_ru_auto.tsv"
 
 NEEDED_CASES = ("nominative", "genitive", "prepositional", "accusative", "instrumental")
 CYR_RE = re.compile(r"^[а-яё]+$")
+# Domain safety filter for conversational RU contour.
+RU_LEMMA_DENYLIST: Set[str] = {"блядь", "говно"}
 
 
 @dataclass(frozen=True)
@@ -116,6 +118,8 @@ def gather_candidates(existing_lemmas: Set[str], existing_form_map: Dict[str, Se
             if case_tag not in NEEDED_CASES:
                 continue
             if lemma in existing_lemmas:
+                continue
+            if lemma in RU_LEMMA_DENYLIST:
                 continue
             if not CYR_RE.fullmatch(lemma):
                 continue

@@ -475,7 +475,6 @@ data Lemma : Set where
   blyuz_N : Lemma
   blyum_N : Lemma
   blyums_N : Lemma
-  blyad_N : Lemma
   blyaha_N : Lemma
   bober_N : Lemma
   bobik_N : Lemma
@@ -1074,7 +1073,6 @@ data Lemma : Set where
   goban_N : Lemma
   gobbl_N : Lemma
   goboj_N : Lemma
-  govno_N : Lemma
   govor_N : Lemma
   gogot_N : Lemma
   godik_N : Lemma
@@ -2477,7 +2475,6 @@ lemmaNominative blyudo_N = "блюдо"
 lemmaNominative blyuz_N = "блюз"
 lemmaNominative blyum_N = "блюм"
 lemmaNominative blyums_N = "блюмс"
-lemmaNominative blyad_N = "блядь"
 lemmaNominative blyaha_N = "бляха"
 lemmaNominative bober_N = "бобер"
 lemmaNominative bobik_N = "бобик"
@@ -3076,7 +3073,6 @@ lemmaNominative gnus_Nv2 = "гнусь"
 lemmaNominative goban_N = "гобан"
 lemmaNominative gobbl_N = "гоббл"
 lemmaNominative goboj_N = "гобой"
-lemmaNominative govno_N = "говно"
 lemmaNominative govor_N = "говор"
 lemmaNominative gogot_N = "гогот"
 lemmaNominative godik_N = "годик"
@@ -4479,7 +4475,6 @@ lemmaGenitive blyudo_N = "блюда"
 lemmaGenitive blyuz_N = "блюза"
 lemmaGenitive blyum_N = "блюма"
 lemmaGenitive blyums_N = "блюмса"
-lemmaGenitive blyad_N = "бляди"
 lemmaGenitive blyaha_N = "бляхи"
 lemmaGenitive bober_N = "бобра"
 lemmaGenitive bobik_N = "бобика"
@@ -5078,7 +5073,6 @@ lemmaGenitive gnus_Nv2 = "гнуси"
 lemmaGenitive goban_N = "гобана"
 lemmaGenitive gobbl_N = "гоббла"
 lemmaGenitive goboj_N = "гобоя"
-lemmaGenitive govno_N = "говна"
 lemmaGenitive govor_N = "говора"
 lemmaGenitive gogot_N = "гогота"
 lemmaGenitive godik_N = "годика"
@@ -6481,7 +6475,6 @@ lemmaPrepositional blyudo_N = "блюде"
 lemmaPrepositional blyuz_N = "блюзе"
 lemmaPrepositional blyum_N = "блюме"
 lemmaPrepositional blyums_N = "блюмсе"
-lemmaPrepositional blyad_N = "бляди"
 lemmaPrepositional blyaha_N = "бляхе"
 lemmaPrepositional bober_N = "бобре"
 lemmaPrepositional bobik_N = "бобике"
@@ -7080,7 +7073,6 @@ lemmaPrepositional gnus_Nv2 = "гнуси"
 lemmaPrepositional goban_N = "гобане"
 lemmaPrepositional gobbl_N = "гоббле"
 lemmaPrepositional goboj_N = "гобое"
-lemmaPrepositional govno_N = "говне"
 lemmaPrepositional govor_N = "говоре"
 lemmaPrepositional gogot_N = "гоготе"
 lemmaPrepositional godik_N = "годике"
@@ -8018,8 +8010,8 @@ lemmaPrepositional yazyk_N = "языке"
 lemmaPrepositional yakor_N = "якоре"
 
 lemmaCount : Nat
-lemmaCount = 2000
+lemmaCount = 1998
 
-lemmaCountExpected : lemmaCount ≡ 2000
+lemmaCountExpected : lemmaCount ≡ 1998
 lemmaCountExpected = refl
 
