@@ -143,6 +143,36 @@ bash scripts/check_generated_artifacts.sh
 - Some external integrations are intentionally stubbed in local test contour
 - Production runtime is not bit-for-bit deterministic (time/UUID/process scheduling)
 
+## EN Language Status
+
+QxFx0 has experimental English support with the following characteristics:
+
+**Capabilities:**
+- GF-based English linearization via `QxFx0SyntaxEng`
+- Bilingual lexicon with ~2000 EN lemmas in `spec/gf/lexicon_bilingual.tsv`
+- Language routing: pure Latin input → English GF path (conservative policy)
+- EN-localized recovery surfaces for degraded/confidence scenarios
+- EN quality gate: `scripts/check_en_render_path.sh`
+
+**Current Limitations:**
+- EN lexicon coverage is smaller than Russian (prioritized RU core)
+- EN GF linearization patterns are less varied than Russian
+- Parser confidence tuning is optimized for Russian morphology
+- Mixed input (RU+EN) defaults to Russian GF path
+
+**Quality Targets (EN Gate):**
+- intent_fit_rate >= 0.90
+- gf_output_rate >= 0.85
+- fallback_rate <= 0.15
+- ru_leakage_rate <= 0.05
+- critical_mismatch_count = 0
+
+To run EN evaluation:
+```bash
+bash scripts/run_en_eval.sh
+bash scripts/check_en_render_path.sh
+```
+
 ## Why This Matters for AI Infrastructure
 
 QxFx0 demonstrates a different axis of AI system design:

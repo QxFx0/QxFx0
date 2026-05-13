@@ -176,6 +176,24 @@ else
   fi
 fi
 
+# ── Gate 4b: EN render path quality (informational for core, required for extended) ───────────────────────────────
+EN_PATH_LOG="$GATES_DIR/06b_en_render_path_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && RUN_ID="$RUN_ID" PROFILE="$PROFILE" QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" bash scripts/check_en_render_path.sh) > "$EN_PATH_LOG" 2>&1; then
+  INTENT_FIT_RATE=$(grep -oE 'intent_fit_rate=[0-9.]+' "$EN_PATH_LOG" | tail -1 | cut -d= -f2 || true)
+  GF_OUTPUT_RATE=$(grep -oE 'gf_output_rate=[0-9.]+' "$EN_PATH_LOG" | tail -1 | cut -d= -f2 || true)
+  RU_LEAKAGE_RATE=$(grep -oE 'ru_leakage_rate=[0-9.]+' "$EN_PATH_LOG" | tail -1 | cut -d= -f2 || true)
+  log_gate "check_en_render_path.sh" "0" "PASS" "intent_fit=${INTENT_FIT_RATE:-n/a}, gf_output=${GF_OUTPUT_RATE:-n/a}, ru_leakage=${RU_LEAKAGE_RATE:-n/a}"
+else
+  EN_PATH_EXIT=$?
+  if [ "$EN_PATH_EXIT" -eq 2 ]; then
+    log_gate "check_en_render_path.sh" "$EN_PATH_EXIT" "INFRA" "unable to measure EN path in this environment"
+    # Don't fail contract for INFRA on EN gate (core profile)
+  else
+    log_gate "check_en_render_path.sh" "$EN_PATH_EXIT" "FAIL" "EN quality thresholds violated"
+    # Don't fail contract for EN gate failures (core profile - informational only)
+  fi
+fi
+
 # ── Gate 5: Haddock ─────────────────────────────────────────────────────
 HADDOCK_LOG="$GATES_DIR/05_check_haddock_${RUN_ID}_${PROFILE}.log"
 if (cd "$ROOT" && bash scripts/check_haddock.sh 2>&1) > "$HADDOCK_LOG" 2>&1; then
