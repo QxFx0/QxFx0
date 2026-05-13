@@ -30,6 +30,17 @@ If you need deterministic dialogue infrastructure with strict operational semant
 - Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
 - CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
 
+## Status Snapshot (2026-05-13)
+
+- Canonical core run: `ci-20260513-195724`
+- Core verdict: `CONTRACT_VERDICT: PROD_GO`
+- Core contour: build, tests, architecture, GF quality, GF render path, artifacts, lexicon, degraded-local smoke
+- Extended contour: intentionally separated (requires high-memory runner for full scientific profile)
+
+For auditors/reviewers, see:
+- `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+- `reports/baseline_v2/final_gates/_gate_results_ci-20260513-195724_core.md`
+
 ## Architecture Snapshot
 
 - `src/QxFx0/**`: runtime core, routing, render pipeline, state, observability
@@ -140,6 +151,12 @@ QxFx0 demonstrates a different axis of AI system design:
 - deterministic recovery over opaque fallback chains
 
 This is useful for domains where explainability, control, and reproducibility matter more than pure generative breadth.
+
+## 2026 Focus
+
+1. Reduce template fallback paths and expand GF-native Russian generation quality.
+2. Improve practical RU/EN dual-language conversational parity.
+3. Add traceable domain adapters (for example legal/structured knowledge corpora) without breaking deterministic core contracts.
 
 ## Repository References
 
