@@ -924,20 +924,26 @@ if [ -x "$BIN" ]; then
       QXFX0_ROOT="$ROOT" \
       QXFX0_RUNTIME_MODE="$SMOKE_RUNTIME_MODE" \
       QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" \
-      "$BIN" --session "smoke1" --input "Что такое свобода?" --json
-    )" 2>"$CLI_STDERR_LOG"
+      "$BIN" --session "smoke1" --input "Что такое свобода?" --json \
+      2>"$CLI_STDERR_LOG"
+    )"
     CLI_STATUS=$?
     CLI_STDERR="$(cat "$CLI_STDERR_LOG" 2>/dev/null || true)"
     rm -f "$CLI_STDERR_LOG"
     if [ "$CLI_STATUS" -ne 0 ]; then
-        if is_cli_infra_fail "$CLI_STDERR"; then
+        # Some runtime failures surface on stdout; preserve both channels for infra classification.
+        CLI_ERROR_DETAIL="$CLI_STDERR"
+        if [ -z "$CLI_ERROR_DETAIL" ] && [ -n "$OUT" ]; then
+            CLI_ERROR_DETAIL="$OUT"
+        fi
+        if is_cli_infra_fail "$CLI_ERROR_DETAIL"; then
             if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
-                step_skip "CLI strict runtime init failed due to infra (datalog/nix unavailable): $(summarize_text "$CLI_STDERR")"
+                step_skip "CLI strict runtime init failed due to infra (datalog/nix unavailable): $(summarize_text "$CLI_ERROR_DETAIL")"
             else
-                step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
+                step_fail "CLI exited non-zero: $(summarize_text "$CLI_ERROR_DETAIL")"
             fi
         else
-            step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
+            step_fail "CLI exited non-zero: $(summarize_text "$CLI_ERROR_DETAIL")"
         fi
     elif [ -n "$OUT" ]; then
         step_info "Output received ($(echo "$OUT" | wc -c) bytes)"
