@@ -2,7 +2,7 @@
 
 **Branch:** `feat/wp123-20260510`  
 **Index SHA:** Post-WP1–WP3 recovery canonical run  
-**Last updated:** 2026-05-11  
+**Last updated:** 2026-05-13  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
 ---
@@ -11,29 +11,29 @@
 
 ### Primary Contract Run — Post-GF Path Contract Enforcement
 
-**RUN_ID:** `ci-20260511-022550`  
-**Commit:** `d79c4a71` (merged release commit; includes core contract Gate 4a `check_gf_render_path.sh`)  
+**RUN_ID:** `ci-20260513-164609`  
+**Commit:** `b81b50b` (current HEAD at transfer-finalization closure; includes core contract Gate 4a `check_gf_render_path.sh`)  
 **Verdict:** **CONTRACT_VERDICT: PROD_GO**  
 **All core gates PASS:** build, tests, architecture, GF quality, GF render-path gate, haddock, SQL sync, schema consistency, schema contract, generated artifacts, lexicon, release-smoke degraded-local (ACCEPT_WITH_SKIPS, 0 FAIL).
 
 | File | Path | Description |
 |------|------|-------------|
-| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260511-022550_core.md` | PROD_GO, all core gates PASS |
-| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260511-022550_core.tsv` | Machine-readable gate results |
+| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260513-164609_core.md` | PROD_GO, all core gates PASS |
+| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260513-164609_core.tsv` | Machine-readable gate results |
 
-### Per-Gate Logs (core, RUN_ID: `ci-20260511-022550`)
+### Per-Gate Logs (core, RUN_ID: `ci-20260513-164609`)
 
 | Gate | Log File |
 |------|----------|
-| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260511-022550_core.log` |
-| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260511-022550_core.log` |
-| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260511-022550_core.log` |
-| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260511-022550_core.log` |
-| 04a check_gf_render_path.sh | `reports/baseline_v2/final_gates/06a_gf_render_path_ci-20260511-022550_core.log` |
-| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260511-022550_core.log` |
-| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260511-022550_core.log` |
-| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260511-022550_core.log` |
-| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260511-022550_core.log` |
+| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260513-164609_core.log` |
+| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260513-164609_core.log` |
+| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260513-164609_core.log` |
+| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260513-164609_core.log` |
+| 04a check_gf_render_path.sh | `reports/baseline_v2/final_gates/06a_gf_render_path_ci-20260513-164609_core.log` |
+| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260513-164609_core.log` |
+| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260513-164609_core.log` |
+| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260513-164609_core.log` |
+| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260513-164609_core.log` |
 
 ---
 
@@ -43,14 +43,14 @@ These logs are from prior attempts in this target repo and **must not** be used 
 
 | File Pattern | Reason Superseded | Canonical Replacement |
 |--------------|-------------------|----------------------|
-| `reports/baseline_v2/final_gates/*_ci-20260509-194300_*` | Early core attempt; GF quality gate failed (missing PGF) | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260509-201231_*` | Package A target closure (PROD_GO), pre-WP1–WP3 | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260509-234041_*` | Pre-WP3 canonical core run (PROD_GO). Superseded by GF-path-enforced run `ci-20260511-022550`. | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-214705_*` | Post-WP3 attempt; Gate 11 REJECT due to INFRA (smoke strict semantics not yet fixed) | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-225652_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-233024_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260511-022550_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260511-000108_*` | Pre-GF-path-gate canonical run (before Gate 4a integration) | `_gate_results_ci-20260511-022550_core.md` |
-| Source-repo evidence (`_gate_results_ci-20260509-183851_*`, `ci-20260509-161530_*`, etc.) | Belongs to `QxFx0_v2` (`stabilize-v2-gf`), not target repo | `_gate_results_ci-20260511-022550_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-194300_*` | Early core attempt; GF quality gate failed (missing PGF) | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-201231_*` | Package A target closure (PROD_GO), pre-WP1–WP3 | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-234041_*` | Pre-WP3 canonical core run (PROD_GO). Superseded by canonical closure run `ci-20260513-164609`. | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-214705_*` | Post-WP3 attempt; Gate 11 REJECT due to INFRA (smoke strict semantics not yet fixed) | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-225652_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-233024_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260513-164609_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260511-000108_*` | Pre-GF-path-gate canonical run (before Gate 4a integration) | `_gate_results_ci-20260513-164609_core.md` |
+| Source-repo evidence (`_gate_results_ci-20260509-183851_*`, `ci-20260509-161530_*`, etc.) | Belongs to `QxFx0_v2` (`stabilize-v2-gf`), not target repo | `_gate_results_ci-20260513-164609_core.md` |
 
 ---
 
@@ -91,7 +91,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 
 ```bash
 # Canonical core contract summary (PROD_GO)
-cat reports/baseline_v2/final_gates/_gate_results_ci-20260511-022550_core.md | grep "CONTRACT_VERDICT"
+cat reports/baseline_v2/final_gates/_gate_results_ci-20260513-164609_core.md | grep "CONTRACT_VERDICT"
 # Expected: CONTRACT_VERDICT: PROD_GO
 ```
 
