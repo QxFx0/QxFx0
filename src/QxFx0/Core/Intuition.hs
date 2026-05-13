@@ -4,6 +4,7 @@ module QxFx0.Core.Intuition
   ( IntuitiveState(..)
   , defaultIntuitiveState
   , basePrior
+  , IntuitiveFlash(..)
   , likelihoodGivenFlash
   , updatePosterior
   , likelihoodGivenNoFlash
@@ -11,8 +12,6 @@ module QxFx0.Core.Intuition
   , longPosteriorAfterFlash
   , updateLongPosterior
   , flashThreshold
-  , FlashTrigger(..)
-  , IntuitiveFlash(..)
   , checkIntuition
   , triggerToGapDomains
   , intuitionSignalStrength
@@ -71,6 +70,8 @@ import QxFx0.Types.Intuition
   , basePrior
   , defaultIntuitiveState
   , effectivePosterior
+  , FlashTrigger(..)
+  , IntuitiveFlash(..)
   )
 import QxFx0.Types.Vec (CoreVec(..))
 import Text.Printf (printf)
@@ -99,11 +100,6 @@ updatePosterior resonance tension prior =
       pE   = pEH * prior + pEnH * (1.0 - prior)
   in clamp01 ((pEH * prior) / max 1e-9 pE)
 
-data FlashTrigger
-  = DeepResonanceTrigger | CrisisMomentTrigger | PureKernelTrigger | ConvergenceTrigger
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (FromJSON, ToJSON)
-
 renderTrigger :: FlashTrigger -> Text
 renderTrigger DeepResonanceTrigger = triggerDeepResonance
 renderTrigger CrisisMomentTrigger  = triggerCrisisMoment
@@ -115,15 +111,6 @@ triggerToGapDomains ConvergenceTrigger   = ["HumanPsychology", "CausalChains"]
 triggerToGapDomains CrisisMomentTrigger  = ["HumanPsychology"]
 triggerToGapDomains DeepResonanceTrigger = ["HumanPsychology", "CulturalAnthropology"]
 triggerToGapDomains PureKernelTrigger    = ["CausalChains", "RhetoricalAnalysis"]
-
-data IntuitiveFlash = IntuitiveFlash
-  { ifStrength     :: !Double
-  , ifTrigger      :: !FlashTrigger
-  , ifKernelSignal :: !Text
-  , ifDirective    :: !Text
-  , ifOverridesAll :: !Bool
-  } deriving stock (Show, Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
 qxfx0CoreVec :: CoreVec
 qxfx0CoreVec =
