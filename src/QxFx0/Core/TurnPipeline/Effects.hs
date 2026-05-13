@@ -24,7 +24,7 @@ import QxFx0.Core.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimpl
 import QxFx0.Core.Policy.Contracts (fallbackWord)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
-import QxFx0.Core.Intuition (IntuitiveFlash)
+import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
 
 import Data.Text (Text)

@@ -15,11 +15,16 @@ SHARED_CABAL_STORE="${QXFX0_SHARED_CABAL_STORE:-$DEFAULT_CABAL_STORE}"
 SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
 EXIT_CODE=0
+HOST_PYTHON_SITE_PACKAGES=""
+if command -v python3 >/dev/null 2>&1; then
+  HOST_PYTHON_SITE_PACKAGES="$(python3 -c "import site; print(site.getusersitepackages())" 2>/dev/null || true)"
+fi
 REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
 ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 ENFORCE_HADDOCK_GATE="${QXFX0_ENFORCE_HADDOCK_GATE:-1}"
 ENABLE_COVERAGE_GATE="${QXFX0_ENABLE_COVERAGE_GATE:-1}"
+RUN_SLOW_TESTS="${QXFX0_RUN_SLOW_TESTS:-auto}"
 VERIFY_HOME="$(mktemp -d "${TMPDIR:-/tmp}/qxfx0-verify.XXXXXX")"
 VERIFY_CACHE="$VERIFY_HOME/.cache"
 VERIFY_CONFIG="$VERIFY_HOME/.config"
@@ -75,6 +80,7 @@ run_local() {
     XDG_CONFIG_HOME="$VERIFY_CONFIG" \
     XDG_STATE_HOME="$VERIFY_STATE" \
     CABAL_DIR="$VERIFY_CABAL_DIR" \
+    PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
     bash -c "cd \"$ROOT\" && $*"
   ) 9>"$CABAL_LOCK_FILE"
 }
@@ -87,6 +93,7 @@ run_in_dev() {
     XDG_CONFIG_HOME="$VERIFY_CONFIG" \
     XDG_STATE_HOME="$VERIFY_STATE" \
     CABAL_DIR="$VERIFY_CABAL_DIR" \
+    PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
     run_nix_flake develop "$ROOT" --command bash -c "cd \"$ROOT\" && $*"
   ) 9>"$CABAL_LOCK_FILE"
 }
@@ -97,6 +104,7 @@ run_nix_app() {
   XDG_CONFIG_HOME="$VERIFY_CONFIG" \
   XDG_STATE_HOME="$VERIFY_STATE" \
   CABAL_DIR="$VERIFY_CABAL_DIR" \
+  PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
   bash -c "cd \"$ROOT\" && nix --extra-experimental-features \"nix-command flakes\" run .#$1"
 }
 
@@ -115,11 +123,30 @@ run_agda_check() {
     run_local "agda spec/Legitimacy.agda >/dev/null 2>&1"
     run_local "agda spec/LexiconData.agda >/dev/null 2>&1"
     run_local "agda spec/LexiconProof.agda >/dev/null 2>&1"
+    run_local "agda spec/BayesianCoverage.agda >/dev/null 2>&1"
+    run_local "agda spec/FamilyCoverage.agda >/dev/null 2>&1"
+    run_local "agda spec/ClusterInsightTotality.agda >/dev/null 2>&1"
+    run_local "agda spec/GeodesicPlanTotality.agda >/dev/null 2>&1"
   elif command -v nix >/dev/null 2>&1; then
     run_nix_app "typecheck-agda" >/dev/null 2>&1
   else
     return 127
   fi
+}
+
+spacy_ru_model_ready() {
+  if ! command -v python3 >/dev/null 2>&1; then
+    return 1
+  fi
+  python3 - <<'PY' >/dev/null 2>&1
+import importlib.util
+import sys
+
+if importlib.util.find_spec("spacy") is None:
+    raise SystemExit(1)
+import spacy
+spacy.load("ru_core_news_sm")
+PY
 }
 
 write_agda_witness() {
@@ -201,8 +228,8 @@ else
   exit 1
 fi
 
-echo "[2/9] Cabal test ..."
-if TEST_OUT="$(run_cabal_check "cabal test qxfx0-test 2>&1")"; then
+echo "[2/9] Cabal test (fast profile) ..."
+if TEST_OUT="$(run_cabal_check "cabal test qxfx0-test-fast 2>&1")"; then
   TEST_FAIL=$(echo "$TEST_OUT" | grep -c 'FAIL' || true)
   TEST_CASES_RAW=$(echo "$TEST_OUT" | grep -oP 'Cases: \K\d+' | tail -1 || true)
   TEST_TRIED_RAW=$(echo "$TEST_OUT" | grep -oP 'Tried: \K\d+' | tail -1 || true)
@@ -224,10 +251,49 @@ if TEST_OUT="$(run_cabal_check "cabal test qxfx0-test 2>&1")"; then
     fi
   fi
 else
-  echo "  FAIL (cabal test exited non-zero)"
+  echo "  FAIL (cabal test qxfx0-test-fast exited non-zero)"
   echo "$TEST_OUT" | tail -20
   exit 1
 fi
+
+echo "[2s/9] Cabal test (slow profile) ..."
+case "$RUN_SLOW_TESTS" in
+  0|false|FALSE|no|NO)
+    echo "  SKIP (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
+    ;;
+  1|true|TRUE|yes|YES)
+    if ! spacy_ru_model_ready; then
+      echo "  FAIL (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS but spaCy/ru_core_news_sm is unavailable)"
+      exit 1
+    fi
+    if SLOW_TEST_OUT="$(run_cabal_check "cabal test qxfx0-test-slow 2>&1")"; then
+      SLOW_TEST_SUMMARY="$(echo "$SLOW_TEST_OUT" | grep -E 'Cases: .*Tried: .*Errors: .*Failures:' | tail -1 || true)"
+      echo "  OK (${SLOW_TEST_SUMMARY:-slow suite passed})"
+    else
+      echo "  FAIL (cabal test qxfx0-test-slow exited non-zero)"
+      echo "$SLOW_TEST_OUT" | tail -20
+      exit 1
+    fi
+    ;;
+  auto|AUTO|Auto|'')
+    if spacy_ru_model_ready; then
+      if SLOW_TEST_OUT="$(run_cabal_check "cabal test qxfx0-test-slow 2>&1")"; then
+        SLOW_TEST_SUMMARY="$(echo "$SLOW_TEST_OUT" | grep -E 'Cases: .*Tried: .*Errors: .*Failures:' | tail -1 || true)"
+        echo "  OK (${SLOW_TEST_SUMMARY:-slow suite passed})"
+      else
+        echo "  FAIL (cabal test qxfx0-test-slow exited non-zero)"
+        echo "$SLOW_TEST_OUT" | tail -20
+        exit 1
+      fi
+    else
+      echo "  SKIP (spaCy/ru_core_news_sm unavailable; set QXFX0_RUN_SLOW_TESTS=1 to force)"
+    fi
+    ;;
+  *)
+    echo "  FAIL (invalid QXFX0_RUN_SLOW_TESTS value: $RUN_SLOW_TESTS)"
+    exit 1
+    ;;
+esac
 
 echo "[2b/9] Haddock module headers ..."
 if [ "$ENFORCE_HADDOCK_GATE" = "1" ]; then

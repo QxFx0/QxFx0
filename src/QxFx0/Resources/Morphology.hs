@@ -19,28 +19,17 @@ import QxFx0.Resources.Paths (getMorphologyDir)
 import QxFx0.Types (MorphologyData(..), LexemeForm(..))
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>))
-import System.IO.Unsafe (unsafePerformIO)
-import Control.Concurrent.MVar (MVar, newMVar, modifyMVar)
-
-{-# NOINLINE morphologyCache #-}
-morphologyCache :: MVar (Map.Map FilePath MorphologyData)
-morphologyCache = unsafePerformIO (newMVar Map.empty)
 
 loadMorphologyData :: IO MorphologyData
 loadMorphologyData = do
   mDirRaw <- getMorphologyDir
   mDir <- canonicalizePath mDirRaw
-  modifyMVar morphologyCache $ \cache ->
-    case Map.lookup mDir cache of
-      Just md -> pure (cache, md)
-      Nothing -> do
-        prep <- loadMorphologyDict (mDir </> "prepositional.json")
-        gen <- loadMorphologyDict (mDir </> "genitive.json")
-        nom <- loadMorphologyDict (mDir </> "nominative.json")
-        forms <- loadFormsBySurface (mDir </> "forms_by_surface.json")
-        _ <- loadJsonValueStrict (mDir </> "lexicon_quality.json")
-        let md = MorphologyData prep gen nom forms
-        pure (Map.insert mDir md cache, md)
+  prep <- loadMorphologyDict (mDir </> "prepositional.json")
+  gen <- loadMorphologyDict (mDir </> "genitive.json")
+  nom <- loadMorphologyDict (mDir </> "nominative.json")
+  forms <- loadFormsBySurface (mDir </> "forms_by_surface.json")
+  _ <- loadJsonValueStrict (mDir </> "lexicon_quality.json")
+  pure (MorphologyData prep gen nom forms)
 
 validateMorphologyResources :: FilePath -> IO (Bool, String)
 validateMorphologyResources morphDir = do

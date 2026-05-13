@@ -16,7 +16,7 @@ import QxFx0.Core.IdentitySignal (IdentitySignal)
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
-import QxFx0.Core.Intuition (IntuitiveFlash)
+import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)

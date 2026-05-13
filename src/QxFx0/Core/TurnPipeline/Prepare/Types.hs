@@ -10,7 +10,7 @@ module QxFx0.Core.TurnPipeline.Prepare.Types
 import QxFx0.Types
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
-import QxFx0.Core.Intuition (IntuitiveFlash)
+import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Semantic.Embedding (EmbeddingResult)
 
 import Data.Text (Text)

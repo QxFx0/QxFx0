@@ -8,6 +8,8 @@ module QxFx0.Types.Intuition
   , basePrior
   , defaultIntuitiveState
   , effectivePosterior
+  , FlashTrigger(..)
+  , IntuitiveFlash(..)
   ) where
 
 import Control.DeepSeq (NFData)
@@ -20,6 +22,7 @@ import Data.Aeson
   , (.!=)
   , (.=)
   )
+import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import QxFx0.Types.Thresholds
@@ -28,6 +31,20 @@ import QxFx0.Types.Thresholds
   , intuitionEffectivePosteriorShortWeight
   , intuitionEffectivePosteriorLongWeight
   )
+
+data FlashTrigger
+  = DeepResonanceTrigger | CrisisMomentTrigger | PureKernelTrigger | ConvergenceTrigger
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON, NFData)
+
+data IntuitiveFlash = IntuitiveFlash
+  { ifStrength     :: !Double
+  , ifTrigger      :: !FlashTrigger
+  , ifKernelSignal :: !Text
+  , ifDirective    :: !Text
+  , ifOverridesAll :: !Bool
+  } deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON, NFData)
 
 data IntuitiveState = IntuitiveState
   { isCooldown :: !Int

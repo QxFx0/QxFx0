@@ -18,6 +18,7 @@ data SafetyStatus
 
 data RenderSegmentKind
   = SegmentTemplate
+  | SegmentFallback       -- ^ Hardcoded safety circuit-breaker
   | SegmentIdentityClaim
   | SegmentNarrative
   | SegmentSurfacing

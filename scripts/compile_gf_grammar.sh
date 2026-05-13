@@ -6,6 +6,9 @@ REQUIRE_GF="${QXFX0_REQUIRE_GF:-1}"
 SYNTAX_CONCRETE="$ROOT/spec/gf/QxFx0SyntaxRus.gf"
 OUT_PGF="$ROOT/spec/gf/QxFx0Syntax.pgf"
 
+# Add ~/.cabal/bin to PATH to find gf binary (avoid shell alias 'gf=git fetch')
+export PATH="$HOME/.cabal/bin:$PATH"
+
 if [ ! -f "$SYNTAX_CONCRETE" ]; then
   echo "GF_GRAMMAR_INPUT_MISSING: $SYNTAX_CONCRETE" >&2
   exit 1
@@ -13,7 +16,7 @@ fi
 
 compile_with_gf() {
   cd "$ROOT"
-  gf -make -f pgf "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
+  "$GF_BIN" -make -f pgf "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
 }
 
 compile_with_nix_shell() {
@@ -42,7 +45,16 @@ if ! needs_compile; then
   exit 0
 fi
 
-if command -v gf >/dev/null 2>&1; then
+# Check for real GF compiler (not shell alias)
+GF_BIN=""
+for candidate in "$HOME/.cabal/bin/gf" "$(command -v gf 2>/dev/null)"; do
+  if [ -x "$candidate" ] && "$candidate" --version 2>/dev/null | grep -q "Grammatical Framework"; then
+    GF_BIN="$candidate"
+    break
+  fi
+done
+
+if [ -n "$GF_BIN" ]; then
   compile_with_gf
 else
   if [ "$REQUIRE_GF" != "1" ]; then

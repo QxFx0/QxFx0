@@ -15,6 +15,10 @@ DEFAULT_CABAL_LOGS="${HOST_CABAL_DIR}/logs"
 SHARED_CABAL_STORE="${QXFX0_SHARED_CABAL_STORE:-$DEFAULT_CABAL_STORE}"
 SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
+HOST_PYTHON_SITE_PACKAGES=""
+if command -v python3 >/dev/null 2>&1; then
+  HOST_PYTHON_SITE_PACKAGES="$(python3 -c "import site; print(site.getusersitepackages())" 2>/dev/null || true)"
+fi
 BIN=""
 DB="/tmp/qxfx0-smoke-$$.db"
 PORT=19170
@@ -28,11 +32,6 @@ ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 RUN_SLOW_TESTS="${QXFX0_RUN_SLOW_TESTS:-auto}"
 SMOKE_RUNTIME_MODE="strict"
 RELEASE_SMOKE_MODE="${QXFX0_RELEASE_SMOKE_MODE:-strict}"
-# WP-B: degraded-local must propagate to runtime mode so the binary does not
-# enforce strict readiness checks that fail on local-dev infra gaps.
-if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
-    SMOKE_RUNTIME_MODE="degraded-local"
-fi
 # Supported modes:
 #   strict         — CI/release; infra failures are treated as FAIL.
 #   degraded-local — local dev; infra failures are SKIP/WARN.
@@ -107,6 +106,14 @@ summarize_text() {
 
 is_nix_infra_error() {
     printf '%s' "$1" | grep -Eqi 'big-lock|read-only file system|operation not permitted|permission denied|cannot connect to.*nix|opening lock file'
+}
+
+is_cli_infra_fail() {
+    printf '%s' "$1" | grep -Eqi 'datalog=false|nix=false'
+}
+
+is_http_infra_fail() {
+    printf '%s' "$1" | grep -Eqi 'bind_permission_denied|non_loopback_bind|eaddrinuse'
 }
 
 validate_replay_trace_json() {
@@ -265,12 +272,58 @@ run_local_cabal() {
       XDG_CONFIG_HOME="$RELEASE_CONFIG" \
       XDG_STATE_HOME="$RELEASE_STATE" \
       CABAL_DIR="$RELEASE_CABAL_DIR" \
+      PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
       "$@"
   ) 9>"$CABAL_LOCK_FILE"
 }
 
+spacy_ru_model_ready() {
+    if ! command -v python3 >/dev/null 2>&1; then
+        return 1
+    fi
+    python3 - <<'PY' >/dev/null 2>&1
+import importlib.util
+import sys
+
+if importlib.util.find_spec("spacy") is None:
+    raise SystemExit(1)
+import spacy
+spacy.load("ru_core_news_sm")
+PY
+}
+
+AGDA_BIN=""
+
+resolve_agda_bin() {
+    if [ -n "$AGDA_BIN" ]; then
+        echo "$AGDA_BIN"
+        return 0
+    fi
+    if command -v agda >/dev/null 2>&1; then
+        AGDA_BIN="$(command -v agda)"
+        echo "$AGDA_BIN"
+        return 0
+    fi
+    if command -v nix >/dev/null 2>&1; then
+        local nix_agda=""
+        nix_agda="$(nix eval --impure --expr 'with import <nixpkgs> {}; "${agda}/bin/agda"' 2>/dev/null | tr -d '"' || true)"
+        if [ -n "$nix_agda" ] && [ -x "$nix_agda" ]; then
+            AGDA_BIN="$nix_agda"
+            echo "$AGDA_BIN"
+            return 0
+        fi
+    fi
+    return 1
+}
+
 write_agda_witness() {
-    run_local_cabal cabal run -v0 qxfx0-main -- --write-agda-witness
+    local agda_path=""
+    agda_path="$(resolve_agda_bin)" || true
+    if [ -n "$agda_path" ]; then
+        PATH="$PATH:$(dirname "$agda_path")" run_local_cabal cabal run -v0 qxfx0-main -- --write-agda-witness
+    else
+        run_local_cabal cabal run -v0 qxfx0-main -- --write-agda-witness
+    fi
 }
 
 run_sql_file() {
@@ -350,7 +403,6 @@ echo "╚═══════════════════════�
 echo ""
 step_info "Profile context: release-smoke | Runtime mode: $SMOKE_RUNTIME_MODE | Script mode: $RELEASE_SMOKE_MODE"
 step_info "Profile semantics: strict=REJECT on any skip; degraded-local=ACCEPT_WITH_SKIPS on infra skips"
-step_info "Runtime mode for release gates: $SMOKE_RUNTIME_MODE"
 
 PRE_SMOKE_STATUS=""
 if git -C "$ROOT" rev-parse --is-inside-work-tree &>/dev/null; then
@@ -390,8 +442,8 @@ echo "────────────────────────�
 echo "[2/10] Unit tests (cabal test)"
 echo "─────────────────────────────────────────────────────────────"
 TEST_LOG="/tmp/qxfx0-test-$$.log"
-step_info "Running cabal test qxfx0-test..."
-if run_local_cabal cabal test qxfx0-test >"$TEST_LOG" 2>&1; then
+step_info "Running cabal test qxfx0-test-fast..."
+if run_local_cabal cabal test qxfx0-test-fast >"$TEST_LOG" 2>&1; then
     tail -8 "$TEST_LOG"
     TEST_SUMMARY="$(grep -E 'Cases: .*Tried: .*Errors: .*Failures:' "$TEST_LOG" | tail -1 || true)"
     TEST_ERRORS="$(echo "$TEST_SUMMARY" | sed -nE 's/.*Errors:[[:space:]]*([0-9]+).*/\1/p')"
@@ -399,13 +451,13 @@ if run_local_cabal cabal test qxfx0-test >"$TEST_LOG" 2>&1; then
     TEST_ERRORS="${TEST_ERRORS:-0}"
     TEST_FAILURES="${TEST_FAILURES:-0}"
     if [ "$TEST_ERRORS" -gt 0 ] || [ "$TEST_FAILURES" -gt 0 ]; then
-        step_fail "test suite reported failures (errors=$TEST_ERRORS, failures=$TEST_FAILURES)"
+        step_fail "fast suite reported failures (errors=$TEST_ERRORS, failures=$TEST_FAILURES)"
     else
         step_pass
     fi
 else
     tail -20 "$TEST_LOG" 2>/dev/null || true
-    step_fail "cabal test exited non-zero"
+    step_fail "cabal test qxfx0-test-fast exited non-zero"
 fi
 rm -f "$TEST_LOG"
 
@@ -414,10 +466,36 @@ case "$RUN_SLOW_TESTS" in
         step_skip "slow suite disabled (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
         ;;
     1|true|TRUE|yes|YES)
-        step_skip "target has no separate slow test suite (qxfx0-test-slow not present); run full qxfx0-test instead"
+        if ! spacy_ru_model_ready; then
+            step_fail "QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS but spaCy/ru_core_news_sm is unavailable"
+        else
+            SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
+            step_info "Running cabal test qxfx0-test-slow..."
+            if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
+                tail -8 "$SLOW_TEST_LOG"
+                step_pass
+            else
+                tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
+                step_fail "cabal test qxfx0-test-slow exited non-zero"
+            fi
+            rm -f "$SLOW_TEST_LOG"
+        fi
         ;;
     auto|AUTO|Auto|'')
-        step_skip "slow suite skipped: auto mode (spaCy + ru_core_news_sm check not implemented in minimal integration)"
+        if spacy_ru_model_ready; then
+            SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
+            step_info "Running cabal test qxfx0-test-slow..."
+            if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
+                tail -8 "$SLOW_TEST_LOG"
+                step_pass
+            else
+                tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
+                step_fail "cabal test qxfx0-test-slow exited non-zero"
+            fi
+            rm -f "$SLOW_TEST_LOG"
+        else
+            step_skip "slow suite skipped: spaCy + ru_core_news_sm is unavailable"
+        fi
         ;;
     *)
         step_fail "unsupported QXFX0_RUN_SLOW_TESTS value: $RUN_SLOW_TESTS"
@@ -549,15 +627,24 @@ if [ -d "$SEED_DIR" ]; then
             step_info "Applied $SEED_COUNT seed files with errors"
         else
             step_info "Applied $SEED_COUNT seed files"
+            # Knowledge schema is a required extension for V2 runtime (WP5).
+            if [ -f "$SEED_DIR/knowledge/schema.sql" ]; then
+                step_info "Loading knowledge schema..."
+                if ! sqlite3 "$DB" < "$SEED_DIR/knowledge/schema.sql" 2>&1; then
+                    step_fail "knowledge schema failed to apply"
+                    SEED_OK=false
+                fi
+            fi
             IDENTITY_COUNT="$(sqlite3 "$DB" "SELECT count(*) FROM identity_claims" 2>/dev/null || echo "0")"
             CLUSTER_COUNT="$(sqlite3 "$DB" "SELECT count(*) FROM semantic_clusters" 2>/dev/null || echo "0")"
             TEMPLATE_COUNT="$(sqlite3 "$DB" "SELECT count(*) FROM realization_templates" 2>/dev/null || echo "0")"
             step_info "identity_claims rows: $IDENTITY_COUNT"
             step_info "semantic_clusters rows: $CLUSTER_COUNT"
             step_info "realization_templates rows: $TEMPLATE_COUNT"
+            # V2 is template-less: realization_templates may legitimately be empty.
+            # We only strictly require identity_claims and semantic_clusters.
             if [ "$IDENTITY_COUNT" -gt 0 ] 2>/dev/null && \
-               [ "$CLUSTER_COUNT" -gt 0 ] 2>/dev/null && \
-               [ "$TEMPLATE_COUNT" -gt 0 ] 2>/dev/null; then
+               [ "$CLUSTER_COUNT" -gt 0 ] 2>/dev/null; then
                 step_pass
             else
                 step_fail "seed data incomplete: identity=$IDENTITY_COUNT clusters=$CLUSTER_COUNT templates=$TEMPLATE_COUNT"
@@ -605,7 +692,11 @@ if [ -f "$CONCEPTS" ] && command -v nix-instantiate &>/dev/null; then
     else
         SUMMARY="$(summarize_text "$CONCEPT_COUNT_OUT")"
         if is_nix_infra_error "$CONCEPT_COUNT_OUT"; then
-            step_fail "nix evaluator unavailable while reading concepts.nix: $SUMMARY"
+            if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                step_skip "nix evaluator unavailable (infra): $SUMMARY"
+            else
+                step_fail "nix evaluator unavailable while reading concepts.nix: $SUMMARY"
+            fi
         else
             step_fail "concepts.nix evaluation failed: $SUMMARY"
         fi
@@ -638,7 +729,11 @@ if [ -f "$CONCEPTS" ] && command -v nix-instantiate &>/dev/null; then
             fi
             SUMMARY="$(summarize_text "$FAILURE_OUT")"
             if is_nix_infra_error "$FAILURE_OUT"; then
-                step_fail "nix evaluator unavailable while reading constitutional thresholds: $SUMMARY"
+                if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                    step_skip "nix evaluator unavailable (infra): $SUMMARY"
+                else
+                    step_fail "nix evaluator unavailable while reading constitutional thresholds: $SUMMARY"
+                fi
             else
                 step_fail "constitutional threshold evaluation failed: $SUMMARY"
             fi
@@ -684,9 +779,17 @@ EOF
             fi
         else
             if is_nix_infra_error "$SOUFFLE_RESOLVE_DETAIL"; then
-                step_fail "souffle runtime unavailable because nix resolver failed: $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                    step_skip "souffle runtime unavailable because nix resolver failed (infra): $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                else
+                    step_fail "souffle runtime unavailable because nix resolver failed: $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                fi
             else
-                step_fail "souffle runtime unavailable: $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                    step_skip "souffle runtime unavailable (infra): $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                else
+                    step_fail "souffle runtime unavailable: $(summarize_text "$SOUFFLE_RESOLVE_DETAIL")"
+                fi
             fi
         fi
     else
@@ -713,7 +816,11 @@ if [ -f "$AGDA_DIR/R5Core.agda" ] && command -v agda &>/dev/null; then
         "$AGDA_DIR"/Sovereignty.agda \
         "$AGDA_DIR"/Legitimacy.agda \
         "$AGDA_DIR"/LexiconData.agda \
-        "$AGDA_DIR"/LexiconProof.agda; do
+        "$AGDA_DIR"/LexiconProof.agda \
+        "$AGDA_DIR"/BayesianCoverage.agda \
+        "$AGDA_DIR"/FamilyCoverage.agda \
+        "$AGDA_DIR"/ClusterInsightTotality.agda \
+        "$AGDA_DIR"/GeodesicPlanTotality.agda; do
         [ -f "$ag" ] || continue
         AGDA_COUNT=$((AGDA_COUNT + 1))
         step_info "Type-checking $(basename "$ag")..."
@@ -737,33 +844,21 @@ if [ -f "$AGDA_DIR/R5Core.agda" ] && command -v agda &>/dev/null; then
         fi
     fi
 elif [ -f "$AGDA_DIR/R5Core.agda" ] && nix_flake_available; then
-    if [ "$REQUIRE_AGDA" = "0" ] || [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
-        step_skip "agda not installed (infra skip in degraded-local)"
-    else
-        step_info "agda not found, using Nix flake fallback..."
-        if run_nix_flake run .#typecheck-agda 2>&1; then
-            AGDA_READY=1
-            step_info "Agda modules type-checked successfully via Nix"
-            WITNESS_OUT="$(write_agda_witness 2>&1)" || {
-                if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
-                    step_skip "Agda witness generation failed (infra skip in degraded-local)"
-                else
-                    step_fail "Agda witness generation failed"
-                fi
-                step_info "$WITNESS_OUT"
-                AGDA_READY=0
-            }
-            if [ "$AGDA_READY" = "1" ]; then
-                step_info "Witness: $(echo "$WITNESS_OUT" | tail -1)"
-                step_pass
-            fi
-        else
-            if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
-                step_skip "Agda type-check failed via Nix fallback (infra skip in degraded-local)"
-            else
-                step_fail "Agda type-check failed via Nix fallback"
-            fi
+    step_info "agda not found, using Nix flake fallback..."
+    if run_nix_flake run .#typecheck-agda 2>&1; then
+        AGDA_READY=1
+        step_info "Agda modules type-checked successfully via Nix"
+        WITNESS_OUT="$(write_agda_witness 2>&1)" || {
+            step_fail "Agda witness generation failed"
+            step_info "$WITNESS_OUT"
+            AGDA_READY=0
+        }
+        if [ "$AGDA_READY" = "1" ]; then
+            step_info "Witness: $(echo "$WITNESS_OUT" | tail -1)"
+            step_pass
         fi
+    else
+        step_fail "Agda type-check failed via Nix fallback"
     fi
 else
     if [ "$REQUIRE_AGDA" = "1" ]; then
@@ -816,13 +911,31 @@ if [ -x "$BIN" ]; then
     step_info "Binary: $BIN"
     step_info "Executing: $BIN --session smoke1 --input 'Что такое свобода?' --json"
     CLI_STDERR_LOG="$(mktemp "${TMPDIR:-/tmp}/qxfx0-cli-smoke.XXXXXX")"
-    OUT="$(HOME="$RELEASE_HOME" XDG_CACHE_HOME="$RELEASE_CACHE" XDG_CONFIG_HOME="$RELEASE_CONFIG" XDG_STATE_HOME="$RELEASE_STATE" CABAL_DIR="$RELEASE_CABAL_DIR" QXFX0_DB="$DB" QXFX0_ROOT="$ROOT" QXFX0_RUNTIME_MODE="$SMOKE_RUNTIME_MODE" QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" "$BIN" --session "smoke1" --input "Что такое свобода?" --json 2>"$CLI_STDERR_LOG")"
+    AGDA_DIR="${AGDA_BIN:+$(dirname "$AGDA_BIN")}"
+    OUT="$(
+      [ -n "$AGDA_DIR" ] && PATH="$AGDA_DIR:$PATH"
+      HOME="$RELEASE_HOME" \
+      XDG_CACHE_HOME="$RELEASE_CACHE" \
+      XDG_CONFIG_HOME="$RELEASE_CONFIG" \
+      XDG_STATE_HOME="$RELEASE_STATE" \
+      CABAL_DIR="$RELEASE_CABAL_DIR" \
+      PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
+      QXFX0_DB="$DB" \
+      QXFX0_ROOT="$ROOT" \
+      QXFX0_RUNTIME_MODE="$SMOKE_RUNTIME_MODE" \
+      QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" \
+      "$BIN" --session "smoke1" --input "Что такое свобода?" --json
+    )" 2>"$CLI_STDERR_LOG"
     CLI_STATUS=$?
     CLI_STDERR="$(cat "$CLI_STDERR_LOG" 2>/dev/null || true)"
     rm -f "$CLI_STDERR_LOG"
     if [ "$CLI_STATUS" -ne 0 ]; then
-        if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ] && printf '%s' "$CLI_STDERR" | grep -qE 'RuntimeInitError|not_ready'; then
-            step_skip "CLI runtime init not ready in degraded-local (infra skip): $(summarize_text "$CLI_STDERR")"
+        if is_cli_infra_fail "$CLI_STDERR"; then
+            if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                step_skip "CLI strict runtime init failed due to infra (datalog/nix unavailable): $(summarize_text "$CLI_STDERR")"
+            else
+                step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
+            fi
         else
             step_fail "CLI exited non-zero: $(summarize_text "$CLI_STDERR")"
         fi
@@ -892,10 +1005,37 @@ echo "[10/10] HTTP sidecar smoke test"
 echo "─────────────────────────────────────────────────────────────"
 HTTP_SCRIPT="$ROOT/scripts/http_runtime.py"
 if [ -f "$HTTP_SCRIPT" ] && [ -x "$BIN" ]; then
+    ALT_PORT=""
+    if command -v python3 >/dev/null 2>&1; then
+        ALT_PORT="$(python3 -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()" 2>/dev/null || true)"
+    fi
+    if [ -n "$ALT_PORT" ]; then
+        step_info "Switching to dynamic port $ALT_PORT (original $PORT may be unavailable)"
+        PORT="$ALT_PORT"
+    fi
     step_info "Starting HTTP sidecar on port $PORT..."
     HTTP_LOG="$(mktemp "${TMPDIR:-/tmp}/qxfx0-http-smoke.XXXXXX")"
-    HOME="$RELEASE_HOME" XDG_CACHE_HOME="$RELEASE_CACHE" XDG_CONFIG_HOME="$RELEASE_CONFIG" XDG_STATE_HOME="$RELEASE_STATE" CABAL_DIR="$RELEASE_CABAL_DIR" QXFX0_DB="$DB" QXFX0_BIN="$BIN" QXFX0_HTTP_PORT="$PORT" QXFX0_API_KEY="" QXFX0_ROOT="$ROOT" QXFX0_WORKERS="0" QXFX0_HTTP_HOST="127.0.0.1" QXFX0_RUNTIME_MODE="$SMOKE_RUNTIME_MODE" QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" \
-        python3 "$HTTP_SCRIPT" >"$HTTP_LOG" 2>&1 &
+    AGDA_DIR="${AGDA_BIN:+$(dirname "$AGDA_BIN")}"
+    (
+      [ -n "$AGDA_DIR" ] && PATH="$AGDA_DIR:$PATH"
+      HOME="$RELEASE_HOME" \
+      XDG_CACHE_HOME="$RELEASE_CACHE" \
+      XDG_CONFIG_HOME="$RELEASE_CONFIG" \
+      XDG_STATE_HOME="$RELEASE_STATE" \
+      CABAL_DIR="$RELEASE_CABAL_DIR" \
+      PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
+      QXFX0_DB="$DB" \
+      QXFX0_BIN="$BIN" \
+      QXFX0_HTTP_PORT="$PORT" \
+      QXFX0_API_KEY="" \
+      QXFX0_ROOT="$ROOT" \
+      QXFX0_WORKERS="0" \
+      QXFX0_HTTP_HOST="127.0.0.1" \
+      QXFX0_RUNTIME_MODE="$SMOKE_RUNTIME_MODE" \
+      QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" \
+      QXFX0_WORKER_TIMEOUT_SECONDS="30" \
+      python3 "$HTTP_SCRIPT" >"$HTTP_LOG" 2>&1
+    ) &
     PID_HTTP=$!
     step_info "Polling sidecar readiness (PID: $PID_HTTP)..."
     step_info "Checking /sidecar-health endpoint..."
@@ -926,20 +1066,23 @@ if [ -f "$HTTP_SCRIPT" ] && [ -x "$BIN" ]; then
             step_fail "turn endpoint returned unexpected: $TURN_RESP"
         fi
     else
-        if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ] && echo "$SIDECAR_HEALTH" | grep -q '"ok"\|"healthy"\|"up"'; then
-            step_skip "runtime readiness not ok in degraded-local (infra skip): runtime=$RUNTIME_READY"
-        else
-            HTTP_ERR="$(tail -20 "$HTTP_LOG" 2>/dev/null || true)"
-            if [ -n "$HTTP_ERR" ]; then
-                step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
+        HTTP_ERR="$(tail -20 "$HTTP_LOG" 2>/dev/null || true)"
+        if is_http_infra_fail "$HTTP_ERR"; then
+            if [ "$RELEASE_SMOKE_MODE" = "degraded-local" ]; then
+                step_skip "HTTP sidecar bind failed (infra): sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
             else
-                step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY"
+                step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
             fi
+        elif [ -n "$HTTP_ERR" ]; then
+            step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY sidecar_log=$(summarize_text "$HTTP_ERR")"
+        else
+            step_fail "health/readiness check failed: sidecar=$SIDECAR_HEALTH runtime=$RUNTIME_READY"
         fi
     fi
     kill "$PID_HTTP" 2>/dev/null || true
     wait "$PID_HTTP" 2>/dev/null || true
     PID_HTTP=""
+    cp "$HTTP_LOG" /tmp/qxfx0-http-smoke-last.log 2>/dev/null || true
     rm -f "$HTTP_LOG"
 else
     step_skip "http_runtime.py or binary not available"
