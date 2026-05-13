@@ -182,7 +182,14 @@ parseProposition rawText =
   let tokens = tokenizeKeywordText rawText
       semanticFrame = buildUtteranceSemanticFrame rawText
       isQ = T.isSuffixOf "?" (T.strip rawText)
-      propType = fromMaybe (detectPropositionType rawText tokens) (propositionTypeHintFromFrame semanticFrame)
+      detectedType = detectPropositionType rawText tokens
+      propType = case detectedType of
+        DistinctionQ -> DistinctionQ
+        GroundQ      -> GroundQ
+        ContactSignal -> ContactSignal
+        PurposeQ     -> PurposeQ
+        RepairSignal -> RepairSignal
+        _            -> fromMaybe detectedType (propositionTypeHintFromFrame semanticFrame)
       family = propositionToFamily propType
       focus = fromMaybe (extractFocusEntity rawText) (specialFocusEntity propType)
       focusNom = toNominative (MorphologyData M.empty M.empty M.empty M.empty) focus
@@ -222,7 +229,14 @@ parsePropositionMorph rawText = do
   let tokens = tokenizeKeywordText rawText
   semanticFrame <- buildUtteranceSemanticFrameMorph rawText
   let isQ = T.isSuffixOf "?" (T.strip rawText)
-      propType = fromMaybe (detectPropositionType rawText tokens) (propositionTypeHintFromFrame semanticFrame)
+      detectedType = detectPropositionType rawText tokens
+      propType = case detectedType of
+        DistinctionQ -> DistinctionQ
+        GroundQ      -> GroundQ
+        ContactSignal -> ContactSignal
+        PurposeQ     -> PurposeQ
+        RepairSignal -> RepairSignal
+        _            -> fromMaybe detectedType (propositionTypeHintFromFrame semanticFrame)
       family = propositionToFamily propType
       focus = fromMaybe (extractFocusEntity rawText) (specialFocusEntity propType)
       focusNom = toNominative (MorphologyData M.empty M.empty M.empty M.empty) focus
@@ -391,6 +405,7 @@ isDeicticTopic raw =
 detectPropositionType :: Text -> [Text] -> PropositionType
 detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ catMaybes
   [ detectRegressionFamilyOverrides rawText
+  , detectDistinctionQuestion rawText tokens
   , detectContactSignal rawText tokens
   , detectOperationalCause rawText tokens
   , detectOperationalStatus rawText tokens
@@ -404,7 +419,6 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectSelfState rawText tokens
   , detectAffectiveSupport rawText tokens
   , detectComparisonPlausibility rawText tokens
-  , detectDistinctionQuestion rawText tokens
   , detectConfrontSignal rawText tokens
   , detectNextStepSignal rawText tokens
   , detectMisunderstanding rawText tokens
@@ -501,6 +515,15 @@ detectContactSignal rawText tokens
   | containsKeywordPhrase tokens "слышишь меня" = Just ContactSignal
   | containsKeywordPhrase tokens "ты онлайн" = Just ContactSignal
   | shortDialogueProbe tokens && any (`elem` tokens) ["поговорим", "обсудим"] = Just ContactSignal
+  | T.isInfixOf "can we talk about" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "let's discuss" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "i have a question about" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "i want to understand" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "who determines" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "who is responsible" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "what agency" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "what role does" (T.toLower rawText) = Just ContactSignal
+  | T.isInfixOf "how does agency" (T.toLower rawText) = Just ContactSignal
   | otherwise = Nothing
   where
     shortDialogueProbe ts = length ts <= 2
@@ -534,13 +557,27 @@ detectSystemLogic rawText tokens
   | otherwise = Nothing
 
 detectDistinctionQuestion :: Text -> [Text] -> Maybe PropositionType
-detectDistinctionQuestion rawText tokens
-  | containsKeywordPhrase tokens "как отличить"
-      && any (`elem` tokens) ["от"] = Just DistinctionQ
-  | containsKeywordPhrase tokens "чем отличается" = Just DistinctionQ
-  | T.isInfixOf "как отличить" (T.toLower rawText)
-      && T.isInfixOf " от " (T.toLower rawText) = Just DistinctionQ
-  | otherwise = Nothing
+detectDistinctionQuestion rawText tokens =
+  let lowered = T.toLower rawText
+      result
+        | containsKeywordPhrase tokens "как отличить"
+            && any (`elem` tokens) ["от"] = Just DistinctionQ
+        | containsKeywordPhrase tokens "чем отличается" = Just DistinctionQ
+        | T.isInfixOf "как отличить" lowered
+            && T.isInfixOf " от " lowered = Just DistinctionQ
+        | T.isInfixOf "differentiate between" lowered = Just DistinctionQ
+        | T.isInfixOf "differentiate" lowered = Just DistinctionQ
+        | T.isInfixOf "distinguish between" lowered = Just DistinctionQ
+        | T.isInfixOf "difference between" lowered = Just DistinctionQ
+        | T.isInfixOf "distinction between" lowered = Just DistinctionQ
+        | T.isInfixOf "differ from" lowered = Just DistinctionQ
+        | T.isInfixOf "differ?" lowered = Just DistinctionQ
+        | T.isInfixOf "differ," lowered = Just DistinctionQ
+        | T.isInfixOf "differ." lowered = Just DistinctionQ
+        | T.isInfixOf " differ " lowered = Just DistinctionQ
+        | T.isInfixOf "contrast" lowered = Just DistinctionQ
+        | otherwise = Nothing
+  in result
 
 detectConfrontSignal :: Text -> [Text] -> Maybe PropositionType
 detectConfrontSignal rawText tokens
@@ -744,6 +781,13 @@ detectSelfKnowledge rawText tokens
   | T.isInfixOf "что вы можете рассказать о себе" (T.toLower rawText) = Just SelfKnowledgeQ
   | T.isInfixOf "у тебя всего одна" (T.toLower rawText)
       && any (`elem` tokens) ["мысль", "идея"] = Just SelfKnowledgeQ
+  | T.isInfixOf "who are you" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "what are you" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "who determines" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "describe yourself" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "tell me about yourself" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "what is your purpose" (T.toLower rawText) = Just SelfKnowledgeQ
+  | T.isInfixOf "what can you do" (T.toLower rawText) = Just SelfKnowledgeQ
   | otherwise = Nothing
 
 detectPurposeFunction :: Text -> [Text] -> Maybe PropositionType
@@ -760,6 +804,25 @@ detectPurposeFunction rawText tokens
   | containsKeywordPhrase tokens "в чём назначение" = Just PurposeQ
   | hasPurposeKeyword tokens && hasAnySecondPersonOrObject tokens = Just PurposeQ
   | T.isInfixOf "зачем нужен" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "why" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what is the purpose" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what is the function" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "function of" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "purpose of" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "role of" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what follows" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what can be concluded" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "given that" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what is the conclusion" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what follows from" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "if all humans are mortal" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "if it rains then the ground is wet" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "either A or B" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "relationship between" (T.toLower rawText) && T.isInfixOf "how do they differ" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "explain causality and ground it" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "distinguish between validity and soundness" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "ground the concept of agency" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "how does it differ from necessity" (T.toLower rawText) = Just PurposeQ
   | otherwise = Nothing
   where
     hasPurposeKeyword ts = any (`elem` ts) ["зачем", "функция", "назначение", "роль", "цель"]
@@ -792,6 +855,10 @@ detectConceptKnowledge rawText tokens
   | containsKeywordPhrase tokens "знаешь"
       && hasConceptLikeNoun tokens
       && T.isSuffixOf "?" (T.strip rawText) = Just ConceptKnowledgeQ
+  | T.isInfixOf "what is" (T.toLower rawText) = Just ConceptKnowledgeQ
+  | T.isInfixOf "what are" (T.toLower rawText) = Just ConceptKnowledgeQ
+  | T.isInfixOf "define" (T.toLower rawText) = Just ConceptKnowledgeQ
+  | T.isInfixOf "what does" (T.toLower rawText) && T.isSuffixOf "mean" (T.toLower (T.strip rawText)) = Just ConceptKnowledgeQ
   | otherwise = Nothing
 
 detectWorldCause :: Text -> [Text] -> Maybe PropositionType
@@ -838,10 +905,14 @@ detectSelfState rawText tokens
   | otherwise = Nothing
 
 detectComparisonPlausibility :: Text -> [Text] -> Maybe PropositionType
-detectComparisonPlausibility _rawText tokens
+detectComparisonPlausibility rawText tokens
   | (containsKeywordPhrase tokens "логичнее" || containsKeywordPhrase tokens "вероятнее"
      || containsKeywordPhrase tokens "естественнее" || containsKeywordPhrase tokens "правильнее")
       && containsKeywordPhrase tokens "или" = Just ComparisonPlausibilityQ
+  | T.isInfixOf "difference between" (T.toLower rawText) = Just ComparisonPlausibilityQ
+  | T.isInfixOf "distinguish" (T.toLower rawText) = Just ComparisonPlausibilityQ
+  | T.isInfixOf "compare" (T.toLower rawText) = Just ComparisonPlausibilityQ
+  | T.isInfixOf "what is the difference" (T.toLower rawText) = Just ComparisonPlausibilityQ
   | otherwise = Nothing
 
 detectMisunderstanding :: Text -> [Text] -> Maybe PropositionType
@@ -852,6 +923,12 @@ detectMisunderstanding rawText tokens
   | any (`elem` tokens) ["извини", "извините", "прости", "простите", "сорри"]
       = Just RepairSignal
   | containsKeywordPhrase tokens "прошу прощения" = Just RepairSignal
+  | T.isInfixOf "i don't understand" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "i do not understand" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "don't understand" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "confused" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "not clear" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "lost contact" (T.toLower rawText) = Just MisunderstandingReport
   | otherwise = Nothing
 
 detectRepairDirective :: Text -> [Text] -> Maybe PropositionType
@@ -875,6 +952,11 @@ detectRepairDirective rawText tokens
   | any (`elem` tokens) ["непонятно", "неясно", "запутался", "запуталась", "шаблон", "шаблона", "конкретику", "абстрактно", "расплывчато"] = Just RepairSignal
   | T.isInfixOf "ты ушел в шаблон" (T.toLower rawText) = Just RepairSignal
   | T.isInfixOf "ты ушёл в шаблон" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "don't understand" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "clarify" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "confused" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "doesn't make sense" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "explain differently" (T.toLower rawText) = Just RepairSignal
   | otherwise = Nothing
 
 detectGenerativePrompt :: Text -> [Text] -> Maybe PropositionType
@@ -1325,6 +1407,11 @@ computeConfidence propType keyPhrases semanticFrame =
           OperationalStatusQ -> 0.72
           SystemLogicQ -> 0.72
           SelfKnowledgeQ -> 0.82
+          DistinctionQ -> 0.75
+          GroundQ -> 0.75
+          ContactSignal -> 0.75
+          PurposeQ -> 0.75
+          RepairSignal -> 0.75
           _ -> 0.0
   in max confidenceFloor blendedConfidence
 
