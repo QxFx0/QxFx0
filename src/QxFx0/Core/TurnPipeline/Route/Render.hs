@@ -65,7 +65,7 @@ import QxFx0.ExceptionPolicy
   , throwQxFx0
   )
 
-import Data.Char (isSpace)
+import Data.Char (isAlpha, isSpace)
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import Data.Maybe (fromMaybe)
@@ -76,6 +76,7 @@ import Data.Time.Clock (UTCTime)
 data RenderStatic = RenderStatic
   { rsRenderWithBg :: !Text
   , rsTemplateArtifact :: !DialogueRenderArtifact
+  , rsPreferredGfLang :: !Text
   , rsModePrefixText :: !Text
   , rsAnchorPrefixText :: !Text
   , rsNarrativeFragmentText :: !Text
@@ -191,6 +192,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       { repRenderStatic = RenderStatic
           { rsRenderWithBg = renderWithBg
           , rsTemplateArtifact = dialogueArtifact
+          , rsPreferredGfLang = detectInputGfLang input
           , rsModePrefixText =
               if structuredSurface
                 then ""
@@ -390,16 +392,24 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                     Nothing
    in fmap
         (\(cause, strategy, evidence) ->
+          let preferredLang = detectInputGfLang (ipfRawText (tiFrame ti))
+          in
           LocalRecoveryPlan
             { lrpCause = cause
             , lrpStrategy = strategy
             , lrpEvidence = evidence
-            , lrpSurface = renderLocalRecoverySurface cause strategy (tiBestTopic ti)
+            , lrpSurface = renderLocalRecoverySurface preferredLang cause strategy (tiBestTopic ti)
             })
         candidate
 
-renderLocalRecoverySurface :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurface _cause strategy topic =
+renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurface gfLang _cause strategy topic =
+  if gfLangTelemetryTag gfLang == "en"
+    then renderLocalRecoverySurfaceEn strategy topic
+    else renderLocalRecoverySurfaceRu strategy topic
+
+renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceRu strategy topic =
   let topicText = if T.null topic then "этот вопрос" else topic
       header = "Локальный режим восстановления."
    in case strategy of
@@ -415,6 +425,24 @@ renderLocalRecoverySurface _cause strategy topic =
           header <> " Уверенность снижена; продолжу с явной пометкой неопределенности вместо внешней догадки."
         StrategySafeRecovery ->
           header <> " Ответ переведен в безопасную форму восстановления хода."
+
+renderLocalRecoverySurfaceEn :: LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceEn strategy topic =
+  let topicText = if T.null topic then "this question" else topic
+      header = "Local recovery mode."
+   in case strategy of
+        StrategyAskClarification ->
+          header <> " Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."
+        StrategyNarrowScope ->
+          header <> " I will keep the answer within stable local evidence and avoid speculative completion."
+        StrategyDefineKnownTerms ->
+          header <> " I can rely only on known local terms; for a new term, provide usage context: " <> topicText <> "."
+        StrategyDistinguishCandidates ->
+          header <> " I will separate candidate readings and mark where local evidence is insufficient."
+        StrategyExposeUncertainty ->
+          header <> " Confidence is reduced; I will proceed with explicit uncertainty instead of external guessing."
+        StrategySafeRecovery ->
+          header <> " The response was switched to a safe recovery form."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =
@@ -465,21 +493,19 @@ resolveRuntimeGfLinearization pio renderStatic = do
   if not runtimeEnabled
     then pure Nothing
     else do
+      gfLang <- resolveGfLang pio (rsPreferredGfLang renderStatic)
       mPgfPath <- resolveGfPgfPath pio
-      -- COMPAT GLUE: lang resolution removed; target effect constructors
-      -- do not take a language parameter (default "QxFx0SyntaxRus" is wired
-      -- in Runtime.Wiring.Pipeline).
       let da = draDialogAtoms (rsTemplateArtifact renderStatic)
-      resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath da)
+      resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath gfLang da)
       case resultDa of
         TurnResLinearizeDialogAtoms (Right txt) | not (T.null (T.strip txt)) ->
-          pure (Just (applyRuntimeGfResult renderStatic resultDa))
+          pure (Just (applyRuntimeGfResult gfLang renderStatic resultDa))
         _ ->
           case draClaimAst (rsTemplateArtifact renderStatic) of
             Nothing -> pure Nothing
             Just claimAst -> do
-              result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath claimAst)
-              pure (Just (applyRuntimeGfResult renderStatic result))
+              result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath gfLang claimAst)
+              pure (Just (applyRuntimeGfResult gfLang renderStatic result))
 
 shouldUseGfRuntime :: PipelineIO -> IO Bool
 shouldUseGfRuntime pio = do
@@ -490,14 +516,14 @@ shouldUseGfRuntime pio = do
     _ ->
       pure False
 
-resolveGfLang :: PipelineIO -> IO Text
-resolveGfLang pio = do
+resolveGfLang :: PipelineIO -> Text -> IO Text
+resolveGfLang pio defaultLang = do
   result <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_GF_LANG")
   case result of
     TurnResReadEnv (Just lang) | not (T.null (T.strip lang)) ->
-      pure (T.strip lang)
+      pure (normalizeGfLang (T.strip lang))
     _ ->
-      pure "QxFx0SyntaxRus"
+      pure (normalizeGfLang defaultLang)
 
 resolveGfPgfPath :: PipelineIO -> IO (Maybe FilePath)
 resolveGfPgfPath pio = do
@@ -513,8 +539,10 @@ normalizeBool :: Text -> Bool
 normalizeBool rawValue =
   T.toLower (T.strip rawValue) `elem` ["1", "true", "yes", "on"]
 
-applyRuntimeGfResult :: RenderStatic -> TurnEffectResult -> RenderStatic
-applyRuntimeGfResult renderStatic result =
+applyRuntimeGfResult :: Text -> RenderStatic -> TurnEffectResult -> RenderStatic
+applyRuntimeGfResult gfLang renderStatic result =
+  let langTag = gfLangTelemetryTag gfLang
+  in
   case result of
     TurnResLinearizeDialogAtoms (Right gfText)
       | not (T.null (T.strip gfText)) ->
@@ -523,7 +551,7 @@ applyRuntimeGfResult renderStatic result =
                 baseArtifact
                   { draRenderedText = gfText
                   , draTemplateBodyText = gfText
-                  , draLinearizationLang = Just "ru_GF_ATOMS"
+                  , draLinearizationLang = Just (langTag <> "_GF_ATOMS")
                   , draLinearizationOk = True
                   , draFallbackReason = Nothing
                   }
@@ -538,7 +566,7 @@ applyRuntimeGfResult renderStatic result =
                 baseArtifact
                   { draRenderedText = gfText
                   , draTemplateBodyText = gfText
-                  , draLinearizationLang = Just "ru_GF_PGF"
+                  , draLinearizationLang = Just (langTag <> "_GF_PGF")
                   , draLinearizationOk = True
                   , draFallbackReason = Nothing
                   }
@@ -551,7 +579,7 @@ applyRuntimeGfResult renderStatic result =
       in renderStatic
            { rsTemplateArtifact =
                baseArtifact
-                 { draLinearizationLang = Just "ru_GF_PGF"
+                 { draLinearizationLang = Just (langTag <> "_GF_PGF")
                  , draLinearizationOk = False
                  , draFallbackReason = Just ("gf_runtime:" <> err)
                  }
@@ -561,11 +589,39 @@ applyRuntimeGfResult renderStatic result =
       in renderStatic
            { rsTemplateArtifact =
                baseArtifact
-                 { draLinearizationLang = Just "ru_GF_PGF"
+                 { draLinearizationLang = Just (langTag <> "_GF_PGF")
                  , draLinearizationOk = False
                  , draFallbackReason = Just "gf_runtime:unexpected_effect_result"
                  }
            }
+
+normalizeGfLang :: Text -> Text
+normalizeGfLang raw =
+  case T.toLower (T.strip raw) of
+    "ru" -> "QxFx0SyntaxRus"
+    "russian" -> "QxFx0SyntaxRus"
+    "en" -> "QxFx0SyntaxEng"
+    "english" -> "QxFx0SyntaxEng"
+    "qxfx0syntaxrus" -> "QxFx0SyntaxRus"
+    "qxfx0syntaxeng" -> "QxFx0SyntaxEng"
+    x | T.isPrefixOf "qxfx0syntax" x -> raw
+    _ -> "QxFx0SyntaxRus"
+
+gfLangTelemetryTag :: Text -> Text
+gfLangTelemetryTag lang
+  | normalized == "QxFx0SyntaxEng" = "en"
+  | otherwise = "ru"
+  where
+    normalized = normalizeGfLang lang
+
+detectInputGfLang :: Text -> Text
+detectInputGfLang input
+  | hasLatin && not hasCyrillic = "QxFx0SyntaxEng"
+  | otherwise = "QxFx0SyntaxRus"
+  where
+    letters = T.filter isAlpha input
+    hasLatin = T.any (\c -> ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')) letters
+    hasCyrillic = T.any (\c -> ('а' <= c && c <= 'я') || ('А' <= c && c <= 'Я') || c == 'ё' || c == 'Ё') letters
 
 rebuildRenderWithBg :: RenderStatic -> Text -> Text
 rebuildRenderWithBg renderStatic claimText =

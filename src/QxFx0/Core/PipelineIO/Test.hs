@@ -119,8 +119,10 @@ defaultTestInterpreter request =
       pure (TurnResRollbackTurnProjections (Left (PdRollbackFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))
     TurnReqCheckpoint _ ->
       pure TurnResCheckpointCompleted
-    TurnReqLinearizeClaimAst _ _ ->
+    TurnReqLinearizeClaimAst _ _ _ ->
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_default_test_pipeline"))
+    TurnReqLinearizeDialogAtoms _ _ _ ->
+      pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_default_test_pipeline"))
 
 fixedTestTime :: Clock.UTCTime
 fixedTestTime = Clock.UTCTime (ModifiedJulianDay 0) 0

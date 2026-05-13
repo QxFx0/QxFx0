@@ -50,8 +50,8 @@ data TurnEffectRequest
   | TurnReqSaveState !SystemState !Text !(Maybe TurnProjection)
   | TurnReqRollbackTurnProjections !Text !Int
   | TurnReqCheckpoint !Int
-  | TurnReqLinearizeClaimAst !(Maybe FilePath) !ClaimAst
-  | TurnReqLinearizeDialogAtoms !(Maybe FilePath) !DialogAtoms
+  | TurnReqLinearizeClaimAst !(Maybe FilePath) !Text !ClaimAst
+  | TurnReqLinearizeDialogAtoms !(Maybe FilePath) !Text !DialogAtoms
   deriving stock (Show)
 
 data TurnEffectResult

@@ -40,7 +40,7 @@ import QxFx0.Core.PipelineIO
 import QxFx0.Core.PipelineIO.Internal (PipelineIO(..))
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Runtime.Mode (RuntimeMode(..))
-import QxFx0.Runtime.PGF (linearizeClaimAstGf, linearizeDialogAtomsGf)
+import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
   , TimeSource
@@ -154,10 +154,10 @@ runtimeInterpreter ctx request =
     TurnReqCheckpoint turnCount -> do
       withRuntimeDb ctx $ \db -> maybeCheckpoint db turnCount
       pure TurnResCheckpointCompleted
-    TurnReqLinearizeClaimAst mPgfPath claimAst ->
-      TurnResLinearizeClaimAst <$> linearizeClaimAstGf mPgfPath claimAst
-    TurnReqLinearizeDialogAtoms mPgfPath da ->
-      TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGf mPgfPath da
+    TurnReqLinearizeClaimAst mPgfPath lang claimAst ->
+      TurnResLinearizeClaimAst <$> linearizeClaimAstGfLang mPgfPath lang claimAst
+    TurnReqLinearizeDialogAtoms mPgfPath lang da ->
+      TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLang mPgfPath lang da
 
 generateRequestId :: TimeSource -> IO T.Text
 generateRequestId timeSource = do
@@ -244,5 +244,6 @@ allowedReadEnvKeys =
     , "QXFX0_TEST_MODE"
     , "QXFX0_TEST_POST_COMMIT_TAIL_EXCEPTION_ONCE_FILE"
     , "QXFX0_GF_RUNTIME"
+    , "QXFX0_GF_LANG"
     , "QXFX0_GF_PGF_PATH"
     ]

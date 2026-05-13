@@ -10,8 +10,10 @@
 module QxFx0.Runtime.PGF
   ( astToGfExpr
   , linearizeClaimAstGf
+  , linearizeClaimAstGfLang
   , dialogAtomsToGfExpr
   , linearizeDialogAtomsGf
+  , linearizeDialogAtomsGfLang
   ) where
 
 import Control.Exception (try, SomeException)

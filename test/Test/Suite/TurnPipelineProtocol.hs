@@ -1135,9 +1135,9 @@ testProtocolInterpreter request =
       pure (TurnResRollbackTurnProjections (Right ()))
     TurnReqCheckpoint _ ->
       pure TurnResCheckpointCompleted
-    TurnReqLinearizeClaimAst _ _ ->
+    TurnReqLinearizeClaimAst _ _ _ ->
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
-    TurnReqLinearizeDialogAtoms _ _ ->
+    TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
 
 protocolFixedTime :: UTCTime
