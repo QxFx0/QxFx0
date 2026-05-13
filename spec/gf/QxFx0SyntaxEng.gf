@@ -13,13 +13,13 @@ concrete QxFx0SyntaxEng of QxFx0Syntax = QxFx0LexiconEng ** open SyntaxEng, Para
     MkAP adj = mkAP adj ;
     MkAdvP adv = adv ;
     MoveCritique topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "criticize")) topic)) ;
-    MoveGround topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "ground")) topic)) ;
+    MoveGround topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkVP (mkV "ground") topic) (mkAdv "in" (mkNP concrete_N)))) ;
     MovePurpose topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "have")) topic)) ;
     MoveParadox a b = mkS (mkCl a (mkVP (mkV2 (mkV "contradict")) b)) ;
-    MoveCompare a b = mkS (mkCl a (mkVP (mkV2 (mkV "compare")) b)) ;
-    MoveDefine subj obj = mkS (mkCl subj obj) ;
+    MoveCompare a b = mkS (mkCl a (mkVP (mkV2 (mkV "compare")) (mkNP with_Prep b))) ;
+    MoveDefine subj obj = mkS (mkCl subj (mkVP (mkV2 (mkV "define")) obj)) ;
     MoveExplain subj vp = mkS (mkCl subj vp) ;
-    MoveQuestion topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "ask")) topic)) ;
+    MoveQuestion topic = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "ask")) (mkNP about_Prep topic))) ;
     MoveWithAdj np ap = mkS (mkCl np ap) ;
     MoveWithAdv vp adv = mkS (mkCl (mkNP i_Pron) vp) ;
 }

@@ -615,6 +615,11 @@ gfLangTelemetryTag lang
     normalized = normalizeGfLang lang
 
 detectInputGfLang :: Text -> Text
+-- Language routing policy:
+-- - Pure Latin input (no Cyrillic) → English GF path (QxFx0SyntaxEng)
+-- - Any Cyrillic present → Russian GF path (QxFx0SyntaxRus)
+-- This conservative policy prevents RU leakage on EN input by default.
+-- Override via QXFX0_GF_LANG environment variable.
 detectInputGfLang input
   | hasLatin && not hasCyrillic = "QxFx0SyntaxEng"
   | otherwise = "QxFx0SyntaxRus"

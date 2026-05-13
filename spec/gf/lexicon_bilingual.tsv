@@ -4443,3 +4443,44 @@ gogot_N	гогот	ru	noun	гогот	гогота	гоготе	гогот	го�
 gogot_N	gogot	en	noun	gogot															
 godik_N	годик	ru	noun	годик	годика	годике	годик	годиком											
 godik_N	godik	en	noun	godik															
+
+prichinnost_N	причинность	ru	noun	причинность	причинности	причинности	причинность	причинностью
+prichinnost_N	causality	en	noun	causality
+korrelyatsiya_N	корреляция	ru	noun	корреляция	корреляции	корреляции	корреляцию	корреляцией
+korrelyatsiya_N	correlation	en	noun	correlation
+neobkhodimost_N	необходимость	ru	noun	необходимость	необходимости	необходимости	необходимость	необходимостью
+neobkhodimost2_N	necessity	en	noun	necessity
+kontingentnost_N	контингентность	ru	noun	контингентность	контингентности	контингентности	контингентность	контингентностью
+kontingentnost_N	contingency	en	noun	contingency
+deystvitelnost_N	действительность	ru	noun	действительность	действительности	действительности	действительность	действительностью
+deystvitelnost_N	validity2	en	noun	validity
+zvuchnost_N	звучность	ru	noun	звучность	звучности	звучности	звучность	звучностью
+zvuchnost_N	soundness	en	noun	soundness
+znachenie_N	значение	ru	noun	значение	значения	значении	значение	значением
+znachenie2_N	meaning	en	noun	meaning
+ekvivalentnost_N	эквивалентность	ru	noun	эквивалентность	эквивалентности	эквивалентности	эквивалентность	эквивалентностью
+ekvivalentnost_N	equivalence	en	noun	equivalence
+znanie_N	знание	ru	noun	знание	знания	знании	знание	знанием
+znanie2_N	knowledge	en	noun	knowledge
+uverennost_N	уверенность	ru	noun	уверенность	уверенности	уверенности	уверенность	уверенностью
+uverennost_N	belief	en	noun	belief
+konkretnyy_N	конкретный	ru	adj	конкретный	конкретного	конкретном	конкретный	конкретным
+konkretnyy_N	concrete	en	adj	concrete
+primer_N	пример	ru	noun	пример	примера	примере	пример	примером
+primer2_N	example	en	noun	example
+povsednevnost_N	повседневность	ru	noun	повседневность	повседневности	повседневности	повседневность	повседневностью
+povsednevnost_N	everyday	en	noun	everyday
+reshenie_N	решение	ru	noun	решение	решения	решении	решение	решением
+reshenie2_N	decision2	en	noun	decision
+praktika_N	практика	ru	noun	практика	практики	практике	практику	практикой
+praktika_N	practice	en	noun	practice
+protivorechie_N	противоречие	ru	noun	противоречие	противоречия	противоречии	противоречие	противоречием
+protivorechie_N	contradiction	en	noun	contradiction
+logicheskiy_N	логический	ru	adj	логический	логического	логическом	логический	логическим
+logicheskiy_N	logical	en	adj	logical
+rassuzhdenie_N	рассуждение	ru	noun	рассуждение	рассуждения	рассуждении	рассуждение	рассуждением
+rassuzhdenie_N	reasoning	en	noun	reasoning
+nablyudaemyy_N	наблюдаемый	ru	adj	наблюдаемый	наблюдаемого	наблюдаемом	наблюдаемый	наблюдаемым
+nablyudaemyy_N	observable	en	adj	observable
+fakt_N	факт	ru	noun	факт	факта	факте	факт	фактом
+fakt2_N	fact2	en	noun	fact
