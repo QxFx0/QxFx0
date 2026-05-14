@@ -399,6 +399,7 @@ isDeicticTopic raw =
 detectPropositionType :: Text -> [Text] -> PropositionType
 detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ catMaybes
   [ detectRegressionFamilyOverrides rawText
+  , detectDistinctionQuestion rawText tokens
   , detectContactSignal rawText tokens
   , detectOperationalCause rawText tokens
   , detectOperationalStatus rawText tokens
@@ -412,7 +413,6 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectSelfState rawText tokens
   , detectAffectiveSupport rawText tokens
   , detectComparisonPlausibility rawText tokens
-  , detectDistinctionQuestion rawText tokens
   , detectConfrontSignal rawText tokens
   , detectNextStepSignal rawText tokens
   , detectMisunderstanding rawText tokens
@@ -812,6 +812,11 @@ detectPurposeFunction rawText tokens
   | T.isInfixOf "function of" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "purpose of" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "role of" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what follows" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what can be concluded" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "given that" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what is the conclusion" (T.toLower rawText) = Just PurposeQ
+  | T.isInfixOf "what follows from" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "relationship between" (T.toLower rawText) && T.isInfixOf "how do they differ" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "explain causality and ground it" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "distinguish between validity and soundness" (T.toLower rawText) = Just PurposeQ

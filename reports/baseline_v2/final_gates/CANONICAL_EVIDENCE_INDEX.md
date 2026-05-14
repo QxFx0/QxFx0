@@ -11,29 +11,30 @@
 
 ### Primary Contract Run — Post-GF Path Contract Enforcement
 
-**RUN_ID:** `ci-20260513-195724`  
-**Commit:** `bf62266` (current HEAD at transfer-finalization closure; includes core contract Gate 4a `check_gf_render_path.sh`)  
+**RUN_ID:** `ci-20260514-175516`  
+**Commit:** `e43760c` (current HEAD at EN hotfix / Tech Debt Closure; includes EN render-path gate)  
 **Verdict:** **CONTRACT_VERDICT: PROD_GO**  
-**All core gates PASS:** build, tests, architecture, GF quality, GF render-path gate, haddock, SQL sync, schema consistency, schema contract, generated artifacts, lexicon, release-smoke degraded-local (ACCEPT_WITH_SKIPS, 0 FAIL).
+**All core gates PASS:** build, tests, architecture, GF quality, GF render-path gate, EN render-path gate, haddock, SQL sync, schema consistency, schema contract, generated artifacts, lexicon, release-smoke degraded-local (ACCEPT_WITH_SKIPS, 0 FAIL).
 
 | File | Path | Description |
 |------|------|-------------|
-| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260513-195724_core.md` | PROD_GO, all core gates PASS |
-| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260513-195724_core.tsv` | Machine-readable gate results |
+| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260514-175516_core.md` | PROD_GO, all core gates PASS |
+| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260514-175516_core.tsv` | Machine-readable gate results |
 
-### Per-Gate Logs (core, RUN_ID: `ci-20260513-195724`)
+### Per-Gate Logs (core, RUN_ID: `ci-20260514-175516`)
 
 | Gate | Log File |
 |------|----------|
-| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260513-195724_core.log` |
-| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260513-195724_core.log` |
-| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260513-195724_core.log` |
-| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260513-195724_core.log` |
-| 04a check_gf_render_path.sh | `reports/baseline_v2/final_gates/06a_gf_render_path_ci-20260513-195724_core.log` |
-| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260513-195724_core.log` |
-| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260513-195724_core.log` |
-| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260513-195724_core.log` |
-| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260513-195724_core.log` |
+| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260514-175516_core.log` |
+| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260514-175516_core.log` |
+| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260514-175516_core.log` |
+| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260514-175516_core.log` |
+| 04a check_gf_render_path.sh | `reports/baseline_v2/final_gates/06a_gf_render_path_ci-20260514-175516_core.log` |
+| 04b check_en_render_path.sh | `reports/baseline_v2/final_gates/06b_en_render_path_ci-20260514-175516_core.log` |
+| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260514-175516_core.log` |
+| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260514-175516_core.log` |
+| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260514-175516_core.log` |
+| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260514-175516_core.log` |
 
 ---
 
