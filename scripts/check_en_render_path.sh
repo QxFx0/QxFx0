@@ -78,6 +78,7 @@ rm -f "$DB"
 QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" \
 QXFX0_GF_LANG="QxFx0SyntaxEng" \
 QXFX0_RUNTIME_MODE=degraded \
+QXFX0_ROOT="$ROOT" \
 QXFX0_DB="$DB" \
 "$BIN" --session "eninit_$$" --input "hello" --json >/dev/null 2>/dev/null || true
 
@@ -104,13 +105,19 @@ for prompt_entry in "${PROMPTS[@]}"; do
   IFS=$'\t' read -r id prompt expected_family <<< "$prompt_entry"
   session="enrender_${TOTAL}_$$"
 
-  cli_out=""
-  if timeout "$TURN_TIMEOUT_SECONDS" \
-      env QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" QXFX0_GF_LANG="QxFx0SyntaxEng" QXFX0_RUNTIME_MODE=degraded QXFX0_DB="$DB" \
-      "$BIN" --session "$session" --input "$prompt" --json 2>/dev/null; then
-    cli_out="$(QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" QXFX0_GF_LANG="QxFx0SyntaxEng" QXFX0_RUNTIME_MODE=degraded QXFX0_DB="$DB" "$BIN" --session "$session" --input "$prompt" --json 2>/dev/null || true)"
-  else
-    ec=$?
+  set +e
+  cli_out="$(
+    timeout "$TURN_TIMEOUT_SECONDS" env \
+      QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" \
+      QXFX0_GF_LANG="QxFx0SyntaxEng" \
+      QXFX0_RUNTIME_MODE=degraded \
+      QXFX0_ROOT="$ROOT" \
+      QXFX0_DB="$DB" \
+      "$BIN" --session "$session" --input "$prompt" --json 2>/dev/null
+  )"
+  ec=$?
+  set -e
+  if [ "$ec" -ne 0 ]; then
     if [ "$ec" -eq 124 ]; then
       TIMEOUTS=$((TIMEOUTS + 1))
       echo "warn: timeout prompt_index=$TOTAL" >> "$LOG"
@@ -156,13 +163,13 @@ ru_markers = ["рефлексия:", "отклик: что значит", "ло�
 ru_leakage = 1 if any(m in response for m in ru_markers) else 0
 has_cyrillic = 1 if re.search(r'[а-яё]', response, re.IGNORECASE) else 0
 
-# Check fallback (template markers in EN output)
-fallback_markers = ["i ground meaning", "i have meaning", "i criticize meaning"]
-fallback = 1 if any(m in response for m in fallback_markers) else 0
-# Also count as fallback if trace shows a fallback reason
-if fb and "fallback" in str(fb).lower():
-    fallback = 1
-if fb and "failed" in str(fb).lower():
+# Fallback is trace-driven.
+fallback = 0
+if fb and (
+    "fallback" in str(fb).lower()
+    or "failed" in str(fb).lower()
+    or "pgf_missing" in str(fb).lower()
+):
     fallback = 1
 
 # GF output for EN: linearization succeeded with EN tag

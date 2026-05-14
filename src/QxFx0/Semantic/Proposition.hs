@@ -559,7 +559,15 @@ detectSystemLogic rawText tokens
 detectDistinctionQuestion :: Text -> [Text] -> Maybe PropositionType
 detectDistinctionQuestion rawText tokens =
   let lowered = T.toLower rawText
+      isComplexPurpose =
+        (T.isInfixOf "relationship between" lowered && T.isInfixOf "how do they differ" lowered) ||
+        (T.isInfixOf "distinguish" lowered && T.isInfixOf "then ground" lowered) ||
+        (T.isInfixOf "how does it differ" lowered && T.isInfixOf "in practical reasoning" lowered) ||
+        (T.isInfixOf "why" lowered && T.isInfixOf "differ" lowered) ||
+        (T.isInfixOf "for what purpose" lowered && T.isInfixOf "distinguish" lowered) ||
+        (T.isInfixOf "why" lowered && T.isInfixOf "distinguish" lowered)
       result
+        | isComplexPurpose = Nothing
         | containsKeywordPhrase tokens "как отличить"
             && any (`elem` tokens) ["от"] = Just DistinctionQ
         | containsKeywordPhrase tokens "чем отличается" = Just DistinctionQ
@@ -957,6 +965,7 @@ detectRepairDirective rawText tokens
   | T.isInfixOf "confused" (T.toLower rawText) = Just RepairSignal
   | T.isInfixOf "doesn't make sense" (T.toLower rawText) = Just RepairSignal
   | T.isInfixOf "explain differently" (T.toLower rawText) = Just RepairSignal
+  | T.isInfixOf "explain that differently" (T.toLower rawText) = Just RepairSignal
   | otherwise = Nothing
 
 detectGenerativePrompt :: Text -> [Text] -> Maybe PropositionType

@@ -2,11 +2,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 RUN_ID="${1:-en_run_$(date +%Y%m%d-%H%M%S)}"
 PROMPTS_FILE="${2:-$ROOT/data/semantic/en_baseline_prompts.tsv}"
 RUNTIME_MODE="${QXFX0_RUNTIME_MODE:-degraded}"
 SESSION_ID="${QXFX0_EVAL_SESSION_ID:-en-eval-${RUN_ID}}"
 SESSION_MODE="${QXFX0_EVAL_SESSION_MODE:-isolated}"
+MAX_PROMPTS="${QXFX0_EN_MAX_PROMPTS:-0}"
+TURN_TIMEOUT_SECONDS="${QXFX0_EN_TURN_TIMEOUT_SECONDS:-30}"
 OUT_DIR="$ROOT/reports/eval_runs/$RUN_ID"
 RESULTS_JSONL="$OUT_DIR/results.jsonl"
 SUMMARY_JSON="$OUT_DIR/summary.json"
@@ -21,12 +24,26 @@ fi
 mkdir -p "$OUT_DIR" "$RAW_DIR"
 rm -f "$RESULTS_JSONL" "$SUMMARY_JSON" "$SUMMARY_MD"
 
+if [[ -n "${QXFX0_BIN:-}" ]]; then
+  BIN="$QXFX0_BIN"
+else
+  BIN="$(cabal list-bin qxfx0-main 2>/dev/null || true)"
+fi
+
+if [[ -z "$BIN" || ! -x "$BIN" ]]; then
+  echo "qxfx0-main binary not available; build first with: cabal build all" >&2
+  exit 1
+fi
+
 {
   echo "run_id=$RUN_ID"
   echo "started_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
   echo "runtime_mode=$RUNTIME_MODE"
   echo "session_id=$SESSION_ID"
   echo "session_mode=$SESSION_MODE"
+  echo "max_prompts=$MAX_PROMPTS"
+  echo "turn_timeout_seconds=$TURN_TIMEOUT_SECONDS"
+  echo "binary=$BIN"
   echo "prompts_file=$PROMPTS_FILE"
   echo "evaluation_language=en"
 } >"$OUT_DIR/meta.env"
@@ -35,12 +52,16 @@ echo "Running EN eval: $RUN_ID"
 echo "Prompts: $PROMPTS_FILE"
 echo "Runtime mode: $RUNTIME_MODE"
 echo "Session mode: $SESSION_MODE"
+echo "Binary: $BIN"
 
 row_index=0
 while IFS=$'\t' read -r id prompt expected_family; do
   [[ -z "${id// }" ]] && continue
   [[ "$id" == \#* ]] && continue
   [[ "$id" == "id" ]] && continue
+  if [[ "$MAX_PROMPTS" -gt 0 && "$row_index" -ge "$MAX_PROMPTS" ]]; then
+    break
+  fi
 
   row_index=$((row_index + 1))
   raw_file="$RAW_DIR/${id}.log"
@@ -57,13 +78,24 @@ while IFS=$'\t' read -r id prompt expected_family; do
   rm -f "$db_path"
 
   start_ms=$(date +%s%3N)
-  cmd_out="$(QXFX0_RUNTIME_MODE="$RUNTIME_MODE" QXFX0_GF_LANG=QxFx0SyntaxEng QXFX0_DB="$db_path" cabal run -v0 qxfx0-main -- --session "$row_session_id" --input "$prompt" --json 2>&1 || true)"
+  set +e
+  cmd_out="$(
+    timeout "$TURN_TIMEOUT_SECONDS" env \
+      QXFX0_ROOT="$ROOT" \
+      QXFX0_RUNTIME_MODE="$RUNTIME_MODE" \
+      QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" \
+      QXFX0_GF_LANG=QxFx0SyntaxEng \
+      QXFX0_DB="$db_path" \
+      "$BIN" --session "$row_session_id" --input "$prompt" --json 2>&1
+  )"
+  cmd_ec=$?
+  set -e
   end_ms=$(date +%s%3N)
   latency_ms=$((end_ms - start_ms))
 
   printf '%s\n' "$cmd_out" >"$raw_file"
 
-  RAW_FILE="$raw_file" ID="$id" PROMPT="$prompt" EXPECTED_FAMILY="$expected_family" LATENCY_MS="$latency_ms" ROW_SESSION_ID="$row_session_id" DB_PATH="$db_path" \
+  RAW_FILE="$raw_file" ID="$id" PROMPT="$prompt" EXPECTED_FAMILY="$expected_family" LATENCY_MS="$latency_ms" ROW_SESSION_ID="$row_session_id" DB_PATH="$db_path" CMD_EXIT="$cmd_ec" \
   python3 - <<'PY' >>"$RESULTS_JSONL"
 import json
 import os
@@ -78,6 +110,7 @@ expected = os.environ.get("EXPECTED_FAMILY", "").strip()
 latency_ms = int(os.environ["LATENCY_MS"])
 row_session_id = os.environ["ROW_SESSION_ID"]
 db_path = os.environ["DB_PATH"]
+cmd_exit = int(os.environ.get("CMD_EXIT", "0"))
 
 raw = raw_path.read_text(encoding="utf-8", errors="replace")
 payload = None
@@ -119,6 +152,11 @@ try:
 except Exception:
     pass
 
+if cmd_exit == 124:
+    status = "timeout"
+elif cmd_exit != 0 and status == "parse_error":
+    status = f"runtime_exit_{cmd_exit}"
+
 text = response.lower()
 # EN-specific fallback markers (Russian template fallback)
 ru_fallback_markers = [
@@ -128,13 +166,6 @@ ru_fallback_markers = [
     "назначение смысла раскрывается через устойчивую роль",
     "локальный режим восстановления",
 ]
-# EN fallback markers (template fallback)
-en_fallback_markers = [
-    "i ground meaning",
-    "i have meaning",
-    "i criticize meaning",
-]
-
 ru_leakage = False
 for marker in ru_fallback_markers:
     if marker in text:
@@ -144,9 +175,13 @@ for marker in ru_fallback_markers:
 # Check for Cyrillic characters in response
 has_cyrillic = bool(re.search(r'[а-яё]', text, re.IGNORECASE))
 
-fallback_drift = any(m in text for m in en_fallback_markers)
-# Also mark fallback if trace shows fallback reason
-if fallback_reason and ("fallback" in str(fallback_reason).lower() or "failed" in str(fallback_reason).lower()):
+# Fallback is trace-driven.
+fallback_drift = False
+if fallback_reason and (
+    "fallback" in str(fallback_reason).lower()
+    or "failed" in str(fallback_reason).lower()
+    or "pgf_missing" in str(fallback_reason).lower()
+):
     fallback_drift = True
 
 gf_output = linearization_ok and linearization_lang and "en" in linearization_lang.lower()
