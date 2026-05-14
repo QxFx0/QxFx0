@@ -166,14 +166,12 @@ ru_fallback_markers = [
     "назначение смысла раскрывается через устойчивую роль",
     "локальный режим восстановления",
 ]
-ru_leakage = False
-for marker in ru_fallback_markers:
-    if marker in text:
-        ru_leakage = True
-        break
+has_marker = any(m in text for m in ru_fallback_markers)
 
 # Check for Cyrillic characters in response
 has_cyrillic = bool(re.search(r'[а-яё]', text, re.IGNORECASE))
+
+ru_leakage = has_marker or has_cyrillic
 
 # Fallback is trace-driven.
 fallback_drift = False

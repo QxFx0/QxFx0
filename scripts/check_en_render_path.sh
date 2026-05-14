@@ -159,9 +159,16 @@ ok = 1 if trace.get("trcLinearizationOk", False) else 0
 fb = trace.get("trcFallbackReason")
 
 # Check for Russian leakage (any Cyrillic chars in response = leakage for EN input)
-ru_markers = ["рефлексия:", "отклик: что значит", "локальный режим восстановления", "я могу дать локальную понятийную рамку"]
-ru_leakage = 1 if any(m in response for m in ru_markers) else 0
-has_cyrillic = 1 if re.search(r'[а-яё]', response, re.IGNORECASE) else 0
+ru_markers = [
+    "рефлексия:",
+    "отклик: что значит",
+    "я могу дать локальную понятийную рамку",
+    "назначение смысла раскрывается через устойчивую роль",
+    "локальный режим восстановления",
+]
+has_marker = any(m in response for m in ru_markers)
+has_cyrillic = bool(re.search(r'[а-яё]', response, re.IGNORECASE))
+ru_leakage = 1 if (has_marker or has_cyrillic) else 0
 
 # Fallback is trace-driven.
 fallback = 0
@@ -181,7 +188,7 @@ intent_fit = 1 if expected and actual == expected else 0
 # Critical mismatch: expected family differs from actual
 critical = 1 if expected and actual != expected else 0
 
-print(f"{intent_fit}|{gf_output}|{fallback}|{ru_leakage or has_cyrillic}|{critical}|{expected}|{actual}|{lang}")
+print(f"{intent_fit}|{gf_output}|{fallback}|{ru_leakage}|{critical}|{expected}|{actual}|{lang}")
 PY
 )"
 
