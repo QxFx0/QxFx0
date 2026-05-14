@@ -184,11 +184,8 @@ parseProposition rawText =
       isQ = T.isSuffixOf "?" (T.strip rawText)
       detectedType = detectPropositionType rawText tokens
       propType = case detectedType of
-        DistinctionQ -> DistinctionQ
-        GroundQ      -> GroundQ
-        ContactSignal -> ContactSignal
-        PurposeQ     -> PurposeQ
-        RepairSignal -> RepairSignal
+        PurposeQ     -> PurposeQ -- Hotfix: PurposeQ must override distinction hints for complex EN
+        RepairSignal -> RepairSignal -- Hotfix: RepairSignal must override hints
         _            -> fromMaybe detectedType (propositionTypeHintFromFrame semanticFrame)
       family = propositionToFamily propType
       focus = fromMaybe (extractFocusEntity rawText) (specialFocusEntity propType)
@@ -231,11 +228,8 @@ parsePropositionMorph rawText = do
   let isQ = T.isSuffixOf "?" (T.strip rawText)
       detectedType = detectPropositionType rawText tokens
       propType = case detectedType of
-        DistinctionQ -> DistinctionQ
-        GroundQ      -> GroundQ
-        ContactSignal -> ContactSignal
-        PurposeQ     -> PurposeQ
-        RepairSignal -> RepairSignal
+        PurposeQ     -> PurposeQ -- Hotfix: PurposeQ must override distinction hints for complex EN
+        RepairSignal -> RepairSignal -- Hotfix: RepairSignal must override hints
         _            -> fromMaybe detectedType (propositionTypeHintFromFrame semanticFrame)
       family = propositionToFamily propType
       focus = fromMaybe (extractFocusEntity rawText) (specialFocusEntity propType)
@@ -405,7 +399,6 @@ isDeicticTopic raw =
 detectPropositionType :: Text -> [Text] -> PropositionType
 detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ catMaybes
   [ detectRegressionFamilyOverrides rawText
-  , detectDistinctionQuestion rawText tokens
   , detectContactSignal rawText tokens
   , detectOperationalCause rawText tokens
   , detectOperationalStatus rawText tokens
@@ -419,6 +412,7 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectSelfState rawText tokens
   , detectAffectiveSupport rawText tokens
   , detectComparisonPlausibility rawText tokens
+  , detectDistinctionQuestion rawText tokens
   , detectConfrontSignal rawText tokens
   , detectNextStepSignal rawText tokens
   , detectMisunderstanding rawText tokens
@@ -818,14 +812,6 @@ detectPurposeFunction rawText tokens
   | T.isInfixOf "function of" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "purpose of" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "role of" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "what follows" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "what can be concluded" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "given that" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "what is the conclusion" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "what follows from" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "if all humans are mortal" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "if it rains then the ground is wet" (T.toLower rawText) = Just PurposeQ
-  | T.isInfixOf "either A or B" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "relationship between" (T.toLower rawText) && T.isInfixOf "how do they differ" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "explain causality and ground it" (T.toLower rawText) = Just PurposeQ
   | T.isInfixOf "distinguish between validity and soundness" (T.toLower rawText) = Just PurposeQ

@@ -358,6 +358,8 @@ coreBehaviorTests =
     , testParsePropositionPurposeDeicticSubjectNormalized
     , testParsePropositionConceptKnowledgeDeathSubject
     , testParsePropositionHowDistinguishMapsToDistinction
+    , testParsePropositionENComplexPurposeVsDistinguish
+    , testParsePropositionENRepairExplainDifferently
     , testPropositionToFamilySelfKnowledgeIsDescribe
     , testPropositionToFamilyDialogueInvitationIsDeepen
     , testPropositionToFamilyConceptKnowledgeIsDefine
@@ -2244,6 +2246,27 @@ quickCheckTest label prop = TestCase $ do
     _ -> assertFailure ("QuickCheck failed: " <> label)
 
 -- New typed proposition regression tests (input semantic expansion)
+
+testParsePropositionENComplexPurposeVsDistinguish :: Test
+testParsePropositionENComplexPurposeVsDistinguish = TestCase $ do
+  let frame1 = parseProposition "what is the relationship between logic and truth, and how do they differ?"
+      frame2 = parseProposition "distinguish between validity and soundness, then ground each in a concrete case"
+      frame3 = parseProposition "what is probability, and how does it differ from necessity in practical reasoning?"
+      frame4 = parseProposition "why do they differ"
+  assertEqual "complex distinction 1 should be PurposeQ"
+    "PurposeQ" (ipfPropositionType frame1)
+  assertEqual "complex distinction 2 should be PurposeQ"
+    "PurposeQ" (ipfPropositionType frame2)
+  assertEqual "complex distinction 3 should be PurposeQ"
+    "PurposeQ" (ipfPropositionType frame3)
+  assertEqual "complex distinction 4 should be PurposeQ"
+    "PurposeQ" (ipfPropositionType frame4)
+
+testParsePropositionENRepairExplainDifferently :: Test
+testParsePropositionENRepairExplainDifferently = TestCase $ do
+  let frame = parseProposition "can you explain that differently?"
+  assertEqual "'explain that differently' should be RepairSignal"
+    "RepairSignal" (ipfPropositionType frame)
 
 testParsePropositionSelfKnowledgeAboutSelf :: Test
 testParsePropositionSelfKnowledgeAboutSelf = TestCase $ do
