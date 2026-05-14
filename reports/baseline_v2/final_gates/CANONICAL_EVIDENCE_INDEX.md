@@ -44,14 +44,14 @@ These logs are from prior attempts in this target repo and **must not** be used 
 
 | File Pattern | Reason Superseded | Canonical Replacement |
 |--------------|-------------------|----------------------|
-| `reports/baseline_v2/final_gates/*_ci-20260509-194300_*` | Early core attempt; GF quality gate failed (missing PGF) | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260509-201231_*` | Package A target closure (PROD_GO), pre-WP1–WP3 | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260509-234041_*` | Pre-WP3 canonical core run (PROD_GO). Superseded by canonical closure run `ci-20260513-195724`. | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-214705_*` | Post-WP3 attempt; Gate 11 REJECT due to INFRA (smoke strict semantics not yet fixed) | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-225652_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260510-233024_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260513-195724_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260511-000108_*` | Pre-GF-path-gate canonical run (before Gate 4a integration) | `_gate_results_ci-20260513-195724_core.md` |
-| Source-repo evidence (`_gate_results_ci-20260509-183851_*`, `ci-20260509-161530_*`, etc.) | Belongs to `QxFx0_v2` (`stabilize-v2-gf`), not target repo | `_gate_results_ci-20260513-195724_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-194300_*` | Early core attempt; GF quality gate failed (missing PGF) | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-201231_*` | Package A target closure (PROD_GO), pre-WP1–WP3 | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260509-234041_*` | Pre-WP3 canonical core run (PROD_GO). Superseded by canonical closure run `ci-20260514-175516`. | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-214705_*` | Post-WP3 attempt; Gate 11 REJECT due to INFRA (smoke strict semantics not yet fixed) | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-225652_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260510-233024_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260514-175516_core.md` |
+| `reports/baseline_v2/final_gates/*_ci-20260511-000108_*` | Pre-GF-path-gate canonical run (before Gate 4a integration) | `_gate_results_ci-20260514-175516_core.md` |
+| Source-repo evidence (`_gate_results_ci-20260509-183851_*`, `ci-20260509-161530_*`, etc.) | Belongs to `QxFx0_v2` (`stabilize-v2-gf`), not target repo | `_gate_results_ci-20260514-175516_core.md` |
 
 ---
 
@@ -92,7 +92,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 
 ```bash
 # Canonical core contract summary (PROD_GO)
-cat reports/baseline_v2/final_gates/_gate_results_ci-20260513-195724_core.md | grep "CONTRACT_VERDICT"
+cat reports/baseline_v2/final_gates/_gate_results_ci-20260514-175516_core.md | grep "CONTRACT_VERDICT"
 # Expected: CONTRACT_VERDICT: PROD_GO
 ```
 

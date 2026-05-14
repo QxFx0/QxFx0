@@ -1,0 +1,74 @@
+id	prompt	expected_family
+# EN Baseline Prompt Pack for QxFx0 Language Parity Evaluation
+# Categories: definition, distinguish, grounding, agency, repair, long-form logic
+
+# Definition prompts
+en_def_001	what is logic?	CMDefine
+en_def_002	define freedom	CMDefine
+en_def_003	what is truth?	CMDefine
+en_def_004	explain the concept of responsibility	CMDefine
+en_def_005	what is causality?	CMDefine
+en_def_006	define probability	CMDefine
+en_def_007	what is the meaning of agency?	CMDefine
+en_def_008	explain the notion of possibility	CMDefine
+en_def_009	what is a hypothesis?	CMDefine
+en_def_010	define contradiction	CMDefine
+
+# Distinguish prompts
+en_dist_001	what is the difference between truth and validity?	CMDistinguish
+en_dist_002	distinguish between cause and correlation	CMDistinguish
+en_dist_003	how does necessity differ from possibility?	CMDistinguish
+en_dist_004	contrast logic and reason	CMDistinguish
+en_dist_005	differentiate between argument and explanation	CMDistinguish
+en_dist_006	what is the distinction between knowledge and belief?	CMDistinguish
+en_dist_007	how do possibility and probability differ?	CMDistinguish
+en_dist_008	contrast necessity and contingency	CMDistinguish
+en_dist_009	distinguish between validity and soundness	CMDistinguish
+en_dist_010	what is the difference between implication and equivalence?	CMDistinguish
+
+# Grounding prompts
+en_ground_001	ground the concept of freedom in concrete examples	CMGround
+en_ground_002	provide grounding for the notion of responsibility	CMGround
+en_ground_003	ground the idea of causality in everyday experience	CMGround
+en_ground_004	ground the concept of truth in observable facts	CMGround
+en_ground_005	provide concrete grounding for probability	CMGround
+en_ground_006	ground the notion of agency in decision-making	CMGround
+en_ground_007	ground the concept of possibility in real-world scenarios	CMGround
+en_ground_008	ground the idea of hypothesis in scientific practice	CMGround
+en_ground_009	ground the concept of contradiction in logical reasoning	CMGround
+en_ground_010	provide grounding for the notion of validity	CMGround
+
+# Agency prompts
+en_agency_001	who determines the meaning of a statement?	CMContact
+en_agency_002	what agency does the speaker have in defining terms?	CMContact
+en_agency_003	who is responsible for the truth of a proposition?	CMContact
+en_agency_004	what role does the interlocutor play in establishing meaning?	CMContact
+en_agency_005	how does agency manifest in logical discourse?	CMContact
+
+# Repair prompts (clarification needed)
+en_repair_001	I don't understand what you mean by logic	CMRepair
+en_repair_002	that doesn't make sense to me	CMRepair
+en_repair_003	please clarify your point about freedom	CMRepair
+en_repair_004	I'm confused about the distinction you made	CMRepair
+en_repair_005	can you explain that differently?	CMRepair
+
+# Long-form logic prompts
+en_logic_001	if all humans are mortal and Socrates is human, what follows?	CMPurpose
+en_logic_002	what can be concluded from the premise that if it rains then the ground is wet, and it is raining?	CMPurpose
+en_logic_003	given that either A or B is true, and not A is true, what follows?	CMPurpose
+en_logic_004	if necessity implies possibility, and this is necessary, what is the conclusion?	CMPurpose
+en_logic_005	what follows from the contradiction between A and not A?	CMPurpose
+
+# Mixed/complex prompts
+en_complex_001	what is the relationship between logic and truth, and how do they differ?	CMPurpose
+en_complex_002	explain causality and ground it in an example of everyday decision-making	CMPurpose
+en_complex_003	distinguish between validity and soundness, then ground each in a concrete case	CMPurpose
+en_complex_004	what is probability, and how does it differ from necessity in practical reasoning?	CMPurpose
+en_complex_005	ground the concept of agency and explain its role in establishing truth	CMPurpose
+
+# Contact/initiation prompts
+en_contact_001	hello	CMContact
+en_contact_002	can we talk about logic?	CMContact
+en_contact_003	I have a question about truth	CMContact
+en_contact_004	let's discuss causality	CMContact
+en_contact_005	I want to understand probability better	CMContact

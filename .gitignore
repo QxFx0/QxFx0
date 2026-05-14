@@ -27,6 +27,7 @@ test_facts.dl
 # Generated evaluation artifacts (large, reproducible)
 reports/eval_runs/
 reports/release_readiness/
+reports/en_parity_execution_report.md
 reports/*_result.md
 reports/*.tsv
 reports/input_*_report.json
