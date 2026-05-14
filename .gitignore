@@ -31,6 +31,9 @@ reports/*_result.md
 reports/*.tsv
 reports/input_*_report.json
 reports/input_unknown_candidates.json
+reports/baseline_v2/final_gates/*.log
+reports/baseline_v2/final_gates/*.tsv
+reports/baseline_v2/final_gates/_gate_results*.md
 
 # Oversized generated morphology index (>100MB); regenerate via scripts/export_lexicon.py
 resources/morphology/forms_by_surface.json

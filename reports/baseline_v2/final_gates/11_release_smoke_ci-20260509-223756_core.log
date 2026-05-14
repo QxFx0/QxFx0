@@ -1,75 +1,0 @@
-╔════════════════════════════════════════════════════════════╗
-║   QxFx0 Release Smoke Test — 10 Constitutional Gates      ║
-║   Конституционная Монархия Языков                         ║
-╚════════════════════════════════════════════════════════════╝
-
-  [1m→[0m Profile context: release-smoke | Runtime mode: strict | Script mode: degraded-local
-  [1m→[0m Profile semantics: strict=REJECT on any skip; degraded-local=ACCEPT_WITH_SKIPS on infra skips
-  [1m→[0m Runtime mode for release gates: strict
-─────────────────────────────────────────────────────────────
-[1/10] Cabal build
-─────────────────────────────────────────────────────────────
-  [1m→[0m Running cabal build all...
-Preprocessing test suite 'qxfx0-test' for qxfx0-0.1.0.0...
-Building test suite 'qxfx0-test' for qxfx0-0.1.0.0...
-[9 of 9] Linking dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test/build/qxfx0-test/qxfx0-test [Library changed]
-  [1m→[0m Binary: /home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main
-  [0;32m✓ PASS[0m
-─────────────────────────────────────────────────────────────
-[2/10] Unit tests (cabal test)
-─────────────────────────────────────────────────────────────
-  [1m→[0m Running cabal test qxfx0-test...
-- cabal.project
-- cabal.project.freeze
-- cabal.project.local
-Cases: 420  Tried: 400  Errors: 0  Failures: 0Cases: 420  Tried: 401  Errors: 0  Failures: 0Cases: 420  Tried: 402  Errors: 0  Failures: 0Cases: 420  Tried: 403  Errors: 0  Failures: 0Cases: 420  Tried: 404  Errors: 0  Failures: 0Cases: 420  Tried: 405  Errors: 0  Failures: 0Cases: 420  Tried: 406  Errors: 0  Failures: 0Cases: 420  Tried: 407  Errors: 0  Failures: 0Cases: 420  Tried: 408  Errors: 0  Failures: 0Cases: 420  Tried: 409  Errors: 0  Failures: 0Cases: 420  Tried: 410  Errors: 0  Failures: 0Cases: 420  Tried: 411  Errors: 0  Failures: 0Cases: 420  Tried: 412  Errors: 0  Failures: 0Cases: 420  Tried: 413  Errors: 0  Failures: 0Cases: 420  Tried: 414  Errors: 0  Failures: 0Cases: 420  Tried: 415  Errors: 0  Failures: 0Cases: 420  Tried: 416  Errors: 0  Failures: 0Cases: 420  Tried: 417  Errors: 0  Failures: 0Cases: 420  Tried: 418  Errors: 0  Failures: 0Cases: 420  Tried: 419  Errors: 0  Failures: 0                                              Cases: 420  Tried: 420  Errors: 0  Failures: 0
-Test suite qxfx0-test: PASS
-Test suite logged to:
-/home/liskil/my-haskell-project/QxFx0/./dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test/test/qxfx0-0.1.0.0-qxfx0-test.log
-1 of 1 test suites (1 of 1 test cases) passed.
-  [0;32m✓ PASS[0m
-  [0;33m⊘ SKIP: slow suite disabled (QXFX0_RUN_SLOW_TESTS=0)[0m
-  [1m→[0m Running architecture boundary checker...
-  [1m→[0m Architecture boundaries: OK
-  [1m→[0m Running lexical gate...
-  [1m→[0m Lexical gate: OK
-  [1m→[0m Running generated-artifact drift gate...
-  [1m→[0m Generated artifacts: OK
-─────────────────────────────────────────────────────────────
-[3/10] Schema migration check
-─────────────────────────────────────────────────────────────
-  [1m→[0m Applying migration: 001_initial_schema.sql
-wal
-  [1m→[0m Applying migration: 002_turn_quality_trace_columns.sql
-wal
-  [1m→[0m Applying migration: 003_shadow_divergence_trace_columns.sql
-wal
-  [1m→[0m Applied 3 migrations, 13 tables
-  [1m→[0m Cumulative migration schema matches canonical schema.sql
-  [0;32m✓ PASS[0m
-─────────────────────────────────────────────────────────────
-[4/10] Seed data verification
-─────────────────────────────────────────────────────────────
-  [1m→[0m Loading schema from schema.sql
-  [1m→[0m wal
-  [1m→[0m Loading seed: seed_clusters.sql
-  [1m→[0m Loading seed: seed_identity.sql
-  [1m→[0m Loading seed: seed_templates.sql
-  [1m→[0m Applied 3 seed files
-  [1m→[0m identity_claims rows: 24
-  [1m→[0m semantic_clusters rows: 18
-  [1m→[0m realization_templates rows: 24
-  [0;32m✓ PASS[0m
-  [1m→[0m Running lexical contour gate (SQL -> morphology artifacts)...
-Terminated                 "$LEXICON_CHECK" > /dev/null 2>&1
-
-════════════════════════════════════════════════════════════
-  RELEASE GATE RESULTS
-════════════════════════════════════════════════════════════
-  Mode:     degraded-local
-  Passed:   4
-  Failed:   0
-  Skipped:  1
-  Elapsed:  490s
-════════════════════════════════════════════════════════════
-  [0;33m[1mVERDICT: ACCEPT_WITH_SKIPS[0m — 1 infra/opt-out gate(s) skipped in degraded-local
