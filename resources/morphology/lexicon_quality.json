@@ -16,35 +16,35 @@
   "case_surface_metrics": {
     "feminine_like_acc_eq_nom_count": 0,
     "feminine_like_acc_eq_nom_ratio": 0.0,
-    "feminine_like_noun_count": 378,
-    "noun_acc_eq_nom_count": 1473,
-    "noun_acc_eq_nom_ratio": 0.7409456740442656,
-    "noun_count": 1988,
+    "feminine_like_noun_count": 820,
+    "noun_acc_eq_nom_count": 2105,
+    "noun_acc_eq_nom_ratio": 0.6671949286846276,
+    "noun_count": 3155,
     "noun_ins_eq_nom_count": 0,
     "noun_ins_eq_nom_ratio": 0.0,
     "soft_sign_ins_eq_nom_count": 0,
     "soft_sign_ins_eq_nom_ratio": 0.0,
-    "soft_sign_noun_count": 877
+    "soft_sign_noun_count": 1014
   },
   "collision_count": 0,
-  "complete_rows": 1998,
+  "complete_rows": 3155,
   "dangerous_collision_count": 0,
-  "dataset_sha256": "f85e37eada00be26460fff5342df74001211537bf8774278ca5c288b03f23da6",
+  "dataset_sha256": "1c6c05c3c90da957cce570bcaf8676b6de5da5a613047a516990d9398df19406",
   "drift_check": {
     "auto_manifest_present": true,
     "schema_sha256": "f5899715476dc6af",
     "seed_brain_kb_reviewed_sha256": "0396a6aa2b2027bc",
-    "seed_sha256": "8ceb0219396b8ebd"
+    "seed_sha256": "fe532337a3648dea"
   },
   "forms_by_surface": {
     "dangerous_collision_count": 0,
-    "expected_ambiguity_count": 1612,
-    "harmless_collision_count": 62,
-    "p1_form_count": 50275,
+    "expected_ambiguity_count": 1555,
+    "harmless_collision_count": 58,
+    "p1_form_count": 50158,
     "p1_lemma_count": 3992,
-    "p2_form_count": 667945,
+    "p2_form_count": 667900,
     "p2_lemma_count": 17497,
-    "surface_count": 434604
+    "surface_count": 438868
   },
   "generated_artifacts": [
     "resources/morphology/nominative.json",
@@ -64,7 +64,7 @@
   ],
   "harmless_collision_count": 0,
   "invalid_rows": 0,
-  "lemma_count": 1998,
+  "lemma_count": 3155,
   "score": 10.0,
   "sources": [
     "spec/sql/lexicon/schema.sql",

@@ -1103,6 +1103,10 @@ def render_haskell_runtime_module(
         entries.append((r.accusative, r.lemma, r.pos, "accusative"))
         entries.append((r.instrumental, r.lemma, r.pos, "instrumental"))
 
+    # Sort by (lemma, pos, case_tag) to match test expectation for deterministic order
+    _case_rank = {"nominative": 0, "genitive": 1, "prepositional": 2, "accusative": 3, "instrumental": 4}
+    entries.sort(key=lambda t: (t[1], t[2], _case_rank.get(t[3], 99)))
+
     out = [
         "{-# LANGUAGE OverloadedStrings #-}",
         "module QxFx0.Lexicon.Generated",

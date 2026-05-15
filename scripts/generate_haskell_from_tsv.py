@@ -97,8 +97,9 @@ def main():
             for case_key, (case_const, case_tag) in CASE_MAP.items():
                 form = row.get(case_key, "").strip()
                 if form:
-                    lines.append(f'    ("{form}", "{lemma}", "{pos}", "{case_tag}")')
-        f.write(",\n".join(lines))
+                    lines.append((lemma, pos, case_tag, f'    ("{form}", "{lemma}", "{pos}", "{case_tag}")'))
+        lines.sort(key=lambda x: (x[0], x[1], x[2]))
+        f.write(",\n".join(l[3] for l in lines))
         f.write('\n  ]\n\n')
 
         # generatedCandidateForms

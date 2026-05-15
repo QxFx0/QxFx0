@@ -19,13 +19,13 @@ data Lemma : Set where
   abrazivnost_N : Lemma
   abrek_N : Lemma
   abris_N : Lemma
-  absurd_N : Lemma
   abhaz_N : Lemma
   abtsug_N : Lemma
   aval_N : Lemma
   avans_N : Lemma
   avantazhnost_N : Lemma
   avar_N : Lemma
+  avariya_N : Lemma
   avgit_N : Lemma
   avgur_N : Lemma
   avers_N : Lemma
@@ -34,22 +34,22 @@ data Lemma : Set where
   avost_N : Lemma
   avral_N : Lemma
   avran_N : Lemma
+  avtobus_N : Lemma
   avtoinformativnost_N : Lemma
   avtokosmetika_N : Lemma
   avtol_N : Lemma
+  avtomat_N : Lemma
   avtomedtehnika_N : Lemma
+  avtomobil_N : Lemma
   avtomototehnika_N : Lemma
-  avtonomiya_N : Lemma
-  avtor_N : Lemma
+  avtorizatsiya_N : Lemma
   avtoelektronika_N : Lemma
-  aga_N : Lemma
   agava_N : Lemma
   agal_N : Lemma
   agama_N : Lemma
   agar_N : Lemma
   agat_N : Lemma
   agens_N : Lemma
-  agent_N : Lemma
   agentnost_N : Lemma
   agnat_N : Lemma
   agnets_N : Lemma
@@ -57,8 +57,11 @@ data Lemma : Set where
   agon_N : Lemma
   agonistika_N : Lemma
   agraf_N : Lemma
+  agregatsiya_N : Lemma
+  agregirovanie_N : Lemma
   agropromyshlennost_N : Lemma
   agul_N : Lemma
+  adapter_N : Lemma
   adaptivnost_N : Lemma
   adaptiruemost_N : Lemma
   adat_N : Lemma
@@ -67,7 +70,7 @@ data Lemma : Set where
   adept_N : Lemma
   adeh_N : Lemma
   admin_N : Lemma
-  adres_N : Lemma
+  administrirovanie_N : Lemma
   adresnost_N : Lemma
   adresuemost_N : Lemma
   adrodinamika_N : Lemma
@@ -93,21 +96,20 @@ data Lemma : Set where
   ajrol_N : Lemma
   ajsor_N : Lemma
   ajfon_N : Lemma
+  akademiya_N : Lemma
   akant_N : Lemma
   akanf_N : Lemma
   akvakinetika_N : Lemma
   akvanavtika_N : Lemma
+  akvarium_N : Lemma
   akom_N : Lemma
   akr_N : Lemma
   akril_N : Lemma
   aks_N : Lemma
   akses_N : Lemma
-  aksioma_N : Lemma
   aksiomatiziruemost_N : Lemma
   akson_N : Lemma
-  akt_N : Lemma
   akter_N : Lemma
-  aktiv_N : Lemma
   aktin_N : Lemma
   aktinichnost_N : Lemma
   aktor_N : Lemma
@@ -119,6 +121,7 @@ data Lemma : Set where
   akyn_N : Lemma
   alas_N : Lemma
   algol_N : Lemma
+  algoritm_N : Lemma
   aleatorika_N : Lemma
   aleut_N : Lemma
   alef_N : Lemma
@@ -134,6 +137,7 @@ data Lemma : Set where
   aloin_N : Lemma
   altej_N : Lemma
   altyn_N : Lemma
+  albom_N : Lemma
   alt_N : Lemma
   alfa_N : Lemma
   ama_N : Lemma
@@ -150,10 +154,12 @@ data Lemma : Set where
   amorf_N : Lemma
   amper_N : Lemma
   ampir_N : Lemma
+  amplituda_N : Lemma
   amt_N : Lemma
   ana_N : Lemma
   anal_N : Lemma
   analitichnost_N : Lemma
+  analogiya_N : Lemma
   angar_N : Lemma
   angel_N : Lemma
   angelika_N : Lemma
@@ -174,21 +180,26 @@ data Lemma : Set where
   anons_N : Lemma
   ant_N : Lemma
   antej_N : Lemma
+  antena_N : Lemma
   antigalaktika_N : Lemma
   antik_N : Lemma
   antikommutativnost_N : Lemma
+  antinomiya_N : Lemma
+  antipatiya_N : Lemma
   antirefleksivnost_N : Lemma
-  antitezis_N : Lemma
   anus_N : Lemma
   anchar_N : Lemma
   aorta_N : Lemma
+  apatiya_N : Lemma
   apash_N : Lemma
   apeks_N : Lemma
   apis_N : Lemma
   aport_N : Lemma
+  approksimatsiya_N : Lemma
   approksimiruemost_N : Lemma
   aprel_N : Lemma
   aprosh_N : Lemma
+  apteka_N : Lemma
   arab_N : Lemma
   arabika_N : Lemma
   arak_N : Lemma
@@ -198,7 +209,7 @@ data Lemma : Set where
   arbuz_N : Lemma
   argal_N : Lemma
   argon_N : Lemma
-  argument_N : Lemma
+  argumentatsiya_N : Lemma
   argumentirovannost_N : Lemma
   argus_N : Lemma
   arden_N : Lemma
@@ -217,12 +228,12 @@ data Lemma : Set where
   aromatnost_N : Lemma
   arpan_N : Lemma
   arsis_N : Lemma
+  artefakt_N : Lemma
   artos_N : Lemma
   arum_N : Lemma
   arfa_N : Lemma
   arhar_N : Lemma
   arhat_N : Lemma
-  arhiv_N : Lemma
   arhivistika_N : Lemma
   archak_N : Lemma
   arshin_N : Lemma
@@ -239,14 +250,14 @@ data Lemma : Set where
   astra_N : Lemma
   astrionika_N : Lemma
   astrodinamika_N : Lemma
+  asfalt_N : Lemma
   asferichnost_N : Lemma
   astsit_N : Lemma
-  ataka_N : Lemma
   atlas_N : Lemma
   atlet_N : Lemma
+  atmosfera_N : Lemma
   atmosferostojkost_N : Lemma
   atoll_N : Lemma
-  atom_N : Lemma
   atomnost_N : Lemma
   atrij_N : Lemma
   attik_N : Lemma
@@ -256,6 +267,7 @@ data Lemma : Set where
   aura_N : Lemma
   aurat_N : Lemma
   aut_N : Lemma
+  autentifikatsiya_N : Lemma
   autoplastika_N : Lemma
   afera_N : Lemma
   afisha_N : Lemma
@@ -281,27 +293,26 @@ data Lemma : Set where
   babaj_N : Lemma
   babka_N : Lemma
   babr_N : Lemma
-  bag_N : Lemma
   bagazh_N : Lemma
   bager_N : Lemma
   baget_N : Lemma
   bagor_N : Lemma
   badan_N : Lemma
   badya_N : Lemma
-  baz_N : Lemma
   bazar_N : Lemma
   bazis_N : Lemma
   bajka_N : Lemma
-  bajt_N : Lemma
   bakan_N : Lemma
   baken_N : Lemma
   baks_N : Lemma
   bakt_N : Lemma
   bal_N : Lemma
+  balans_N : Lemma
   balda_N : Lemma
   balet_N : Lemma
   balka_N : Lemma
   balkanistika_N : Lemma
+  balkon_N : Lemma
   ball_N : Lemma
   ballnost_N : Lemma
   balyk_N : Lemma
@@ -311,9 +322,9 @@ data Lemma : Set where
   bang_N : Lemma
   banda_N : Lemma
   baner_N : Lemma
-  bank_N : Lemma
   bant_N : Lemma
   bar_N : Lemma
+  baran_N : Lemma
   bard_N : Lemma
   barezh_N : Lemma
   barzha_N : Lemma
@@ -326,6 +337,7 @@ data Lemma : Set where
   baroklinnost_N : Lemma
   baron_N : Lemma
   bars_N : Lemma
+  barer_N : Lemma
   bas_N : Lemma
   basistost_N : Lemma
   bask_N : Lemma
@@ -333,9 +345,11 @@ data Lemma : Set where
   basnya_N : Lemma
   basovitost_N : Lemma
   bason_N : Lemma
+  bassejn_N : Lemma
   bastr_N : Lemma
   bat_N : Lemma
   batan_N : Lemma
+  batareya_N : Lemma
   batat_N : Lemma
   batik_N : Lemma
   batog_N : Lemma
@@ -350,10 +364,12 @@ data Lemma : Set where
   bachok_N : Lemma
   bash_N : Lemma
   bashka_N : Lemma
+  bashmak_N : Lemma
   bashnya_N : Lemma
   bayan_N : Lemma
   beda_N : Lemma
   bedro_N : Lemma
+  bezhenets_N : Lemma
   bezapellyatsionnost_N : Lemma
   bezvkusnost_N : Lemma
   bezdefitsitnost_N : Lemma
@@ -361,6 +377,7 @@ data Lemma : Set where
   bezik_N : Lemma
   bezmolvnost_N : Lemma
   bezoglyadnost_N : Lemma
+  bezopasnost_N : Lemma
   bezotzyvnost_N : Lemma
   bezymyannost_N : Lemma
   bezyskusnost_N : Lemma
@@ -376,21 +393,20 @@ data Lemma : Set where
   belg_N : Lemma
   belek_N : Lemma
   belets_N : Lemma
-  belka_N : Lemma
   belkovost_N : Lemma
   belokurost_N : Lemma
   bel_Nv2 : Lemma
   belyak_N : Lemma
   belyash_N : Lemma
-  ber_N : Lemma
+  benchmark_N : Lemma
   berdo_N : Lemma
-  bereg_N : Lemma
   beret_N : Lemma
   beril_N : Lemma
   berma_N : Lemma
   bertse_N : Lemma
   bersh_N : Lemma
   bes_N : Lemma
+  beseda_N : Lemma
   beskrajnost_N : Lemma
   bespokojnost_N : Lemma
   bespolost_N : Lemma
@@ -405,6 +421,8 @@ data Lemma : Set where
   beton_N : Lemma
   bzik_N : Lemma
   bib_N : Lemma
+  biblioteka_N : Lemma
+  bibliya_N : Lemma
   bibop_N : Lemma
   bivak_N : Lemma
   big_N : Lemma
@@ -416,6 +434,7 @@ data Lemma : Set where
   bilet_N : Lemma
   bill_N : Lemma
   bims_N : Lemma
+  binokl_N : Lemma
   binom_N : Lemma
   bint_N : Lemma
   bioakustika_N : Lemma
@@ -435,20 +454,17 @@ data Lemma : Set where
   biotika_N : Lemma
   bioelektronika_N : Lemma
   bioenergetika_N : Lemma
-  birzha_N : Lemma
   birka_N : Lemma
   biryuch_N : Lemma
   biser_N : Lemma
   bistr_N : Lemma
   bit_N : Lemma
-  bitva_N : Lemma
   biter_N : Lemma
   bitok_N : Lemma
   bitum_N : Lemma
   biharakteristika_N : Lemma
   bich_N : Lemma
   bishop_N : Lemma
-  blago_N : Lemma
   blagorodnost_N : Lemma
   blagouhannost_N : Lemma
   blagochestivost_N : Lemma
@@ -456,9 +472,9 @@ data Lemma : Set where
   blank_N : Lemma
   blast_N : Lemma
   blat_N : Lemma
-  blesk_N : Lemma
   bleskost_N : Lemma
   blef_N : Lemma
+  blizost_N : Lemma
   bliz_N : Lemma
   blik_N : Lemma
   blin_N : Lemma
@@ -479,7 +495,6 @@ data Lemma : Set where
   bober_N : Lemma
   bobik_N : Lemma
   bobok_N : Lemma
-  bog_N : Lemma
   bogach_N : Lemma
   bogovdohnovennost_N : Lemma
   bogomolnost_N : Lemma
@@ -497,11 +512,14 @@ data Lemma : Set where
   bokal_N : Lemma
   boks_N : Lemma
   bol_N : Lemma
+  bolezn_N : Lemma
   bolid_N : Lemma
+  boloto_N : Lemma
   bolt_N : Lemma
-  bol_Nv2 : Lemma
+  bolnitsa_N : Lemma
   bolyus_N : Lemma
   bomba_N : Lemma
+  bombardir_N : Lemma
   bomzh_N : Lemma
   bon_N : Lemma
   bonza_N : Lemma
@@ -516,35 +534,38 @@ data Lemma : Set where
   borid_N : Lemma
   born_N : Lemma
   borov_N : Lemma
+  boroda_N : Lemma
   borozdchatost_N : Lemma
   bort_N : Lemma
   bort_Nv2 : Lemma
   borshch_N : Lemma
   boss_N : Lemma
   bosyak_N : Lemma
-  bot_N : Lemma
   botan_N : Lemma
   botik_N : Lemma
+  botinok_N : Lemma
   bochag_N : Lemma
   bochar_N : Lemma
   bochka_N : Lemma
   bosh_N : Lemma
   braga_N : Lemma
   brada_N : Lemma
+  brak_N : Lemma
   bran_N : Lemma
   bras_N : Lemma
   brass_N : Lemma
   brat_N : Lemma
   brachnost_N : Lemma
+  brevno_N : Lemma
   breg_N : Lemma
   brejk_N : Lemma
-  bremya_N : Lemma
-  brend_N : Lemma
   breh_N : Lemma
   bresh_N : Lemma
   brig_N : Lemma
+  brigada_N : Lemma
   bridzh_N : Lemma
   briz_N : Lemma
+  brilliant_N : Lemma
   britt_N : Lemma
   brov_N : Lemma
   brom_N : Lemma
@@ -553,8 +574,9 @@ data Lemma : Set where
   bron_N : Lemma
   brosh_N : Lemma
   brus_N : Lemma
+  brusok_N : Lemma
   bryla_N : Lemma
-  brend_Nv2 : Lemma
+  brend_N : Lemma
   bryuho_N : Lemma
   bryak_N : Lemma
   bubal_N : Lemma
@@ -565,23 +587,23 @@ data Lemma : Set where
   budda_N : Lemma
   budka_N : Lemma
   budra_N : Lemma
+  budushchee_N : Lemma
   buek_N : Lemma
   buer_N : Lemma
   buzh_N : Lemma
   buzun_N : Lemma
   buk_N : Lemma
   bukan_N : Lemma
-  bukva_N : Lemma
+  bukvar_N : Lemma
   buket_N : Lemma
   buklya_N : Lemma
   buks_N : Lemma
   bulka_N : Lemma
   bulb_N : Lemma
+  bulvar_N : Lemma
   bum_N : Lemma
-  bumaga_N : Lemma
   buna_N : Lemma
   bund_N : Lemma
-  bunt_N : Lemma
   bur_N : Lemma
   burav_N : Lemma
   burak_N : Lemma
@@ -592,13 +614,14 @@ data Lemma : Set where
   burt_N : Lemma
   burun_N : Lemma
   bursh_N : Lemma
+  burya_N : Lemma
   buryat_N : Lemma
   butik_N : Lemma
   butil_N : Lemma
   buton_N : Lemma
   butsy_N : Lemma
   butuz_N : Lemma
-  bufer_N : Lemma
+  butylka_N : Lemma
   bufet_N : Lemma
   buhta_N : Lemma
   bucha_N : Lemma
@@ -611,9 +634,10 @@ data Lemma : Set where
   byuik_N : Lemma
   bekus_N : Lemma
   bend_N : Lemma
-  ber_Nv2 : Lemma
+  ber_N : Lemma
   byuvar_N : Lemma
   byuvet_N : Lemma
+  byudzhet_N : Lemma
   byust_N : Lemma
   byaz_N : Lemma
   byaka_N : Lemma
@@ -622,11 +646,13 @@ data Lemma : Set where
   vabik_N : Lemma
   vaga_N : Lemma
   vagon_N : Lemma
+  vagonetka_N : Lemma
   vaza_N : Lemma
   vazon_N : Lemma
   vajya_N : Lemma
   vakat_N : Lemma
   vaksa_N : Lemma
+  vaktsina_N : Lemma
   vaktsinoprofilaktika_N : Lemma
   val_N : Lemma
   valah_N : Lemma
@@ -634,13 +660,14 @@ data Lemma : Set where
   valer_N : Lemma
   valet_N : Lemma
   valets_N : Lemma
-  validnost_N : Lemma
+  validatsiya_N : Lemma
   valik_N : Lemma
   valka_N : Lemma
   valuj_N : Lemma
   valun_N : Lemma
   valuh_N : Lemma
   vals_N : Lemma
+  valyuta_N : Lemma
   vamp_N : Lemma
   vanna_N : Lemma
   vanta_N : Lemma
@@ -650,6 +677,7 @@ data Lemma : Set where
   variativnost_N : Lemma
   varka_N : Lemma
   varyag_N : Lemma
+  vasilek_N : Lemma
   vata_N : Lemma
   vater_N : Lemma
   vatin_N : Lemma
@@ -659,30 +687,31 @@ data Lemma : Set where
   vahnya_N : Lemma
   vahta_N : Lemma
   vbros_N : Lemma
-  vvod_N : Lemma
   vvoz_N : Lemma
   vgib_N : Lemma
   vdavlennost_N : Lemma
   vdova_N : Lemma
-  vdoh_N : Lemma
   veb_N : Lemma
   veda_N : Lemma
   vedda_N : Lemma
   vedro_N : Lemma
   vedun_N : Lemma
+  vedma_N : Lemma
   veer_N : Lemma
   vezha_N : Lemma
   vezhda_N : Lemma
   vezdesushchnost_N : Lemma
   vezdehodnost_N : Lemma
   vejka_N : Lemma
-  veko_N : Lemma
+  vektor_N : Lemma
   veksha_N : Lemma
   veld_N : Lemma
   velik_N : Lemma
+  velosiped_N : Lemma
   veld_Nv2 : Lemma
   vels_N : Lemma
   velyur_N : Lemma
+  vena_N : Lemma
   vengr_N : Lemma
   vend_N : Lemma
   vened_N : Lemma
@@ -690,52 +719,53 @@ data Lemma : Set where
   venets_N : Lemma
   venik_N : Lemma
   venka_N : Lemma
-  veno_N : Lemma
+  ventilyator_N : Lemma
   vepr_N : Lemma
   veps_N : Lemma
+  veranda_N : Lemma
   verba_N : Lemma
   verv_N : Lemma
+  verevka_N : Lemma
   vered_N : Lemma
   veres_N : Lemma
+  verifikatsiya_N : Lemma
   veronika_N : Lemma
-  veroyatnost_N : Lemma
   verp_N : Lemma
+  versionirovanie_N : Lemma
+  versiya_N : Lemma
+  versta_N : Lemma
+  vertikal_N : Lemma
+  vertolet_N : Lemma
   verf_N : Lemma
   verh_N : Lemma
   versha_N : Lemma
-  ves_N : Lemma
   veslo_N : Lemma
   vesna_N : Lemma
   vest_N : Lemma
   vest_Nv2 : Lemma
-  ves_Nv2 : Lemma
-  vetv_N : Lemma
-  veter_N : Lemma
-  vetka_N : Lemma
   vetla_N : Lemma
   vetrennost_N : Lemma
   veha_N : Lemma
   veche_N : Lemma
-  vecher_N : Lemma
-  vechnost_N : Lemma
+  veshalka_N : Lemma
   veshka_N : Lemma
+  veshchestvo_N : Lemma
   veshchun_N : Lemma
-  veshch_N : Lemma
   vzaimovygodnost_N : Lemma
   vzaimodopolnyaemost_N : Lemma
   vzaimozamestimost_N : Lemma
   vzaimoinduktivnost_N : Lemma
   vzaimosvyazannost_N : Lemma
+  vzaimosvyaz_N : Lemma
   vzbudorazhennost_N : Lemma
   vzvar_N : Lemma
   vzveshennost_N : Lemma
   vzvod_N : Lemma
   vzvoz_N : Lemma
+  vzglyad_N : Lemma
   vzdor_N : Lemma
-  vzdoh_N : Lemma
   vzimaemost_N : Lemma
   vzlet_N : Lemma
-  vzlom_N : Lemma
   vzmah_N : Lemma
   vzmet_N : Lemma
   vzmyv_N : Lemma
@@ -743,7 +773,6 @@ data Lemma : Set where
   vzor_N : Lemma
   vzrez_N : Lemma
   vzroslost_N : Lemma
-  vzryv_N : Lemma
   vzryvoopasnost_N : Lemma
   vzeroshennost_N : Lemma
   vzysk_N : Lemma
@@ -753,7 +782,7 @@ data Lemma : Set where
   viver_N : Lemma
   vig_N : Lemma
   vigilnost_N : Lemma
-  vid_N : Lemma
+  videnie_N : Lemma
   videotehnika_N : Lemma
   vidik_N : Lemma
   vidnost_N : Lemma
@@ -765,32 +794,33 @@ data Lemma : Set where
   vilka_N : Lemma
   villa_N : Lemma
   vilt_N : Lemma
-  vina_N : Lemma
   vinil_N : Lemma
+  vinograd_N : Lemma
   vint_N : Lemma
   viola_N : Lemma
   vira_N : Lemma
   virazh_N : Lemma
   virt_N : Lemma
-  virus_N : Lemma
   visok_N : Lemma
   vist_N : Lemma
+  vitamin_N : Lemma
   vitiya_N : Lemma
   vitok_N : Lemma
-  vihor_N : Lemma
+  vitrina_N : Lemma
+  vihr_N : Lemma
   vitsa_N : Lemma
   vishnya_N : Lemma
-  vklad_N : Lemma
   vklinennost_N : Lemma
   vklyuchennost_N : Lemma
   vkraplennost_N : Lemma
-  vkus_N : Lemma
   vlaga_N : Lemma
   vlagoemkost_N : Lemma
   vlagonepronitsaemost_N : Lemma
   vlagopronitsaemost_N : Lemma
+  vlazhnost_N : Lemma
   vlah_N : Lemma
   vlet_N : Lemma
+  vliyanie_N : Lemma
   vlozhennost_N : Lemma
   vnebrachnost_N : Lemma
   vnevedomstvennost_N : Lemma
@@ -800,40 +830,35 @@ data Lemma : Set where
   vobla_N : Lemma
   vovlechennost_N : Lemma
   vogul_N : Lemma
-  vod_N : Lemma
+  voda_N : Lemma
   vodka_N : Lemma
   vodoobespechennost_N : Lemma
   vodoottalkivaemost_N : Lemma
   vozhak_N : Lemma
   vozhd_N : Lemma
   vozhzha_N : Lemma
+  vozvrat_N : Lemma
   vozvratnost_N : Lemma
-  vozduh_N : Lemma
   vozka_N : Lemma
   vozmezdnost_N : Lemma
-  vozmozhnost_N : Lemma
   voznya_N : Lemma
   voin_N : Lemma
   voj_N : Lemma
-  vojna_N : Lemma
   vojt_N : Lemma
   vok_N : Lemma
   vokal_N : Lemma
   volan_N : Lemma
   volga_N : Lemma
   volk_N : Lemma
-  volna_N : Lemma
   volok_N : Lemma
   volos_N : Lemma
   voloh_N : Lemma
   volhv_N : Lemma
   volt_N : Lemma
-  volya_N : Lemma
   vomer_N : Lemma
   vona_N : Lemma
   von_N : Lemma
   vopl_N : Lemma
-  vopros_N : Lemma
   vor_N : Lemma
   vorog_N : Lemma
   voron_N : Lemma
@@ -842,20 +867,23 @@ data Lemma : Set where
   vors_N : Lemma
   vosk_N : Lemma
   vospalennost_N : Lemma
+  vosproizvodimost_N : Lemma
   vosstanavlivaemost_N : Lemma
+  vosstanovlenie_N : Lemma
+  vostok_N : Lemma
+  voshishchenie_N : Lemma
   votum_N : Lemma
   votyak_N : Lemma
   voshka_N : Lemma
   vosh_N : Lemma
   voyazh_N : Lemma
   voyaka_N : Lemma
+  vpechatlenie_N : Lemma
   vpolneprimenimost_N : Lemma
   vpusk_N : Lemma
-  vrag_N : Lemma
   vral_N : Lemma
   vrach_N : Lemma
-  vred_N : Lemma
-  vremya_N : Lemma
+  vrashchenie_N : Lemma
   vrub_N : Lemma
   vrun_N : Lemma
   vrusha_N : Lemma
@@ -864,27 +892,27 @@ data Lemma : Set where
   vseohvatnost_N : Lemma
   vskok_N : Lemma
   vspuchennost_N : Lemma
+  vstrecha_N : Lemma
   vstrechaemost_N : Lemma
   vshod_N : Lemma
   vtora_N : Lemma
   vtyk_N : Lemma
   vual_N : Lemma
+  vulkan_N : Lemma
   vuta_N : Lemma
-  vhod_N : Lemma
+  vchera_N : Lemma
   vezd_N : Lemma
   vybeg_N : Lemma
-  vybor_N : Lemma
+  vyborka_N : Lemma
   vyborochnost_N : Lemma
   vyval_N : Lemma
   vyvih_N : Lemma
-  vyvod_N : Lemma
-  vyvodimost_N : Lemma
   vyvoz_N : Lemma
   vygib_N : Lemma
+  vygoda_N : Lemma
   vygon_N : Lemma
   vygul_N : Lemma
   vydel_N : Lemma
-  vydoh_N : Lemma
   vydra_N : Lemma
   vyezd_N : Lemma
   vyem_N : Lemma
@@ -910,27 +938,35 @@ data Lemma : Set where
   vypar_N : Lemma
   vypas_N : Lemma
   vypek_N : Lemma
+  vypiska_N : Lemma
   vypolnennost_N : Lemma
   vypor_N : Lemma
   vypot_N : Lemma
+  vypusk_N : Lemma
   vyp_N : Lemma
   vyravnennost_N : Lemma
+  vyrazhenie_N : Lemma
   vyrez_N : Lemma
   vyrozhdennost_N : Lemma
   vyrub_N : Lemma
+  vyruchka_N : Lemma
   vysev_N : Lemma
   vysed_N : Lemma
-  vyskazyvanie_N : Lemma
   vysov_N : Lemma
+  vysota_N : Lemma
+  vystavka_N : Lemma
+  vystrel_N : Lemma
+  vystuplenie_N : Lemma
   vys_N : Lemma
   vyt_N : Lemma
   vytyanutost_N : Lemma
-  vyhod_N : Lemma
+  vyhodnoj_N : Lemma
   vyholoshchennost_N : Lemma
   vychet_N : Lemma
   vyshag_N : Lemma
   vyshka_N : Lemma
   vyya_N : Lemma
+  vyyava_N : Lemma
   vyyavlyaemost_N : Lemma
   vyuga_N : Lemma
   vyuk_N : Lemma
@@ -939,19 +975,20 @@ data Lemma : Set where
   vyazka_N : Lemma
   vyaz_Nv2 : Lemma
   vyatka_N : Lemma
+  gavan_N : Lemma
   gavot_N : Lemma
   gaga_N : Lemma
   gagat_N : Lemma
   gad_N : Lemma
-  gaz_N : Lemma
+  gazeta_N : Lemma
   gazik_N : Lemma
   gazodinamika_N : Lemma
   gazon_N : Lemma
   gazoenergetika_N : Lemma
   gajal_N : Lemma
-  gajda_N : Lemma
   gajka_N : Lemma
   gak_N : Lemma
+  galereya_N : Lemma
   galid_N : Lemma
   galit_N : Lemma
   galka_N : Lemma
@@ -970,6 +1007,7 @@ data Lemma : Set where
   ganit_N : Lemma
   ganka_N : Lemma
   garazh_N : Lemma
+  garantiya_N : Lemma
   garem_N : Lemma
   gart_N : Lemma
   garus_N : Lemma
@@ -981,6 +1019,8 @@ data Lemma : Set where
   gayuin_N : Lemma
   gbajt_N : Lemma
   gvalt_N : Lemma
+  gvardiya_N : Lemma
+  gvozd_N : Lemma
   geveya_N : Lemma
   gej_N : Lemma
   gejm_N : Lemma
@@ -996,6 +1036,7 @@ data Lemma : Set where
   geometrodinamika_N : Lemma
   geomehanika_N : Lemma
   gerb_N : Lemma
+  gerbarij_N : Lemma
   gerej_N : Lemma
   germa_N : Lemma
   gerodontika_N : Lemma
@@ -1007,6 +1048,7 @@ data Lemma : Set where
   geteroskedastichnost_N : Lemma
   getit_N : Lemma
   getry_N : Lemma
+  gibel_N : Lemma
   gibridnost_N : Lemma
   gig_N : Lemma
   gid_N : Lemma
@@ -1021,9 +1063,9 @@ data Lemma : Set where
   gilyak_N : Lemma
   gimen_N : Lemma
   gimn_N : Lemma
+  gimnastika_N : Lemma
   gineya_N : Lemma
   gioid_N : Lemma
-  gipoteza_N : Lemma
   gips_N : Lemma
   gipyur_N : Lemma
   girej_N : Lemma
@@ -1037,19 +1079,21 @@ data Lemma : Set where
   glavk_N : Lemma
   glad_N : Lemma
   glad_Nv2 : Lemma
-  glaz_N : Lemma
+  glazok_N : Lemma
   glajd_N : Lemma
   glas_N : Lemma
   glej_N : Lemma
   glen_N : Lemma
   glet_N : Lemma
-  glina_N : Lemma
+  glint_N : Lemma
   glipt_N : Lemma
   glist_N : Lemma
   glif_N : Lemma
   gliya_N : Lemma
+  globus_N : Lemma
   glossematika_N : Lemma
   glot_N : Lemma
+  glubina_N : Lemma
   glub_N : Lemma
   glum_N : Lemma
   glupovatost_N : Lemma
@@ -1060,7 +1104,7 @@ data Lemma : Set where
   glyuk_N : Lemma
   glyuon_N : Lemma
   gmina_N : Lemma
-  gnev_N : Lemma
+  gnezdo_N : Lemma
   gnejs_N : Lemma
   gnet_N : Lemma
   gnida_N : Lemma
@@ -1075,101 +1119,226 @@ data Lemma : Set where
   goboj_N : Lemma
   govor_N : Lemma
   gogot_N : Lemma
+  god_N : Lemma
   godik_N : Lemma
+  golovka_N : Lemma
   golovokruzhitelnost_N : Lemma
+  golub_N : Lemma
   gomogennost_N : Lemma
   gomozigotnost_N : Lemma
   gomoskedastichnost_N : Lemma
+  gonets_N : Lemma
   gonimost_N : Lemma
-  gordost_N : Lemma
+  gorenie_N : Lemma
+  gorizont_N : Lemma
+  gorlo_N : Lemma
+  gorshok_N : Lemma
   gosbezopasnost_N : Lemma
+  gostinitsa_N : Lemma
   gost_N : Lemma
+  gosudarstvo_N : Lemma
+  gravitatsiya_N : Lemma
+  grad_N : Lemma
+  gradus_N : Lemma
   grammatichnost_N : Lemma
-  granitsa_N : Lemma
+  granat_N : Lemma
+  grafik_N : Lemma
+  greben_N : Lemma
   grehovnost_N : Lemma
   greshnost_N : Lemma
+  groza_N : Lemma
+  grom_N : Lemma
   grotesknost_N : Lemma
+  grohot_N : Lemma
   grubovatost_N : Lemma
   gruzonapryazhennost_N : Lemma
+  grunt_N : Lemma
+  gruppa_N : Lemma
+  grusha_N : Lemma
+  gryadka_N : Lemma
+  guberniya_N : Lemma
   gubkoobraznost_N : Lemma
   gubchatost_N : Lemma
+  gusenitsa_N : Lemma
+  gus_N : Lemma
+  davka_N : Lemma
+  davlenie_N : Lemma
+  daleko_N : Lemma
+  dannye_N : Lemma
+  dan_N : Lemma
+  dvizhenie_N : Lemma
+  dvojnya_N : Lemma
+  dvor_N : Lemma
+  dvorets_N : Lemma
   dvuznachnost_N : Lemma
   dvunatsionalnost_N : Lemma
   dvuhmernost_N : Lemma
   dvuhtsvetnost_N : Lemma
+  debaty_N : Lemma
+  devochka_N : Lemma
+  degradatsiya_N : Lemma
+  ded_N : Lemma
+  dedlajn_N : Lemma
+  deduktsiya_N : Lemma
+  deduplikatsiya_N : Lemma
   dezaktivizatsiya_N : Lemma
   dezorientirovannost_N : Lemma
   deizm_N : Lemma
+  dejstvie_N : Lemma
+  dejstvitelnost_N : Lemma
+  dekabr_N : Lemma
   deklassirovannost_N : Lemma
-  delat_V : Lemma
+  dekompozitsiya_N : Lemma
+  delegirovanie_N : Lemma
+  delo_N : Lemma
+  demokratiya_N : Lemma
   demoralizovannost_N : Lemma
+  denormalizatsiya_N : Lemma
+  deploj_N : Lemma
   depressivnost_N : Lemma
+  derevnya_N : Lemma
+  desant_N : Lemma
+  deserializatsiya_N : Lemma
+  desna_N : Lemma
+  detal_N : Lemma
+  determinizm_N : Lemma
   determinirovannost_N : Lemma
   detorozhdaemost_N : Lemma
-  definitsiya_N : Lemma
+  defitsit_N : Lemma
+  deformatsiya_N : Lemma
+  deshifrovanie_N : Lemma
+  deyatel_N : Lemma
+  diagnostika_N : Lemma
+  diagonal_N : Lemma
   diakaustika_N : Lemma
   diakritika_N : Lemma
   dialog_N : Lemma
+  diametr_N : Lemma
+  diapazon_N : Lemma
   diatermichnost_N : Lemma
+  divan_N : Lemma
+  diviziya_N : Lemma
   didzhitronika_N : Lemma
-  distinktsiya_N : Lemma
+  dizyunktsiya_N : Lemma
+  dinastiya_N : Lemma
+  direktor_N : Lemma
+  disbalans_N : Lemma
+  diskoteka_N : Lemma
+  dispersiya_N : Lemma
+  dispetcher_N : Lemma
+  distantsiya_N : Lemma
   differentsiruemost_N : Lemma
-  doverie_N : Lemma
-  dovod_N : Lemma
-  dokazatelstvo_N : Lemma
+  dnevnik_N : Lemma
+  dobycha_N : Lemma
+  dogovor_N : Lemma
+  doklad_N : Lemma
+  dokument_N : Lemma
   dokumentalistika_N : Lemma
-  dolg_N : Lemma
   dolgosrochnost_N : Lemma
+  dolina_N : Lemma
+  domik_N : Lemma
   dominantnost_N : Lemma
+  dopolnenie_N : Lemma
   dopolnitelnost_N : Lemma
   dopolnyaemost_N : Lemma
-  dopushchenie_N : Lemma
-  dostatochnost_N : Lemma
-  dostovernost_N : Lemma
+  dopusk_N : Lemma
+  doroga_N : Lemma
+  doska_N : Lemma
+  dostavka_N : Lemma
+  dostizhenie_N : Lemma
+  dostupnost_N : Lemma
   dotatsionnost_N : Lemma
   dohlost_N : Lemma
+  doch_N : Lemma
+  draka_N : Lemma
+  drevesina_N : Lemma
+  drova_N : Lemma
+  druzhba_N : Lemma
   dualnost_N : Lemma
+  dub_N : Lemma
   dubletnost_N : Lemma
   dubnost_N : Lemma
+  duma_N : Lemma
+  durak_N : Lemma
+  duhi_N : Lemma
   duhovitost_N : Lemma
+  duhovka_N : Lemma
   dushistost_N : Lemma
+  duel_N : Lemma
+  dymka_N : Lemma
   dymnost_N : Lemma
   dymchatost_N : Lemma
+  dyadya_N : Lemma
+  evrej_N : Lemma
+  evropa_N : Lemma
   evfenika_N : Lemma
   edinokrovnost_N : Lemma
   edinorodnost_N : Lemma
   edinosushchnost_N : Lemma
   edinstvennost_N : Lemma
   ezhednevnost_N : Lemma
+  elka_N : Lemma
+  est_N : Lemma
+  ehat_N : Lemma
+  zhaloba_N : Lemma
   zhalobnost_N : Lemma
+  zhara_N : Lemma
+  zhelezo_N : Lemma
   zheltushnost_N : Lemma
+  zhelud_N : Lemma
+  zhena_N : Lemma
+  zhenih_N : Lemma
   zhenopodobnost_N : Lemma
-  zhizn_N : Lemma
+  zhenshchina_N : Lemma
+  zhertva_N : Lemma
+  zhivot_N : Lemma
+  zhivotnoe_N : Lemma
+  zhurnal_N : Lemma
+  zhurnalist_N : Lemma
+  zabava_N : Lemma
   zablagovremennost_N : Lemma
+  zabor_N : Lemma
+  zavershenie_N : Lemma
+  zavisimost_N : Lemma
+  zavist_N : Lemma
+  zavod_N : Lemma
   zavorozhennost_N : Lemma
+  zavtra_N : Lemma
+  zagadka_N : Lemma
   zagruzhenost_N : Lemma
-  zadacha_N : Lemma
+  zaderzhka_N : Lemma
   zazhatost_N : Lemma
   zaika_N : Lemma
-  zaklyuchenie_N : Lemma
+  zakaz_N : Lemma
+  zakat_N : Lemma
   zakompleksovannost_N : Lemma
   zakonnorozhdennost_N : Lemma
+  zakonomernost_N : Lemma
   zakopchennost_N : Lemma
   zakreplennost_N : Lemma
   zakruchennost_N : Lemma
   zakrytost_N : Lemma
   zalizannost_N : Lemma
+  zamedlenie_N : Lemma
   zamenyaemost_N : Lemma
+  zametka_N : Lemma
   zametnost_N : Lemma
   zameshannost_N : Lemma
   zamusolennost_N : Lemma
   zamutnennost_N : Lemma
+  zamysel_N : Lemma
+  zanaves_N : Lemma
+  zapad_N : Lemma
+  zapas_N : Lemma
+  zapah_N : Lemma
+  zapis_N : Lemma
   zapolnennost_N : Lemma
-  zapret_N : Lemma
   zapreshchennost_N : Lemma
+  zarya_N : Lemma
   zaryazhennost_N : Lemma
   zasalennost_N : Lemma
   zasluzhennost_N : Lemma
+  zasuha_N : Lemma
   zasuhostojkost_N : Lemma
   zatvorennost_N : Lemma
   zatormozhennost_N : Lemma
@@ -1177,137 +1346,344 @@ data Lemma : Set where
   zatyanutost_N : Lemma
   zacharovannost_N : Lemma
   zashchishchennost_N : Lemma
+  zayavka_N : Lemma
+  zayavlenie_N : Lemma
+  zayats_N : Lemma
+  zvon_N : Lemma
+  zvonok_N : Lemma
   zvukotehnika_N : Lemma
+  zdanie_N : Lemma
+  zdorove_N : Lemma
+  zemletryasenie_N : Lemma
+  zerno_N : Lemma
+  zima_N : Lemma
+  zlo_N : Lemma
+  zmeya_N : Lemma
   znakovost_N : Lemma
-  znat_V : Lemma
+  znamya_N : Lemma
+  znachenie_N : Lemma
+  zoloto_N : Lemma
+  zritel_N : Lemma
+  zub_N : Lemma
   zubchatost_N : Lemma
   idempotentnost_N : Lemma
+  identifikatsiya_N : Lemma
   identifitsiruemost_N : Lemma
-  identichnost_N : Lemma
   idiotichnost_N : Lemma
+  ierarhiya_N : Lemma
   ieroglifika_N : Lemma
+  izba_N : Lemma
+  izvestie_N : Lemma
+  izgnanie_N : Lemma
   izlechimost_N : Lemma
+  izluchenie_N : Lemma
+  izmena_N : Lemma
+  izmenenie_N : Lemma
   izmotannost_N : Lemma
   iznemozhennost_N : Lemma
+  izolyatsiya_N : Lemma
   izotropnost_N : Lemma
   izrezannost_N : Lemma
+  ikona_N : Lemma
   ikonika_N : Lemma
-  illyuziya_N : Lemma
   imbetsilnost_N : Lemma
   immunogenetika_N : Lemma
-  implikatsiya_N : Lemma
+  imperiya_N : Lemma
+  impuls_N : Lemma
+  imya_N : Lemma
+  invariant_N : Lemma
+  indeks_N : Lemma
+  indeksatsiya_N : Lemma
+  indikator_N : Lemma
+  induktsiya_N : Lemma
+  inej_N : Lemma
   inertsionnost_N : Lemma
+  inertsiya_N : Lemma
+  inkapsulyatsiya_N : Lemma
+  inspektsiya_N : Lemma
   instruktivnost_N : Lemma
+  instruktsiya_N : Lemma
+  instrument_N : Lemma
   insulyarnost_N : Lemma
+  integratsiya_N : Lemma
   integrirovannost_N : Lemma
   integriruemost_N : Lemma
   interaktivnost_N : Lemma
+  interval_N : Lemma
+  interes_N : Lemma
   internatsionalnost_N : Lemma
-  interpretatsiya_N : Lemma
-  inferentsiya_N : Lemma
+  interpolyatsiya_N : Lemma
+  interpretiruemost_N : Lemma
+  interfejs_N : Lemma
+  interfejsnost_N : Lemma
+  intriga_N : Lemma
   informativnost_N : Lemma
   informatika_N : Lemma
   informatsionnost_N : Lemma
+  informatsiya_N : Lemma
   informirovannost_N : Lemma
   informtehnika_N : Lemma
+  intsident_N : Lemma
   ionika_N : Lemma
   irregulyarnost_N : Lemma
-  isklyuchenie_N : Lemma
+  isk_N : Lemma
+  iskra_N : Lemma
+  iskrennost_N : Lemma
   iskushennost_N : Lemma
+  isparenie_N : Lemma
   ispeshchrennost_N : Lemma
+  ispolnitel_N : Lemma
   ispravimost_N : Lemma
+  ispravlenie_N : Lemma
+  ispytanie_N : Lemma
   issledovannost_N : Lemma
-  istina_N : Lemma
-  istinnost_N : Lemma
+  istorik_N : Lemma
+  istochnik_N : Lemma
   istrepannost_N : Lemma
+  ishod_N : Lemma
   ischislimost_N : Lemma
   ischislyaemost_N : Lemma
+  iteratsiya_N : Lemma
+  kabinet_N : Lemma
+  kavaler_N : Lemma
+  kavychka_N : Lemma
+  kazarma_N : Lemma
   kazennost_N : Lemma
+  kazn_N : Lemma
+  kalendar_N : Lemma
+  kalibrovka_N : Lemma
+  kamera_N : Lemma
+  kantata_N : Lemma
   kantserogennost_N : Lemma
+  kapital_N : Lemma
   kapitaloemkost_N : Lemma
+  kapitan_N : Lemma
+  karandash_N : Lemma
   karlikovost_N : Lemma
+  karman_N : Lemma
+  karera_N : Lemma
+  kassa_N : Lemma
   katadioptrika_N : Lemma
+  katalog_N : Lemma
+  katastrofa_N : Lemma
+  kategorizatsiya_N : Lemma
+  kauzatsiya_N : Lemma
+  kafe_N : Lemma
+  kasha_N : Lemma
+  kvadrat_N : Lemma
   kvadratnost_N : Lemma
   kvadrika_N : Lemma
   kvadriruemost_N : Lemma
   kvazioptika_N : Lemma
-  kvantor_N : Lemma
+  kvantil_N : Lemma
+  kvartal_N : Lemma
+  kvartira_N : Lemma
   kvelost_N : Lemma
+  kvitantsiya_N : Lemma
+  kedr_N : Lemma
+  kerosin_N : Lemma
   kika_N : Lemma
+  kilometr_N : Lemma
   kinesika_N : Lemma
   kinoavtomatika_N : Lemma
   kinokritika_N : Lemma
   kinomehanika_N : Lemma
   kinoradiomehanika_N : Lemma
   kiralnost_N : Lemma
+  kislorod_N : Lemma
+  kislota_N : Lemma
   kislotorastvorimost_N : Lemma
   kislotoustojchivost_N : Lemma
+  klad_N : Lemma
+  klassifikatsiya_N : Lemma
+  klassifitsirovanie_N : Lemma
+  kletka_N : Lemma
+  klet_N : Lemma
+  klient_N : Lemma
   klika_N : Lemma
+  klimat_N : Lemma
+  klinika_N : Lemma
   klinovidnost_N : Lemma
+  knizhka_N : Lemma
+  knopka_N : Lemma
+  knut_N : Lemma
+  knyaz_N : Lemma
   kovalentnost_N : Lemma
+  kover_N : Lemma
+  kovsh_N : Lemma
+  kogeziya_N : Lemma
   kognitivistika_N : Lemma
+  kozhuh_N : Lemma
+  kozel_N : Lemma
+  kokos_N : Lemma
+  kolebanie_N : Lemma
+  koleso_N : Lemma
+  kollega_N : Lemma
+  kollektiv_N : Lemma
   kollinearnost_N : Lemma
+  kolodets_N : Lemma
+  kolonka_N : Lemma
+  kolonna_N : Lemma
+  koltso_N : Lemma
+  komanda_N : Lemma
+  komandir_N : Lemma
+  komar_N : Lemma
+  kometa_N : Lemma
   kommutativnost_N : Lemma
+  komnata_N : Lemma
+  kompaniya_N : Lemma
+  komplaens_N : Lemma
+  kompleks_N : Lemma
   komplementarnost_N : Lemma
+  komponent_N : Lemma
+  kompressiya_N : Lemma
   komfortnost_N : Lemma
+  konvejer_N : Lemma
   konvertiruemost_N : Lemma
-  konkretika_N : Lemma
+  kondensatsiya_N : Lemma
   konkurentnost_N : Lemma
+  konkurs_N : Lemma
+  konnektor_N : Lemma
+  konsistentnost_N : Lemma
+  konstanta_N : Lemma
   konstitutsionnost_N : Lemma
+  konstruktor_N : Lemma
   kontakt_N : Lemma
   kontaktnost_N : Lemma
+  kontekst_N : Lemma
   kontinentalnost_N : Lemma
+  kontrakt_N : Lemma
   kontroliruemost_N : Lemma
-  kontrprimer_N : Lemma
+  kontrol_N : Lemma
+  kontur_N : Lemma
   konusnost_N : Lemma
   konusoobraznost_N : Lemma
+  konfeta_N : Lemma
+  konfigurirovanie_N : Lemma
   konfidentsialnost_N : Lemma
-  konflikt_N : Lemma
   konfliktnost_N : Lemma
-  konfrontatsiya_N : Lemma
   kontsentrirovannost_N : Lemma
+  kontsert_N : Lemma
   konyunkturnost_N : Lemma
+  konyunktsiya_N : Lemma
+  kon_N : Lemma
+  koordinata_N : Lemma
+  koordinatsiya_N : Lemma
   koordinirovannost_N : Lemma
-  korollarij_N : Lemma
-  korrektnost_N : Lemma
+  kopejka_N : Lemma
+  korabl_N : Lemma
+  koren_N : Lemma
+  korzina_N : Lemma
+  koridor_N : Lemma
+  korobka_N : Lemma
+  korova_N : Lemma
+  korpus_N : Lemma
+  korrektsiya_N : Lemma
   korrelirovannost_N : Lemma
+  korrelyatsiya_N : Lemma
   korrumpirovannost_N : Lemma
   kosvennost_N : Lemma
   kosmatost_N : Lemma
   kosmichnost_N : Lemma
+  kosmos_N : Lemma
+  koster_N : Lemma
   kost_N : Lemma
+  kotel_N : Lemma
   koertsitivnost_N : Lemma
   krapchatost_N : Lemma
+  kraska_N : Lemma
   krasnostojkost_N : Lemma
+  kredit_N : Lemma
+  kreslo_N : Lemma
+  krest_N : Lemma
   krivorukost_N : Lemma
+  krizis_N : Lemma
   kriogenika_N : Lemma
   krioelektronika_N : Lemma
-  kriterij_N : Lemma
+  kristall_N : Lemma
+  kristallizatsiya_N : Lemma
+  krovat_N : Lemma
   krovnost_N : Lemma
+  krolik_N : Lemma
   krugoobraznost_N : Lemma
   krupnost_N : Lemma
+  krylo_N : Lemma
+  krysa_N : Lemma
+  krysha_N : Lemma
+  kub_N : Lemma
+  kuznets_N : Lemma
+  kukuruza_N : Lemma
   kulttehnika_N : Lemma
+  kupol_N : Lemma
+  kurort_N : Lemma
+  kust_N : Lemma
+  kuhnya_N : Lemma
+  keshirovanie_N : Lemma
+  laboratoriya_N : Lemma
+  lager_N : Lemma
   ladnost_N : Lemma
+  ladon_N : Lemma
+  lak_N : Lemma
   laminarnost_N : Lemma
+  lampa_N : Lemma
+  lampochka_N : Lemma
+  lapa_N : Lemma
   latentnost_N : Lemma
+  latun_N : Lemma
+  lgun_N : Lemma
+  lev_N : Lemma
+  levaya_N : Lemma
+  legenda_N : Lemma
   legitimnost_N : Lemma
+  legkoe_N : Lemma
+  lezhak_N : Lemma
   lezhkost_N : Lemma
   leksikostatistika_N : Lemma
-  lemma_N : Lemma
+  lepestok_N : Lemma
+  lesnik_N : Lemma
+  leto_N : Lemma
+  letchik_N : Lemma
+  liven_N : Lemma
+  linejka_N : Lemma
   listovatost_N : Lemma
+  listok_N : Lemma
+  literatura_N : Lemma
+  litsej_N : Lemma
+  lovushka_N : Lemma
   logarifmetika_N : Lemma
   logarifmika_N : Lemma
   logika_N : Lemma
-  lozh_N : Lemma
+  lodka_N : Lemma
+  lozhka_N : Lemma
+  lozhnost_N : Lemma
+  loza_N : Lemma
+  lokomotiv_N : Lemma
+  lokon_N : Lemma
+  lopata_N : Lemma
+  lopuh_N : Lemma
+  lotok_N : Lemma
   lotsiya_N : Lemma
+  loshad_N : Lemma
+  luk_N : Lemma
+  luchina_N : Lemma
   ldistost_N : Lemma
   lyubovnost_N : Lemma
   lyubov_N : Lemma
-  magiya_N : Lemma
+  lyudi_N : Lemma
+  lyustra_N : Lemma
+  lyagushka_N : Lemma
+  legkost_N : Lemma
+  magazin_N : Lemma
   magnionika_N : Lemma
+  magnit_N : Lemma
   magnitoaerodinamika_N : Lemma
   magnitogazodinamika_N : Lemma
   magnitogidrodinamika_N : Lemma
+  maz_N : Lemma
+  maj_N : Lemma
+  majka_N : Lemma
+  mak_N : Lemma
+  maket_N : Lemma
   makrobiotika_N : Lemma
   makrokinetika_N : Lemma
   makrolingvistika_N : Lemma
@@ -1316,26 +1692,73 @@ data Lemma : Set where
   makroekonomika_N : Lemma
   malovazhnost_N : Lemma
   maloinertsionnost_N : Lemma
+  malysh_N : Lemma
+  malyar_N : Lemma
+  mama_N : Lemma
+  mandarin_N : Lemma
+  manezh_N : Lemma
+  manifest_N : Lemma
+  manyak_N : Lemma
+  marafon_N : Lemma
+  marka_N : Lemma
   markovost_N : Lemma
+  mart_N : Lemma
+  marshrut_N : Lemma
+  marshrutizatsiya_N : Lemma
+  marshrutnost_N : Lemma
+  maslo_N : Lemma
   maslobenzostojkost_N : Lemma
   maslopogloshchaemost_N : Lemma
+  massa_N : Lemma
+  massiv_N : Lemma
   massirovannost_N : Lemma
+  master_N : Lemma
+  masterskaya_N : Lemma
+  masshtab_N : Lemma
+  masshtabiruemost_N : Lemma
+  mat_N : Lemma
   materialoemkost_N : Lemma
+  materiya_N : Lemma
+  matras_N : Lemma
+  mahorka_N : Lemma
+  mashina_N : Lemma
+  mashinist_N : Lemma
+  mgnovenie_N : Lemma
   mgnovennost_N : Lemma
+  med_N : Lemma
+  medal_N : Lemma
+  medved_N : Lemma
+  mediana_N : Lemma
   medstatistika_N : Lemma
   medtehnika_N : Lemma
+  mel_N : Lemma
   melkozernistost_N : Lemma
   melkoplodnost_N : Lemma
   melkoslojnost_N : Lemma
+  melodiya_N : Lemma
   mentalnost_N : Lemma
   mertvost_N : Lemma
+  mestnost_N : Lemma
   metalingvistika_N : Lemma
+  metall_N : Lemma
   metalloplastika_N : Lemma
   metalogika_N : Lemma
   metamatematika_N : Lemma
   metasemiotika_N : Lemma
   metafizichnost_N : Lemma
+  metel_N : Lemma
+  metla_N : Lemma
+  metod_N : Lemma
+  metodika_N : Lemma
+  metrika_N : Lemma
+  metro_N : Lemma
+  meh_N : Lemma
+  mehanizm_N : Lemma
   mehatronika_N : Lemma
+  mech_N : Lemma
+  mechta_N : Lemma
+  meshok_N : Lemma
+  migratsiya_N : Lemma
   mikrografika_N : Lemma
   mikromehanika_N : Lemma
   mikroskladchatost_N : Lemma
@@ -1346,8 +1769,11 @@ data Lemma : Set where
   mikrofotoelektronika_N : Lemma
   mikroekonomika_N : Lemma
   mikroelektronika_N : Lemma
+  milya_N : Lemma
+  mineral_N : Lemma
   mineralokeramika_N : Lemma
   minutnost_N : Lemma
+  mirolyubie_N : Lemma
   mnogoaspektnost_N : Lemma
   mnogovalentnost_N : Lemma
   mnogovariantnost_N : Lemma
@@ -1364,40 +1790,74 @@ data Lemma : Set where
   mnogoukladnost_N : Lemma
   mnogotsvetnost_N : Lemma
   mnogoyadnost_N : Lemma
-  modalnost_N : Lemma
+  mnozhestvo_N : Lemma
+  modul_N : Lemma
   molektronika_N : Lemma
-  molchanie_N : Lemma
+  molekula_N : Lemma
+  molniya_N : Lemma
   molyarnost_N : Lemma
+  moment_N : Lemma
+  monah_N : Lemma
+  moneta_N : Lemma
+  monitoring_N : Lemma
+  monolog_N : Lemma
   monohromatichnost_N : Lemma
   monohromnost_N : Lemma
   monoenergetichnost_N : Lemma
+  moral_N : Lemma
+  moroz_N : Lemma
   moroznost_N : Lemma
+  moros_N : Lemma
+  mostik_N : Lemma
+  mototsikl_N : Lemma
+  motylek_N : Lemma
+  moshchnost_N : Lemma
+  moshch_N : Lemma
+  mramor_N : Lemma
   mramornost_N : Lemma
+  mudrets_N : Lemma
   muzhepodobnost_N : Lemma
+  muzej_N : Lemma
+  muka_N : Lemma
   multikollinearnost_N : Lemma
   multipletnost_N : Lemma
   multiustojchivost_N : Lemma
+  mundir_N : Lemma
+  muravej_N : Lemma
   mutagennost_N : Lemma
   mutantnost_N : Lemma
-  myslit_V : Lemma
+  mysh_N : Lemma
+  mer_N : Lemma
+  myach_N : Lemma
   nablyudaemost_N : Lemma
-  nadezhda_N : Lemma
-  nadezhnost_N : Lemma
+  navazhdenie_N : Lemma
+  naves_N : Lemma
+  nagrada_N : Lemma
+  nagruzka_N : Lemma
   naznachaemost_N : Lemma
-  naznachenie_N : Lemma
   naigrannost_N : Lemma
+  namerenie_N : Lemma
   nametannost_N : Lemma
   nanoelektronika_N : Lemma
+  napadenie_N : Lemma
   napolnyaemost_N : Lemma
+  napravlenie_N : Lemma
   naprasnost_N : Lemma
+  napryazhenie_N : Lemma
+  naryad_N : Lemma
+  nastoyashchee_N : Lemma
   nastraivaemost_N : Lemma
   natuzhnost_N : Lemma
+  natura_N : Lemma
+  natsiya_N : Lemma
+  nachalo_N : Lemma
   naelektrizovannost_N : Lemma
   neadekvatnost_N : Lemma
   nebezopasnost_N : Lemma
   nebespristrastnost_N : Lemma
   nevazhnost_N : Lemma
   neveskost_N : Lemma
+  nevesta_N : Lemma
   neveshchestvennost_N : Lemma
   nevzaimozamestimost_N : Lemma
   nevidimost_N : Lemma
@@ -1413,6 +1873,7 @@ data Lemma : Set where
   nedejstvennost_N : Lemma
   nedokazannost_N : Lemma
   nedootsenennost_N : Lemma
+  nedra_N : Lemma
   nezagruzhennost_N : Lemma
   nezakonnorozhdennost_N : Lemma
   nezakreplennost_N : Lemma
@@ -1423,6 +1884,7 @@ data Lemma : Set where
   nezarazhennost_N : Lemma
   nezashchishchennost_N : Lemma
   nezlopamyatnost_N : Lemma
+  neizvestnost_N : Lemma
   neizyasnimost_N : Lemma
   neizyashchnost_N : Lemma
   neinteresnost_N : Lemma
@@ -1430,6 +1892,7 @@ data Lemma : Set where
   nejrobionika_N : Lemma
   nejroinformatika_N : Lemma
   nejrolingvistika_N : Lemma
+  nejtralitet_N : Lemma
   nejtronika_N : Lemma
   nekogerentnost_N : Lemma
   nekonvertiruemost_N : Lemma
@@ -1443,15 +1906,16 @@ data Lemma : Set where
   nelitsepriyatnost_N : Lemma
   nelyubeznost_N : Lemma
   nematerialnost_N : Lemma
+  nemets_N : Lemma
   nemnogochislennost_N : Lemma
   nemudrenost_N : Lemma
   nenapolnennost_N : Lemma
   nenasyshchennost_N : Lemma
   neobrabotannost_N : Lemma
-  neobhodimost_N : Lemma
   neobyasnimost_N : Lemma
   neopasnost_N : Lemma
   neopravdannost_N : Lemma
+  neopredelennost_N : Lemma
   neortodoksalnost_N : Lemma
   neosvoennost_N : Lemma
   neosyazaemost_N : Lemma
@@ -1478,13 +1942,16 @@ data Lemma : Set where
   nepodtverzhdennost_N : Lemma
   nepodchinennost_N : Lemma
   nepoleznost_N : Lemma
+  nepolnota_N : Lemma
   nepolovovzroslost_N : Lemma
   nepopulyarnost_N : Lemma
   nepostizhimost_N : Lemma
+  nepravilnost_N : Lemma
   nepredvzyatost_N : Lemma
   nepredskazuemost_N : Lemma
   nepredubezhdennost_N : Lemma
   nepremennost_N : Lemma
+  nepreryvnost_N : Lemma
   neprestizhnost_N : Lemma
   neprivodimost_N : Lemma
   neprikasaemost_N : Lemma
@@ -1493,7 +1960,6 @@ data Lemma : Set where
   neproglyadnost_N : Lemma
   neprodumannost_N : Lemma
   neprozrachnost_N : Lemma
-  neprotivorechivost_N : Lemma
   nerazdelennost_N : Lemma
   nerazlichimost_N : Lemma
   nerazmennost_N : Lemma
@@ -1518,8 +1984,8 @@ data Lemma : Set where
   nesmetnost_N : Lemma
   nesminaemost_N : Lemma
   nesovershennost_N : Lemma
-  nesovmestimost_N : Lemma
   nesovremennost_N : Lemma
+  nesoglasie_N : Lemma
   nesokratimost_N : Lemma
   nesoosnost_N : Lemma
   nesochetaemost_N : Lemma
@@ -1541,9 +2007,11 @@ data Lemma : Set where
   neupravlyaemost_N : Lemma
   neuprugost_N : Lemma
   neuregulirovannost_N : Lemma
+  neustojchivost_N : Lemma
   neformalnost_N : Lemma
   neftegazonosnost_N : Lemma
   neftegeofizika_N : Lemma
+  neft_N : Lemma
   netselomudrennost_N : Lemma
   netsentrirovannost_N : Lemma
   netsivilizovannost_N : Lemma
@@ -1553,43 +2021,74 @@ data Lemma : Set where
   neelastichnost_N : Lemma
   neeffektivnost_N : Lemma
   neyarkost_N : Lemma
+  niva_N : Lemma
+  niz_N : Lemma
   nichejnost_N : Lemma
-  nichto_N : Lemma
+  novost_N : Lemma
+  nozh_N : Lemma
+  nozhka_N : Lemma
+  nozhnitsy_N : Lemma
+  norma_N : Lemma
+  normalizatsiya_N : Lemma
+  nos_N : Lemma
+  nosok_N : Lemma
+  nochleg_N : Lemma
+  noch_N : Lemma
+  noyabr_N : Lemma
+  nrav_N : Lemma
   nuzhnost_N : Lemma
   nukleonika_N : Lemma
   obaldelost_N : Lemma
   obvetrennost_N : Lemma
   obvodnennost_N : Lemma
+  obed_N : Lemma
   obezlichennost_N : Lemma
   obeskurazhennost_N : Lemma
   obespokoennost_N : Lemma
-  obida_N : Lemma
+  obeshchanie_N : Lemma
   oblagaemost_N : Lemma
+  oblako_N : Lemma
+  oblast_N : Lemma
+  oblik_N : Lemma
   obluchennost_N : Lemma
+  obman_N : Lemma
+  obobshchenie_N : Lemma
+  obolochka_N : Lemma
   oborvannost_N : Lemma
   oboronoustojchivost_N : Lemma
   oborotosposobnost_N : Lemma
-  obosnovanie_N : Lemma
+  obosnovannost_N : Lemma
+  obrabotka_N : Lemma
+  obrabotchik_N : Lemma
+  obrazets_N : Lemma
   obrashchennost_N : Lemma
   obryadovost_N : Lemma
   obsluzhivaemost_N : Lemma
+  obsluzhivanie_N : Lemma
   obstruktsionnost_N : Lemma
+  obsuzhdenie_N : Lemma
+  obuv_N : Lemma
+  obuslovlennost_N : Lemma
   obuchaemost_N : Lemma
   obshcheznachimost_N : Lemma
   obshcheprinyatost_N : Lemma
   obshchinnost_N : Lemma
-  obyasnenie_N : Lemma
-  obyazannost_N : Lemma
-  obyazatelstvo_N : Lemma
+  obedinenie_N : Lemma
+  obyasnimost_N : Lemma
+  obem_N : Lemma
+  ovrag_N : Lemma
+  ovtsa_N : Lemma
   ognennost_N : Lemma
-  ogranichenie_N : Lemma
-  odinochestvo_N : Lemma
+  ogorod_N : Lemma
   odnoatomnost_N : Lemma
   odnodetnost_N : Lemma
   odnozvuchnost_N : Lemma
   odnomernost_N : Lemma
   odnohozyajnost_N : Lemma
   odurelost_N : Lemma
+  ozero_N : Lemma
+  okean_N : Lemma
+  okislenie_N : Lemma
   okislyaemost_N : Lemma
   okkazionalnost_N : Lemma
   okoldovannost_N : Lemma
@@ -1597,111 +2096,245 @@ data Lemma : Set where
   okonchatelnost_N : Lemma
   okrashennost_N : Lemma
   okristallizovannost_N : Lemma
+  okrug_N : Lemma
+  okruzhenie_N : Lemma
   okruzhennost_N : Lemma
   okupaemost_N : Lemma
+  olen_N : Lemma
   olfaktronika_N : Lemma
   omofonichnost_N : Lemma
+  opeka_N : Lemma
+  opera_N : Lemma
   operabelnost_N : Lemma
+  operatsiya_N : Lemma
+  operezhenie_N : Lemma
   operennost_N : Lemma
-  opisanie_N : Lemma
+  opilki_N : Lemma
   oposredstvovannost_N : Lemma
+  oppozitsiya_N : Lemma
   opravdannost_N : Lemma
   opravdyvaemost_N : Lemma
-  opredelenie_N : Lemma
   oprovergaemost_N : Lemma
-  oproverzhenie_N : Lemma
   oproverzhimost_N : Lemma
+  opros_N : Lemma
+  optimizatsiya_N : Lemma
   optoakustika_N : Lemma
   optotehnika_N : Lemma
   optoelektronika_N : Lemma
+  oranzhereya_N : Lemma
+  orbita_N : Lemma
+  organ_N : Lemma
+  organizator_N : Lemma
   orgtehnika_N : Lemma
+  orden_N : Lemma
+  orel_N : Lemma
+  orientatsiya_N : Lemma
   orientirovannost_N : Lemma
+  orkestratsiya_N : Lemma
   ortogonalnost_N : Lemma
   ortoptika_N : Lemma
+  orudie_N : Lemma
+  osadok_N : Lemma
+  osen_N : Lemma
+  osina_N : Lemma
+  oskolok_N : Lemma
   oslablennost_N : Lemma
-  osnovanie_N : Lemma
+  osmotr_N : Lemma
   osnovnost_N : Lemma
-  osnovyvat_V : Lemma
+  osobennost_N : Lemma
   osolonennost_N : Lemma
+  ostanovka_N : Lemma
   osteoplastika_N : Lemma
+  ostrov_N : Lemma
   ostroumnost_N : Lemma
   ost_N : Lemma
+  osminog_N : Lemma
   otbornost_N : Lemma
-  otvet_N : Lemma
-  otvetstvennost_N : Lemma
+  otvaga_N : Lemma
+  otdel_N : Lemma
+  otdyh_N : Lemma
+  otel_N : Lemma
+  otkaz_N : Lemma
   otkazoustojchivost_N : Lemma
   otkazoustochivost_N : Lemma
+  otkat_N : Lemma
+  otklonenie_N : Lemma
+  otkrovennost_N : Lemma
   otkrytost_N : Lemma
+  otlichie_N : Lemma
   otlichimost_N : Lemma
   otnesennost_N : Lemma
   otnosimost_N : Lemma
+  otnoshenie_N : Lemma
+  otpusk_N : Lemma
+  otrava_N : Lemma
   otradnost_N : Lemma
-  otrazhenie_N : Lemma
+  otritsanie_N : Lemma
+  otryad_N : Lemma
   otslezhivaemost_N : Lemma
   otstranennost_N : Lemma
   ottochennost_N : Lemma
+  otchayanie_N : Lemma
+  otchet_N : Lemma
+  ohota_N : Lemma
+  ohrana_N : Lemma
   ohranosposobnost_N : Lemma
+  ochag_N : Lemma
+  ochered_N : Lemma
   ochumelost_N : Lemma
   oshalelost_N : Lemma
-  oshibka_N : Lemma
+  oshejnik_N : Lemma
   oshibkoustojchivost_N : Lemma
+  pajplajn_N : Lemma
+  palata_N : Lemma
+  palatka_N : Lemma
   paleobionika_N : Lemma
   paleogeofizika_N : Lemma
-  pamyat_N : Lemma
+  palets_N : Lemma
+  pamyatnik_N : Lemma
+  panel_N : Lemma
+  papa_N : Lemma
+  papaha_N : Lemma
+  parad_N : Lemma
+  paradoks_N : Lemma
   paralingvistika_N : Lemma
+  parametrizatsiya_N : Lemma
+  park_N : Lemma
   paronepronitsaemost_N : Lemma
+  parta_N : Lemma
+  partiya_N : Lemma
+  parus_N : Lemma
+  paseka_N : Lemma
   passazhirovmestimost_N : Lemma
   patafizika_N : Lemma
   patentosposobnost_N : Lemma
   patogennost_N : Lemma
   patrilinejnost_N : Lemma
+  pauza_N : Lemma
+  pautina_N : Lemma
   pahotoprigodnost_N : Lemma
+  pevets_N : Lemma
+  pekarnya_N : Lemma
   penetrantnost_N : Lemma
+  pensiya_N : Lemma
   pervozdannost_N : Lemma
+  perevod_N : Lemma
+  perevorot_N : Lemma
+  peredacha_N : Lemma
   perelivchatost_N : Lemma
+  perelom_N : Lemma
   peremezhaemost_N : Lemma
+  peremennaya_N : Lemma
   peremestitelnost_N : Lemma
   peremeshchaemost_N : Lemma
+  peremeshchenie_N : Lemma
   perenalazhivaemost_N : Lemma
   perenormiruemost_N : Lemma
+  perenos_N : Lemma
   perenosimost_N : Lemma
+  pereprava_N : Lemma
   pereputannost_N : Lemma
+  peresechenie_N : Lemma
   perestanovochnost_N : Lemma
+  perehod_N : Lemma
+  period_N : Lemma
   peristost_N : Lemma
+  pero_N : Lemma
+  perspektiva_N : Lemma
+  pesnya_N : Lemma
+  pesok_N : Lemma
+  petlya_N : Lemma
+  petuh_N : Lemma
+  pechal_N : Lemma
+  pechat_N : Lemma
+  pechka_N : Lemma
+  peshka_N : Lemma
   pika_N : Lemma
+  pila_N : Lemma
   piloobraznost_N : Lemma
+  pioner_N : Lemma
+  pirog_N : Lemma
   piroprovodimost_N : Lemma
+  pisatel_N : Lemma
+  pitanie_N : Lemma
+  pishcha_N : Lemma
+  plavlenie_N : Lemma
+  planeta_N : Lemma
+  plastichnost_N : Lemma
+  plata_N : Lemma
   platezhnost_N : Lemma
+  platforma_N : Lemma
+  plate_N : Lemma
+  platezh_N : Lemma
+  plita_N : Lemma
+  plod_N : Lemma
   plojchatost_N : Lemma
   ploskostnost_N : Lemma
+  ploskost_N : Lemma
+  plotnost_N : Lemma
+  ploshchadka_N : Lemma
+  ploshchad_N : Lemma
+  plyazh_N : Lemma
   pnevmatichnost_N : Lemma
   pnevmoavtomatika_N : Lemma
   pnevmonika_N : Lemma
+  pobeda_N : Lemma
+  poberezhe_N : Lemma
   pobitost_N : Lemma
+  povar_N : Lemma
+  povedenie_N : Lemma
+  poverhnost_N : Lemma
+  povod_N : Lemma
+  povorot_N : Lemma
+  povtor_N : Lemma
   pogashennost_N : Lemma
   pogloshchennost_N : Lemma
+  pogoda_N : Lemma
   pogodoustojchivost_N : Lemma
+  pogon_N : Lemma
+  pogreshnost_N : Lemma
   pogruzhennost_N : Lemma
+  podval_N : Lemma
+  podvig_N : Lemma
+  podderzhka_N : Lemma
+  podkova_N : Lemma
   podkontrolnost_N : Lemma
   podkupnost_N : Lemma
+  podlodka_N : Lemma
+  podmnozhestvo_N : Lemma
   podnadzornost_N : Lemma
+  podnos_N : Lemma
+  podotchetnost_N : Lemma
+  podpis_N : Lemma
+  podrobnost_N : Lemma
   podrubrika_N : Lemma
+  podruga_N : Lemma
+  podsistema_N : Lemma
   podsledstvennost_N : Lemma
   podsudimost_N : Lemma
+  poezd_N : Lemma
+  pozhar_N : Lemma
   pozharobezopasnost_N : Lemma
   pozharoopasnost_N : Lemma
-  pozitsiya_N : Lemma
   pokinutost_N : Lemma
+  pokoj_N : Lemma
   pokoroblennost_N : Lemma
+  pokryshka_N : Lemma
+  pokupka_N : Lemma
+  pol_N : Lemma
   polgodika_N : Lemma
+  polemika_N : Lemma
   poletoprigodnost_N : Lemma
   polivalentnost_N : Lemma
+  politika_N : Lemma
   politkorrektnost_N : Lemma
   politonalnost_N : Lemma
   polnovodnost_N : Lemma
   polnodrevesnost_N : Lemma
   polnokrovnost_N : Lemma
   polozhennost_N : Lemma
+  polomka_N : Lemma
+  polosa_N : Lemma
   poloschatost_N : Lemma
   polstakanchika_N : Lemma
   poluanonimnost_N : Lemma
@@ -1710,68 +2343,157 @@ data Lemma : Set where
   poluprozrachnost_N : Lemma
   polchasika_N : Lemma
   polyubovnost_N : Lemma
+  polyus_N : Lemma
+  polyana_N : Lemma
   polyarizuemost_N : Lemma
   pomehozashchishchennost_N : Lemma
-  ponimanie_N : Lemma
-  ponimat_V : Lemma
-  ponyatie_N : Lemma
+  pomeshchenie_N : Lemma
+  pomeshchik_N : Lemma
+  pomidor_N : Lemma
+  pomoshch_N : Lemma
+  ponedelnik_N : Lemma
+  poncho_N : Lemma
+  ponyatnost_N : Lemma
+  pop_N : Lemma
+  popytka_N : Lemma
   poraboshchennost_N : Lemma
   porazhennost_N : Lemma
+  porog_N : Lemma
+  poroda_N : Lemma
   poroznost_N : Lemma
+  poroh_N : Lemma
+  portret_N : Lemma
+  portera_N : Lemma
+  poruchenie_N : Lemma
   posvyashchennost_N : Lemma
+  posev_N : Lemma
+  posledovatelnost_N : Lemma
+  posledstvie_N : Lemma
+  posol_N : Lemma
+  posrednik_N : Lemma
   postizhimost_N : Lemma
   postnost_N : Lemma
+  postupok_N : Lemma
+  postuslovie_N : Lemma
   postylost_N : Lemma
-  posylka_N : Lemma
   potaennost_N : Lemma
+  poterya_N : Lemma
+  potok_N : Lemma
+  potolok_N : Lemma
+  pochva_N : Lemma
+  pochta_N : Lemma
   poetapnost_N : Lemma
-  pravda_N : Lemma
-  pravo_N : Lemma
+  poyas_N : Lemma
+  pravilo_N : Lemma
+  pravilnost_N : Lemma
+  pravitelstvo_N : Lemma
   pravosubektivnost_N : Lemma
   pravosubektnost_N : Lemma
+  prazdnik_N : Lemma
+  pregrada_N : Lemma
+  predannost_N : Lemma
+  predatelstvo_N : Lemma
   preddelinkventnost_N : Lemma
+  predel_N : Lemma
+  predlozhenie_N : Lemma
+  predmet_N : Lemma
   predohranitelnost_N : Lemma
-  predpolozhenie_N : Lemma
-  predposylka_N : Lemma
+  predpriyatie_N : Lemma
   predskazuemost_N : Lemma
   predstavimost_N : Lemma
+  preduslovie_N : Lemma
   predustanovlennost_N : Lemma
+  prezident_N : Lemma
+  prelest_N : Lemma
+  prepyatstvie_N : Lemma
+  preryvanie_N : Lemma
   prestizhnost_N : Lemma
+  prestuplenie_N : Lemma
   preyuditsialnost_N : Lemma
+  pribyl_N : Lemma
+  privet_N : Lemma
   privodimost_N : Lemma
   privolnost_N : Lemma
+  privychka_N : Lemma
   priglushennost_N : Lemma
+  prigorod_N : Lemma
+  priem_N : Lemma
   prizemlennost_N : Lemma
+  priznak_N : Lemma
+  prizrak_N : Lemma
+  prikaz_N : Lemma
   prikovannost_N : Lemma
   prilegaemost_N : Lemma
   primetnost_N : Lemma
-  prinuzhdenie_N : Lemma
+  prints_N : Lemma
+  printsip_N : Lemma
+  prinyatie_N : Lemma
   prinyatost_N : Lemma
   priobshchennost_N : Lemma
+  prioritet_N : Lemma
+  prioritizatsiya_N : Lemma
+  priroda_N : Lemma
   prirodoemkost_N : Lemma
   prisposablivaemost_N : Lemma
   pristyzhennost_N : Lemma
-  prisutstvie_N : Lemma
-  prichina_N : Lemma
+  prichinnost_N : Lemma
   prishiblennost_N : Lemma
+  priem_Nv2 : Lemma
+  priemnik_N : Lemma
+  probka_N : Lemma
+  problema_N : Lemma
   problemnost_N : Lemma
   probnost_N : Lemma
-  proverka_N : Lemma
+  provintsiya_N : Lemma
+  provod_N : Lemma
+  provodimost_N : Lemma
+  prognoz_N : Lemma
+  programma_N : Lemma
   programmiruemost_N : Lemma
+  progulka_N : Lemma
+  prodazha_N : Lemma
+  prodolzhenie_N : Lemma
+  produkt_N : Lemma
+  prodyuser_N : Lemma
+  proekt_N : Lemma
   proektivnost_N : Lemma
+  proza_N : Lemma
+  prozrachnost_N : Lemma
+  proigrysh_N : Lemma
+  proklyatie_N : Lemma
   proksemika_N : Lemma
   promaslennost_N : Lemma
   promezhutochnost_N : Lemma
-  proniknut_V : Lemma
+  propusk_N : Lemma
+  propusknaya_sposobnost_N : Lemma
+  prorez_N : Lemma
+  prorok_N : Lemma
   prosvechivaemost_N : Lemma
+  prospekt_N : Lemma
+  prostor_N : Lemma
+  prostota_N : Lemma
   prostuzhennost_N : Lemma
+  prostynya_N : Lemma
+  prosba_N : Lemma
+  protivnik_N : Lemma
   protivooreolnost_N : Lemma
   protivopokazannost_N : Lemma
   protivopravnost_N : Lemma
-  protivorechie_N : Lemma
   protogalaktika_N : Lemma
+  protokol_N : Lemma
+  professiya_N : Lemma
+  profilaktika_N : Lemma
+  profilirovanie_N : Lemma
   profnadezhnost_N : Lemma
+  prohod_N : Lemma
+  protsent_N : Lemma
   prochuvstvovannost_N : Lemma
+  proshloe_N : Lemma
+  proshchenie_N : Lemma
+  prud_N : Lemma
+  pryzhok_N : Lemma
+  pryad_N : Lemma
+  pryazha_N : Lemma
   pryamougolnost_N : Lemma
   pryanichnost_N : Lemma
   psevdoizoshchrennost_N : Lemma
@@ -1781,86 +2503,165 @@ data Lemma : Set where
   psihografika_N : Lemma
   psihodinamika_N : Lemma
   psihoprofilaktika_N : Lemma
+  ptitsa_N : Lemma
+  publika_N : Lemma
+  pud_N : Lemma
   puzyrchatost_N : Lemma
-  pustota_N : Lemma
+  puzyr_N : Lemma
+  pult_N : Lemma
   putanost_N : Lemma
+  puteshestvie_N : Lemma
+  putnik_N : Lemma
   puchnost_N : Lemma
+  pshenitsa_N : Lemma
   pezovospriimchivost_N : Lemma
   pezokeramika_N : Lemma
+  pyad_N : Lemma
   pyativalentnost_N : Lemma
+  rab_N : Lemma
+  ravnina_N : Lemma
+  ravnovesie_N : Lemma
   ravnodostupnost_N : Lemma
-  ravnosilnost_N : Lemma
+  ravnodushie_N : Lemma
+  ravnopravie_N : Lemma
+  radzha_N : Lemma
+  radiatsiya_N : Lemma
   radioakustika_N : Lemma
   radiogalaktika_N : Lemma
   radiogenetika_N : Lemma
   radiomehanika_N : Lemma
   radioneprozrachnost_N : Lemma
+  radius_N : Lemma
   radonoopasnost_N : Lemma
-  radost_N : Lemma
+  raduga_N : Lemma
+  raz_N : Lemma
   razbavlennost_N : Lemma
   razbalansirovannost_N : Lemma
-  razgranichenie_N : Lemma
+  razvedka_N : Lemma
+  razgovor_N : Lemma
+  razdacha_N : Lemma
   razdelimost_N : Lemma
   razzhizhennost_N : Lemma
-  razlichat_V : Lemma
-  razlichie_N : Lemma
   razlichimost_N : Lemma
+  razluka_N : Lemma
+  razmer_N : Lemma
   razmytost_N : Lemma
-  raznitsa_N : Lemma
-  razreshenie_N : Lemma
   razreshimost_N : Lemma
   razrushaemost_N : Lemma
   razrushimost_N : Lemma
   razryvnost_N : Lemma
+  razryad_N : Lemma
   razryazhennost_N : Lemma
-  razum_N : Lemma
   razezzhennost_N : Lemma
+  raj_N : Lemma
+  rajon_N : Lemma
+  rak_N : Lemma
+  raketa_N : Lemma
   raketodinamika_N : Lemma
-  rakurs_N : Lemma
+  ramka_N : Lemma
   ranennost_N : Lemma
   raskrashennost_N : Lemma
   raskruchennost_N : Lemma
   raskryvaemost_N : Lemma
   raspevnost_N : Lemma
+  raspisanie_N : Lemma
   raspolozhennost_N : Lemma
+  rasporyazhenie_N : Lemma
+  raspredelenie_N : Lemma
+  rassvet_N : Lemma
+  rasskaz_N : Lemma
   rassloennost_N : Lemma
   rassoglasovannost_N : Lemma
   rassredotochennost_N : Lemma
+  rasstavanie_N : Lemma
+  rasstoyanie_N : Lemma
+  rastvor_N : Lemma
   rasterzannost_N : Lemma
   rastrepannost_N : Lemma
   rastrogannost_N : Lemma
+  rashod_N : Lemma
   rashodimost_N : Lemma
   rasshirennost_N : Lemma
   rasshcheplennost_N : Lemma
+  ratsiya_N : Lemma
   rashpilevidnost_N : Lemma
   readaptatsiya_N : Lemma
+  reaktsiya_N : Lemma
   realizuemost_N : Lemma
   reversivnost_N : Lemma
+  reviziya_N : Lemma
+  region_N : Lemma
+  registratsiya_N : Lemma
+  reglamentatsiya_N : Lemma
+  regressiya_N : Lemma
+  redaktor_N : Lemma
   reenterabelnost_N : Lemma
+  rezhim_N : Lemma
   rezhimnost_N : Lemma
+  rezina_N : Lemma
   rezinotehnika_N : Lemma
   rezistentnost_N : Lemma
+  rezonans_N : Lemma
+  rezultat_N : Lemma
   rejganomika_N : Lemma
   rekurrentnost_N : Lemma
   rekursivnost_N : Lemma
+  rekursiya_N : Lemma
   relevantnost_N : Lemma
-  remont_N : Lemma
+  reliz_N : Lemma
+  rels_N : Lemma
   remontoprigodnost_N : Lemma
   remontosposobnost_N : Lemma
   rentosposobnost_N : Lemma
+  repka_N : Lemma
+  replikatsiya_N : Lemma
+  reportazh_N : Lemma
+  reputatsiya_N : Lemma
+  restoran_N : Lemma
+  resurs_N : Lemma
   resursoemkost_N : Lemma
   refleksivnost_N : Lemma
+  reforma_N : Lemma
   refrakternost_N : Lemma
-  reshenie_N : Lemma
+  retsenziya_N : Lemma
+  rech_N : Lemma
+  ris_N : Lemma
   riflenost_N : Lemma
   robastnost_N : Lemma
+  robot_N : Lemma
   robotehnika_N : Lemma
   robototehnika_N : Lemma
+  roga_N : Lemma
+  rodina_N : Lemma
+  rozhok_N : Lemma
+  roza_N : Lemma
   rozovatost_N : Lemma
   rozovoshchekost_N : Lemma
+  rok_N : Lemma
+  roman_N : Lemma
+  rosa_N : Lemma
   rosistost_N : Lemma
+  roshcha_N : Lemma
+  royal_N : Lemma
+  rubashka_N : Lemma
+  rubezh_N : Lemma
+  rubl_N : Lemma
+  ruda_N : Lemma
   rudonosnost_N : Lemma
+  rukav_N : Lemma
+  rukovoditel_N : Lemma
+  rukovodstvo_N : Lemma
+  russkij_N : Lemma
+  ruchej_N : Lemma
+  ryba_N : Lemma
+  rybak_N : Lemma
   ryboproduktivnost_N : Lemma
+  rynok_N : Lemma
+  sablya_N : Lemma
+  sadovod_N : Lemma
+  salat_N : Lemma
+  salon_N : Lemma
+  samovar_N : Lemma
   samovosplamenyaemost_N : Lemma
   samodistributivnost_N : Lemma
   samodostatochnost_N : Lemma
@@ -1868,8 +2669,17 @@ data Lemma : Set where
   samozanyatost_N : Lemma
   samoobespechennost_N : Lemma
   samoochevidnost_N : Lemma
+  sani_N : Lemma
   sanovnost_N : Lemma
+  sapog_N : Lemma
+  saraj_N : Lemma
+  satir_N : Lemma
+  sahar_N : Lemma
   sbalansirovannost_N : Lemma
+  sboj_N : Lemma
+  svadba_N : Lemma
+  svedeniya_N : Lemma
+  svekla_N : Lemma
   svernutost_N : Lemma
   sverhaktivnost_N : Lemma
   sverhvooruzhennost_N : Lemma
@@ -1880,107 +2690,266 @@ data Lemma : Set where
   sverhsekretnost_N : Lemma
   sverhspiralnost_N : Lemma
   sverheffektivnost_N : Lemma
+  svet_N : Lemma
   svetnost_N : Lemma
   svetolyubivost_N : Lemma
   svetoprochnost_N : Lemma
-  svidetelstvo_N : Lemma
+  svecha_N : Lemma
+  svidanie_N : Lemma
+  svinya_N : Lemma
+  sviter_N : Lemma
   svishchevatost_N : Lemma
   svoboda_N : Lemma
   svobodnost_N : Lemma
   svodimost_N : Lemma
+  svodka_N : Lemma
   svojstvennost_N : Lemma
+  svyazka_N : Lemma
+  svyaznost_N : Lemma
+  svyaz_N : Lemma
+  svyashchennik_N : Lemma
   svyashchennost_N : Lemma
   sgorblennost_N : Lemma
   sdavlennost_N : Lemma
+  sdvig_N : Lemma
   sdobnost_N : Lemma
+  sever_N : Lemma
+  segment_N : Lemma
+  segmentatsiya_N : Lemma
+  segodnya_N : Lemma
+  sedlo_N : Lemma
+  sezon_N : Lemma
   sejsmobezopasnost_N : Lemma
   sejsmoopasnost_N : Lemma
+  sejf_N : Lemma
+  sekret_N : Lemma
+  sektor_N : Lemma
+  sektsiya_N : Lemma
   selhoztehnika_N : Lemma
+  semya_N : Lemma
+  senat_N : Lemma
   sensitivnost_N : Lemma
   sensorika_N : Lemma
+  sentyabr_N : Lemma
+  sen_N : Lemma
   separabelnost_N : Lemma
   septichnost_N : Lemma
+  seredina_N : Lemma
+  serializatsiya_N : Lemma
+  serp_N : Lemma
+  sestra_N : Lemma
   setchatost_N : Lemma
-  sillogizm_N : Lemma
+  set_N : Lemma
+  sigareta_N : Lemma
+  signal_N : Lemma
+  sidene_N : Lemma
+  silach_N : Lemma
+  silogizm_N : Lemma
+  simpatiya_N : Lemma
   singulyarnost_N : Lemma
   sinektika_N : Lemma
   sinergetika_N : Lemma
   sintaktika_N : Lemma
+  sinhronizatsiya_N : Lemma
+  sinhronnost_N : Lemma
+  siren_N : Lemma
   sistemotehnika_N : Lemma
-  skazat_V : Lemma
+  skazka_N : Lemma
+  skala_N : Lemma
+  skamya_N : Lemma
   skarednost_N : Lemma
+  skatert_N : Lemma
+  skachok_N : Lemma
+  skidka_N : Lemma
+  sklad_N : Lemma
+  skladka_N : Lemma
   skoordinirovannost_N : Lemma
   skorostrelnost_N : Lemma
+  skorost_N : Lemma
+  skot_N : Lemma
   skoshennost_N : Lemma
   skruchennost_N : Lemma
   skruchivaemost_N : Lemma
+  slava_N : Lemma
   sladkoglasnost_N : Lemma
-  sledstvie_N : Lemma
+  sledovanie_N : Lemma
+  sleza_N : Lemma
+  slepoj_N : Lemma
+  sliva_N : Lemma
+  slozhnost_N : Lemma
+  sloj_N : Lemma
+  slon_N : Lemma
+  sluga_N : Lemma
+  sluzhba_N : Lemma
   sluzhebnost_N : Lemma
+  sluchajnost_N : Lemma
+  slushatel_N : Lemma
   smazannost_N : Lemma
   smachivaemost_N : Lemma
-  smert_N : Lemma
+  smena_N : Lemma
+  smes_N : Lemma
   smeshannost_N : Lemma
   smeshchaemost_N : Lemma
   sminaemost_N : Lemma
-  smirenie_N : Lemma
   smirnost_N : Lemma
-  smysl_N : Lemma
+  smola_N : Lemma
+  sneg_N : Lemma
+  snegovik_N : Lemma
+  snegurka_N : Lemma
+  sobaka_N : Lemma
   sobiraemost_N : Lemma
+  sobor_N : Lemma
+  sobytie_N : Lemma
   sovershennost_N : Lemma
-  soglasie_N : Lemma
-  soglasovannost_N : Lemma
+  sovest_N : Lemma
+  sovet_N : Lemma
+  sovmestimost_N : Lemma
   sognutost_N : Lemma
   soznanie_N : Lemma
+  sok_N : Lemma
+  sokol_N : Lemma
   sokrashchaemost_N : Lemma
-  somnenie_N : Lemma
+  soldat_N : Lemma
+  solntsestoyanie_N : Lemma
   sonika_N : Lemma
+  soobshchenie_N : Lemma
   soosnost_N : Lemma
+  sootvetstvie_N : Lemma
+  sootnoshenie_N : Lemma
   sopodchinennost_N : Lemma
+  soprotivlenie_N : Lemma
+  soroka_N : Lemma
+  sosed_N : Lemma
+  sosna_N : Lemma
+  sostav_N : Lemma
+  sosud_N : Lemma
+  sofa_N : Lemma
+  soha_N : Lemma
   sohranyaemost_N : Lemma
   soyuzselhoztehnika_N : Lemma
   soyuzspetsavtomatika_N : Lemma
+  spalnyj_N : Lemma
+  spalnya_N : Lemma
+  spektakl_N : Lemma
+  spektr_N : Lemma
+  spekulyatsiya_N : Lemma
   spetsavtomatika_N : Lemma
+  spetsifikatsiya_N : Lemma
+  spetsifichnost_N : Lemma
   spetsorgtehnika_N : Lemma
   spetstehnika_N : Lemma
+  spina_N : Lemma
+  spiral_N : Lemma
+  spisok_N : Lemma
+  spichka_N : Lemma
+  splav_N : Lemma
   sploshnost_N : Lemma
   splyusnutost_N : Lemma
   splyushchennost_N : Lemma
   spokojnost_N : Lemma
-  sposobnost_N : Lemma
-  spravedlivost_N : Lemma
+  sposob_N : Lemma
+  spravka_N : Lemma
   sputannost_N : Lemma
+  sreda_N : Lemma
+  sredstvo_N : Lemma
+  ssora_N : Lemma
+  ssylka_N : Lemma
+  stabilnost_N : Lemma
+  stavka_N : Lemma
+  stadion_N : Lemma
+  stadiya_N : Lemma
+  stado_N : Lemma
+  stakan_N : Lemma
+  stal_N : Lemma
+  standartizatsiya_N : Lemma
+  stanok_N : Lemma
+  stantsiya_N : Lemma
+  starik_N : Lemma
+  starshina_N : Lemma
+  status_N : Lemma
+  staya_N : Lemma
+  stvol_N : Lemma
+  steklo_N : Lemma
   steklovidnost_N : Lemma
+  stena_N : Lemma
+  stend_N : Lemma
+  stepen_N : Lemma
+  step_N : Lemma
   stervoznost_N : Lemma
   stiraemost_N : Lemma
+  stihiya_N : Lemma
+  stojka_N : Lemma
+  stol_N : Lemma
+  stolb_N : Lemma
+  stolovaya_N : Lemma
+  stolyar_N : Lemma
+  ston_N : Lemma
+  storona_N : Lemma
   stohastichnost_N : Lemma
-  stradanie_N : Lemma
-  strah_N : Lemma
+  stoyanka_N : Lemma
+  stranitsa_N : Lemma
+  strast_N : Lemma
+  strela_N : Lemma
   strelovidnost_N : Lemma
-  styd_N : Lemma
+  stremyanka_N : Lemma
+  stroka_N : Lemma
+  strochka_N : Lemma
+  struna_N : Lemma
+  student_N : Lemma
+  stul_N : Lemma
   subatsidnost_N : Lemma
   subgarmonika_N : Lemma
-  sudba_N : Lemma
+  sud_N : Lemma
+  sudno_N : Lemma
   sudbonosnost_N : Lemma
-  suzhdenie_N : Lemma
   sumasbrodnost_N : Lemma
   sumerechnost_N : Lemma
+  sumka_N : Lemma
+  summa_N : Lemma
   summiruemost_N : Lemma
+  sup_N : Lemma
   suporosnost_N : Lemma
+  supruga_N : Lemma
   surdotehnika_N : Lemma
-  sushchestvovanie_N : Lemma
-  sushchestvovat_V : Lemma
+  sutki_N : Lemma
+  sfera_N : Lemma
+  shema_N : Lemma
+  stsena_N : Lemma
+  stsenarij_N : Lemma
   stseplennost_N : Lemma
   stseplyaemost_N : Lemma
+  schaste_N : Lemma
   schetnost_N : Lemma
+  schet_N : Lemma
+  tabak_N : Lemma
+  tablitsa_N : Lemma
+  taburet_N : Lemma
+  tavtologiya_N : Lemma
   tagmemika_N : Lemma
-  tezis_N : Lemma
+  tajga_N : Lemma
+  tajna_N : Lemma
+  taksi_N : Lemma
+  talant_N : Lemma
+  tanets_N : Lemma
+  tank_N : Lemma
+  tarelka_N : Lemma
+  tarif_N : Lemma
+  tachka_N : Lemma
+  tvar_N : Lemma
+  tverd_N : Lemma
   tektonofizika_N : Lemma
+  televizor_N : Lemma
+  telega_N : Lemma
   telematika_N : Lemma
+  telemetriya_N : Lemma
   teleradiotehnika_N : Lemma
-  telo_N : Lemma
+  telefon_N : Lemma
+  temnitsa_N : Lemma
+  temperatura_N : Lemma
   temperaturostojkost_N : Lemma
-  teorema_N : Lemma
+  tender_N : Lemma
+  tenor_N : Lemma
+  teoriya_N : Lemma
   teplovatost_N : Lemma
   teplokrovnost_N : Lemma
   teplonapryazhennost_N : Lemma
@@ -1989,25 +2958,213 @@ data Lemma : Set where
   teploprozrachnost_N : Lemma
   teplopronitsaemost_N : Lemma
   teplofizika_N : Lemma
-  termin_N : Lemma
-  toska_N : Lemma
-  trevoga_N : Lemma
-  uslovie_N : Lemma
-  utverzhdenie_N : Lemma
-  utochnyat_V : Lemma
-  utrata_N : Lemma
-  uhod_N : Lemma
-  fakt_N : Lemma
-  filosofiya_N : Lemma
-  hrupkost_N : Lemma
-  tsel_N : Lemma
-  tsifra_N : Lemma
-  chestnost_N : Lemma
-  ekvivalentsiya_N : Lemma
-  eksplikatsiya_N : Lemma
-  entejlment_N : Lemma
-  yazyk_N : Lemma
-  yakor_N : Lemma
+  termos_N : Lemma
+  terrasa_N : Lemma
+  territoriya_N : Lemma
+  tes_N : Lemma
+  tesnota_N : Lemma
+  tehnika_N : Lemma
+  tehnologiya_N : Lemma
+  tigr_N : Lemma
+  tirazh_N : Lemma
+  titul_N : Lemma
+  tkan_N : Lemma
+  tovar_N : Lemma
+  tovarishch_N : Lemma
+  tok_N : Lemma
+  tokenizatsiya_N : Lemma
+  tolpa_N : Lemma
+  tolshchina_N : Lemma
+  toplivo_N : Lemma
+  tochka_N : Lemma
+  tochnost_N : Lemma
+  trava_N : Lemma
+  traditsiya_N : Lemma
+  traektoriya_N : Lemma
+  traktor_N : Lemma
+  tramvaj_N : Lemma
+  tranzaktsiya_N : Lemma
+  transport_N : Lemma
+  trassiruemost_N : Lemma
+  traur_N : Lemma
+  trener_N : Lemma
+  trenie_N : Lemma
+  trenirovka_N : Lemma
+  trigger_N : Lemma
+  tropa_N : Lemma
+  trotuar_N : Lemma
+  truba_N : Lemma
+  trudnost_N : Lemma
+  tryapka_N : Lemma
+  tuman_N : Lemma
+  tykva_N : Lemma
+  tysyacha_N : Lemma
+  tyuk_N : Lemma
+  tyurma_N : Lemma
+  uborka_N : Lemma
+  uvedomlenie_N : Lemma
+  uverennost_N : Lemma
+  ugol_N : Lemma
+  udalennost_N : Lemma
+  udobstvo_N : Lemma
+  udovletvorenie_N : Lemma
+  udochka_N : Lemma
+  ukaz_N : Lemma
+  ukus_N : Lemma
+  ulitsa_N : Lemma
+  umozaklyuchenie_N : Lemma
+  universitet_N : Lemma
+  unifikatsiya_N : Lemma
+  uniforma_N : Lemma
+  upakovka_N : Lemma
+  upravlenie_N : Lemma
+  uprugost_N : Lemma
+  uragan_N : Lemma
+  uroven_N : Lemma
+  urozhaj_N : Lemma
+  us_N : Lemma
+  uskorenie_N : Lemma
+  usluga_N : Lemma
+  uspeh_N : Lemma
+  usta_N : Lemma
+  ustav_N : Lemma
+  ustojchivost_N : Lemma
+  ustrojstvo_N : Lemma
+  utka_N : Lemma
+  uho_N : Lemma
+  uchastnik_N : Lemma
+  uchastok_N : Lemma
+  ucheba_N : Lemma
+  uchebnik_N : Lemma
+  uchitel_N : Lemma
+  fabrika_N : Lemma
+  fakel_N : Lemma
+  fanera_N : Lemma
+  fantaziya_N : Lemma
+  fantom_N : Lemma
+  fasad_N : Lemma
+  fevral_N : Lemma
+  ferma_N : Lemma
+  fermer_N : Lemma
+  figura_N : Lemma
+  fizika_N : Lemma
+  film_N : Lemma
+  filtratsiya_N : Lemma
+  final_N : Lemma
+  firma_N : Lemma
+  flejta_N : Lemma
+  flot_N : Lemma
+  fokus_N : Lemma
+  formalizatsiya_N : Lemma
+  fraza_N : Lemma
+  front_N : Lemma
+  frukt_N : Lemma
+  funt_N : Lemma
+  furgon_N : Lemma
+  halat_N : Lemma
+  harakteristika_N : Lemma
+  hvost_N : Lemma
+  hvoya_N : Lemma
+  hleb_N : Lemma
+  hlopok_N : Lemma
+  hozyain_N : Lemma
+  holod_N : Lemma
+  holodilnik_N : Lemma
+  horosho_N : Lemma
+  hram_N : Lemma
+  hren_N : Lemma
+  tsarstvo_N : Lemma
+  tsvet_N : Lemma
+  tsvetok_N : Lemma
+  tselostnost_N : Lemma
+  tsepochka_N : Lemma
+  tseremoniya_N : Lemma
+  tserkov_N : Lemma
+  tsiklon_N : Lemma
+  tsilindr_N : Lemma
+  tsink_N : Lemma
+  tsirk_N : Lemma
+  tsitata_N : Lemma
+  chastitsa_N : Lemma
+  chastota_N : Lemma
+  chasy_N : Lemma
+  chashka_N : Lemma
+  chek_N : Lemma
+  chelyust_N : Lemma
+  chemodan_N : Lemma
+  cherv_N : Lemma
+  cherep_N : Lemma
+  cherepaha_N : Lemma
+  chernika_N : Lemma
+  cherta_N : Lemma
+  chertezh_N : Lemma
+  chest_N : Lemma
+  chetverg_N : Lemma
+  chehol_N : Lemma
+  chin_N : Lemma
+  chitatel_N : Lemma
+  chuvstvitelnost_N : Lemma
+  chulan_N : Lemma
+  chulok_N : Lemma
+  shalash_N : Lemma
+  shapka_N : Lemma
+  shar_N : Lemma
+  shahmaty_N : Lemma
+  shahta_N : Lemma
+  shinel_N : Lemma
+  shirina_N : Lemma
+  shifrovanie_N : Lemma
+  shkala_N : Lemma
+  shkaf_N : Lemma
+  shkval_N : Lemma
+  shlagbaum_N : Lemma
+  shlyapa_N : Lemma
+  shtab_N : Lemma
+  shtil_N : Lemma
+  shtorm_N : Lemma
+  shtuka_N : Lemma
+  shcheka_N : Lemma
+  shchelk_N : Lemma
+  shchepka_N : Lemma
+  shchit_N : Lemma
+  ekvivalentnost_N : Lemma
+  ekzamen_N : Lemma
+  ekonomiya_N : Lemma
+  ekran_N : Lemma
+  ekspeditsiya_N : Lemma
+  eksperiment_N : Lemma
+  ekspert_N : Lemma
+  ekstrapolyatsiya_N : Lemma
+  elektrichestvo_N : Lemma
+  element_N : Lemma
+  embargo_N : Lemma
+  emotsiya_N : Lemma
+  energiya_N : Lemma
+  entuziazm_N : Lemma
+  epizod_N : Lemma
+  epoha_N : Lemma
+  eskalatsiya_N : Lemma
+  estrada_N : Lemma
+  etazh_N : Lemma
+  etiket_N : Lemma
+  effekt_N : Lemma
+  yubilej_N : Lemma
+  yug_N : Lemma
+  yunosha_N : Lemma
+  yabloko_N : Lemma
+  yablonya_N : Lemma
+  yavlenie_N : Lemma
+  yagoda_N : Lemma
+  yadernyj_N : Lemma
+  yajtso_N : Lemma
+  yama_N : Lemma
+  yanvar_N : Lemma
+  yarmarka_N : Lemma
+  yarost_N : Lemma
+  yasli_N : Lemma
+  yasnost_N : Lemma
+  yastreb_N : Lemma
+  yachmen_N : Lemma
 
 lemmaNominative : Lemma → String
 lemmaNominative abaz_N = "абаз"
@@ -2019,13 +3176,13 @@ lemmaNominative abort_N = "аборт"
 lemmaNominative abrazivnost_N = "абразивность"
 lemmaNominative abrek_N = "абрек"
 lemmaNominative abris_N = "абрис"
-lemmaNominative absurd_N = "абсурд"
 lemmaNominative abhaz_N = "абхаз"
 lemmaNominative abtsug_N = "абцуг"
 lemmaNominative aval_N = "авал"
 lemmaNominative avans_N = "аванс"
 lemmaNominative avantazhnost_N = "авантажность"
 lemmaNominative avar_N = "авар"
+lemmaNominative avariya_N = "авария"
 lemmaNominative avgit_N = "авгит"
 lemmaNominative avgur_N = "авгур"
 lemmaNominative avers_N = "аверс"
@@ -2034,22 +3191,22 @@ lemmaNominative avlos_N = "авлос"
 lemmaNominative avost_N = "авост"
 lemmaNominative avral_N = "аврал"
 lemmaNominative avran_N = "авран"
+lemmaNominative avtobus_N = "автобус"
 lemmaNominative avtoinformativnost_N = "автоинформативность"
 lemmaNominative avtokosmetika_N = "автокосметика"
 lemmaNominative avtol_N = "автол"
+lemmaNominative avtomat_N = "автомат"
 lemmaNominative avtomedtehnika_N = "автомедтехника"
+lemmaNominative avtomobil_N = "автомобиль"
 lemmaNominative avtomototehnika_N = "автомототехника"
-lemmaNominative avtonomiya_N = "автономия"
-lemmaNominative avtor_N = "автор"
+lemmaNominative avtorizatsiya_N = "авторизация"
 lemmaNominative avtoelektronika_N = "автоэлектроника"
-lemmaNominative aga_N = "ага"
 lemmaNominative agava_N = "агава"
 lemmaNominative agal_N = "агал"
 lemmaNominative agama_N = "агама"
 lemmaNominative agar_N = "агар"
 lemmaNominative agat_N = "агат"
 lemmaNominative agens_N = "агенс"
-lemmaNominative agent_N = "агент"
 lemmaNominative agentnost_N = "агентность"
 lemmaNominative agnat_N = "агнат"
 lemmaNominative agnets_N = "агнец"
@@ -2057,8 +3214,11 @@ lemmaNominative agogika_N = "агогика"
 lemmaNominative agon_N = "агон"
 lemmaNominative agonistika_N = "агонистика"
 lemmaNominative agraf_N = "аграф"
+lemmaNominative agregatsiya_N = "агрегация"
+lemmaNominative agregirovanie_N = "агрегирование"
 lemmaNominative agropromyshlennost_N = "агропромышленность"
 lemmaNominative agul_N = "агул"
+lemmaNominative adapter_N = "адаптер"
 lemmaNominative adaptivnost_N = "адаптивность"
 lemmaNominative adaptiruemost_N = "адаптируемость"
 lemmaNominative adat_N = "адат"
@@ -2067,7 +3227,7 @@ lemmaNominative additivnost_N = "аддитивность"
 lemmaNominative adept_N = "адепт"
 lemmaNominative adeh_N = "адех"
 lemmaNominative admin_N = "админ"
-lemmaNominative adres_N = "адрес"
+lemmaNominative administrirovanie_N = "администрирование"
 lemmaNominative adresnost_N = "адресность"
 lemmaNominative adresuemost_N = "адресуемость"
 lemmaNominative adrodinamika_N = "адродинамика"
@@ -2093,21 +3253,20 @@ lemmaNominative ajran_N = "айран"
 lemmaNominative ajrol_N = "айрол"
 lemmaNominative ajsor_N = "айсор"
 lemmaNominative ajfon_N = "айфон"
+lemmaNominative akademiya_N = "академия"
 lemmaNominative akant_N = "акант"
 lemmaNominative akanf_N = "аканф"
 lemmaNominative akvakinetika_N = "аквакинетика"
 lemmaNominative akvanavtika_N = "акванавтика"
+lemmaNominative akvarium_N = "аквариум"
 lemmaNominative akom_N = "аком"
 lemmaNominative akr_N = "акр"
 lemmaNominative akril_N = "акрил"
 lemmaNominative aks_N = "акс"
 lemmaNominative akses_N = "аксес"
-lemmaNominative aksioma_N = "аксиома"
 lemmaNominative aksiomatiziruemost_N = "аксиоматизируемость"
 lemmaNominative akson_N = "аксон"
-lemmaNominative akt_N = "акт"
 lemmaNominative akter_N = "актер"
-lemmaNominative aktiv_N = "актив"
 lemmaNominative aktin_N = "актин"
 lemmaNominative aktinichnost_N = "актиничность"
 lemmaNominative aktor_N = "актор"
@@ -2119,6 +3278,7 @@ lemmaNominative aktsiya_N = "акция"
 lemmaNominative akyn_N = "акын"
 lemmaNominative alas_N = "алас"
 lemmaNominative algol_N = "алгол"
+lemmaNominative algoritm_N = "алгоритм"
 lemmaNominative aleatorika_N = "алеаторика"
 lemmaNominative aleut_N = "алеут"
 lemmaNominative alef_N = "алеф"
@@ -2134,6 +3294,7 @@ lemmaNominative almaz_N = "алмаз"
 lemmaNominative aloin_N = "алоин"
 lemmaNominative altej_N = "алтей"
 lemmaNominative altyn_N = "алтын"
+lemmaNominative albom_N = "альбом"
 lemmaNominative alt_N = "альт"
 lemmaNominative alfa_N = "альфа"
 lemmaNominative ama_N = "ама"
@@ -2150,10 +3311,12 @@ lemmaNominative amok_N = "амок"
 lemmaNominative amorf_N = "аморф"
 lemmaNominative amper_N = "ампер"
 lemmaNominative ampir_N = "ампир"
+lemmaNominative amplituda_N = "амплитуда"
 lemmaNominative amt_N = "амт"
 lemmaNominative ana_N = "ана"
 lemmaNominative anal_N = "анал"
 lemmaNominative analitichnost_N = "аналитичность"
+lemmaNominative analogiya_N = "аналогия"
 lemmaNominative angar_N = "ангар"
 lemmaNominative angel_N = "ангел"
 lemmaNominative angelika_N = "ангелика"
@@ -2174,21 +3337,26 @@ lemmaNominative anomalnost_N = "аномальность"
 lemmaNominative anons_N = "анонс"
 lemmaNominative ant_N = "ант"
 lemmaNominative antej_N = "антей"
+lemmaNominative antena_N = "антенна"
 lemmaNominative antigalaktika_N = "антигалактика"
 lemmaNominative antik_N = "антик"
 lemmaNominative antikommutativnost_N = "антикоммутативность"
+lemmaNominative antinomiya_N = "антиномия"
+lemmaNominative antipatiya_N = "антипатия"
 lemmaNominative antirefleksivnost_N = "антирефлексивность"
-lemmaNominative antitezis_N = "антитезис"
 lemmaNominative anus_N = "анус"
 lemmaNominative anchar_N = "анчар"
 lemmaNominative aorta_N = "аорта"
+lemmaNominative apatiya_N = "апатия"
 lemmaNominative apash_N = "апаш"
 lemmaNominative apeks_N = "апекс"
 lemmaNominative apis_N = "апис"
 lemmaNominative aport_N = "апорт"
+lemmaNominative approksimatsiya_N = "аппроксимация"
 lemmaNominative approksimiruemost_N = "аппроксимируемость"
 lemmaNominative aprel_N = "апрель"
 lemmaNominative aprosh_N = "апрош"
+lemmaNominative apteka_N = "аптека"
 lemmaNominative arab_N = "араб"
 lemmaNominative arabika_N = "арабика"
 lemmaNominative arak_N = "арак"
@@ -2198,7 +3366,7 @@ lemmaNominative arba_N = "арба"
 lemmaNominative arbuz_N = "арбуз"
 lemmaNominative argal_N = "аргал"
 lemmaNominative argon_N = "аргон"
-lemmaNominative argument_N = "аргумент"
+lemmaNominative argumentatsiya_N = "аргументация"
 lemmaNominative argumentirovannost_N = "аргументированность"
 lemmaNominative argus_N = "аргус"
 lemmaNominative arden_N = "арден"
@@ -2217,12 +3385,12 @@ lemmaNominative arnost_N = "арность"
 lemmaNominative aromatnost_N = "ароматность"
 lemmaNominative arpan_N = "арпан"
 lemmaNominative arsis_N = "арсис"
+lemmaNominative artefakt_N = "артефакт"
 lemmaNominative artos_N = "артос"
 lemmaNominative arum_N = "арум"
 lemmaNominative arfa_N = "арфа"
 lemmaNominative arhar_N = "архар"
 lemmaNominative arhat_N = "архат"
-lemmaNominative arhiv_N = "архив"
 lemmaNominative arhivistika_N = "архивистика"
 lemmaNominative archak_N = "арчак"
 lemmaNominative arshin_N = "аршин"
@@ -2239,14 +3407,14 @@ lemmaNominative astma_N = "астма"
 lemmaNominative astra_N = "астра"
 lemmaNominative astrionika_N = "астрионика"
 lemmaNominative astrodinamika_N = "астродинамика"
+lemmaNominative asfalt_N = "асфальт"
 lemmaNominative asferichnost_N = "асферичность"
 lemmaNominative astsit_N = "асцит"
-lemmaNominative ataka_N = "атака"
 lemmaNominative atlas_N = "атлас"
 lemmaNominative atlet_N = "атлет"
+lemmaNominative atmosfera_N = "атмосфера"
 lemmaNominative atmosferostojkost_N = "атмосферостойкость"
 lemmaNominative atoll_N = "атолл"
-lemmaNominative atom_N = "атом"
 lemmaNominative atomnost_N = "атомность"
 lemmaNominative atrij_N = "атрий"
 lemmaNominative attik_N = "аттик"
@@ -2256,6 +3424,7 @@ lemmaNominative aul_N = "аул"
 lemmaNominative aura_N = "аура"
 lemmaNominative aurat_N = "аурат"
 lemmaNominative aut_N = "аут"
+lemmaNominative autentifikatsiya_N = "аутентификация"
 lemmaNominative autoplastika_N = "аутопластика"
 lemmaNominative afera_N = "афера"
 lemmaNominative afisha_N = "афиша"
@@ -2281,27 +3450,26 @@ lemmaNominative baba_N = "баба"
 lemmaNominative babaj_N = "бабай"
 lemmaNominative babka_N = "бабка"
 lemmaNominative babr_N = "бабр"
-lemmaNominative bag_N = "баг"
 lemmaNominative bagazh_N = "багаж"
 lemmaNominative bager_N = "багер"
 lemmaNominative baget_N = "багет"
 lemmaNominative bagor_N = "багор"
 lemmaNominative badan_N = "бадан"
 lemmaNominative badya_N = "бадья"
-lemmaNominative baz_N = "баз"
 lemmaNominative bazar_N = "базар"
 lemmaNominative bazis_N = "базис"
 lemmaNominative bajka_N = "байка"
-lemmaNominative bajt_N = "байт"
 lemmaNominative bakan_N = "бакан"
 lemmaNominative baken_N = "бакен"
 lemmaNominative baks_N = "бакс"
 lemmaNominative bakt_N = "бакт"
 lemmaNominative bal_N = "бал"
+lemmaNominative balans_N = "баланс"
 lemmaNominative balda_N = "балда"
 lemmaNominative balet_N = "балет"
 lemmaNominative balka_N = "балка"
 lemmaNominative balkanistika_N = "балканистика"
+lemmaNominative balkon_N = "балкон"
 lemmaNominative ball_N = "балл"
 lemmaNominative ballnost_N = "балльность"
 lemmaNominative balyk_N = "балык"
@@ -2311,9 +3479,9 @@ lemmaNominative banan_N = "банан"
 lemmaNominative bang_N = "банг"
 lemmaNominative banda_N = "банда"
 lemmaNominative baner_N = "банер"
-lemmaNominative bank_N = "банк"
 lemmaNominative bant_N = "бант"
 lemmaNominative bar_N = "бар"
+lemmaNominative baran_N = "баран"
 lemmaNominative bard_N = "бард"
 lemmaNominative barezh_N = "бареж"
 lemmaNominative barzha_N = "баржа"
@@ -2326,6 +3494,7 @@ lemmaNominative barodinamika_N = "бародинамика"
 lemmaNominative baroklinnost_N = "бароклинность"
 lemmaNominative baron_N = "барон"
 lemmaNominative bars_N = "барс"
+lemmaNominative barer_N = "барьер"
 lemmaNominative bas_N = "бас"
 lemmaNominative basistost_N = "басистость"
 lemmaNominative bask_N = "баск"
@@ -2333,9 +3502,11 @@ lemmaNominative basma_N = "басма"
 lemmaNominative basnya_N = "басня"
 lemmaNominative basovitost_N = "басовитость"
 lemmaNominative bason_N = "басон"
+lemmaNominative bassejn_N = "бассейн"
 lemmaNominative bastr_N = "бастр"
 lemmaNominative bat_N = "бат"
 lemmaNominative batan_N = "батан"
+lemmaNominative batareya_N = "батарея"
 lemmaNominative batat_N = "батат"
 lemmaNominative batik_N = "батик"
 lemmaNominative batog_N = "батог"
@@ -2350,10 +3521,12 @@ lemmaNominative bahcha_N = "бахча"
 lemmaNominative bachok_N = "бачок"
 lemmaNominative bash_N = "баш"
 lemmaNominative bashka_N = "башка"
+lemmaNominative bashmak_N = "башмак"
 lemmaNominative bashnya_N = "башня"
 lemmaNominative bayan_N = "баян"
 lemmaNominative beda_N = "беда"
 lemmaNominative bedro_N = "бедро"
+lemmaNominative bezhenets_N = "беженец"
 lemmaNominative bezapellyatsionnost_N = "безапелляционность"
 lemmaNominative bezvkusnost_N = "безвкусность"
 lemmaNominative bezdefitsitnost_N = "бездефицитность"
@@ -2361,6 +3534,7 @@ lemmaNominative bezduhovnost_N = "бездуховность"
 lemmaNominative bezik_N = "безик"
 lemmaNominative bezmolvnost_N = "безмолвность"
 lemmaNominative bezoglyadnost_N = "безоглядность"
+lemmaNominative bezopasnost_N = "безопасность"
 lemmaNominative bezotzyvnost_N = "безотзывность"
 lemmaNominative bezymyannost_N = "безымянность"
 lemmaNominative bezyskusnost_N = "безыскусность"
@@ -2376,21 +3550,20 @@ lemmaNominative bel_N = "бел"
 lemmaNominative belg_N = "белг"
 lemmaNominative belek_N = "белек"
 lemmaNominative belets_N = "белец"
-lemmaNominative belka_N = "белка"
 lemmaNominative belkovost_N = "белковость"
 lemmaNominative belokurost_N = "белокурость"
 lemmaNominative bel_Nv2 = "бель"
 lemmaNominative belyak_N = "беляк"
 lemmaNominative belyash_N = "беляш"
-lemmaNominative ber_N = "бер"
+lemmaNominative benchmark_N = "бенчмарк"
 lemmaNominative berdo_N = "бердо"
-lemmaNominative bereg_N = "берег"
 lemmaNominative beret_N = "берет"
 lemmaNominative beril_N = "берил"
 lemmaNominative berma_N = "берма"
 lemmaNominative bertse_N = "берце"
 lemmaNominative bersh_N = "берш"
 lemmaNominative bes_N = "бес"
+lemmaNominative beseda_N = "беседа"
 lemmaNominative beskrajnost_N = "бескрайность"
 lemmaNominative bespokojnost_N = "беспокойность"
 lemmaNominative bespolost_N = "бесполость"
@@ -2405,6 +3578,8 @@ lemmaNominative beta_N = "бета"
 lemmaNominative beton_N = "бетон"
 lemmaNominative bzik_N = "бзик"
 lemmaNominative bib_N = "биб"
+lemmaNominative biblioteka_N = "библиотека"
+lemmaNominative bibliya_N = "библия"
 lemmaNominative bibop_N = "бибоп"
 lemmaNominative bivak_N = "бивак"
 lemmaNominative big_N = "биг"
@@ -2416,6 +3591,7 @@ lemmaNominative bilateralnost_N = "билатеральность"
 lemmaNominative bilet_N = "билет"
 lemmaNominative bill_N = "билль"
 lemmaNominative bims_N = "бимс"
+lemmaNominative binokl_N = "бинокль"
 lemmaNominative binom_N = "бином"
 lemmaNominative bint_N = "бинт"
 lemmaNominative bioakustika_N = "биоакустика"
@@ -2435,20 +3611,17 @@ lemmaNominative biostatika_N = "биостатика"
 lemmaNominative biotika_N = "биотика"
 lemmaNominative bioelektronika_N = "биоэлектроника"
 lemmaNominative bioenergetika_N = "биоэнергетика"
-lemmaNominative birzha_N = "биржа"
 lemmaNominative birka_N = "бирка"
 lemmaNominative biryuch_N = "бирюч"
 lemmaNominative biser_N = "бисер"
 lemmaNominative bistr_N = "бистр"
 lemmaNominative bit_N = "бит"
-lemmaNominative bitva_N = "битва"
 lemmaNominative biter_N = "битер"
 lemmaNominative bitok_N = "биток"
 lemmaNominative bitum_N = "битум"
 lemmaNominative biharakteristika_N = "бихарактеристика"
 lemmaNominative bich_N = "бич"
 lemmaNominative bishop_N = "бишоп"
-lemmaNominative blago_N = "благо"
 lemmaNominative blagorodnost_N = "благородность"
 lemmaNominative blagouhannost_N = "благоуханность"
 lemmaNominative blagochestivost_N = "благочестивость"
@@ -2456,9 +3629,9 @@ lemmaNominative blazh_N = "блажь"
 lemmaNominative blank_N = "бланк"
 lemmaNominative blast_N = "бласт"
 lemmaNominative blat_N = "блат"
-lemmaNominative blesk_N = "блеск"
 lemmaNominative bleskost_N = "блескость"
 lemmaNominative blef_N = "блеф"
+lemmaNominative blizost_N = "близость"
 lemmaNominative bliz_N = "близь"
 lemmaNominative blik_N = "блик"
 lemmaNominative blin_N = "блин"
@@ -2479,7 +3652,6 @@ lemmaNominative blyaha_N = "бляха"
 lemmaNominative bober_N = "бобер"
 lemmaNominative bobik_N = "бобик"
 lemmaNominative bobok_N = "бобок"
-lemmaNominative bog_N = "бог"
 lemmaNominative bogach_N = "богач"
 lemmaNominative bogovdohnovennost_N = "боговдохновенность"
 lemmaNominative bogomolnost_N = "богомольность"
@@ -2497,11 +3669,14 @@ lemmaNominative bok_N = "бок"
 lemmaNominative bokal_N = "бокал"
 lemmaNominative boks_N = "бокс"
 lemmaNominative bol_N = "бол"
+lemmaNominative bolezn_N = "болезнь"
 lemmaNominative bolid_N = "болид"
+lemmaNominative boloto_N = "болото"
 lemmaNominative bolt_N = "болт"
-lemmaNominative bol_Nv2 = "боль"
+lemmaNominative bolnitsa_N = "больница"
 lemmaNominative bolyus_N = "болюс"
 lemmaNominative bomba_N = "бомба"
+lemmaNominative bombardir_N = "бомбардир"
 lemmaNominative bomzh_N = "бомж"
 lemmaNominative bon_N = "бон"
 lemmaNominative bonza_N = "бонза"
@@ -2516,35 +3691,38 @@ lemmaNominative borets_N = "борец"
 lemmaNominative borid_N = "борид"
 lemmaNominative born_N = "борн"
 lemmaNominative borov_N = "боров"
+lemmaNominative boroda_N = "борода"
 lemmaNominative borozdchatost_N = "бороздчатость"
 lemmaNominative bort_N = "борт"
 lemmaNominative bort_Nv2 = "борть"
 lemmaNominative borshch_N = "борщ"
 lemmaNominative boss_N = "босс"
 lemmaNominative bosyak_N = "босяк"
-lemmaNominative bot_N = "бот"
 lemmaNominative botan_N = "ботан"
 lemmaNominative botik_N = "ботик"
+lemmaNominative botinok_N = "ботинок"
 lemmaNominative bochag_N = "бочаг"
 lemmaNominative bochar_N = "бочар"
 lemmaNominative bochka_N = "бочка"
 lemmaNominative bosh_N = "бош"
 lemmaNominative braga_N = "брага"
 lemmaNominative brada_N = "брада"
+lemmaNominative brak_N = "брак"
 lemmaNominative bran_N = "брань"
 lemmaNominative bras_N = "брас"
 lemmaNominative brass_N = "брасс"
 lemmaNominative brat_N = "брат"
 lemmaNominative brachnost_N = "брачность"
+lemmaNominative brevno_N = "бревно"
 lemmaNominative breg_N = "брег"
 lemmaNominative brejk_N = "брейк"
-lemmaNominative bremya_N = "бремя"
-lemmaNominative brend_N = "бренд"
 lemmaNominative breh_N = "брех"
 lemmaNominative bresh_N = "брешь"
 lemmaNominative brig_N = "бриг"
+lemmaNominative brigada_N = "бригада"
 lemmaNominative bridzh_N = "бридж"
 lemmaNominative briz_N = "бриз"
+lemmaNominative brilliant_N = "бриллиант"
 lemmaNominative britt_N = "бритт"
 lemmaNominative brov_N = "бровь"
 lemmaNominative brom_N = "бром"
@@ -2553,8 +3731,9 @@ lemmaNominative bronh_N = "бронх"
 lemmaNominative bron_N = "бронь"
 lemmaNominative brosh_N = "брошь"
 lemmaNominative brus_N = "брус"
+lemmaNominative brusok_N = "брусок"
 lemmaNominative bryla_N = "брыла"
-lemmaNominative brend_Nv2 = "брэнд"
+lemmaNominative brend_N = "брэнд"
 lemmaNominative bryuho_N = "брюхо"
 lemmaNominative bryak_N = "бряк"
 lemmaNominative bubal_N = "бубал"
@@ -2565,23 +3744,23 @@ lemmaNominative bugor_N = "бугор"
 lemmaNominative budda_N = "будда"
 lemmaNominative budka_N = "будка"
 lemmaNominative budra_N = "будра"
+lemmaNominative budushchee_N = "будущее"
 lemmaNominative buek_N = "буек"
 lemmaNominative buer_N = "буер"
 lemmaNominative buzh_N = "буж"
 lemmaNominative buzun_N = "бузун"
 lemmaNominative buk_N = "бук"
 lemmaNominative bukan_N = "букан"
-lemmaNominative bukva_N = "буква"
+lemmaNominative bukvar_N = "букварь"
 lemmaNominative buket_N = "букет"
 lemmaNominative buklya_N = "букля"
 lemmaNominative buks_N = "букс"
 lemmaNominative bulka_N = "булка"
 lemmaNominative bulb_N = "бульб"
+lemmaNominative bulvar_N = "бульвар"
 lemmaNominative bum_N = "бум"
-lemmaNominative bumaga_N = "бумага"
 lemmaNominative buna_N = "буна"
 lemmaNominative bund_N = "бунд"
-lemmaNominative bunt_N = "бунт"
 lemmaNominative bur_N = "бур"
 lemmaNominative burav_N = "бурав"
 lemmaNominative burak_N = "бурак"
@@ -2592,13 +3771,14 @@ lemmaNominative burka_N = "бурка"
 lemmaNominative burt_N = "бурт"
 lemmaNominative burun_N = "бурун"
 lemmaNominative bursh_N = "бурш"
+lemmaNominative burya_N = "буря"
 lemmaNominative buryat_N = "бурят"
 lemmaNominative butik_N = "бутик"
 lemmaNominative butil_N = "бутил"
 lemmaNominative buton_N = "бутон"
 lemmaNominative butsy_N = "бутса"
 lemmaNominative butuz_N = "бутуз"
-lemmaNominative bufer_N = "буфер"
+lemmaNominative butylka_N = "бутылка"
 lemmaNominative bufet_N = "буфет"
 lemmaNominative buhta_N = "бухта"
 lemmaNominative bucha_N = "буча"
@@ -2611,9 +3791,10 @@ lemmaNominative bef_N = "бьеф"
 lemmaNominative byuik_N = "бьюик"
 lemmaNominative bekus_N = "бэкус"
 lemmaNominative bend_N = "бэнд"
-lemmaNominative ber_Nv2 = "бэр"
+lemmaNominative ber_N = "бэр"
 lemmaNominative byuvar_N = "бювар"
 lemmaNominative byuvet_N = "бювет"
+lemmaNominative byudzhet_N = "бюджет"
 lemmaNominative byust_N = "бюст"
 lemmaNominative byaz_N = "бязь"
 lemmaNominative byaka_N = "бяка"
@@ -2622,11 +3803,13 @@ lemmaNominative vaap_N = "ваап"
 lemmaNominative vabik_N = "вабик"
 lemmaNominative vaga_N = "вага"
 lemmaNominative vagon_N = "вагон"
+lemmaNominative vagonetka_N = "вагонетка"
 lemmaNominative vaza_N = "ваза"
 lemmaNominative vazon_N = "вазон"
 lemmaNominative vajya_N = "вайя"
 lemmaNominative vakat_N = "вакат"
 lemmaNominative vaksa_N = "вакса"
+lemmaNominative vaktsina_N = "вакцина"
 lemmaNominative vaktsinoprofilaktika_N = "вакцинопрофилактика"
 lemmaNominative val_N = "вал"
 lemmaNominative valah_N = "валах"
@@ -2634,13 +3817,14 @@ lemmaNominative valek_N = "валек"
 lemmaNominative valer_N = "валер"
 lemmaNominative valet_N = "валет"
 lemmaNominative valets_N = "валец"
-lemmaNominative validnost_N = "валидность"
+lemmaNominative validatsiya_N = "валидация"
 lemmaNominative valik_N = "валик"
 lemmaNominative valka_N = "валка"
 lemmaNominative valuj_N = "валуй"
 lemmaNominative valun_N = "валун"
 lemmaNominative valuh_N = "валух"
 lemmaNominative vals_N = "вальс"
+lemmaNominative valyuta_N = "валюта"
 lemmaNominative vamp_N = "вамп"
 lemmaNominative vanna_N = "ванна"
 lemmaNominative vanta_N = "ванта"
@@ -2650,6 +3834,7 @@ lemmaNominative variabelnost_N = "вариабельность"
 lemmaNominative variativnost_N = "вариативность"
 lemmaNominative varka_N = "варка"
 lemmaNominative varyag_N = "варяг"
+lemmaNominative vasilek_N = "василек"
 lemmaNominative vata_N = "вата"
 lemmaNominative vater_N = "ватер"
 lemmaNominative vatin_N = "ватин"
@@ -2659,30 +3844,31 @@ lemmaNominative vaflya_N = "вафля"
 lemmaNominative vahnya_N = "вахня"
 lemmaNominative vahta_N = "вахта"
 lemmaNominative vbros_N = "вброс"
-lemmaNominative vvod_N = "ввод"
 lemmaNominative vvoz_N = "ввоз"
 lemmaNominative vgib_N = "вгиб"
 lemmaNominative vdavlennost_N = "вдавленность"
 lemmaNominative vdova_N = "вдова"
-lemmaNominative vdoh_N = "вдох"
 lemmaNominative veb_N = "веб"
 lemmaNominative veda_N = "веда"
 lemmaNominative vedda_N = "ведда"
 lemmaNominative vedro_N = "ведро"
 lemmaNominative vedun_N = "ведун"
+lemmaNominative vedma_N = "ведьма"
 lemmaNominative veer_N = "веер"
 lemmaNominative vezha_N = "вежа"
 lemmaNominative vezhda_N = "вежда"
 lemmaNominative vezdesushchnost_N = "вездесущность"
 lemmaNominative vezdehodnost_N = "вездеходность"
 lemmaNominative vejka_N = "вейка"
-lemmaNominative veko_N = "веко"
+lemmaNominative vektor_N = "вектор"
 lemmaNominative veksha_N = "векша"
 lemmaNominative veld_N = "велд"
 lemmaNominative velik_N = "велик"
+lemmaNominative velosiped_N = "велосипед"
 lemmaNominative veld_Nv2 = "вельд"
 lemmaNominative vels_N = "вельс"
 lemmaNominative velyur_N = "велюр"
+lemmaNominative vena_N = "вена"
 lemmaNominative vengr_N = "венгр"
 lemmaNominative vend_N = "венд"
 lemmaNominative vened_N = "венед"
@@ -2690,52 +3876,53 @@ lemmaNominative venet_N = "венет"
 lemmaNominative venets_N = "венец"
 lemmaNominative venik_N = "веник"
 lemmaNominative venka_N = "венка"
-lemmaNominative veno_N = "вено"
+lemmaNominative ventilyator_N = "вентилятор"
 lemmaNominative vepr_N = "вепрь"
 lemmaNominative veps_N = "вепс"
+lemmaNominative veranda_N = "веранда"
 lemmaNominative verba_N = "верба"
 lemmaNominative verv_N = "вервь"
+lemmaNominative verevka_N = "веревка"
 lemmaNominative vered_N = "веред"
 lemmaNominative veres_N = "верес"
+lemmaNominative verifikatsiya_N = "верификация"
 lemmaNominative veronika_N = "вероника"
-lemmaNominative veroyatnost_N = "вероятность"
 lemmaNominative verp_N = "верп"
+lemmaNominative versionirovanie_N = "версионирование"
+lemmaNominative versiya_N = "версия"
+lemmaNominative versta_N = "верста"
+lemmaNominative vertikal_N = "вертикаль"
+lemmaNominative vertolet_N = "вертолет"
 lemmaNominative verf_N = "верфь"
 lemmaNominative verh_N = "верх"
 lemmaNominative versha_N = "верша"
-lemmaNominative ves_N = "вес"
 lemmaNominative veslo_N = "весло"
 lemmaNominative vesna_N = "весна"
 lemmaNominative vest_N = "вест"
 lemmaNominative vest_Nv2 = "весть"
-lemmaNominative ves_Nv2 = "весь"
-lemmaNominative vetv_N = "ветвь"
-lemmaNominative veter_N = "ветер"
-lemmaNominative vetka_N = "ветка"
 lemmaNominative vetla_N = "ветла"
 lemmaNominative vetrennost_N = "ветренность"
 lemmaNominative veha_N = "веха"
 lemmaNominative veche_N = "вече"
-lemmaNominative vecher_N = "вечер"
-lemmaNominative vechnost_N = "вечность"
+lemmaNominative veshalka_N = "вешалка"
 lemmaNominative veshka_N = "вешка"
+lemmaNominative veshchestvo_N = "вещество"
 lemmaNominative veshchun_N = "вещун"
-lemmaNominative veshch_N = "вещь"
 lemmaNominative vzaimovygodnost_N = "взаимовыгодность"
 lemmaNominative vzaimodopolnyaemost_N = "взаимодополняемость"
 lemmaNominative vzaimozamestimost_N = "взаимозаместимость"
 lemmaNominative vzaimoinduktivnost_N = "взаимоиндуктивность"
 lemmaNominative vzaimosvyazannost_N = "взаимосвязанность"
+lemmaNominative vzaimosvyaz_N = "взаимосвязь"
 lemmaNominative vzbudorazhennost_N = "взбудораженность"
 lemmaNominative vzvar_N = "взвар"
 lemmaNominative vzveshennost_N = "взвешенность"
 lemmaNominative vzvod_N = "взвод"
 lemmaNominative vzvoz_N = "взвоз"
+lemmaNominative vzglyad_N = "взгляд"
 lemmaNominative vzdor_N = "вздор"
-lemmaNominative vzdoh_N = "вздох"
 lemmaNominative vzimaemost_N = "взимаемость"
 lemmaNominative vzlet_N = "взлет"
-lemmaNominative vzlom_N = "взлом"
 lemmaNominative vzmah_N = "взмах"
 lemmaNominative vzmet_N = "взмет"
 lemmaNominative vzmyv_N = "взмыв"
@@ -2743,7 +3930,6 @@ lemmaNominative vznos_N = "взнос"
 lemmaNominative vzor_N = "взор"
 lemmaNominative vzrez_N = "взрез"
 lemmaNominative vzroslost_N = "взрослость"
-lemmaNominative vzryv_N = "взрыв"
 lemmaNominative vzryvoopasnost_N = "взрывоопасность"
 lemmaNominative vzeroshennost_N = "взъерошенность"
 lemmaNominative vzysk_N = "взыск"
@@ -2753,7 +3939,7 @@ lemmaNominative vibrotehnika_N = "вибротехника"
 lemmaNominative viver_N = "вивер"
 lemmaNominative vig_N = "виг"
 lemmaNominative vigilnost_N = "вигильность"
-lemmaNominative vid_N = "вид"
+lemmaNominative videnie_N = "видение"
 lemmaNominative videotehnika_N = "видеотехника"
 lemmaNominative vidik_N = "видик"
 lemmaNominative vidnost_N = "видность"
@@ -2765,32 +3951,33 @@ lemmaNominative vika_N = "вика"
 lemmaNominative vilka_N = "вилка"
 lemmaNominative villa_N = "вилла"
 lemmaNominative vilt_N = "вилт"
-lemmaNominative vina_N = "вина"
 lemmaNominative vinil_N = "винил"
+lemmaNominative vinograd_N = "виноград"
 lemmaNominative vint_N = "винт"
 lemmaNominative viola_N = "виола"
 lemmaNominative vira_N = "вира"
 lemmaNominative virazh_N = "вираж"
 lemmaNominative virt_N = "вирт"
-lemmaNominative virus_N = "вирус"
 lemmaNominative visok_N = "висок"
 lemmaNominative vist_N = "вист"
+lemmaNominative vitamin_N = "витамин"
 lemmaNominative vitiya_N = "вития"
 lemmaNominative vitok_N = "виток"
-lemmaNominative vihor_N = "вихор"
+lemmaNominative vitrina_N = "витрина"
+lemmaNominative vihr_N = "вихрь"
 lemmaNominative vitsa_N = "вица"
 lemmaNominative vishnya_N = "вишня"
-lemmaNominative vklad_N = "вклад"
 lemmaNominative vklinennost_N = "вклиненность"
 lemmaNominative vklyuchennost_N = "включенность"
 lemmaNominative vkraplennost_N = "вкрапленность"
-lemmaNominative vkus_N = "вкус"
 lemmaNominative vlaga_N = "влага"
 lemmaNominative vlagoemkost_N = "влагоемкость"
 lemmaNominative vlagonepronitsaemost_N = "влагонепроницаемость"
 lemmaNominative vlagopronitsaemost_N = "влагопроницаемость"
+lemmaNominative vlazhnost_N = "влажность"
 lemmaNominative vlah_N = "влах"
 lemmaNominative vlet_N = "влет"
+lemmaNominative vliyanie_N = "влияние"
 lemmaNominative vlozhennost_N = "вложенность"
 lemmaNominative vnebrachnost_N = "внебрачность"
 lemmaNominative vnevedomstvennost_N = "вневедомственность"
@@ -2800,40 +3987,35 @@ lemmaNominative vnuk_N = "внук"
 lemmaNominative vobla_N = "вобла"
 lemmaNominative vovlechennost_N = "вовлеченность"
 lemmaNominative vogul_N = "вогул"
-lemmaNominative vod_N = "вод"
+lemmaNominative voda_N = "вода"
 lemmaNominative vodka_N = "водка"
 lemmaNominative vodoobespechennost_N = "водообеспеченность"
 lemmaNominative vodoottalkivaemost_N = "водоотталкиваемость"
 lemmaNominative vozhak_N = "вожак"
 lemmaNominative vozhd_N = "вождь"
 lemmaNominative vozhzha_N = "вожжа"
+lemmaNominative vozvrat_N = "возврат"
 lemmaNominative vozvratnost_N = "возвратность"
-lemmaNominative vozduh_N = "воздух"
 lemmaNominative vozka_N = "возка"
 lemmaNominative vozmezdnost_N = "возмездность"
-lemmaNominative vozmozhnost_N = "возможность"
 lemmaNominative voznya_N = "возня"
 lemmaNominative voin_N = "воин"
 lemmaNominative voj_N = "вой"
-lemmaNominative vojna_N = "война"
 lemmaNominative vojt_N = "войт"
 lemmaNominative vok_N = "вок"
 lemmaNominative vokal_N = "вокал"
 lemmaNominative volan_N = "волан"
 lemmaNominative volga_N = "волга"
 lemmaNominative volk_N = "волк"
-lemmaNominative volna_N = "волна"
 lemmaNominative volok_N = "волок"
 lemmaNominative volos_N = "волос"
 lemmaNominative voloh_N = "волох"
 lemmaNominative volhv_N = "волхв"
 lemmaNominative volt_N = "вольт"
-lemmaNominative volya_N = "воля"
 lemmaNominative vomer_N = "вомер"
 lemmaNominative vona_N = "вона"
 lemmaNominative von_N = "вонь"
 lemmaNominative vopl_N = "вопль"
-lemmaNominative vopros_N = "вопрос"
 lemmaNominative vor_N = "вор"
 lemmaNominative vorog_N = "ворог"
 lemmaNominative voron_N = "ворон"
@@ -2842,20 +4024,23 @@ lemmaNominative voroh_N = "ворох"
 lemmaNominative vors_N = "ворс"
 lemmaNominative vosk_N = "воск"
 lemmaNominative vospalennost_N = "воспаленность"
+lemmaNominative vosproizvodimost_N = "воспроизводимость"
 lemmaNominative vosstanavlivaemost_N = "восстанавливаемость"
+lemmaNominative vosstanovlenie_N = "восстановление"
+lemmaNominative vostok_N = "восток"
+lemmaNominative voshishchenie_N = "восхищение"
 lemmaNominative votum_N = "вотум"
 lemmaNominative votyak_N = "вотяк"
 lemmaNominative voshka_N = "вошка"
 lemmaNominative vosh_N = "вошь"
 lemmaNominative voyazh_N = "вояж"
 lemmaNominative voyaka_N = "вояка"
+lemmaNominative vpechatlenie_N = "впечатление"
 lemmaNominative vpolneprimenimost_N = "вполнеприменимость"
 lemmaNominative vpusk_N = "впуск"
-lemmaNominative vrag_N = "враг"
 lemmaNominative vral_N = "враль"
 lemmaNominative vrach_N = "врач"
-lemmaNominative vred_N = "вред"
-lemmaNominative vremya_N = "время"
+lemmaNominative vrashchenie_N = "вращение"
 lemmaNominative vrub_N = "вруб"
 lemmaNominative vrun_N = "врун"
 lemmaNominative vrusha_N = "вруша"
@@ -2864,27 +4049,27 @@ lemmaNominative vsedozvolennost_N = "вседозволенность"
 lemmaNominative vseohvatnost_N = "всеохватность"
 lemmaNominative vskok_N = "вскок"
 lemmaNominative vspuchennost_N = "вспученность"
+lemmaNominative vstrecha_N = "встреча"
 lemmaNominative vstrechaemost_N = "встречаемость"
 lemmaNominative vshod_N = "всход"
 lemmaNominative vtora_N = "втора"
 lemmaNominative vtyk_N = "втык"
 lemmaNominative vual_N = "вуаль"
+lemmaNominative vulkan_N = "вулкан"
 lemmaNominative vuta_N = "вута"
-lemmaNominative vhod_N = "вход"
+lemmaNominative vchera_N = "вчера"
 lemmaNominative vezd_N = "въезд"
 lemmaNominative vybeg_N = "выбег"
-lemmaNominative vybor_N = "выбор"
+lemmaNominative vyborka_N = "выборка"
 lemmaNominative vyborochnost_N = "выборочность"
 lemmaNominative vyval_N = "вывал"
 lemmaNominative vyvih_N = "вывих"
-lemmaNominative vyvod_N = "вывод"
-lemmaNominative vyvodimost_N = "выводимость"
 lemmaNominative vyvoz_N = "вывоз"
 lemmaNominative vygib_N = "выгиб"
+lemmaNominative vygoda_N = "выгода"
 lemmaNominative vygon_N = "выгон"
 lemmaNominative vygul_N = "выгул"
 lemmaNominative vydel_N = "выдел"
-lemmaNominative vydoh_N = "выдох"
 lemmaNominative vydra_N = "выдра"
 lemmaNominative vyezd_N = "выезд"
 lemmaNominative vyem_N = "выем"
@@ -2910,27 +4095,35 @@ lemmaNominative vypal_N = "выпал"
 lemmaNominative vypar_N = "выпар"
 lemmaNominative vypas_N = "выпас"
 lemmaNominative vypek_N = "выпек"
+lemmaNominative vypiska_N = "выписка"
 lemmaNominative vypolnennost_N = "выполненность"
 lemmaNominative vypor_N = "выпор"
 lemmaNominative vypot_N = "выпот"
+lemmaNominative vypusk_N = "выпуск"
 lemmaNominative vyp_N = "выпь"
 lemmaNominative vyravnennost_N = "выравненность"
+lemmaNominative vyrazhenie_N = "выражение"
 lemmaNominative vyrez_N = "вырез"
 lemmaNominative vyrozhdennost_N = "вырожденность"
 lemmaNominative vyrub_N = "выруб"
+lemmaNominative vyruchka_N = "выручка"
 lemmaNominative vysev_N = "высев"
 lemmaNominative vysed_N = "высед"
-lemmaNominative vyskazyvanie_N = "высказывание"
 lemmaNominative vysov_N = "высов"
+lemmaNominative vysota_N = "высота"
+lemmaNominative vystavka_N = "выставка"
+lemmaNominative vystrel_N = "выстрел"
+lemmaNominative vystuplenie_N = "выступление"
 lemmaNominative vys_N = "высь"
 lemmaNominative vyt_N = "выть"
 lemmaNominative vytyanutost_N = "вытянутость"
-lemmaNominative vyhod_N = "выход"
+lemmaNominative vyhodnoj_N = "выходной"
 lemmaNominative vyholoshchennost_N = "выхолощенность"
 lemmaNominative vychet_N = "вычет"
 lemmaNominative vyshag_N = "вышаг"
 lemmaNominative vyshka_N = "вышка"
 lemmaNominative vyya_N = "выя"
+lemmaNominative vyyava_N = "выява"
 lemmaNominative vyyavlyaemost_N = "выявляемость"
 lemmaNominative vyuga_N = "вьюга"
 lemmaNominative vyuk_N = "вьюк"
@@ -2939,19 +4132,20 @@ lemmaNominative vyaz_N = "вяз"
 lemmaNominative vyazka_N = "вязка"
 lemmaNominative vyaz_Nv2 = "вязь"
 lemmaNominative vyatka_N = "вятка"
+lemmaNominative gavan_N = "гавань"
 lemmaNominative gavot_N = "гавот"
 lemmaNominative gaga_N = "гага"
 lemmaNominative gagat_N = "гагат"
 lemmaNominative gad_N = "гад"
-lemmaNominative gaz_N = "газ"
+lemmaNominative gazeta_N = "газета"
 lemmaNominative gazik_N = "газик"
 lemmaNominative gazodinamika_N = "газодинамика"
 lemmaNominative gazon_N = "газон"
 lemmaNominative gazoenergetika_N = "газоэнергетика"
 lemmaNominative gajal_N = "гайал"
-lemmaNominative gajda_N = "гайда"
 lemmaNominative gajka_N = "гайка"
 lemmaNominative gak_N = "гак"
+lemmaNominative galereya_N = "галерея"
 lemmaNominative galid_N = "галид"
 lemmaNominative galit_N = "галит"
 lemmaNominative galka_N = "галка"
@@ -2970,6 +4164,7 @@ lemmaNominative ganets_N = "ганец"
 lemmaNominative ganit_N = "ганит"
 lemmaNominative ganka_N = "ганка"
 lemmaNominative garazh_N = "гараж"
+lemmaNominative garantiya_N = "гарантия"
 lemmaNominative garem_N = "гарем"
 lemmaNominative gart_N = "гарт"
 lemmaNominative garus_N = "гарус"
@@ -2981,6 +4176,8 @@ lemmaNominative gael_N = "гаэл"
 lemmaNominative gayuin_N = "гаюин"
 lemmaNominative gbajt_N = "гбайт"
 lemmaNominative gvalt_N = "гвалт"
+lemmaNominative gvardiya_N = "гвардия"
+lemmaNominative gvozd_N = "гвоздь"
 lemmaNominative geveya_N = "гевея"
 lemmaNominative gej_N = "гей"
 lemmaNominative gejm_N = "гейм"
@@ -2996,6 +4193,7 @@ lemmaNominative geoinformatika_N = "геоинформатика"
 lemmaNominative geometrodinamika_N = "геометродинамика"
 lemmaNominative geomehanika_N = "геомеханика"
 lemmaNominative gerb_N = "герб"
+lemmaNominative gerbarij_N = "гербарий"
 lemmaNominative gerej_N = "герей"
 lemmaNominative germa_N = "герма"
 lemmaNominative gerodontika_N = "геродонтика"
@@ -3007,6 +4205,7 @@ lemmaNominative geterogennost_N = "гетерогенность"
 lemmaNominative geteroskedastichnost_N = "гетероскедастичность"
 lemmaNominative getit_N = "гетит"
 lemmaNominative getry_N = "гетра"
+lemmaNominative gibel_N = "гибель"
 lemmaNominative gibridnost_N = "гибридность"
 lemmaNominative gig_N = "гиг"
 lemmaNominative gid_N = "гид"
@@ -3021,9 +4220,9 @@ lemmaNominative gil_N = "гиль"
 lemmaNominative gilyak_N = "гиляк"
 lemmaNominative gimen_N = "гимен"
 lemmaNominative gimn_N = "гимн"
+lemmaNominative gimnastika_N = "гимнастика"
 lemmaNominative gineya_N = "гинея"
 lemmaNominative gioid_N = "гиоид"
-lemmaNominative gipoteza_N = "гипотеза"
 lemmaNominative gips_N = "гипс"
 lemmaNominative gipyur_N = "гипюр"
 lemmaNominative girej_N = "гирей"
@@ -3037,19 +4236,21 @@ lemmaNominative glava_N = "глава"
 lemmaNominative glavk_N = "главк"
 lemmaNominative glad_N = "глад"
 lemmaNominative glad_Nv2 = "гладь"
-lemmaNominative glaz_N = "глаз"
+lemmaNominative glazok_N = "глазок"
 lemmaNominative glajd_N = "глайд"
 lemmaNominative glas_N = "глас"
 lemmaNominative glej_N = "глей"
 lemmaNominative glen_N = "глень"
 lemmaNominative glet_N = "глет"
-lemmaNominative glina_N = "глина"
+lemmaNominative glint_N = "глинт"
 lemmaNominative glipt_N = "глипт"
 lemmaNominative glist_N = "глист"
 lemmaNominative glif_N = "глиф"
 lemmaNominative gliya_N = "глия"
+lemmaNominative globus_N = "глобус"
 lemmaNominative glossematika_N = "глоссематика"
 lemmaNominative glot_N = "глот"
+lemmaNominative glubina_N = "глубина"
 lemmaNominative glub_N = "глубь"
 lemmaNominative glum_N = "глум"
 lemmaNominative glupovatost_N = "глуповатость"
@@ -3060,7 +4261,7 @@ lemmaNominative glem_N = "глэм"
 lemmaNominative glyuk_N = "глюк"
 lemmaNominative glyuon_N = "глюон"
 lemmaNominative gmina_N = "гмина"
-lemmaNominative gnev_N = "гнев"
+lemmaNominative gnezdo_N = "гнездо"
 lemmaNominative gnejs_N = "гнейс"
 lemmaNominative gnet_N = "гнет"
 lemmaNominative gnida_N = "гнида"
@@ -3075,101 +4276,226 @@ lemmaNominative gobbl_N = "гоббл"
 lemmaNominative goboj_N = "гобой"
 lemmaNominative govor_N = "говор"
 lemmaNominative gogot_N = "гогот"
+lemmaNominative god_N = "год"
 lemmaNominative godik_N = "годик"
+lemmaNominative golovka_N = "головка"
 lemmaNominative golovokruzhitelnost_N = "головокружительность"
+lemmaNominative golub_N = "голубь"
 lemmaNominative gomogennost_N = "гомогенность"
 lemmaNominative gomozigotnost_N = "гомозиготность"
 lemmaNominative gomoskedastichnost_N = "гомоскедастичность"
+lemmaNominative gonets_N = "гонец"
 lemmaNominative gonimost_N = "гонимость"
-lemmaNominative gordost_N = "гордость"
+lemmaNominative gorenie_N = "горение"
+lemmaNominative gorizont_N = "горизонт"
+lemmaNominative gorlo_N = "горло"
+lemmaNominative gorshok_N = "горшок"
 lemmaNominative gosbezopasnost_N = "госбезопасность"
+lemmaNominative gostinitsa_N = "гостиница"
 lemmaNominative gost_N = "гость"
+lemmaNominative gosudarstvo_N = "государство"
+lemmaNominative gravitatsiya_N = "гравитация"
+lemmaNominative grad_N = "град"
+lemmaNominative gradus_N = "градус"
 lemmaNominative grammatichnost_N = "грамматичность"
-lemmaNominative granitsa_N = "граница"
+lemmaNominative granat_N = "гранат"
+lemmaNominative grafik_N = "график"
+lemmaNominative greben_N = "гребень"
 lemmaNominative grehovnost_N = "греховность"
 lemmaNominative greshnost_N = "грешность"
+lemmaNominative groza_N = "гроза"
+lemmaNominative grom_N = "гром"
 lemmaNominative grotesknost_N = "гротескность"
+lemmaNominative grohot_N = "грохот"
 lemmaNominative grubovatost_N = "грубоватость"
 lemmaNominative gruzonapryazhennost_N = "грузонапряженность"
+lemmaNominative grunt_N = "грунт"
+lemmaNominative gruppa_N = "группа"
+lemmaNominative grusha_N = "груша"
+lemmaNominative gryadka_N = "грядка"
+lemmaNominative guberniya_N = "губерния"
 lemmaNominative gubkoobraznost_N = "губкообразность"
 lemmaNominative gubchatost_N = "губчатость"
+lemmaNominative gusenitsa_N = "гусеница"
+lemmaNominative gus_N = "гусь"
+lemmaNominative davka_N = "давка"
+lemmaNominative davlenie_N = "давление"
+lemmaNominative daleko_N = "далеко"
+lemmaNominative dannye_N = "данные"
+lemmaNominative dan_N = "дань"
+lemmaNominative dvizhenie_N = "движение"
+lemmaNominative dvojnya_N = "двойня"
+lemmaNominative dvor_N = "двор"
+lemmaNominative dvorets_N = "дворец"
 lemmaNominative dvuznachnost_N = "двузначность"
 lemmaNominative dvunatsionalnost_N = "двунациональность"
 lemmaNominative dvuhmernost_N = "двухмерность"
 lemmaNominative dvuhtsvetnost_N = "двухцветность"
+lemmaNominative debaty_N = "дебаты"
+lemmaNominative devochka_N = "девочка"
+lemmaNominative degradatsiya_N = "деградация"
+lemmaNominative ded_N = "дед"
+lemmaNominative dedlajn_N = "дедлайн"
+lemmaNominative deduktsiya_N = "дедукция"
+lemmaNominative deduplikatsiya_N = "дедупликация"
 lemmaNominative dezaktivizatsiya_N = "дезактивизация"
 lemmaNominative dezorientirovannost_N = "дезориентированность"
 lemmaNominative deizm_N = "деизм"
+lemmaNominative dejstvie_N = "действие"
+lemmaNominative dejstvitelnost_N = "действительность"
+lemmaNominative dekabr_N = "декабрь"
 lemmaNominative deklassirovannost_N = "деклассированность"
-lemmaNominative delat_V = "делать"
+lemmaNominative dekompozitsiya_N = "декомпозиция"
+lemmaNominative delegirovanie_N = "делегирование"
+lemmaNominative delo_N = "дело"
+lemmaNominative demokratiya_N = "демократия"
 lemmaNominative demoralizovannost_N = "деморализованность"
+lemmaNominative denormalizatsiya_N = "денормализация"
+lemmaNominative deploj_N = "деплой"
 lemmaNominative depressivnost_N = "депрессивность"
+lemmaNominative derevnya_N = "деревня"
+lemmaNominative desant_N = "десант"
+lemmaNominative deserializatsiya_N = "десериализация"
+lemmaNominative desna_N = "десна"
+lemmaNominative detal_N = "деталь"
+lemmaNominative determinizm_N = "детерминизм"
 lemmaNominative determinirovannost_N = "детерминированность"
 lemmaNominative detorozhdaemost_N = "деторождаемость"
-lemmaNominative definitsiya_N = "дефиниция"
+lemmaNominative defitsit_N = "дефицит"
+lemmaNominative deformatsiya_N = "деформация"
+lemmaNominative deshifrovanie_N = "дешифрование"
+lemmaNominative deyatel_N = "деятель"
+lemmaNominative diagnostika_N = "диагностика"
+lemmaNominative diagonal_N = "диагональ"
 lemmaNominative diakaustika_N = "диакаустика"
 lemmaNominative diakritika_N = "диакритика"
 lemmaNominative dialog_N = "диалог"
+lemmaNominative diametr_N = "диаметр"
+lemmaNominative diapazon_N = "диапазон"
 lemmaNominative diatermichnost_N = "диатермичность"
+lemmaNominative divan_N = "диван"
+lemmaNominative diviziya_N = "дивизия"
 lemmaNominative didzhitronika_N = "диджитроника"
-lemmaNominative distinktsiya_N = "дистинкция"
+lemmaNominative dizyunktsiya_N = "дизъюнкция"
+lemmaNominative dinastiya_N = "династия"
+lemmaNominative direktor_N = "директор"
+lemmaNominative disbalans_N = "дисбаланс"
+lemmaNominative diskoteka_N = "дискотека"
+lemmaNominative dispersiya_N = "дисперсия"
+lemmaNominative dispetcher_N = "диспетчер"
+lemmaNominative distantsiya_N = "дистанция"
 lemmaNominative differentsiruemost_N = "дифференцируемость"
-lemmaNominative doverie_N = "доверие"
-lemmaNominative dovod_N = "довод"
-lemmaNominative dokazatelstvo_N = "доказательство"
+lemmaNominative dnevnik_N = "дневник"
+lemmaNominative dobycha_N = "добыча"
+lemmaNominative dogovor_N = "договор"
+lemmaNominative doklad_N = "доклад"
+lemmaNominative dokument_N = "документ"
 lemmaNominative dokumentalistika_N = "документалистика"
-lemmaNominative dolg_N = "долг"
 lemmaNominative dolgosrochnost_N = "долгосрочность"
+lemmaNominative dolina_N = "долина"
+lemmaNominative domik_N = "домик"
 lemmaNominative dominantnost_N = "доминантность"
+lemmaNominative dopolnenie_N = "дополнение"
 lemmaNominative dopolnitelnost_N = "дополнительность"
 lemmaNominative dopolnyaemost_N = "дополняемость"
-lemmaNominative dopushchenie_N = "допущение"
-lemmaNominative dostatochnost_N = "достаточность"
-lemmaNominative dostovernost_N = "достоверность"
+lemmaNominative dopusk_N = "допуск"
+lemmaNominative doroga_N = "дорога"
+lemmaNominative doska_N = "доска"
+lemmaNominative dostavka_N = "доставка"
+lemmaNominative dostizhenie_N = "достижение"
+lemmaNominative dostupnost_N = "доступность"
 lemmaNominative dotatsionnost_N = "дотационность"
 lemmaNominative dohlost_N = "дохлость"
+lemmaNominative doch_N = "дочь"
+lemmaNominative draka_N = "драка"
+lemmaNominative drevesina_N = "древесина"
+lemmaNominative drova_N = "дрова"
+lemmaNominative druzhba_N = "дружба"
 lemmaNominative dualnost_N = "дуальность"
+lemmaNominative dub_N = "дуб"
 lemmaNominative dubletnost_N = "дублетность"
 lemmaNominative dubnost_N = "дубность"
+lemmaNominative duma_N = "дума"
+lemmaNominative durak_N = "дурак"
+lemmaNominative duhi_N = "духи"
 lemmaNominative duhovitost_N = "духовитость"
+lemmaNominative duhovka_N = "духовка"
 lemmaNominative dushistost_N = "душистость"
+lemmaNominative duel_N = "дуэль"
+lemmaNominative dymka_N = "дымка"
 lemmaNominative dymnost_N = "дымность"
 lemmaNominative dymchatost_N = "дымчатость"
+lemmaNominative dyadya_N = "дядя"
+lemmaNominative evrej_N = "еврей"
+lemmaNominative evropa_N = "европа"
 lemmaNominative evfenika_N = "евфеника"
 lemmaNominative edinokrovnost_N = "единокровность"
 lemmaNominative edinorodnost_N = "единородность"
 lemmaNominative edinosushchnost_N = "единосущность"
 lemmaNominative edinstvennost_N = "единственность"
 lemmaNominative ezhednevnost_N = "ежедневность"
+lemmaNominative elka_N = "елка"
+lemmaNominative est_N = "есть"
+lemmaNominative ehat_N = "ехать"
+lemmaNominative zhaloba_N = "жалоба"
 lemmaNominative zhalobnost_N = "жалобность"
+lemmaNominative zhara_N = "жара"
+lemmaNominative zhelezo_N = "железо"
 lemmaNominative zheltushnost_N = "желтушность"
+lemmaNominative zhelud_N = "желудь"
+lemmaNominative zhena_N = "жена"
+lemmaNominative zhenih_N = "жених"
 lemmaNominative zhenopodobnost_N = "женоподобность"
-lemmaNominative zhizn_N = "жизнь"
+lemmaNominative zhenshchina_N = "женщина"
+lemmaNominative zhertva_N = "жертва"
+lemmaNominative zhivot_N = "живот"
+lemmaNominative zhivotnoe_N = "животное"
+lemmaNominative zhurnal_N = "журнал"
+lemmaNominative zhurnalist_N = "журналист"
+lemmaNominative zabava_N = "забава"
 lemmaNominative zablagovremennost_N = "заблаговременность"
+lemmaNominative zabor_N = "забор"
+lemmaNominative zavershenie_N = "завершение"
+lemmaNominative zavisimost_N = "зависимость"
+lemmaNominative zavist_N = "зависть"
+lemmaNominative zavod_N = "завод"
 lemmaNominative zavorozhennost_N = "завороженность"
+lemmaNominative zavtra_N = "завтра"
+lemmaNominative zagadka_N = "загадка"
 lemmaNominative zagruzhenost_N = "загруженость"
-lemmaNominative zadacha_N = "задача"
+lemmaNominative zaderzhka_N = "задержка"
 lemmaNominative zazhatost_N = "зажатость"
 lemmaNominative zaika_N = "заика"
-lemmaNominative zaklyuchenie_N = "заключение"
+lemmaNominative zakaz_N = "заказ"
+lemmaNominative zakat_N = "закат"
 lemmaNominative zakompleksovannost_N = "закомплексованность"
 lemmaNominative zakonnorozhdennost_N = "законнорожденность"
+lemmaNominative zakonomernost_N = "закономерность"
 lemmaNominative zakopchennost_N = "закопченность"
 lemmaNominative zakreplennost_N = "закрепленность"
 lemmaNominative zakruchennost_N = "закрученность"
 lemmaNominative zakrytost_N = "закрытость"
 lemmaNominative zalizannost_N = "зализанность"
+lemmaNominative zamedlenie_N = "замедление"
 lemmaNominative zamenyaemost_N = "заменяемость"
+lemmaNominative zametka_N = "заметка"
 lemmaNominative zametnost_N = "заметность"
 lemmaNominative zameshannost_N = "замешанность"
 lemmaNominative zamusolennost_N = "замусоленность"
 lemmaNominative zamutnennost_N = "замутненность"
+lemmaNominative zamysel_N = "замысел"
+lemmaNominative zanaves_N = "занавес"
+lemmaNominative zapad_N = "запад"
+lemmaNominative zapas_N = "запас"
+lemmaNominative zapah_N = "запах"
+lemmaNominative zapis_N = "запись"
 lemmaNominative zapolnennost_N = "заполненность"
-lemmaNominative zapret_N = "запрет"
 lemmaNominative zapreshchennost_N = "запрещенность"
+lemmaNominative zarya_N = "заря"
 lemmaNominative zaryazhennost_N = "заряженность"
 lemmaNominative zasalennost_N = "засаленность"
 lemmaNominative zasluzhennost_N = "заслуженность"
+lemmaNominative zasuha_N = "засуха"
 lemmaNominative zasuhostojkost_N = "засухостойкость"
 lemmaNominative zatvorennost_N = "затворенность"
 lemmaNominative zatormozhennost_N = "заторможенность"
@@ -3177,137 +4503,344 @@ lemmaNominative zatrapeznost_N = "затрапезность"
 lemmaNominative zatyanutost_N = "затянутость"
 lemmaNominative zacharovannost_N = "зачарованность"
 lemmaNominative zashchishchennost_N = "защищенность"
+lemmaNominative zayavka_N = "заявка"
+lemmaNominative zayavlenie_N = "заявление"
+lemmaNominative zayats_N = "заяц"
+lemmaNominative zvon_N = "звон"
+lemmaNominative zvonok_N = "звонок"
 lemmaNominative zvukotehnika_N = "звукотехника"
+lemmaNominative zdanie_N = "здание"
+lemmaNominative zdorove_N = "здоровье"
+lemmaNominative zemletryasenie_N = "землетрясение"
+lemmaNominative zerno_N = "зерно"
+lemmaNominative zima_N = "зима"
+lemmaNominative zlo_N = "зло"
+lemmaNominative zmeya_N = "змея"
 lemmaNominative znakovost_N = "знаковость"
-lemmaNominative znat_V = "знать"
+lemmaNominative znamya_N = "знамя"
+lemmaNominative znachenie_N = "значение"
+lemmaNominative zoloto_N = "золото"
+lemmaNominative zritel_N = "зритель"
+lemmaNominative zub_N = "зуб"
 lemmaNominative zubchatost_N = "зубчатость"
 lemmaNominative idempotentnost_N = "идемпотентность"
+lemmaNominative identifikatsiya_N = "идентификация"
 lemmaNominative identifitsiruemost_N = "идентифицируемость"
-lemmaNominative identichnost_N = "идентичность"
 lemmaNominative idiotichnost_N = "идиотичность"
+lemmaNominative ierarhiya_N = "иерархия"
 lemmaNominative ieroglifika_N = "иероглифика"
+lemmaNominative izba_N = "изба"
+lemmaNominative izvestie_N = "известие"
+lemmaNominative izgnanie_N = "изгнание"
 lemmaNominative izlechimost_N = "излечимость"
+lemmaNominative izluchenie_N = "излучение"
+lemmaNominative izmena_N = "измена"
+lemmaNominative izmenenie_N = "изменение"
 lemmaNominative izmotannost_N = "измотанность"
 lemmaNominative iznemozhennost_N = "изнеможенность"
+lemmaNominative izolyatsiya_N = "изоляция"
 lemmaNominative izotropnost_N = "изотропность"
 lemmaNominative izrezannost_N = "изрезанность"
+lemmaNominative ikona_N = "икона"
 lemmaNominative ikonika_N = "иконика"
-lemmaNominative illyuziya_N = "иллюзия"
 lemmaNominative imbetsilnost_N = "имбецильность"
 lemmaNominative immunogenetika_N = "иммуногенетика"
-lemmaNominative implikatsiya_N = "импликация"
+lemmaNominative imperiya_N = "империя"
+lemmaNominative impuls_N = "импульс"
+lemmaNominative imya_N = "имя"
+lemmaNominative invariant_N = "инвариант"
+lemmaNominative indeks_N = "индекс"
+lemmaNominative indeksatsiya_N = "индексация"
+lemmaNominative indikator_N = "индикатор"
+lemmaNominative induktsiya_N = "индукция"
+lemmaNominative inej_N = "иней"
 lemmaNominative inertsionnost_N = "инерционность"
+lemmaNominative inertsiya_N = "инерция"
+lemmaNominative inkapsulyatsiya_N = "инкапсуляция"
+lemmaNominative inspektsiya_N = "инспекция"
 lemmaNominative instruktivnost_N = "инструктивность"
+lemmaNominative instruktsiya_N = "инструкция"
+lemmaNominative instrument_N = "инструмент"
 lemmaNominative insulyarnost_N = "инсулярность"
+lemmaNominative integratsiya_N = "интеграция"
 lemmaNominative integrirovannost_N = "интегрированность"
 lemmaNominative integriruemost_N = "интегрируемость"
 lemmaNominative interaktivnost_N = "интерактивность"
+lemmaNominative interval_N = "интервал"
+lemmaNominative interes_N = "интерес"
 lemmaNominative internatsionalnost_N = "интернациональность"
-lemmaNominative interpretatsiya_N = "интерпретация"
-lemmaNominative inferentsiya_N = "инференция"
+lemmaNominative interpolyatsiya_N = "интерполяция"
+lemmaNominative interpretiruemost_N = "интерпретируемость"
+lemmaNominative interfejs_N = "интерфейс"
+lemmaNominative interfejsnost_N = "интерфейсность"
+lemmaNominative intriga_N = "интрига"
 lemmaNominative informativnost_N = "информативность"
 lemmaNominative informatika_N = "информатика"
 lemmaNominative informatsionnost_N = "информационность"
+lemmaNominative informatsiya_N = "информация"
 lemmaNominative informirovannost_N = "информированность"
 lemmaNominative informtehnika_N = "информтехника"
+lemmaNominative intsident_N = "инцидент"
 lemmaNominative ionika_N = "ионика"
 lemmaNominative irregulyarnost_N = "иррегулярность"
-lemmaNominative isklyuchenie_N = "исключение"
+lemmaNominative isk_N = "иск"
+lemmaNominative iskra_N = "искра"
+lemmaNominative iskrennost_N = "искренность"
 lemmaNominative iskushennost_N = "искушенность"
+lemmaNominative isparenie_N = "испарение"
 lemmaNominative ispeshchrennost_N = "испещренность"
+lemmaNominative ispolnitel_N = "исполнитель"
 lemmaNominative ispravimost_N = "исправимость"
+lemmaNominative ispravlenie_N = "исправление"
+lemmaNominative ispytanie_N = "испытание"
 lemmaNominative issledovannost_N = "исследованность"
-lemmaNominative istina_N = "истина"
-lemmaNominative istinnost_N = "истинность"
+lemmaNominative istorik_N = "историк"
+lemmaNominative istochnik_N = "источник"
 lemmaNominative istrepannost_N = "истрепанность"
+lemmaNominative ishod_N = "исход"
 lemmaNominative ischislimost_N = "исчислимость"
 lemmaNominative ischislyaemost_N = "исчисляемость"
+lemmaNominative iteratsiya_N = "итерация"
+lemmaNominative kabinet_N = "кабинет"
+lemmaNominative kavaler_N = "кавалер"
+lemmaNominative kavychka_N = "кавычка"
+lemmaNominative kazarma_N = "казарма"
 lemmaNominative kazennost_N = "казенность"
+lemmaNominative kazn_N = "казнь"
+lemmaNominative kalendar_N = "календарь"
+lemmaNominative kalibrovka_N = "калибровка"
+lemmaNominative kamera_N = "камера"
+lemmaNominative kantata_N = "кантата"
 lemmaNominative kantserogennost_N = "канцерогенность"
+lemmaNominative kapital_N = "капитал"
 lemmaNominative kapitaloemkost_N = "капиталоемкость"
+lemmaNominative kapitan_N = "капитан"
+lemmaNominative karandash_N = "карандаш"
 lemmaNominative karlikovost_N = "карликовость"
+lemmaNominative karman_N = "карман"
+lemmaNominative karera_N = "карьера"
+lemmaNominative kassa_N = "касса"
 lemmaNominative katadioptrika_N = "катадиоптрика"
+lemmaNominative katalog_N = "каталог"
+lemmaNominative katastrofa_N = "катастрофа"
+lemmaNominative kategorizatsiya_N = "категоризация"
+lemmaNominative kauzatsiya_N = "каузация"
+lemmaNominative kafe_N = "кафе"
+lemmaNominative kasha_N = "каша"
+lemmaNominative kvadrat_N = "квадрат"
 lemmaNominative kvadratnost_N = "квадратность"
 lemmaNominative kvadrika_N = "квадрика"
 lemmaNominative kvadriruemost_N = "квадрируемость"
 lemmaNominative kvazioptika_N = "квазиоптика"
-lemmaNominative kvantor_N = "квантор"
+lemmaNominative kvantil_N = "квантиль"
+lemmaNominative kvartal_N = "квартал"
+lemmaNominative kvartira_N = "квартира"
 lemmaNominative kvelost_N = "квелость"
+lemmaNominative kvitantsiya_N = "квитанция"
+lemmaNominative kedr_N = "кедр"
+lemmaNominative kerosin_N = "керосин"
 lemmaNominative kika_N = "кика"
+lemmaNominative kilometr_N = "километр"
 lemmaNominative kinesika_N = "кинесика"
 lemmaNominative kinoavtomatika_N = "киноавтоматика"
 lemmaNominative kinokritika_N = "кинокритика"
 lemmaNominative kinomehanika_N = "киномеханика"
 lemmaNominative kinoradiomehanika_N = "кинорадиомеханика"
 lemmaNominative kiralnost_N = "киральность"
+lemmaNominative kislorod_N = "кислород"
+lemmaNominative kislota_N = "кислота"
 lemmaNominative kislotorastvorimost_N = "кислоторастворимость"
 lemmaNominative kislotoustojchivost_N = "кислотоустойчивость"
+lemmaNominative klad_N = "клад"
+lemmaNominative klassifikatsiya_N = "классификация"
+lemmaNominative klassifitsirovanie_N = "классифицирование"
+lemmaNominative kletka_N = "клетка"
+lemmaNominative klet_N = "клеть"
+lemmaNominative klient_N = "клиент"
 lemmaNominative klika_N = "клика"
+lemmaNominative klimat_N = "климат"
+lemmaNominative klinika_N = "клиника"
 lemmaNominative klinovidnost_N = "клиновидность"
+lemmaNominative knizhka_N = "книжка"
+lemmaNominative knopka_N = "кнопка"
+lemmaNominative knut_N = "кнут"
+lemmaNominative knyaz_N = "князь"
 lemmaNominative kovalentnost_N = "ковалентность"
+lemmaNominative kover_N = "ковер"
+lemmaNominative kovsh_N = "ковш"
+lemmaNominative kogeziya_N = "когезия"
 lemmaNominative kognitivistika_N = "когнитивистика"
+lemmaNominative kozhuh_N = "кожух"
+lemmaNominative kozel_N = "козел"
+lemmaNominative kokos_N = "кокос"
+lemmaNominative kolebanie_N = "колебание"
+lemmaNominative koleso_N = "колесо"
+lemmaNominative kollega_N = "коллега"
+lemmaNominative kollektiv_N = "коллектив"
 lemmaNominative kollinearnost_N = "коллинеарность"
+lemmaNominative kolodets_N = "колодец"
+lemmaNominative kolonka_N = "колонка"
+lemmaNominative kolonna_N = "колонна"
+lemmaNominative koltso_N = "кольцо"
+lemmaNominative komanda_N = "команда"
+lemmaNominative komandir_N = "командир"
+lemmaNominative komar_N = "комар"
+lemmaNominative kometa_N = "комета"
 lemmaNominative kommutativnost_N = "коммутативность"
+lemmaNominative komnata_N = "комната"
+lemmaNominative kompaniya_N = "компания"
+lemmaNominative komplaens_N = "комплаенс"
+lemmaNominative kompleks_N = "комплекс"
 lemmaNominative komplementarnost_N = "комплементарность"
+lemmaNominative komponent_N = "компонент"
+lemmaNominative kompressiya_N = "компрессия"
 lemmaNominative komfortnost_N = "комфортность"
+lemmaNominative konvejer_N = "конвейер"
 lemmaNominative konvertiruemost_N = "конвертируемость"
-lemmaNominative konkretika_N = "конкретика"
+lemmaNominative kondensatsiya_N = "конденсация"
 lemmaNominative konkurentnost_N = "конкурентность"
+lemmaNominative konkurs_N = "конкурс"
+lemmaNominative konnektor_N = "коннектор"
+lemmaNominative konsistentnost_N = "консистентность"
+lemmaNominative konstanta_N = "константа"
 lemmaNominative konstitutsionnost_N = "конституционность"
+lemmaNominative konstruktor_N = "конструктор"
 lemmaNominative kontakt_N = "контакт"
 lemmaNominative kontaktnost_N = "контактность"
+lemmaNominative kontekst_N = "контекст"
 lemmaNominative kontinentalnost_N = "континентальность"
+lemmaNominative kontrakt_N = "контракт"
 lemmaNominative kontroliruemost_N = "контролируемость"
-lemmaNominative kontrprimer_N = "контрпример"
+lemmaNominative kontrol_N = "контроль"
+lemmaNominative kontur_N = "контур"
 lemmaNominative konusnost_N = "конусность"
 lemmaNominative konusoobraznost_N = "конусообразность"
+lemmaNominative konfeta_N = "конфета"
+lemmaNominative konfigurirovanie_N = "конфигурирование"
 lemmaNominative konfidentsialnost_N = "конфиденциальность"
-lemmaNominative konflikt_N = "конфликт"
 lemmaNominative konfliktnost_N = "конфликтность"
-lemmaNominative konfrontatsiya_N = "конфронтация"
 lemmaNominative kontsentrirovannost_N = "концентрированность"
+lemmaNominative kontsert_N = "концерт"
 lemmaNominative konyunkturnost_N = "конъюнктурность"
+lemmaNominative konyunktsiya_N = "конъюнкция"
+lemmaNominative kon_N = "конь"
+lemmaNominative koordinata_N = "координата"
+lemmaNominative koordinatsiya_N = "координация"
 lemmaNominative koordinirovannost_N = "координированность"
-lemmaNominative korollarij_N = "королларий"
-lemmaNominative korrektnost_N = "корректность"
+lemmaNominative kopejka_N = "копейка"
+lemmaNominative korabl_N = "корабль"
+lemmaNominative koren_N = "корень"
+lemmaNominative korzina_N = "корзина"
+lemmaNominative koridor_N = "коридор"
+lemmaNominative korobka_N = "коробка"
+lemmaNominative korova_N = "корова"
+lemmaNominative korpus_N = "корпус"
+lemmaNominative korrektsiya_N = "коррекция"
 lemmaNominative korrelirovannost_N = "коррелированность"
+lemmaNominative korrelyatsiya_N = "корреляция"
 lemmaNominative korrumpirovannost_N = "коррумпированность"
 lemmaNominative kosvennost_N = "косвенность"
 lemmaNominative kosmatost_N = "косматость"
 lemmaNominative kosmichnost_N = "космичность"
+lemmaNominative kosmos_N = "космос"
+lemmaNominative koster_N = "костер"
 lemmaNominative kost_N = "кость"
+lemmaNominative kotel_N = "котел"
 lemmaNominative koertsitivnost_N = "коэрцитивность"
 lemmaNominative krapchatost_N = "крапчатость"
+lemmaNominative kraska_N = "краска"
 lemmaNominative krasnostojkost_N = "красностойкость"
+lemmaNominative kredit_N = "кредит"
+lemmaNominative kreslo_N = "кресло"
+lemmaNominative krest_N = "крест"
 lemmaNominative krivorukost_N = "криворукость"
+lemmaNominative krizis_N = "кризис"
 lemmaNominative kriogenika_N = "криогеника"
 lemmaNominative krioelektronika_N = "криоэлектроника"
-lemmaNominative kriterij_N = "критерий"
+lemmaNominative kristall_N = "кристалл"
+lemmaNominative kristallizatsiya_N = "кристаллизация"
+lemmaNominative krovat_N = "кровать"
 lemmaNominative krovnost_N = "кровность"
+lemmaNominative krolik_N = "кролик"
 lemmaNominative krugoobraznost_N = "кругообразность"
 lemmaNominative krupnost_N = "крупность"
+lemmaNominative krylo_N = "крыло"
+lemmaNominative krysa_N = "крыса"
+lemmaNominative krysha_N = "крыша"
+lemmaNominative kub_N = "куб"
+lemmaNominative kuznets_N = "кузнец"
+lemmaNominative kukuruza_N = "кукуруза"
 lemmaNominative kulttehnika_N = "культтехника"
+lemmaNominative kupol_N = "купол"
+lemmaNominative kurort_N = "курорт"
+lemmaNominative kust_N = "куст"
+lemmaNominative kuhnya_N = "кухня"
+lemmaNominative keshirovanie_N = "кэширование"
+lemmaNominative laboratoriya_N = "лаборатория"
+lemmaNominative lager_N = "лагерь"
 lemmaNominative ladnost_N = "ладность"
+lemmaNominative ladon_N = "ладонь"
+lemmaNominative lak_N = "лак"
 lemmaNominative laminarnost_N = "ламинарность"
+lemmaNominative lampa_N = "лампа"
+lemmaNominative lampochka_N = "лампочка"
+lemmaNominative lapa_N = "лапа"
 lemmaNominative latentnost_N = "латентность"
+lemmaNominative latun_N = "латунь"
+lemmaNominative lgun_N = "лгун"
+lemmaNominative lev_N = "лев"
+lemmaNominative levaya_N = "левая"
+lemmaNominative legenda_N = "легенда"
 lemmaNominative legitimnost_N = "легитимность"
+lemmaNominative legkoe_N = "легкое"
+lemmaNominative lezhak_N = "лежак"
 lemmaNominative lezhkost_N = "лежкость"
 lemmaNominative leksikostatistika_N = "лексикостатистика"
-lemmaNominative lemma_N = "лемма"
+lemmaNominative lepestok_N = "лепесток"
+lemmaNominative lesnik_N = "лесник"
+lemmaNominative leto_N = "лето"
+lemmaNominative letchik_N = "летчик"
+lemmaNominative liven_N = "ливень"
+lemmaNominative linejka_N = "линейка"
 lemmaNominative listovatost_N = "листоватость"
+lemmaNominative listok_N = "листок"
+lemmaNominative literatura_N = "литература"
+lemmaNominative litsej_N = "лицей"
+lemmaNominative lovushka_N = "ловушка"
 lemmaNominative logarifmetika_N = "логарифметика"
 lemmaNominative logarifmika_N = "логарифмика"
 lemmaNominative logika_N = "логика"
-lemmaNominative lozh_N = "ложь"
+lemmaNominative lodka_N = "лодка"
+lemmaNominative lozhka_N = "ложка"
+lemmaNominative lozhnost_N = "ложность"
+lemmaNominative loza_N = "лоза"
+lemmaNominative lokomotiv_N = "локомотив"
+lemmaNominative lokon_N = "локон"
+lemmaNominative lopata_N = "лопата"
+lemmaNominative lopuh_N = "лопух"
+lemmaNominative lotok_N = "лоток"
 lemmaNominative lotsiya_N = "лоция"
+lemmaNominative loshad_N = "лошадь"
+lemmaNominative luk_N = "лук"
+lemmaNominative luchina_N = "лучина"
 lemmaNominative ldistost_N = "льдистость"
 lemmaNominative lyubovnost_N = "любовность"
 lemmaNominative lyubov_N = "любовь"
-lemmaNominative magiya_N = "магия"
+lemmaNominative lyudi_N = "люди"
+lemmaNominative lyustra_N = "люстра"
+lemmaNominative lyagushka_N = "лягушка"
+lemmaNominative legkost_N = "легкость"
+lemmaNominative magazin_N = "магазин"
 lemmaNominative magnionika_N = "магнионика"
+lemmaNominative magnit_N = "магнит"
 lemmaNominative magnitoaerodinamika_N = "магнитоаэродинамика"
 lemmaNominative magnitogazodinamika_N = "магнитогазодинамика"
 lemmaNominative magnitogidrodinamika_N = "магнитогидродинамика"
+lemmaNominative maz_N = "мазь"
+lemmaNominative maj_N = "май"
+lemmaNominative majka_N = "майка"
+lemmaNominative mak_N = "мак"
+lemmaNominative maket_N = "макет"
 lemmaNominative makrobiotika_N = "макробиотика"
 lemmaNominative makrokinetika_N = "макрокинетика"
 lemmaNominative makrolingvistika_N = "макролингвистика"
@@ -3316,26 +4849,73 @@ lemmaNominative makroturbulentnost_N = "макротурбулентность"
 lemmaNominative makroekonomika_N = "макроэкономика"
 lemmaNominative malovazhnost_N = "маловажность"
 lemmaNominative maloinertsionnost_N = "малоинерционность"
+lemmaNominative malysh_N = "малыш"
+lemmaNominative malyar_N = "маляр"
+lemmaNominative mama_N = "мама"
+lemmaNominative mandarin_N = "мандарин"
+lemmaNominative manezh_N = "манеж"
+lemmaNominative manifest_N = "манифест"
+lemmaNominative manyak_N = "маньяк"
+lemmaNominative marafon_N = "марафон"
+lemmaNominative marka_N = "марка"
 lemmaNominative markovost_N = "марковость"
+lemmaNominative mart_N = "март"
+lemmaNominative marshrut_N = "маршрут"
+lemmaNominative marshrutizatsiya_N = "маршрутизация"
+lemmaNominative marshrutnost_N = "маршрутность"
+lemmaNominative maslo_N = "масло"
 lemmaNominative maslobenzostojkost_N = "маслобензостойкость"
 lemmaNominative maslopogloshchaemost_N = "маслопоглощаемость"
+lemmaNominative massa_N = "масса"
+lemmaNominative massiv_N = "массив"
 lemmaNominative massirovannost_N = "массированность"
+lemmaNominative master_N = "мастер"
+lemmaNominative masterskaya_N = "мастерская"
+lemmaNominative masshtab_N = "масштаб"
+lemmaNominative masshtabiruemost_N = "масштабируемость"
+lemmaNominative mat_N = "мат"
 lemmaNominative materialoemkost_N = "материалоемкость"
+lemmaNominative materiya_N = "материя"
+lemmaNominative matras_N = "матрас"
+lemmaNominative mahorka_N = "махорка"
+lemmaNominative mashina_N = "машина"
+lemmaNominative mashinist_N = "машинист"
+lemmaNominative mgnovenie_N = "мгновение"
 lemmaNominative mgnovennost_N = "мгновенность"
+lemmaNominative med_N = "мед"
+lemmaNominative medal_N = "медаль"
+lemmaNominative medved_N = "медведь"
+lemmaNominative mediana_N = "медиана"
 lemmaNominative medstatistika_N = "медстатистика"
 lemmaNominative medtehnika_N = "медтехника"
+lemmaNominative mel_N = "мел"
 lemmaNominative melkozernistost_N = "мелкозернистость"
 lemmaNominative melkoplodnost_N = "мелкоплодность"
 lemmaNominative melkoslojnost_N = "мелкослойность"
+lemmaNominative melodiya_N = "мелодия"
 lemmaNominative mentalnost_N = "ментальность"
 lemmaNominative mertvost_N = "мертвость"
+lemmaNominative mestnost_N = "местность"
 lemmaNominative metalingvistika_N = "металингвистика"
+lemmaNominative metall_N = "металл"
 lemmaNominative metalloplastika_N = "металлопластика"
 lemmaNominative metalogika_N = "металогика"
 lemmaNominative metamatematika_N = "метаматематика"
 lemmaNominative metasemiotika_N = "метасемиотика"
 lemmaNominative metafizichnost_N = "метафизичность"
+lemmaNominative metel_N = "метель"
+lemmaNominative metla_N = "метла"
+lemmaNominative metod_N = "метод"
+lemmaNominative metodika_N = "методика"
+lemmaNominative metrika_N = "метрика"
+lemmaNominative metro_N = "метро"
+lemmaNominative meh_N = "мех"
+lemmaNominative mehanizm_N = "механизм"
 lemmaNominative mehatronika_N = "мехатроника"
+lemmaNominative mech_N = "меч"
+lemmaNominative mechta_N = "мечта"
+lemmaNominative meshok_N = "мешок"
+lemmaNominative migratsiya_N = "миграция"
 lemmaNominative mikrografika_N = "микрографика"
 lemmaNominative mikromehanika_N = "микромеханика"
 lemmaNominative mikroskladchatost_N = "микроскладчатость"
@@ -3346,8 +4926,11 @@ lemmaNominative mikrofizika_N = "микрофизика"
 lemmaNominative mikrofotoelektronika_N = "микрофотоэлектроника"
 lemmaNominative mikroekonomika_N = "микроэкономика"
 lemmaNominative mikroelektronika_N = "микроэлектроника"
+lemmaNominative milya_N = "миля"
+lemmaNominative mineral_N = "минерал"
 lemmaNominative mineralokeramika_N = "минералокерамика"
 lemmaNominative minutnost_N = "минутность"
+lemmaNominative mirolyubie_N = "миролюбие"
 lemmaNominative mnogoaspektnost_N = "многоаспектность"
 lemmaNominative mnogovalentnost_N = "многовалентность"
 lemmaNominative mnogovariantnost_N = "многовариантность"
@@ -3364,40 +4947,74 @@ lemmaNominative mnogotomnost_N = "многотомность"
 lemmaNominative mnogoukladnost_N = "многоукладность"
 lemmaNominative mnogotsvetnost_N = "многоцветность"
 lemmaNominative mnogoyadnost_N = "многоядность"
-lemmaNominative modalnost_N = "модальность"
+lemmaNominative mnozhestvo_N = "множество"
+lemmaNominative modul_N = "модуль"
 lemmaNominative molektronika_N = "молектроника"
-lemmaNominative molchanie_N = "молчание"
+lemmaNominative molekula_N = "молекула"
+lemmaNominative molniya_N = "молния"
 lemmaNominative molyarnost_N = "молярность"
+lemmaNominative moment_N = "момент"
+lemmaNominative monah_N = "монах"
+lemmaNominative moneta_N = "монета"
+lemmaNominative monitoring_N = "мониторинг"
+lemmaNominative monolog_N = "монолог"
 lemmaNominative monohromatichnost_N = "монохроматичность"
 lemmaNominative monohromnost_N = "монохромность"
 lemmaNominative monoenergetichnost_N = "моноэнергетичность"
+lemmaNominative moral_N = "мораль"
+lemmaNominative moroz_N = "мороз"
 lemmaNominative moroznost_N = "морозность"
+lemmaNominative moros_N = "морось"
+lemmaNominative mostik_N = "мостик"
+lemmaNominative mototsikl_N = "мотоцикл"
+lemmaNominative motylek_N = "мотылек"
+lemmaNominative moshchnost_N = "мощность"
+lemmaNominative moshch_N = "мощь"
+lemmaNominative mramor_N = "мрамор"
 lemmaNominative mramornost_N = "мраморность"
+lemmaNominative mudrets_N = "мудрец"
 lemmaNominative muzhepodobnost_N = "мужеподобность"
+lemmaNominative muzej_N = "музей"
+lemmaNominative muka_N = "мука"
 lemmaNominative multikollinearnost_N = "мультиколлинеарность"
 lemmaNominative multipletnost_N = "мультиплетность"
 lemmaNominative multiustojchivost_N = "мультиустойчивость"
+lemmaNominative mundir_N = "мундир"
+lemmaNominative muravej_N = "муравей"
 lemmaNominative mutagennost_N = "мутагенность"
 lemmaNominative mutantnost_N = "мутантность"
-lemmaNominative myslit_V = "мыслить"
+lemmaNominative mysh_N = "мышь"
+lemmaNominative mer_N = "мэр"
+lemmaNominative myach_N = "мяч"
 lemmaNominative nablyudaemost_N = "наблюдаемость"
-lemmaNominative nadezhda_N = "надежда"
-lemmaNominative nadezhnost_N = "надежность"
+lemmaNominative navazhdenie_N = "наваждение"
+lemmaNominative naves_N = "навес"
+lemmaNominative nagrada_N = "награда"
+lemmaNominative nagruzka_N = "нагрузка"
 lemmaNominative naznachaemost_N = "назначаемость"
-lemmaNominative naznachenie_N = "назначение"
 lemmaNominative naigrannost_N = "наигранность"
+lemmaNominative namerenie_N = "намерение"
 lemmaNominative nametannost_N = "наметанность"
 lemmaNominative nanoelektronika_N = "наноэлектроника"
+lemmaNominative napadenie_N = "нападение"
 lemmaNominative napolnyaemost_N = "наполняемость"
+lemmaNominative napravlenie_N = "направление"
 lemmaNominative naprasnost_N = "напрасность"
+lemmaNominative napryazhenie_N = "напряжение"
+lemmaNominative naryad_N = "наряд"
+lemmaNominative nastoyashchee_N = "настоящее"
 lemmaNominative nastraivaemost_N = "настраиваемость"
 lemmaNominative natuzhnost_N = "натужность"
+lemmaNominative natura_N = "натура"
+lemmaNominative natsiya_N = "нация"
+lemmaNominative nachalo_N = "начало"
 lemmaNominative naelektrizovannost_N = "наэлектризованность"
 lemmaNominative neadekvatnost_N = "неадекватность"
 lemmaNominative nebezopasnost_N = "небезопасность"
 lemmaNominative nebespristrastnost_N = "небеспристрастность"
 lemmaNominative nevazhnost_N = "неважность"
 lemmaNominative neveskost_N = "невескость"
+lemmaNominative nevesta_N = "невеста"
 lemmaNominative neveshchestvennost_N = "невещественность"
 lemmaNominative nevzaimozamestimost_N = "невзаимозаместимость"
 lemmaNominative nevidimost_N = "невидимость"
@@ -3413,6 +5030,7 @@ lemmaNominative nedevstvennost_N = "недевственность"
 lemmaNominative nedejstvennost_N = "недейственность"
 lemmaNominative nedokazannost_N = "недоказанность"
 lemmaNominative nedootsenennost_N = "недооцененность"
+lemmaNominative nedra_N = "недра"
 lemmaNominative nezagruzhennost_N = "незагруженность"
 lemmaNominative nezakonnorozhdennost_N = "незаконнорожденность"
 lemmaNominative nezakreplennost_N = "незакрепленность"
@@ -3423,6 +5041,7 @@ lemmaNominative nezapolnennost_N = "незаполненность"
 lemmaNominative nezarazhennost_N = "незараженность"
 lemmaNominative nezashchishchennost_N = "незащищенность"
 lemmaNominative nezlopamyatnost_N = "незлопамятность"
+lemmaNominative neizvestnost_N = "неизвестность"
 lemmaNominative neizyasnimost_N = "неизъяснимость"
 lemmaNominative neizyashchnost_N = "неизящность"
 lemmaNominative neinteresnost_N = "неинтересность"
@@ -3430,6 +5049,7 @@ lemmaNominative neiskusnost_N = "неискусность"
 lemmaNominative nejrobionika_N = "нейробионика"
 lemmaNominative nejroinformatika_N = "нейроинформатика"
 lemmaNominative nejrolingvistika_N = "нейролингвистика"
+lemmaNominative nejtralitet_N = "нейтралитет"
 lemmaNominative nejtronika_N = "нейтроника"
 lemmaNominative nekogerentnost_N = "некогерентность"
 lemmaNominative nekonvertiruemost_N = "неконвертируемость"
@@ -3443,15 +5063,16 @@ lemmaNominative nelinejnost_N = "нелинейность"
 lemmaNominative nelitsepriyatnost_N = "нелицеприятность"
 lemmaNominative nelyubeznost_N = "нелюбезность"
 lemmaNominative nematerialnost_N = "нематериальность"
+lemmaNominative nemets_N = "немец"
 lemmaNominative nemnogochislennost_N = "немногочисленность"
 lemmaNominative nemudrenost_N = "немудреность"
 lemmaNominative nenapolnennost_N = "ненаполненность"
 lemmaNominative nenasyshchennost_N = "ненасыщенность"
 lemmaNominative neobrabotannost_N = "необработанность"
-lemmaNominative neobhodimost_N = "необходимость"
 lemmaNominative neobyasnimost_N = "необъяснимость"
 lemmaNominative neopasnost_N = "неопасность"
 lemmaNominative neopravdannost_N = "неоправданность"
+lemmaNominative neopredelennost_N = "неопределенность"
 lemmaNominative neortodoksalnost_N = "неортодоксальность"
 lemmaNominative neosvoennost_N = "неосвоенность"
 lemmaNominative neosyazaemost_N = "неосязаемость"
@@ -3478,13 +5099,16 @@ lemmaNominative nepodotchetnost_N = "неподотчетность"
 lemmaNominative nepodtverzhdennost_N = "неподтвержденность"
 lemmaNominative nepodchinennost_N = "неподчиненность"
 lemmaNominative nepoleznost_N = "неполезность"
+lemmaNominative nepolnota_N = "неполнота"
 lemmaNominative nepolovovzroslost_N = "неполововзрослость"
 lemmaNominative nepopulyarnost_N = "непопулярность"
 lemmaNominative nepostizhimost_N = "непостижимость"
+lemmaNominative nepravilnost_N = "неправильность"
 lemmaNominative nepredvzyatost_N = "непредвзятость"
 lemmaNominative nepredskazuemost_N = "непредсказуемость"
 lemmaNominative nepredubezhdennost_N = "непредубежденность"
 lemmaNominative nepremennost_N = "непременность"
+lemmaNominative nepreryvnost_N = "непрерывность"
 lemmaNominative neprestizhnost_N = "непрестижность"
 lemmaNominative neprivodimost_N = "неприводимость"
 lemmaNominative neprikasaemost_N = "неприкасаемость"
@@ -3493,7 +5117,6 @@ lemmaNominative neprinadlezhnost_N = "непринадлежность"
 lemmaNominative neproglyadnost_N = "непроглядность"
 lemmaNominative neprodumannost_N = "непродуманность"
 lemmaNominative neprozrachnost_N = "непрозрачность"
-lemmaNominative neprotivorechivost_N = "непротиворечивость"
 lemmaNominative nerazdelennost_N = "неразделенность"
 lemmaNominative nerazlichimost_N = "неразличимость"
 lemmaNominative nerazmennost_N = "неразменность"
@@ -3518,8 +5141,8 @@ lemmaNominative neslyshimost_N = "неслышимость"
 lemmaNominative nesmetnost_N = "несметность"
 lemmaNominative nesminaemost_N = "несминаемость"
 lemmaNominative nesovershennost_N = "несовершенность"
-lemmaNominative nesovmestimost_N = "несовместимость"
 lemmaNominative nesovremennost_N = "несовременность"
+lemmaNominative nesoglasie_N = "несогласие"
 lemmaNominative nesokratimost_N = "несократимость"
 lemmaNominative nesoosnost_N = "несоосность"
 lemmaNominative nesochetaemost_N = "несочетаемость"
@@ -3541,9 +5164,11 @@ lemmaNominative neumyshlennost_N = "неумышленность"
 lemmaNominative neupravlyaemost_N = "неуправляемость"
 lemmaNominative neuprugost_N = "неупругость"
 lemmaNominative neuregulirovannost_N = "неурегулированность"
+lemmaNominative neustojchivost_N = "неустойчивость"
 lemmaNominative neformalnost_N = "неформальность"
 lemmaNominative neftegazonosnost_N = "нефтегазоносность"
 lemmaNominative neftegeofizika_N = "нефтегеофизика"
+lemmaNominative neft_N = "нефть"
 lemmaNominative netselomudrennost_N = "нецеломудренность"
 lemmaNominative netsentrirovannost_N = "нецентрированность"
 lemmaNominative netsivilizovannost_N = "нецивилизованность"
@@ -3553,43 +5178,74 @@ lemmaNominative neekonomnost_N = "неэкономность"
 lemmaNominative neelastichnost_N = "неэластичность"
 lemmaNominative neeffektivnost_N = "неэффективность"
 lemmaNominative neyarkost_N = "неяркость"
+lemmaNominative niva_N = "нива"
+lemmaNominative niz_N = "низ"
 lemmaNominative nichejnost_N = "ничейность"
-lemmaNominative nichto_N = "ничто"
+lemmaNominative novost_N = "новость"
+lemmaNominative nozh_N = "нож"
+lemmaNominative nozhka_N = "ножка"
+lemmaNominative nozhnitsy_N = "ножницы"
+lemmaNominative norma_N = "норма"
+lemmaNominative normalizatsiya_N = "нормализация"
+lemmaNominative nos_N = "нос"
+lemmaNominative nosok_N = "носок"
+lemmaNominative nochleg_N = "ночлег"
+lemmaNominative noch_N = "ночь"
+lemmaNominative noyabr_N = "ноябрь"
+lemmaNominative nrav_N = "нрав"
 lemmaNominative nuzhnost_N = "нужность"
 lemmaNominative nukleonika_N = "нуклеоника"
 lemmaNominative obaldelost_N = "обалделость"
 lemmaNominative obvetrennost_N = "обветренность"
 lemmaNominative obvodnennost_N = "обводненность"
+lemmaNominative obed_N = "обед"
 lemmaNominative obezlichennost_N = "обезличенность"
 lemmaNominative obeskurazhennost_N = "обескураженность"
 lemmaNominative obespokoennost_N = "обеспокоенность"
-lemmaNominative obida_N = "обида"
+lemmaNominative obeshchanie_N = "обещание"
 lemmaNominative oblagaemost_N = "облагаемость"
+lemmaNominative oblako_N = "облако"
+lemmaNominative oblast_N = "область"
+lemmaNominative oblik_N = "облик"
 lemmaNominative obluchennost_N = "облученность"
+lemmaNominative obman_N = "обман"
+lemmaNominative obobshchenie_N = "обобщение"
+lemmaNominative obolochka_N = "оболочка"
 lemmaNominative oborvannost_N = "оборванность"
 lemmaNominative oboronoustojchivost_N = "обороноустойчивость"
 lemmaNominative oborotosposobnost_N = "оборотоспособность"
-lemmaNominative obosnovanie_N = "обоснование"
+lemmaNominative obosnovannost_N = "обоснованность"
+lemmaNominative obrabotka_N = "обработка"
+lemmaNominative obrabotchik_N = "обработчик"
+lemmaNominative obrazets_N = "образец"
 lemmaNominative obrashchennost_N = "обращенность"
 lemmaNominative obryadovost_N = "обрядовость"
 lemmaNominative obsluzhivaemost_N = "обслуживаемость"
+lemmaNominative obsluzhivanie_N = "обслуживание"
 lemmaNominative obstruktsionnost_N = "обструкционность"
+lemmaNominative obsuzhdenie_N = "обсуждение"
+lemmaNominative obuv_N = "обувь"
+lemmaNominative obuslovlennost_N = "обусловленность"
 lemmaNominative obuchaemost_N = "обучаемость"
 lemmaNominative obshcheznachimost_N = "общезначимость"
 lemmaNominative obshcheprinyatost_N = "общепринятость"
 lemmaNominative obshchinnost_N = "общинность"
-lemmaNominative obyasnenie_N = "объяснение"
-lemmaNominative obyazannost_N = "обязанность"
-lemmaNominative obyazatelstvo_N = "обязательство"
+lemmaNominative obedinenie_N = "объединение"
+lemmaNominative obyasnimost_N = "объяснимость"
+lemmaNominative obem_N = "объем"
+lemmaNominative ovrag_N = "овраг"
+lemmaNominative ovtsa_N = "овца"
 lemmaNominative ognennost_N = "огненность"
-lemmaNominative ogranichenie_N = "ограничение"
-lemmaNominative odinochestvo_N = "одиночество"
+lemmaNominative ogorod_N = "огород"
 lemmaNominative odnoatomnost_N = "одноатомность"
 lemmaNominative odnodetnost_N = "однодетность"
 lemmaNominative odnozvuchnost_N = "однозвучность"
 lemmaNominative odnomernost_N = "одномерность"
 lemmaNominative odnohozyajnost_N = "однохозяйность"
 lemmaNominative odurelost_N = "одурелость"
+lemmaNominative ozero_N = "озеро"
+lemmaNominative okean_N = "океан"
+lemmaNominative okislenie_N = "окисление"
 lemmaNominative okislyaemost_N = "окисляемость"
 lemmaNominative okkazionalnost_N = "окказиональность"
 lemmaNominative okoldovannost_N = "околдованность"
@@ -3597,111 +5253,245 @@ lemmaNominative okolnost_N = "окольность"
 lemmaNominative okonchatelnost_N = "окончательность"
 lemmaNominative okrashennost_N = "окрашенность"
 lemmaNominative okristallizovannost_N = "окристаллизованность"
+lemmaNominative okrug_N = "округ"
+lemmaNominative okruzhenie_N = "окружение"
 lemmaNominative okruzhennost_N = "окруженность"
 lemmaNominative okupaemost_N = "окупаемость"
+lemmaNominative olen_N = "олень"
 lemmaNominative olfaktronika_N = "ольфактроника"
 lemmaNominative omofonichnost_N = "омофоничность"
+lemmaNominative opeka_N = "опека"
+lemmaNominative opera_N = "опера"
 lemmaNominative operabelnost_N = "операбельность"
+lemmaNominative operatsiya_N = "операция"
+lemmaNominative operezhenie_N = "опережение"
 lemmaNominative operennost_N = "оперенность"
-lemmaNominative opisanie_N = "описание"
+lemmaNominative opilki_N = "опилки"
 lemmaNominative oposredstvovannost_N = "опосредствованность"
+lemmaNominative oppozitsiya_N = "оппозиция"
 lemmaNominative opravdannost_N = "оправданность"
 lemmaNominative opravdyvaemost_N = "оправдываемость"
-lemmaNominative opredelenie_N = "определение"
 lemmaNominative oprovergaemost_N = "опровергаемость"
-lemmaNominative oproverzhenie_N = "опровержение"
 lemmaNominative oproverzhimost_N = "опровержимость"
+lemmaNominative opros_N = "опрос"
+lemmaNominative optimizatsiya_N = "оптимизация"
 lemmaNominative optoakustika_N = "оптоакустика"
 lemmaNominative optotehnika_N = "оптотехника"
 lemmaNominative optoelektronika_N = "оптоэлектроника"
+lemmaNominative oranzhereya_N = "оранжерея"
+lemmaNominative orbita_N = "орбита"
+lemmaNominative organ_N = "орган"
+lemmaNominative organizator_N = "организатор"
 lemmaNominative orgtehnika_N = "оргтехника"
+lemmaNominative orden_N = "орден"
+lemmaNominative orel_N = "орел"
+lemmaNominative orientatsiya_N = "ориентация"
 lemmaNominative orientirovannost_N = "ориентированность"
+lemmaNominative orkestratsiya_N = "оркестрация"
 lemmaNominative ortogonalnost_N = "ортогональность"
 lemmaNominative ortoptika_N = "ортоптика"
+lemmaNominative orudie_N = "орудие"
+lemmaNominative osadok_N = "осадок"
+lemmaNominative osen_N = "осень"
+lemmaNominative osina_N = "осина"
+lemmaNominative oskolok_N = "осколок"
 lemmaNominative oslablennost_N = "ослабленность"
-lemmaNominative osnovanie_N = "основание"
+lemmaNominative osmotr_N = "осмотр"
 lemmaNominative osnovnost_N = "основность"
-lemmaNominative osnovyvat_V = "основывать"
+lemmaNominative osobennost_N = "особенность"
 lemmaNominative osolonennost_N = "осолоненность"
+lemmaNominative ostanovka_N = "остановка"
 lemmaNominative osteoplastika_N = "остеопластика"
+lemmaNominative ostrov_N = "остров"
 lemmaNominative ostroumnost_N = "остроумность"
 lemmaNominative ost_N = "ость"
+lemmaNominative osminog_N = "осьминог"
 lemmaNominative otbornost_N = "отборность"
-lemmaNominative otvet_N = "ответ"
-lemmaNominative otvetstvennost_N = "ответственность"
+lemmaNominative otvaga_N = "отвага"
+lemmaNominative otdel_N = "отдел"
+lemmaNominative otdyh_N = "отдых"
+lemmaNominative otel_N = "отель"
+lemmaNominative otkaz_N = "отказ"
 lemmaNominative otkazoustojchivost_N = "отказоустойчивость"
 lemmaNominative otkazoustochivost_N = "отказоусточивость"
+lemmaNominative otkat_N = "откат"
+lemmaNominative otklonenie_N = "отклонение"
+lemmaNominative otkrovennost_N = "откровенность"
 lemmaNominative otkrytost_N = "открытость"
+lemmaNominative otlichie_N = "отличие"
 lemmaNominative otlichimost_N = "отличимость"
 lemmaNominative otnesennost_N = "отнесенность"
 lemmaNominative otnosimost_N = "относимость"
+lemmaNominative otnoshenie_N = "отношение"
+lemmaNominative otpusk_N = "отпуск"
+lemmaNominative otrava_N = "отрава"
 lemmaNominative otradnost_N = "отрадность"
-lemmaNominative otrazhenie_N = "отражение"
+lemmaNominative otritsanie_N = "отрицание"
+lemmaNominative otryad_N = "отряд"
 lemmaNominative otslezhivaemost_N = "отслеживаемость"
 lemmaNominative otstranennost_N = "отстраненность"
 lemmaNominative ottochennost_N = "отточенность"
+lemmaNominative otchayanie_N = "отчаяние"
+lemmaNominative otchet_N = "отчет"
+lemmaNominative ohota_N = "охота"
+lemmaNominative ohrana_N = "охрана"
 lemmaNominative ohranosposobnost_N = "охраноспособность"
+lemmaNominative ochag_N = "очаг"
+lemmaNominative ochered_N = "очередь"
 lemmaNominative ochumelost_N = "очумелость"
 lemmaNominative oshalelost_N = "ошалелость"
-lemmaNominative oshibka_N = "ошибка"
+lemmaNominative oshejnik_N = "ошейник"
 lemmaNominative oshibkoustojchivost_N = "ошибкоустойчивость"
+lemmaNominative pajplajn_N = "пайплайн"
+lemmaNominative palata_N = "палата"
+lemmaNominative palatka_N = "палатка"
 lemmaNominative paleobionika_N = "палеобионика"
 lemmaNominative paleogeofizika_N = "палеогеофизика"
-lemmaNominative pamyat_N = "память"
+lemmaNominative palets_N = "палец"
+lemmaNominative pamyatnik_N = "памятник"
+lemmaNominative panel_N = "панель"
+lemmaNominative papa_N = "папа"
+lemmaNominative papaha_N = "папаха"
+lemmaNominative parad_N = "парад"
+lemmaNominative paradoks_N = "парадокс"
 lemmaNominative paralingvistika_N = "паралингвистика"
+lemmaNominative parametrizatsiya_N = "параметризация"
+lemmaNominative park_N = "парк"
 lemmaNominative paronepronitsaemost_N = "паронепроницаемость"
+lemmaNominative parta_N = "парта"
+lemmaNominative partiya_N = "партия"
+lemmaNominative parus_N = "парус"
+lemmaNominative paseka_N = "пасека"
 lemmaNominative passazhirovmestimost_N = "пассажировместимость"
 lemmaNominative patafizika_N = "патафизика"
 lemmaNominative patentosposobnost_N = "патентоспособность"
 lemmaNominative patogennost_N = "патогенность"
 lemmaNominative patrilinejnost_N = "патрилинейность"
+lemmaNominative pauza_N = "пауза"
+lemmaNominative pautina_N = "паутина"
 lemmaNominative pahotoprigodnost_N = "пахотопригодность"
+lemmaNominative pevets_N = "певец"
+lemmaNominative pekarnya_N = "пекарня"
 lemmaNominative penetrantnost_N = "пенетрантность"
+lemmaNominative pensiya_N = "пенсия"
 lemmaNominative pervozdannost_N = "первозданность"
+lemmaNominative perevod_N = "перевод"
+lemmaNominative perevorot_N = "переворот"
+lemmaNominative peredacha_N = "передача"
 lemmaNominative perelivchatost_N = "переливчатость"
+lemmaNominative perelom_N = "перелом"
 lemmaNominative peremezhaemost_N = "перемежаемость"
+lemmaNominative peremennaya_N = "переменная"
 lemmaNominative peremestitelnost_N = "переместительность"
 lemmaNominative peremeshchaemost_N = "перемещаемость"
+lemmaNominative peremeshchenie_N = "перемещение"
 lemmaNominative perenalazhivaemost_N = "переналаживаемость"
 lemmaNominative perenormiruemost_N = "перенормируемость"
+lemmaNominative perenos_N = "перенос"
 lemmaNominative perenosimost_N = "переносимость"
+lemmaNominative pereprava_N = "переправа"
 lemmaNominative pereputannost_N = "перепутанность"
+lemmaNominative peresechenie_N = "пересечение"
 lemmaNominative perestanovochnost_N = "перестановочность"
+lemmaNominative perehod_N = "переход"
+lemmaNominative period_N = "период"
 lemmaNominative peristost_N = "перистость"
+lemmaNominative pero_N = "перо"
+lemmaNominative perspektiva_N = "перспектива"
+lemmaNominative pesnya_N = "песня"
+lemmaNominative pesok_N = "песок"
+lemmaNominative petlya_N = "петля"
+lemmaNominative petuh_N = "петух"
+lemmaNominative pechal_N = "печаль"
+lemmaNominative pechat_N = "печать"
+lemmaNominative pechka_N = "печка"
+lemmaNominative peshka_N = "пешка"
 lemmaNominative pika_N = "пика"
+lemmaNominative pila_N = "пила"
 lemmaNominative piloobraznost_N = "пилообразность"
+lemmaNominative pioner_N = "пионер"
+lemmaNominative pirog_N = "пирог"
 lemmaNominative piroprovodimost_N = "пиропроводимость"
+lemmaNominative pisatel_N = "писатель"
+lemmaNominative pitanie_N = "питание"
+lemmaNominative pishcha_N = "пища"
+lemmaNominative plavlenie_N = "плавление"
+lemmaNominative planeta_N = "планета"
+lemmaNominative plastichnost_N = "пластичность"
+lemmaNominative plata_N = "плата"
 lemmaNominative platezhnost_N = "платежность"
+lemmaNominative platforma_N = "платформа"
+lemmaNominative plate_N = "платье"
+lemmaNominative platezh_N = "платеж"
+lemmaNominative plita_N = "плита"
+lemmaNominative plod_N = "плод"
 lemmaNominative plojchatost_N = "плойчатость"
 lemmaNominative ploskostnost_N = "плоскостность"
+lemmaNominative ploskost_N = "плоскость"
+lemmaNominative plotnost_N = "плотность"
+lemmaNominative ploshchadka_N = "площадка"
+lemmaNominative ploshchad_N = "площадь"
+lemmaNominative plyazh_N = "пляж"
 lemmaNominative pnevmatichnost_N = "пневматичность"
 lemmaNominative pnevmoavtomatika_N = "пневмоавтоматика"
 lemmaNominative pnevmonika_N = "пневмоника"
+lemmaNominative pobeda_N = "победа"
+lemmaNominative poberezhe_N = "побережье"
 lemmaNominative pobitost_N = "побитость"
+lemmaNominative povar_N = "повар"
+lemmaNominative povedenie_N = "поведение"
+lemmaNominative poverhnost_N = "поверхность"
+lemmaNominative povod_N = "повод"
+lemmaNominative povorot_N = "поворот"
+lemmaNominative povtor_N = "повтор"
 lemmaNominative pogashennost_N = "погашенность"
 lemmaNominative pogloshchennost_N = "поглощенность"
+lemmaNominative pogoda_N = "погода"
 lemmaNominative pogodoustojchivost_N = "погодоустойчивость"
+lemmaNominative pogon_N = "погон"
+lemmaNominative pogreshnost_N = "погрешность"
 lemmaNominative pogruzhennost_N = "погруженность"
+lemmaNominative podval_N = "подвал"
+lemmaNominative podvig_N = "подвиг"
+lemmaNominative podderzhka_N = "поддержка"
+lemmaNominative podkova_N = "подкова"
 lemmaNominative podkontrolnost_N = "подконтрольность"
 lemmaNominative podkupnost_N = "подкупность"
+lemmaNominative podlodka_N = "подлодка"
+lemmaNominative podmnozhestvo_N = "подмножество"
 lemmaNominative podnadzornost_N = "поднадзорность"
+lemmaNominative podnos_N = "поднос"
+lemmaNominative podotchetnost_N = "подотчетность"
+lemmaNominative podpis_N = "подпись"
+lemmaNominative podrobnost_N = "подробность"
 lemmaNominative podrubrika_N = "подрубрика"
+lemmaNominative podruga_N = "подруга"
+lemmaNominative podsistema_N = "подсистема"
 lemmaNominative podsledstvennost_N = "подследственность"
 lemmaNominative podsudimost_N = "подсудимость"
+lemmaNominative poezd_N = "поезд"
+lemmaNominative pozhar_N = "пожар"
 lemmaNominative pozharobezopasnost_N = "пожаробезопасность"
 lemmaNominative pozharoopasnost_N = "пожароопасность"
-lemmaNominative pozitsiya_N = "позиция"
 lemmaNominative pokinutost_N = "покинутость"
+lemmaNominative pokoj_N = "покой"
 lemmaNominative pokoroblennost_N = "покоробленность"
+lemmaNominative pokryshka_N = "покрышка"
+lemmaNominative pokupka_N = "покупка"
+lemmaNominative pol_N = "пол"
 lemmaNominative polgodika_N = "полгодика"
+lemmaNominative polemika_N = "полемика"
 lemmaNominative poletoprigodnost_N = "полетопригодность"
 lemmaNominative polivalentnost_N = "поливалентность"
+lemmaNominative politika_N = "политика"
 lemmaNominative politkorrektnost_N = "политкорректность"
 lemmaNominative politonalnost_N = "политональность"
 lemmaNominative polnovodnost_N = "полноводность"
 lemmaNominative polnodrevesnost_N = "полнодревесность"
 lemmaNominative polnokrovnost_N = "полнокровность"
 lemmaNominative polozhennost_N = "положенность"
+lemmaNominative polomka_N = "поломка"
+lemmaNominative polosa_N = "полоса"
 lemmaNominative poloschatost_N = "полосчатость"
 lemmaNominative polstakanchika_N = "полстаканчика"
 lemmaNominative poluanonimnost_N = "полуанонимность"
@@ -3710,68 +5500,157 @@ lemmaNominative poluploskost_N = "полуплоскость"
 lemmaNominative poluprozrachnost_N = "полупрозрачность"
 lemmaNominative polchasika_N = "полчасика"
 lemmaNominative polyubovnost_N = "полюбовность"
+lemmaNominative polyus_N = "полюс"
+lemmaNominative polyana_N = "поляна"
 lemmaNominative polyarizuemost_N = "поляризуемость"
 lemmaNominative pomehozashchishchennost_N = "помехозащищенность"
-lemmaNominative ponimanie_N = "понимание"
-lemmaNominative ponimat_V = "понимать"
-lemmaNominative ponyatie_N = "понятие"
+lemmaNominative pomeshchenie_N = "помещение"
+lemmaNominative pomeshchik_N = "помещик"
+lemmaNominative pomidor_N = "помидор"
+lemmaNominative pomoshch_N = "помощь"
+lemmaNominative ponedelnik_N = "понедельник"
+lemmaNominative poncho_N = "пончо"
+lemmaNominative ponyatnost_N = "понятность"
+lemmaNominative pop_N = "поп"
+lemmaNominative popytka_N = "попытка"
 lemmaNominative poraboshchennost_N = "порабощенность"
 lemmaNominative porazhennost_N = "пораженность"
+lemmaNominative porog_N = "порог"
+lemmaNominative poroda_N = "порода"
 lemmaNominative poroznost_N = "порозность"
+lemmaNominative poroh_N = "порох"
+lemmaNominative portret_N = "портрет"
+lemmaNominative portera_N = "портьера"
+lemmaNominative poruchenie_N = "поручение"
 lemmaNominative posvyashchennost_N = "посвященность"
+lemmaNominative posev_N = "посев"
+lemmaNominative posledovatelnost_N = "последовательность"
+lemmaNominative posledstvie_N = "последствие"
+lemmaNominative posol_N = "посол"
+lemmaNominative posrednik_N = "посредник"
 lemmaNominative postizhimost_N = "постижимость"
 lemmaNominative postnost_N = "постность"
+lemmaNominative postupok_N = "поступок"
+lemmaNominative postuslovie_N = "постусловие"
 lemmaNominative postylost_N = "постылость"
-lemmaNominative posylka_N = "посылка"
 lemmaNominative potaennost_N = "потаенность"
+lemmaNominative poterya_N = "потеря"
+lemmaNominative potok_N = "поток"
+lemmaNominative potolok_N = "потолок"
+lemmaNominative pochva_N = "почва"
+lemmaNominative pochta_N = "почта"
 lemmaNominative poetapnost_N = "поэтапность"
-lemmaNominative pravda_N = "правда"
-lemmaNominative pravo_N = "право"
+lemmaNominative poyas_N = "пояс"
+lemmaNominative pravilo_N = "правило"
+lemmaNominative pravilnost_N = "правильность"
+lemmaNominative pravitelstvo_N = "правительство"
 lemmaNominative pravosubektivnost_N = "правосубъективность"
 lemmaNominative pravosubektnost_N = "правосубъектность"
+lemmaNominative prazdnik_N = "праздник"
+lemmaNominative pregrada_N = "преграда"
+lemmaNominative predannost_N = "преданность"
+lemmaNominative predatelstvo_N = "предательство"
 lemmaNominative preddelinkventnost_N = "предделинквентность"
+lemmaNominative predel_N = "предел"
+lemmaNominative predlozhenie_N = "предложение"
+lemmaNominative predmet_N = "предмет"
 lemmaNominative predohranitelnost_N = "предохранительность"
-lemmaNominative predpolozhenie_N = "предположение"
-lemmaNominative predposylka_N = "предпосылка"
+lemmaNominative predpriyatie_N = "предприятие"
 lemmaNominative predskazuemost_N = "предсказуемость"
 lemmaNominative predstavimost_N = "представимость"
+lemmaNominative preduslovie_N = "предусловие"
 lemmaNominative predustanovlennost_N = "предустановленность"
+lemmaNominative prezident_N = "президент"
+lemmaNominative prelest_N = "прелесть"
+lemmaNominative prepyatstvie_N = "препятствие"
+lemmaNominative preryvanie_N = "прерывание"
 lemmaNominative prestizhnost_N = "престижность"
+lemmaNominative prestuplenie_N = "преступление"
 lemmaNominative preyuditsialnost_N = "преюдициальность"
+lemmaNominative pribyl_N = "прибыль"
+lemmaNominative privet_N = "привет"
 lemmaNominative privodimost_N = "приводимость"
 lemmaNominative privolnost_N = "привольность"
+lemmaNominative privychka_N = "привычка"
 lemmaNominative priglushennost_N = "приглушенность"
+lemmaNominative prigorod_N = "пригород"
+lemmaNominative priem_N = "прием"
 lemmaNominative prizemlennost_N = "приземленность"
+lemmaNominative priznak_N = "признак"
+lemmaNominative prizrak_N = "призрак"
+lemmaNominative prikaz_N = "приказ"
 lemmaNominative prikovannost_N = "прикованность"
 lemmaNominative prilegaemost_N = "прилегаемость"
 lemmaNominative primetnost_N = "приметность"
-lemmaNominative prinuzhdenie_N = "принуждение"
+lemmaNominative prints_N = "принц"
+lemmaNominative printsip_N = "принцип"
+lemmaNominative prinyatie_N = "принятие"
 lemmaNominative prinyatost_N = "принятость"
 lemmaNominative priobshchennost_N = "приобщенность"
+lemmaNominative prioritet_N = "приоритет"
+lemmaNominative prioritizatsiya_N = "приоритизация"
+lemmaNominative priroda_N = "природа"
 lemmaNominative prirodoemkost_N = "природоемкость"
 lemmaNominative prisposablivaemost_N = "приспосабливаемость"
 lemmaNominative pristyzhennost_N = "пристыженность"
-lemmaNominative prisutstvie_N = "присутствие"
-lemmaNominative prichina_N = "причина"
+lemmaNominative prichinnost_N = "причинность"
 lemmaNominative prishiblennost_N = "пришибленность"
+lemmaNominative priem_Nv2 = "прием"
+lemmaNominative priemnik_N = "приемник"
+lemmaNominative probka_N = "пробка"
+lemmaNominative problema_N = "проблема"
 lemmaNominative problemnost_N = "проблемность"
 lemmaNominative probnost_N = "пробность"
-lemmaNominative proverka_N = "проверка"
+lemmaNominative provintsiya_N = "провинция"
+lemmaNominative provod_N = "провод"
+lemmaNominative provodimost_N = "проводимость"
+lemmaNominative prognoz_N = "прогноз"
+lemmaNominative programma_N = "программа"
 lemmaNominative programmiruemost_N = "программируемость"
+lemmaNominative progulka_N = "прогулка"
+lemmaNominative prodazha_N = "продажа"
+lemmaNominative prodolzhenie_N = "продолжение"
+lemmaNominative produkt_N = "продукт"
+lemmaNominative prodyuser_N = "продюсер"
+lemmaNominative proekt_N = "проект"
 lemmaNominative proektivnost_N = "проективность"
+lemmaNominative proza_N = "проза"
+lemmaNominative prozrachnost_N = "прозрачность"
+lemmaNominative proigrysh_N = "проигрыш"
+lemmaNominative proklyatie_N = "проклятие"
 lemmaNominative proksemika_N = "проксемика"
 lemmaNominative promaslennost_N = "промасленность"
 lemmaNominative promezhutochnost_N = "промежуточность"
-lemmaNominative proniknut_V = "проникнуть"
+lemmaNominative propusk_N = "пропуск"
+lemmaNominative propusknaya_sposobnost_N = "пропускная способность"
+lemmaNominative prorez_N = "прорезь"
+lemmaNominative prorok_N = "пророк"
 lemmaNominative prosvechivaemost_N = "просвечиваемость"
+lemmaNominative prospekt_N = "проспект"
+lemmaNominative prostor_N = "простор"
+lemmaNominative prostota_N = "простота"
 lemmaNominative prostuzhennost_N = "простуженность"
+lemmaNominative prostynya_N = "простыня"
+lemmaNominative prosba_N = "просьба"
+lemmaNominative protivnik_N = "противник"
 lemmaNominative protivooreolnost_N = "противоореольность"
 lemmaNominative protivopokazannost_N = "противопоказанность"
 lemmaNominative protivopravnost_N = "противоправность"
-lemmaNominative protivorechie_N = "противоречие"
 lemmaNominative protogalaktika_N = "протогалактика"
+lemmaNominative protokol_N = "протокол"
+lemmaNominative professiya_N = "профессия"
+lemmaNominative profilaktika_N = "профилактика"
+lemmaNominative profilirovanie_N = "профилирование"
 lemmaNominative profnadezhnost_N = "профнадежность"
+lemmaNominative prohod_N = "проход"
+lemmaNominative protsent_N = "процент"
 lemmaNominative prochuvstvovannost_N = "прочувствованность"
+lemmaNominative proshloe_N = "прошлое"
+lemmaNominative proshchenie_N = "прощение"
+lemmaNominative prud_N = "пруд"
+lemmaNominative pryzhok_N = "прыжок"
+lemmaNominative pryad_N = "прядь"
+lemmaNominative pryazha_N = "пряжа"
 lemmaNominative pryamougolnost_N = "прямоугольность"
 lemmaNominative pryanichnost_N = "пряничность"
 lemmaNominative psevdoizoshchrennost_N = "псевдоизощренность"
@@ -3781,86 +5660,165 @@ lemmaNominative psevdoutonchennost_N = "псевдоутонченность"
 lemmaNominative psihografika_N = "психографика"
 lemmaNominative psihodinamika_N = "психодинамика"
 lemmaNominative psihoprofilaktika_N = "психопрофилактика"
+lemmaNominative ptitsa_N = "птица"
+lemmaNominative publika_N = "публика"
+lemmaNominative pud_N = "пуд"
 lemmaNominative puzyrchatost_N = "пузырчатость"
-lemmaNominative pustota_N = "пустота"
+lemmaNominative puzyr_N = "пузырь"
+lemmaNominative pult_N = "пульт"
 lemmaNominative putanost_N = "путаность"
+lemmaNominative puteshestvie_N = "путешествие"
+lemmaNominative putnik_N = "путник"
 lemmaNominative puchnost_N = "пучность"
+lemmaNominative pshenitsa_N = "пшеница"
 lemmaNominative pezovospriimchivost_N = "пьезовосприимчивость"
 lemmaNominative pezokeramika_N = "пьезокерамика"
+lemmaNominative pyad_N = "пядь"
 lemmaNominative pyativalentnost_N = "пятивалентность"
+lemmaNominative rab_N = "раб"
+lemmaNominative ravnina_N = "равнина"
+lemmaNominative ravnovesie_N = "равновесие"
 lemmaNominative ravnodostupnost_N = "равнодоступность"
-lemmaNominative ravnosilnost_N = "равносильность"
+lemmaNominative ravnodushie_N = "равнодушие"
+lemmaNominative ravnopravie_N = "равноправие"
+lemmaNominative radzha_N = "раджа"
+lemmaNominative radiatsiya_N = "радиация"
 lemmaNominative radioakustika_N = "радиоакустика"
 lemmaNominative radiogalaktika_N = "радиогалактика"
 lemmaNominative radiogenetika_N = "радиогенетика"
 lemmaNominative radiomehanika_N = "радиомеханика"
 lemmaNominative radioneprozrachnost_N = "радионепрозрачность"
+lemmaNominative radius_N = "радиус"
 lemmaNominative radonoopasnost_N = "радоноопасность"
-lemmaNominative radost_N = "радость"
+lemmaNominative raduga_N = "радуга"
+lemmaNominative raz_N = "раз"
 lemmaNominative razbavlennost_N = "разбавленность"
 lemmaNominative razbalansirovannost_N = "разбалансированность"
-lemmaNominative razgranichenie_N = "разграничение"
+lemmaNominative razvedka_N = "разведка"
+lemmaNominative razgovor_N = "разговор"
+lemmaNominative razdacha_N = "раздача"
 lemmaNominative razdelimost_N = "разделимость"
 lemmaNominative razzhizhennost_N = "разжиженность"
-lemmaNominative razlichat_V = "различать"
-lemmaNominative razlichie_N = "различие"
 lemmaNominative razlichimost_N = "различимость"
+lemmaNominative razluka_N = "разлука"
+lemmaNominative razmer_N = "размер"
 lemmaNominative razmytost_N = "размытость"
-lemmaNominative raznitsa_N = "разница"
-lemmaNominative razreshenie_N = "разрешение"
 lemmaNominative razreshimost_N = "разрешимость"
 lemmaNominative razrushaemost_N = "разрушаемость"
 lemmaNominative razrushimost_N = "разрушимость"
 lemmaNominative razryvnost_N = "разрывность"
+lemmaNominative razryad_N = "разряд"
 lemmaNominative razryazhennost_N = "разряженность"
-lemmaNominative razum_N = "разум"
 lemmaNominative razezzhennost_N = "разъезженность"
+lemmaNominative raj_N = "рай"
+lemmaNominative rajon_N = "район"
+lemmaNominative rak_N = "рак"
+lemmaNominative raketa_N = "ракета"
 lemmaNominative raketodinamika_N = "ракетодинамика"
-lemmaNominative rakurs_N = "ракурс"
+lemmaNominative ramka_N = "рамка"
 lemmaNominative ranennost_N = "раненность"
 lemmaNominative raskrashennost_N = "раскрашенность"
 lemmaNominative raskruchennost_N = "раскрученность"
 lemmaNominative raskryvaemost_N = "раскрываемость"
 lemmaNominative raspevnost_N = "распевность"
+lemmaNominative raspisanie_N = "расписание"
 lemmaNominative raspolozhennost_N = "расположенность"
+lemmaNominative rasporyazhenie_N = "распоряжение"
+lemmaNominative raspredelenie_N = "распределение"
+lemmaNominative rassvet_N = "рассвет"
+lemmaNominative rasskaz_N = "рассказ"
 lemmaNominative rassloennost_N = "расслоенность"
 lemmaNominative rassoglasovannost_N = "рассогласованность"
 lemmaNominative rassredotochennost_N = "рассредоточенность"
+lemmaNominative rasstavanie_N = "расставание"
+lemmaNominative rasstoyanie_N = "расстояние"
+lemmaNominative rastvor_N = "раствор"
 lemmaNominative rasterzannost_N = "растерзанность"
 lemmaNominative rastrepannost_N = "растрепанность"
 lemmaNominative rastrogannost_N = "растроганность"
+lemmaNominative rashod_N = "расход"
 lemmaNominative rashodimost_N = "расходимость"
 lemmaNominative rasshirennost_N = "расширенность"
 lemmaNominative rasshcheplennost_N = "расщепленность"
+lemmaNominative ratsiya_N = "рация"
 lemmaNominative rashpilevidnost_N = "рашпилевидность"
 lemmaNominative readaptatsiya_N = "реадаптация"
+lemmaNominative reaktsiya_N = "реакция"
 lemmaNominative realizuemost_N = "реализуемость"
 lemmaNominative reversivnost_N = "реверсивность"
+lemmaNominative reviziya_N = "ревизия"
+lemmaNominative region_N = "регион"
+lemmaNominative registratsiya_N = "регистрация"
+lemmaNominative reglamentatsiya_N = "регламентация"
+lemmaNominative regressiya_N = "регрессия"
+lemmaNominative redaktor_N = "редактор"
 lemmaNominative reenterabelnost_N = "реентерабельность"
+lemmaNominative rezhim_N = "режим"
 lemmaNominative rezhimnost_N = "режимность"
+lemmaNominative rezina_N = "резина"
 lemmaNominative rezinotehnika_N = "резинотехника"
 lemmaNominative rezistentnost_N = "резистентность"
+lemmaNominative rezonans_N = "резонанс"
+lemmaNominative rezultat_N = "результат"
 lemmaNominative rejganomika_N = "рейганомика"
 lemmaNominative rekurrentnost_N = "рекуррентность"
 lemmaNominative rekursivnost_N = "рекурсивность"
+lemmaNominative rekursiya_N = "рекурсия"
 lemmaNominative relevantnost_N = "релевантность"
-lemmaNominative remont_N = "ремонт"
+lemmaNominative reliz_N = "релиз"
+lemmaNominative rels_N = "рельс"
 lemmaNominative remontoprigodnost_N = "ремонтопригодность"
 lemmaNominative remontosposobnost_N = "ремонтоспособность"
 lemmaNominative rentosposobnost_N = "рентоспособность"
+lemmaNominative repka_N = "репка"
+lemmaNominative replikatsiya_N = "репликация"
+lemmaNominative reportazh_N = "репортаж"
+lemmaNominative reputatsiya_N = "репутация"
+lemmaNominative restoran_N = "ресторан"
+lemmaNominative resurs_N = "ресурс"
 lemmaNominative resursoemkost_N = "ресурсоемкость"
 lemmaNominative refleksivnost_N = "рефлексивность"
+lemmaNominative reforma_N = "реформа"
 lemmaNominative refrakternost_N = "рефрактерность"
-lemmaNominative reshenie_N = "решение"
+lemmaNominative retsenziya_N = "рецензия"
+lemmaNominative rech_N = "речь"
+lemmaNominative ris_N = "рис"
 lemmaNominative riflenost_N = "рифленость"
 lemmaNominative robastnost_N = "робастность"
+lemmaNominative robot_N = "робот"
 lemmaNominative robotehnika_N = "роботехника"
 lemmaNominative robototehnika_N = "робототехника"
+lemmaNominative roga_N = "рога"
+lemmaNominative rodina_N = "родина"
+lemmaNominative rozhok_N = "рожок"
+lemmaNominative roza_N = "роза"
 lemmaNominative rozovatost_N = "розоватость"
 lemmaNominative rozovoshchekost_N = "розовощекость"
+lemmaNominative rok_N = "рок"
+lemmaNominative roman_N = "роман"
+lemmaNominative rosa_N = "роса"
 lemmaNominative rosistost_N = "росистость"
+lemmaNominative roshcha_N = "роща"
+lemmaNominative royal_N = "рояль"
+lemmaNominative rubashka_N = "рубашка"
+lemmaNominative rubezh_N = "рубеж"
+lemmaNominative rubl_N = "рубль"
+lemmaNominative ruda_N = "руда"
 lemmaNominative rudonosnost_N = "рудоносность"
+lemmaNominative rukav_N = "рукав"
+lemmaNominative rukovoditel_N = "руководитель"
+lemmaNominative rukovodstvo_N = "руководство"
+lemmaNominative russkij_N = "русский"
+lemmaNominative ruchej_N = "ручей"
+lemmaNominative ryba_N = "рыба"
+lemmaNominative rybak_N = "рыбак"
 lemmaNominative ryboproduktivnost_N = "рыбопродуктивность"
+lemmaNominative rynok_N = "рынок"
+lemmaNominative sablya_N = "сабля"
+lemmaNominative sadovod_N = "садовод"
+lemmaNominative salat_N = "салат"
+lemmaNominative salon_N = "салон"
+lemmaNominative samovar_N = "самовар"
 lemmaNominative samovosplamenyaemost_N = "самовоспламеняемость"
 lemmaNominative samodistributivnost_N = "самодистрибутивность"
 lemmaNominative samodostatochnost_N = "самодостаточность"
@@ -3868,8 +5826,17 @@ lemmaNominative samozabvennost_N = "самозабвенность"
 lemmaNominative samozanyatost_N = "самозанятость"
 lemmaNominative samoobespechennost_N = "самообеспеченность"
 lemmaNominative samoochevidnost_N = "самоочевидность"
+lemmaNominative sani_N = "сани"
 lemmaNominative sanovnost_N = "сановность"
+lemmaNominative sapog_N = "сапог"
+lemmaNominative saraj_N = "сарай"
+lemmaNominative satir_N = "сатир"
+lemmaNominative sahar_N = "сахар"
 lemmaNominative sbalansirovannost_N = "сбалансированность"
+lemmaNominative sboj_N = "сбой"
+lemmaNominative svadba_N = "свадьба"
+lemmaNominative svedeniya_N = "сведения"
+lemmaNominative svekla_N = "свекла"
 lemmaNominative svernutost_N = "свернутость"
 lemmaNominative sverhaktivnost_N = "сверхактивность"
 lemmaNominative sverhvooruzhennost_N = "сверхвооруженность"
@@ -3880,107 +5847,266 @@ lemmaNominative sverhplastichnost_N = "сверхпластичность"
 lemmaNominative sverhsekretnost_N = "сверхсекретность"
 lemmaNominative sverhspiralnost_N = "сверхспиральность"
 lemmaNominative sverheffektivnost_N = "сверхэффективность"
+lemmaNominative svet_N = "свет"
 lemmaNominative svetnost_N = "светность"
 lemmaNominative svetolyubivost_N = "светолюбивость"
 lemmaNominative svetoprochnost_N = "светопрочность"
-lemmaNominative svidetelstvo_N = "свидетельство"
+lemmaNominative svecha_N = "свеча"
+lemmaNominative svidanie_N = "свидание"
+lemmaNominative svinya_N = "свинья"
+lemmaNominative sviter_N = "свитер"
 lemmaNominative svishchevatost_N = "свищеватость"
 lemmaNominative svoboda_N = "свобода"
 lemmaNominative svobodnost_N = "свободность"
 lemmaNominative svodimost_N = "сводимость"
+lemmaNominative svodka_N = "сводка"
 lemmaNominative svojstvennost_N = "свойственность"
+lemmaNominative svyazka_N = "связка"
+lemmaNominative svyaznost_N = "связность"
+lemmaNominative svyaz_N = "связь"
+lemmaNominative svyashchennik_N = "священник"
 lemmaNominative svyashchennost_N = "священность"
 lemmaNominative sgorblennost_N = "сгорбленность"
 lemmaNominative sdavlennost_N = "сдавленность"
+lemmaNominative sdvig_N = "сдвиг"
 lemmaNominative sdobnost_N = "сдобность"
+lemmaNominative sever_N = "север"
+lemmaNominative segment_N = "сегмент"
+lemmaNominative segmentatsiya_N = "сегментация"
+lemmaNominative segodnya_N = "сегодня"
+lemmaNominative sedlo_N = "седло"
+lemmaNominative sezon_N = "сезон"
 lemmaNominative sejsmobezopasnost_N = "сейсмобезопасность"
 lemmaNominative sejsmoopasnost_N = "сейсмоопасность"
+lemmaNominative sejf_N = "сейф"
+lemmaNominative sekret_N = "секрет"
+lemmaNominative sektor_N = "сектор"
+lemmaNominative sektsiya_N = "секция"
 lemmaNominative selhoztehnika_N = "сельхозтехника"
+lemmaNominative semya_N = "семя"
+lemmaNominative senat_N = "сенат"
 lemmaNominative sensitivnost_N = "сенситивность"
 lemmaNominative sensorika_N = "сенсорика"
+lemmaNominative sentyabr_N = "сентябрь"
+lemmaNominative sen_N = "сень"
 lemmaNominative separabelnost_N = "сепарабельность"
 lemmaNominative septichnost_N = "септичность"
+lemmaNominative seredina_N = "середина"
+lemmaNominative serializatsiya_N = "сериализация"
+lemmaNominative serp_N = "серп"
+lemmaNominative sestra_N = "сестра"
 lemmaNominative setchatost_N = "сетчатость"
-lemmaNominative sillogizm_N = "силлогизм"
+lemmaNominative set_N = "сеть"
+lemmaNominative sigareta_N = "сигарета"
+lemmaNominative signal_N = "сигнал"
+lemmaNominative sidene_N = "сиденье"
+lemmaNominative silach_N = "силач"
+lemmaNominative silogizm_N = "силогизм"
+lemmaNominative simpatiya_N = "симпатия"
 lemmaNominative singulyarnost_N = "сингулярность"
 lemmaNominative sinektika_N = "синектика"
 lemmaNominative sinergetika_N = "синергетика"
 lemmaNominative sintaktika_N = "синтактика"
+lemmaNominative sinhronizatsiya_N = "синхронизация"
+lemmaNominative sinhronnost_N = "синхронность"
+lemmaNominative siren_N = "сирень"
 lemmaNominative sistemotehnika_N = "системотехника"
-lemmaNominative skazat_V = "сказать"
+lemmaNominative skazka_N = "сказка"
+lemmaNominative skala_N = "скала"
+lemmaNominative skamya_N = "скамья"
 lemmaNominative skarednost_N = "скаредность"
+lemmaNominative skatert_N = "скатерть"
+lemmaNominative skachok_N = "скачок"
+lemmaNominative skidka_N = "скидка"
+lemmaNominative sklad_N = "склад"
+lemmaNominative skladka_N = "складка"
 lemmaNominative skoordinirovannost_N = "скоординированность"
 lemmaNominative skorostrelnost_N = "скорострельность"
+lemmaNominative skorost_N = "скорость"
+lemmaNominative skot_N = "скот"
 lemmaNominative skoshennost_N = "скошенность"
 lemmaNominative skruchennost_N = "скрученность"
 lemmaNominative skruchivaemost_N = "скручиваемость"
+lemmaNominative slava_N = "слава"
 lemmaNominative sladkoglasnost_N = "сладкогласность"
-lemmaNominative sledstvie_N = "следствие"
+lemmaNominative sledovanie_N = "следование"
+lemmaNominative sleza_N = "слеза"
+lemmaNominative slepoj_N = "слепой"
+lemmaNominative sliva_N = "слива"
+lemmaNominative slozhnost_N = "сложность"
+lemmaNominative sloj_N = "слой"
+lemmaNominative slon_N = "слон"
+lemmaNominative sluga_N = "слуга"
+lemmaNominative sluzhba_N = "служба"
 lemmaNominative sluzhebnost_N = "служебность"
+lemmaNominative sluchajnost_N = "случайность"
+lemmaNominative slushatel_N = "слушатель"
 lemmaNominative smazannost_N = "смазанность"
 lemmaNominative smachivaemost_N = "смачиваемость"
-lemmaNominative smert_N = "смерть"
+lemmaNominative smena_N = "смена"
+lemmaNominative smes_N = "смесь"
 lemmaNominative smeshannost_N = "смешанность"
 lemmaNominative smeshchaemost_N = "смещаемость"
 lemmaNominative sminaemost_N = "сминаемость"
-lemmaNominative smirenie_N = "смирение"
 lemmaNominative smirnost_N = "смирность"
-lemmaNominative smysl_N = "смысл"
+lemmaNominative smola_N = "смола"
+lemmaNominative sneg_N = "снег"
+lemmaNominative snegovik_N = "снеговик"
+lemmaNominative snegurka_N = "снегурка"
+lemmaNominative sobaka_N = "собака"
 lemmaNominative sobiraemost_N = "собираемость"
+lemmaNominative sobor_N = "собор"
+lemmaNominative sobytie_N = "событие"
 lemmaNominative sovershennost_N = "совершенность"
-lemmaNominative soglasie_N = "согласие"
-lemmaNominative soglasovannost_N = "согласованность"
+lemmaNominative sovest_N = "совесть"
+lemmaNominative sovet_N = "совет"
+lemmaNominative sovmestimost_N = "совместимость"
 lemmaNominative sognutost_N = "согнутость"
 lemmaNominative soznanie_N = "сознание"
+lemmaNominative sok_N = "сок"
+lemmaNominative sokol_N = "сокол"
 lemmaNominative sokrashchaemost_N = "сокращаемость"
-lemmaNominative somnenie_N = "сомнение"
+lemmaNominative soldat_N = "солдат"
+lemmaNominative solntsestoyanie_N = "солнцестояние"
 lemmaNominative sonika_N = "соника"
+lemmaNominative soobshchenie_N = "сообщение"
 lemmaNominative soosnost_N = "соосность"
+lemmaNominative sootvetstvie_N = "соответствие"
+lemmaNominative sootnoshenie_N = "соотношение"
 lemmaNominative sopodchinennost_N = "соподчиненность"
+lemmaNominative soprotivlenie_N = "сопротивление"
+lemmaNominative soroka_N = "сорока"
+lemmaNominative sosed_N = "сосед"
+lemmaNominative sosna_N = "сосна"
+lemmaNominative sostav_N = "состав"
+lemmaNominative sosud_N = "сосуд"
+lemmaNominative sofa_N = "софа"
+lemmaNominative soha_N = "соха"
 lemmaNominative sohranyaemost_N = "сохраняемость"
 lemmaNominative soyuzselhoztehnika_N = "союзсельхозтехника"
 lemmaNominative soyuzspetsavtomatika_N = "союзспецавтоматика"
+lemmaNominative spalnyj_N = "спальный"
+lemmaNominative spalnya_N = "спальня"
+lemmaNominative spektakl_N = "спектакль"
+lemmaNominative spektr_N = "спектр"
+lemmaNominative spekulyatsiya_N = "спекуляция"
 lemmaNominative spetsavtomatika_N = "спецавтоматика"
+lemmaNominative spetsifikatsiya_N = "спецификация"
+lemmaNominative spetsifichnost_N = "специфичность"
 lemmaNominative spetsorgtehnika_N = "спецоргтехника"
 lemmaNominative spetstehnika_N = "спецтехника"
+lemmaNominative spina_N = "спина"
+lemmaNominative spiral_N = "спираль"
+lemmaNominative spisok_N = "список"
+lemmaNominative spichka_N = "спичка"
+lemmaNominative splav_N = "сплав"
 lemmaNominative sploshnost_N = "сплошность"
 lemmaNominative splyusnutost_N = "сплюснутость"
 lemmaNominative splyushchennost_N = "сплющенность"
 lemmaNominative spokojnost_N = "спокойность"
-lemmaNominative sposobnost_N = "способность"
-lemmaNominative spravedlivost_N = "справедливость"
+lemmaNominative sposob_N = "способ"
+lemmaNominative spravka_N = "справка"
 lemmaNominative sputannost_N = "спутанность"
+lemmaNominative sreda_N = "среда"
+lemmaNominative sredstvo_N = "средство"
+lemmaNominative ssora_N = "ссора"
+lemmaNominative ssylka_N = "ссылка"
+lemmaNominative stabilnost_N = "стабильность"
+lemmaNominative stavka_N = "ставка"
+lemmaNominative stadion_N = "стадион"
+lemmaNominative stadiya_N = "стадия"
+lemmaNominative stado_N = "стадо"
+lemmaNominative stakan_N = "стакан"
+lemmaNominative stal_N = "сталь"
+lemmaNominative standartizatsiya_N = "стандартизация"
+lemmaNominative stanok_N = "станок"
+lemmaNominative stantsiya_N = "станция"
+lemmaNominative starik_N = "старик"
+lemmaNominative starshina_N = "старшина"
+lemmaNominative status_N = "статус"
+lemmaNominative staya_N = "стая"
+lemmaNominative stvol_N = "ствол"
+lemmaNominative steklo_N = "стекло"
 lemmaNominative steklovidnost_N = "стекловидность"
+lemmaNominative stena_N = "стена"
+lemmaNominative stend_N = "стенд"
+lemmaNominative stepen_N = "степень"
+lemmaNominative step_N = "степь"
 lemmaNominative stervoznost_N = "стервозность"
 lemmaNominative stiraemost_N = "стираемость"
+lemmaNominative stihiya_N = "стихия"
+lemmaNominative stojka_N = "стойка"
+lemmaNominative stol_N = "стол"
+lemmaNominative stolb_N = "столб"
+lemmaNominative stolovaya_N = "столовая"
+lemmaNominative stolyar_N = "столяр"
+lemmaNominative ston_N = "стон"
+lemmaNominative storona_N = "сторона"
 lemmaNominative stohastichnost_N = "стохастичность"
-lemmaNominative stradanie_N = "страдание"
-lemmaNominative strah_N = "страх"
+lemmaNominative stoyanka_N = "стоянка"
+lemmaNominative stranitsa_N = "страница"
+lemmaNominative strast_N = "страсть"
+lemmaNominative strela_N = "стрела"
 lemmaNominative strelovidnost_N = "стреловидность"
-lemmaNominative styd_N = "стыд"
+lemmaNominative stremyanka_N = "стремянка"
+lemmaNominative stroka_N = "строка"
+lemmaNominative strochka_N = "строчка"
+lemmaNominative struna_N = "струна"
+lemmaNominative student_N = "студент"
+lemmaNominative stul_N = "стул"
 lemmaNominative subatsidnost_N = "субацидность"
 lemmaNominative subgarmonika_N = "субгармоника"
-lemmaNominative sudba_N = "судьба"
+lemmaNominative sud_N = "суд"
+lemmaNominative sudno_N = "судно"
 lemmaNominative sudbonosnost_N = "судьбоносность"
-lemmaNominative suzhdenie_N = "суждение"
 lemmaNominative sumasbrodnost_N = "сумасбродность"
 lemmaNominative sumerechnost_N = "сумеречность"
+lemmaNominative sumka_N = "сумка"
+lemmaNominative summa_N = "сумма"
 lemmaNominative summiruemost_N = "суммируемость"
+lemmaNominative sup_N = "суп"
 lemmaNominative suporosnost_N = "супоросность"
+lemmaNominative supruga_N = "супруга"
 lemmaNominative surdotehnika_N = "сурдотехника"
-lemmaNominative sushchestvovanie_N = "существование"
-lemmaNominative sushchestvovat_V = "существовать"
+lemmaNominative sutki_N = "сутки"
+lemmaNominative sfera_N = "сфера"
+lemmaNominative shema_N = "схема"
+lemmaNominative stsena_N = "сцена"
+lemmaNominative stsenarij_N = "сценарий"
 lemmaNominative stseplennost_N = "сцепленность"
 lemmaNominative stseplyaemost_N = "сцепляемость"
+lemmaNominative schaste_N = "счастье"
 lemmaNominative schetnost_N = "счетность"
+lemmaNominative schet_N = "счет"
+lemmaNominative tabak_N = "табак"
+lemmaNominative tablitsa_N = "таблица"
+lemmaNominative taburet_N = "табурет"
+lemmaNominative tavtologiya_N = "тавтология"
 lemmaNominative tagmemika_N = "тагмемика"
-lemmaNominative tezis_N = "тезис"
+lemmaNominative tajga_N = "тайга"
+lemmaNominative tajna_N = "тайна"
+lemmaNominative taksi_N = "такси"
+lemmaNominative talant_N = "талант"
+lemmaNominative tanets_N = "танец"
+lemmaNominative tank_N = "танк"
+lemmaNominative tarelka_N = "тарелка"
+lemmaNominative tarif_N = "тариф"
+lemmaNominative tachka_N = "тачка"
+lemmaNominative tvar_N = "тварь"
+lemmaNominative tverd_N = "твердь"
 lemmaNominative tektonofizika_N = "тектонофизика"
+lemmaNominative televizor_N = "телевизор"
+lemmaNominative telega_N = "телега"
 lemmaNominative telematika_N = "телематика"
+lemmaNominative telemetriya_N = "телеметрия"
 lemmaNominative teleradiotehnika_N = "телерадиотехника"
-lemmaNominative telo_N = "тело"
+lemmaNominative telefon_N = "телефон"
+lemmaNominative temnitsa_N = "темница"
+lemmaNominative temperatura_N = "температура"
 lemmaNominative temperaturostojkost_N = "температуростойкость"
-lemmaNominative teorema_N = "теорема"
+lemmaNominative tender_N = "тендер"
+lemmaNominative tenor_N = "тенор"
+lemmaNominative teoriya_N = "теория"
 lemmaNominative teplovatost_N = "тепловатость"
 lemmaNominative teplokrovnost_N = "теплокровность"
 lemmaNominative teplonapryazhennost_N = "теплонапряженность"
@@ -3989,25 +6115,213 @@ lemmaNominative teplonepronitsaemost_N = "теплонепроницаемост
 lemmaNominative teploprozrachnost_N = "теплопрозрачность"
 lemmaNominative teplopronitsaemost_N = "теплопроницаемость"
 lemmaNominative teplofizika_N = "теплофизика"
-lemmaNominative termin_N = "термин"
-lemmaNominative toska_N = "тоска"
-lemmaNominative trevoga_N = "тревога"
-lemmaNominative uslovie_N = "условие"
-lemmaNominative utverzhdenie_N = "утверждение"
-lemmaNominative utochnyat_V = "уточнять"
-lemmaNominative utrata_N = "утрата"
-lemmaNominative uhod_N = "уход"
-lemmaNominative fakt_N = "факт"
-lemmaNominative filosofiya_N = "философия"
-lemmaNominative hrupkost_N = "хрупкость"
-lemmaNominative tsel_N = "цель"
-lemmaNominative tsifra_N = "цифра"
-lemmaNominative chestnost_N = "честность"
-lemmaNominative ekvivalentsiya_N = "эквиваленция"
-lemmaNominative eksplikatsiya_N = "экспликация"
-lemmaNominative entejlment_N = "энтейлмент"
-lemmaNominative yazyk_N = "язык"
-lemmaNominative yakor_N = "якорь"
+lemmaNominative termos_N = "термос"
+lemmaNominative terrasa_N = "терраса"
+lemmaNominative territoriya_N = "территория"
+lemmaNominative tes_N = "тес"
+lemmaNominative tesnota_N = "теснота"
+lemmaNominative tehnika_N = "техника"
+lemmaNominative tehnologiya_N = "технология"
+lemmaNominative tigr_N = "тигр"
+lemmaNominative tirazh_N = "тираж"
+lemmaNominative titul_N = "титул"
+lemmaNominative tkan_N = "ткань"
+lemmaNominative tovar_N = "товар"
+lemmaNominative tovarishch_N = "товарищ"
+lemmaNominative tok_N = "ток"
+lemmaNominative tokenizatsiya_N = "токенизация"
+lemmaNominative tolpa_N = "толпа"
+lemmaNominative tolshchina_N = "толщина"
+lemmaNominative toplivo_N = "топливо"
+lemmaNominative tochka_N = "точка"
+lemmaNominative tochnost_N = "точность"
+lemmaNominative trava_N = "трава"
+lemmaNominative traditsiya_N = "традиция"
+lemmaNominative traektoriya_N = "траектория"
+lemmaNominative traktor_N = "трактор"
+lemmaNominative tramvaj_N = "трамвай"
+lemmaNominative tranzaktsiya_N = "транзакция"
+lemmaNominative transport_N = "транспорт"
+lemmaNominative trassiruemost_N = "трассируемость"
+lemmaNominative traur_N = "траур"
+lemmaNominative trener_N = "тренер"
+lemmaNominative trenie_N = "трение"
+lemmaNominative trenirovka_N = "тренировка"
+lemmaNominative trigger_N = "триггер"
+lemmaNominative tropa_N = "тропа"
+lemmaNominative trotuar_N = "тротуар"
+lemmaNominative truba_N = "труба"
+lemmaNominative trudnost_N = "трудность"
+lemmaNominative tryapka_N = "тряпка"
+lemmaNominative tuman_N = "туман"
+lemmaNominative tykva_N = "тыква"
+lemmaNominative tysyacha_N = "тысяча"
+lemmaNominative tyuk_N = "тюк"
+lemmaNominative tyurma_N = "тюрьма"
+lemmaNominative uborka_N = "уборка"
+lemmaNominative uvedomlenie_N = "уведомление"
+lemmaNominative uverennost_N = "уверенность"
+lemmaNominative ugol_N = "уголь"
+lemmaNominative udalennost_N = "удаленность"
+lemmaNominative udobstvo_N = "удобство"
+lemmaNominative udovletvorenie_N = "удовлетворение"
+lemmaNominative udochka_N = "удочка"
+lemmaNominative ukaz_N = "указ"
+lemmaNominative ukus_N = "укус"
+lemmaNominative ulitsa_N = "улица"
+lemmaNominative umozaklyuchenie_N = "умозаключение"
+lemmaNominative universitet_N = "университет"
+lemmaNominative unifikatsiya_N = "унификация"
+lemmaNominative uniforma_N = "униформа"
+lemmaNominative upakovka_N = "упаковка"
+lemmaNominative upravlenie_N = "управление"
+lemmaNominative uprugost_N = "упругость"
+lemmaNominative uragan_N = "ураган"
+lemmaNominative uroven_N = "уровень"
+lemmaNominative urozhaj_N = "урожай"
+lemmaNominative us_N = "ус"
+lemmaNominative uskorenie_N = "ускорение"
+lemmaNominative usluga_N = "услуга"
+lemmaNominative uspeh_N = "успех"
+lemmaNominative usta_N = "уста"
+lemmaNominative ustav_N = "устав"
+lemmaNominative ustojchivost_N = "устойчивость"
+lemmaNominative ustrojstvo_N = "устройство"
+lemmaNominative utka_N = "утка"
+lemmaNominative uho_N = "ухо"
+lemmaNominative uchastnik_N = "участник"
+lemmaNominative uchastok_N = "участок"
+lemmaNominative ucheba_N = "учеба"
+lemmaNominative uchebnik_N = "учебник"
+lemmaNominative uchitel_N = "учитель"
+lemmaNominative fabrika_N = "фабрика"
+lemmaNominative fakel_N = "факел"
+lemmaNominative fanera_N = "фанера"
+lemmaNominative fantaziya_N = "фантазия"
+lemmaNominative fantom_N = "фантом"
+lemmaNominative fasad_N = "фасад"
+lemmaNominative fevral_N = "февраль"
+lemmaNominative ferma_N = "ферма"
+lemmaNominative fermer_N = "фермер"
+lemmaNominative figura_N = "фигура"
+lemmaNominative fizika_N = "физика"
+lemmaNominative film_N = "фильм"
+lemmaNominative filtratsiya_N = "фильтрация"
+lemmaNominative final_N = "финал"
+lemmaNominative firma_N = "фирма"
+lemmaNominative flejta_N = "флейта"
+lemmaNominative flot_N = "флот"
+lemmaNominative fokus_N = "фокус"
+lemmaNominative formalizatsiya_N = "формализация"
+lemmaNominative fraza_N = "фраза"
+lemmaNominative front_N = "фронт"
+lemmaNominative frukt_N = "фрукт"
+lemmaNominative funt_N = "фунт"
+lemmaNominative furgon_N = "фургон"
+lemmaNominative halat_N = "халат"
+lemmaNominative harakteristika_N = "характеристика"
+lemmaNominative hvost_N = "хвост"
+lemmaNominative hvoya_N = "хвоя"
+lemmaNominative hleb_N = "хлеб"
+lemmaNominative hlopok_N = "хлопок"
+lemmaNominative hozyain_N = "хозяин"
+lemmaNominative holod_N = "холод"
+lemmaNominative holodilnik_N = "холодильник"
+lemmaNominative horosho_N = "хорошо"
+lemmaNominative hram_N = "храм"
+lemmaNominative hren_N = "хрен"
+lemmaNominative tsarstvo_N = "царство"
+lemmaNominative tsvet_N = "цвет"
+lemmaNominative tsvetok_N = "цветок"
+lemmaNominative tselostnost_N = "целостность"
+lemmaNominative tsepochka_N = "цепочка"
+lemmaNominative tseremoniya_N = "церемония"
+lemmaNominative tserkov_N = "церковь"
+lemmaNominative tsiklon_N = "циклон"
+lemmaNominative tsilindr_N = "цилиндр"
+lemmaNominative tsink_N = "цинк"
+lemmaNominative tsirk_N = "цирк"
+lemmaNominative tsitata_N = "цитата"
+lemmaNominative chastitsa_N = "частица"
+lemmaNominative chastota_N = "частота"
+lemmaNominative chasy_N = "часы"
+lemmaNominative chashka_N = "чашка"
+lemmaNominative chek_N = "чек"
+lemmaNominative chelyust_N = "челюсть"
+lemmaNominative chemodan_N = "чемодан"
+lemmaNominative cherv_N = "червь"
+lemmaNominative cherep_N = "череп"
+lemmaNominative cherepaha_N = "черепаха"
+lemmaNominative chernika_N = "черника"
+lemmaNominative cherta_N = "черта"
+lemmaNominative chertezh_N = "чертеж"
+lemmaNominative chest_N = "честь"
+lemmaNominative chetverg_N = "четверг"
+lemmaNominative chehol_N = "чехол"
+lemmaNominative chin_N = "чин"
+lemmaNominative chitatel_N = "читатель"
+lemmaNominative chuvstvitelnost_N = "чувствительность"
+lemmaNominative chulan_N = "чулан"
+lemmaNominative chulok_N = "чулок"
+lemmaNominative shalash_N = "шалаш"
+lemmaNominative shapka_N = "шапка"
+lemmaNominative shar_N = "шар"
+lemmaNominative shahmaty_N = "шахматы"
+lemmaNominative shahta_N = "шахта"
+lemmaNominative shinel_N = "шинель"
+lemmaNominative shirina_N = "ширина"
+lemmaNominative shifrovanie_N = "шифрование"
+lemmaNominative shkala_N = "шкала"
+lemmaNominative shkaf_N = "шкаф"
+lemmaNominative shkval_N = "шквал"
+lemmaNominative shlagbaum_N = "шлагбаум"
+lemmaNominative shlyapa_N = "шляпа"
+lemmaNominative shtab_N = "штаб"
+lemmaNominative shtil_N = "штиль"
+lemmaNominative shtorm_N = "шторм"
+lemmaNominative shtuka_N = "штука"
+lemmaNominative shcheka_N = "щека"
+lemmaNominative shchelk_N = "щелк"
+lemmaNominative shchepka_N = "щепка"
+lemmaNominative shchit_N = "щит"
+lemmaNominative ekvivalentnost_N = "эквивалентность"
+lemmaNominative ekzamen_N = "экзамен"
+lemmaNominative ekonomiya_N = "экономия"
+lemmaNominative ekran_N = "экран"
+lemmaNominative ekspeditsiya_N = "экспедиция"
+lemmaNominative eksperiment_N = "эксперимент"
+lemmaNominative ekspert_N = "эксперт"
+lemmaNominative ekstrapolyatsiya_N = "экстраполяция"
+lemmaNominative elektrichestvo_N = "электричество"
+lemmaNominative element_N = "элемент"
+lemmaNominative embargo_N = "эмбарго"
+lemmaNominative emotsiya_N = "эмоция"
+lemmaNominative energiya_N = "энергия"
+lemmaNominative entuziazm_N = "энтузиазм"
+lemmaNominative epizod_N = "эпизод"
+lemmaNominative epoha_N = "эпоха"
+lemmaNominative eskalatsiya_N = "эскалация"
+lemmaNominative estrada_N = "эстрада"
+lemmaNominative etazh_N = "этаж"
+lemmaNominative etiket_N = "этикет"
+lemmaNominative effekt_N = "эффект"
+lemmaNominative yubilej_N = "юбилей"
+lemmaNominative yug_N = "юг"
+lemmaNominative yunosha_N = "юноша"
+lemmaNominative yabloko_N = "яблоко"
+lemmaNominative yablonya_N = "яблоня"
+lemmaNominative yavlenie_N = "явление"
+lemmaNominative yagoda_N = "ягода"
+lemmaNominative yadernyj_N = "ядерный"
+lemmaNominative yajtso_N = "яйцо"
+lemmaNominative yama_N = "яма"
+lemmaNominative yanvar_N = "январь"
+lemmaNominative yarmarka_N = "ярмарка"
+lemmaNominative yarost_N = "ярость"
+lemmaNominative yasli_N = "ясли"
+lemmaNominative yasnost_N = "ясность"
+lemmaNominative yastreb_N = "ястреб"
+lemmaNominative yachmen_N = "ячмень"
 
 lemmaGenitive : Lemma → String
 lemmaGenitive abaz_N = "абаза"
@@ -4019,13 +6333,13 @@ lemmaGenitive abort_N = "аборта"
 lemmaGenitive abrazivnost_N = "абразивности"
 lemmaGenitive abrek_N = "абрека"
 lemmaGenitive abris_N = "абриса"
-lemmaGenitive absurd_N = "абсурда"
 lemmaGenitive abhaz_N = "абхаза"
 lemmaGenitive abtsug_N = "абцуга"
 lemmaGenitive aval_N = "авала"
 lemmaGenitive avans_N = "аванса"
 lemmaGenitive avantazhnost_N = "авантажности"
 lemmaGenitive avar_N = "авара"
+lemmaGenitive avariya_N = "аварии"
 lemmaGenitive avgit_N = "авгита"
 lemmaGenitive avgur_N = "авгура"
 lemmaGenitive avers_N = "аверса"
@@ -4034,22 +6348,22 @@ lemmaGenitive avlos_N = "авлоса"
 lemmaGenitive avost_N = "авоста"
 lemmaGenitive avral_N = "аврала"
 lemmaGenitive avran_N = "аврана"
+lemmaGenitive avtobus_N = "автобуса"
 lemmaGenitive avtoinformativnost_N = "автоинформативности"
 lemmaGenitive avtokosmetika_N = "автокосметики"
 lemmaGenitive avtol_N = "автола"
+lemmaGenitive avtomat_N = "автомата"
 lemmaGenitive avtomedtehnika_N = "автомедтехники"
+lemmaGenitive avtomobil_N = "автомобиля"
 lemmaGenitive avtomototehnika_N = "автомототехники"
-lemmaGenitive avtonomiya_N = "автономии"
-lemmaGenitive avtor_N = "автора"
+lemmaGenitive avtorizatsiya_N = "авторизации"
 lemmaGenitive avtoelektronika_N = "автоэлектроники"
-lemmaGenitive aga_N = "аги"
 lemmaGenitive agava_N = "агавы"
 lemmaGenitive agal_N = "агала"
 lemmaGenitive agama_N = "агамы"
 lemmaGenitive agar_N = "агара"
 lemmaGenitive agat_N = "агата"
 lemmaGenitive agens_N = "агенса"
-lemmaGenitive agent_N = "агента"
 lemmaGenitive agentnost_N = "агентности"
 lemmaGenitive agnat_N = "агната"
 lemmaGenitive agnets_N = "агнца"
@@ -4057,8 +6371,11 @@ lemmaGenitive agogika_N = "агогики"
 lemmaGenitive agon_N = "агона"
 lemmaGenitive agonistika_N = "агонистики"
 lemmaGenitive agraf_N = "аграфа"
+lemmaGenitive agregatsiya_N = "агрегации"
+lemmaGenitive agregirovanie_N = "агрегирования"
 lemmaGenitive agropromyshlennost_N = "агропромышленности"
 lemmaGenitive agul_N = "агула"
+lemmaGenitive adapter_N = "адаптера"
 lemmaGenitive adaptivnost_N = "адаптивности"
 lemmaGenitive adaptiruemost_N = "адаптируемости"
 lemmaGenitive adat_N = "адата"
@@ -4067,7 +6384,7 @@ lemmaGenitive additivnost_N = "аддитивности"
 lemmaGenitive adept_N = "адепта"
 lemmaGenitive adeh_N = "адеха"
 lemmaGenitive admin_N = "админа"
-lemmaGenitive adres_N = "адреса"
+lemmaGenitive administrirovanie_N = "администрирования"
 lemmaGenitive adresnost_N = "адресности"
 lemmaGenitive adresuemost_N = "адресуемости"
 lemmaGenitive adrodinamika_N = "адродинамики"
@@ -4093,21 +6410,20 @@ lemmaGenitive ajran_N = "айрана"
 lemmaGenitive ajrol_N = "айрола"
 lemmaGenitive ajsor_N = "айсора"
 lemmaGenitive ajfon_N = "айфона"
+lemmaGenitive akademiya_N = "академии"
 lemmaGenitive akant_N = "аканта"
 lemmaGenitive akanf_N = "аканфа"
 lemmaGenitive akvakinetika_N = "аквакинетики"
 lemmaGenitive akvanavtika_N = "акванавтики"
+lemmaGenitive akvarium_N = "аквариума"
 lemmaGenitive akom_N = "акома"
 lemmaGenitive akr_N = "акра"
 lemmaGenitive akril_N = "акрила"
 lemmaGenitive aks_N = "акса"
 lemmaGenitive akses_N = "аксеса"
-lemmaGenitive aksioma_N = "аксиомы"
 lemmaGenitive aksiomatiziruemost_N = "аксиоматизируемости"
 lemmaGenitive akson_N = "аксона"
-lemmaGenitive akt_N = "акта"
 lemmaGenitive akter_N = "актера"
-lemmaGenitive aktiv_N = "актива"
 lemmaGenitive aktin_N = "актина"
 lemmaGenitive aktinichnost_N = "актиничности"
 lemmaGenitive aktor_N = "актора"
@@ -4119,6 +6435,7 @@ lemmaGenitive aktsiya_N = "акции"
 lemmaGenitive akyn_N = "акына"
 lemmaGenitive alas_N = "аласа"
 lemmaGenitive algol_N = "алгола"
+lemmaGenitive algoritm_N = "алгоритма"
 lemmaGenitive aleatorika_N = "алеаторики"
 lemmaGenitive aleut_N = "алеута"
 lemmaGenitive alef_N = "алефа"
@@ -4134,6 +6451,7 @@ lemmaGenitive almaz_N = "алмаза"
 lemmaGenitive aloin_N = "алоина"
 lemmaGenitive altej_N = "алтея"
 lemmaGenitive altyn_N = "алтына"
+lemmaGenitive albom_N = "альбома"
 lemmaGenitive alt_N = "альта"
 lemmaGenitive alfa_N = "альфы"
 lemmaGenitive ama_N = "амы"
@@ -4150,10 +6468,12 @@ lemmaGenitive amok_N = "амока"
 lemmaGenitive amorf_N = "аморфа"
 lemmaGenitive amper_N = "ампера"
 lemmaGenitive ampir_N = "ампира"
+lemmaGenitive amplituda_N = "амплитуды"
 lemmaGenitive amt_N = "амта"
 lemmaGenitive ana_N = "аны"
 lemmaGenitive anal_N = "анала"
 lemmaGenitive analitichnost_N = "аналитичности"
+lemmaGenitive analogiya_N = "аналогии"
 lemmaGenitive angar_N = "ангара"
 lemmaGenitive angel_N = "ангела"
 lemmaGenitive angelika_N = "ангелики"
@@ -4174,21 +6494,26 @@ lemmaGenitive anomalnost_N = "аномальности"
 lemmaGenitive anons_N = "анонса"
 lemmaGenitive ant_N = "анта"
 lemmaGenitive antej_N = "антея"
+lemmaGenitive antena_N = "антенны"
 lemmaGenitive antigalaktika_N = "антигалактики"
 lemmaGenitive antik_N = "антика"
 lemmaGenitive antikommutativnost_N = "антикоммутативности"
+lemmaGenitive antinomiya_N = "антиномии"
+lemmaGenitive antipatiya_N = "антипатии"
 lemmaGenitive antirefleksivnost_N = "антирефлексивности"
-lemmaGenitive antitezis_N = "антитезиса"
 lemmaGenitive anus_N = "ануса"
 lemmaGenitive anchar_N = "анчара"
 lemmaGenitive aorta_N = "аорты"
+lemmaGenitive apatiya_N = "апатии"
 lemmaGenitive apash_N = "апаша"
 lemmaGenitive apeks_N = "апекса"
 lemmaGenitive apis_N = "аписа"
 lemmaGenitive aport_N = "апорта"
+lemmaGenitive approksimatsiya_N = "аппроксимации"
 lemmaGenitive approksimiruemost_N = "аппроксимируемости"
 lemmaGenitive aprel_N = "апреля"
 lemmaGenitive aprosh_N = "апроша"
+lemmaGenitive apteka_N = "аптеки"
 lemmaGenitive arab_N = "араба"
 lemmaGenitive arabika_N = "арабики"
 lemmaGenitive arak_N = "арака"
@@ -4198,7 +6523,7 @@ lemmaGenitive arba_N = "арбы"
 lemmaGenitive arbuz_N = "арбуза"
 lemmaGenitive argal_N = "аргала"
 lemmaGenitive argon_N = "аргона"
-lemmaGenitive argument_N = "аргумента"
+lemmaGenitive argumentatsiya_N = "аргументации"
 lemmaGenitive argumentirovannost_N = "аргументированности"
 lemmaGenitive argus_N = "аргуса"
 lemmaGenitive arden_N = "ардена"
@@ -4217,12 +6542,12 @@ lemmaGenitive arnost_N = "арности"
 lemmaGenitive aromatnost_N = "ароматности"
 lemmaGenitive arpan_N = "арпана"
 lemmaGenitive arsis_N = "арсиса"
+lemmaGenitive artefakt_N = "артефакта"
 lemmaGenitive artos_N = "артоса"
 lemmaGenitive arum_N = "арума"
 lemmaGenitive arfa_N = "арфы"
 lemmaGenitive arhar_N = "архара"
 lemmaGenitive arhat_N = "архата"
-lemmaGenitive arhiv_N = "архива"
 lemmaGenitive arhivistika_N = "архивистики"
 lemmaGenitive archak_N = "арчака"
 lemmaGenitive arshin_N = "аршина"
@@ -4239,14 +6564,14 @@ lemmaGenitive astma_N = "астмы"
 lemmaGenitive astra_N = "астры"
 lemmaGenitive astrionika_N = "астрионики"
 lemmaGenitive astrodinamika_N = "астродинамики"
+lemmaGenitive asfalt_N = "асфальта"
 lemmaGenitive asferichnost_N = "асферичности"
 lemmaGenitive astsit_N = "асцита"
-lemmaGenitive ataka_N = "атаки"
 lemmaGenitive atlas_N = "атласа"
 lemmaGenitive atlet_N = "атлета"
+lemmaGenitive atmosfera_N = "атмосферы"
 lemmaGenitive atmosferostojkost_N = "атмосферостойкости"
 lemmaGenitive atoll_N = "атолла"
-lemmaGenitive atom_N = "атома"
 lemmaGenitive atomnost_N = "атомности"
 lemmaGenitive atrij_N = "атрия"
 lemmaGenitive attik_N = "аттика"
@@ -4256,6 +6581,7 @@ lemmaGenitive aul_N = "аула"
 lemmaGenitive aura_N = "ауры"
 lemmaGenitive aurat_N = "аурата"
 lemmaGenitive aut_N = "аута"
+lemmaGenitive autentifikatsiya_N = "аутентификации"
 lemmaGenitive autoplastika_N = "аутопластики"
 lemmaGenitive afera_N = "аферы"
 lemmaGenitive afisha_N = "афиши"
@@ -4281,27 +6607,26 @@ lemmaGenitive baba_N = "бабы"
 lemmaGenitive babaj_N = "бабая"
 lemmaGenitive babka_N = "бабки"
 lemmaGenitive babr_N = "бабра"
-lemmaGenitive bag_N = "бага"
 lemmaGenitive bagazh_N = "багажа"
 lemmaGenitive bager_N = "багера"
 lemmaGenitive baget_N = "багета"
 lemmaGenitive bagor_N = "багра"
 lemmaGenitive badan_N = "бадана"
 lemmaGenitive badya_N = "бадьи"
-lemmaGenitive baz_N = "база"
 lemmaGenitive bazar_N = "базара"
 lemmaGenitive bazis_N = "базиса"
 lemmaGenitive bajka_N = "байки"
-lemmaGenitive bajt_N = "байта"
 lemmaGenitive bakan_N = "бакана"
 lemmaGenitive baken_N = "бакена"
 lemmaGenitive baks_N = "бакса"
 lemmaGenitive bakt_N = "бакта"
 lemmaGenitive bal_N = "бала"
+lemmaGenitive balans_N = "баланса"
 lemmaGenitive balda_N = "балды"
 lemmaGenitive balet_N = "балета"
 lemmaGenitive balka_N = "балки"
 lemmaGenitive balkanistika_N = "балканистики"
+lemmaGenitive balkon_N = "балкона"
 lemmaGenitive ball_N = "балла"
 lemmaGenitive ballnost_N = "балльности"
 lemmaGenitive balyk_N = "балыка"
@@ -4311,9 +6636,9 @@ lemmaGenitive banan_N = "банана"
 lemmaGenitive bang_N = "банга"
 lemmaGenitive banda_N = "банды"
 lemmaGenitive baner_N = "банера"
-lemmaGenitive bank_N = "банка"
 lemmaGenitive bant_N = "банта"
 lemmaGenitive bar_N = "бара"
+lemmaGenitive baran_N = "барана"
 lemmaGenitive bard_N = "барда"
 lemmaGenitive barezh_N = "барежа"
 lemmaGenitive barzha_N = "баржи"
@@ -4326,6 +6651,7 @@ lemmaGenitive barodinamika_N = "бародинамики"
 lemmaGenitive baroklinnost_N = "бароклинности"
 lemmaGenitive baron_N = "барона"
 lemmaGenitive bars_N = "барса"
+lemmaGenitive barer_N = "барьера"
 lemmaGenitive bas_N = "баса"
 lemmaGenitive basistost_N = "басистости"
 lemmaGenitive bask_N = "баска"
@@ -4333,9 +6659,11 @@ lemmaGenitive basma_N = "басмы"
 lemmaGenitive basnya_N = "басни"
 lemmaGenitive basovitost_N = "басовитости"
 lemmaGenitive bason_N = "басона"
+lemmaGenitive bassejn_N = "бассейна"
 lemmaGenitive bastr_N = "бастра"
 lemmaGenitive bat_N = "бата"
 lemmaGenitive batan_N = "батана"
+lemmaGenitive batareya_N = "батареи"
 lemmaGenitive batat_N = "батата"
 lemmaGenitive batik_N = "батика"
 lemmaGenitive batog_N = "батога"
@@ -4350,10 +6678,12 @@ lemmaGenitive bahcha_N = "бахчи"
 lemmaGenitive bachok_N = "бачка"
 lemmaGenitive bash_N = "баша"
 lemmaGenitive bashka_N = "башки"
+lemmaGenitive bashmak_N = "башмака"
 lemmaGenitive bashnya_N = "башни"
 lemmaGenitive bayan_N = "баяна"
 lemmaGenitive beda_N = "беды"
 lemmaGenitive bedro_N = "бедра"
+lemmaGenitive bezhenets_N = "беженца"
 lemmaGenitive bezapellyatsionnost_N = "безапелляционности"
 lemmaGenitive bezvkusnost_N = "безвкусности"
 lemmaGenitive bezdefitsitnost_N = "бездефицитности"
@@ -4361,6 +6691,7 @@ lemmaGenitive bezduhovnost_N = "бездуховности"
 lemmaGenitive bezik_N = "безика"
 lemmaGenitive bezmolvnost_N = "безмолвности"
 lemmaGenitive bezoglyadnost_N = "безоглядности"
+lemmaGenitive bezopasnost_N = "безопасности"
 lemmaGenitive bezotzyvnost_N = "безотзывности"
 lemmaGenitive bezymyannost_N = "безымянности"
 lemmaGenitive bezyskusnost_N = "безыскусности"
@@ -4376,21 +6707,20 @@ lemmaGenitive bel_N = "бела"
 lemmaGenitive belg_N = "белга"
 lemmaGenitive belek_N = "белька"
 lemmaGenitive belets_N = "бельца"
-lemmaGenitive belka_N = "белки"
 lemmaGenitive belkovost_N = "белковости"
 lemmaGenitive belokurost_N = "белокурости"
 lemmaGenitive bel_Nv2 = "бели"
 lemmaGenitive belyak_N = "беляка"
 lemmaGenitive belyash_N = "беляша"
-lemmaGenitive ber_N = "бера"
+lemmaGenitive benchmark_N = "бенчмарка"
 lemmaGenitive berdo_N = "берда"
-lemmaGenitive bereg_N = "берега"
 lemmaGenitive beret_N = "берета"
 lemmaGenitive beril_N = "берила"
 lemmaGenitive berma_N = "бермы"
 lemmaGenitive bertse_N = "берца"
 lemmaGenitive bersh_N = "берша"
 lemmaGenitive bes_N = "беса"
+lemmaGenitive beseda_N = "беседы"
 lemmaGenitive beskrajnost_N = "бескрайности"
 lemmaGenitive bespokojnost_N = "беспокойности"
 lemmaGenitive bespolost_N = "бесполости"
@@ -4405,6 +6735,8 @@ lemmaGenitive beta_N = "беты"
 lemmaGenitive beton_N = "бетона"
 lemmaGenitive bzik_N = "бзика"
 lemmaGenitive bib_N = "биба"
+lemmaGenitive biblioteka_N = "библиотеки"
+lemmaGenitive bibliya_N = "библии"
 lemmaGenitive bibop_N = "бибопа"
 lemmaGenitive bivak_N = "бивака"
 lemmaGenitive big_N = "бига"
@@ -4416,6 +6748,7 @@ lemmaGenitive bilateralnost_N = "билатеральности"
 lemmaGenitive bilet_N = "билета"
 lemmaGenitive bill_N = "билля"
 lemmaGenitive bims_N = "бимса"
+lemmaGenitive binokl_N = "бинокля"
 lemmaGenitive binom_N = "бинома"
 lemmaGenitive bint_N = "бинта"
 lemmaGenitive bioakustika_N = "биоакустики"
@@ -4435,20 +6768,17 @@ lemmaGenitive biostatika_N = "биостатики"
 lemmaGenitive biotika_N = "биотики"
 lemmaGenitive bioelektronika_N = "биоэлектроники"
 lemmaGenitive bioenergetika_N = "биоэнергетики"
-lemmaGenitive birzha_N = "биржи"
 lemmaGenitive birka_N = "бирки"
 lemmaGenitive biryuch_N = "бирюча"
 lemmaGenitive biser_N = "бисера"
 lemmaGenitive bistr_N = "бистра"
 lemmaGenitive bit_N = "бита"
-lemmaGenitive bitva_N = "битвы"
 lemmaGenitive biter_N = "битера"
 lemmaGenitive bitok_N = "битка"
 lemmaGenitive bitum_N = "битума"
 lemmaGenitive biharakteristika_N = "бихарактеристики"
 lemmaGenitive bich_N = "бича"
 lemmaGenitive bishop_N = "бишопа"
-lemmaGenitive blago_N = "блага"
 lemmaGenitive blagorodnost_N = "благородности"
 lemmaGenitive blagouhannost_N = "благоуханности"
 lemmaGenitive blagochestivost_N = "благочестивости"
@@ -4456,9 +6786,9 @@ lemmaGenitive blazh_N = "блажи"
 lemmaGenitive blank_N = "бланка"
 lemmaGenitive blast_N = "бласта"
 lemmaGenitive blat_N = "блата"
-lemmaGenitive blesk_N = "блеска"
 lemmaGenitive bleskost_N = "блескости"
 lemmaGenitive blef_N = "блефа"
+lemmaGenitive blizost_N = "близости"
 lemmaGenitive bliz_N = "близи"
 lemmaGenitive blik_N = "блика"
 lemmaGenitive blin_N = "блина"
@@ -4479,7 +6809,6 @@ lemmaGenitive blyaha_N = "бляхи"
 lemmaGenitive bober_N = "бобра"
 lemmaGenitive bobik_N = "бобика"
 lemmaGenitive bobok_N = "бобка"
-lemmaGenitive bog_N = "бога"
 lemmaGenitive bogach_N = "богача"
 lemmaGenitive bogovdohnovennost_N = "боговдохновенности"
 lemmaGenitive bogomolnost_N = "богомольности"
@@ -4497,11 +6826,14 @@ lemmaGenitive bok_N = "бока"
 lemmaGenitive bokal_N = "бокала"
 lemmaGenitive boks_N = "бокса"
 lemmaGenitive bol_N = "бола"
+lemmaGenitive bolezn_N = "болезни"
 lemmaGenitive bolid_N = "болида"
+lemmaGenitive boloto_N = "болота"
 lemmaGenitive bolt_N = "болта"
-lemmaGenitive bol_Nv2 = "боли"
+lemmaGenitive bolnitsa_N = "больницы"
 lemmaGenitive bolyus_N = "болюса"
 lemmaGenitive bomba_N = "бомбы"
+lemmaGenitive bombardir_N = "бомбардира"
 lemmaGenitive bomzh_N = "бомжа"
 lemmaGenitive bon_N = "бона"
 lemmaGenitive bonza_N = "бонзы"
@@ -4516,35 +6848,38 @@ lemmaGenitive borets_N = "борца"
 lemmaGenitive borid_N = "борида"
 lemmaGenitive born_N = "борна"
 lemmaGenitive borov_N = "борова"
+lemmaGenitive boroda_N = "бороды"
 lemmaGenitive borozdchatost_N = "бороздчатости"
 lemmaGenitive bort_N = "борта"
 lemmaGenitive bort_Nv2 = "борти"
 lemmaGenitive borshch_N = "борща"
 lemmaGenitive boss_N = "босса"
 lemmaGenitive bosyak_N = "босяка"
-lemmaGenitive bot_N = "бота"
 lemmaGenitive botan_N = "ботана"
 lemmaGenitive botik_N = "ботика"
+lemmaGenitive botinok_N = "ботинка"
 lemmaGenitive bochag_N = "бочага"
 lemmaGenitive bochar_N = "бочара"
 lemmaGenitive bochka_N = "бочки"
 lemmaGenitive bosh_N = "боша"
 lemmaGenitive braga_N = "браги"
 lemmaGenitive brada_N = "брады"
+lemmaGenitive brak_N = "брака"
 lemmaGenitive bran_N = "брани"
 lemmaGenitive bras_N = "браса"
 lemmaGenitive brass_N = "брасса"
 lemmaGenitive brat_N = "брата"
 lemmaGenitive brachnost_N = "брачности"
+lemmaGenitive brevno_N = "бревна"
 lemmaGenitive breg_N = "брега"
 lemmaGenitive brejk_N = "брейка"
-lemmaGenitive bremya_N = "бремени"
-lemmaGenitive brend_N = "бренда"
 lemmaGenitive breh_N = "бреха"
 lemmaGenitive bresh_N = "бреши"
 lemmaGenitive brig_N = "брига"
+lemmaGenitive brigada_N = "бригады"
 lemmaGenitive bridzh_N = "бриджа"
 lemmaGenitive briz_N = "бриза"
+lemmaGenitive brilliant_N = "бриллианта"
 lemmaGenitive britt_N = "бритта"
 lemmaGenitive brov_N = "брови"
 lemmaGenitive brom_N = "брома"
@@ -4553,8 +6888,9 @@ lemmaGenitive bronh_N = "бронха"
 lemmaGenitive bron_N = "брони"
 lemmaGenitive brosh_N = "броши"
 lemmaGenitive brus_N = "бруса"
+lemmaGenitive brusok_N = "бруска"
 lemmaGenitive bryla_N = "брылы"
-lemmaGenitive brend_Nv2 = "брэнда"
+lemmaGenitive brend_N = "брэнда"
 lemmaGenitive bryuho_N = "брюха"
 lemmaGenitive bryak_N = "бряка"
 lemmaGenitive bubal_N = "бубала"
@@ -4565,23 +6901,23 @@ lemmaGenitive bugor_N = "бугра"
 lemmaGenitive budda_N = "будды"
 lemmaGenitive budka_N = "будки"
 lemmaGenitive budra_N = "будры"
+lemmaGenitive budushchee_N = "будущего"
 lemmaGenitive buek_N = "буйка"
 lemmaGenitive buer_N = "буера"
 lemmaGenitive buzh_N = "бужа"
 lemmaGenitive buzun_N = "бузуна"
 lemmaGenitive buk_N = "бука"
 lemmaGenitive bukan_N = "букана"
-lemmaGenitive bukva_N = "буквы"
+lemmaGenitive bukvar_N = "букваря"
 lemmaGenitive buket_N = "букета"
 lemmaGenitive buklya_N = "букли"
 lemmaGenitive buks_N = "букса"
 lemmaGenitive bulka_N = "булки"
 lemmaGenitive bulb_N = "бульба"
+lemmaGenitive bulvar_N = "бульвара"
 lemmaGenitive bum_N = "бума"
-lemmaGenitive bumaga_N = "бумаги"
 lemmaGenitive buna_N = "буны"
 lemmaGenitive bund_N = "бунда"
-lemmaGenitive bunt_N = "бунта"
 lemmaGenitive bur_N = "бура"
 lemmaGenitive burav_N = "бурава"
 lemmaGenitive burak_N = "бурака"
@@ -4592,13 +6928,14 @@ lemmaGenitive burka_N = "бурки"
 lemmaGenitive burt_N = "бурта"
 lemmaGenitive burun_N = "буруна"
 lemmaGenitive bursh_N = "бурша"
+lemmaGenitive burya_N = "бури"
 lemmaGenitive buryat_N = "бурята"
 lemmaGenitive butik_N = "бутика"
 lemmaGenitive butil_N = "бутила"
 lemmaGenitive buton_N = "бутона"
 lemmaGenitive butsy_N = "бутсы"
 lemmaGenitive butuz_N = "бутуза"
-lemmaGenitive bufer_N = "буфера"
+lemmaGenitive butylka_N = "бутылки"
 lemmaGenitive bufet_N = "буфета"
 lemmaGenitive buhta_N = "бухты"
 lemmaGenitive bucha_N = "бучи"
@@ -4611,9 +6948,10 @@ lemmaGenitive bef_N = "бьефа"
 lemmaGenitive byuik_N = "бьюика"
 lemmaGenitive bekus_N = "бэкуса"
 lemmaGenitive bend_N = "бэнда"
-lemmaGenitive ber_Nv2 = "бэра"
+lemmaGenitive ber_N = "бэра"
 lemmaGenitive byuvar_N = "бювара"
 lemmaGenitive byuvet_N = "бювета"
+lemmaGenitive byudzhet_N = "бюджета"
 lemmaGenitive byust_N = "бюста"
 lemmaGenitive byaz_N = "бязи"
 lemmaGenitive byaka_N = "бяки"
@@ -4622,11 +6960,13 @@ lemmaGenitive vaap_N = "ваапа"
 lemmaGenitive vabik_N = "вабика"
 lemmaGenitive vaga_N = "ваги"
 lemmaGenitive vagon_N = "вагона"
+lemmaGenitive vagonetka_N = "вагонетки"
 lemmaGenitive vaza_N = "вазы"
 lemmaGenitive vazon_N = "вазона"
 lemmaGenitive vajya_N = "вайи"
 lemmaGenitive vakat_N = "ваката"
 lemmaGenitive vaksa_N = "ваксы"
+lemmaGenitive vaktsina_N = "вакцины"
 lemmaGenitive vaktsinoprofilaktika_N = "вакцинопрофилактики"
 lemmaGenitive val_N = "вала"
 lemmaGenitive valah_N = "валаха"
@@ -4634,13 +6974,14 @@ lemmaGenitive valek_N = "валька"
 lemmaGenitive valer_N = "валера"
 lemmaGenitive valet_N = "валета"
 lemmaGenitive valets_N = "вальца"
-lemmaGenitive validnost_N = "валидности"
+lemmaGenitive validatsiya_N = "валидации"
 lemmaGenitive valik_N = "валика"
 lemmaGenitive valka_N = "валки"
 lemmaGenitive valuj_N = "валуя"
 lemmaGenitive valun_N = "валуна"
 lemmaGenitive valuh_N = "валуха"
 lemmaGenitive vals_N = "вальса"
+lemmaGenitive valyuta_N = "валюты"
 lemmaGenitive vamp_N = "вампа"
 lemmaGenitive vanna_N = "ванны"
 lemmaGenitive vanta_N = "ванты"
@@ -4650,6 +6991,7 @@ lemmaGenitive variabelnost_N = "вариабельности"
 lemmaGenitive variativnost_N = "вариативности"
 lemmaGenitive varka_N = "варки"
 lemmaGenitive varyag_N = "варяга"
+lemmaGenitive vasilek_N = "василько"
 lemmaGenitive vata_N = "ваты"
 lemmaGenitive vater_N = "ватера"
 lemmaGenitive vatin_N = "ватина"
@@ -4659,30 +7001,31 @@ lemmaGenitive vaflya_N = "вафли"
 lemmaGenitive vahnya_N = "вахни"
 lemmaGenitive vahta_N = "вахты"
 lemmaGenitive vbros_N = "вброса"
-lemmaGenitive vvod_N = "ввода"
 lemmaGenitive vvoz_N = "ввоза"
 lemmaGenitive vgib_N = "вгиба"
 lemmaGenitive vdavlennost_N = "вдавленности"
 lemmaGenitive vdova_N = "вдовы"
-lemmaGenitive vdoh_N = "вдоха"
 lemmaGenitive veb_N = "веба"
 lemmaGenitive veda_N = "веды"
 lemmaGenitive vedda_N = "ведды"
 lemmaGenitive vedro_N = "ведра"
 lemmaGenitive vedun_N = "ведуна"
+lemmaGenitive vedma_N = "ведьмы"
 lemmaGenitive veer_N = "веера"
 lemmaGenitive vezha_N = "вежи"
 lemmaGenitive vezhda_N = "вежды"
 lemmaGenitive vezdesushchnost_N = "вездесущности"
 lemmaGenitive vezdehodnost_N = "вездеходности"
 lemmaGenitive vejka_N = "вейки"
-lemmaGenitive veko_N = "века"
+lemmaGenitive vektor_N = "вектора"
 lemmaGenitive veksha_N = "векши"
 lemmaGenitive veld_N = "велда"
 lemmaGenitive velik_N = "велика"
+lemmaGenitive velosiped_N = "велосипеда"
 lemmaGenitive veld_Nv2 = "вельда"
 lemmaGenitive vels_N = "вельса"
 lemmaGenitive velyur_N = "велюра"
+lemmaGenitive vena_N = "вены"
 lemmaGenitive vengr_N = "венгра"
 lemmaGenitive vend_N = "венда"
 lemmaGenitive vened_N = "венеда"
@@ -4690,52 +7033,53 @@ lemmaGenitive venet_N = "венета"
 lemmaGenitive venets_N = "венца"
 lemmaGenitive venik_N = "веника"
 lemmaGenitive venka_N = "венки"
-lemmaGenitive veno_N = "вена"
+lemmaGenitive ventilyator_N = "вентилятора"
 lemmaGenitive vepr_N = "вепря"
 lemmaGenitive veps_N = "вепса"
+lemmaGenitive veranda_N = "веранды"
 lemmaGenitive verba_N = "вербы"
 lemmaGenitive verv_N = "верви"
+lemmaGenitive verevka_N = "веревки"
 lemmaGenitive vered_N = "вереда"
 lemmaGenitive veres_N = "вереса"
+lemmaGenitive verifikatsiya_N = "верификации"
 lemmaGenitive veronika_N = "вероники"
-lemmaGenitive veroyatnost_N = "вероятности"
 lemmaGenitive verp_N = "верпа"
+lemmaGenitive versionirovanie_N = "версионирования"
+lemmaGenitive versiya_N = "версии"
+lemmaGenitive versta_N = "версты"
+lemmaGenitive vertikal_N = "вертикали"
+lemmaGenitive vertolet_N = "вертолета"
 lemmaGenitive verf_N = "верфи"
 lemmaGenitive verh_N = "верха"
 lemmaGenitive versha_N = "верши"
-lemmaGenitive ves_N = "веса"
 lemmaGenitive veslo_N = "весла"
 lemmaGenitive vesna_N = "весны"
 lemmaGenitive vest_N = "веста"
 lemmaGenitive vest_Nv2 = "вести"
-lemmaGenitive ves_Nv2 = "веси"
-lemmaGenitive vetv_N = "ветви"
-lemmaGenitive veter_N = "ветра"
-lemmaGenitive vetka_N = "ветки"
 lemmaGenitive vetla_N = "ветлы"
 lemmaGenitive vetrennost_N = "ветренности"
 lemmaGenitive veha_N = "вехи"
 lemmaGenitive veche_N = "веча"
-lemmaGenitive vecher_N = "вечера"
-lemmaGenitive vechnost_N = "вечности"
+lemmaGenitive veshalka_N = "вешалки"
 lemmaGenitive veshka_N = "вешки"
+lemmaGenitive veshchestvo_N = "вещества"
 lemmaGenitive veshchun_N = "вещуна"
-lemmaGenitive veshch_N = "вещи"
 lemmaGenitive vzaimovygodnost_N = "взаимовыгодности"
 lemmaGenitive vzaimodopolnyaemost_N = "взаимодополняемости"
 lemmaGenitive vzaimozamestimost_N = "взаимозаместимости"
 lemmaGenitive vzaimoinduktivnost_N = "взаимоиндуктивности"
 lemmaGenitive vzaimosvyazannost_N = "взаимосвязанности"
+lemmaGenitive vzaimosvyaz_N = "взаимосвязи"
 lemmaGenitive vzbudorazhennost_N = "взбудораженности"
 lemmaGenitive vzvar_N = "взвара"
 lemmaGenitive vzveshennost_N = "взвешенности"
 lemmaGenitive vzvod_N = "взвода"
 lemmaGenitive vzvoz_N = "взвоза"
+lemmaGenitive vzglyad_N = "взгляда"
 lemmaGenitive vzdor_N = "вздора"
-lemmaGenitive vzdoh_N = "вздоха"
 lemmaGenitive vzimaemost_N = "взимаемости"
 lemmaGenitive vzlet_N = "взлета"
-lemmaGenitive vzlom_N = "взлома"
 lemmaGenitive vzmah_N = "взмаха"
 lemmaGenitive vzmet_N = "взмета"
 lemmaGenitive vzmyv_N = "взмыва"
@@ -4743,7 +7087,6 @@ lemmaGenitive vznos_N = "взноса"
 lemmaGenitive vzor_N = "взора"
 lemmaGenitive vzrez_N = "взреза"
 lemmaGenitive vzroslost_N = "взрослости"
-lemmaGenitive vzryv_N = "взрыва"
 lemmaGenitive vzryvoopasnost_N = "взрывоопасности"
 lemmaGenitive vzeroshennost_N = "взъерошенности"
 lemmaGenitive vzysk_N = "взыска"
@@ -4753,7 +7096,7 @@ lemmaGenitive vibrotehnika_N = "вибротехники"
 lemmaGenitive viver_N = "вивера"
 lemmaGenitive vig_N = "вига"
 lemmaGenitive vigilnost_N = "вигильности"
-lemmaGenitive vid_N = "вида"
+lemmaGenitive videnie_N = "видения"
 lemmaGenitive videotehnika_N = "видеотехники"
 lemmaGenitive vidik_N = "видика"
 lemmaGenitive vidnost_N = "видности"
@@ -4765,32 +7108,33 @@ lemmaGenitive vika_N = "вики"
 lemmaGenitive vilka_N = "вилки"
 lemmaGenitive villa_N = "виллы"
 lemmaGenitive vilt_N = "вилта"
-lemmaGenitive vina_N = "вины"
 lemmaGenitive vinil_N = "винила"
+lemmaGenitive vinograd_N = "винограда"
 lemmaGenitive vint_N = "винта"
 lemmaGenitive viola_N = "виолы"
 lemmaGenitive vira_N = "виры"
 lemmaGenitive virazh_N = "виража"
 lemmaGenitive virt_N = "вирта"
-lemmaGenitive virus_N = "вируса"
 lemmaGenitive visok_N = "виска"
 lemmaGenitive vist_N = "виста"
+lemmaGenitive vitamin_N = "витамина"
 lemmaGenitive vitiya_N = "витии"
 lemmaGenitive vitok_N = "витка"
-lemmaGenitive vihor_N = "вихра"
+lemmaGenitive vitrina_N = "витрины"
+lemmaGenitive vihr_N = "вихря"
 lemmaGenitive vitsa_N = "вицы"
 lemmaGenitive vishnya_N = "вишни"
-lemmaGenitive vklad_N = "вклада"
 lemmaGenitive vklinennost_N = "вклиненности"
 lemmaGenitive vklyuchennost_N = "включенности"
 lemmaGenitive vkraplennost_N = "вкрапленности"
-lemmaGenitive vkus_N = "вкуса"
 lemmaGenitive vlaga_N = "влаги"
 lemmaGenitive vlagoemkost_N = "влагоемкости"
 lemmaGenitive vlagonepronitsaemost_N = "влагонепроницаемости"
 lemmaGenitive vlagopronitsaemost_N = "влагопроницаемости"
+lemmaGenitive vlazhnost_N = "влажности"
 lemmaGenitive vlah_N = "влаха"
 lemmaGenitive vlet_N = "влета"
+lemmaGenitive vliyanie_N = "влияния"
 lemmaGenitive vlozhennost_N = "вложенности"
 lemmaGenitive vnebrachnost_N = "внебрачности"
 lemmaGenitive vnevedomstvennost_N = "вневедомственности"
@@ -4800,40 +7144,35 @@ lemmaGenitive vnuk_N = "внука"
 lemmaGenitive vobla_N = "воблы"
 lemmaGenitive vovlechennost_N = "вовлеченности"
 lemmaGenitive vogul_N = "вогула"
-lemmaGenitive vod_N = "вода"
+lemmaGenitive voda_N = "воды"
 lemmaGenitive vodka_N = "водки"
 lemmaGenitive vodoobespechennost_N = "водообеспеченности"
 lemmaGenitive vodoottalkivaemost_N = "водоотталкиваемости"
 lemmaGenitive vozhak_N = "вожака"
 lemmaGenitive vozhd_N = "вождя"
 lemmaGenitive vozhzha_N = "вожжи"
+lemmaGenitive vozvrat_N = "возврата"
 lemmaGenitive vozvratnost_N = "возвратности"
-lemmaGenitive vozduh_N = "воздуха"
 lemmaGenitive vozka_N = "возки"
 lemmaGenitive vozmezdnost_N = "возмездности"
-lemmaGenitive vozmozhnost_N = "возможности"
 lemmaGenitive voznya_N = "возни"
 lemmaGenitive voin_N = "воина"
 lemmaGenitive voj_N = "воя"
-lemmaGenitive vojna_N = "войны"
 lemmaGenitive vojt_N = "войта"
 lemmaGenitive vok_N = "вока"
 lemmaGenitive vokal_N = "вокала"
 lemmaGenitive volan_N = "волана"
 lemmaGenitive volga_N = "волги"
 lemmaGenitive volk_N = "волка"
-lemmaGenitive volna_N = "волны"
 lemmaGenitive volok_N = "волока"
 lemmaGenitive volos_N = "волоса"
 lemmaGenitive voloh_N = "волоха"
 lemmaGenitive volhv_N = "волхва"
 lemmaGenitive volt_N = "вольта"
-lemmaGenitive volya_N = "воли"
 lemmaGenitive vomer_N = "вомера"
 lemmaGenitive vona_N = "воны"
 lemmaGenitive von_N = "вони"
 lemmaGenitive vopl_N = "вопля"
-lemmaGenitive vopros_N = "вопроса"
 lemmaGenitive vor_N = "вора"
 lemmaGenitive vorog_N = "ворога"
 lemmaGenitive voron_N = "ворона"
@@ -4842,20 +7181,23 @@ lemmaGenitive voroh_N = "вороха"
 lemmaGenitive vors_N = "ворса"
 lemmaGenitive vosk_N = "воска"
 lemmaGenitive vospalennost_N = "воспаленности"
+lemmaGenitive vosproizvodimost_N = "воспроизводимости"
 lemmaGenitive vosstanavlivaemost_N = "восстанавливаемости"
+lemmaGenitive vosstanovlenie_N = "восстановления"
+lemmaGenitive vostok_N = "востока"
+lemmaGenitive voshishchenie_N = "восхищения"
 lemmaGenitive votum_N = "вотума"
 lemmaGenitive votyak_N = "вотяка"
 lemmaGenitive voshka_N = "вошки"
 lemmaGenitive vosh_N = "вши"
 lemmaGenitive voyazh_N = "вояжа"
 lemmaGenitive voyaka_N = "вояки"
+lemmaGenitive vpechatlenie_N = "впечатления"
 lemmaGenitive vpolneprimenimost_N = "вполнеприменимости"
 lemmaGenitive vpusk_N = "впуска"
-lemmaGenitive vrag_N = "врага"
 lemmaGenitive vral_N = "враля"
 lemmaGenitive vrach_N = "врача"
-lemmaGenitive vred_N = "вреда"
-lemmaGenitive vremya_N = "времени"
+lemmaGenitive vrashchenie_N = "вращения"
 lemmaGenitive vrub_N = "вруба"
 lemmaGenitive vrun_N = "вруна"
 lemmaGenitive vrusha_N = "вруши"
@@ -4864,27 +7206,27 @@ lemmaGenitive vsedozvolennost_N = "вседозволенности"
 lemmaGenitive vseohvatnost_N = "всеохватности"
 lemmaGenitive vskok_N = "вскока"
 lemmaGenitive vspuchennost_N = "вспученности"
+lemmaGenitive vstrecha_N = "встречи"
 lemmaGenitive vstrechaemost_N = "встречаемости"
 lemmaGenitive vshod_N = "всхода"
 lemmaGenitive vtora_N = "вторы"
 lemmaGenitive vtyk_N = "втыка"
 lemmaGenitive vual_N = "вуали"
+lemmaGenitive vulkan_N = "вулкана"
 lemmaGenitive vuta_N = "вуты"
-lemmaGenitive vhod_N = "входа"
+lemmaGenitive vchera_N = "вчера"
 lemmaGenitive vezd_N = "въезда"
 lemmaGenitive vybeg_N = "выбега"
-lemmaGenitive vybor_N = "выбора"
+lemmaGenitive vyborka_N = "выборки"
 lemmaGenitive vyborochnost_N = "выборочности"
 lemmaGenitive vyval_N = "вывала"
 lemmaGenitive vyvih_N = "вывиха"
-lemmaGenitive vyvod_N = "вывода"
-lemmaGenitive vyvodimost_N = "выводимости"
 lemmaGenitive vyvoz_N = "вывоза"
 lemmaGenitive vygib_N = "выгиба"
+lemmaGenitive vygoda_N = "выгоды"
 lemmaGenitive vygon_N = "выгона"
 lemmaGenitive vygul_N = "выгула"
 lemmaGenitive vydel_N = "выдела"
-lemmaGenitive vydoh_N = "выдоха"
 lemmaGenitive vydra_N = "выдры"
 lemmaGenitive vyezd_N = "выезда"
 lemmaGenitive vyem_N = "выема"
@@ -4910,27 +7252,35 @@ lemmaGenitive vypal_N = "выпала"
 lemmaGenitive vypar_N = "выпара"
 lemmaGenitive vypas_N = "выпаса"
 lemmaGenitive vypek_N = "выпека"
+lemmaGenitive vypiska_N = "выписки"
 lemmaGenitive vypolnennost_N = "выполненности"
 lemmaGenitive vypor_N = "выпора"
 lemmaGenitive vypot_N = "выпота"
+lemmaGenitive vypusk_N = "выпуска"
 lemmaGenitive vyp_N = "выпи"
 lemmaGenitive vyravnennost_N = "выравненности"
+lemmaGenitive vyrazhenie_N = "выражения"
 lemmaGenitive vyrez_N = "выреза"
 lemmaGenitive vyrozhdennost_N = "вырожденности"
 lemmaGenitive vyrub_N = "выруба"
+lemmaGenitive vyruchka_N = "выручки"
 lemmaGenitive vysev_N = "высева"
 lemmaGenitive vysed_N = "выседа"
-lemmaGenitive vyskazyvanie_N = "высказывания"
 lemmaGenitive vysov_N = "высова"
+lemmaGenitive vysota_N = "высоты"
+lemmaGenitive vystavka_N = "выставки"
+lemmaGenitive vystrel_N = "выстрела"
+lemmaGenitive vystuplenie_N = "выступления"
 lemmaGenitive vys_N = "выси"
 lemmaGenitive vyt_N = "выти"
 lemmaGenitive vytyanutost_N = "вытянутости"
-lemmaGenitive vyhod_N = "выхода"
+lemmaGenitive vyhodnoj_N = "выходного"
 lemmaGenitive vyholoshchennost_N = "выхолощенности"
 lemmaGenitive vychet_N = "вычета"
 lemmaGenitive vyshag_N = "вышага"
 lemmaGenitive vyshka_N = "вышки"
 lemmaGenitive vyya_N = "выи"
+lemmaGenitive vyyava_N = "выявы"
 lemmaGenitive vyyavlyaemost_N = "выявляемости"
 lemmaGenitive vyuga_N = "вьюги"
 lemmaGenitive vyuk_N = "вьюка"
@@ -4939,19 +7289,20 @@ lemmaGenitive vyaz_N = "вяза"
 lemmaGenitive vyazka_N = "вязки"
 lemmaGenitive vyaz_Nv2 = "вязи"
 lemmaGenitive vyatka_N = "вятки"
+lemmaGenitive gavan_N = "гавани"
 lemmaGenitive gavot_N = "гавота"
 lemmaGenitive gaga_N = "гаги"
 lemmaGenitive gagat_N = "гагата"
 lemmaGenitive gad_N = "гада"
-lemmaGenitive gaz_N = "газа"
+lemmaGenitive gazeta_N = "газеты"
 lemmaGenitive gazik_N = "газика"
 lemmaGenitive gazodinamika_N = "газодинамики"
 lemmaGenitive gazon_N = "газона"
 lemmaGenitive gazoenergetika_N = "газоэнергетики"
 lemmaGenitive gajal_N = "гайала"
-lemmaGenitive gajda_N = "гайды"
 lemmaGenitive gajka_N = "гайки"
 lemmaGenitive gak_N = "гака"
+lemmaGenitive galereya_N = "галереи"
 lemmaGenitive galid_N = "галида"
 lemmaGenitive galit_N = "галита"
 lemmaGenitive galka_N = "галки"
@@ -4970,6 +7321,7 @@ lemmaGenitive ganets_N = "ганца"
 lemmaGenitive ganit_N = "ганита"
 lemmaGenitive ganka_N = "ганки"
 lemmaGenitive garazh_N = "гаража"
+lemmaGenitive garantiya_N = "гарантии"
 lemmaGenitive garem_N = "гарема"
 lemmaGenitive gart_N = "гарта"
 lemmaGenitive garus_N = "гаруса"
@@ -4981,6 +7333,8 @@ lemmaGenitive gael_N = "гаэла"
 lemmaGenitive gayuin_N = "гаюина"
 lemmaGenitive gbajt_N = "гбайта"
 lemmaGenitive gvalt_N = "гвалта"
+lemmaGenitive gvardiya_N = "гвардии"
+lemmaGenitive gvozd_N = "гвоздя"
 lemmaGenitive geveya_N = "гевеи"
 lemmaGenitive gej_N = "гея"
 lemmaGenitive gejm_N = "гейма"
@@ -4996,6 +7350,7 @@ lemmaGenitive geoinformatika_N = "геоинформатики"
 lemmaGenitive geometrodinamika_N = "геометродинамики"
 lemmaGenitive geomehanika_N = "геомеханики"
 lemmaGenitive gerb_N = "герба"
+lemmaGenitive gerbarij_N = "гербария"
 lemmaGenitive gerej_N = "герея"
 lemmaGenitive germa_N = "гермы"
 lemmaGenitive gerodontika_N = "геродонтики"
@@ -5007,6 +7362,7 @@ lemmaGenitive geterogennost_N = "гетерогенности"
 lemmaGenitive geteroskedastichnost_N = "гетероскедастичности"
 lemmaGenitive getit_N = "гетита"
 lemmaGenitive getry_N = "гетры"
+lemmaGenitive gibel_N = "гибели"
 lemmaGenitive gibridnost_N = "гибридности"
 lemmaGenitive gig_N = "гига"
 lemmaGenitive gid_N = "гида"
@@ -5021,9 +7377,9 @@ lemmaGenitive gil_N = "гили"
 lemmaGenitive gilyak_N = "гиляка"
 lemmaGenitive gimen_N = "гимена"
 lemmaGenitive gimn_N = "гимна"
+lemmaGenitive gimnastika_N = "гимнастики"
 lemmaGenitive gineya_N = "гинеи"
 lemmaGenitive gioid_N = "гиоида"
-lemmaGenitive gipoteza_N = "гипотезы"
 lemmaGenitive gips_N = "гипса"
 lemmaGenitive gipyur_N = "гипюра"
 lemmaGenitive girej_N = "гирея"
@@ -5037,19 +7393,21 @@ lemmaGenitive glava_N = "главы"
 lemmaGenitive glavk_N = "главка"
 lemmaGenitive glad_N = "глада"
 lemmaGenitive glad_Nv2 = "глади"
-lemmaGenitive glaz_N = "глаза"
+lemmaGenitive glazok_N = "глазка"
 lemmaGenitive glajd_N = "глайда"
 lemmaGenitive glas_N = "гласа"
 lemmaGenitive glej_N = "глея"
 lemmaGenitive glen_N = "глени"
 lemmaGenitive glet_N = "глета"
-lemmaGenitive glina_N = "глины"
+lemmaGenitive glint_N = "глинта"
 lemmaGenitive glipt_N = "глипта"
 lemmaGenitive glist_N = "глиста"
 lemmaGenitive glif_N = "глифа"
 lemmaGenitive gliya_N = "глии"
+lemmaGenitive globus_N = "глобуса"
 lemmaGenitive glossematika_N = "глоссематики"
 lemmaGenitive glot_N = "глота"
+lemmaGenitive glubina_N = "глубины"
 lemmaGenitive glub_N = "глуби"
 lemmaGenitive glum_N = "глума"
 lemmaGenitive glupovatost_N = "глуповатости"
@@ -5060,7 +7418,7 @@ lemmaGenitive glem_N = "глэма"
 lemmaGenitive glyuk_N = "глюка"
 lemmaGenitive glyuon_N = "глюона"
 lemmaGenitive gmina_N = "гмины"
-lemmaGenitive gnev_N = "гнева"
+lemmaGenitive gnezdo_N = "гнезда"
 lemmaGenitive gnejs_N = "гнейса"
 lemmaGenitive gnet_N = "гнета"
 lemmaGenitive gnida_N = "гниды"
@@ -5075,101 +7433,226 @@ lemmaGenitive gobbl_N = "гоббла"
 lemmaGenitive goboj_N = "гобоя"
 lemmaGenitive govor_N = "говора"
 lemmaGenitive gogot_N = "гогота"
+lemmaGenitive god_N = "года"
 lemmaGenitive godik_N = "годика"
+lemmaGenitive golovka_N = "головки"
 lemmaGenitive golovokruzhitelnost_N = "головокружительности"
+lemmaGenitive golub_N = "голубя"
 lemmaGenitive gomogennost_N = "гомогенности"
 lemmaGenitive gomozigotnost_N = "гомозиготности"
 lemmaGenitive gomoskedastichnost_N = "гомоскедастичности"
+lemmaGenitive gonets_N = "гонца"
 lemmaGenitive gonimost_N = "гонимости"
-lemmaGenitive gordost_N = "гордости"
+lemmaGenitive gorenie_N = "горения"
+lemmaGenitive gorizont_N = "горизонта"
+lemmaGenitive gorlo_N = "горла"
+lemmaGenitive gorshok_N = "горшка"
 lemmaGenitive gosbezopasnost_N = "госбезопасности"
+lemmaGenitive gostinitsa_N = "гостиницы"
 lemmaGenitive gost_N = "гостя"
+lemmaGenitive gosudarstvo_N = "государства"
+lemmaGenitive gravitatsiya_N = "гравитации"
+lemmaGenitive grad_N = "града"
+lemmaGenitive gradus_N = "градуса"
 lemmaGenitive grammatichnost_N = "грамматичности"
-lemmaGenitive granitsa_N = "границы"
+lemmaGenitive granat_N = "граната"
+lemmaGenitive grafik_N = "графика"
+lemmaGenitive greben_N = "гребня"
 lemmaGenitive grehovnost_N = "греховности"
 lemmaGenitive greshnost_N = "грешности"
+lemmaGenitive groza_N = "грозы"
+lemmaGenitive grom_N = "грома"
 lemmaGenitive grotesknost_N = "гротескности"
+lemmaGenitive grohot_N = "грохота"
 lemmaGenitive grubovatost_N = "грубоватости"
 lemmaGenitive gruzonapryazhennost_N = "грузонапряженности"
+lemmaGenitive grunt_N = "грунта"
+lemmaGenitive gruppa_N = "группы"
+lemmaGenitive grusha_N = "груши"
+lemmaGenitive gryadka_N = "грядки"
+lemmaGenitive guberniya_N = "губернии"
 lemmaGenitive gubkoobraznost_N = "губкообразности"
 lemmaGenitive gubchatost_N = "губчатости"
+lemmaGenitive gusenitsa_N = "гусеницы"
+lemmaGenitive gus_N = "гуся"
+lemmaGenitive davka_N = "давки"
+lemmaGenitive davlenie_N = "давления"
+lemmaGenitive daleko_N = "далека"
+lemmaGenitive dannye_N = "данных"
+lemmaGenitive dan_N = "дани"
+lemmaGenitive dvizhenie_N = "движения"
+lemmaGenitive dvojnya_N = "двойни"
+lemmaGenitive dvor_N = "двора"
+lemmaGenitive dvorets_N = "дворца"
 lemmaGenitive dvuznachnost_N = "двузначности"
 lemmaGenitive dvunatsionalnost_N = "двунациональности"
 lemmaGenitive dvuhmernost_N = "двухмерности"
 lemmaGenitive dvuhtsvetnost_N = "двухцветности"
+lemmaGenitive debaty_N = "дебатов"
+lemmaGenitive devochka_N = "девочки"
+lemmaGenitive degradatsiya_N = "деградации"
+lemmaGenitive ded_N = "деда"
+lemmaGenitive dedlajn_N = "дедлайна"
+lemmaGenitive deduktsiya_N = "дедукции"
+lemmaGenitive deduplikatsiya_N = "дедупликации"
 lemmaGenitive dezaktivizatsiya_N = "дезактивизации"
 lemmaGenitive dezorientirovannost_N = "дезориентированности"
 lemmaGenitive deizm_N = "деизма"
+lemmaGenitive dejstvie_N = "действия"
+lemmaGenitive dejstvitelnost_N = "действительности"
+lemmaGenitive dekabr_N = "декабря"
 lemmaGenitive deklassirovannost_N = "деклассированности"
-lemmaGenitive delat_V = "делать"
+lemmaGenitive dekompozitsiya_N = "декомпозиции"
+lemmaGenitive delegirovanie_N = "делегирования"
+lemmaGenitive delo_N = "дела"
+lemmaGenitive demokratiya_N = "демократии"
 lemmaGenitive demoralizovannost_N = "деморализованности"
+lemmaGenitive denormalizatsiya_N = "денормализации"
+lemmaGenitive deploj_N = "деплоя"
 lemmaGenitive depressivnost_N = "депрессивности"
+lemmaGenitive derevnya_N = "деревни"
+lemmaGenitive desant_N = "десанта"
+lemmaGenitive deserializatsiya_N = "десериализации"
+lemmaGenitive desna_N = "десны"
+lemmaGenitive detal_N = "детали"
+lemmaGenitive determinizm_N = "детерминизма"
 lemmaGenitive determinirovannost_N = "детерминированности"
 lemmaGenitive detorozhdaemost_N = "деторождаемости"
-lemmaGenitive definitsiya_N = "дефиниции"
+lemmaGenitive defitsit_N = "дефицита"
+lemmaGenitive deformatsiya_N = "деформации"
+lemmaGenitive deshifrovanie_N = "дешифрования"
+lemmaGenitive deyatel_N = "деятеля"
+lemmaGenitive diagnostika_N = "диагностики"
+lemmaGenitive diagonal_N = "диагонали"
 lemmaGenitive diakaustika_N = "диакаустики"
 lemmaGenitive diakritika_N = "диакритики"
 lemmaGenitive dialog_N = "диалога"
+lemmaGenitive diametr_N = "диаметра"
+lemmaGenitive diapazon_N = "диапазона"
 lemmaGenitive diatermichnost_N = "диатермичности"
+lemmaGenitive divan_N = "дивана"
+lemmaGenitive diviziya_N = "дивизии"
 lemmaGenitive didzhitronika_N = "диджитроники"
-lemmaGenitive distinktsiya_N = "дистинкции"
+lemmaGenitive dizyunktsiya_N = "дизъюнкции"
+lemmaGenitive dinastiya_N = "династии"
+lemmaGenitive direktor_N = "директора"
+lemmaGenitive disbalans_N = "дисбаланса"
+lemmaGenitive diskoteka_N = "дискотеки"
+lemmaGenitive dispersiya_N = "дисперсии"
+lemmaGenitive dispetcher_N = "диспетчера"
+lemmaGenitive distantsiya_N = "дистанции"
 lemmaGenitive differentsiruemost_N = "дифференцируемости"
-lemmaGenitive doverie_N = "доверия"
-lemmaGenitive dovod_N = "довода"
-lemmaGenitive dokazatelstvo_N = "доказательства"
+lemmaGenitive dnevnik_N = "дневника"
+lemmaGenitive dobycha_N = "добычи"
+lemmaGenitive dogovor_N = "договора"
+lemmaGenitive doklad_N = "доклада"
+lemmaGenitive dokument_N = "документа"
 lemmaGenitive dokumentalistika_N = "документалистики"
-lemmaGenitive dolg_N = "долга"
 lemmaGenitive dolgosrochnost_N = "долгосрочности"
+lemmaGenitive dolina_N = "долины"
+lemmaGenitive domik_N = "домика"
 lemmaGenitive dominantnost_N = "доминантности"
+lemmaGenitive dopolnenie_N = "дополнения"
 lemmaGenitive dopolnitelnost_N = "дополнительности"
 lemmaGenitive dopolnyaemost_N = "дополняемости"
-lemmaGenitive dopushchenie_N = "допущения"
-lemmaGenitive dostatochnost_N = "достаточности"
-lemmaGenitive dostovernost_N = "достоверности"
+lemmaGenitive dopusk_N = "допуска"
+lemmaGenitive doroga_N = "дороги"
+lemmaGenitive doska_N = "доски"
+lemmaGenitive dostavka_N = "доставки"
+lemmaGenitive dostizhenie_N = "достижения"
+lemmaGenitive dostupnost_N = "доступности"
 lemmaGenitive dotatsionnost_N = "дотационности"
 lemmaGenitive dohlost_N = "дохлости"
+lemmaGenitive doch_N = "дочери"
+lemmaGenitive draka_N = "драки"
+lemmaGenitive drevesina_N = "древесины"
+lemmaGenitive drova_N = "дров"
+lemmaGenitive druzhba_N = "дружбы"
 lemmaGenitive dualnost_N = "дуальности"
+lemmaGenitive dub_N = "дуба"
 lemmaGenitive dubletnost_N = "дублетности"
 lemmaGenitive dubnost_N = "дубности"
+lemmaGenitive duma_N = "думы"
+lemmaGenitive durak_N = "дурака"
+lemmaGenitive duhi_N = "духов"
 lemmaGenitive duhovitost_N = "духовитости"
+lemmaGenitive duhovka_N = "духовки"
 lemmaGenitive dushistost_N = "душистости"
+lemmaGenitive duel_N = "дуэли"
+lemmaGenitive dymka_N = "дымки"
 lemmaGenitive dymnost_N = "дымности"
 lemmaGenitive dymchatost_N = "дымчатости"
+lemmaGenitive dyadya_N = "дяди"
+lemmaGenitive evrej_N = "еврея"
+lemmaGenitive evropa_N = "европы"
 lemmaGenitive evfenika_N = "евфеники"
 lemmaGenitive edinokrovnost_N = "единокровности"
 lemmaGenitive edinorodnost_N = "единородности"
 lemmaGenitive edinosushchnost_N = "единосущности"
 lemmaGenitive edinstvennost_N = "единственности"
 lemmaGenitive ezhednevnost_N = "ежедневности"
+lemmaGenitive elka_N = "елки"
+lemmaGenitive est_N = "ести"
+lemmaGenitive ehat_N = "ехать"
+lemmaGenitive zhaloba_N = "жалобы"
 lemmaGenitive zhalobnost_N = "жалобности"
+lemmaGenitive zhara_N = "жары"
+lemmaGenitive zhelezo_N = "железа"
 lemmaGenitive zheltushnost_N = "желтушности"
+lemmaGenitive zhelud_N = "желудя"
+lemmaGenitive zhena_N = "жены"
+lemmaGenitive zhenih_N = "жениха"
 lemmaGenitive zhenopodobnost_N = "женоподобности"
-lemmaGenitive zhizn_N = "жизни"
+lemmaGenitive zhenshchina_N = "женщины"
+lemmaGenitive zhertva_N = "жертвы"
+lemmaGenitive zhivot_N = "живота"
+lemmaGenitive zhivotnoe_N = "животного"
+lemmaGenitive zhurnal_N = "журнала"
+lemmaGenitive zhurnalist_N = "журналиста"
+lemmaGenitive zabava_N = "забавы"
 lemmaGenitive zablagovremennost_N = "заблаговременности"
+lemmaGenitive zabor_N = "забора"
+lemmaGenitive zavershenie_N = "завершения"
+lemmaGenitive zavisimost_N = "зависимости"
+lemmaGenitive zavist_N = "зависти"
+lemmaGenitive zavod_N = "завода"
 lemmaGenitive zavorozhennost_N = "завороженности"
+lemmaGenitive zavtra_N = "завтра"
+lemmaGenitive zagadka_N = "загадки"
 lemmaGenitive zagruzhenost_N = "загружености"
-lemmaGenitive zadacha_N = "задачи"
+lemmaGenitive zaderzhka_N = "задержки"
 lemmaGenitive zazhatost_N = "зажатости"
 lemmaGenitive zaika_N = "заики"
-lemmaGenitive zaklyuchenie_N = "заключения"
+lemmaGenitive zakaz_N = "заказа"
+lemmaGenitive zakat_N = "заката"
 lemmaGenitive zakompleksovannost_N = "закомплексованности"
 lemmaGenitive zakonnorozhdennost_N = "законнорожденности"
+lemmaGenitive zakonomernost_N = "закономерности"
 lemmaGenitive zakopchennost_N = "закопченности"
 lemmaGenitive zakreplennost_N = "закрепленности"
 lemmaGenitive zakruchennost_N = "закрученности"
 lemmaGenitive zakrytost_N = "закрытости"
 lemmaGenitive zalizannost_N = "зализанности"
+lemmaGenitive zamedlenie_N = "замедления"
 lemmaGenitive zamenyaemost_N = "заменяемости"
+lemmaGenitive zametka_N = "заметки"
 lemmaGenitive zametnost_N = "заметности"
 lemmaGenitive zameshannost_N = "замешанности"
 lemmaGenitive zamusolennost_N = "замусоленности"
 lemmaGenitive zamutnennost_N = "замутненности"
+lemmaGenitive zamysel_N = "замысла"
+lemmaGenitive zanaves_N = "занавеса"
+lemmaGenitive zapad_N = "запада"
+lemmaGenitive zapas_N = "запаса"
+lemmaGenitive zapah_N = "запаха"
+lemmaGenitive zapis_N = "записи"
 lemmaGenitive zapolnennost_N = "заполненности"
-lemmaGenitive zapret_N = "запрета"
 lemmaGenitive zapreshchennost_N = "запрещенности"
+lemmaGenitive zarya_N = "зари"
 lemmaGenitive zaryazhennost_N = "заряженности"
 lemmaGenitive zasalennost_N = "засаленности"
 lemmaGenitive zasluzhennost_N = "заслуженности"
+lemmaGenitive zasuha_N = "засухи"
 lemmaGenitive zasuhostojkost_N = "засухостойкости"
 lemmaGenitive zatvorennost_N = "затворенности"
 lemmaGenitive zatormozhennost_N = "заторможенности"
@@ -5177,137 +7660,344 @@ lemmaGenitive zatrapeznost_N = "затрапезности"
 lemmaGenitive zatyanutost_N = "затянутости"
 lemmaGenitive zacharovannost_N = "зачарованности"
 lemmaGenitive zashchishchennost_N = "защищенности"
+lemmaGenitive zayavka_N = "заявки"
+lemmaGenitive zayavlenie_N = "заявления"
+lemmaGenitive zayats_N = "зайца"
+lemmaGenitive zvon_N = "звона"
+lemmaGenitive zvonok_N = "звонка"
 lemmaGenitive zvukotehnika_N = "звукотехники"
+lemmaGenitive zdanie_N = "здания"
+lemmaGenitive zdorove_N = "здоровья"
+lemmaGenitive zemletryasenie_N = "землетрясения"
+lemmaGenitive zerno_N = "зерна"
+lemmaGenitive zima_N = "зимы"
+lemmaGenitive zlo_N = "зла"
+lemmaGenitive zmeya_N = "змеи"
 lemmaGenitive znakovost_N = "знаковости"
-lemmaGenitive znat_V = "знать"
+lemmaGenitive znamya_N = "знамени"
+lemmaGenitive znachenie_N = "значения"
+lemmaGenitive zoloto_N = "золота"
+lemmaGenitive zritel_N = "зрителя"
+lemmaGenitive zub_N = "зуба"
 lemmaGenitive zubchatost_N = "зубчатости"
 lemmaGenitive idempotentnost_N = "идемпотентности"
+lemmaGenitive identifikatsiya_N = "идентификации"
 lemmaGenitive identifitsiruemost_N = "идентифицируемости"
-lemmaGenitive identichnost_N = "идентичности"
 lemmaGenitive idiotichnost_N = "идиотичности"
+lemmaGenitive ierarhiya_N = "иерархии"
 lemmaGenitive ieroglifika_N = "иероглифики"
+lemmaGenitive izba_N = "избы"
+lemmaGenitive izvestie_N = "известия"
+lemmaGenitive izgnanie_N = "изгнания"
 lemmaGenitive izlechimost_N = "излечимости"
+lemmaGenitive izluchenie_N = "излучения"
+lemmaGenitive izmena_N = "измены"
+lemmaGenitive izmenenie_N = "изменения"
 lemmaGenitive izmotannost_N = "измотанности"
 lemmaGenitive iznemozhennost_N = "изнеможенности"
+lemmaGenitive izolyatsiya_N = "изоляции"
 lemmaGenitive izotropnost_N = "изотропности"
 lemmaGenitive izrezannost_N = "изрезанности"
+lemmaGenitive ikona_N = "иконы"
 lemmaGenitive ikonika_N = "иконики"
-lemmaGenitive illyuziya_N = "иллюзии"
 lemmaGenitive imbetsilnost_N = "имбецильности"
 lemmaGenitive immunogenetika_N = "иммуногенетики"
-lemmaGenitive implikatsiya_N = "импликации"
+lemmaGenitive imperiya_N = "империи"
+lemmaGenitive impuls_N = "импульса"
+lemmaGenitive imya_N = "имени"
+lemmaGenitive invariant_N = "инварианта"
+lemmaGenitive indeks_N = "индекса"
+lemmaGenitive indeksatsiya_N = "индексации"
+lemmaGenitive indikator_N = "индикатора"
+lemmaGenitive induktsiya_N = "индукции"
+lemmaGenitive inej_N = "инея"
 lemmaGenitive inertsionnost_N = "инерционности"
+lemmaGenitive inertsiya_N = "инерции"
+lemmaGenitive inkapsulyatsiya_N = "инкапсуляции"
+lemmaGenitive inspektsiya_N = "инспекции"
 lemmaGenitive instruktivnost_N = "инструктивности"
+lemmaGenitive instruktsiya_N = "инструкции"
+lemmaGenitive instrument_N = "инструмента"
 lemmaGenitive insulyarnost_N = "инсулярности"
+lemmaGenitive integratsiya_N = "интеграции"
 lemmaGenitive integrirovannost_N = "интегрированности"
 lemmaGenitive integriruemost_N = "интегрируемости"
 lemmaGenitive interaktivnost_N = "интерактивности"
+lemmaGenitive interval_N = "интервала"
+lemmaGenitive interes_N = "интереса"
 lemmaGenitive internatsionalnost_N = "интернациональности"
-lemmaGenitive interpretatsiya_N = "интерпретации"
-lemmaGenitive inferentsiya_N = "инференции"
+lemmaGenitive interpolyatsiya_N = "интерполяции"
+lemmaGenitive interpretiruemost_N = "интерпретируемости"
+lemmaGenitive interfejs_N = "интерфейса"
+lemmaGenitive interfejsnost_N = "интерфейсности"
+lemmaGenitive intriga_N = "интриги"
 lemmaGenitive informativnost_N = "информативности"
 lemmaGenitive informatika_N = "информатики"
 lemmaGenitive informatsionnost_N = "информационности"
+lemmaGenitive informatsiya_N = "информации"
 lemmaGenitive informirovannost_N = "информированности"
 lemmaGenitive informtehnika_N = "информтехники"
+lemmaGenitive intsident_N = "инцидента"
 lemmaGenitive ionika_N = "ионики"
 lemmaGenitive irregulyarnost_N = "иррегулярности"
-lemmaGenitive isklyuchenie_N = "исключения"
+lemmaGenitive isk_N = "иска"
+lemmaGenitive iskra_N = "искры"
+lemmaGenitive iskrennost_N = "искренности"
 lemmaGenitive iskushennost_N = "искушенности"
+lemmaGenitive isparenie_N = "испарения"
 lemmaGenitive ispeshchrennost_N = "испещренности"
+lemmaGenitive ispolnitel_N = "исполнителя"
 lemmaGenitive ispravimost_N = "исправимости"
+lemmaGenitive ispravlenie_N = "исправления"
+lemmaGenitive ispytanie_N = "испытания"
 lemmaGenitive issledovannost_N = "исследованности"
-lemmaGenitive istina_N = "истины"
-lemmaGenitive istinnost_N = "истинности"
+lemmaGenitive istorik_N = "историка"
+lemmaGenitive istochnik_N = "источника"
 lemmaGenitive istrepannost_N = "истрепанности"
+lemmaGenitive ishod_N = "исхода"
 lemmaGenitive ischislimost_N = "исчислимости"
 lemmaGenitive ischislyaemost_N = "исчисляемости"
+lemmaGenitive iteratsiya_N = "итерации"
+lemmaGenitive kabinet_N = "кабинета"
+lemmaGenitive kavaler_N = "кавалера"
+lemmaGenitive kavychka_N = "кавычки"
+lemmaGenitive kazarma_N = "казармы"
 lemmaGenitive kazennost_N = "казенности"
+lemmaGenitive kazn_N = "казни"
+lemmaGenitive kalendar_N = "календаря"
+lemmaGenitive kalibrovka_N = "калибровки"
+lemmaGenitive kamera_N = "камеры"
+lemmaGenitive kantata_N = "кантаты"
 lemmaGenitive kantserogennost_N = "канцерогенности"
+lemmaGenitive kapital_N = "капитала"
 lemmaGenitive kapitaloemkost_N = "капиталоемкости"
+lemmaGenitive kapitan_N = "капитана"
+lemmaGenitive karandash_N = "карандаша"
 lemmaGenitive karlikovost_N = "карликовости"
+lemmaGenitive karman_N = "кармана"
+lemmaGenitive karera_N = "карьеры"
+lemmaGenitive kassa_N = "кассы"
 lemmaGenitive katadioptrika_N = "катадиоптрики"
+lemmaGenitive katalog_N = "каталога"
+lemmaGenitive katastrofa_N = "катастрофы"
+lemmaGenitive kategorizatsiya_N = "категоризации"
+lemmaGenitive kauzatsiya_N = "каузации"
+lemmaGenitive kafe_N = "кафе"
+lemmaGenitive kasha_N = "каши"
+lemmaGenitive kvadrat_N = "квадрата"
 lemmaGenitive kvadratnost_N = "квадратности"
 lemmaGenitive kvadrika_N = "квадрики"
 lemmaGenitive kvadriruemost_N = "квадрируемости"
 lemmaGenitive kvazioptika_N = "квазиоптики"
-lemmaGenitive kvantor_N = "квантора"
+lemmaGenitive kvantil_N = "квантиля"
+lemmaGenitive kvartal_N = "квартала"
+lemmaGenitive kvartira_N = "квартиры"
 lemmaGenitive kvelost_N = "квелости"
+lemmaGenitive kvitantsiya_N = "квитанции"
+lemmaGenitive kedr_N = "кедра"
+lemmaGenitive kerosin_N = "керосина"
 lemmaGenitive kika_N = "кики"
+lemmaGenitive kilometr_N = "километра"
 lemmaGenitive kinesika_N = "кинесики"
 lemmaGenitive kinoavtomatika_N = "киноавтоматики"
 lemmaGenitive kinokritika_N = "кинокритики"
 lemmaGenitive kinomehanika_N = "киномеханики"
 lemmaGenitive kinoradiomehanika_N = "кинорадиомеханики"
 lemmaGenitive kiralnost_N = "киральности"
+lemmaGenitive kislorod_N = "кислорода"
+lemmaGenitive kislota_N = "кислоты"
 lemmaGenitive kislotorastvorimost_N = "кислоторастворимости"
 lemmaGenitive kislotoustojchivost_N = "кислотоустойчивости"
+lemmaGenitive klad_N = "клада"
+lemmaGenitive klassifikatsiya_N = "классификации"
+lemmaGenitive klassifitsirovanie_N = "классифицирования"
+lemmaGenitive kletka_N = "клетки"
+lemmaGenitive klet_N = "клети"
+lemmaGenitive klient_N = "клиента"
 lemmaGenitive klika_N = "клики"
+lemmaGenitive klimat_N = "климата"
+lemmaGenitive klinika_N = "клиники"
 lemmaGenitive klinovidnost_N = "клиновидности"
+lemmaGenitive knizhka_N = "книжки"
+lemmaGenitive knopka_N = "кнопки"
+lemmaGenitive knut_N = "кнута"
+lemmaGenitive knyaz_N = "князя"
 lemmaGenitive kovalentnost_N = "ковалентности"
+lemmaGenitive kover_N = "ковра"
+lemmaGenitive kovsh_N = "ковша"
+lemmaGenitive kogeziya_N = "когезии"
 lemmaGenitive kognitivistika_N = "когнитивистики"
+lemmaGenitive kozhuh_N = "кожуха"
+lemmaGenitive kozel_N = "козла"
+lemmaGenitive kokos_N = "кокоса"
+lemmaGenitive kolebanie_N = "колебания"
+lemmaGenitive koleso_N = "колеса"
+lemmaGenitive kollega_N = "коллеги"
+lemmaGenitive kollektiv_N = "коллектива"
 lemmaGenitive kollinearnost_N = "коллинеарности"
+lemmaGenitive kolodets_N = "колодца"
+lemmaGenitive kolonka_N = "колонки"
+lemmaGenitive kolonna_N = "колонны"
+lemmaGenitive koltso_N = "кольца"
+lemmaGenitive komanda_N = "команды"
+lemmaGenitive komandir_N = "командира"
+lemmaGenitive komar_N = "комара"
+lemmaGenitive kometa_N = "кометы"
 lemmaGenitive kommutativnost_N = "коммутативности"
+lemmaGenitive komnata_N = "комнаты"
+lemmaGenitive kompaniya_N = "компании"
+lemmaGenitive komplaens_N = "комплаенса"
+lemmaGenitive kompleks_N = "комплекса"
 lemmaGenitive komplementarnost_N = "комплементарности"
+lemmaGenitive komponent_N = "компонента"
+lemmaGenitive kompressiya_N = "компрессии"
 lemmaGenitive komfortnost_N = "комфортности"
+lemmaGenitive konvejer_N = "конвейера"
 lemmaGenitive konvertiruemost_N = "конвертируемости"
-lemmaGenitive konkretika_N = "конкретики"
+lemmaGenitive kondensatsiya_N = "конденсации"
 lemmaGenitive konkurentnost_N = "конкурентности"
+lemmaGenitive konkurs_N = "конкурса"
+lemmaGenitive konnektor_N = "коннектора"
+lemmaGenitive konsistentnost_N = "консистентности"
+lemmaGenitive konstanta_N = "константы"
 lemmaGenitive konstitutsionnost_N = "конституционности"
+lemmaGenitive konstruktor_N = "конструктора"
 lemmaGenitive kontakt_N = "контакта"
 lemmaGenitive kontaktnost_N = "контактности"
+lemmaGenitive kontekst_N = "контекста"
 lemmaGenitive kontinentalnost_N = "континентальности"
+lemmaGenitive kontrakt_N = "контракта"
 lemmaGenitive kontroliruemost_N = "контролируемости"
-lemmaGenitive kontrprimer_N = "контрпримера"
+lemmaGenitive kontrol_N = "контроля"
+lemmaGenitive kontur_N = "контура"
 lemmaGenitive konusnost_N = "конусности"
 lemmaGenitive konusoobraznost_N = "конусообразности"
+lemmaGenitive konfeta_N = "конфеты"
+lemmaGenitive konfigurirovanie_N = "конфигурирования"
 lemmaGenitive konfidentsialnost_N = "конфиденциальности"
-lemmaGenitive konflikt_N = "конфликта"
 lemmaGenitive konfliktnost_N = "конфликтности"
-lemmaGenitive konfrontatsiya_N = "конфронтации"
 lemmaGenitive kontsentrirovannost_N = "концентрированности"
+lemmaGenitive kontsert_N = "концерта"
 lemmaGenitive konyunkturnost_N = "конъюнктурности"
+lemmaGenitive konyunktsiya_N = "конъюнкции"
+lemmaGenitive kon_N = "коня"
+lemmaGenitive koordinata_N = "координаты"
+lemmaGenitive koordinatsiya_N = "координации"
 lemmaGenitive koordinirovannost_N = "координированности"
-lemmaGenitive korollarij_N = "короллария"
-lemmaGenitive korrektnost_N = "корректности"
+lemmaGenitive kopejka_N = "копейки"
+lemmaGenitive korabl_N = "корабля"
+lemmaGenitive koren_N = "корня"
+lemmaGenitive korzina_N = "корзины"
+lemmaGenitive koridor_N = "коридора"
+lemmaGenitive korobka_N = "коробки"
+lemmaGenitive korova_N = "коровы"
+lemmaGenitive korpus_N = "корпуса"
+lemmaGenitive korrektsiya_N = "коррекции"
 lemmaGenitive korrelirovannost_N = "коррелированности"
+lemmaGenitive korrelyatsiya_N = "корреляции"
 lemmaGenitive korrumpirovannost_N = "коррумпированности"
 lemmaGenitive kosvennost_N = "косвенности"
 lemmaGenitive kosmatost_N = "косматости"
 lemmaGenitive kosmichnost_N = "космичности"
+lemmaGenitive kosmos_N = "космоса"
+lemmaGenitive koster_N = "костра"
 lemmaGenitive kost_N = "кости"
+lemmaGenitive kotel_N = "котла"
 lemmaGenitive koertsitivnost_N = "коэрцитивности"
 lemmaGenitive krapchatost_N = "крапчатости"
+lemmaGenitive kraska_N = "краски"
 lemmaGenitive krasnostojkost_N = "красностойкости"
+lemmaGenitive kredit_N = "кредита"
+lemmaGenitive kreslo_N = "кресла"
+lemmaGenitive krest_N = "креста"
 lemmaGenitive krivorukost_N = "криворукости"
+lemmaGenitive krizis_N = "кризиса"
 lemmaGenitive kriogenika_N = "криогеники"
 lemmaGenitive krioelektronika_N = "криоэлектроники"
-lemmaGenitive kriterij_N = "критерия"
+lemmaGenitive kristall_N = "кристалла"
+lemmaGenitive kristallizatsiya_N = "кристаллизации"
+lemmaGenitive krovat_N = "кровати"
 lemmaGenitive krovnost_N = "кровности"
+lemmaGenitive krolik_N = "кролика"
 lemmaGenitive krugoobraznost_N = "кругообразности"
 lemmaGenitive krupnost_N = "крупности"
+lemmaGenitive krylo_N = "крыла"
+lemmaGenitive krysa_N = "крысы"
+lemmaGenitive krysha_N = "крыши"
+lemmaGenitive kub_N = "куба"
+lemmaGenitive kuznets_N = "кузнеца"
+lemmaGenitive kukuruza_N = "кукурузы"
 lemmaGenitive kulttehnika_N = "культтехники"
+lemmaGenitive kupol_N = "купола"
+lemmaGenitive kurort_N = "курорта"
+lemmaGenitive kust_N = "куста"
+lemmaGenitive kuhnya_N = "кухни"
+lemmaGenitive keshirovanie_N = "кэширования"
+lemmaGenitive laboratoriya_N = "лаборатории"
+lemmaGenitive lager_N = "лагеря"
 lemmaGenitive ladnost_N = "ладности"
+lemmaGenitive ladon_N = "ладони"
+lemmaGenitive lak_N = "лака"
 lemmaGenitive laminarnost_N = "ламинарности"
+lemmaGenitive lampa_N = "лампы"
+lemmaGenitive lampochka_N = "лампочки"
+lemmaGenitive lapa_N = "лапы"
 lemmaGenitive latentnost_N = "латентности"
+lemmaGenitive latun_N = "латуни"
+lemmaGenitive lgun_N = "лгуна"
+lemmaGenitive lev_N = "льва"
+lemmaGenitive levaya_N = "левой"
+lemmaGenitive legenda_N = "легенды"
 lemmaGenitive legitimnost_N = "легитимности"
+lemmaGenitive legkoe_N = "легкого"
+lemmaGenitive lezhak_N = "лежака"
 lemmaGenitive lezhkost_N = "лежкости"
 lemmaGenitive leksikostatistika_N = "лексикостатистики"
-lemmaGenitive lemma_N = "леммы"
+lemmaGenitive lepestok_N = "лепестка"
+lemmaGenitive lesnik_N = "лесника"
+lemmaGenitive leto_N = "лета"
+lemmaGenitive letchik_N = "летчика"
+lemmaGenitive liven_N = "ливня"
+lemmaGenitive linejka_N = "линейки"
 lemmaGenitive listovatost_N = "листоватости"
+lemmaGenitive listok_N = "листка"
+lemmaGenitive literatura_N = "литературы"
+lemmaGenitive litsej_N = "лицея"
+lemmaGenitive lovushka_N = "ловушки"
 lemmaGenitive logarifmetika_N = "логарифметики"
 lemmaGenitive logarifmika_N = "логарифмики"
 lemmaGenitive logika_N = "логики"
-lemmaGenitive lozh_N = "лжи"
+lemmaGenitive lodka_N = "лодки"
+lemmaGenitive lozhka_N = "ложки"
+lemmaGenitive lozhnost_N = "ложности"
+lemmaGenitive loza_N = "лозы"
+lemmaGenitive lokomotiv_N = "локомотива"
+lemmaGenitive lokon_N = "локона"
+lemmaGenitive lopata_N = "лопаты"
+lemmaGenitive lopuh_N = "лопуха"
+lemmaGenitive lotok_N = "лотка"
 lemmaGenitive lotsiya_N = "лоции"
+lemmaGenitive loshad_N = "лошади"
+lemmaGenitive luk_N = "лука"
+lemmaGenitive luchina_N = "лучины"
 lemmaGenitive ldistost_N = "льдистости"
 lemmaGenitive lyubovnost_N = "любовности"
 lemmaGenitive lyubov_N = "любви"
-lemmaGenitive magiya_N = "магии"
+lemmaGenitive lyudi_N = "людей"
+lemmaGenitive lyustra_N = "люстры"
+lemmaGenitive lyagushka_N = "лягушки"
+lemmaGenitive legkost_N = "легкости"
+lemmaGenitive magazin_N = "магазина"
 lemmaGenitive magnionika_N = "магнионики"
+lemmaGenitive magnit_N = "магнита"
 lemmaGenitive magnitoaerodinamika_N = "магнитоаэродинамики"
 lemmaGenitive magnitogazodinamika_N = "магнитогазодинамики"
 lemmaGenitive magnitogidrodinamika_N = "магнитогидродинамики"
+lemmaGenitive maz_N = "мази"
+lemmaGenitive maj_N = "мая"
+lemmaGenitive majka_N = "майки"
+lemmaGenitive mak_N = "мака"
+lemmaGenitive maket_N = "макета"
 lemmaGenitive makrobiotika_N = "макробиотики"
 lemmaGenitive makrokinetika_N = "макрокинетики"
 lemmaGenitive makrolingvistika_N = "макролингвистики"
@@ -5316,26 +8006,73 @@ lemmaGenitive makroturbulentnost_N = "макротурбулентности"
 lemmaGenitive makroekonomika_N = "макроэкономики"
 lemmaGenitive malovazhnost_N = "маловажности"
 lemmaGenitive maloinertsionnost_N = "малоинерционности"
+lemmaGenitive malysh_N = "малыша"
+lemmaGenitive malyar_N = "маляра"
+lemmaGenitive mama_N = "мамы"
+lemmaGenitive mandarin_N = "мандарина"
+lemmaGenitive manezh_N = "манежа"
+lemmaGenitive manifest_N = "манифеста"
+lemmaGenitive manyak_N = "маньяка"
+lemmaGenitive marafon_N = "марафона"
+lemmaGenitive marka_N = "марки"
 lemmaGenitive markovost_N = "марковости"
+lemmaGenitive mart_N = "марта"
+lemmaGenitive marshrut_N = "маршрута"
+lemmaGenitive marshrutizatsiya_N = "маршрутизации"
+lemmaGenitive marshrutnost_N = "маршрутности"
+lemmaGenitive maslo_N = "масла"
 lemmaGenitive maslobenzostojkost_N = "маслобензостойкости"
 lemmaGenitive maslopogloshchaemost_N = "маслопоглощаемости"
+lemmaGenitive massa_N = "массы"
+lemmaGenitive massiv_N = "массива"
 lemmaGenitive massirovannost_N = "массированности"
+lemmaGenitive master_N = "мастера"
+lemmaGenitive masterskaya_N = "мастерской"
+lemmaGenitive masshtab_N = "масштаба"
+lemmaGenitive masshtabiruemost_N = "масштабируемости"
+lemmaGenitive mat_N = "мата"
 lemmaGenitive materialoemkost_N = "материалоемкости"
+lemmaGenitive materiya_N = "материи"
+lemmaGenitive matras_N = "матраса"
+lemmaGenitive mahorka_N = "махорки"
+lemmaGenitive mashina_N = "машины"
+lemmaGenitive mashinist_N = "машиниста"
+lemmaGenitive mgnovenie_N = "мгновения"
 lemmaGenitive mgnovennost_N = "мгновенности"
+lemmaGenitive med_N = "меда"
+lemmaGenitive medal_N = "медали"
+lemmaGenitive medved_N = "медведя"
+lemmaGenitive mediana_N = "медианы"
 lemmaGenitive medstatistika_N = "медстатистики"
 lemmaGenitive medtehnika_N = "медтехники"
+lemmaGenitive mel_N = "мела"
 lemmaGenitive melkozernistost_N = "мелкозернистости"
 lemmaGenitive melkoplodnost_N = "мелкоплодности"
 lemmaGenitive melkoslojnost_N = "мелкослойности"
+lemmaGenitive melodiya_N = "мелодии"
 lemmaGenitive mentalnost_N = "ментальности"
 lemmaGenitive mertvost_N = "мертвости"
+lemmaGenitive mestnost_N = "местности"
 lemmaGenitive metalingvistika_N = "металингвистики"
+lemmaGenitive metall_N = "металла"
 lemmaGenitive metalloplastika_N = "металлопластики"
 lemmaGenitive metalogika_N = "металогики"
 lemmaGenitive metamatematika_N = "метаматематики"
 lemmaGenitive metasemiotika_N = "метасемиотики"
 lemmaGenitive metafizichnost_N = "метафизичности"
+lemmaGenitive metel_N = "метели"
+lemmaGenitive metla_N = "метлы"
+lemmaGenitive metod_N = "метода"
+lemmaGenitive metodika_N = "методики"
+lemmaGenitive metrika_N = "метрики"
+lemmaGenitive metro_N = "метро"
+lemmaGenitive meh_N = "меха"
+lemmaGenitive mehanizm_N = "механизма"
 lemmaGenitive mehatronika_N = "мехатроники"
+lemmaGenitive mech_N = "меча"
+lemmaGenitive mechta_N = "мечты"
+lemmaGenitive meshok_N = "мешка"
+lemmaGenitive migratsiya_N = "миграции"
 lemmaGenitive mikrografika_N = "микрографики"
 lemmaGenitive mikromehanika_N = "микромеханики"
 lemmaGenitive mikroskladchatost_N = "микроскладчатости"
@@ -5346,8 +8083,11 @@ lemmaGenitive mikrofizika_N = "микрофизики"
 lemmaGenitive mikrofotoelektronika_N = "микрофотоэлектроники"
 lemmaGenitive mikroekonomika_N = "микроэкономики"
 lemmaGenitive mikroelektronika_N = "микроэлектроники"
+lemmaGenitive milya_N = "мили"
+lemmaGenitive mineral_N = "минерала"
 lemmaGenitive mineralokeramika_N = "минералокерамики"
 lemmaGenitive minutnost_N = "минутности"
+lemmaGenitive mirolyubie_N = "миролюбия"
 lemmaGenitive mnogoaspektnost_N = "многоаспектности"
 lemmaGenitive mnogovalentnost_N = "многовалентности"
 lemmaGenitive mnogovariantnost_N = "многовариантности"
@@ -5364,40 +8104,74 @@ lemmaGenitive mnogotomnost_N = "многотомности"
 lemmaGenitive mnogoukladnost_N = "многоукладности"
 lemmaGenitive mnogotsvetnost_N = "многоцветности"
 lemmaGenitive mnogoyadnost_N = "многоядности"
-lemmaGenitive modalnost_N = "модальности"
+lemmaGenitive mnozhestvo_N = "множества"
+lemmaGenitive modul_N = "модуля"
 lemmaGenitive molektronika_N = "молектроники"
-lemmaGenitive molchanie_N = "молчания"
+lemmaGenitive molekula_N = "молекулы"
+lemmaGenitive molniya_N = "молнии"
 lemmaGenitive molyarnost_N = "молярности"
+lemmaGenitive moment_N = "момента"
+lemmaGenitive monah_N = "монаха"
+lemmaGenitive moneta_N = "монеты"
+lemmaGenitive monitoring_N = "мониторинга"
+lemmaGenitive monolog_N = "монолога"
 lemmaGenitive monohromatichnost_N = "монохроматичности"
 lemmaGenitive monohromnost_N = "монохромности"
 lemmaGenitive monoenergetichnost_N = "моноэнергетичности"
+lemmaGenitive moral_N = "морали"
+lemmaGenitive moroz_N = "мороза"
 lemmaGenitive moroznost_N = "морозности"
+lemmaGenitive moros_N = "мороси"
+lemmaGenitive mostik_N = "мостика"
+lemmaGenitive mototsikl_N = "мотоцикла"
+lemmaGenitive motylek_N = "мотылька"
+lemmaGenitive moshchnost_N = "мощности"
+lemmaGenitive moshch_N = "мощи"
+lemmaGenitive mramor_N = "мрамора"
 lemmaGenitive mramornost_N = "мраморности"
+lemmaGenitive mudrets_N = "мудреца"
 lemmaGenitive muzhepodobnost_N = "мужеподобности"
+lemmaGenitive muzej_N = "музея"
+lemmaGenitive muka_N = "муки"
 lemmaGenitive multikollinearnost_N = "мультиколлинеарности"
 lemmaGenitive multipletnost_N = "мультиплетности"
 lemmaGenitive multiustojchivost_N = "мультиустойчивости"
+lemmaGenitive mundir_N = "мундира"
+lemmaGenitive muravej_N = "муравья"
 lemmaGenitive mutagennost_N = "мутагенности"
 lemmaGenitive mutantnost_N = "мутантности"
-lemmaGenitive myslit_V = "мыслить"
+lemmaGenitive mysh_N = "мыши"
+lemmaGenitive mer_N = "мэра"
+lemmaGenitive myach_N = "мяча"
 lemmaGenitive nablyudaemost_N = "наблюдаемости"
-lemmaGenitive nadezhda_N = "надежды"
-lemmaGenitive nadezhnost_N = "надежности"
+lemmaGenitive navazhdenie_N = "наваждения"
+lemmaGenitive naves_N = "навеса"
+lemmaGenitive nagrada_N = "награды"
+lemmaGenitive nagruzka_N = "нагрузки"
 lemmaGenitive naznachaemost_N = "назначаемости"
-lemmaGenitive naznachenie_N = "назначения"
 lemmaGenitive naigrannost_N = "наигранности"
+lemmaGenitive namerenie_N = "намерения"
 lemmaGenitive nametannost_N = "наметанности"
 lemmaGenitive nanoelektronika_N = "наноэлектроники"
+lemmaGenitive napadenie_N = "нападения"
 lemmaGenitive napolnyaemost_N = "наполняемости"
+lemmaGenitive napravlenie_N = "направления"
 lemmaGenitive naprasnost_N = "напрасности"
+lemmaGenitive napryazhenie_N = "напряжения"
+lemmaGenitive naryad_N = "наряда"
+lemmaGenitive nastoyashchee_N = "настоящего"
 lemmaGenitive nastraivaemost_N = "настраиваемости"
 lemmaGenitive natuzhnost_N = "натужности"
+lemmaGenitive natura_N = "натуры"
+lemmaGenitive natsiya_N = "нации"
+lemmaGenitive nachalo_N = "начала"
 lemmaGenitive naelektrizovannost_N = "наэлектризованности"
 lemmaGenitive neadekvatnost_N = "неадекватности"
 lemmaGenitive nebezopasnost_N = "небезопасности"
 lemmaGenitive nebespristrastnost_N = "небеспристрастности"
 lemmaGenitive nevazhnost_N = "неважности"
 lemmaGenitive neveskost_N = "невескости"
+lemmaGenitive nevesta_N = "невесты"
 lemmaGenitive neveshchestvennost_N = "невещественности"
 lemmaGenitive nevzaimozamestimost_N = "невзаимозаместимости"
 lemmaGenitive nevidimost_N = "невидимости"
@@ -5413,6 +8187,7 @@ lemmaGenitive nedevstvennost_N = "недевственности"
 lemmaGenitive nedejstvennost_N = "недейственности"
 lemmaGenitive nedokazannost_N = "недоказанности"
 lemmaGenitive nedootsenennost_N = "недооцененности"
+lemmaGenitive nedra_N = "недр"
 lemmaGenitive nezagruzhennost_N = "незагруженности"
 lemmaGenitive nezakonnorozhdennost_N = "незаконнорожденности"
 lemmaGenitive nezakreplennost_N = "незакрепленности"
@@ -5423,6 +8198,7 @@ lemmaGenitive nezapolnennost_N = "незаполненности"
 lemmaGenitive nezarazhennost_N = "незараженности"
 lemmaGenitive nezashchishchennost_N = "незащищенности"
 lemmaGenitive nezlopamyatnost_N = "незлопамятности"
+lemmaGenitive neizvestnost_N = "неизвестности"
 lemmaGenitive neizyasnimost_N = "неизъяснимости"
 lemmaGenitive neizyashchnost_N = "неизящности"
 lemmaGenitive neinteresnost_N = "неинтересности"
@@ -5430,6 +8206,7 @@ lemmaGenitive neiskusnost_N = "неискусности"
 lemmaGenitive nejrobionika_N = "нейробионики"
 lemmaGenitive nejroinformatika_N = "нейроинформатики"
 lemmaGenitive nejrolingvistika_N = "нейролингвистики"
+lemmaGenitive nejtralitet_N = "нейтралитета"
 lemmaGenitive nejtronika_N = "нейтроники"
 lemmaGenitive nekogerentnost_N = "некогерентности"
 lemmaGenitive nekonvertiruemost_N = "неконвертируемости"
@@ -5443,15 +8220,16 @@ lemmaGenitive nelinejnost_N = "нелинейности"
 lemmaGenitive nelitsepriyatnost_N = "нелицеприятности"
 lemmaGenitive nelyubeznost_N = "нелюбезности"
 lemmaGenitive nematerialnost_N = "нематериальности"
+lemmaGenitive nemets_N = "немца"
 lemmaGenitive nemnogochislennost_N = "немногочисленности"
 lemmaGenitive nemudrenost_N = "немудрености"
 lemmaGenitive nenapolnennost_N = "ненаполненности"
 lemmaGenitive nenasyshchennost_N = "ненасыщенности"
 lemmaGenitive neobrabotannost_N = "необработанности"
-lemmaGenitive neobhodimost_N = "необходимости"
 lemmaGenitive neobyasnimost_N = "необъяснимости"
 lemmaGenitive neopasnost_N = "неопасности"
 lemmaGenitive neopravdannost_N = "неоправданности"
+lemmaGenitive neopredelennost_N = "неопределенности"
 lemmaGenitive neortodoksalnost_N = "неортодоксальности"
 lemmaGenitive neosvoennost_N = "неосвоенности"
 lemmaGenitive neosyazaemost_N = "неосязаемости"
@@ -5478,13 +8256,16 @@ lemmaGenitive nepodotchetnost_N = "неподотчетности"
 lemmaGenitive nepodtverzhdennost_N = "неподтвержденности"
 lemmaGenitive nepodchinennost_N = "неподчиненности"
 lemmaGenitive nepoleznost_N = "неполезности"
+lemmaGenitive nepolnota_N = "неполноты"
 lemmaGenitive nepolovovzroslost_N = "неполововзрослости"
 lemmaGenitive nepopulyarnost_N = "непопулярности"
 lemmaGenitive nepostizhimost_N = "непостижимости"
+lemmaGenitive nepravilnost_N = "неправильности"
 lemmaGenitive nepredvzyatost_N = "непредвзятости"
 lemmaGenitive nepredskazuemost_N = "непредсказуемости"
 lemmaGenitive nepredubezhdennost_N = "непредубежденности"
 lemmaGenitive nepremennost_N = "непременности"
+lemmaGenitive nepreryvnost_N = "непрерывности"
 lemmaGenitive neprestizhnost_N = "непрестижности"
 lemmaGenitive neprivodimost_N = "неприводимости"
 lemmaGenitive neprikasaemost_N = "неприкасаемости"
@@ -5493,7 +8274,6 @@ lemmaGenitive neprinadlezhnost_N = "непринадлежности"
 lemmaGenitive neproglyadnost_N = "непроглядности"
 lemmaGenitive neprodumannost_N = "непродуманности"
 lemmaGenitive neprozrachnost_N = "непрозрачности"
-lemmaGenitive neprotivorechivost_N = "непротиворечивости"
 lemmaGenitive nerazdelennost_N = "неразделенности"
 lemmaGenitive nerazlichimost_N = "неразличимости"
 lemmaGenitive nerazmennost_N = "неразменности"
@@ -5518,8 +8298,8 @@ lemmaGenitive neslyshimost_N = "неслышимости"
 lemmaGenitive nesmetnost_N = "несметности"
 lemmaGenitive nesminaemost_N = "несминаемости"
 lemmaGenitive nesovershennost_N = "несовершенности"
-lemmaGenitive nesovmestimost_N = "несовместимости"
 lemmaGenitive nesovremennost_N = "несовременности"
+lemmaGenitive nesoglasie_N = "несогласия"
 lemmaGenitive nesokratimost_N = "несократимости"
 lemmaGenitive nesoosnost_N = "несоосности"
 lemmaGenitive nesochetaemost_N = "несочетаемости"
@@ -5541,9 +8321,11 @@ lemmaGenitive neumyshlennost_N = "неумышленности"
 lemmaGenitive neupravlyaemost_N = "неуправляемости"
 lemmaGenitive neuprugost_N = "неупругости"
 lemmaGenitive neuregulirovannost_N = "неурегулированности"
+lemmaGenitive neustojchivost_N = "неустойчивости"
 lemmaGenitive neformalnost_N = "неформальности"
 lemmaGenitive neftegazonosnost_N = "нефтегазоносности"
 lemmaGenitive neftegeofizika_N = "нефтегеофизики"
+lemmaGenitive neft_N = "нефти"
 lemmaGenitive netselomudrennost_N = "нецеломудренности"
 lemmaGenitive netsentrirovannost_N = "нецентрированности"
 lemmaGenitive netsivilizovannost_N = "нецивилизованности"
@@ -5553,43 +8335,74 @@ lemmaGenitive neekonomnost_N = "неэкономности"
 lemmaGenitive neelastichnost_N = "неэластичности"
 lemmaGenitive neeffektivnost_N = "неэффективности"
 lemmaGenitive neyarkost_N = "неяркости"
+lemmaGenitive niva_N = "нивы"
+lemmaGenitive niz_N = "низа"
 lemmaGenitive nichejnost_N = "ничейности"
-lemmaGenitive nichto_N = "ничего"
+lemmaGenitive novost_N = "новости"
+lemmaGenitive nozh_N = "ножа"
+lemmaGenitive nozhka_N = "ножки"
+lemmaGenitive nozhnitsy_N = "ножниц"
+lemmaGenitive norma_N = "нормы"
+lemmaGenitive normalizatsiya_N = "нормализации"
+lemmaGenitive nos_N = "носа"
+lemmaGenitive nosok_N = "носка"
+lemmaGenitive nochleg_N = "ночлега"
+lemmaGenitive noch_N = "ночи"
+lemmaGenitive noyabr_N = "ноября"
+lemmaGenitive nrav_N = "нрава"
 lemmaGenitive nuzhnost_N = "нужности"
 lemmaGenitive nukleonika_N = "нуклеоники"
 lemmaGenitive obaldelost_N = "обалделости"
 lemmaGenitive obvetrennost_N = "обветренности"
 lemmaGenitive obvodnennost_N = "обводненности"
+lemmaGenitive obed_N = "обеда"
 lemmaGenitive obezlichennost_N = "обезличенности"
 lemmaGenitive obeskurazhennost_N = "обескураженности"
 lemmaGenitive obespokoennost_N = "обеспокоенности"
-lemmaGenitive obida_N = "обиды"
+lemmaGenitive obeshchanie_N = "обещания"
 lemmaGenitive oblagaemost_N = "облагаемости"
+lemmaGenitive oblako_N = "облака"
+lemmaGenitive oblast_N = "области"
+lemmaGenitive oblik_N = "облика"
 lemmaGenitive obluchennost_N = "облученности"
+lemmaGenitive obman_N = "обмана"
+lemmaGenitive obobshchenie_N = "обобщения"
+lemmaGenitive obolochka_N = "оболочки"
 lemmaGenitive oborvannost_N = "оборванности"
 lemmaGenitive oboronoustojchivost_N = "обороноустойчивости"
 lemmaGenitive oborotosposobnost_N = "оборотоспособности"
-lemmaGenitive obosnovanie_N = "обоснования"
+lemmaGenitive obosnovannost_N = "обоснованности"
+lemmaGenitive obrabotka_N = "обработки"
+lemmaGenitive obrabotchik_N = "обработчика"
+lemmaGenitive obrazets_N = "образца"
 lemmaGenitive obrashchennost_N = "обращенности"
 lemmaGenitive obryadovost_N = "обрядовости"
 lemmaGenitive obsluzhivaemost_N = "обслуживаемости"
+lemmaGenitive obsluzhivanie_N = "обслуживания"
 lemmaGenitive obstruktsionnost_N = "обструкционности"
+lemmaGenitive obsuzhdenie_N = "обсуждения"
+lemmaGenitive obuv_N = "обуви"
+lemmaGenitive obuslovlennost_N = "обусловленности"
 lemmaGenitive obuchaemost_N = "обучаемости"
 lemmaGenitive obshcheznachimost_N = "общезначимости"
 lemmaGenitive obshcheprinyatost_N = "общепринятости"
 lemmaGenitive obshchinnost_N = "общинности"
-lemmaGenitive obyasnenie_N = "объяснения"
-lemmaGenitive obyazannost_N = "обязанности"
-lemmaGenitive obyazatelstvo_N = "обязательства"
+lemmaGenitive obedinenie_N = "объединения"
+lemmaGenitive obyasnimost_N = "объяснимости"
+lemmaGenitive obem_N = "объема"
+lemmaGenitive ovrag_N = "оврага"
+lemmaGenitive ovtsa_N = "овцы"
 lemmaGenitive ognennost_N = "огненности"
-lemmaGenitive ogranichenie_N = "ограничения"
-lemmaGenitive odinochestvo_N = "одиночества"
+lemmaGenitive ogorod_N = "огорода"
 lemmaGenitive odnoatomnost_N = "одноатомности"
 lemmaGenitive odnodetnost_N = "однодетности"
 lemmaGenitive odnozvuchnost_N = "однозвучности"
 lemmaGenitive odnomernost_N = "одномерности"
 lemmaGenitive odnohozyajnost_N = "однохозяйности"
 lemmaGenitive odurelost_N = "одурелости"
+lemmaGenitive ozero_N = "озера"
+lemmaGenitive okean_N = "океана"
+lemmaGenitive okislenie_N = "окисления"
 lemmaGenitive okislyaemost_N = "окисляемости"
 lemmaGenitive okkazionalnost_N = "окказиональности"
 lemmaGenitive okoldovannost_N = "околдованности"
@@ -5597,111 +8410,245 @@ lemmaGenitive okolnost_N = "окольности"
 lemmaGenitive okonchatelnost_N = "окончательности"
 lemmaGenitive okrashennost_N = "окрашенности"
 lemmaGenitive okristallizovannost_N = "окристаллизованности"
+lemmaGenitive okrug_N = "округа"
+lemmaGenitive okruzhenie_N = "окружения"
 lemmaGenitive okruzhennost_N = "окруженности"
 lemmaGenitive okupaemost_N = "окупаемости"
+lemmaGenitive olen_N = "оленя"
 lemmaGenitive olfaktronika_N = "ольфактроники"
 lemmaGenitive omofonichnost_N = "омофоничности"
+lemmaGenitive opeka_N = "опеки"
+lemmaGenitive opera_N = "оперы"
 lemmaGenitive operabelnost_N = "операбельности"
+lemmaGenitive operatsiya_N = "операции"
+lemmaGenitive operezhenie_N = "опережения"
 lemmaGenitive operennost_N = "оперенности"
-lemmaGenitive opisanie_N = "описания"
+lemmaGenitive opilki_N = "опилок"
 lemmaGenitive oposredstvovannost_N = "опосредствованности"
+lemmaGenitive oppozitsiya_N = "оппозиции"
 lemmaGenitive opravdannost_N = "оправданности"
 lemmaGenitive opravdyvaemost_N = "оправдываемости"
-lemmaGenitive opredelenie_N = "определения"
 lemmaGenitive oprovergaemost_N = "опровергаемости"
-lemmaGenitive oproverzhenie_N = "опровержения"
 lemmaGenitive oproverzhimost_N = "опровержимости"
+lemmaGenitive opros_N = "опроса"
+lemmaGenitive optimizatsiya_N = "оптимизации"
 lemmaGenitive optoakustika_N = "оптоакустики"
 lemmaGenitive optotehnika_N = "оптотехники"
 lemmaGenitive optoelektronika_N = "оптоэлектроники"
+lemmaGenitive oranzhereya_N = "оранжереи"
+lemmaGenitive orbita_N = "орбиты"
+lemmaGenitive organ_N = "органа"
+lemmaGenitive organizator_N = "организатора"
 lemmaGenitive orgtehnika_N = "оргтехники"
+lemmaGenitive orden_N = "ордена"
+lemmaGenitive orel_N = "орла"
+lemmaGenitive orientatsiya_N = "ориентации"
 lemmaGenitive orientirovannost_N = "ориентированности"
+lemmaGenitive orkestratsiya_N = "оркестрации"
 lemmaGenitive ortogonalnost_N = "ортогональности"
 lemmaGenitive ortoptika_N = "ортоптики"
+lemmaGenitive orudie_N = "орудия"
+lemmaGenitive osadok_N = "осадка"
+lemmaGenitive osen_N = "осени"
+lemmaGenitive osina_N = "осины"
+lemmaGenitive oskolok_N = "осколка"
 lemmaGenitive oslablennost_N = "ослабленности"
-lemmaGenitive osnovanie_N = "основания"
+lemmaGenitive osmotr_N = "осмотра"
 lemmaGenitive osnovnost_N = "основности"
-lemmaGenitive osnovyvat_V = "основывать"
+lemmaGenitive osobennost_N = "особенности"
 lemmaGenitive osolonennost_N = "осолоненности"
+lemmaGenitive ostanovka_N = "остановки"
 lemmaGenitive osteoplastika_N = "остеопластики"
+lemmaGenitive ostrov_N = "острова"
 lemmaGenitive ostroumnost_N = "остроумности"
 lemmaGenitive ost_N = "ости"
+lemmaGenitive osminog_N = "осьминога"
 lemmaGenitive otbornost_N = "отборности"
-lemmaGenitive otvet_N = "ответа"
-lemmaGenitive otvetstvennost_N = "ответственности"
+lemmaGenitive otvaga_N = "отваги"
+lemmaGenitive otdel_N = "отдела"
+lemmaGenitive otdyh_N = "отдыха"
+lemmaGenitive otel_N = "отеля"
+lemmaGenitive otkaz_N = "отказа"
 lemmaGenitive otkazoustojchivost_N = "отказоустойчивости"
 lemmaGenitive otkazoustochivost_N = "отказоусточивости"
+lemmaGenitive otkat_N = "отката"
+lemmaGenitive otklonenie_N = "отклонения"
+lemmaGenitive otkrovennost_N = "откровенности"
 lemmaGenitive otkrytost_N = "открытости"
+lemmaGenitive otlichie_N = "отличия"
 lemmaGenitive otlichimost_N = "отличимости"
 lemmaGenitive otnesennost_N = "отнесенности"
 lemmaGenitive otnosimost_N = "относимости"
+lemmaGenitive otnoshenie_N = "отношения"
+lemmaGenitive otpusk_N = "отпуска"
+lemmaGenitive otrava_N = "отравы"
 lemmaGenitive otradnost_N = "отрадности"
-lemmaGenitive otrazhenie_N = "отражения"
+lemmaGenitive otritsanie_N = "отрицания"
+lemmaGenitive otryad_N = "отряда"
 lemmaGenitive otslezhivaemost_N = "отслеживаемости"
 lemmaGenitive otstranennost_N = "отстраненности"
 lemmaGenitive ottochennost_N = "отточенности"
+lemmaGenitive otchayanie_N = "отчаяния"
+lemmaGenitive otchet_N = "отчета"
+lemmaGenitive ohota_N = "охоты"
+lemmaGenitive ohrana_N = "охраны"
 lemmaGenitive ohranosposobnost_N = "охраноспособности"
+lemmaGenitive ochag_N = "очага"
+lemmaGenitive ochered_N = "очереди"
 lemmaGenitive ochumelost_N = "очумелости"
 lemmaGenitive oshalelost_N = "ошалелости"
-lemmaGenitive oshibka_N = "ошибки"
+lemmaGenitive oshejnik_N = "ошейника"
 lemmaGenitive oshibkoustojchivost_N = "ошибкоустойчивости"
+lemmaGenitive pajplajn_N = "пайплайна"
+lemmaGenitive palata_N = "палаты"
+lemmaGenitive palatka_N = "палатки"
 lemmaGenitive paleobionika_N = "палеобионики"
 lemmaGenitive paleogeofizika_N = "палеогеофизики"
-lemmaGenitive pamyat_N = "памяти"
+lemmaGenitive palets_N = "пальца"
+lemmaGenitive pamyatnik_N = "памятника"
+lemmaGenitive panel_N = "панели"
+lemmaGenitive papa_N = "папы"
+lemmaGenitive papaha_N = "папахи"
+lemmaGenitive parad_N = "парада"
+lemmaGenitive paradoks_N = "парадокса"
 lemmaGenitive paralingvistika_N = "паралингвистики"
+lemmaGenitive parametrizatsiya_N = "параметризации"
+lemmaGenitive park_N = "парка"
 lemmaGenitive paronepronitsaemost_N = "паронепроницаемости"
+lemmaGenitive parta_N = "парты"
+lemmaGenitive partiya_N = "партии"
+lemmaGenitive parus_N = "паруса"
+lemmaGenitive paseka_N = "пасеки"
 lemmaGenitive passazhirovmestimost_N = "пассажировместимости"
 lemmaGenitive patafizika_N = "патафизики"
 lemmaGenitive patentosposobnost_N = "патентоспособности"
 lemmaGenitive patogennost_N = "патогенности"
 lemmaGenitive patrilinejnost_N = "патрилинейности"
+lemmaGenitive pauza_N = "паузы"
+lemmaGenitive pautina_N = "паутины"
 lemmaGenitive pahotoprigodnost_N = "пахотопригодности"
+lemmaGenitive pevets_N = "певца"
+lemmaGenitive pekarnya_N = "пекарни"
 lemmaGenitive penetrantnost_N = "пенетрантности"
+lemmaGenitive pensiya_N = "пенсии"
 lemmaGenitive pervozdannost_N = "первозданности"
+lemmaGenitive perevod_N = "перевода"
+lemmaGenitive perevorot_N = "переворота"
+lemmaGenitive peredacha_N = "передачи"
 lemmaGenitive perelivchatost_N = "переливчатости"
+lemmaGenitive perelom_N = "перелома"
 lemmaGenitive peremezhaemost_N = "перемежаемости"
+lemmaGenitive peremennaya_N = "переменной"
 lemmaGenitive peremestitelnost_N = "переместительности"
 lemmaGenitive peremeshchaemost_N = "перемещаемости"
+lemmaGenitive peremeshchenie_N = "перемещения"
 lemmaGenitive perenalazhivaemost_N = "переналаживаемости"
 lemmaGenitive perenormiruemost_N = "перенормируемости"
+lemmaGenitive perenos_N = "переноса"
 lemmaGenitive perenosimost_N = "переносимости"
+lemmaGenitive pereprava_N = "переправы"
 lemmaGenitive pereputannost_N = "перепутанности"
+lemmaGenitive peresechenie_N = "пересечения"
 lemmaGenitive perestanovochnost_N = "перестановочности"
+lemmaGenitive perehod_N = "перехода"
+lemmaGenitive period_N = "периода"
 lemmaGenitive peristost_N = "перистости"
+lemmaGenitive pero_N = "пера"
+lemmaGenitive perspektiva_N = "перспективы"
+lemmaGenitive pesnya_N = "песни"
+lemmaGenitive pesok_N = "песка"
+lemmaGenitive petlya_N = "петли"
+lemmaGenitive petuh_N = "петуха"
+lemmaGenitive pechal_N = "печали"
+lemmaGenitive pechat_N = "печати"
+lemmaGenitive pechka_N = "печки"
+lemmaGenitive peshka_N = "пешки"
 lemmaGenitive pika_N = "пики"
+lemmaGenitive pila_N = "пилы"
 lemmaGenitive piloobraznost_N = "пилообразности"
+lemmaGenitive pioner_N = "пионера"
+lemmaGenitive pirog_N = "пирога"
 lemmaGenitive piroprovodimost_N = "пиропроводимости"
+lemmaGenitive pisatel_N = "писателя"
+lemmaGenitive pitanie_N = "питания"
+lemmaGenitive pishcha_N = "пищи"
+lemmaGenitive plavlenie_N = "плавления"
+lemmaGenitive planeta_N = "планеты"
+lemmaGenitive plastichnost_N = "пластичности"
+lemmaGenitive plata_N = "платы"
 lemmaGenitive platezhnost_N = "платежности"
+lemmaGenitive platforma_N = "платформы"
+lemmaGenitive plate_N = "платья"
+lemmaGenitive platezh_N = "платежа"
+lemmaGenitive plita_N = "плиты"
+lemmaGenitive plod_N = "плода"
 lemmaGenitive plojchatost_N = "плойчатости"
 lemmaGenitive ploskostnost_N = "плоскостности"
+lemmaGenitive ploskost_N = "плоскости"
+lemmaGenitive plotnost_N = "плотности"
+lemmaGenitive ploshchadka_N = "площадки"
+lemmaGenitive ploshchad_N = "площади"
+lemmaGenitive plyazh_N = "пляжа"
 lemmaGenitive pnevmatichnost_N = "пневматичности"
 lemmaGenitive pnevmoavtomatika_N = "пневмоавтоматики"
 lemmaGenitive pnevmonika_N = "пневмоники"
+lemmaGenitive pobeda_N = "победы"
+lemmaGenitive poberezhe_N = "побережья"
 lemmaGenitive pobitost_N = "побитости"
+lemmaGenitive povar_N = "повара"
+lemmaGenitive povedenie_N = "поведения"
+lemmaGenitive poverhnost_N = "поверхности"
+lemmaGenitive povod_N = "повода"
+lemmaGenitive povorot_N = "поворота"
+lemmaGenitive povtor_N = "повтора"
 lemmaGenitive pogashennost_N = "погашенности"
 lemmaGenitive pogloshchennost_N = "поглощенности"
+lemmaGenitive pogoda_N = "погоды"
 lemmaGenitive pogodoustojchivost_N = "погодоустойчивости"
+lemmaGenitive pogon_N = "погона"
+lemmaGenitive pogreshnost_N = "погрешности"
 lemmaGenitive pogruzhennost_N = "погруженности"
+lemmaGenitive podval_N = "подвала"
+lemmaGenitive podvig_N = "подвига"
+lemmaGenitive podderzhka_N = "поддержки"
+lemmaGenitive podkova_N = "подковы"
 lemmaGenitive podkontrolnost_N = "подконтрольности"
 lemmaGenitive podkupnost_N = "подкупности"
+lemmaGenitive podlodka_N = "подлодки"
+lemmaGenitive podmnozhestvo_N = "подмножества"
 lemmaGenitive podnadzornost_N = "поднадзорности"
+lemmaGenitive podnos_N = "подноса"
+lemmaGenitive podotchetnost_N = "подотчетности"
+lemmaGenitive podpis_N = "подписи"
+lemmaGenitive podrobnost_N = "подробности"
 lemmaGenitive podrubrika_N = "подрубрики"
+lemmaGenitive podruga_N = "подруги"
+lemmaGenitive podsistema_N = "подсистемы"
 lemmaGenitive podsledstvennost_N = "подследственности"
 lemmaGenitive podsudimost_N = "подсудимости"
+lemmaGenitive poezd_N = "поезда"
+lemmaGenitive pozhar_N = "пожара"
 lemmaGenitive pozharobezopasnost_N = "пожаробезопасности"
 lemmaGenitive pozharoopasnost_N = "пожароопасности"
-lemmaGenitive pozitsiya_N = "позиции"
 lemmaGenitive pokinutost_N = "покинутости"
+lemmaGenitive pokoj_N = "покоя"
 lemmaGenitive pokoroblennost_N = "покоробленности"
+lemmaGenitive pokryshka_N = "покрышки"
+lemmaGenitive pokupka_N = "покупки"
+lemmaGenitive pol_N = "пола"
 lemmaGenitive polgodika_N = "полугодика"
+lemmaGenitive polemika_N = "полемики"
 lemmaGenitive poletoprigodnost_N = "полетопригодности"
 lemmaGenitive polivalentnost_N = "поливалентности"
+lemmaGenitive politika_N = "политики"
 lemmaGenitive politkorrektnost_N = "политкорректности"
 lemmaGenitive politonalnost_N = "политональности"
 lemmaGenitive polnovodnost_N = "полноводности"
 lemmaGenitive polnodrevesnost_N = "полнодревесности"
 lemmaGenitive polnokrovnost_N = "полнокровности"
 lemmaGenitive polozhennost_N = "положенности"
+lemmaGenitive polomka_N = "поломки"
+lemmaGenitive polosa_N = "полосы"
 lemmaGenitive poloschatost_N = "полосчатости"
 lemmaGenitive polstakanchika_N = "полустаканчика"
 lemmaGenitive poluanonimnost_N = "полуанонимности"
@@ -5710,68 +8657,157 @@ lemmaGenitive poluploskost_N = "полуплоскости"
 lemmaGenitive poluprozrachnost_N = "полупрозрачности"
 lemmaGenitive polchasika_N = "получасика"
 lemmaGenitive polyubovnost_N = "полюбовности"
+lemmaGenitive polyus_N = "полюса"
+lemmaGenitive polyana_N = "поляны"
 lemmaGenitive polyarizuemost_N = "поляризуемости"
 lemmaGenitive pomehozashchishchennost_N = "помехозащищенности"
-lemmaGenitive ponimanie_N = "понимания"
-lemmaGenitive ponimat_V = "понимать"
-lemmaGenitive ponyatie_N = "понятия"
+lemmaGenitive pomeshchenie_N = "помещения"
+lemmaGenitive pomeshchik_N = "помещика"
+lemmaGenitive pomidor_N = "помидора"
+lemmaGenitive pomoshch_N = "помощи"
+lemmaGenitive ponedelnik_N = "понедельника"
+lemmaGenitive poncho_N = "пончо"
+lemmaGenitive ponyatnost_N = "понятности"
+lemmaGenitive pop_N = "попа"
+lemmaGenitive popytka_N = "попытки"
 lemmaGenitive poraboshchennost_N = "порабощенности"
 lemmaGenitive porazhennost_N = "пораженности"
+lemmaGenitive porog_N = "порога"
+lemmaGenitive poroda_N = "породы"
 lemmaGenitive poroznost_N = "порозности"
+lemmaGenitive poroh_N = "пороха"
+lemmaGenitive portret_N = "портрета"
+lemmaGenitive portera_N = "портьеры"
+lemmaGenitive poruchenie_N = "поручения"
 lemmaGenitive posvyashchennost_N = "посвященности"
+lemmaGenitive posev_N = "посева"
+lemmaGenitive posledovatelnost_N = "последовательности"
+lemmaGenitive posledstvie_N = "последствия"
+lemmaGenitive posol_N = "посла"
+lemmaGenitive posrednik_N = "посредника"
 lemmaGenitive postizhimost_N = "постижимости"
 lemmaGenitive postnost_N = "постности"
+lemmaGenitive postupok_N = "поступка"
+lemmaGenitive postuslovie_N = "постусловия"
 lemmaGenitive postylost_N = "постылости"
-lemmaGenitive posylka_N = "посылки"
 lemmaGenitive potaennost_N = "потаенности"
+lemmaGenitive poterya_N = "потери"
+lemmaGenitive potok_N = "потока"
+lemmaGenitive potolok_N = "потолка"
+lemmaGenitive pochva_N = "почвы"
+lemmaGenitive pochta_N = "почты"
 lemmaGenitive poetapnost_N = "поэтапности"
-lemmaGenitive pravda_N = "правды"
-lemmaGenitive pravo_N = "права"
+lemmaGenitive poyas_N = "пояса"
+lemmaGenitive pravilo_N = "правила"
+lemmaGenitive pravilnost_N = "правильности"
+lemmaGenitive pravitelstvo_N = "правительства"
 lemmaGenitive pravosubektivnost_N = "правосубъективности"
 lemmaGenitive pravosubektnost_N = "правосубъектности"
+lemmaGenitive prazdnik_N = "праздника"
+lemmaGenitive pregrada_N = "преграды"
+lemmaGenitive predannost_N = "преданности"
+lemmaGenitive predatelstvo_N = "предательства"
 lemmaGenitive preddelinkventnost_N = "предделинквентности"
+lemmaGenitive predel_N = "предела"
+lemmaGenitive predlozhenie_N = "предложения"
+lemmaGenitive predmet_N = "предмета"
 lemmaGenitive predohranitelnost_N = "предохранительности"
-lemmaGenitive predpolozhenie_N = "предположения"
-lemmaGenitive predposylka_N = "предпосылки"
+lemmaGenitive predpriyatie_N = "предприятия"
 lemmaGenitive predskazuemost_N = "предсказуемости"
 lemmaGenitive predstavimost_N = "представимости"
+lemmaGenitive preduslovie_N = "предусловия"
 lemmaGenitive predustanovlennost_N = "предустановленности"
+lemmaGenitive prezident_N = "президента"
+lemmaGenitive prelest_N = "прелести"
+lemmaGenitive prepyatstvie_N = "препятствия"
+lemmaGenitive preryvanie_N = "прерывания"
 lemmaGenitive prestizhnost_N = "престижности"
+lemmaGenitive prestuplenie_N = "преступления"
 lemmaGenitive preyuditsialnost_N = "преюдициальности"
+lemmaGenitive pribyl_N = "прибыли"
+lemmaGenitive privet_N = "привета"
 lemmaGenitive privodimost_N = "приводимости"
 lemmaGenitive privolnost_N = "привольности"
+lemmaGenitive privychka_N = "привычки"
 lemmaGenitive priglushennost_N = "приглушенности"
+lemmaGenitive prigorod_N = "пригорода"
+lemmaGenitive priem_N = "приема"
 lemmaGenitive prizemlennost_N = "приземленности"
+lemmaGenitive priznak_N = "признака"
+lemmaGenitive prizrak_N = "призрака"
+lemmaGenitive prikaz_N = "приказа"
 lemmaGenitive prikovannost_N = "прикованности"
 lemmaGenitive prilegaemost_N = "прилегаемости"
 lemmaGenitive primetnost_N = "приметности"
-lemmaGenitive prinuzhdenie_N = "принуждения"
+lemmaGenitive prints_N = "принца"
+lemmaGenitive printsip_N = "принципа"
+lemmaGenitive prinyatie_N = "принятия"
 lemmaGenitive prinyatost_N = "принятости"
 lemmaGenitive priobshchennost_N = "приобщенности"
+lemmaGenitive prioritet_N = "приоритета"
+lemmaGenitive prioritizatsiya_N = "приоритизации"
+lemmaGenitive priroda_N = "природы"
 lemmaGenitive prirodoemkost_N = "природоемкости"
 lemmaGenitive prisposablivaemost_N = "приспосабливаемости"
 lemmaGenitive pristyzhennost_N = "пристыженности"
-lemmaGenitive prisutstvie_N = "присутствия"
-lemmaGenitive prichina_N = "причины"
+lemmaGenitive prichinnost_N = "причинности"
 lemmaGenitive prishiblennost_N = "пришибленности"
+lemmaGenitive priem_Nv2 = "приема"
+lemmaGenitive priemnik_N = "приемника"
+lemmaGenitive probka_N = "пробки"
+lemmaGenitive problema_N = "проблемы"
 lemmaGenitive problemnost_N = "проблемности"
 lemmaGenitive probnost_N = "пробности"
-lemmaGenitive proverka_N = "проверки"
+lemmaGenitive provintsiya_N = "провинции"
+lemmaGenitive provod_N = "провода"
+lemmaGenitive provodimost_N = "проводимости"
+lemmaGenitive prognoz_N = "прогноза"
+lemmaGenitive programma_N = "программы"
 lemmaGenitive programmiruemost_N = "программируемости"
+lemmaGenitive progulka_N = "прогулки"
+lemmaGenitive prodazha_N = "продажи"
+lemmaGenitive prodolzhenie_N = "продолжения"
+lemmaGenitive produkt_N = "продукта"
+lemmaGenitive prodyuser_N = "продюсера"
+lemmaGenitive proekt_N = "проекта"
 lemmaGenitive proektivnost_N = "проективности"
+lemmaGenitive proza_N = "прозы"
+lemmaGenitive prozrachnost_N = "прозрачности"
+lemmaGenitive proigrysh_N = "проигрыша"
+lemmaGenitive proklyatie_N = "проклятия"
 lemmaGenitive proksemika_N = "проксемики"
 lemmaGenitive promaslennost_N = "промасленности"
 lemmaGenitive promezhutochnost_N = "промежуточности"
-lemmaGenitive proniknut_V = "проникнуть"
+lemmaGenitive propusk_N = "пропуска"
+lemmaGenitive propusknaya_sposobnost_N = "пропускной способности"
+lemmaGenitive prorez_N = "прорези"
+lemmaGenitive prorok_N = "пророка"
 lemmaGenitive prosvechivaemost_N = "просвечиваемости"
+lemmaGenitive prospekt_N = "проспекта"
+lemmaGenitive prostor_N = "простора"
+lemmaGenitive prostota_N = "простоты"
 lemmaGenitive prostuzhennost_N = "простуженности"
+lemmaGenitive prostynya_N = "простыни"
+lemmaGenitive prosba_N = "просьбы"
+lemmaGenitive protivnik_N = "противника"
 lemmaGenitive protivooreolnost_N = "противоореольности"
 lemmaGenitive protivopokazannost_N = "противопоказанности"
 lemmaGenitive protivopravnost_N = "противоправности"
-lemmaGenitive protivorechie_N = "противоречия"
 lemmaGenitive protogalaktika_N = "протогалактики"
+lemmaGenitive protokol_N = "протокола"
+lemmaGenitive professiya_N = "профессии"
+lemmaGenitive profilaktika_N = "профилактики"
+lemmaGenitive profilirovanie_N = "профилирования"
 lemmaGenitive profnadezhnost_N = "профнадежности"
+lemmaGenitive prohod_N = "прохода"
+lemmaGenitive protsent_N = "процента"
 lemmaGenitive prochuvstvovannost_N = "прочувствованности"
+lemmaGenitive proshloe_N = "прошлого"
+lemmaGenitive proshchenie_N = "прощения"
+lemmaGenitive prud_N = "пруда"
+lemmaGenitive pryzhok_N = "прыжка"
+lemmaGenitive pryad_N = "пряди"
+lemmaGenitive pryazha_N = "пряжи"
 lemmaGenitive pryamougolnost_N = "прямоугольности"
 lemmaGenitive pryanichnost_N = "пряничности"
 lemmaGenitive psevdoizoshchrennost_N = "псевдоизощренности"
@@ -5781,86 +8817,165 @@ lemmaGenitive psevdoutonchennost_N = "псевдоутонченности"
 lemmaGenitive psihografika_N = "психографики"
 lemmaGenitive psihodinamika_N = "психодинамики"
 lemmaGenitive psihoprofilaktika_N = "психопрофилактики"
+lemmaGenitive ptitsa_N = "птицы"
+lemmaGenitive publika_N = "публики"
+lemmaGenitive pud_N = "пуда"
 lemmaGenitive puzyrchatost_N = "пузырчатости"
-lemmaGenitive pustota_N = "пустоты"
+lemmaGenitive puzyr_N = "пузыря"
+lemmaGenitive pult_N = "пульта"
 lemmaGenitive putanost_N = "путаности"
+lemmaGenitive puteshestvie_N = "путешествия"
+lemmaGenitive putnik_N = "путника"
 lemmaGenitive puchnost_N = "пучности"
+lemmaGenitive pshenitsa_N = "пшеницы"
 lemmaGenitive pezovospriimchivost_N = "пьезовосприимчивости"
 lemmaGenitive pezokeramika_N = "пьезокерамики"
+lemmaGenitive pyad_N = "пяди"
 lemmaGenitive pyativalentnost_N = "пятивалентности"
+lemmaGenitive rab_N = "раба"
+lemmaGenitive ravnina_N = "равнины"
+lemmaGenitive ravnovesie_N = "равновесия"
 lemmaGenitive ravnodostupnost_N = "равнодоступности"
-lemmaGenitive ravnosilnost_N = "равносильности"
+lemmaGenitive ravnodushie_N = "равнодушия"
+lemmaGenitive ravnopravie_N = "равноправия"
+lemmaGenitive radzha_N = "раджи"
+lemmaGenitive radiatsiya_N = "радиации"
 lemmaGenitive radioakustika_N = "радиоакустики"
 lemmaGenitive radiogalaktika_N = "радиогалактики"
 lemmaGenitive radiogenetika_N = "радиогенетики"
 lemmaGenitive radiomehanika_N = "радиомеханики"
 lemmaGenitive radioneprozrachnost_N = "радионепрозрачности"
+lemmaGenitive radius_N = "радиуса"
 lemmaGenitive radonoopasnost_N = "радоноопасности"
-lemmaGenitive radost_N = "радости"
+lemmaGenitive raduga_N = "радуги"
+lemmaGenitive raz_N = "раза"
 lemmaGenitive razbavlennost_N = "разбавленности"
 lemmaGenitive razbalansirovannost_N = "разбалансированности"
-lemmaGenitive razgranichenie_N = "разграничения"
+lemmaGenitive razvedka_N = "разведки"
+lemmaGenitive razgovor_N = "разговора"
+lemmaGenitive razdacha_N = "раздачи"
 lemmaGenitive razdelimost_N = "разделимости"
 lemmaGenitive razzhizhennost_N = "разжиженности"
-lemmaGenitive razlichat_V = "различать"
-lemmaGenitive razlichie_N = "различия"
 lemmaGenitive razlichimost_N = "различимости"
+lemmaGenitive razluka_N = "разлуки"
+lemmaGenitive razmer_N = "размера"
 lemmaGenitive razmytost_N = "размытости"
-lemmaGenitive raznitsa_N = "разницы"
-lemmaGenitive razreshenie_N = "разрешения"
 lemmaGenitive razreshimost_N = "разрешимости"
 lemmaGenitive razrushaemost_N = "разрушаемости"
 lemmaGenitive razrushimost_N = "разрушимости"
 lemmaGenitive razryvnost_N = "разрывности"
+lemmaGenitive razryad_N = "разряда"
 lemmaGenitive razryazhennost_N = "разряженности"
-lemmaGenitive razum_N = "разума"
 lemmaGenitive razezzhennost_N = "разъезженности"
+lemmaGenitive raj_N = "рая"
+lemmaGenitive rajon_N = "района"
+lemmaGenitive rak_N = "рака"
+lemmaGenitive raketa_N = "ракеты"
 lemmaGenitive raketodinamika_N = "ракетодинамики"
-lemmaGenitive rakurs_N = "ракурса"
+lemmaGenitive ramka_N = "рамки"
 lemmaGenitive ranennost_N = "раненности"
 lemmaGenitive raskrashennost_N = "раскрашенности"
 lemmaGenitive raskruchennost_N = "раскрученности"
 lemmaGenitive raskryvaemost_N = "раскрываемости"
 lemmaGenitive raspevnost_N = "распевности"
+lemmaGenitive raspisanie_N = "расписания"
 lemmaGenitive raspolozhennost_N = "расположенности"
+lemmaGenitive rasporyazhenie_N = "распоряжения"
+lemmaGenitive raspredelenie_N = "распределения"
+lemmaGenitive rassvet_N = "рассвета"
+lemmaGenitive rasskaz_N = "рассказа"
 lemmaGenitive rassloennost_N = "расслоенности"
 lemmaGenitive rassoglasovannost_N = "рассогласованности"
 lemmaGenitive rassredotochennost_N = "рассредоточенности"
+lemmaGenitive rasstavanie_N = "расставания"
+lemmaGenitive rasstoyanie_N = "расстояния"
+lemmaGenitive rastvor_N = "раствора"
 lemmaGenitive rasterzannost_N = "растерзанности"
 lemmaGenitive rastrepannost_N = "растрепанности"
 lemmaGenitive rastrogannost_N = "растроганности"
+lemmaGenitive rashod_N = "расхода"
 lemmaGenitive rashodimost_N = "расходимости"
 lemmaGenitive rasshirennost_N = "расширенности"
 lemmaGenitive rasshcheplennost_N = "расщепленности"
+lemmaGenitive ratsiya_N = "рации"
 lemmaGenitive rashpilevidnost_N = "рашпилевидности"
 lemmaGenitive readaptatsiya_N = "реадаптации"
+lemmaGenitive reaktsiya_N = "реакции"
 lemmaGenitive realizuemost_N = "реализуемости"
 lemmaGenitive reversivnost_N = "реверсивности"
+lemmaGenitive reviziya_N = "ревизии"
+lemmaGenitive region_N = "региона"
+lemmaGenitive registratsiya_N = "регистрации"
+lemmaGenitive reglamentatsiya_N = "регламентации"
+lemmaGenitive regressiya_N = "регрессии"
+lemmaGenitive redaktor_N = "редактора"
 lemmaGenitive reenterabelnost_N = "реентерабельности"
+lemmaGenitive rezhim_N = "режима"
 lemmaGenitive rezhimnost_N = "режимности"
+lemmaGenitive rezina_N = "резины"
 lemmaGenitive rezinotehnika_N = "резинотехники"
 lemmaGenitive rezistentnost_N = "резистентности"
+lemmaGenitive rezonans_N = "резонанса"
+lemmaGenitive rezultat_N = "результата"
 lemmaGenitive rejganomika_N = "рейганомики"
 lemmaGenitive rekurrentnost_N = "рекуррентности"
 lemmaGenitive rekursivnost_N = "рекурсивности"
+lemmaGenitive rekursiya_N = "рекурсии"
 lemmaGenitive relevantnost_N = "релевантности"
-lemmaGenitive remont_N = "ремонта"
+lemmaGenitive reliz_N = "релиза"
+lemmaGenitive rels_N = "рельса"
 lemmaGenitive remontoprigodnost_N = "ремонтопригодности"
 lemmaGenitive remontosposobnost_N = "ремонтоспособности"
 lemmaGenitive rentosposobnost_N = "рентоспособности"
+lemmaGenitive repka_N = "репки"
+lemmaGenitive replikatsiya_N = "репликации"
+lemmaGenitive reportazh_N = "репортажа"
+lemmaGenitive reputatsiya_N = "репутации"
+lemmaGenitive restoran_N = "ресторана"
+lemmaGenitive resurs_N = "ресурса"
 lemmaGenitive resursoemkost_N = "ресурсоемкости"
 lemmaGenitive refleksivnost_N = "рефлексивности"
+lemmaGenitive reforma_N = "реформы"
 lemmaGenitive refrakternost_N = "рефрактерности"
-lemmaGenitive reshenie_N = "решения"
+lemmaGenitive retsenziya_N = "рецензии"
+lemmaGenitive rech_N = "речи"
+lemmaGenitive ris_N = "риса"
 lemmaGenitive riflenost_N = "рифлености"
 lemmaGenitive robastnost_N = "робастности"
+lemmaGenitive robot_N = "робота"
 lemmaGenitive robotehnika_N = "роботехники"
 lemmaGenitive robototehnika_N = "робототехники"
+lemmaGenitive roga_N = "рогов"
+lemmaGenitive rodina_N = "родины"
+lemmaGenitive rozhok_N = "рожка"
+lemmaGenitive roza_N = "розы"
 lemmaGenitive rozovatost_N = "розоватости"
 lemmaGenitive rozovoshchekost_N = "розовощекости"
+lemmaGenitive rok_N = "рока"
+lemmaGenitive roman_N = "романа"
+lemmaGenitive rosa_N = "росы"
 lemmaGenitive rosistost_N = "росистости"
+lemmaGenitive roshcha_N = "рощи"
+lemmaGenitive royal_N = "рояля"
+lemmaGenitive rubashka_N = "рубашки"
+lemmaGenitive rubezh_N = "рубежа"
+lemmaGenitive rubl_N = "рубля"
+lemmaGenitive ruda_N = "руды"
 lemmaGenitive rudonosnost_N = "рудоносности"
+lemmaGenitive rukav_N = "рукава"
+lemmaGenitive rukovoditel_N = "руководителя"
+lemmaGenitive rukovodstvo_N = "руководства"
+lemmaGenitive russkij_N = "русского"
+lemmaGenitive ruchej_N = "ручья"
+lemmaGenitive ryba_N = "рыбы"
+lemmaGenitive rybak_N = "рыбака"
 lemmaGenitive ryboproduktivnost_N = "рыбопродуктивности"
+lemmaGenitive rynok_N = "рынка"
+lemmaGenitive sablya_N = "сабли"
+lemmaGenitive sadovod_N = "садовода"
+lemmaGenitive salat_N = "салата"
+lemmaGenitive salon_N = "салона"
+lemmaGenitive samovar_N = "самовара"
 lemmaGenitive samovosplamenyaemost_N = "самовоспламеняемости"
 lemmaGenitive samodistributivnost_N = "самодистрибутивности"
 lemmaGenitive samodostatochnost_N = "самодостаточности"
@@ -5868,8 +8983,17 @@ lemmaGenitive samozabvennost_N = "самозабвенности"
 lemmaGenitive samozanyatost_N = "самозанятости"
 lemmaGenitive samoobespechennost_N = "самообеспеченности"
 lemmaGenitive samoochevidnost_N = "самоочевидности"
+lemmaGenitive sani_N = "саней"
 lemmaGenitive sanovnost_N = "сановности"
+lemmaGenitive sapog_N = "сапога"
+lemmaGenitive saraj_N = "сарая"
+lemmaGenitive satir_N = "сатира"
+lemmaGenitive sahar_N = "сахара"
 lemmaGenitive sbalansirovannost_N = "сбалансированности"
+lemmaGenitive sboj_N = "сбоя"
+lemmaGenitive svadba_N = "свадьбы"
+lemmaGenitive svedeniya_N = "сведений"
+lemmaGenitive svekla_N = "свеклы"
 lemmaGenitive svernutost_N = "свернутости"
 lemmaGenitive sverhaktivnost_N = "сверхактивности"
 lemmaGenitive sverhvooruzhennost_N = "сверхвооруженности"
@@ -5880,107 +9004,266 @@ lemmaGenitive sverhplastichnost_N = "сверхпластичности"
 lemmaGenitive sverhsekretnost_N = "сверхсекретности"
 lemmaGenitive sverhspiralnost_N = "сверхспиральности"
 lemmaGenitive sverheffektivnost_N = "сверхэффективности"
+lemmaGenitive svet_N = "света"
 lemmaGenitive svetnost_N = "светности"
 lemmaGenitive svetolyubivost_N = "светолюбивости"
 lemmaGenitive svetoprochnost_N = "светопрочности"
-lemmaGenitive svidetelstvo_N = "свидетельства"
+lemmaGenitive svecha_N = "свечи"
+lemmaGenitive svidanie_N = "свидания"
+lemmaGenitive svinya_N = "свиньи"
+lemmaGenitive sviter_N = "свитера"
 lemmaGenitive svishchevatost_N = "свищеватости"
 lemmaGenitive svoboda_N = "свободы"
 lemmaGenitive svobodnost_N = "свободности"
 lemmaGenitive svodimost_N = "сводимости"
+lemmaGenitive svodka_N = "сводки"
 lemmaGenitive svojstvennost_N = "свойственности"
+lemmaGenitive svyazka_N = "связки"
+lemmaGenitive svyaznost_N = "связности"
+lemmaGenitive svyaz_N = "связи"
+lemmaGenitive svyashchennik_N = "священника"
 lemmaGenitive svyashchennost_N = "священности"
 lemmaGenitive sgorblennost_N = "сгорбленности"
 lemmaGenitive sdavlennost_N = "сдавленности"
+lemmaGenitive sdvig_N = "сдвига"
 lemmaGenitive sdobnost_N = "сдобности"
+lemmaGenitive sever_N = "севера"
+lemmaGenitive segment_N = "сегмента"
+lemmaGenitive segmentatsiya_N = "сегментации"
+lemmaGenitive segodnya_N = "сегодня"
+lemmaGenitive sedlo_N = "седла"
+lemmaGenitive sezon_N = "сезона"
 lemmaGenitive sejsmobezopasnost_N = "сейсмобезопасности"
 lemmaGenitive sejsmoopasnost_N = "сейсмоопасности"
+lemmaGenitive sejf_N = "сейфа"
+lemmaGenitive sekret_N = "секрета"
+lemmaGenitive sektor_N = "сектора"
+lemmaGenitive sektsiya_N = "секции"
 lemmaGenitive selhoztehnika_N = "сельхозтехники"
+lemmaGenitive semya_N = "семени"
+lemmaGenitive senat_N = "сената"
 lemmaGenitive sensitivnost_N = "сенситивности"
 lemmaGenitive sensorika_N = "сенсорики"
+lemmaGenitive sentyabr_N = "сентября"
+lemmaGenitive sen_N = "сени"
 lemmaGenitive separabelnost_N = "сепарабельности"
 lemmaGenitive septichnost_N = "септичности"
+lemmaGenitive seredina_N = "середины"
+lemmaGenitive serializatsiya_N = "сериализации"
+lemmaGenitive serp_N = "серпа"
+lemmaGenitive sestra_N = "сестры"
 lemmaGenitive setchatost_N = "сетчатости"
-lemmaGenitive sillogizm_N = "силлогизма"
+lemmaGenitive set_N = "сети"
+lemmaGenitive sigareta_N = "сигареты"
+lemmaGenitive signal_N = "сигнала"
+lemmaGenitive sidene_N = "сиденья"
+lemmaGenitive silach_N = "силача"
+lemmaGenitive silogizm_N = "силогизма"
+lemmaGenitive simpatiya_N = "симпатии"
 lemmaGenitive singulyarnost_N = "сингулярности"
 lemmaGenitive sinektika_N = "синектики"
 lemmaGenitive sinergetika_N = "синергетики"
 lemmaGenitive sintaktika_N = "синтактики"
+lemmaGenitive sinhronizatsiya_N = "синхронизации"
+lemmaGenitive sinhronnost_N = "синхронности"
+lemmaGenitive siren_N = "сирени"
 lemmaGenitive sistemotehnika_N = "системотехники"
-lemmaGenitive skazat_V = "сказать"
+lemmaGenitive skazka_N = "сказки"
+lemmaGenitive skala_N = "скалы"
+lemmaGenitive skamya_N = "скамьи"
 lemmaGenitive skarednost_N = "скаредности"
+lemmaGenitive skatert_N = "скатерти"
+lemmaGenitive skachok_N = "скачка"
+lemmaGenitive skidka_N = "скидки"
+lemmaGenitive sklad_N = "склада"
+lemmaGenitive skladka_N = "складки"
 lemmaGenitive skoordinirovannost_N = "скоординированности"
 lemmaGenitive skorostrelnost_N = "скорострельности"
+lemmaGenitive skorost_N = "скорости"
+lemmaGenitive skot_N = "скота"
 lemmaGenitive skoshennost_N = "скошенности"
 lemmaGenitive skruchennost_N = "скрученности"
 lemmaGenitive skruchivaemost_N = "скручиваемости"
+lemmaGenitive slava_N = "славы"
 lemmaGenitive sladkoglasnost_N = "сладкогласности"
-lemmaGenitive sledstvie_N = "следствия"
+lemmaGenitive sledovanie_N = "следования"
+lemmaGenitive sleza_N = "слезы"
+lemmaGenitive slepoj_N = "слепого"
+lemmaGenitive sliva_N = "сливы"
+lemmaGenitive slozhnost_N = "сложности"
+lemmaGenitive sloj_N = "слоя"
+lemmaGenitive slon_N = "слона"
+lemmaGenitive sluga_N = "слуги"
+lemmaGenitive sluzhba_N = "службы"
 lemmaGenitive sluzhebnost_N = "служебности"
+lemmaGenitive sluchajnost_N = "случайности"
+lemmaGenitive slushatel_N = "слушателя"
 lemmaGenitive smazannost_N = "смазанности"
 lemmaGenitive smachivaemost_N = "смачиваемости"
-lemmaGenitive smert_N = "смерти"
+lemmaGenitive smena_N = "смены"
+lemmaGenitive smes_N = "смеси"
 lemmaGenitive smeshannost_N = "смешанности"
 lemmaGenitive smeshchaemost_N = "смещаемости"
 lemmaGenitive sminaemost_N = "сминаемости"
-lemmaGenitive smirenie_N = "смирения"
 lemmaGenitive smirnost_N = "смирности"
-lemmaGenitive smysl_N = "смысла"
+lemmaGenitive smola_N = "смолы"
+lemmaGenitive sneg_N = "снега"
+lemmaGenitive snegovik_N = "снеговика"
+lemmaGenitive snegurka_N = "снегурки"
+lemmaGenitive sobaka_N = "собаки"
 lemmaGenitive sobiraemost_N = "собираемости"
+lemmaGenitive sobor_N = "собора"
+lemmaGenitive sobytie_N = "события"
 lemmaGenitive sovershennost_N = "совершенности"
-lemmaGenitive soglasie_N = "согласия"
-lemmaGenitive soglasovannost_N = "согласованности"
+lemmaGenitive sovest_N = "совести"
+lemmaGenitive sovet_N = "совета"
+lemmaGenitive sovmestimost_N = "совместимости"
 lemmaGenitive sognutost_N = "согнутости"
 lemmaGenitive soznanie_N = "сознания"
+lemmaGenitive sok_N = "сока"
+lemmaGenitive sokol_N = "сокола"
 lemmaGenitive sokrashchaemost_N = "сокращаемости"
-lemmaGenitive somnenie_N = "сомнения"
+lemmaGenitive soldat_N = "солдата"
+lemmaGenitive solntsestoyanie_N = "солнцестояния"
 lemmaGenitive sonika_N = "соники"
+lemmaGenitive soobshchenie_N = "сообщения"
 lemmaGenitive soosnost_N = "соосности"
+lemmaGenitive sootvetstvie_N = "соответствия"
+lemmaGenitive sootnoshenie_N = "соотношения"
 lemmaGenitive sopodchinennost_N = "соподчиненности"
+lemmaGenitive soprotivlenie_N = "сопротивления"
+lemmaGenitive soroka_N = "сороки"
+lemmaGenitive sosed_N = "соседа"
+lemmaGenitive sosna_N = "сосны"
+lemmaGenitive sostav_N = "состава"
+lemmaGenitive sosud_N = "сосуда"
+lemmaGenitive sofa_N = "софы"
+lemmaGenitive soha_N = "сохи"
 lemmaGenitive sohranyaemost_N = "сохраняемости"
 lemmaGenitive soyuzselhoztehnika_N = "союзсельхозтехники"
 lemmaGenitive soyuzspetsavtomatika_N = "союзспецавтоматики"
+lemmaGenitive spalnyj_N = "спального"
+lemmaGenitive spalnya_N = "спальни"
+lemmaGenitive spektakl_N = "спектакля"
+lemmaGenitive spektr_N = "спектра"
+lemmaGenitive spekulyatsiya_N = "спекуляции"
 lemmaGenitive spetsavtomatika_N = "спецавтоматики"
+lemmaGenitive spetsifikatsiya_N = "спецификации"
+lemmaGenitive spetsifichnost_N = "специфичности"
 lemmaGenitive spetsorgtehnika_N = "спецоргтехники"
 lemmaGenitive spetstehnika_N = "спецтехники"
+lemmaGenitive spina_N = "спины"
+lemmaGenitive spiral_N = "спирали"
+lemmaGenitive spisok_N = "списка"
+lemmaGenitive spichka_N = "спички"
+lemmaGenitive splav_N = "сплава"
 lemmaGenitive sploshnost_N = "сплошности"
 lemmaGenitive splyusnutost_N = "сплюснутости"
 lemmaGenitive splyushchennost_N = "сплющенности"
 lemmaGenitive spokojnost_N = "спокойности"
-lemmaGenitive sposobnost_N = "способности"
-lemmaGenitive spravedlivost_N = "справедливости"
+lemmaGenitive sposob_N = "способа"
+lemmaGenitive spravka_N = "справки"
 lemmaGenitive sputannost_N = "спутанности"
+lemmaGenitive sreda_N = "среды"
+lemmaGenitive sredstvo_N = "средства"
+lemmaGenitive ssora_N = "ссоры"
+lemmaGenitive ssylka_N = "ссылки"
+lemmaGenitive stabilnost_N = "стабильности"
+lemmaGenitive stavka_N = "ставки"
+lemmaGenitive stadion_N = "стадиона"
+lemmaGenitive stadiya_N = "стадии"
+lemmaGenitive stado_N = "стада"
+lemmaGenitive stakan_N = "стакана"
+lemmaGenitive stal_N = "стали"
+lemmaGenitive standartizatsiya_N = "стандартизации"
+lemmaGenitive stanok_N = "станка"
+lemmaGenitive stantsiya_N = "станции"
+lemmaGenitive starik_N = "старика"
+lemmaGenitive starshina_N = "старшины"
+lemmaGenitive status_N = "статуса"
+lemmaGenitive staya_N = "стаи"
+lemmaGenitive stvol_N = "ствола"
+lemmaGenitive steklo_N = "стекла"
 lemmaGenitive steklovidnost_N = "стекловидности"
+lemmaGenitive stena_N = "стены"
+lemmaGenitive stend_N = "стенда"
+lemmaGenitive stepen_N = "степени"
+lemmaGenitive step_N = "степи"
 lemmaGenitive stervoznost_N = "стервозности"
 lemmaGenitive stiraemost_N = "стираемости"
+lemmaGenitive stihiya_N = "стихии"
+lemmaGenitive stojka_N = "стойки"
+lemmaGenitive stol_N = "стола"
+lemmaGenitive stolb_N = "столба"
+lemmaGenitive stolovaya_N = "столовой"
+lemmaGenitive stolyar_N = "столяра"
+lemmaGenitive ston_N = "стона"
+lemmaGenitive storona_N = "стороны"
 lemmaGenitive stohastichnost_N = "стохастичности"
-lemmaGenitive stradanie_N = "страдания"
-lemmaGenitive strah_N = "страха"
+lemmaGenitive stoyanka_N = "стоянки"
+lemmaGenitive stranitsa_N = "страницы"
+lemmaGenitive strast_N = "страсти"
+lemmaGenitive strela_N = "стрелы"
 lemmaGenitive strelovidnost_N = "стреловидности"
-lemmaGenitive styd_N = "стыда"
+lemmaGenitive stremyanka_N = "стремянки"
+lemmaGenitive stroka_N = "строки"
+lemmaGenitive strochka_N = "строчки"
+lemmaGenitive struna_N = "струны"
+lemmaGenitive student_N = "студента"
+lemmaGenitive stul_N = "стула"
 lemmaGenitive subatsidnost_N = "субацидности"
 lemmaGenitive subgarmonika_N = "субгармоники"
-lemmaGenitive sudba_N = "судьбы"
+lemmaGenitive sud_N = "суда"
+lemmaGenitive sudno_N = "судна"
 lemmaGenitive sudbonosnost_N = "судьбоносности"
-lemmaGenitive suzhdenie_N = "суждения"
 lemmaGenitive sumasbrodnost_N = "сумасбродности"
 lemmaGenitive sumerechnost_N = "сумеречности"
+lemmaGenitive sumka_N = "сумки"
+lemmaGenitive summa_N = "суммы"
 lemmaGenitive summiruemost_N = "суммируемости"
+lemmaGenitive sup_N = "супа"
 lemmaGenitive suporosnost_N = "супоросности"
+lemmaGenitive supruga_N = "супруги"
 lemmaGenitive surdotehnika_N = "сурдотехники"
-lemmaGenitive sushchestvovanie_N = "существования"
-lemmaGenitive sushchestvovat_V = "существовать"
+lemmaGenitive sutki_N = "суток"
+lemmaGenitive sfera_N = "сферы"
+lemmaGenitive shema_N = "схемы"
+lemmaGenitive stsena_N = "сцены"
+lemmaGenitive stsenarij_N = "сценария"
 lemmaGenitive stseplennost_N = "сцепленности"
 lemmaGenitive stseplyaemost_N = "сцепляемости"
+lemmaGenitive schaste_N = "счастья"
 lemmaGenitive schetnost_N = "счетности"
+lemmaGenitive schet_N = "счета"
+lemmaGenitive tabak_N = "табака"
+lemmaGenitive tablitsa_N = "таблицы"
+lemmaGenitive taburet_N = "табурета"
+lemmaGenitive tavtologiya_N = "тавтологии"
 lemmaGenitive tagmemika_N = "тагмемики"
-lemmaGenitive tezis_N = "тезиса"
+lemmaGenitive tajga_N = "тайги"
+lemmaGenitive tajna_N = "тайны"
+lemmaGenitive taksi_N = "такси"
+lemmaGenitive talant_N = "таланта"
+lemmaGenitive tanets_N = "танца"
+lemmaGenitive tank_N = "танка"
+lemmaGenitive tarelka_N = "тарелки"
+lemmaGenitive tarif_N = "тарифа"
+lemmaGenitive tachka_N = "тачки"
+lemmaGenitive tvar_N = "твари"
+lemmaGenitive tverd_N = "тверди"
 lemmaGenitive tektonofizika_N = "тектонофизики"
+lemmaGenitive televizor_N = "телевизора"
+lemmaGenitive telega_N = "телеги"
 lemmaGenitive telematika_N = "телематики"
+lemmaGenitive telemetriya_N = "телеметрии"
 lemmaGenitive teleradiotehnika_N = "телерадиотехники"
-lemmaGenitive telo_N = "тела"
+lemmaGenitive telefon_N = "телефона"
+lemmaGenitive temnitsa_N = "темницы"
+lemmaGenitive temperatura_N = "температуры"
 lemmaGenitive temperaturostojkost_N = "температуростойкости"
-lemmaGenitive teorema_N = "теоремы"
+lemmaGenitive tender_N = "тендера"
+lemmaGenitive tenor_N = "тенора"
+lemmaGenitive teoriya_N = "теории"
 lemmaGenitive teplovatost_N = "тепловатости"
 lemmaGenitive teplokrovnost_N = "теплокровности"
 lemmaGenitive teplonapryazhennost_N = "теплонапряженности"
@@ -5989,25 +9272,213 @@ lemmaGenitive teplonepronitsaemost_N = "теплонепроницаемости
 lemmaGenitive teploprozrachnost_N = "теплопрозрачности"
 lemmaGenitive teplopronitsaemost_N = "теплопроницаемости"
 lemmaGenitive teplofizika_N = "теплофизики"
-lemmaGenitive termin_N = "термина"
-lemmaGenitive toska_N = "тоски"
-lemmaGenitive trevoga_N = "тревоги"
-lemmaGenitive uslovie_N = "условия"
-lemmaGenitive utverzhdenie_N = "утверждения"
-lemmaGenitive utochnyat_V = "уточнять"
-lemmaGenitive utrata_N = "утраты"
-lemmaGenitive uhod_N = "ухода"
-lemmaGenitive fakt_N = "факта"
-lemmaGenitive filosofiya_N = "философии"
-lemmaGenitive hrupkost_N = "хрупкости"
-lemmaGenitive tsel_N = "цели"
-lemmaGenitive tsifra_N = "цифры"
-lemmaGenitive chestnost_N = "честности"
-lemmaGenitive ekvivalentsiya_N = "эквиваленции"
-lemmaGenitive eksplikatsiya_N = "экспликации"
-lemmaGenitive entejlment_N = "энтейлмента"
-lemmaGenitive yazyk_N = "языка"
-lemmaGenitive yakor_N = "якоря"
+lemmaGenitive termos_N = "термоса"
+lemmaGenitive terrasa_N = "террасы"
+lemmaGenitive territoriya_N = "территории"
+lemmaGenitive tes_N = "теса"
+lemmaGenitive tesnota_N = "тесноты"
+lemmaGenitive tehnika_N = "техники"
+lemmaGenitive tehnologiya_N = "технологии"
+lemmaGenitive tigr_N = "тигра"
+lemmaGenitive tirazh_N = "тиража"
+lemmaGenitive titul_N = "титула"
+lemmaGenitive tkan_N = "ткани"
+lemmaGenitive tovar_N = "товара"
+lemmaGenitive tovarishch_N = "товарища"
+lemmaGenitive tok_N = "тока"
+lemmaGenitive tokenizatsiya_N = "токенизации"
+lemmaGenitive tolpa_N = "толпы"
+lemmaGenitive tolshchina_N = "толщины"
+lemmaGenitive toplivo_N = "топлива"
+lemmaGenitive tochka_N = "точки"
+lemmaGenitive tochnost_N = "точности"
+lemmaGenitive trava_N = "травы"
+lemmaGenitive traditsiya_N = "традиции"
+lemmaGenitive traektoriya_N = "траектории"
+lemmaGenitive traktor_N = "трактора"
+lemmaGenitive tramvaj_N = "трамвая"
+lemmaGenitive tranzaktsiya_N = "транзакции"
+lemmaGenitive transport_N = "транспорта"
+lemmaGenitive trassiruemost_N = "трассируемости"
+lemmaGenitive traur_N = "траура"
+lemmaGenitive trener_N = "тренера"
+lemmaGenitive trenie_N = "трения"
+lemmaGenitive trenirovka_N = "тренировки"
+lemmaGenitive trigger_N = "триггера"
+lemmaGenitive tropa_N = "тропы"
+lemmaGenitive trotuar_N = "тротуара"
+lemmaGenitive truba_N = "трубы"
+lemmaGenitive trudnost_N = "трудности"
+lemmaGenitive tryapka_N = "тряпки"
+lemmaGenitive tuman_N = "тумана"
+lemmaGenitive tykva_N = "тыквы"
+lemmaGenitive tysyacha_N = "тысячи"
+lemmaGenitive tyuk_N = "тюка"
+lemmaGenitive tyurma_N = "тюрьмы"
+lemmaGenitive uborka_N = "уборки"
+lemmaGenitive uvedomlenie_N = "уведомления"
+lemmaGenitive uverennost_N = "уверенности"
+lemmaGenitive ugol_N = "угля"
+lemmaGenitive udalennost_N = "удаленности"
+lemmaGenitive udobstvo_N = "удобства"
+lemmaGenitive udovletvorenie_N = "удовлетворения"
+lemmaGenitive udochka_N = "удочки"
+lemmaGenitive ukaz_N = "указа"
+lemmaGenitive ukus_N = "укуса"
+lemmaGenitive ulitsa_N = "улицы"
+lemmaGenitive umozaklyuchenie_N = "умозаключения"
+lemmaGenitive universitet_N = "университета"
+lemmaGenitive unifikatsiya_N = "унификации"
+lemmaGenitive uniforma_N = "униформы"
+lemmaGenitive upakovka_N = "упаковки"
+lemmaGenitive upravlenie_N = "управления"
+lemmaGenitive uprugost_N = "упругости"
+lemmaGenitive uragan_N = "урагана"
+lemmaGenitive uroven_N = "уровня"
+lemmaGenitive urozhaj_N = "урожая"
+lemmaGenitive us_N = "уса"
+lemmaGenitive uskorenie_N = "ускорения"
+lemmaGenitive usluga_N = "услуги"
+lemmaGenitive uspeh_N = "успеха"
+lemmaGenitive usta_N = "уст"
+lemmaGenitive ustav_N = "устава"
+lemmaGenitive ustojchivost_N = "устойчивости"
+lemmaGenitive ustrojstvo_N = "устройства"
+lemmaGenitive utka_N = "утки"
+lemmaGenitive uho_N = "уха"
+lemmaGenitive uchastnik_N = "участника"
+lemmaGenitive uchastok_N = "участка"
+lemmaGenitive ucheba_N = "учебы"
+lemmaGenitive uchebnik_N = "учебника"
+lemmaGenitive uchitel_N = "учителя"
+lemmaGenitive fabrika_N = "фабрики"
+lemmaGenitive fakel_N = "факела"
+lemmaGenitive fanera_N = "фанеры"
+lemmaGenitive fantaziya_N = "фантазии"
+lemmaGenitive fantom_N = "фантома"
+lemmaGenitive fasad_N = "фасада"
+lemmaGenitive fevral_N = "февраля"
+lemmaGenitive ferma_N = "фермы"
+lemmaGenitive fermer_N = "фермера"
+lemmaGenitive figura_N = "фигуры"
+lemmaGenitive fizika_N = "физики"
+lemmaGenitive film_N = "фильма"
+lemmaGenitive filtratsiya_N = "фильтрации"
+lemmaGenitive final_N = "финала"
+lemmaGenitive firma_N = "фирмы"
+lemmaGenitive flejta_N = "флейты"
+lemmaGenitive flot_N = "флота"
+lemmaGenitive fokus_N = "фокуса"
+lemmaGenitive formalizatsiya_N = "формализации"
+lemmaGenitive fraza_N = "фразы"
+lemmaGenitive front_N = "фронта"
+lemmaGenitive frukt_N = "фрукта"
+lemmaGenitive funt_N = "фунта"
+lemmaGenitive furgon_N = "фургона"
+lemmaGenitive halat_N = "халата"
+lemmaGenitive harakteristika_N = "характеристики"
+lemmaGenitive hvost_N = "хвоста"
+lemmaGenitive hvoya_N = "хвои"
+lemmaGenitive hleb_N = "хлеба"
+lemmaGenitive hlopok_N = "хлопка"
+lemmaGenitive hozyain_N = "хозяина"
+lemmaGenitive holod_N = "холода"
+lemmaGenitive holodilnik_N = "холодильника"
+lemmaGenitive horosho_N = "хорошо"
+lemmaGenitive hram_N = "храма"
+lemmaGenitive hren_N = "хрена"
+lemmaGenitive tsarstvo_N = "царства"
+lemmaGenitive tsvet_N = "цвета"
+lemmaGenitive tsvetok_N = "цветка"
+lemmaGenitive tselostnost_N = "целостности"
+lemmaGenitive tsepochka_N = "цепочки"
+lemmaGenitive tseremoniya_N = "церемонии"
+lemmaGenitive tserkov_N = "церкви"
+lemmaGenitive tsiklon_N = "циклона"
+lemmaGenitive tsilindr_N = "цилиндра"
+lemmaGenitive tsink_N = "цинка"
+lemmaGenitive tsirk_N = "цирка"
+lemmaGenitive tsitata_N = "цитаты"
+lemmaGenitive chastitsa_N = "частицы"
+lemmaGenitive chastota_N = "частоты"
+lemmaGenitive chasy_N = "часов"
+lemmaGenitive chashka_N = "чашки"
+lemmaGenitive chek_N = "чека"
+lemmaGenitive chelyust_N = "челюсти"
+lemmaGenitive chemodan_N = "чемодана"
+lemmaGenitive cherv_N = "червя"
+lemmaGenitive cherep_N = "черепа"
+lemmaGenitive cherepaha_N = "черепахи"
+lemmaGenitive chernika_N = "черники"
+lemmaGenitive cherta_N = "черты"
+lemmaGenitive chertezh_N = "чертежа"
+lemmaGenitive chest_N = "чести"
+lemmaGenitive chetverg_N = "четверга"
+lemmaGenitive chehol_N = "чехла"
+lemmaGenitive chin_N = "чина"
+lemmaGenitive chitatel_N = "читателя"
+lemmaGenitive chuvstvitelnost_N = "чувствительности"
+lemmaGenitive chulan_N = "чулана"
+lemmaGenitive chulok_N = "чулка"
+lemmaGenitive shalash_N = "шалаша"
+lemmaGenitive shapka_N = "шапки"
+lemmaGenitive shar_N = "шара"
+lemmaGenitive shahmaty_N = "шахмат"
+lemmaGenitive shahta_N = "шахты"
+lemmaGenitive shinel_N = "шинели"
+lemmaGenitive shirina_N = "ширины"
+lemmaGenitive shifrovanie_N = "шифрования"
+lemmaGenitive shkala_N = "шкалы"
+lemmaGenitive shkaf_N = "шкафа"
+lemmaGenitive shkval_N = "шквала"
+lemmaGenitive shlagbaum_N = "шлагбаума"
+lemmaGenitive shlyapa_N = "шляпы"
+lemmaGenitive shtab_N = "штаба"
+lemmaGenitive shtil_N = "штиля"
+lemmaGenitive shtorm_N = "шторма"
+lemmaGenitive shtuka_N = "штуки"
+lemmaGenitive shcheka_N = "щеки"
+lemmaGenitive shchelk_N = "щелка"
+lemmaGenitive shchepka_N = "щепки"
+lemmaGenitive shchit_N = "щита"
+lemmaGenitive ekvivalentnost_N = "эквивалентности"
+lemmaGenitive ekzamen_N = "экзамена"
+lemmaGenitive ekonomiya_N = "экономии"
+lemmaGenitive ekran_N = "экрана"
+lemmaGenitive ekspeditsiya_N = "экспедиции"
+lemmaGenitive eksperiment_N = "эксперимента"
+lemmaGenitive ekspert_N = "эксперта"
+lemmaGenitive ekstrapolyatsiya_N = "экстраполяции"
+lemmaGenitive elektrichestvo_N = "электричества"
+lemmaGenitive element_N = "элемента"
+lemmaGenitive embargo_N = "эмбарго"
+lemmaGenitive emotsiya_N = "эмоции"
+lemmaGenitive energiya_N = "энергии"
+lemmaGenitive entuziazm_N = "энтузиазма"
+lemmaGenitive epizod_N = "эпизода"
+lemmaGenitive epoha_N = "эпохи"
+lemmaGenitive eskalatsiya_N = "эскалации"
+lemmaGenitive estrada_N = "эстрады"
+lemmaGenitive etazh_N = "этажа"
+lemmaGenitive etiket_N = "этикета"
+lemmaGenitive effekt_N = "эффекта"
+lemmaGenitive yubilej_N = "юбилея"
+lemmaGenitive yug_N = "юга"
+lemmaGenitive yunosha_N = "юноши"
+lemmaGenitive yabloko_N = "яблока"
+lemmaGenitive yablonya_N = "яблони"
+lemmaGenitive yavlenie_N = "явления"
+lemmaGenitive yagoda_N = "ягоды"
+lemmaGenitive yadernyj_N = "ядерного"
+lemmaGenitive yajtso_N = "яйца"
+lemmaGenitive yama_N = "ямы"
+lemmaGenitive yanvar_N = "января"
+lemmaGenitive yarmarka_N = "ярмарки"
+lemmaGenitive yarost_N = "ярости"
+lemmaGenitive yasli_N = "ясель"
+lemmaGenitive yasnost_N = "ясности"
+lemmaGenitive yastreb_N = "ястреба"
+lemmaGenitive yachmen_N = "ячменя"
 
 lemmaPrepositional : Lemma → String
 lemmaPrepositional abaz_N = "абазе"
@@ -6019,13 +9490,13 @@ lemmaPrepositional abort_N = "аборте"
 lemmaPrepositional abrazivnost_N = "абразивности"
 lemmaPrepositional abrek_N = "абреке"
 lemmaPrepositional abris_N = "абрисе"
-lemmaPrepositional absurd_N = "абсурде"
 lemmaPrepositional abhaz_N = "абхазе"
 lemmaPrepositional abtsug_N = "абцуге"
 lemmaPrepositional aval_N = "авале"
 lemmaPrepositional avans_N = "авансе"
 lemmaPrepositional avantazhnost_N = "авантажности"
 lemmaPrepositional avar_N = "аваре"
+lemmaPrepositional avariya_N = "аварии"
 lemmaPrepositional avgit_N = "авгите"
 lemmaPrepositional avgur_N = "авгуре"
 lemmaPrepositional avers_N = "аверсе"
@@ -6034,22 +9505,22 @@ lemmaPrepositional avlos_N = "авлосе"
 lemmaPrepositional avost_N = "авосте"
 lemmaPrepositional avral_N = "аврале"
 lemmaPrepositional avran_N = "авране"
+lemmaPrepositional avtobus_N = "автобусе"
 lemmaPrepositional avtoinformativnost_N = "автоинформативности"
 lemmaPrepositional avtokosmetika_N = "автокосметике"
 lemmaPrepositional avtol_N = "автоле"
+lemmaPrepositional avtomat_N = "автомате"
 lemmaPrepositional avtomedtehnika_N = "автомедтехнике"
+lemmaPrepositional avtomobil_N = "автомобиле"
 lemmaPrepositional avtomototehnika_N = "автомототехнике"
-lemmaPrepositional avtonomiya_N = "автономии"
-lemmaPrepositional avtor_N = "авторе"
+lemmaPrepositional avtorizatsiya_N = "авторизации"
 lemmaPrepositional avtoelektronika_N = "автоэлектронике"
-lemmaPrepositional aga_N = "аге"
 lemmaPrepositional agava_N = "агаве"
 lemmaPrepositional agal_N = "агале"
 lemmaPrepositional agama_N = "агаме"
 lemmaPrepositional agar_N = "агаре"
 lemmaPrepositional agat_N = "агате"
 lemmaPrepositional agens_N = "агенсе"
-lemmaPrepositional agent_N = "агенте"
 lemmaPrepositional agentnost_N = "агентности"
 lemmaPrepositional agnat_N = "агнате"
 lemmaPrepositional agnets_N = "агнце"
@@ -6057,8 +9528,11 @@ lemmaPrepositional agogika_N = "агогике"
 lemmaPrepositional agon_N = "агоне"
 lemmaPrepositional agonistika_N = "агонистике"
 lemmaPrepositional agraf_N = "аграфе"
+lemmaPrepositional agregatsiya_N = "агрегации"
+lemmaPrepositional agregirovanie_N = "агрегировании"
 lemmaPrepositional agropromyshlennost_N = "агропромышленности"
 lemmaPrepositional agul_N = "агуле"
+lemmaPrepositional adapter_N = "адаптере"
 lemmaPrepositional adaptivnost_N = "адаптивности"
 lemmaPrepositional adaptiruemost_N = "адаптируемости"
 lemmaPrepositional adat_N = "адате"
@@ -6067,7 +9541,7 @@ lemmaPrepositional additivnost_N = "аддитивности"
 lemmaPrepositional adept_N = "адепте"
 lemmaPrepositional adeh_N = "адехе"
 lemmaPrepositional admin_N = "админе"
-lemmaPrepositional adres_N = "адресе"
+lemmaPrepositional administrirovanie_N = "администрировании"
 lemmaPrepositional adresnost_N = "адресности"
 lemmaPrepositional adresuemost_N = "адресуемости"
 lemmaPrepositional adrodinamika_N = "адродинамике"
@@ -6093,21 +9567,20 @@ lemmaPrepositional ajran_N = "айране"
 lemmaPrepositional ajrol_N = "айроле"
 lemmaPrepositional ajsor_N = "айсоре"
 lemmaPrepositional ajfon_N = "айфоне"
+lemmaPrepositional akademiya_N = "академии"
 lemmaPrepositional akant_N = "аканте"
 lemmaPrepositional akanf_N = "аканфе"
 lemmaPrepositional akvakinetika_N = "аквакинетике"
 lemmaPrepositional akvanavtika_N = "акванавтике"
+lemmaPrepositional akvarium_N = "аквариуме"
 lemmaPrepositional akom_N = "акоме"
 lemmaPrepositional akr_N = "акре"
 lemmaPrepositional akril_N = "акриле"
 lemmaPrepositional aks_N = "аксе"
 lemmaPrepositional akses_N = "аксесе"
-lemmaPrepositional aksioma_N = "аксиоме"
 lemmaPrepositional aksiomatiziruemost_N = "аксиоматизируемости"
 lemmaPrepositional akson_N = "аксоне"
-lemmaPrepositional akt_N = "акте"
 lemmaPrepositional akter_N = "актере"
-lemmaPrepositional aktiv_N = "активе"
 lemmaPrepositional aktin_N = "актине"
 lemmaPrepositional aktinichnost_N = "актиничности"
 lemmaPrepositional aktor_N = "акторе"
@@ -6119,6 +9592,7 @@ lemmaPrepositional aktsiya_N = "акции"
 lemmaPrepositional akyn_N = "акыне"
 lemmaPrepositional alas_N = "аласе"
 lemmaPrepositional algol_N = "алголе"
+lemmaPrepositional algoritm_N = "алгоритме"
 lemmaPrepositional aleatorika_N = "алеаторике"
 lemmaPrepositional aleut_N = "алеуте"
 lemmaPrepositional alef_N = "алефе"
@@ -6134,6 +9608,7 @@ lemmaPrepositional almaz_N = "алмазе"
 lemmaPrepositional aloin_N = "алоине"
 lemmaPrepositional altej_N = "алтее"
 lemmaPrepositional altyn_N = "алтыне"
+lemmaPrepositional albom_N = "альбоме"
 lemmaPrepositional alt_N = "альте"
 lemmaPrepositional alfa_N = "альфе"
 lemmaPrepositional ama_N = "аме"
@@ -6150,10 +9625,12 @@ lemmaPrepositional amok_N = "амоке"
 lemmaPrepositional amorf_N = "аморфе"
 lemmaPrepositional amper_N = "ампере"
 lemmaPrepositional ampir_N = "ампире"
+lemmaPrepositional amplituda_N = "амплитуде"
 lemmaPrepositional amt_N = "амте"
 lemmaPrepositional ana_N = "ане"
 lemmaPrepositional anal_N = "анале"
 lemmaPrepositional analitichnost_N = "аналитичности"
+lemmaPrepositional analogiya_N = "аналогии"
 lemmaPrepositional angar_N = "ангаре"
 lemmaPrepositional angel_N = "ангеле"
 lemmaPrepositional angelika_N = "ангелике"
@@ -6174,21 +9651,26 @@ lemmaPrepositional anomalnost_N = "аномальности"
 lemmaPrepositional anons_N = "анонсе"
 lemmaPrepositional ant_N = "анте"
 lemmaPrepositional antej_N = "антее"
+lemmaPrepositional antena_N = "антенне"
 lemmaPrepositional antigalaktika_N = "антигалактике"
 lemmaPrepositional antik_N = "антике"
 lemmaPrepositional antikommutativnost_N = "антикоммутативности"
+lemmaPrepositional antinomiya_N = "антиномии"
+lemmaPrepositional antipatiya_N = "антипатии"
 lemmaPrepositional antirefleksivnost_N = "антирефлексивности"
-lemmaPrepositional antitezis_N = "антитезисе"
 lemmaPrepositional anus_N = "анусе"
 lemmaPrepositional anchar_N = "анчаре"
 lemmaPrepositional aorta_N = "аорте"
+lemmaPrepositional apatiya_N = "апатии"
 lemmaPrepositional apash_N = "апаше"
 lemmaPrepositional apeks_N = "апексе"
 lemmaPrepositional apis_N = "аписе"
 lemmaPrepositional aport_N = "апорте"
+lemmaPrepositional approksimatsiya_N = "аппроксимации"
 lemmaPrepositional approksimiruemost_N = "аппроксимируемости"
 lemmaPrepositional aprel_N = "апреле"
 lemmaPrepositional aprosh_N = "апроше"
+lemmaPrepositional apteka_N = "аптеке"
 lemmaPrepositional arab_N = "арабе"
 lemmaPrepositional arabika_N = "арабике"
 lemmaPrepositional arak_N = "араке"
@@ -6198,7 +9680,7 @@ lemmaPrepositional arba_N = "арбе"
 lemmaPrepositional arbuz_N = "арбузе"
 lemmaPrepositional argal_N = "аргале"
 lemmaPrepositional argon_N = "аргоне"
-lemmaPrepositional argument_N = "аргументе"
+lemmaPrepositional argumentatsiya_N = "аргументации"
 lemmaPrepositional argumentirovannost_N = "аргументированности"
 lemmaPrepositional argus_N = "аргусе"
 lemmaPrepositional arden_N = "ардене"
@@ -6217,12 +9699,12 @@ lemmaPrepositional arnost_N = "арности"
 lemmaPrepositional aromatnost_N = "ароматности"
 lemmaPrepositional arpan_N = "арпане"
 lemmaPrepositional arsis_N = "арсисе"
+lemmaPrepositional artefakt_N = "артефакте"
 lemmaPrepositional artos_N = "артосе"
 lemmaPrepositional arum_N = "аруме"
 lemmaPrepositional arfa_N = "арфе"
 lemmaPrepositional arhar_N = "архаре"
 lemmaPrepositional arhat_N = "архате"
-lemmaPrepositional arhiv_N = "архиве"
 lemmaPrepositional arhivistika_N = "архивистике"
 lemmaPrepositional archak_N = "арчаке"
 lemmaPrepositional arshin_N = "аршине"
@@ -6239,14 +9721,14 @@ lemmaPrepositional astma_N = "астме"
 lemmaPrepositional astra_N = "астре"
 lemmaPrepositional astrionika_N = "астрионике"
 lemmaPrepositional astrodinamika_N = "астродинамике"
+lemmaPrepositional asfalt_N = "асфальте"
 lemmaPrepositional asferichnost_N = "асферичности"
 lemmaPrepositional astsit_N = "асците"
-lemmaPrepositional ataka_N = "атаке"
 lemmaPrepositional atlas_N = "атласе"
 lemmaPrepositional atlet_N = "атлете"
+lemmaPrepositional atmosfera_N = "атмосфере"
 lemmaPrepositional atmosferostojkost_N = "атмосферостойкости"
 lemmaPrepositional atoll_N = "атолле"
-lemmaPrepositional atom_N = "атоме"
 lemmaPrepositional atomnost_N = "атомности"
 lemmaPrepositional atrij_N = "атрии"
 lemmaPrepositional attik_N = "аттике"
@@ -6256,6 +9738,7 @@ lemmaPrepositional aul_N = "ауле"
 lemmaPrepositional aura_N = "ауре"
 lemmaPrepositional aurat_N = "аурате"
 lemmaPrepositional aut_N = "ауте"
+lemmaPrepositional autentifikatsiya_N = "аутентификации"
 lemmaPrepositional autoplastika_N = "аутопластике"
 lemmaPrepositional afera_N = "афере"
 lemmaPrepositional afisha_N = "афише"
@@ -6281,27 +9764,26 @@ lemmaPrepositional baba_N = "бабе"
 lemmaPrepositional babaj_N = "бабае"
 lemmaPrepositional babka_N = "бабке"
 lemmaPrepositional babr_N = "бабре"
-lemmaPrepositional bag_N = "баге"
 lemmaPrepositional bagazh_N = "багаже"
 lemmaPrepositional bager_N = "багере"
 lemmaPrepositional baget_N = "багете"
 lemmaPrepositional bagor_N = "багре"
 lemmaPrepositional badan_N = "бадане"
 lemmaPrepositional badya_N = "бадье"
-lemmaPrepositional baz_N = "базе"
 lemmaPrepositional bazar_N = "базаре"
 lemmaPrepositional bazis_N = "базисе"
 lemmaPrepositional bajka_N = "байке"
-lemmaPrepositional bajt_N = "байте"
 lemmaPrepositional bakan_N = "бакане"
 lemmaPrepositional baken_N = "бакене"
 lemmaPrepositional baks_N = "баксе"
 lemmaPrepositional bakt_N = "бакте"
 lemmaPrepositional bal_N = "бале"
+lemmaPrepositional balans_N = "балансе"
 lemmaPrepositional balda_N = "балде"
 lemmaPrepositional balet_N = "балете"
 lemmaPrepositional balka_N = "балке"
 lemmaPrepositional balkanistika_N = "балканистике"
+lemmaPrepositional balkon_N = "балконе"
 lemmaPrepositional ball_N = "балле"
 lemmaPrepositional ballnost_N = "балльности"
 lemmaPrepositional balyk_N = "балыке"
@@ -6311,9 +9793,9 @@ lemmaPrepositional banan_N = "банане"
 lemmaPrepositional bang_N = "банге"
 lemmaPrepositional banda_N = "банде"
 lemmaPrepositional baner_N = "банере"
-lemmaPrepositional bank_N = "банке"
 lemmaPrepositional bant_N = "банте"
 lemmaPrepositional bar_N = "баре"
+lemmaPrepositional baran_N = "баране"
 lemmaPrepositional bard_N = "барде"
 lemmaPrepositional barezh_N = "бареже"
 lemmaPrepositional barzha_N = "барже"
@@ -6326,6 +9808,7 @@ lemmaPrepositional barodinamika_N = "бародинамике"
 lemmaPrepositional baroklinnost_N = "бароклинности"
 lemmaPrepositional baron_N = "бароне"
 lemmaPrepositional bars_N = "барсе"
+lemmaPrepositional barer_N = "барьере"
 lemmaPrepositional bas_N = "басе"
 lemmaPrepositional basistost_N = "басистости"
 lemmaPrepositional bask_N = "баске"
@@ -6333,9 +9816,11 @@ lemmaPrepositional basma_N = "басме"
 lemmaPrepositional basnya_N = "басне"
 lemmaPrepositional basovitost_N = "басовитости"
 lemmaPrepositional bason_N = "басоне"
+lemmaPrepositional bassejn_N = "бассейне"
 lemmaPrepositional bastr_N = "бастре"
 lemmaPrepositional bat_N = "бате"
 lemmaPrepositional batan_N = "батане"
+lemmaPrepositional batareya_N = "батарее"
 lemmaPrepositional batat_N = "батате"
 lemmaPrepositional batik_N = "батике"
 lemmaPrepositional batog_N = "батоге"
@@ -6350,10 +9835,12 @@ lemmaPrepositional bahcha_N = "бахче"
 lemmaPrepositional bachok_N = "бачке"
 lemmaPrepositional bash_N = "баше"
 lemmaPrepositional bashka_N = "башке"
+lemmaPrepositional bashmak_N = "башмаке"
 lemmaPrepositional bashnya_N = "башне"
 lemmaPrepositional bayan_N = "баяне"
 lemmaPrepositional beda_N = "беде"
 lemmaPrepositional bedro_N = "бедре"
+lemmaPrepositional bezhenets_N = "беженце"
 lemmaPrepositional bezapellyatsionnost_N = "безапелляционности"
 lemmaPrepositional bezvkusnost_N = "безвкусности"
 lemmaPrepositional bezdefitsitnost_N = "бездефицитности"
@@ -6361,6 +9848,7 @@ lemmaPrepositional bezduhovnost_N = "бездуховности"
 lemmaPrepositional bezik_N = "безике"
 lemmaPrepositional bezmolvnost_N = "безмолвности"
 lemmaPrepositional bezoglyadnost_N = "безоглядности"
+lemmaPrepositional bezopasnost_N = "безопасности"
 lemmaPrepositional bezotzyvnost_N = "безотзывности"
 lemmaPrepositional bezymyannost_N = "безымянности"
 lemmaPrepositional bezyskusnost_N = "безыскусности"
@@ -6376,21 +9864,20 @@ lemmaPrepositional bel_N = "беле"
 lemmaPrepositional belg_N = "белге"
 lemmaPrepositional belek_N = "бельке"
 lemmaPrepositional belets_N = "бельце"
-lemmaPrepositional belka_N = "белке"
 lemmaPrepositional belkovost_N = "белковости"
 lemmaPrepositional belokurost_N = "белокурости"
 lemmaPrepositional bel_Nv2 = "бели"
 lemmaPrepositional belyak_N = "беляке"
 lemmaPrepositional belyash_N = "беляше"
-lemmaPrepositional ber_N = "бере"
+lemmaPrepositional benchmark_N = "бенчмарке"
 lemmaPrepositional berdo_N = "берде"
-lemmaPrepositional bereg_N = "береге"
 lemmaPrepositional beret_N = "берете"
 lemmaPrepositional beril_N = "бериле"
 lemmaPrepositional berma_N = "берме"
 lemmaPrepositional bertse_N = "берце"
 lemmaPrepositional bersh_N = "берше"
 lemmaPrepositional bes_N = "бесе"
+lemmaPrepositional beseda_N = "беседе"
 lemmaPrepositional beskrajnost_N = "бескрайности"
 lemmaPrepositional bespokojnost_N = "беспокойности"
 lemmaPrepositional bespolost_N = "бесполости"
@@ -6405,6 +9892,8 @@ lemmaPrepositional beta_N = "бете"
 lemmaPrepositional beton_N = "бетоне"
 lemmaPrepositional bzik_N = "бзике"
 lemmaPrepositional bib_N = "бибе"
+lemmaPrepositional biblioteka_N = "библиотеке"
+lemmaPrepositional bibliya_N = "библии"
 lemmaPrepositional bibop_N = "бибопе"
 lemmaPrepositional bivak_N = "биваке"
 lemmaPrepositional big_N = "биге"
@@ -6416,6 +9905,7 @@ lemmaPrepositional bilateralnost_N = "билатеральности"
 lemmaPrepositional bilet_N = "билете"
 lemmaPrepositional bill_N = "билле"
 lemmaPrepositional bims_N = "бимсе"
+lemmaPrepositional binokl_N = "бинокле"
 lemmaPrepositional binom_N = "биноме"
 lemmaPrepositional bint_N = "бинте"
 lemmaPrepositional bioakustika_N = "биоакустике"
@@ -6435,20 +9925,17 @@ lemmaPrepositional biostatika_N = "биостатике"
 lemmaPrepositional biotika_N = "биотике"
 lemmaPrepositional bioelektronika_N = "биоэлектронике"
 lemmaPrepositional bioenergetika_N = "биоэнергетике"
-lemmaPrepositional birzha_N = "бирже"
 lemmaPrepositional birka_N = "бирке"
 lemmaPrepositional biryuch_N = "бирюче"
 lemmaPrepositional biser_N = "бисере"
 lemmaPrepositional bistr_N = "бистре"
 lemmaPrepositional bit_N = "бите"
-lemmaPrepositional bitva_N = "битве"
 lemmaPrepositional biter_N = "битере"
 lemmaPrepositional bitok_N = "битке"
 lemmaPrepositional bitum_N = "битуме"
 lemmaPrepositional biharakteristika_N = "бихарактеристике"
 lemmaPrepositional bich_N = "биче"
 lemmaPrepositional bishop_N = "бишопе"
-lemmaPrepositional blago_N = "благе"
 lemmaPrepositional blagorodnost_N = "благородности"
 lemmaPrepositional blagouhannost_N = "благоуханности"
 lemmaPrepositional blagochestivost_N = "благочестивости"
@@ -6456,9 +9943,9 @@ lemmaPrepositional blazh_N = "блажи"
 lemmaPrepositional blank_N = "бланке"
 lemmaPrepositional blast_N = "бласте"
 lemmaPrepositional blat_N = "блате"
-lemmaPrepositional blesk_N = "блеске"
 lemmaPrepositional bleskost_N = "блескости"
 lemmaPrepositional blef_N = "блефе"
+lemmaPrepositional blizost_N = "близости"
 lemmaPrepositional bliz_N = "близи"
 lemmaPrepositional blik_N = "блике"
 lemmaPrepositional blin_N = "блине"
@@ -6479,7 +9966,6 @@ lemmaPrepositional blyaha_N = "бляхе"
 lemmaPrepositional bober_N = "бобре"
 lemmaPrepositional bobik_N = "бобике"
 lemmaPrepositional bobok_N = "бобке"
-lemmaPrepositional bog_N = "боге"
 lemmaPrepositional bogach_N = "богаче"
 lemmaPrepositional bogovdohnovennost_N = "боговдохновенности"
 lemmaPrepositional bogomolnost_N = "богомольности"
@@ -6497,11 +9983,14 @@ lemmaPrepositional bok_N = "боке"
 lemmaPrepositional bokal_N = "бокале"
 lemmaPrepositional boks_N = "боксе"
 lemmaPrepositional bol_N = "боле"
+lemmaPrepositional bolezn_N = "болезни"
 lemmaPrepositional bolid_N = "болиде"
+lemmaPrepositional boloto_N = "болоте"
 lemmaPrepositional bolt_N = "болте"
-lemmaPrepositional bol_Nv2 = "боли"
+lemmaPrepositional bolnitsa_N = "больнице"
 lemmaPrepositional bolyus_N = "болюсе"
 lemmaPrepositional bomba_N = "бомбе"
+lemmaPrepositional bombardir_N = "бомбардире"
 lemmaPrepositional bomzh_N = "бомже"
 lemmaPrepositional bon_N = "боне"
 lemmaPrepositional bonza_N = "бонзе"
@@ -6516,35 +10005,38 @@ lemmaPrepositional borets_N = "борце"
 lemmaPrepositional borid_N = "бориде"
 lemmaPrepositional born_N = "борне"
 lemmaPrepositional borov_N = "борове"
+lemmaPrepositional boroda_N = "бороде"
 lemmaPrepositional borozdchatost_N = "бороздчатости"
 lemmaPrepositional bort_N = "борте"
 lemmaPrepositional bort_Nv2 = "борти"
 lemmaPrepositional borshch_N = "борще"
 lemmaPrepositional boss_N = "боссе"
 lemmaPrepositional bosyak_N = "босяке"
-lemmaPrepositional bot_N = "боте"
 lemmaPrepositional botan_N = "ботане"
 lemmaPrepositional botik_N = "ботике"
+lemmaPrepositional botinok_N = "ботинке"
 lemmaPrepositional bochag_N = "бочаге"
 lemmaPrepositional bochar_N = "бочаре"
 lemmaPrepositional bochka_N = "бочке"
 lemmaPrepositional bosh_N = "боше"
 lemmaPrepositional braga_N = "браге"
 lemmaPrepositional brada_N = "браде"
+lemmaPrepositional brak_N = "браке"
 lemmaPrepositional bran_N = "брани"
 lemmaPrepositional bras_N = "брасе"
 lemmaPrepositional brass_N = "брассе"
 lemmaPrepositional brat_N = "брате"
 lemmaPrepositional brachnost_N = "брачности"
+lemmaPrepositional brevno_N = "бревне"
 lemmaPrepositional breg_N = "бреге"
 lemmaPrepositional brejk_N = "брейке"
-lemmaPrepositional bremya_N = "бремени"
-lemmaPrepositional brend_N = "бренде"
 lemmaPrepositional breh_N = "брехе"
 lemmaPrepositional bresh_N = "бреши"
 lemmaPrepositional brig_N = "бриге"
+lemmaPrepositional brigada_N = "бригаде"
 lemmaPrepositional bridzh_N = "бридже"
 lemmaPrepositional briz_N = "бризе"
+lemmaPrepositional brilliant_N = "бриллианте"
 lemmaPrepositional britt_N = "бритте"
 lemmaPrepositional brov_N = "брови"
 lemmaPrepositional brom_N = "броме"
@@ -6553,8 +10045,9 @@ lemmaPrepositional bronh_N = "бронхе"
 lemmaPrepositional bron_N = "брони"
 lemmaPrepositional brosh_N = "броши"
 lemmaPrepositional brus_N = "брусе"
+lemmaPrepositional brusok_N = "бруске"
 lemmaPrepositional bryla_N = "брыле"
-lemmaPrepositional brend_Nv2 = "брэнде"
+lemmaPrepositional brend_N = "брэнде"
 lemmaPrepositional bryuho_N = "брюхе"
 lemmaPrepositional bryak_N = "бряке"
 lemmaPrepositional bubal_N = "бубале"
@@ -6565,23 +10058,23 @@ lemmaPrepositional bugor_N = "бугре"
 lemmaPrepositional budda_N = "будде"
 lemmaPrepositional budka_N = "будке"
 lemmaPrepositional budra_N = "будре"
+lemmaPrepositional budushchee_N = "будущем"
 lemmaPrepositional buek_N = "буйке"
 lemmaPrepositional buer_N = "буере"
 lemmaPrepositional buzh_N = "буже"
 lemmaPrepositional buzun_N = "бузуне"
 lemmaPrepositional buk_N = "буке"
 lemmaPrepositional bukan_N = "букане"
-lemmaPrepositional bukva_N = "букве"
+lemmaPrepositional bukvar_N = "букваре"
 lemmaPrepositional buket_N = "букете"
 lemmaPrepositional buklya_N = "букле"
 lemmaPrepositional buks_N = "буксе"
 lemmaPrepositional bulka_N = "булке"
 lemmaPrepositional bulb_N = "бульбе"
+lemmaPrepositional bulvar_N = "бульваре"
 lemmaPrepositional bum_N = "буме"
-lemmaPrepositional bumaga_N = "бумаге"
 lemmaPrepositional buna_N = "буне"
 lemmaPrepositional bund_N = "бунде"
-lemmaPrepositional bunt_N = "бунте"
 lemmaPrepositional bur_N = "буре"
 lemmaPrepositional burav_N = "бураве"
 lemmaPrepositional burak_N = "бураке"
@@ -6592,13 +10085,14 @@ lemmaPrepositional burka_N = "бурке"
 lemmaPrepositional burt_N = "бурте"
 lemmaPrepositional burun_N = "буруне"
 lemmaPrepositional bursh_N = "бурше"
+lemmaPrepositional burya_N = "бурях"
 lemmaPrepositional buryat_N = "буряте"
 lemmaPrepositional butik_N = "бутике"
 lemmaPrepositional butil_N = "бутиле"
 lemmaPrepositional buton_N = "бутоне"
 lemmaPrepositional butsy_N = "бутсе"
 lemmaPrepositional butuz_N = "бутузе"
-lemmaPrepositional bufer_N = "буфере"
+lemmaPrepositional butylka_N = "бутылке"
 lemmaPrepositional bufet_N = "буфете"
 lemmaPrepositional buhta_N = "бухте"
 lemmaPrepositional bucha_N = "буче"
@@ -6611,9 +10105,10 @@ lemmaPrepositional bef_N = "бьефе"
 lemmaPrepositional byuik_N = "бьюике"
 lemmaPrepositional bekus_N = "бэкусе"
 lemmaPrepositional bend_N = "бэнде"
-lemmaPrepositional ber_Nv2 = "бэре"
+lemmaPrepositional ber_N = "бэре"
 lemmaPrepositional byuvar_N = "бюваре"
 lemmaPrepositional byuvet_N = "бювете"
+lemmaPrepositional byudzhet_N = "бюджете"
 lemmaPrepositional byust_N = "бюсте"
 lemmaPrepositional byaz_N = "бязи"
 lemmaPrepositional byaka_N = "бяке"
@@ -6622,11 +10117,13 @@ lemmaPrepositional vaap_N = "ваапе"
 lemmaPrepositional vabik_N = "вабике"
 lemmaPrepositional vaga_N = "ваге"
 lemmaPrepositional vagon_N = "вагоне"
+lemmaPrepositional vagonetka_N = "вагонетке"
 lemmaPrepositional vaza_N = "вазе"
 lemmaPrepositional vazon_N = "вазоне"
 lemmaPrepositional vajya_N = "вайе"
 lemmaPrepositional vakat_N = "вакате"
 lemmaPrepositional vaksa_N = "ваксе"
+lemmaPrepositional vaktsina_N = "вакцине"
 lemmaPrepositional vaktsinoprofilaktika_N = "вакцинопрофилактике"
 lemmaPrepositional val_N = "вале"
 lemmaPrepositional valah_N = "валахе"
@@ -6634,13 +10131,14 @@ lemmaPrepositional valek_N = "вальке"
 lemmaPrepositional valer_N = "валере"
 lemmaPrepositional valet_N = "валете"
 lemmaPrepositional valets_N = "вальце"
-lemmaPrepositional validnost_N = "валидности"
+lemmaPrepositional validatsiya_N = "валидации"
 lemmaPrepositional valik_N = "валике"
 lemmaPrepositional valka_N = "валке"
 lemmaPrepositional valuj_N = "валуе"
 lemmaPrepositional valun_N = "валуне"
 lemmaPrepositional valuh_N = "валухе"
 lemmaPrepositional vals_N = "вальсе"
+lemmaPrepositional valyuta_N = "валюте"
 lemmaPrepositional vamp_N = "вампе"
 lemmaPrepositional vanna_N = "ванне"
 lemmaPrepositional vanta_N = "ванте"
@@ -6650,6 +10148,7 @@ lemmaPrepositional variabelnost_N = "вариабельности"
 lemmaPrepositional variativnost_N = "вариативности"
 lemmaPrepositional varka_N = "варке"
 lemmaPrepositional varyag_N = "варяге"
+lemmaPrepositional vasilek_N = "васильке"
 lemmaPrepositional vata_N = "вате"
 lemmaPrepositional vater_N = "ватере"
 lemmaPrepositional vatin_N = "ватине"
@@ -6659,30 +10158,31 @@ lemmaPrepositional vaflya_N = "вафле"
 lemmaPrepositional vahnya_N = "вахне"
 lemmaPrepositional vahta_N = "вахте"
 lemmaPrepositional vbros_N = "вбросе"
-lemmaPrepositional vvod_N = "вводе"
 lemmaPrepositional vvoz_N = "ввозе"
 lemmaPrepositional vgib_N = "вгибе"
 lemmaPrepositional vdavlennost_N = "вдавленности"
 lemmaPrepositional vdova_N = "вдове"
-lemmaPrepositional vdoh_N = "вдохе"
 lemmaPrepositional veb_N = "вебе"
 lemmaPrepositional veda_N = "веде"
 lemmaPrepositional vedda_N = "ведде"
 lemmaPrepositional vedro_N = "ведре"
 lemmaPrepositional vedun_N = "ведуне"
+lemmaPrepositional vedma_N = "ведьме"
 lemmaPrepositional veer_N = "веере"
 lemmaPrepositional vezha_N = "веже"
 lemmaPrepositional vezhda_N = "вежде"
 lemmaPrepositional vezdesushchnost_N = "вездесущности"
 lemmaPrepositional vezdehodnost_N = "вездеходности"
 lemmaPrepositional vejka_N = "вейке"
-lemmaPrepositional veko_N = "веке"
+lemmaPrepositional vektor_N = "векторе"
 lemmaPrepositional veksha_N = "векше"
 lemmaPrepositional veld_N = "велде"
 lemmaPrepositional velik_N = "велике"
+lemmaPrepositional velosiped_N = "велосипеде"
 lemmaPrepositional veld_Nv2 = "вельде"
 lemmaPrepositional vels_N = "вельсе"
 lemmaPrepositional velyur_N = "велюре"
+lemmaPrepositional vena_N = "вене"
 lemmaPrepositional vengr_N = "венгре"
 lemmaPrepositional vend_N = "венде"
 lemmaPrepositional vened_N = "венеде"
@@ -6690,52 +10190,53 @@ lemmaPrepositional venet_N = "венете"
 lemmaPrepositional venets_N = "венце"
 lemmaPrepositional venik_N = "венике"
 lemmaPrepositional venka_N = "венке"
-lemmaPrepositional veno_N = "вене"
+lemmaPrepositional ventilyator_N = "вентиляторе"
 lemmaPrepositional vepr_N = "вепре"
 lemmaPrepositional veps_N = "вепсе"
+lemmaPrepositional veranda_N = "веранде"
 lemmaPrepositional verba_N = "вербе"
 lemmaPrepositional verv_N = "верви"
+lemmaPrepositional verevka_N = "веревке"
 lemmaPrepositional vered_N = "вереде"
 lemmaPrepositional veres_N = "вересе"
+lemmaPrepositional verifikatsiya_N = "верификации"
 lemmaPrepositional veronika_N = "веронике"
-lemmaPrepositional veroyatnost_N = "вероятности"
 lemmaPrepositional verp_N = "верпе"
+lemmaPrepositional versionirovanie_N = "версионировании"
+lemmaPrepositional versiya_N = "версии"
+lemmaPrepositional versta_N = "версте"
+lemmaPrepositional vertikal_N = "вертикали"
+lemmaPrepositional vertolet_N = "вертолете"
 lemmaPrepositional verf_N = "верфи"
 lemmaPrepositional verh_N = "верхе"
 lemmaPrepositional versha_N = "верше"
-lemmaPrepositional ves_N = "весе"
 lemmaPrepositional veslo_N = "весле"
 lemmaPrepositional vesna_N = "весне"
 lemmaPrepositional vest_N = "весте"
 lemmaPrepositional vest_Nv2 = "вести"
-lemmaPrepositional ves_Nv2 = "веси"
-lemmaPrepositional vetv_N = "ветви"
-lemmaPrepositional veter_N = "ветре"
-lemmaPrepositional vetka_N = "ветке"
 lemmaPrepositional vetla_N = "ветле"
 lemmaPrepositional vetrennost_N = "ветренности"
 lemmaPrepositional veha_N = "вехе"
 lemmaPrepositional veche_N = "вече"
-lemmaPrepositional vecher_N = "вечере"
-lemmaPrepositional vechnost_N = "вечности"
+lemmaPrepositional veshalka_N = "вешалке"
 lemmaPrepositional veshka_N = "вешке"
+lemmaPrepositional veshchestvo_N = "веществе"
 lemmaPrepositional veshchun_N = "вещуне"
-lemmaPrepositional veshch_N = "вещи"
 lemmaPrepositional vzaimovygodnost_N = "взаимовыгодности"
 lemmaPrepositional vzaimodopolnyaemost_N = "взаимодополняемости"
 lemmaPrepositional vzaimozamestimost_N = "взаимозаместимости"
 lemmaPrepositional vzaimoinduktivnost_N = "взаимоиндуктивности"
 lemmaPrepositional vzaimosvyazannost_N = "взаимосвязанности"
+lemmaPrepositional vzaimosvyaz_N = "взаимосвязи"
 lemmaPrepositional vzbudorazhennost_N = "взбудораженности"
 lemmaPrepositional vzvar_N = "взваре"
 lemmaPrepositional vzveshennost_N = "взвешенности"
 lemmaPrepositional vzvod_N = "взводе"
 lemmaPrepositional vzvoz_N = "взвозе"
+lemmaPrepositional vzglyad_N = "взгляде"
 lemmaPrepositional vzdor_N = "вздоре"
-lemmaPrepositional vzdoh_N = "вздохе"
 lemmaPrepositional vzimaemost_N = "взимаемости"
 lemmaPrepositional vzlet_N = "взлете"
-lemmaPrepositional vzlom_N = "взломе"
 lemmaPrepositional vzmah_N = "взмахе"
 lemmaPrepositional vzmet_N = "взмете"
 lemmaPrepositional vzmyv_N = "взмыве"
@@ -6743,7 +10244,6 @@ lemmaPrepositional vznos_N = "взносе"
 lemmaPrepositional vzor_N = "взоре"
 lemmaPrepositional vzrez_N = "взрезе"
 lemmaPrepositional vzroslost_N = "взрослости"
-lemmaPrepositional vzryv_N = "взрыве"
 lemmaPrepositional vzryvoopasnost_N = "взрывоопасности"
 lemmaPrepositional vzeroshennost_N = "взъерошенности"
 lemmaPrepositional vzysk_N = "взыске"
@@ -6753,7 +10253,7 @@ lemmaPrepositional vibrotehnika_N = "вибротехнике"
 lemmaPrepositional viver_N = "вивере"
 lemmaPrepositional vig_N = "виге"
 lemmaPrepositional vigilnost_N = "вигильности"
-lemmaPrepositional vid_N = "виде"
+lemmaPrepositional videnie_N = "видении"
 lemmaPrepositional videotehnika_N = "видеотехнике"
 lemmaPrepositional vidik_N = "видике"
 lemmaPrepositional vidnost_N = "видности"
@@ -6765,32 +10265,33 @@ lemmaPrepositional vika_N = "вике"
 lemmaPrepositional vilka_N = "вилке"
 lemmaPrepositional villa_N = "вилле"
 lemmaPrepositional vilt_N = "вилте"
-lemmaPrepositional vina_N = "вине"
 lemmaPrepositional vinil_N = "виниле"
+lemmaPrepositional vinograd_N = "винограде"
 lemmaPrepositional vint_N = "винте"
 lemmaPrepositional viola_N = "виоле"
 lemmaPrepositional vira_N = "вире"
 lemmaPrepositional virazh_N = "вираже"
 lemmaPrepositional virt_N = "вирте"
-lemmaPrepositional virus_N = "вирусе"
 lemmaPrepositional visok_N = "виске"
 lemmaPrepositional vist_N = "висте"
+lemmaPrepositional vitamin_N = "витамине"
 lemmaPrepositional vitiya_N = "витии"
 lemmaPrepositional vitok_N = "витке"
-lemmaPrepositional vihor_N = "вихре"
+lemmaPrepositional vitrina_N = "витрине"
+lemmaPrepositional vihr_N = "вихре"
 lemmaPrepositional vitsa_N = "вице"
 lemmaPrepositional vishnya_N = "вишне"
-lemmaPrepositional vklad_N = "вкладе"
 lemmaPrepositional vklinennost_N = "вклиненности"
 lemmaPrepositional vklyuchennost_N = "включенности"
 lemmaPrepositional vkraplennost_N = "вкрапленности"
-lemmaPrepositional vkus_N = "вкусе"
 lemmaPrepositional vlaga_N = "влаге"
 lemmaPrepositional vlagoemkost_N = "влагоемкости"
 lemmaPrepositional vlagonepronitsaemost_N = "влагонепроницаемости"
 lemmaPrepositional vlagopronitsaemost_N = "влагопроницаемости"
+lemmaPrepositional vlazhnost_N = "влажности"
 lemmaPrepositional vlah_N = "влахе"
 lemmaPrepositional vlet_N = "влете"
+lemmaPrepositional vliyanie_N = "влиянии"
 lemmaPrepositional vlozhennost_N = "вложенности"
 lemmaPrepositional vnebrachnost_N = "внебрачности"
 lemmaPrepositional vnevedomstvennost_N = "вневедомственности"
@@ -6800,40 +10301,35 @@ lemmaPrepositional vnuk_N = "внуке"
 lemmaPrepositional vobla_N = "вобле"
 lemmaPrepositional vovlechennost_N = "вовлеченности"
 lemmaPrepositional vogul_N = "вогуле"
-lemmaPrepositional vod_N = "воде"
+lemmaPrepositional voda_N = "воде"
 lemmaPrepositional vodka_N = "водке"
 lemmaPrepositional vodoobespechennost_N = "водообеспеченности"
 lemmaPrepositional vodoottalkivaemost_N = "водоотталкиваемости"
 lemmaPrepositional vozhak_N = "вожаке"
 lemmaPrepositional vozhd_N = "вожде"
 lemmaPrepositional vozhzha_N = "вожже"
+lemmaPrepositional vozvrat_N = "возврате"
 lemmaPrepositional vozvratnost_N = "возвратности"
-lemmaPrepositional vozduh_N = "воздухе"
 lemmaPrepositional vozka_N = "возке"
 lemmaPrepositional vozmezdnost_N = "возмездности"
-lemmaPrepositional vozmozhnost_N = "возможности"
 lemmaPrepositional voznya_N = "возне"
 lemmaPrepositional voin_N = "воине"
 lemmaPrepositional voj_N = "вое"
-lemmaPrepositional vojna_N = "войне"
 lemmaPrepositional vojt_N = "войте"
 lemmaPrepositional vok_N = "воке"
 lemmaPrepositional vokal_N = "вокале"
 lemmaPrepositional volan_N = "волане"
 lemmaPrepositional volga_N = "волге"
 lemmaPrepositional volk_N = "волке"
-lemmaPrepositional volna_N = "волне"
 lemmaPrepositional volok_N = "волоке"
 lemmaPrepositional volos_N = "волосе"
 lemmaPrepositional voloh_N = "волохе"
 lemmaPrepositional volhv_N = "волхве"
 lemmaPrepositional volt_N = "вольте"
-lemmaPrepositional volya_N = "воле"
 lemmaPrepositional vomer_N = "вомере"
 lemmaPrepositional vona_N = "воне"
 lemmaPrepositional von_N = "вони"
 lemmaPrepositional vopl_N = "вопле"
-lemmaPrepositional vopros_N = "вопросе"
 lemmaPrepositional vor_N = "воре"
 lemmaPrepositional vorog_N = "вороге"
 lemmaPrepositional voron_N = "вороне"
@@ -6842,20 +10338,23 @@ lemmaPrepositional voroh_N = "ворохе"
 lemmaPrepositional vors_N = "ворсе"
 lemmaPrepositional vosk_N = "воске"
 lemmaPrepositional vospalennost_N = "воспаленности"
+lemmaPrepositional vosproizvodimost_N = "воспроизводимости"
 lemmaPrepositional vosstanavlivaemost_N = "восстанавливаемости"
+lemmaPrepositional vosstanovlenie_N = "восстановлении"
+lemmaPrepositional vostok_N = "востоке"
+lemmaPrepositional voshishchenie_N = "восхищении"
 lemmaPrepositional votum_N = "вотуме"
 lemmaPrepositional votyak_N = "вотяке"
 lemmaPrepositional voshka_N = "вошке"
 lemmaPrepositional vosh_N = "вши"
 lemmaPrepositional voyazh_N = "вояже"
 lemmaPrepositional voyaka_N = "вояке"
+lemmaPrepositional vpechatlenie_N = "впечатлении"
 lemmaPrepositional vpolneprimenimost_N = "вполнеприменимости"
 lemmaPrepositional vpusk_N = "впуске"
-lemmaPrepositional vrag_N = "враге"
 lemmaPrepositional vral_N = "врале"
 lemmaPrepositional vrach_N = "враче"
-lemmaPrepositional vred_N = "вреде"
-lemmaPrepositional vremya_N = "времени"
+lemmaPrepositional vrashchenie_N = "вращении"
 lemmaPrepositional vrub_N = "врубе"
 lemmaPrepositional vrun_N = "вруне"
 lemmaPrepositional vrusha_N = "вруше"
@@ -6864,27 +10363,27 @@ lemmaPrepositional vsedozvolennost_N = "вседозволенности"
 lemmaPrepositional vseohvatnost_N = "всеохватности"
 lemmaPrepositional vskok_N = "вскоке"
 lemmaPrepositional vspuchennost_N = "вспученности"
+lemmaPrepositional vstrecha_N = "встрече"
 lemmaPrepositional vstrechaemost_N = "встречаемости"
 lemmaPrepositional vshod_N = "всходе"
 lemmaPrepositional vtora_N = "вторе"
 lemmaPrepositional vtyk_N = "втыке"
 lemmaPrepositional vual_N = "вуали"
+lemmaPrepositional vulkan_N = "вулкане"
 lemmaPrepositional vuta_N = "вуте"
-lemmaPrepositional vhod_N = "входе"
+lemmaPrepositional vchera_N = "вчера"
 lemmaPrepositional vezd_N = "въезде"
 lemmaPrepositional vybeg_N = "выбеге"
-lemmaPrepositional vybor_N = "выборе"
+lemmaPrepositional vyborka_N = "выборке"
 lemmaPrepositional vyborochnost_N = "выборочности"
 lemmaPrepositional vyval_N = "вывале"
 lemmaPrepositional vyvih_N = "вывихе"
-lemmaPrepositional vyvod_N = "выводе"
-lemmaPrepositional vyvodimost_N = "выводимости"
 lemmaPrepositional vyvoz_N = "вывозе"
 lemmaPrepositional vygib_N = "выгибе"
+lemmaPrepositional vygoda_N = "выгоде"
 lemmaPrepositional vygon_N = "выгоне"
 lemmaPrepositional vygul_N = "выгуле"
 lemmaPrepositional vydel_N = "выделе"
-lemmaPrepositional vydoh_N = "выдохе"
 lemmaPrepositional vydra_N = "выдре"
 lemmaPrepositional vyezd_N = "выезде"
 lemmaPrepositional vyem_N = "выеме"
@@ -6910,27 +10409,35 @@ lemmaPrepositional vypal_N = "выпале"
 lemmaPrepositional vypar_N = "выпаре"
 lemmaPrepositional vypas_N = "выпасе"
 lemmaPrepositional vypek_N = "выпеке"
+lemmaPrepositional vypiska_N = "выписке"
 lemmaPrepositional vypolnennost_N = "выполненности"
 lemmaPrepositional vypor_N = "выпоре"
 lemmaPrepositional vypot_N = "выпоте"
+lemmaPrepositional vypusk_N = "выпуске"
 lemmaPrepositional vyp_N = "выпи"
 lemmaPrepositional vyravnennost_N = "выравненности"
+lemmaPrepositional vyrazhenie_N = "выражении"
 lemmaPrepositional vyrez_N = "вырезе"
 lemmaPrepositional vyrozhdennost_N = "вырожденности"
 lemmaPrepositional vyrub_N = "вырубе"
+lemmaPrepositional vyruchka_N = "выручке"
 lemmaPrepositional vysev_N = "высеве"
 lemmaPrepositional vysed_N = "выседе"
-lemmaPrepositional vyskazyvanie_N = "высказывании"
 lemmaPrepositional vysov_N = "высове"
+lemmaPrepositional vysota_N = "высоте"
+lemmaPrepositional vystavka_N = "выставке"
+lemmaPrepositional vystrel_N = "выстреле"
+lemmaPrepositional vystuplenie_N = "выступлении"
 lemmaPrepositional vys_N = "выси"
 lemmaPrepositional vyt_N = "выти"
 lemmaPrepositional vytyanutost_N = "вытянутости"
-lemmaPrepositional vyhod_N = "выходе"
+lemmaPrepositional vyhodnoj_N = "выходном"
 lemmaPrepositional vyholoshchennost_N = "выхолощенности"
 lemmaPrepositional vychet_N = "вычете"
 lemmaPrepositional vyshag_N = "вышаге"
 lemmaPrepositional vyshka_N = "вышке"
 lemmaPrepositional vyya_N = "вые"
+lemmaPrepositional vyyava_N = "выяве"
 lemmaPrepositional vyyavlyaemost_N = "выявляемости"
 lemmaPrepositional vyuga_N = "вьюге"
 lemmaPrepositional vyuk_N = "вьюке"
@@ -6939,19 +10446,20 @@ lemmaPrepositional vyaz_N = "вязе"
 lemmaPrepositional vyazka_N = "вязке"
 lemmaPrepositional vyaz_Nv2 = "вязи"
 lemmaPrepositional vyatka_N = "вятке"
+lemmaPrepositional gavan_N = "гавани"
 lemmaPrepositional gavot_N = "гавоте"
 lemmaPrepositional gaga_N = "гаге"
 lemmaPrepositional gagat_N = "гагате"
 lemmaPrepositional gad_N = "гаде"
-lemmaPrepositional gaz_N = "газе"
+lemmaPrepositional gazeta_N = "газете"
 lemmaPrepositional gazik_N = "газике"
 lemmaPrepositional gazodinamika_N = "газодинамике"
 lemmaPrepositional gazon_N = "газоне"
 lemmaPrepositional gazoenergetika_N = "газоэнергетике"
 lemmaPrepositional gajal_N = "гайале"
-lemmaPrepositional gajda_N = "гайде"
 lemmaPrepositional gajka_N = "гайке"
 lemmaPrepositional gak_N = "гаке"
+lemmaPrepositional galereya_N = "галерее"
 lemmaPrepositional galid_N = "галиде"
 lemmaPrepositional galit_N = "галите"
 lemmaPrepositional galka_N = "галке"
@@ -6970,6 +10478,7 @@ lemmaPrepositional ganets_N = "ганце"
 lemmaPrepositional ganit_N = "ганите"
 lemmaPrepositional ganka_N = "ганке"
 lemmaPrepositional garazh_N = "гараже"
+lemmaPrepositional garantiya_N = "гарантии"
 lemmaPrepositional garem_N = "гареме"
 lemmaPrepositional gart_N = "гарте"
 lemmaPrepositional garus_N = "гарусе"
@@ -6981,6 +10490,8 @@ lemmaPrepositional gael_N = "гаэле"
 lemmaPrepositional gayuin_N = "гаюине"
 lemmaPrepositional gbajt_N = "гбайте"
 lemmaPrepositional gvalt_N = "гвалте"
+lemmaPrepositional gvardiya_N = "гвардии"
+lemmaPrepositional gvozd_N = "гвозде"
 lemmaPrepositional geveya_N = "гевее"
 lemmaPrepositional gej_N = "гее"
 lemmaPrepositional gejm_N = "гейме"
@@ -6996,6 +10507,7 @@ lemmaPrepositional geoinformatika_N = "геоинформатике"
 lemmaPrepositional geometrodinamika_N = "геометродинамике"
 lemmaPrepositional geomehanika_N = "геомеханике"
 lemmaPrepositional gerb_N = "гербе"
+lemmaPrepositional gerbarij_N = "гербарии"
 lemmaPrepositional gerej_N = "герее"
 lemmaPrepositional germa_N = "герме"
 lemmaPrepositional gerodontika_N = "геродонтике"
@@ -7007,6 +10519,7 @@ lemmaPrepositional geterogennost_N = "гетерогенности"
 lemmaPrepositional geteroskedastichnost_N = "гетероскедастичности"
 lemmaPrepositional getit_N = "гетите"
 lemmaPrepositional getry_N = "гетре"
+lemmaPrepositional gibel_N = "гибели"
 lemmaPrepositional gibridnost_N = "гибридности"
 lemmaPrepositional gig_N = "гиге"
 lemmaPrepositional gid_N = "гиде"
@@ -7021,9 +10534,9 @@ lemmaPrepositional gil_N = "гили"
 lemmaPrepositional gilyak_N = "гиляке"
 lemmaPrepositional gimen_N = "гимене"
 lemmaPrepositional gimn_N = "гимне"
+lemmaPrepositional gimnastika_N = "гимнастике"
 lemmaPrepositional gineya_N = "гинее"
 lemmaPrepositional gioid_N = "гиоиде"
-lemmaPrepositional gipoteza_N = "гипотезе"
 lemmaPrepositional gips_N = "гипсе"
 lemmaPrepositional gipyur_N = "гипюре"
 lemmaPrepositional girej_N = "гирее"
@@ -7037,19 +10550,21 @@ lemmaPrepositional glava_N = "главе"
 lemmaPrepositional glavk_N = "главке"
 lemmaPrepositional glad_N = "гладе"
 lemmaPrepositional glad_Nv2 = "глади"
-lemmaPrepositional glaz_N = "глазе"
+lemmaPrepositional glazok_N = "глазке"
 lemmaPrepositional glajd_N = "глайде"
 lemmaPrepositional glas_N = "гласе"
 lemmaPrepositional glej_N = "глее"
 lemmaPrepositional glen_N = "глени"
 lemmaPrepositional glet_N = "глете"
-lemmaPrepositional glina_N = "глине"
+lemmaPrepositional glint_N = "глинте"
 lemmaPrepositional glipt_N = "глипте"
 lemmaPrepositional glist_N = "глисте"
 lemmaPrepositional glif_N = "глифе"
 lemmaPrepositional gliya_N = "глии"
+lemmaPrepositional globus_N = "глобусе"
 lemmaPrepositional glossematika_N = "глоссематике"
 lemmaPrepositional glot_N = "глоте"
+lemmaPrepositional glubina_N = "глубине"
 lemmaPrepositional glub_N = "глуби"
 lemmaPrepositional glum_N = "глуме"
 lemmaPrepositional glupovatost_N = "глуповатости"
@@ -7060,7 +10575,7 @@ lemmaPrepositional glem_N = "глэме"
 lemmaPrepositional glyuk_N = "глюке"
 lemmaPrepositional glyuon_N = "глюоне"
 lemmaPrepositional gmina_N = "гмине"
-lemmaPrepositional gnev_N = "гневе"
+lemmaPrepositional gnezdo_N = "гнезде"
 lemmaPrepositional gnejs_N = "гнейсе"
 lemmaPrepositional gnet_N = "гнете"
 lemmaPrepositional gnida_N = "гниде"
@@ -7075,101 +10590,226 @@ lemmaPrepositional gobbl_N = "гоббле"
 lemmaPrepositional goboj_N = "гобое"
 lemmaPrepositional govor_N = "говоре"
 lemmaPrepositional gogot_N = "гоготе"
+lemmaPrepositional god_N = "году"
 lemmaPrepositional godik_N = "годике"
+lemmaPrepositional golovka_N = "головке"
 lemmaPrepositional golovokruzhitelnost_N = "головокружительности"
+lemmaPrepositional golub_N = "голубе"
 lemmaPrepositional gomogennost_N = "гомогенности"
 lemmaPrepositional gomozigotnost_N = "гомозиготности"
 lemmaPrepositional gomoskedastichnost_N = "гомоскедастичности"
+lemmaPrepositional gonets_N = "гонце"
 lemmaPrepositional gonimost_N = "гонимости"
-lemmaPrepositional gordost_N = "гордости"
+lemmaPrepositional gorenie_N = "горении"
+lemmaPrepositional gorizont_N = "горизонте"
+lemmaPrepositional gorlo_N = "горле"
+lemmaPrepositional gorshok_N = "горшке"
 lemmaPrepositional gosbezopasnost_N = "госбезопасности"
+lemmaPrepositional gostinitsa_N = "гостинице"
 lemmaPrepositional gost_N = "госте"
+lemmaPrepositional gosudarstvo_N = "государстве"
+lemmaPrepositional gravitatsiya_N = "гравитации"
+lemmaPrepositional grad_N = "граде"
+lemmaPrepositional gradus_N = "градусе"
 lemmaPrepositional grammatichnost_N = "грамматичности"
-lemmaPrepositional granitsa_N = "границе"
+lemmaPrepositional granat_N = "гранате"
+lemmaPrepositional grafik_N = "графике"
+lemmaPrepositional greben_N = "гребне"
 lemmaPrepositional grehovnost_N = "греховности"
 lemmaPrepositional greshnost_N = "грешности"
+lemmaPrepositional groza_N = "грозе"
+lemmaPrepositional grom_N = "громе"
 lemmaPrepositional grotesknost_N = "гротескности"
+lemmaPrepositional grohot_N = "грохоте"
 lemmaPrepositional grubovatost_N = "грубоватости"
 lemmaPrepositional gruzonapryazhennost_N = "грузонапряженности"
+lemmaPrepositional grunt_N = "грунте"
+lemmaPrepositional gruppa_N = "группе"
+lemmaPrepositional grusha_N = "груше"
+lemmaPrepositional gryadka_N = "грядке"
+lemmaPrepositional guberniya_N = "губернии"
 lemmaPrepositional gubkoobraznost_N = "губкообразности"
 lemmaPrepositional gubchatost_N = "губчатости"
+lemmaPrepositional gusenitsa_N = "гусенице"
+lemmaPrepositional gus_N = "гусе"
+lemmaPrepositional davka_N = "давке"
+lemmaPrepositional davlenie_N = "давлении"
+lemmaPrepositional daleko_N = "далеке"
+lemmaPrepositional dannye_N = "данных"
+lemmaPrepositional dan_N = "дани"
+lemmaPrepositional dvizhenie_N = "движении"
+lemmaPrepositional dvojnya_N = "двойне"
+lemmaPrepositional dvor_N = "дворе"
+lemmaPrepositional dvorets_N = "дворце"
 lemmaPrepositional dvuznachnost_N = "двузначности"
 lemmaPrepositional dvunatsionalnost_N = "двунациональности"
 lemmaPrepositional dvuhmernost_N = "двухмерности"
 lemmaPrepositional dvuhtsvetnost_N = "двухцветности"
+lemmaPrepositional debaty_N = "дебатах"
+lemmaPrepositional devochka_N = "девочке"
+lemmaPrepositional degradatsiya_N = "деградации"
+lemmaPrepositional ded_N = "деде"
+lemmaPrepositional dedlajn_N = "дедлайне"
+lemmaPrepositional deduktsiya_N = "дедукции"
+lemmaPrepositional deduplikatsiya_N = "дедупликации"
 lemmaPrepositional dezaktivizatsiya_N = "дезактивизации"
 lemmaPrepositional dezorientirovannost_N = "дезориентированности"
 lemmaPrepositional deizm_N = "деизме"
+lemmaPrepositional dejstvie_N = "действии"
+lemmaPrepositional dejstvitelnost_N = "действительности"
+lemmaPrepositional dekabr_N = "декабре"
 lemmaPrepositional deklassirovannost_N = "деклассированности"
-lemmaPrepositional delat_V = "делать"
+lemmaPrepositional dekompozitsiya_N = "декомпозиции"
+lemmaPrepositional delegirovanie_N = "делегировании"
+lemmaPrepositional delo_N = "деле"
+lemmaPrepositional demokratiya_N = "демократии"
 lemmaPrepositional demoralizovannost_N = "деморализованности"
+lemmaPrepositional denormalizatsiya_N = "денормализации"
+lemmaPrepositional deploj_N = "деплое"
 lemmaPrepositional depressivnost_N = "депрессивности"
+lemmaPrepositional derevnya_N = "деревне"
+lemmaPrepositional desant_N = "десанте"
+lemmaPrepositional deserializatsiya_N = "десериализации"
+lemmaPrepositional desna_N = "десне"
+lemmaPrepositional detal_N = "детали"
+lemmaPrepositional determinizm_N = "детерминизме"
 lemmaPrepositional determinirovannost_N = "детерминированности"
 lemmaPrepositional detorozhdaemost_N = "деторождаемости"
-lemmaPrepositional definitsiya_N = "дефиниции"
+lemmaPrepositional defitsit_N = "дефиците"
+lemmaPrepositional deformatsiya_N = "деформации"
+lemmaPrepositional deshifrovanie_N = "дешифровании"
+lemmaPrepositional deyatel_N = "деятеле"
+lemmaPrepositional diagnostika_N = "диагностике"
+lemmaPrepositional diagonal_N = "диагонали"
 lemmaPrepositional diakaustika_N = "диакаустике"
 lemmaPrepositional diakritika_N = "диакритике"
 lemmaPrepositional dialog_N = "диалоге"
+lemmaPrepositional diametr_N = "диаметре"
+lemmaPrepositional diapazon_N = "диапазоне"
 lemmaPrepositional diatermichnost_N = "диатермичности"
+lemmaPrepositional divan_N = "диване"
+lemmaPrepositional diviziya_N = "дивизии"
 lemmaPrepositional didzhitronika_N = "диджитронике"
-lemmaPrepositional distinktsiya_N = "дистинкции"
+lemmaPrepositional dizyunktsiya_N = "дизъюнкции"
+lemmaPrepositional dinastiya_N = "династии"
+lemmaPrepositional direktor_N = "директоре"
+lemmaPrepositional disbalans_N = "дисбалансе"
+lemmaPrepositional diskoteka_N = "дискотеке"
+lemmaPrepositional dispersiya_N = "дисперсии"
+lemmaPrepositional dispetcher_N = "диспетчере"
+lemmaPrepositional distantsiya_N = "дистанции"
 lemmaPrepositional differentsiruemost_N = "дифференцируемости"
-lemmaPrepositional doverie_N = "доверии"
-lemmaPrepositional dovod_N = "доводе"
-lemmaPrepositional dokazatelstvo_N = "доказательстве"
+lemmaPrepositional dnevnik_N = "дневнике"
+lemmaPrepositional dobycha_N = "добыче"
+lemmaPrepositional dogovor_N = "договоре"
+lemmaPrepositional doklad_N = "докладе"
+lemmaPrepositional dokument_N = "документе"
 lemmaPrepositional dokumentalistika_N = "документалистике"
-lemmaPrepositional dolg_N = "долге"
 lemmaPrepositional dolgosrochnost_N = "долгосрочности"
+lemmaPrepositional dolina_N = "долине"
+lemmaPrepositional domik_N = "домике"
 lemmaPrepositional dominantnost_N = "доминантности"
+lemmaPrepositional dopolnenie_N = "дополнении"
 lemmaPrepositional dopolnitelnost_N = "дополнительности"
 lemmaPrepositional dopolnyaemost_N = "дополняемости"
-lemmaPrepositional dopushchenie_N = "допущении"
-lemmaPrepositional dostatochnost_N = "достаточности"
-lemmaPrepositional dostovernost_N = "достоверности"
+lemmaPrepositional dopusk_N = "допуске"
+lemmaPrepositional doroga_N = "дороге"
+lemmaPrepositional doska_N = "доске"
+lemmaPrepositional dostavka_N = "доставке"
+lemmaPrepositional dostizhenie_N = "достижении"
+lemmaPrepositional dostupnost_N = "доступности"
 lemmaPrepositional dotatsionnost_N = "дотационности"
 lemmaPrepositional dohlost_N = "дохлости"
+lemmaPrepositional doch_N = "дочери"
+lemmaPrepositional draka_N = "драке"
+lemmaPrepositional drevesina_N = "древесине"
+lemmaPrepositional drova_N = "дровах"
+lemmaPrepositional druzhba_N = "дружбе"
 lemmaPrepositional dualnost_N = "дуальности"
+lemmaPrepositional dub_N = "дубе"
 lemmaPrepositional dubletnost_N = "дублетности"
 lemmaPrepositional dubnost_N = "дубности"
+lemmaPrepositional duma_N = "думе"
+lemmaPrepositional durak_N = "дураке"
+lemmaPrepositional duhi_N = "духах"
 lemmaPrepositional duhovitost_N = "духовитости"
+lemmaPrepositional duhovka_N = "духовке"
 lemmaPrepositional dushistost_N = "душистости"
+lemmaPrepositional duel_N = "дуэли"
+lemmaPrepositional dymka_N = "дымке"
 lemmaPrepositional dymnost_N = "дымности"
 lemmaPrepositional dymchatost_N = "дымчатости"
+lemmaPrepositional dyadya_N = "дяде"
+lemmaPrepositional evrej_N = "еврее"
+lemmaPrepositional evropa_N = "европе"
 lemmaPrepositional evfenika_N = "евфенике"
 lemmaPrepositional edinokrovnost_N = "единокровности"
 lemmaPrepositional edinorodnost_N = "единородности"
 lemmaPrepositional edinosushchnost_N = "единосущности"
 lemmaPrepositional edinstvennost_N = "единственности"
 lemmaPrepositional ezhednevnost_N = "ежедневности"
+lemmaPrepositional elka_N = "елке"
+lemmaPrepositional est_N = "ести"
+lemmaPrepositional ehat_N = "ехать"
+lemmaPrepositional zhaloba_N = "жалобе"
 lemmaPrepositional zhalobnost_N = "жалобности"
+lemmaPrepositional zhara_N = "жаре"
+lemmaPrepositional zhelezo_N = "железе"
 lemmaPrepositional zheltushnost_N = "желтушности"
+lemmaPrepositional zhelud_N = "желуде"
+lemmaPrepositional zhena_N = "жене"
+lemmaPrepositional zhenih_N = "женихе"
 lemmaPrepositional zhenopodobnost_N = "женоподобности"
-lemmaPrepositional zhizn_N = "жизни"
+lemmaPrepositional zhenshchina_N = "женщине"
+lemmaPrepositional zhertva_N = "жертве"
+lemmaPrepositional zhivot_N = "животе"
+lemmaPrepositional zhivotnoe_N = "животном"
+lemmaPrepositional zhurnal_N = "журнале"
+lemmaPrepositional zhurnalist_N = "журналисте"
+lemmaPrepositional zabava_N = "забаве"
 lemmaPrepositional zablagovremennost_N = "заблаговременности"
+lemmaPrepositional zabor_N = "заборе"
+lemmaPrepositional zavershenie_N = "завершении"
+lemmaPrepositional zavisimost_N = "зависимости"
+lemmaPrepositional zavist_N = "зависти"
+lemmaPrepositional zavod_N = "заводе"
 lemmaPrepositional zavorozhennost_N = "завороженности"
+lemmaPrepositional zavtra_N = "завтра"
+lemmaPrepositional zagadka_N = "загадке"
 lemmaPrepositional zagruzhenost_N = "загружености"
-lemmaPrepositional zadacha_N = "задаче"
+lemmaPrepositional zaderzhka_N = "задержке"
 lemmaPrepositional zazhatost_N = "зажатости"
 lemmaPrepositional zaika_N = "заике"
-lemmaPrepositional zaklyuchenie_N = "заключении"
+lemmaPrepositional zakaz_N = "заказе"
+lemmaPrepositional zakat_N = "закате"
 lemmaPrepositional zakompleksovannost_N = "закомплексованности"
 lemmaPrepositional zakonnorozhdennost_N = "законнорожденности"
+lemmaPrepositional zakonomernost_N = "закономерности"
 lemmaPrepositional zakopchennost_N = "закопченности"
 lemmaPrepositional zakreplennost_N = "закрепленности"
 lemmaPrepositional zakruchennost_N = "закрученности"
 lemmaPrepositional zakrytost_N = "закрытости"
 lemmaPrepositional zalizannost_N = "зализанности"
+lemmaPrepositional zamedlenie_N = "замедлении"
 lemmaPrepositional zamenyaemost_N = "заменяемости"
+lemmaPrepositional zametka_N = "заметке"
 lemmaPrepositional zametnost_N = "заметности"
 lemmaPrepositional zameshannost_N = "замешанности"
 lemmaPrepositional zamusolennost_N = "замусоленности"
 lemmaPrepositional zamutnennost_N = "замутненности"
+lemmaPrepositional zamysel_N = "замысле"
+lemmaPrepositional zanaves_N = "занавесе"
+lemmaPrepositional zapad_N = "западе"
+lemmaPrepositional zapas_N = "запасе"
+lemmaPrepositional zapah_N = "запахе"
+lemmaPrepositional zapis_N = "записи"
 lemmaPrepositional zapolnennost_N = "заполненности"
-lemmaPrepositional zapret_N = "запрете"
 lemmaPrepositional zapreshchennost_N = "запрещенности"
+lemmaPrepositional zarya_N = "заре"
 lemmaPrepositional zaryazhennost_N = "заряженности"
 lemmaPrepositional zasalennost_N = "засаленности"
 lemmaPrepositional zasluzhennost_N = "заслуженности"
+lemmaPrepositional zasuha_N = "засухе"
 lemmaPrepositional zasuhostojkost_N = "засухостойкости"
 lemmaPrepositional zatvorennost_N = "затворенности"
 lemmaPrepositional zatormozhennost_N = "заторможенности"
@@ -7177,137 +10817,344 @@ lemmaPrepositional zatrapeznost_N = "затрапезности"
 lemmaPrepositional zatyanutost_N = "затянутости"
 lemmaPrepositional zacharovannost_N = "зачарованности"
 lemmaPrepositional zashchishchennost_N = "защищенности"
+lemmaPrepositional zayavka_N = "заявке"
+lemmaPrepositional zayavlenie_N = "заявлении"
+lemmaPrepositional zayats_N = "зайце"
+lemmaPrepositional zvon_N = "звоне"
+lemmaPrepositional zvonok_N = "звонке"
 lemmaPrepositional zvukotehnika_N = "звукотехнике"
+lemmaPrepositional zdanie_N = "здании"
+lemmaPrepositional zdorove_N = "здоровье"
+lemmaPrepositional zemletryasenie_N = "землетрясении"
+lemmaPrepositional zerno_N = "зерне"
+lemmaPrepositional zima_N = "зиме"
+lemmaPrepositional zlo_N = "зле"
+lemmaPrepositional zmeya_N = "змее"
 lemmaPrepositional znakovost_N = "знаковости"
-lemmaPrepositional znat_V = "знать"
+lemmaPrepositional znamya_N = "знамени"
+lemmaPrepositional znachenie_N = "значении"
+lemmaPrepositional zoloto_N = "золоте"
+lemmaPrepositional zritel_N = "зрителе"
+lemmaPrepositional zub_N = "зубе"
 lemmaPrepositional zubchatost_N = "зубчатости"
 lemmaPrepositional idempotentnost_N = "идемпотентности"
+lemmaPrepositional identifikatsiya_N = "идентификации"
 lemmaPrepositional identifitsiruemost_N = "идентифицируемости"
-lemmaPrepositional identichnost_N = "идентичности"
 lemmaPrepositional idiotichnost_N = "идиотичности"
+lemmaPrepositional ierarhiya_N = "иерархии"
 lemmaPrepositional ieroglifika_N = "иероглифике"
+lemmaPrepositional izba_N = "избе"
+lemmaPrepositional izvestie_N = "известии"
+lemmaPrepositional izgnanie_N = "изгнании"
 lemmaPrepositional izlechimost_N = "излечимости"
+lemmaPrepositional izluchenie_N = "излучении"
+lemmaPrepositional izmena_N = "измене"
+lemmaPrepositional izmenenie_N = "изменении"
 lemmaPrepositional izmotannost_N = "измотанности"
 lemmaPrepositional iznemozhennost_N = "изнеможенности"
+lemmaPrepositional izolyatsiya_N = "изоляции"
 lemmaPrepositional izotropnost_N = "изотропности"
 lemmaPrepositional izrezannost_N = "изрезанности"
+lemmaPrepositional ikona_N = "иконе"
 lemmaPrepositional ikonika_N = "иконике"
-lemmaPrepositional illyuziya_N = "иллюзии"
 lemmaPrepositional imbetsilnost_N = "имбецильности"
 lemmaPrepositional immunogenetika_N = "иммуногенетике"
-lemmaPrepositional implikatsiya_N = "импликации"
+lemmaPrepositional imperiya_N = "империи"
+lemmaPrepositional impuls_N = "импульсе"
+lemmaPrepositional imya_N = "имени"
+lemmaPrepositional invariant_N = "инварианте"
+lemmaPrepositional indeks_N = "индексе"
+lemmaPrepositional indeksatsiya_N = "индексации"
+lemmaPrepositional indikator_N = "индикаторе"
+lemmaPrepositional induktsiya_N = "индукции"
+lemmaPrepositional inej_N = "инее"
 lemmaPrepositional inertsionnost_N = "инерционности"
+lemmaPrepositional inertsiya_N = "инерции"
+lemmaPrepositional inkapsulyatsiya_N = "инкапсуляции"
+lemmaPrepositional inspektsiya_N = "инспекции"
 lemmaPrepositional instruktivnost_N = "инструктивности"
+lemmaPrepositional instruktsiya_N = "инструкции"
+lemmaPrepositional instrument_N = "инструменте"
 lemmaPrepositional insulyarnost_N = "инсулярности"
+lemmaPrepositional integratsiya_N = "интеграции"
 lemmaPrepositional integrirovannost_N = "интегрированности"
 lemmaPrepositional integriruemost_N = "интегрируемости"
 lemmaPrepositional interaktivnost_N = "интерактивности"
+lemmaPrepositional interval_N = "интервале"
+lemmaPrepositional interes_N = "интересе"
 lemmaPrepositional internatsionalnost_N = "интернациональности"
-lemmaPrepositional interpretatsiya_N = "интерпретации"
-lemmaPrepositional inferentsiya_N = "инференции"
+lemmaPrepositional interpolyatsiya_N = "интерполяции"
+lemmaPrepositional interpretiruemost_N = "интерпретируемости"
+lemmaPrepositional interfejs_N = "интерфейсе"
+lemmaPrepositional interfejsnost_N = "интерфейсности"
+lemmaPrepositional intriga_N = "интриге"
 lemmaPrepositional informativnost_N = "информативности"
 lemmaPrepositional informatika_N = "информатике"
 lemmaPrepositional informatsionnost_N = "информационности"
+lemmaPrepositional informatsiya_N = "информации"
 lemmaPrepositional informirovannost_N = "информированности"
 lemmaPrepositional informtehnika_N = "информтехнике"
+lemmaPrepositional intsident_N = "инциденте"
 lemmaPrepositional ionika_N = "ионике"
 lemmaPrepositional irregulyarnost_N = "иррегулярности"
-lemmaPrepositional isklyuchenie_N = "исключении"
+lemmaPrepositional isk_N = "иске"
+lemmaPrepositional iskra_N = "искре"
+lemmaPrepositional iskrennost_N = "искренности"
 lemmaPrepositional iskushennost_N = "искушенности"
+lemmaPrepositional isparenie_N = "испарении"
 lemmaPrepositional ispeshchrennost_N = "испещренности"
+lemmaPrepositional ispolnitel_N = "исполнителе"
 lemmaPrepositional ispravimost_N = "исправимости"
+lemmaPrepositional ispravlenie_N = "исправлении"
+lemmaPrepositional ispytanie_N = "испытании"
 lemmaPrepositional issledovannost_N = "исследованности"
-lemmaPrepositional istina_N = "истине"
-lemmaPrepositional istinnost_N = "истинности"
+lemmaPrepositional istorik_N = "историке"
+lemmaPrepositional istochnik_N = "источнике"
 lemmaPrepositional istrepannost_N = "истрепанности"
+lemmaPrepositional ishod_N = "исходе"
 lemmaPrepositional ischislimost_N = "исчислимости"
 lemmaPrepositional ischislyaemost_N = "исчисляемости"
+lemmaPrepositional iteratsiya_N = "итерации"
+lemmaPrepositional kabinet_N = "кабинете"
+lemmaPrepositional kavaler_N = "кавалере"
+lemmaPrepositional kavychka_N = "кавычке"
+lemmaPrepositional kazarma_N = "казарме"
 lemmaPrepositional kazennost_N = "казенности"
+lemmaPrepositional kazn_N = "казни"
+lemmaPrepositional kalendar_N = "календаре"
+lemmaPrepositional kalibrovka_N = "калибровке"
+lemmaPrepositional kamera_N = "камере"
+lemmaPrepositional kantata_N = "кантате"
 lemmaPrepositional kantserogennost_N = "канцерогенности"
+lemmaPrepositional kapital_N = "капитале"
 lemmaPrepositional kapitaloemkost_N = "капиталоемкости"
+lemmaPrepositional kapitan_N = "капитане"
+lemmaPrepositional karandash_N = "карандаше"
 lemmaPrepositional karlikovost_N = "карликовости"
+lemmaPrepositional karman_N = "кармане"
+lemmaPrepositional karera_N = "карьере"
+lemmaPrepositional kassa_N = "кассе"
 lemmaPrepositional katadioptrika_N = "катадиоптрике"
+lemmaPrepositional katalog_N = "каталоге"
+lemmaPrepositional katastrofa_N = "катастрофе"
+lemmaPrepositional kategorizatsiya_N = "категоризации"
+lemmaPrepositional kauzatsiya_N = "каузации"
+lemmaPrepositional kafe_N = "кафе"
+lemmaPrepositional kasha_N = "каше"
+lemmaPrepositional kvadrat_N = "квадрате"
 lemmaPrepositional kvadratnost_N = "квадратности"
 lemmaPrepositional kvadrika_N = "квадрике"
 lemmaPrepositional kvadriruemost_N = "квадрируемости"
 lemmaPrepositional kvazioptika_N = "квазиоптике"
-lemmaPrepositional kvantor_N = "кванторе"
+lemmaPrepositional kvantil_N = "квантиле"
+lemmaPrepositional kvartal_N = "квартале"
+lemmaPrepositional kvartira_N = "квартире"
 lemmaPrepositional kvelost_N = "квелости"
+lemmaPrepositional kvitantsiya_N = "квитанции"
+lemmaPrepositional kedr_N = "кедре"
+lemmaPrepositional kerosin_N = "керосине"
 lemmaPrepositional kika_N = "кике"
+lemmaPrepositional kilometr_N = "километре"
 lemmaPrepositional kinesika_N = "кинесике"
 lemmaPrepositional kinoavtomatika_N = "киноавтоматике"
 lemmaPrepositional kinokritika_N = "кинокритике"
 lemmaPrepositional kinomehanika_N = "киномеханике"
 lemmaPrepositional kinoradiomehanika_N = "кинорадиомеханике"
 lemmaPrepositional kiralnost_N = "киральности"
+lemmaPrepositional kislorod_N = "кислороде"
+lemmaPrepositional kislota_N = "кислоте"
 lemmaPrepositional kislotorastvorimost_N = "кислоторастворимости"
 lemmaPrepositional kislotoustojchivost_N = "кислотоустойчивости"
+lemmaPrepositional klad_N = "кладе"
+lemmaPrepositional klassifikatsiya_N = "классификации"
+lemmaPrepositional klassifitsirovanie_N = "классифицировании"
+lemmaPrepositional kletka_N = "клетке"
+lemmaPrepositional klet_N = "клети"
+lemmaPrepositional klient_N = "клиенте"
 lemmaPrepositional klika_N = "клике"
+lemmaPrepositional klimat_N = "климате"
+lemmaPrepositional klinika_N = "клинике"
 lemmaPrepositional klinovidnost_N = "клиновидности"
+lemmaPrepositional knizhka_N = "книжке"
+lemmaPrepositional knopka_N = "кнопке"
+lemmaPrepositional knut_N = "кнуте"
+lemmaPrepositional knyaz_N = "князе"
 lemmaPrepositional kovalentnost_N = "ковалентности"
+lemmaPrepositional kover_N = "ковре"
+lemmaPrepositional kovsh_N = "ковше"
+lemmaPrepositional kogeziya_N = "когезии"
 lemmaPrepositional kognitivistika_N = "когнитивистике"
+lemmaPrepositional kozhuh_N = "кожухе"
+lemmaPrepositional kozel_N = "козле"
+lemmaPrepositional kokos_N = "кокосе"
+lemmaPrepositional kolebanie_N = "колебании"
+lemmaPrepositional koleso_N = "колесе"
+lemmaPrepositional kollega_N = "коллеге"
+lemmaPrepositional kollektiv_N = "коллективе"
 lemmaPrepositional kollinearnost_N = "коллинеарности"
+lemmaPrepositional kolodets_N = "колодце"
+lemmaPrepositional kolonka_N = "колонке"
+lemmaPrepositional kolonna_N = "колонне"
+lemmaPrepositional koltso_N = "кольце"
+lemmaPrepositional komanda_N = "команде"
+lemmaPrepositional komandir_N = "командире"
+lemmaPrepositional komar_N = "комаре"
+lemmaPrepositional kometa_N = "комете"
 lemmaPrepositional kommutativnost_N = "коммутативности"
+lemmaPrepositional komnata_N = "комнате"
+lemmaPrepositional kompaniya_N = "компании"
+lemmaPrepositional komplaens_N = "комплаенсе"
+lemmaPrepositional kompleks_N = "комплексе"
 lemmaPrepositional komplementarnost_N = "комплементарности"
+lemmaPrepositional komponent_N = "компоненте"
+lemmaPrepositional kompressiya_N = "компрессии"
 lemmaPrepositional komfortnost_N = "комфортности"
+lemmaPrepositional konvejer_N = "конвейере"
 lemmaPrepositional konvertiruemost_N = "конвертируемости"
-lemmaPrepositional konkretika_N = "конкретике"
+lemmaPrepositional kondensatsiya_N = "конденсации"
 lemmaPrepositional konkurentnost_N = "конкурентности"
+lemmaPrepositional konkurs_N = "конкурсе"
+lemmaPrepositional konnektor_N = "коннекторе"
+lemmaPrepositional konsistentnost_N = "консистентности"
+lemmaPrepositional konstanta_N = "константе"
 lemmaPrepositional konstitutsionnost_N = "конституционности"
+lemmaPrepositional konstruktor_N = "конструкторе"
 lemmaPrepositional kontakt_N = "контакте"
 lemmaPrepositional kontaktnost_N = "контактности"
+lemmaPrepositional kontekst_N = "контексте"
 lemmaPrepositional kontinentalnost_N = "континентальности"
+lemmaPrepositional kontrakt_N = "контракте"
 lemmaPrepositional kontroliruemost_N = "контролируемости"
-lemmaPrepositional kontrprimer_N = "контрпримере"
+lemmaPrepositional kontrol_N = "контроле"
+lemmaPrepositional kontur_N = "контуре"
 lemmaPrepositional konusnost_N = "конусности"
 lemmaPrepositional konusoobraznost_N = "конусообразности"
+lemmaPrepositional konfeta_N = "конфете"
+lemmaPrepositional konfigurirovanie_N = "конфигурировании"
 lemmaPrepositional konfidentsialnost_N = "конфиденциальности"
-lemmaPrepositional konflikt_N = "конфликте"
 lemmaPrepositional konfliktnost_N = "конфликтности"
-lemmaPrepositional konfrontatsiya_N = "конфронтации"
 lemmaPrepositional kontsentrirovannost_N = "концентрированности"
+lemmaPrepositional kontsert_N = "концерте"
 lemmaPrepositional konyunkturnost_N = "конъюнктурности"
+lemmaPrepositional konyunktsiya_N = "конъюнкции"
+lemmaPrepositional kon_N = "коне"
+lemmaPrepositional koordinata_N = "координате"
+lemmaPrepositional koordinatsiya_N = "координации"
 lemmaPrepositional koordinirovannost_N = "координированности"
-lemmaPrepositional korollarij_N = "королларии"
-lemmaPrepositional korrektnost_N = "корректности"
+lemmaPrepositional kopejka_N = "копейке"
+lemmaPrepositional korabl_N = "корабле"
+lemmaPrepositional koren_N = "корне"
+lemmaPrepositional korzina_N = "корзине"
+lemmaPrepositional koridor_N = "коридоре"
+lemmaPrepositional korobka_N = "коробке"
+lemmaPrepositional korova_N = "корове"
+lemmaPrepositional korpus_N = "корпусе"
+lemmaPrepositional korrektsiya_N = "коррекции"
 lemmaPrepositional korrelirovannost_N = "коррелированности"
+lemmaPrepositional korrelyatsiya_N = "корреляции"
 lemmaPrepositional korrumpirovannost_N = "коррумпированности"
 lemmaPrepositional kosvennost_N = "косвенности"
 lemmaPrepositional kosmatost_N = "косматости"
 lemmaPrepositional kosmichnost_N = "космичности"
+lemmaPrepositional kosmos_N = "космосе"
+lemmaPrepositional koster_N = "костре"
 lemmaPrepositional kost_N = "кости"
+lemmaPrepositional kotel_N = "котле"
 lemmaPrepositional koertsitivnost_N = "коэрцитивности"
 lemmaPrepositional krapchatost_N = "крапчатости"
+lemmaPrepositional kraska_N = "краске"
 lemmaPrepositional krasnostojkost_N = "красностойкости"
+lemmaPrepositional kredit_N = "кредите"
+lemmaPrepositional kreslo_N = "кресле"
+lemmaPrepositional krest_N = "кресте"
 lemmaPrepositional krivorukost_N = "криворукости"
+lemmaPrepositional krizis_N = "кризисе"
 lemmaPrepositional kriogenika_N = "криогенике"
 lemmaPrepositional krioelektronika_N = "криоэлектронике"
-lemmaPrepositional kriterij_N = "критерии"
+lemmaPrepositional kristall_N = "кристалле"
+lemmaPrepositional kristallizatsiya_N = "кристаллизации"
+lemmaPrepositional krovat_N = "кровати"
 lemmaPrepositional krovnost_N = "кровности"
+lemmaPrepositional krolik_N = "кролике"
 lemmaPrepositional krugoobraznost_N = "кругообразности"
 lemmaPrepositional krupnost_N = "крупности"
+lemmaPrepositional krylo_N = "крыле"
+lemmaPrepositional krysa_N = "крысе"
+lemmaPrepositional krysha_N = "крыше"
+lemmaPrepositional kub_N = "кубе"
+lemmaPrepositional kuznets_N = "кузнеце"
+lemmaPrepositional kukuruza_N = "кукурузе"
 lemmaPrepositional kulttehnika_N = "культтехнике"
+lemmaPrepositional kupol_N = "куполе"
+lemmaPrepositional kurort_N = "курорте"
+lemmaPrepositional kust_N = "кусте"
+lemmaPrepositional kuhnya_N = "кухне"
+lemmaPrepositional keshirovanie_N = "кэшировании"
+lemmaPrepositional laboratoriya_N = "лаборатории"
+lemmaPrepositional lager_N = "лагере"
 lemmaPrepositional ladnost_N = "ладности"
+lemmaPrepositional ladon_N = "ладони"
+lemmaPrepositional lak_N = "лаке"
 lemmaPrepositional laminarnost_N = "ламинарности"
+lemmaPrepositional lampa_N = "лампе"
+lemmaPrepositional lampochka_N = "лампочке"
+lemmaPrepositional lapa_N = "лапе"
 lemmaPrepositional latentnost_N = "латентности"
+lemmaPrepositional latun_N = "латуни"
+lemmaPrepositional lgun_N = "лгуне"
+lemmaPrepositional lev_N = "льве"
+lemmaPrepositional levaya_N = "левой"
+lemmaPrepositional legenda_N = "легенде"
 lemmaPrepositional legitimnost_N = "легитимности"
+lemmaPrepositional legkoe_N = "легком"
+lemmaPrepositional lezhak_N = "лежаке"
 lemmaPrepositional lezhkost_N = "лежкости"
 lemmaPrepositional leksikostatistika_N = "лексикостатистике"
-lemmaPrepositional lemma_N = "лемме"
+lemmaPrepositional lepestok_N = "лепестке"
+lemmaPrepositional lesnik_N = "леснике"
+lemmaPrepositional leto_N = "лете"
+lemmaPrepositional letchik_N = "летчике"
+lemmaPrepositional liven_N = "ливне"
+lemmaPrepositional linejka_N = "линейке"
 lemmaPrepositional listovatost_N = "листоватости"
+lemmaPrepositional listok_N = "листке"
+lemmaPrepositional literatura_N = "литературе"
+lemmaPrepositional litsej_N = "лицее"
+lemmaPrepositional lovushka_N = "ловушке"
 lemmaPrepositional logarifmetika_N = "логарифметике"
 lemmaPrepositional logarifmika_N = "логарифмике"
 lemmaPrepositional logika_N = "логике"
-lemmaPrepositional lozh_N = "лжи"
+lemmaPrepositional lodka_N = "лодке"
+lemmaPrepositional lozhka_N = "ложке"
+lemmaPrepositional lozhnost_N = "ложности"
+lemmaPrepositional loza_N = "лозе"
+lemmaPrepositional lokomotiv_N = "локомотиве"
+lemmaPrepositional lokon_N = "локоне"
+lemmaPrepositional lopata_N = "лопате"
+lemmaPrepositional lopuh_N = "лопухе"
+lemmaPrepositional lotok_N = "лотке"
 lemmaPrepositional lotsiya_N = "лоции"
+lemmaPrepositional loshad_N = "лошади"
+lemmaPrepositional luk_N = "луке"
+lemmaPrepositional luchina_N = "лучине"
 lemmaPrepositional ldistost_N = "льдистости"
 lemmaPrepositional lyubovnost_N = "любовности"
 lemmaPrepositional lyubov_N = "любви"
-lemmaPrepositional magiya_N = "магии"
+lemmaPrepositional lyudi_N = "людях"
+lemmaPrepositional lyustra_N = "люстре"
+lemmaPrepositional lyagushka_N = "лягушке"
+lemmaPrepositional legkost_N = "легкости"
+lemmaPrepositional magazin_N = "магазине"
 lemmaPrepositional magnionika_N = "магнионике"
+lemmaPrepositional magnit_N = "магните"
 lemmaPrepositional magnitoaerodinamika_N = "магнитоаэродинамике"
 lemmaPrepositional magnitogazodinamika_N = "магнитогазодинамике"
 lemmaPrepositional magnitogidrodinamika_N = "магнитогидродинамике"
+lemmaPrepositional maz_N = "мази"
+lemmaPrepositional maj_N = "мае"
+lemmaPrepositional majka_N = "майке"
+lemmaPrepositional mak_N = "маке"
+lemmaPrepositional maket_N = "макете"
 lemmaPrepositional makrobiotika_N = "макробиотике"
 lemmaPrepositional makrokinetika_N = "макрокинетике"
 lemmaPrepositional makrolingvistika_N = "макролингвистике"
@@ -7316,26 +11163,73 @@ lemmaPrepositional makroturbulentnost_N = "макротурбулентност�
 lemmaPrepositional makroekonomika_N = "макроэкономике"
 lemmaPrepositional malovazhnost_N = "маловажности"
 lemmaPrepositional maloinertsionnost_N = "малоинерционности"
+lemmaPrepositional malysh_N = "малыше"
+lemmaPrepositional malyar_N = "маляре"
+lemmaPrepositional mama_N = "маме"
+lemmaPrepositional mandarin_N = "мандарине"
+lemmaPrepositional manezh_N = "манеже"
+lemmaPrepositional manifest_N = "манифесте"
+lemmaPrepositional manyak_N = "маньяке"
+lemmaPrepositional marafon_N = "марафоне"
+lemmaPrepositional marka_N = "марке"
 lemmaPrepositional markovost_N = "марковости"
+lemmaPrepositional mart_N = "марте"
+lemmaPrepositional marshrut_N = "маршруте"
+lemmaPrepositional marshrutizatsiya_N = "маршрутизации"
+lemmaPrepositional marshrutnost_N = "маршрутности"
+lemmaPrepositional maslo_N = "масле"
 lemmaPrepositional maslobenzostojkost_N = "маслобензостойкости"
 lemmaPrepositional maslopogloshchaemost_N = "маслопоглощаемости"
+lemmaPrepositional massa_N = "массе"
+lemmaPrepositional massiv_N = "массиве"
 lemmaPrepositional massirovannost_N = "массированности"
+lemmaPrepositional master_N = "мастере"
+lemmaPrepositional masterskaya_N = "мастерской"
+lemmaPrepositional masshtab_N = "масштабе"
+lemmaPrepositional masshtabiruemost_N = "масштабируемости"
+lemmaPrepositional mat_N = "мате"
 lemmaPrepositional materialoemkost_N = "материалоемкости"
+lemmaPrepositional materiya_N = "материи"
+lemmaPrepositional matras_N = "матрасе"
+lemmaPrepositional mahorka_N = "махорке"
+lemmaPrepositional mashina_N = "машине"
+lemmaPrepositional mashinist_N = "машинисте"
+lemmaPrepositional mgnovenie_N = "мгновении"
 lemmaPrepositional mgnovennost_N = "мгновенности"
+lemmaPrepositional med_N = "меде"
+lemmaPrepositional medal_N = "медали"
+lemmaPrepositional medved_N = "медведе"
+lemmaPrepositional mediana_N = "медиане"
 lemmaPrepositional medstatistika_N = "медстатистике"
 lemmaPrepositional medtehnika_N = "медтехнике"
+lemmaPrepositional mel_N = "меле"
 lemmaPrepositional melkozernistost_N = "мелкозернистости"
 lemmaPrepositional melkoplodnost_N = "мелкоплодности"
 lemmaPrepositional melkoslojnost_N = "мелкослойности"
+lemmaPrepositional melodiya_N = "мелодии"
 lemmaPrepositional mentalnost_N = "ментальности"
 lemmaPrepositional mertvost_N = "мертвости"
+lemmaPrepositional mestnost_N = "местности"
 lemmaPrepositional metalingvistika_N = "металингвистике"
+lemmaPrepositional metall_N = "металле"
 lemmaPrepositional metalloplastika_N = "металлопластике"
 lemmaPrepositional metalogika_N = "металогике"
 lemmaPrepositional metamatematika_N = "метаматематике"
 lemmaPrepositional metasemiotika_N = "метасемиотике"
 lemmaPrepositional metafizichnost_N = "метафизичности"
+lemmaPrepositional metel_N = "метели"
+lemmaPrepositional metla_N = "метле"
+lemmaPrepositional metod_N = "методе"
+lemmaPrepositional metodika_N = "методике"
+lemmaPrepositional metrika_N = "метрике"
+lemmaPrepositional metro_N = "метро"
+lemmaPrepositional meh_N = "мехе"
+lemmaPrepositional mehanizm_N = "механизме"
 lemmaPrepositional mehatronika_N = "мехатронике"
+lemmaPrepositional mech_N = "мече"
+lemmaPrepositional mechta_N = "мечте"
+lemmaPrepositional meshok_N = "мешке"
+lemmaPrepositional migratsiya_N = "миграции"
 lemmaPrepositional mikrografika_N = "микрографике"
 lemmaPrepositional mikromehanika_N = "микромеханике"
 lemmaPrepositional mikroskladchatost_N = "микроскладчатости"
@@ -7346,8 +11240,11 @@ lemmaPrepositional mikrofizika_N = "микрофизике"
 lemmaPrepositional mikrofotoelektronika_N = "микрофотоэлектронике"
 lemmaPrepositional mikroekonomika_N = "микроэкономике"
 lemmaPrepositional mikroelektronika_N = "микроэлектронике"
+lemmaPrepositional milya_N = "миле"
+lemmaPrepositional mineral_N = "минерале"
 lemmaPrepositional mineralokeramika_N = "минералокерамике"
 lemmaPrepositional minutnost_N = "минутности"
+lemmaPrepositional mirolyubie_N = "миролюбии"
 lemmaPrepositional mnogoaspektnost_N = "многоаспектности"
 lemmaPrepositional mnogovalentnost_N = "многовалентности"
 lemmaPrepositional mnogovariantnost_N = "многовариантности"
@@ -7364,40 +11261,74 @@ lemmaPrepositional mnogotomnost_N = "многотомности"
 lemmaPrepositional mnogoukladnost_N = "многоукладности"
 lemmaPrepositional mnogotsvetnost_N = "многоцветности"
 lemmaPrepositional mnogoyadnost_N = "многоядности"
-lemmaPrepositional modalnost_N = "модальности"
+lemmaPrepositional mnozhestvo_N = "множестве"
+lemmaPrepositional modul_N = "модуле"
 lemmaPrepositional molektronika_N = "молектронике"
-lemmaPrepositional molchanie_N = "молчании"
+lemmaPrepositional molekula_N = "молекуле"
+lemmaPrepositional molniya_N = "молнии"
 lemmaPrepositional molyarnost_N = "молярности"
+lemmaPrepositional moment_N = "моменте"
+lemmaPrepositional monah_N = "монахе"
+lemmaPrepositional moneta_N = "монете"
+lemmaPrepositional monitoring_N = "мониторинге"
+lemmaPrepositional monolog_N = "монологе"
 lemmaPrepositional monohromatichnost_N = "монохроматичности"
 lemmaPrepositional monohromnost_N = "монохромности"
 lemmaPrepositional monoenergetichnost_N = "моноэнергетичности"
+lemmaPrepositional moral_N = "морали"
+lemmaPrepositional moroz_N = "морозе"
 lemmaPrepositional moroznost_N = "морозности"
+lemmaPrepositional moros_N = "мороси"
+lemmaPrepositional mostik_N = "мостике"
+lemmaPrepositional mototsikl_N = "мотоцикле"
+lemmaPrepositional motylek_N = "мотыльке"
+lemmaPrepositional moshchnost_N = "мощности"
+lemmaPrepositional moshch_N = "мощи"
+lemmaPrepositional mramor_N = "мраморе"
 lemmaPrepositional mramornost_N = "мраморности"
+lemmaPrepositional mudrets_N = "мудреце"
 lemmaPrepositional muzhepodobnost_N = "мужеподобности"
+lemmaPrepositional muzej_N = "музее"
+lemmaPrepositional muka_N = "муке"
 lemmaPrepositional multikollinearnost_N = "мультиколлинеарности"
 lemmaPrepositional multipletnost_N = "мультиплетности"
 lemmaPrepositional multiustojchivost_N = "мультиустойчивости"
+lemmaPrepositional mundir_N = "мундире"
+lemmaPrepositional muravej_N = "муравье"
 lemmaPrepositional mutagennost_N = "мутагенности"
 lemmaPrepositional mutantnost_N = "мутантности"
-lemmaPrepositional myslit_V = "мыслить"
+lemmaPrepositional mysh_N = "мыши"
+lemmaPrepositional mer_N = "мэре"
+lemmaPrepositional myach_N = "мяче"
 lemmaPrepositional nablyudaemost_N = "наблюдаемости"
-lemmaPrepositional nadezhda_N = "надежде"
-lemmaPrepositional nadezhnost_N = "надежности"
+lemmaPrepositional navazhdenie_N = "наваждении"
+lemmaPrepositional naves_N = "навесе"
+lemmaPrepositional nagrada_N = "награде"
+lemmaPrepositional nagruzka_N = "нагрузке"
 lemmaPrepositional naznachaemost_N = "назначаемости"
-lemmaPrepositional naznachenie_N = "назначении"
 lemmaPrepositional naigrannost_N = "наигранности"
+lemmaPrepositional namerenie_N = "намерении"
 lemmaPrepositional nametannost_N = "наметанности"
 lemmaPrepositional nanoelektronika_N = "наноэлектронике"
+lemmaPrepositional napadenie_N = "нападении"
 lemmaPrepositional napolnyaemost_N = "наполняемости"
+lemmaPrepositional napravlenie_N = "направлении"
 lemmaPrepositional naprasnost_N = "напрасности"
+lemmaPrepositional napryazhenie_N = "напряжении"
+lemmaPrepositional naryad_N = "наряде"
+lemmaPrepositional nastoyashchee_N = "настоящем"
 lemmaPrepositional nastraivaemost_N = "настраиваемости"
 lemmaPrepositional natuzhnost_N = "натужности"
+lemmaPrepositional natura_N = "натуре"
+lemmaPrepositional natsiya_N = "нации"
+lemmaPrepositional nachalo_N = "начале"
 lemmaPrepositional naelektrizovannost_N = "наэлектризованности"
 lemmaPrepositional neadekvatnost_N = "неадекватности"
 lemmaPrepositional nebezopasnost_N = "небезопасности"
 lemmaPrepositional nebespristrastnost_N = "небеспристрастности"
 lemmaPrepositional nevazhnost_N = "неважности"
 lemmaPrepositional neveskost_N = "невескости"
+lemmaPrepositional nevesta_N = "невесте"
 lemmaPrepositional neveshchestvennost_N = "невещественности"
 lemmaPrepositional nevzaimozamestimost_N = "невзаимозаместимости"
 lemmaPrepositional nevidimost_N = "невидимости"
@@ -7413,6 +11344,7 @@ lemmaPrepositional nedevstvennost_N = "недевственности"
 lemmaPrepositional nedejstvennost_N = "недейственности"
 lemmaPrepositional nedokazannost_N = "недоказанности"
 lemmaPrepositional nedootsenennost_N = "недооцененности"
+lemmaPrepositional nedra_N = "недрах"
 lemmaPrepositional nezagruzhennost_N = "незагруженности"
 lemmaPrepositional nezakonnorozhdennost_N = "незаконнорожденности"
 lemmaPrepositional nezakreplennost_N = "незакрепленности"
@@ -7423,6 +11355,7 @@ lemmaPrepositional nezapolnennost_N = "незаполненности"
 lemmaPrepositional nezarazhennost_N = "незараженности"
 lemmaPrepositional nezashchishchennost_N = "незащищенности"
 lemmaPrepositional nezlopamyatnost_N = "незлопамятности"
+lemmaPrepositional neizvestnost_N = "неизвестности"
 lemmaPrepositional neizyasnimost_N = "неизъяснимости"
 lemmaPrepositional neizyashchnost_N = "неизящности"
 lemmaPrepositional neinteresnost_N = "неинтересности"
@@ -7430,6 +11363,7 @@ lemmaPrepositional neiskusnost_N = "неискусности"
 lemmaPrepositional nejrobionika_N = "нейробионике"
 lemmaPrepositional nejroinformatika_N = "нейроинформатике"
 lemmaPrepositional nejrolingvistika_N = "нейролингвистике"
+lemmaPrepositional nejtralitet_N = "нейтралитете"
 lemmaPrepositional nejtronika_N = "нейтронике"
 lemmaPrepositional nekogerentnost_N = "некогерентности"
 lemmaPrepositional nekonvertiruemost_N = "неконвертируемости"
@@ -7443,15 +11377,16 @@ lemmaPrepositional nelinejnost_N = "нелинейности"
 lemmaPrepositional nelitsepriyatnost_N = "нелицеприятности"
 lemmaPrepositional nelyubeznost_N = "нелюбезности"
 lemmaPrepositional nematerialnost_N = "нематериальности"
+lemmaPrepositional nemets_N = "немце"
 lemmaPrepositional nemnogochislennost_N = "немногочисленности"
 lemmaPrepositional nemudrenost_N = "немудрености"
 lemmaPrepositional nenapolnennost_N = "ненаполненности"
 lemmaPrepositional nenasyshchennost_N = "ненасыщенности"
 lemmaPrepositional neobrabotannost_N = "необработанности"
-lemmaPrepositional neobhodimost_N = "необходимости"
 lemmaPrepositional neobyasnimost_N = "необъяснимости"
 lemmaPrepositional neopasnost_N = "неопасности"
 lemmaPrepositional neopravdannost_N = "неоправданности"
+lemmaPrepositional neopredelennost_N = "неопределенности"
 lemmaPrepositional neortodoksalnost_N = "неортодоксальности"
 lemmaPrepositional neosvoennost_N = "неосвоенности"
 lemmaPrepositional neosyazaemost_N = "неосязаемости"
@@ -7478,13 +11413,16 @@ lemmaPrepositional nepodotchetnost_N = "неподотчетности"
 lemmaPrepositional nepodtverzhdennost_N = "неподтвержденности"
 lemmaPrepositional nepodchinennost_N = "неподчиненности"
 lemmaPrepositional nepoleznost_N = "неполезности"
+lemmaPrepositional nepolnota_N = "неполноте"
 lemmaPrepositional nepolovovzroslost_N = "неполововзрослости"
 lemmaPrepositional nepopulyarnost_N = "непопулярности"
 lemmaPrepositional nepostizhimost_N = "непостижимости"
+lemmaPrepositional nepravilnost_N = "неправильности"
 lemmaPrepositional nepredvzyatost_N = "непредвзятости"
 lemmaPrepositional nepredskazuemost_N = "непредсказуемости"
 lemmaPrepositional nepredubezhdennost_N = "непредубежденности"
 lemmaPrepositional nepremennost_N = "непременности"
+lemmaPrepositional nepreryvnost_N = "непрерывности"
 lemmaPrepositional neprestizhnost_N = "непрестижности"
 lemmaPrepositional neprivodimost_N = "неприводимости"
 lemmaPrepositional neprikasaemost_N = "неприкасаемости"
@@ -7493,7 +11431,6 @@ lemmaPrepositional neprinadlezhnost_N = "непринадлежности"
 lemmaPrepositional neproglyadnost_N = "непроглядности"
 lemmaPrepositional neprodumannost_N = "непродуманности"
 lemmaPrepositional neprozrachnost_N = "непрозрачности"
-lemmaPrepositional neprotivorechivost_N = "непротиворечивости"
 lemmaPrepositional nerazdelennost_N = "неразделенности"
 lemmaPrepositional nerazlichimost_N = "неразличимости"
 lemmaPrepositional nerazmennost_N = "неразменности"
@@ -7518,8 +11455,8 @@ lemmaPrepositional neslyshimost_N = "неслышимости"
 lemmaPrepositional nesmetnost_N = "несметности"
 lemmaPrepositional nesminaemost_N = "несминаемости"
 lemmaPrepositional nesovershennost_N = "несовершенности"
-lemmaPrepositional nesovmestimost_N = "несовместимости"
 lemmaPrepositional nesovremennost_N = "несовременности"
+lemmaPrepositional nesoglasie_N = "несогласии"
 lemmaPrepositional nesokratimost_N = "несократимости"
 lemmaPrepositional nesoosnost_N = "несоосности"
 lemmaPrepositional nesochetaemost_N = "несочетаемости"
@@ -7541,9 +11478,11 @@ lemmaPrepositional neumyshlennost_N = "неумышленности"
 lemmaPrepositional neupravlyaemost_N = "неуправляемости"
 lemmaPrepositional neuprugost_N = "неупругости"
 lemmaPrepositional neuregulirovannost_N = "неурегулированности"
+lemmaPrepositional neustojchivost_N = "неустойчивости"
 lemmaPrepositional neformalnost_N = "неформальности"
 lemmaPrepositional neftegazonosnost_N = "нефтегазоносности"
 lemmaPrepositional neftegeofizika_N = "нефтегеофизике"
+lemmaPrepositional neft_N = "нефти"
 lemmaPrepositional netselomudrennost_N = "нецеломудренности"
 lemmaPrepositional netsentrirovannost_N = "нецентрированности"
 lemmaPrepositional netsivilizovannost_N = "нецивилизованности"
@@ -7553,43 +11492,74 @@ lemmaPrepositional neekonomnost_N = "неэкономности"
 lemmaPrepositional neelastichnost_N = "неэластичности"
 lemmaPrepositional neeffektivnost_N = "неэффективности"
 lemmaPrepositional neyarkost_N = "неяркости"
+lemmaPrepositional niva_N = "ниве"
+lemmaPrepositional niz_N = "низе"
 lemmaPrepositional nichejnost_N = "ничейности"
-lemmaPrepositional nichto_N = "ничем"
+lemmaPrepositional novost_N = "новости"
+lemmaPrepositional nozh_N = "ноже"
+lemmaPrepositional nozhka_N = "ножке"
+lemmaPrepositional nozhnitsy_N = "ножницах"
+lemmaPrepositional norma_N = "норме"
+lemmaPrepositional normalizatsiya_N = "нормализации"
+lemmaPrepositional nos_N = "носе"
+lemmaPrepositional nosok_N = "носке"
+lemmaPrepositional nochleg_N = "ночлеге"
+lemmaPrepositional noch_N = "ночи"
+lemmaPrepositional noyabr_N = "ноябре"
+lemmaPrepositional nrav_N = "нраве"
 lemmaPrepositional nuzhnost_N = "нужности"
 lemmaPrepositional nukleonika_N = "нуклеонике"
 lemmaPrepositional obaldelost_N = "обалделости"
 lemmaPrepositional obvetrennost_N = "обветренности"
 lemmaPrepositional obvodnennost_N = "обводненности"
+lemmaPrepositional obed_N = "обеде"
 lemmaPrepositional obezlichennost_N = "обезличенности"
 lemmaPrepositional obeskurazhennost_N = "обескураженности"
 lemmaPrepositional obespokoennost_N = "обеспокоенности"
-lemmaPrepositional obida_N = "обиде"
+lemmaPrepositional obeshchanie_N = "обещании"
 lemmaPrepositional oblagaemost_N = "облагаемости"
+lemmaPrepositional oblako_N = "облаке"
+lemmaPrepositional oblast_N = "области"
+lemmaPrepositional oblik_N = "облике"
 lemmaPrepositional obluchennost_N = "облученности"
+lemmaPrepositional obman_N = "обмане"
+lemmaPrepositional obobshchenie_N = "обобщении"
+lemmaPrepositional obolochka_N = "оболочке"
 lemmaPrepositional oborvannost_N = "оборванности"
 lemmaPrepositional oboronoustojchivost_N = "обороноустойчивости"
 lemmaPrepositional oborotosposobnost_N = "оборотоспособности"
-lemmaPrepositional obosnovanie_N = "обосновании"
+lemmaPrepositional obosnovannost_N = "обоснованности"
+lemmaPrepositional obrabotka_N = "обработке"
+lemmaPrepositional obrabotchik_N = "обработчике"
+lemmaPrepositional obrazets_N = "образце"
 lemmaPrepositional obrashchennost_N = "обращенности"
 lemmaPrepositional obryadovost_N = "обрядовости"
 lemmaPrepositional obsluzhivaemost_N = "обслуживаемости"
+lemmaPrepositional obsluzhivanie_N = "обслуживании"
 lemmaPrepositional obstruktsionnost_N = "обструкционности"
+lemmaPrepositional obsuzhdenie_N = "обсуждении"
+lemmaPrepositional obuv_N = "обуви"
+lemmaPrepositional obuslovlennost_N = "обусловленности"
 lemmaPrepositional obuchaemost_N = "обучаемости"
 lemmaPrepositional obshcheznachimost_N = "общезначимости"
 lemmaPrepositional obshcheprinyatost_N = "общепринятости"
 lemmaPrepositional obshchinnost_N = "общинности"
-lemmaPrepositional obyasnenie_N = "объяснении"
-lemmaPrepositional obyazannost_N = "обязанности"
-lemmaPrepositional obyazatelstvo_N = "обязательстве"
+lemmaPrepositional obedinenie_N = "объединении"
+lemmaPrepositional obyasnimost_N = "объяснимости"
+lemmaPrepositional obem_N = "объеме"
+lemmaPrepositional ovrag_N = "овраге"
+lemmaPrepositional ovtsa_N = "овце"
 lemmaPrepositional ognennost_N = "огненности"
-lemmaPrepositional ogranichenie_N = "ограничении"
-lemmaPrepositional odinochestvo_N = "одиночестве"
+lemmaPrepositional ogorod_N = "огороде"
 lemmaPrepositional odnoatomnost_N = "одноатомности"
 lemmaPrepositional odnodetnost_N = "однодетности"
 lemmaPrepositional odnozvuchnost_N = "однозвучности"
 lemmaPrepositional odnomernost_N = "одномерности"
 lemmaPrepositional odnohozyajnost_N = "однохозяйности"
 lemmaPrepositional odurelost_N = "одурелости"
+lemmaPrepositional ozero_N = "озере"
+lemmaPrepositional okean_N = "океане"
+lemmaPrepositional okislenie_N = "окислении"
 lemmaPrepositional okislyaemost_N = "окисляемости"
 lemmaPrepositional okkazionalnost_N = "окказиональности"
 lemmaPrepositional okoldovannost_N = "околдованности"
@@ -7597,111 +11567,245 @@ lemmaPrepositional okolnost_N = "окольности"
 lemmaPrepositional okonchatelnost_N = "окончательности"
 lemmaPrepositional okrashennost_N = "окрашенности"
 lemmaPrepositional okristallizovannost_N = "окристаллизованности"
+lemmaPrepositional okrug_N = "округе"
+lemmaPrepositional okruzhenie_N = "окружении"
 lemmaPrepositional okruzhennost_N = "окруженности"
 lemmaPrepositional okupaemost_N = "окупаемости"
+lemmaPrepositional olen_N = "олене"
 lemmaPrepositional olfaktronika_N = "ольфактронике"
 lemmaPrepositional omofonichnost_N = "омофоничности"
+lemmaPrepositional opeka_N = "опеке"
+lemmaPrepositional opera_N = "опере"
 lemmaPrepositional operabelnost_N = "операбельности"
+lemmaPrepositional operatsiya_N = "операции"
+lemmaPrepositional operezhenie_N = "опережении"
 lemmaPrepositional operennost_N = "оперенности"
-lemmaPrepositional opisanie_N = "описании"
+lemmaPrepositional opilki_N = "опилках"
 lemmaPrepositional oposredstvovannost_N = "опосредствованности"
+lemmaPrepositional oppozitsiya_N = "оппозиции"
 lemmaPrepositional opravdannost_N = "оправданности"
 lemmaPrepositional opravdyvaemost_N = "оправдываемости"
-lemmaPrepositional opredelenie_N = "определении"
 lemmaPrepositional oprovergaemost_N = "опровергаемости"
-lemmaPrepositional oproverzhenie_N = "опровержении"
 lemmaPrepositional oproverzhimost_N = "опровержимости"
+lemmaPrepositional opros_N = "опросе"
+lemmaPrepositional optimizatsiya_N = "оптимизации"
 lemmaPrepositional optoakustika_N = "оптоакустике"
 lemmaPrepositional optotehnika_N = "оптотехнике"
 lemmaPrepositional optoelektronika_N = "оптоэлектронике"
+lemmaPrepositional oranzhereya_N = "оранжерее"
+lemmaPrepositional orbita_N = "орбите"
+lemmaPrepositional organ_N = "органе"
+lemmaPrepositional organizator_N = "организаторе"
 lemmaPrepositional orgtehnika_N = "оргтехнике"
+lemmaPrepositional orden_N = "ордене"
+lemmaPrepositional orel_N = "орле"
+lemmaPrepositional orientatsiya_N = "ориентации"
 lemmaPrepositional orientirovannost_N = "ориентированности"
+lemmaPrepositional orkestratsiya_N = "оркестрации"
 lemmaPrepositional ortogonalnost_N = "ортогональности"
 lemmaPrepositional ortoptika_N = "ортоптике"
+lemmaPrepositional orudie_N = "орудии"
+lemmaPrepositional osadok_N = "осадке"
+lemmaPrepositional osen_N = "осени"
+lemmaPrepositional osina_N = "осине"
+lemmaPrepositional oskolok_N = "осколке"
 lemmaPrepositional oslablennost_N = "ослабленности"
-lemmaPrepositional osnovanie_N = "основании"
+lemmaPrepositional osmotr_N = "осмотре"
 lemmaPrepositional osnovnost_N = "основности"
-lemmaPrepositional osnovyvat_V = "основывать"
+lemmaPrepositional osobennost_N = "особенности"
 lemmaPrepositional osolonennost_N = "осолоненности"
+lemmaPrepositional ostanovka_N = "остановке"
 lemmaPrepositional osteoplastika_N = "остеопластике"
+lemmaPrepositional ostrov_N = "острове"
 lemmaPrepositional ostroumnost_N = "остроумности"
 lemmaPrepositional ost_N = "ости"
+lemmaPrepositional osminog_N = "осьминоге"
 lemmaPrepositional otbornost_N = "отборности"
-lemmaPrepositional otvet_N = "ответе"
-lemmaPrepositional otvetstvennost_N = "ответственности"
+lemmaPrepositional otvaga_N = "отваге"
+lemmaPrepositional otdel_N = "отделе"
+lemmaPrepositional otdyh_N = "отдыхе"
+lemmaPrepositional otel_N = "отеле"
+lemmaPrepositional otkaz_N = "отказе"
 lemmaPrepositional otkazoustojchivost_N = "отказоустойчивости"
 lemmaPrepositional otkazoustochivost_N = "отказоусточивости"
+lemmaPrepositional otkat_N = "откате"
+lemmaPrepositional otklonenie_N = "отклонении"
+lemmaPrepositional otkrovennost_N = "откровенности"
 lemmaPrepositional otkrytost_N = "открытости"
+lemmaPrepositional otlichie_N = "отличии"
 lemmaPrepositional otlichimost_N = "отличимости"
 lemmaPrepositional otnesennost_N = "отнесенности"
 lemmaPrepositional otnosimost_N = "относимости"
+lemmaPrepositional otnoshenie_N = "отношении"
+lemmaPrepositional otpusk_N = "отпуске"
+lemmaPrepositional otrava_N = "отраве"
 lemmaPrepositional otradnost_N = "отрадности"
-lemmaPrepositional otrazhenie_N = "отражении"
+lemmaPrepositional otritsanie_N = "отрицании"
+lemmaPrepositional otryad_N = "отряде"
 lemmaPrepositional otslezhivaemost_N = "отслеживаемости"
 lemmaPrepositional otstranennost_N = "отстраненности"
 lemmaPrepositional ottochennost_N = "отточенности"
+lemmaPrepositional otchayanie_N = "отчаянии"
+lemmaPrepositional otchet_N = "отчете"
+lemmaPrepositional ohota_N = "охоте"
+lemmaPrepositional ohrana_N = "охране"
 lemmaPrepositional ohranosposobnost_N = "охраноспособности"
+lemmaPrepositional ochag_N = "очаге"
+lemmaPrepositional ochered_N = "очереди"
 lemmaPrepositional ochumelost_N = "очумелости"
 lemmaPrepositional oshalelost_N = "ошалелости"
-lemmaPrepositional oshibka_N = "ошибке"
+lemmaPrepositional oshejnik_N = "ошейнике"
 lemmaPrepositional oshibkoustojchivost_N = "ошибкоустойчивости"
+lemmaPrepositional pajplajn_N = "пайплайне"
+lemmaPrepositional palata_N = "палате"
+lemmaPrepositional palatka_N = "палатке"
 lemmaPrepositional paleobionika_N = "палеобионике"
 lemmaPrepositional paleogeofizika_N = "палеогеофизике"
-lemmaPrepositional pamyat_N = "памяти"
+lemmaPrepositional palets_N = "пальце"
+lemmaPrepositional pamyatnik_N = "памятнике"
+lemmaPrepositional panel_N = "панели"
+lemmaPrepositional papa_N = "папе"
+lemmaPrepositional papaha_N = "папахе"
+lemmaPrepositional parad_N = "параде"
+lemmaPrepositional paradoks_N = "парадоксе"
 lemmaPrepositional paralingvistika_N = "паралингвистике"
+lemmaPrepositional parametrizatsiya_N = "параметризации"
+lemmaPrepositional park_N = "парке"
 lemmaPrepositional paronepronitsaemost_N = "паронепроницаемости"
+lemmaPrepositional parta_N = "парте"
+lemmaPrepositional partiya_N = "партии"
+lemmaPrepositional parus_N = "парусе"
+lemmaPrepositional paseka_N = "пасеке"
 lemmaPrepositional passazhirovmestimost_N = "пассажировместимости"
 lemmaPrepositional patafizika_N = "патафизике"
 lemmaPrepositional patentosposobnost_N = "патентоспособности"
 lemmaPrepositional patogennost_N = "патогенности"
 lemmaPrepositional patrilinejnost_N = "патрилинейности"
+lemmaPrepositional pauza_N = "паузе"
+lemmaPrepositional pautina_N = "паутине"
 lemmaPrepositional pahotoprigodnost_N = "пахотопригодности"
+lemmaPrepositional pevets_N = "певце"
+lemmaPrepositional pekarnya_N = "пекарне"
 lemmaPrepositional penetrantnost_N = "пенетрантности"
+lemmaPrepositional pensiya_N = "пенсии"
 lemmaPrepositional pervozdannost_N = "первозданности"
+lemmaPrepositional perevod_N = "переводе"
+lemmaPrepositional perevorot_N = "перевороте"
+lemmaPrepositional peredacha_N = "передаче"
 lemmaPrepositional perelivchatost_N = "переливчатости"
+lemmaPrepositional perelom_N = "переломе"
 lemmaPrepositional peremezhaemost_N = "перемежаемости"
+lemmaPrepositional peremennaya_N = "переменной"
 lemmaPrepositional peremestitelnost_N = "переместительности"
 lemmaPrepositional peremeshchaemost_N = "перемещаемости"
+lemmaPrepositional peremeshchenie_N = "перемещении"
 lemmaPrepositional perenalazhivaemost_N = "переналаживаемости"
 lemmaPrepositional perenormiruemost_N = "перенормируемости"
+lemmaPrepositional perenos_N = "переносе"
 lemmaPrepositional perenosimost_N = "переносимости"
+lemmaPrepositional pereprava_N = "переправе"
 lemmaPrepositional pereputannost_N = "перепутанности"
+lemmaPrepositional peresechenie_N = "пересечении"
 lemmaPrepositional perestanovochnost_N = "перестановочности"
+lemmaPrepositional perehod_N = "переходе"
+lemmaPrepositional period_N = "периоде"
 lemmaPrepositional peristost_N = "перистости"
+lemmaPrepositional pero_N = "пере"
+lemmaPrepositional perspektiva_N = "перспективе"
+lemmaPrepositional pesnya_N = "песне"
+lemmaPrepositional pesok_N = "песке"
+lemmaPrepositional petlya_N = "петле"
+lemmaPrepositional petuh_N = "петухе"
+lemmaPrepositional pechal_N = "печали"
+lemmaPrepositional pechat_N = "печати"
+lemmaPrepositional pechka_N = "печке"
+lemmaPrepositional peshka_N = "пешке"
 lemmaPrepositional pika_N = "пике"
+lemmaPrepositional pila_N = "пиле"
 lemmaPrepositional piloobraznost_N = "пилообразности"
+lemmaPrepositional pioner_N = "пионере"
+lemmaPrepositional pirog_N = "пироге"
 lemmaPrepositional piroprovodimost_N = "пиропроводимости"
+lemmaPrepositional pisatel_N = "писателе"
+lemmaPrepositional pitanie_N = "питании"
+lemmaPrepositional pishcha_N = "пище"
+lemmaPrepositional plavlenie_N = "плавлении"
+lemmaPrepositional planeta_N = "планете"
+lemmaPrepositional plastichnost_N = "пластичности"
+lemmaPrepositional plata_N = "плате"
 lemmaPrepositional platezhnost_N = "платежности"
+lemmaPrepositional platforma_N = "платформе"
+lemmaPrepositional plate_N = "платье"
+lemmaPrepositional platezh_N = "платеже"
+lemmaPrepositional plita_N = "плите"
+lemmaPrepositional plod_N = "плоде"
 lemmaPrepositional plojchatost_N = "плойчатости"
 lemmaPrepositional ploskostnost_N = "плоскостности"
+lemmaPrepositional ploskost_N = "плоскости"
+lemmaPrepositional plotnost_N = "плотности"
+lemmaPrepositional ploshchadka_N = "площадке"
+lemmaPrepositional ploshchad_N = "площади"
+lemmaPrepositional plyazh_N = "пляже"
 lemmaPrepositional pnevmatichnost_N = "пневматичности"
 lemmaPrepositional pnevmoavtomatika_N = "пневмоавтоматике"
 lemmaPrepositional pnevmonika_N = "пневмонике"
+lemmaPrepositional pobeda_N = "победе"
+lemmaPrepositional poberezhe_N = "побережье"
 lemmaPrepositional pobitost_N = "побитости"
+lemmaPrepositional povar_N = "поваре"
+lemmaPrepositional povedenie_N = "поведении"
+lemmaPrepositional poverhnost_N = "поверхности"
+lemmaPrepositional povod_N = "поводе"
+lemmaPrepositional povorot_N = "повороте"
+lemmaPrepositional povtor_N = "повторе"
 lemmaPrepositional pogashennost_N = "погашенности"
 lemmaPrepositional pogloshchennost_N = "поглощенности"
+lemmaPrepositional pogoda_N = "погоде"
 lemmaPrepositional pogodoustojchivost_N = "погодоустойчивости"
+lemmaPrepositional pogon_N = "погоне"
+lemmaPrepositional pogreshnost_N = "погрешности"
 lemmaPrepositional pogruzhennost_N = "погруженности"
+lemmaPrepositional podval_N = "подвале"
+lemmaPrepositional podvig_N = "подвиге"
+lemmaPrepositional podderzhka_N = "поддержке"
+lemmaPrepositional podkova_N = "подкове"
 lemmaPrepositional podkontrolnost_N = "подконтрольности"
 lemmaPrepositional podkupnost_N = "подкупности"
+lemmaPrepositional podlodka_N = "подлодке"
+lemmaPrepositional podmnozhestvo_N = "подмножестве"
 lemmaPrepositional podnadzornost_N = "поднадзорности"
+lemmaPrepositional podnos_N = "подносе"
+lemmaPrepositional podotchetnost_N = "подотчетности"
+lemmaPrepositional podpis_N = "подписи"
+lemmaPrepositional podrobnost_N = "подробности"
 lemmaPrepositional podrubrika_N = "подрубрике"
+lemmaPrepositional podruga_N = "подруге"
+lemmaPrepositional podsistema_N = "подсистеме"
 lemmaPrepositional podsledstvennost_N = "подследственности"
 lemmaPrepositional podsudimost_N = "подсудимости"
+lemmaPrepositional poezd_N = "поезде"
+lemmaPrepositional pozhar_N = "пожаре"
 lemmaPrepositional pozharobezopasnost_N = "пожаробезопасности"
 lemmaPrepositional pozharoopasnost_N = "пожароопасности"
-lemmaPrepositional pozitsiya_N = "позиции"
 lemmaPrepositional pokinutost_N = "покинутости"
+lemmaPrepositional pokoj_N = "покое"
 lemmaPrepositional pokoroblennost_N = "покоробленности"
+lemmaPrepositional pokryshka_N = "покрышке"
+lemmaPrepositional pokupka_N = "покупке"
+lemmaPrepositional pol_N = "поле"
 lemmaPrepositional polgodika_N = "полугодике"
+lemmaPrepositional polemika_N = "полемике"
 lemmaPrepositional poletoprigodnost_N = "полетопригодности"
 lemmaPrepositional polivalentnost_N = "поливалентности"
+lemmaPrepositional politika_N = "политике"
 lemmaPrepositional politkorrektnost_N = "политкорректности"
 lemmaPrepositional politonalnost_N = "политональности"
 lemmaPrepositional polnovodnost_N = "полноводности"
 lemmaPrepositional polnodrevesnost_N = "полнодревесности"
 lemmaPrepositional polnokrovnost_N = "полнокровности"
 lemmaPrepositional polozhennost_N = "положенности"
+lemmaPrepositional polomka_N = "поломке"
+lemmaPrepositional polosa_N = "полосе"
 lemmaPrepositional poloschatost_N = "полосчатости"
 lemmaPrepositional polstakanchika_N = "полустаканчике"
 lemmaPrepositional poluanonimnost_N = "полуанонимности"
@@ -7710,68 +11814,157 @@ lemmaPrepositional poluploskost_N = "полуплоскости"
 lemmaPrepositional poluprozrachnost_N = "полупрозрачности"
 lemmaPrepositional polchasika_N = "получасике"
 lemmaPrepositional polyubovnost_N = "полюбовности"
+lemmaPrepositional polyus_N = "полюсе"
+lemmaPrepositional polyana_N = "поляне"
 lemmaPrepositional polyarizuemost_N = "поляризуемости"
 lemmaPrepositional pomehozashchishchennost_N = "помехозащищенности"
-lemmaPrepositional ponimanie_N = "понимании"
-lemmaPrepositional ponimat_V = "понимать"
-lemmaPrepositional ponyatie_N = "понятии"
+lemmaPrepositional pomeshchenie_N = "помещении"
+lemmaPrepositional pomeshchik_N = "помещике"
+lemmaPrepositional pomidor_N = "помидоре"
+lemmaPrepositional pomoshch_N = "помощи"
+lemmaPrepositional ponedelnik_N = "понедельнике"
+lemmaPrepositional poncho_N = "пончо"
+lemmaPrepositional ponyatnost_N = "понятности"
+lemmaPrepositional pop_N = "попе"
+lemmaPrepositional popytka_N = "попытке"
 lemmaPrepositional poraboshchennost_N = "порабощенности"
 lemmaPrepositional porazhennost_N = "пораженности"
+lemmaPrepositional porog_N = "пороге"
+lemmaPrepositional poroda_N = "породе"
 lemmaPrepositional poroznost_N = "порозности"
+lemmaPrepositional poroh_N = "порохе"
+lemmaPrepositional portret_N = "портрете"
+lemmaPrepositional portera_N = "портьере"
+lemmaPrepositional poruchenie_N = "поручении"
 lemmaPrepositional posvyashchennost_N = "посвященности"
+lemmaPrepositional posev_N = "посеве"
+lemmaPrepositional posledovatelnost_N = "последовательности"
+lemmaPrepositional posledstvie_N = "последствии"
+lemmaPrepositional posol_N = "после"
+lemmaPrepositional posrednik_N = "посреднике"
 lemmaPrepositional postizhimost_N = "постижимости"
 lemmaPrepositional postnost_N = "постности"
+lemmaPrepositional postupok_N = "поступке"
+lemmaPrepositional postuslovie_N = "постусловии"
 lemmaPrepositional postylost_N = "постылости"
-lemmaPrepositional posylka_N = "посылке"
 lemmaPrepositional potaennost_N = "потаенности"
+lemmaPrepositional poterya_N = "потере"
+lemmaPrepositional potok_N = "потоке"
+lemmaPrepositional potolok_N = "потолке"
+lemmaPrepositional pochva_N = "почве"
+lemmaPrepositional pochta_N = "почте"
 lemmaPrepositional poetapnost_N = "поэтапности"
-lemmaPrepositional pravda_N = "правде"
-lemmaPrepositional pravo_N = "праве"
+lemmaPrepositional poyas_N = "поясе"
+lemmaPrepositional pravilo_N = "правиле"
+lemmaPrepositional pravilnost_N = "правильности"
+lemmaPrepositional pravitelstvo_N = "правительстве"
 lemmaPrepositional pravosubektivnost_N = "правосубъективности"
 lemmaPrepositional pravosubektnost_N = "правосубъектности"
+lemmaPrepositional prazdnik_N = "празднике"
+lemmaPrepositional pregrada_N = "преграде"
+lemmaPrepositional predannost_N = "преданности"
+lemmaPrepositional predatelstvo_N = "предательстве"
 lemmaPrepositional preddelinkventnost_N = "предделинквентности"
+lemmaPrepositional predel_N = "пределе"
+lemmaPrepositional predlozhenie_N = "предложении"
+lemmaPrepositional predmet_N = "предмете"
 lemmaPrepositional predohranitelnost_N = "предохранительности"
-lemmaPrepositional predpolozhenie_N = "предположении"
-lemmaPrepositional predposylka_N = "предпосылке"
+lemmaPrepositional predpriyatie_N = "предприятии"
 lemmaPrepositional predskazuemost_N = "предсказуемости"
 lemmaPrepositional predstavimost_N = "представимости"
+lemmaPrepositional preduslovie_N = "предусловии"
 lemmaPrepositional predustanovlennost_N = "предустановленности"
+lemmaPrepositional prezident_N = "президенте"
+lemmaPrepositional prelest_N = "прелести"
+lemmaPrepositional prepyatstvie_N = "препятствии"
+lemmaPrepositional preryvanie_N = "прерывании"
 lemmaPrepositional prestizhnost_N = "престижности"
+lemmaPrepositional prestuplenie_N = "преступлении"
 lemmaPrepositional preyuditsialnost_N = "преюдициальности"
+lemmaPrepositional pribyl_N = "прибыли"
+lemmaPrepositional privet_N = "привете"
 lemmaPrepositional privodimost_N = "приводимости"
 lemmaPrepositional privolnost_N = "привольности"
+lemmaPrepositional privychka_N = "привычке"
 lemmaPrepositional priglushennost_N = "приглушенности"
+lemmaPrepositional prigorod_N = "пригороде"
+lemmaPrepositional priem_N = "приеме"
 lemmaPrepositional prizemlennost_N = "приземленности"
+lemmaPrepositional priznak_N = "признаке"
+lemmaPrepositional prizrak_N = "призраке"
+lemmaPrepositional prikaz_N = "приказе"
 lemmaPrepositional prikovannost_N = "прикованности"
 lemmaPrepositional prilegaemost_N = "прилегаемости"
 lemmaPrepositional primetnost_N = "приметности"
-lemmaPrepositional prinuzhdenie_N = "принуждении"
+lemmaPrepositional prints_N = "принце"
+lemmaPrepositional printsip_N = "принципе"
+lemmaPrepositional prinyatie_N = "принятии"
 lemmaPrepositional prinyatost_N = "принятости"
 lemmaPrepositional priobshchennost_N = "приобщенности"
+lemmaPrepositional prioritet_N = "приоритете"
+lemmaPrepositional prioritizatsiya_N = "приоритизации"
+lemmaPrepositional priroda_N = "природе"
 lemmaPrepositional prirodoemkost_N = "природоемкости"
 lemmaPrepositional prisposablivaemost_N = "приспосабливаемости"
 lemmaPrepositional pristyzhennost_N = "пристыженности"
-lemmaPrepositional prisutstvie_N = "присутствии"
-lemmaPrepositional prichina_N = "причине"
+lemmaPrepositional prichinnost_N = "причинности"
 lemmaPrepositional prishiblennost_N = "пришибленности"
+lemmaPrepositional priem_Nv2 = "приеме"
+lemmaPrepositional priemnik_N = "приемнике"
+lemmaPrepositional probka_N = "пробке"
+lemmaPrepositional problema_N = "проблеме"
 lemmaPrepositional problemnost_N = "проблемности"
 lemmaPrepositional probnost_N = "пробности"
-lemmaPrepositional proverka_N = "проверке"
+lemmaPrepositional provintsiya_N = "провинции"
+lemmaPrepositional provod_N = "проводе"
+lemmaPrepositional provodimost_N = "проводимости"
+lemmaPrepositional prognoz_N = "прогнозе"
+lemmaPrepositional programma_N = "программе"
 lemmaPrepositional programmiruemost_N = "программируемости"
+lemmaPrepositional progulka_N = "прогулке"
+lemmaPrepositional prodazha_N = "продаже"
+lemmaPrepositional prodolzhenie_N = "продолжении"
+lemmaPrepositional produkt_N = "продукте"
+lemmaPrepositional prodyuser_N = "продюсере"
+lemmaPrepositional proekt_N = "проекте"
 lemmaPrepositional proektivnost_N = "проективности"
+lemmaPrepositional proza_N = "прозе"
+lemmaPrepositional prozrachnost_N = "прозрачности"
+lemmaPrepositional proigrysh_N = "проигрыше"
+lemmaPrepositional proklyatie_N = "проклятии"
 lemmaPrepositional proksemika_N = "проксемике"
 lemmaPrepositional promaslennost_N = "промасленности"
 lemmaPrepositional promezhutochnost_N = "промежуточности"
-lemmaPrepositional proniknut_V = "проникнуть"
+lemmaPrepositional propusk_N = "пропуске"
+lemmaPrepositional propusknaya_sposobnost_N = "пропускной способности"
+lemmaPrepositional prorez_N = "прорези"
+lemmaPrepositional prorok_N = "пророке"
 lemmaPrepositional prosvechivaemost_N = "просвечиваемости"
+lemmaPrepositional prospekt_N = "проспекте"
+lemmaPrepositional prostor_N = "просторе"
+lemmaPrepositional prostota_N = "простоте"
 lemmaPrepositional prostuzhennost_N = "простуженности"
+lemmaPrepositional prostynya_N = "простыне"
+lemmaPrepositional prosba_N = "просьбе"
+lemmaPrepositional protivnik_N = "противнике"
 lemmaPrepositional protivooreolnost_N = "противоореольности"
 lemmaPrepositional protivopokazannost_N = "противопоказанности"
 lemmaPrepositional protivopravnost_N = "противоправности"
-lemmaPrepositional protivorechie_N = "противоречии"
 lemmaPrepositional protogalaktika_N = "протогалактике"
+lemmaPrepositional protokol_N = "протоколе"
+lemmaPrepositional professiya_N = "профессии"
+lemmaPrepositional profilaktika_N = "профилактике"
+lemmaPrepositional profilirovanie_N = "профилировании"
 lemmaPrepositional profnadezhnost_N = "профнадежности"
+lemmaPrepositional prohod_N = "проходе"
+lemmaPrepositional protsent_N = "проценте"
 lemmaPrepositional prochuvstvovannost_N = "прочувствованности"
+lemmaPrepositional proshloe_N = "прошлом"
+lemmaPrepositional proshchenie_N = "прощении"
+lemmaPrepositional prud_N = "пруде"
+lemmaPrepositional pryzhok_N = "прыжке"
+lemmaPrepositional pryad_N = "пряди"
+lemmaPrepositional pryazha_N = "пряже"
 lemmaPrepositional pryamougolnost_N = "прямоугольности"
 lemmaPrepositional pryanichnost_N = "пряничности"
 lemmaPrepositional psevdoizoshchrennost_N = "псевдоизощренности"
@@ -7781,86 +11974,165 @@ lemmaPrepositional psevdoutonchennost_N = "псевдоутонченности"
 lemmaPrepositional psihografika_N = "психографике"
 lemmaPrepositional psihodinamika_N = "психодинамике"
 lemmaPrepositional psihoprofilaktika_N = "психопрофилактике"
+lemmaPrepositional ptitsa_N = "птице"
+lemmaPrepositional publika_N = "публике"
+lemmaPrepositional pud_N = "пуде"
 lemmaPrepositional puzyrchatost_N = "пузырчатости"
-lemmaPrepositional pustota_N = "пустоте"
+lemmaPrepositional puzyr_N = "пузыре"
+lemmaPrepositional pult_N = "пульте"
 lemmaPrepositional putanost_N = "путаности"
+lemmaPrepositional puteshestvie_N = "путешествии"
+lemmaPrepositional putnik_N = "путнике"
 lemmaPrepositional puchnost_N = "пучности"
+lemmaPrepositional pshenitsa_N = "пшенице"
 lemmaPrepositional pezovospriimchivost_N = "пьезовосприимчивости"
 lemmaPrepositional pezokeramika_N = "пьезокерамике"
+lemmaPrepositional pyad_N = "пяди"
 lemmaPrepositional pyativalentnost_N = "пятивалентности"
+lemmaPrepositional rab_N = "рабе"
+lemmaPrepositional ravnina_N = "равнине"
+lemmaPrepositional ravnovesie_N = "равновесии"
 lemmaPrepositional ravnodostupnost_N = "равнодоступности"
-lemmaPrepositional ravnosilnost_N = "равносильности"
+lemmaPrepositional ravnodushie_N = "равнодушии"
+lemmaPrepositional ravnopravie_N = "равноправии"
+lemmaPrepositional radzha_N = "радже"
+lemmaPrepositional radiatsiya_N = "радиации"
 lemmaPrepositional radioakustika_N = "радиоакустике"
 lemmaPrepositional radiogalaktika_N = "радиогалактике"
 lemmaPrepositional radiogenetika_N = "радиогенетике"
 lemmaPrepositional radiomehanika_N = "радиомеханике"
 lemmaPrepositional radioneprozrachnost_N = "радионепрозрачности"
+lemmaPrepositional radius_N = "радиусе"
 lemmaPrepositional radonoopasnost_N = "радоноопасности"
-lemmaPrepositional radost_N = "радости"
+lemmaPrepositional raduga_N = "радуге"
+lemmaPrepositional raz_N = "разе"
 lemmaPrepositional razbavlennost_N = "разбавленности"
 lemmaPrepositional razbalansirovannost_N = "разбалансированности"
-lemmaPrepositional razgranichenie_N = "разграничении"
+lemmaPrepositional razvedka_N = "разведке"
+lemmaPrepositional razgovor_N = "разговоре"
+lemmaPrepositional razdacha_N = "раздаче"
 lemmaPrepositional razdelimost_N = "разделимости"
 lemmaPrepositional razzhizhennost_N = "разжиженности"
-lemmaPrepositional razlichat_V = "различать"
-lemmaPrepositional razlichie_N = "различии"
 lemmaPrepositional razlichimost_N = "различимости"
+lemmaPrepositional razluka_N = "разлуке"
+lemmaPrepositional razmer_N = "размере"
 lemmaPrepositional razmytost_N = "размытости"
-lemmaPrepositional raznitsa_N = "разнице"
-lemmaPrepositional razreshenie_N = "разрешении"
 lemmaPrepositional razreshimost_N = "разрешимости"
 lemmaPrepositional razrushaemost_N = "разрушаемости"
 lemmaPrepositional razrushimost_N = "разрушимости"
 lemmaPrepositional razryvnost_N = "разрывности"
+lemmaPrepositional razryad_N = "разряде"
 lemmaPrepositional razryazhennost_N = "разряженности"
-lemmaPrepositional razum_N = "разуме"
 lemmaPrepositional razezzhennost_N = "разъезженности"
+lemmaPrepositional raj_N = "рае"
+lemmaPrepositional rajon_N = "районе"
+lemmaPrepositional rak_N = "раке"
+lemmaPrepositional raketa_N = "ракете"
 lemmaPrepositional raketodinamika_N = "ракетодинамике"
-lemmaPrepositional rakurs_N = "ракурсе"
+lemmaPrepositional ramka_N = "рамке"
 lemmaPrepositional ranennost_N = "раненности"
 lemmaPrepositional raskrashennost_N = "раскрашенности"
 lemmaPrepositional raskruchennost_N = "раскрученности"
 lemmaPrepositional raskryvaemost_N = "раскрываемости"
 lemmaPrepositional raspevnost_N = "распевности"
+lemmaPrepositional raspisanie_N = "расписании"
 lemmaPrepositional raspolozhennost_N = "расположенности"
+lemmaPrepositional rasporyazhenie_N = "распоряжении"
+lemmaPrepositional raspredelenie_N = "распределении"
+lemmaPrepositional rassvet_N = "рассвете"
+lemmaPrepositional rasskaz_N = "рассказе"
 lemmaPrepositional rassloennost_N = "расслоенности"
 lemmaPrepositional rassoglasovannost_N = "рассогласованности"
 lemmaPrepositional rassredotochennost_N = "рассредоточенности"
+lemmaPrepositional rasstavanie_N = "расставании"
+lemmaPrepositional rasstoyanie_N = "расстоянии"
+lemmaPrepositional rastvor_N = "растворе"
 lemmaPrepositional rasterzannost_N = "растерзанности"
 lemmaPrepositional rastrepannost_N = "растрепанности"
 lemmaPrepositional rastrogannost_N = "растроганности"
+lemmaPrepositional rashod_N = "расходе"
 lemmaPrepositional rashodimost_N = "расходимости"
 lemmaPrepositional rasshirennost_N = "расширенности"
 lemmaPrepositional rasshcheplennost_N = "расщепленности"
+lemmaPrepositional ratsiya_N = "рации"
 lemmaPrepositional rashpilevidnost_N = "рашпилевидности"
 lemmaPrepositional readaptatsiya_N = "реадаптации"
+lemmaPrepositional reaktsiya_N = "реакции"
 lemmaPrepositional realizuemost_N = "реализуемости"
 lemmaPrepositional reversivnost_N = "реверсивности"
+lemmaPrepositional reviziya_N = "ревизии"
+lemmaPrepositional region_N = "регионе"
+lemmaPrepositional registratsiya_N = "регистрации"
+lemmaPrepositional reglamentatsiya_N = "регламентации"
+lemmaPrepositional regressiya_N = "регрессии"
+lemmaPrepositional redaktor_N = "редакторе"
 lemmaPrepositional reenterabelnost_N = "реентерабельности"
+lemmaPrepositional rezhim_N = "режиме"
 lemmaPrepositional rezhimnost_N = "режимности"
+lemmaPrepositional rezina_N = "резине"
 lemmaPrepositional rezinotehnika_N = "резинотехнике"
 lemmaPrepositional rezistentnost_N = "резистентности"
+lemmaPrepositional rezonans_N = "резонансе"
+lemmaPrepositional rezultat_N = "результате"
 lemmaPrepositional rejganomika_N = "рейганомике"
 lemmaPrepositional rekurrentnost_N = "рекуррентности"
 lemmaPrepositional rekursivnost_N = "рекурсивности"
+lemmaPrepositional rekursiya_N = "рекурсии"
 lemmaPrepositional relevantnost_N = "релевантности"
-lemmaPrepositional remont_N = "ремонте"
+lemmaPrepositional reliz_N = "релизе"
+lemmaPrepositional rels_N = "рельсе"
 lemmaPrepositional remontoprigodnost_N = "ремонтопригодности"
 lemmaPrepositional remontosposobnost_N = "ремонтоспособности"
 lemmaPrepositional rentosposobnost_N = "рентоспособности"
+lemmaPrepositional repka_N = "репке"
+lemmaPrepositional replikatsiya_N = "репликации"
+lemmaPrepositional reportazh_N = "репортаже"
+lemmaPrepositional reputatsiya_N = "репутации"
+lemmaPrepositional restoran_N = "ресторане"
+lemmaPrepositional resurs_N = "ресурсе"
 lemmaPrepositional resursoemkost_N = "ресурсоемкости"
 lemmaPrepositional refleksivnost_N = "рефлексивности"
+lemmaPrepositional reforma_N = "реформе"
 lemmaPrepositional refrakternost_N = "рефрактерности"
-lemmaPrepositional reshenie_N = "решении"
+lemmaPrepositional retsenziya_N = "рецензии"
+lemmaPrepositional rech_N = "речи"
+lemmaPrepositional ris_N = "рисе"
 lemmaPrepositional riflenost_N = "рифлености"
 lemmaPrepositional robastnost_N = "робастности"
+lemmaPrepositional robot_N = "роботе"
 lemmaPrepositional robotehnika_N = "роботехнике"
 lemmaPrepositional robototehnika_N = "робототехнике"
+lemmaPrepositional roga_N = "рогах"
+lemmaPrepositional rodina_N = "родине"
+lemmaPrepositional rozhok_N = "рожке"
+lemmaPrepositional roza_N = "розе"
 lemmaPrepositional rozovatost_N = "розоватости"
 lemmaPrepositional rozovoshchekost_N = "розовощекости"
+lemmaPrepositional rok_N = "роке"
+lemmaPrepositional roman_N = "романе"
+lemmaPrepositional rosa_N = "росе"
 lemmaPrepositional rosistost_N = "росистости"
+lemmaPrepositional roshcha_N = "роще"
+lemmaPrepositional royal_N = "рояле"
+lemmaPrepositional rubashka_N = "рубашке"
+lemmaPrepositional rubezh_N = "рубеже"
+lemmaPrepositional rubl_N = "рубле"
+lemmaPrepositional ruda_N = "руде"
 lemmaPrepositional rudonosnost_N = "рудоносности"
+lemmaPrepositional rukav_N = "рукаве"
+lemmaPrepositional rukovoditel_N = "руководителе"
+lemmaPrepositional rukovodstvo_N = "руководстве"
+lemmaPrepositional russkij_N = "русском"
+lemmaPrepositional ruchej_N = "ручье"
+lemmaPrepositional ryba_N = "рыбе"
+lemmaPrepositional rybak_N = "рыбаке"
 lemmaPrepositional ryboproduktivnost_N = "рыбопродуктивности"
+lemmaPrepositional rynok_N = "рынке"
+lemmaPrepositional sablya_N = "сабле"
+lemmaPrepositional sadovod_N = "садоводе"
+lemmaPrepositional salat_N = "салате"
+lemmaPrepositional salon_N = "салоне"
+lemmaPrepositional samovar_N = "самоваре"
 lemmaPrepositional samovosplamenyaemost_N = "самовоспламеняемости"
 lemmaPrepositional samodistributivnost_N = "самодистрибутивности"
 lemmaPrepositional samodostatochnost_N = "самодостаточности"
@@ -7868,8 +12140,17 @@ lemmaPrepositional samozabvennost_N = "самозабвенности"
 lemmaPrepositional samozanyatost_N = "самозанятости"
 lemmaPrepositional samoobespechennost_N = "самообеспеченности"
 lemmaPrepositional samoochevidnost_N = "самоочевидности"
+lemmaPrepositional sani_N = "санях"
 lemmaPrepositional sanovnost_N = "сановности"
+lemmaPrepositional sapog_N = "сапоге"
+lemmaPrepositional saraj_N = "сарае"
+lemmaPrepositional satir_N = "сатире"
+lemmaPrepositional sahar_N = "сахаре"
 lemmaPrepositional sbalansirovannost_N = "сбалансированности"
+lemmaPrepositional sboj_N = "сбое"
+lemmaPrepositional svadba_N = "свадьбе"
+lemmaPrepositional svedeniya_N = "сведениях"
+lemmaPrepositional svekla_N = "свекле"
 lemmaPrepositional svernutost_N = "свернутости"
 lemmaPrepositional sverhaktivnost_N = "сверхактивности"
 lemmaPrepositional sverhvooruzhennost_N = "сверхвооруженности"
@@ -7880,107 +12161,266 @@ lemmaPrepositional sverhplastichnost_N = "сверхпластичности"
 lemmaPrepositional sverhsekretnost_N = "сверхсекретности"
 lemmaPrepositional sverhspiralnost_N = "сверхспиральности"
 lemmaPrepositional sverheffektivnost_N = "сверхэффективности"
+lemmaPrepositional svet_N = "свете"
 lemmaPrepositional svetnost_N = "светности"
 lemmaPrepositional svetolyubivost_N = "светолюбивости"
 lemmaPrepositional svetoprochnost_N = "светопрочности"
-lemmaPrepositional svidetelstvo_N = "свидетельстве"
+lemmaPrepositional svecha_N = "свече"
+lemmaPrepositional svidanie_N = "свидании"
+lemmaPrepositional svinya_N = "свинье"
+lemmaPrepositional sviter_N = "свитере"
 lemmaPrepositional svishchevatost_N = "свищеватости"
 lemmaPrepositional svoboda_N = "свободе"
 lemmaPrepositional svobodnost_N = "свободности"
 lemmaPrepositional svodimost_N = "сводимости"
+lemmaPrepositional svodka_N = "сводке"
 lemmaPrepositional svojstvennost_N = "свойственности"
+lemmaPrepositional svyazka_N = "связке"
+lemmaPrepositional svyaznost_N = "связности"
+lemmaPrepositional svyaz_N = "связи"
+lemmaPrepositional svyashchennik_N = "священнике"
 lemmaPrepositional svyashchennost_N = "священности"
 lemmaPrepositional sgorblennost_N = "сгорбленности"
 lemmaPrepositional sdavlennost_N = "сдавленности"
+lemmaPrepositional sdvig_N = "сдвиге"
 lemmaPrepositional sdobnost_N = "сдобности"
+lemmaPrepositional sever_N = "севере"
+lemmaPrepositional segment_N = "сегменте"
+lemmaPrepositional segmentatsiya_N = "сегментации"
+lemmaPrepositional segodnya_N = "сегодня"
+lemmaPrepositional sedlo_N = "седле"
+lemmaPrepositional sezon_N = "сезоне"
 lemmaPrepositional sejsmobezopasnost_N = "сейсмобезопасности"
 lemmaPrepositional sejsmoopasnost_N = "сейсмоопасности"
+lemmaPrepositional sejf_N = "сейфе"
+lemmaPrepositional sekret_N = "секрете"
+lemmaPrepositional sektor_N = "секторе"
+lemmaPrepositional sektsiya_N = "секции"
 lemmaPrepositional selhoztehnika_N = "сельхозтехнике"
+lemmaPrepositional semya_N = "семени"
+lemmaPrepositional senat_N = "сенате"
 lemmaPrepositional sensitivnost_N = "сенситивности"
 lemmaPrepositional sensorika_N = "сенсорике"
+lemmaPrepositional sentyabr_N = "сентябре"
+lemmaPrepositional sen_N = "сени"
 lemmaPrepositional separabelnost_N = "сепарабельности"
 lemmaPrepositional septichnost_N = "септичности"
+lemmaPrepositional seredina_N = "середине"
+lemmaPrepositional serializatsiya_N = "сериализации"
+lemmaPrepositional serp_N = "серпе"
+lemmaPrepositional sestra_N = "сестре"
 lemmaPrepositional setchatost_N = "сетчатости"
-lemmaPrepositional sillogizm_N = "силлогизме"
+lemmaPrepositional set_N = "сети"
+lemmaPrepositional sigareta_N = "сигарете"
+lemmaPrepositional signal_N = "сигнале"
+lemmaPrepositional sidene_N = "сиденье"
+lemmaPrepositional silach_N = "силаче"
+lemmaPrepositional silogizm_N = "силогизме"
+lemmaPrepositional simpatiya_N = "симпатии"
 lemmaPrepositional singulyarnost_N = "сингулярности"
 lemmaPrepositional sinektika_N = "синектике"
 lemmaPrepositional sinergetika_N = "синергетике"
 lemmaPrepositional sintaktika_N = "синтактике"
+lemmaPrepositional sinhronizatsiya_N = "синхронизации"
+lemmaPrepositional sinhronnost_N = "синхронности"
+lemmaPrepositional siren_N = "сирени"
 lemmaPrepositional sistemotehnika_N = "системотехнике"
-lemmaPrepositional skazat_V = "сказать"
+lemmaPrepositional skazka_N = "сказке"
+lemmaPrepositional skala_N = "скале"
+lemmaPrepositional skamya_N = "скамье"
 lemmaPrepositional skarednost_N = "скаредности"
+lemmaPrepositional skatert_N = "скатерти"
+lemmaPrepositional skachok_N = "скачке"
+lemmaPrepositional skidka_N = "скидке"
+lemmaPrepositional sklad_N = "складе"
+lemmaPrepositional skladka_N = "складке"
 lemmaPrepositional skoordinirovannost_N = "скоординированности"
 lemmaPrepositional skorostrelnost_N = "скорострельности"
+lemmaPrepositional skorost_N = "скорости"
+lemmaPrepositional skot_N = "скоте"
 lemmaPrepositional skoshennost_N = "скошенности"
 lemmaPrepositional skruchennost_N = "скрученности"
 lemmaPrepositional skruchivaemost_N = "скручиваемости"
+lemmaPrepositional slava_N = "славе"
 lemmaPrepositional sladkoglasnost_N = "сладкогласности"
-lemmaPrepositional sledstvie_N = "следствии"
+lemmaPrepositional sledovanie_N = "следовании"
+lemmaPrepositional sleza_N = "слезе"
+lemmaPrepositional slepoj_N = "слепом"
+lemmaPrepositional sliva_N = "сливе"
+lemmaPrepositional slozhnost_N = "сложности"
+lemmaPrepositional sloj_N = "слое"
+lemmaPrepositional slon_N = "слоне"
+lemmaPrepositional sluga_N = "слуге"
+lemmaPrepositional sluzhba_N = "службе"
 lemmaPrepositional sluzhebnost_N = "служебности"
+lemmaPrepositional sluchajnost_N = "случайности"
+lemmaPrepositional slushatel_N = "слушателе"
 lemmaPrepositional smazannost_N = "смазанности"
 lemmaPrepositional smachivaemost_N = "смачиваемости"
-lemmaPrepositional smert_N = "смерти"
+lemmaPrepositional smena_N = "смене"
+lemmaPrepositional smes_N = "смеси"
 lemmaPrepositional smeshannost_N = "смешанности"
 lemmaPrepositional smeshchaemost_N = "смещаемости"
 lemmaPrepositional sminaemost_N = "сминаемости"
-lemmaPrepositional smirenie_N = "смирении"
 lemmaPrepositional smirnost_N = "смирности"
-lemmaPrepositional smysl_N = "смысле"
+lemmaPrepositional smola_N = "смоле"
+lemmaPrepositional sneg_N = "снеге"
+lemmaPrepositional snegovik_N = "снеговике"
+lemmaPrepositional snegurka_N = "снегурке"
+lemmaPrepositional sobaka_N = "собаке"
 lemmaPrepositional sobiraemost_N = "собираемости"
+lemmaPrepositional sobor_N = "соборе"
+lemmaPrepositional sobytie_N = "событии"
 lemmaPrepositional sovershennost_N = "совершенности"
-lemmaPrepositional soglasie_N = "согласии"
-lemmaPrepositional soglasovannost_N = "согласованности"
+lemmaPrepositional sovest_N = "совести"
+lemmaPrepositional sovet_N = "совете"
+lemmaPrepositional sovmestimost_N = "совместимости"
 lemmaPrepositional sognutost_N = "согнутости"
 lemmaPrepositional soznanie_N = "сознании"
+lemmaPrepositional sok_N = "соке"
+lemmaPrepositional sokol_N = "соколе"
 lemmaPrepositional sokrashchaemost_N = "сокращаемости"
-lemmaPrepositional somnenie_N = "сомнении"
+lemmaPrepositional soldat_N = "солдате"
+lemmaPrepositional solntsestoyanie_N = "солнцестоянии"
 lemmaPrepositional sonika_N = "сонике"
+lemmaPrepositional soobshchenie_N = "сообщении"
 lemmaPrepositional soosnost_N = "соосности"
+lemmaPrepositional sootvetstvie_N = "соответствии"
+lemmaPrepositional sootnoshenie_N = "соотношении"
 lemmaPrepositional sopodchinennost_N = "соподчиненности"
+lemmaPrepositional soprotivlenie_N = "сопротивлении"
+lemmaPrepositional soroka_N = "сороке"
+lemmaPrepositional sosed_N = "соседе"
+lemmaPrepositional sosna_N = "сосне"
+lemmaPrepositional sostav_N = "составе"
+lemmaPrepositional sosud_N = "сосуде"
+lemmaPrepositional sofa_N = "софе"
+lemmaPrepositional soha_N = "сохе"
 lemmaPrepositional sohranyaemost_N = "сохраняемости"
 lemmaPrepositional soyuzselhoztehnika_N = "союзсельхозтехнике"
 lemmaPrepositional soyuzspetsavtomatika_N = "союзспецавтоматике"
+lemmaPrepositional spalnyj_N = "спальном"
+lemmaPrepositional spalnya_N = "спальне"
+lemmaPrepositional spektakl_N = "спектакле"
+lemmaPrepositional spektr_N = "спектре"
+lemmaPrepositional spekulyatsiya_N = "спекуляции"
 lemmaPrepositional spetsavtomatika_N = "спецавтоматике"
+lemmaPrepositional spetsifikatsiya_N = "спецификации"
+lemmaPrepositional spetsifichnost_N = "специфичности"
 lemmaPrepositional spetsorgtehnika_N = "спецоргтехнике"
 lemmaPrepositional spetstehnika_N = "спецтехнике"
+lemmaPrepositional spina_N = "спине"
+lemmaPrepositional spiral_N = "спирали"
+lemmaPrepositional spisok_N = "списке"
+lemmaPrepositional spichka_N = "спичке"
+lemmaPrepositional splav_N = "сплаве"
 lemmaPrepositional sploshnost_N = "сплошности"
 lemmaPrepositional splyusnutost_N = "сплюснутости"
 lemmaPrepositional splyushchennost_N = "сплющенности"
 lemmaPrepositional spokojnost_N = "спокойности"
-lemmaPrepositional sposobnost_N = "способности"
-lemmaPrepositional spravedlivost_N = "справедливости"
+lemmaPrepositional sposob_N = "способе"
+lemmaPrepositional spravka_N = "справке"
 lemmaPrepositional sputannost_N = "спутанности"
+lemmaPrepositional sreda_N = "среде"
+lemmaPrepositional sredstvo_N = "средстве"
+lemmaPrepositional ssora_N = "ссоре"
+lemmaPrepositional ssylka_N = "ссылке"
+lemmaPrepositional stabilnost_N = "стабильности"
+lemmaPrepositional stavka_N = "ставке"
+lemmaPrepositional stadion_N = "стадионе"
+lemmaPrepositional stadiya_N = "стадии"
+lemmaPrepositional stado_N = "стаде"
+lemmaPrepositional stakan_N = "стакане"
+lemmaPrepositional stal_N = "стали"
+lemmaPrepositional standartizatsiya_N = "стандартизации"
+lemmaPrepositional stanok_N = "станке"
+lemmaPrepositional stantsiya_N = "станции"
+lemmaPrepositional starik_N = "старике"
+lemmaPrepositional starshina_N = "старшине"
+lemmaPrepositional status_N = "статусе"
+lemmaPrepositional staya_N = "стае"
+lemmaPrepositional stvol_N = "стволе"
+lemmaPrepositional steklo_N = "стекле"
 lemmaPrepositional steklovidnost_N = "стекловидности"
+lemmaPrepositional stena_N = "стене"
+lemmaPrepositional stend_N = "стенде"
+lemmaPrepositional stepen_N = "степени"
+lemmaPrepositional step_N = "степи"
 lemmaPrepositional stervoznost_N = "стервозности"
 lemmaPrepositional stiraemost_N = "стираемости"
+lemmaPrepositional stihiya_N = "стихии"
+lemmaPrepositional stojka_N = "стойке"
+lemmaPrepositional stol_N = "столе"
+lemmaPrepositional stolb_N = "столбе"
+lemmaPrepositional stolovaya_N = "столовой"
+lemmaPrepositional stolyar_N = "столяре"
+lemmaPrepositional ston_N = "стоне"
+lemmaPrepositional storona_N = "стороне"
 lemmaPrepositional stohastichnost_N = "стохастичности"
-lemmaPrepositional stradanie_N = "страдании"
-lemmaPrepositional strah_N = "страхе"
+lemmaPrepositional stoyanka_N = "стоянке"
+lemmaPrepositional stranitsa_N = "странице"
+lemmaPrepositional strast_N = "страсти"
+lemmaPrepositional strela_N = "стреле"
 lemmaPrepositional strelovidnost_N = "стреловидности"
-lemmaPrepositional styd_N = "стыде"
+lemmaPrepositional stremyanka_N = "стремянке"
+lemmaPrepositional stroka_N = "строке"
+lemmaPrepositional strochka_N = "строчке"
+lemmaPrepositional struna_N = "струне"
+lemmaPrepositional student_N = "студенте"
+lemmaPrepositional stul_N = "стуле"
 lemmaPrepositional subatsidnost_N = "субацидности"
 lemmaPrepositional subgarmonika_N = "субгармонике"
-lemmaPrepositional sudba_N = "судьбе"
+lemmaPrepositional sud_N = "суде"
+lemmaPrepositional sudno_N = "судне"
 lemmaPrepositional sudbonosnost_N = "судьбоносности"
-lemmaPrepositional suzhdenie_N = "суждении"
 lemmaPrepositional sumasbrodnost_N = "сумасбродности"
 lemmaPrepositional sumerechnost_N = "сумеречности"
+lemmaPrepositional sumka_N = "сумке"
+lemmaPrepositional summa_N = "сумме"
 lemmaPrepositional summiruemost_N = "суммируемости"
+lemmaPrepositional sup_N = "супе"
 lemmaPrepositional suporosnost_N = "супоросности"
+lemmaPrepositional supruga_N = "супруге"
 lemmaPrepositional surdotehnika_N = "сурдотехнике"
-lemmaPrepositional sushchestvovanie_N = "существовании"
-lemmaPrepositional sushchestvovat_V = "существовать"
+lemmaPrepositional sutki_N = "сутках"
+lemmaPrepositional sfera_N = "сфере"
+lemmaPrepositional shema_N = "схеме"
+lemmaPrepositional stsena_N = "сцене"
+lemmaPrepositional stsenarij_N = "сценарии"
 lemmaPrepositional stseplennost_N = "сцепленности"
 lemmaPrepositional stseplyaemost_N = "сцепляемости"
+lemmaPrepositional schaste_N = "счастье"
 lemmaPrepositional schetnost_N = "счетности"
+lemmaPrepositional schet_N = "счете"
+lemmaPrepositional tabak_N = "табаке"
+lemmaPrepositional tablitsa_N = "таблице"
+lemmaPrepositional taburet_N = "табурете"
+lemmaPrepositional tavtologiya_N = "тавтологии"
 lemmaPrepositional tagmemika_N = "тагмемике"
-lemmaPrepositional tezis_N = "тезисе"
+lemmaPrepositional tajga_N = "тайге"
+lemmaPrepositional tajna_N = "тайне"
+lemmaPrepositional taksi_N = "такси"
+lemmaPrepositional talant_N = "таланте"
+lemmaPrepositional tanets_N = "танце"
+lemmaPrepositional tank_N = "танке"
+lemmaPrepositional tarelka_N = "тарелке"
+lemmaPrepositional tarif_N = "тарифе"
+lemmaPrepositional tachka_N = "тачке"
+lemmaPrepositional tvar_N = "твари"
+lemmaPrepositional tverd_N = "тверди"
 lemmaPrepositional tektonofizika_N = "тектонофизике"
+lemmaPrepositional televizor_N = "телевизоре"
+lemmaPrepositional telega_N = "телеге"
 lemmaPrepositional telematika_N = "телематике"
+lemmaPrepositional telemetriya_N = "телеметрии"
 lemmaPrepositional teleradiotehnika_N = "телерадиотехнике"
-lemmaPrepositional telo_N = "теле"
+lemmaPrepositional telefon_N = "телефоне"
+lemmaPrepositional temnitsa_N = "темнице"
+lemmaPrepositional temperatura_N = "температуре"
 lemmaPrepositional temperaturostojkost_N = "температуростойкости"
-lemmaPrepositional teorema_N = "теореме"
+lemmaPrepositional tender_N = "тендере"
+lemmaPrepositional tenor_N = "теноре"
+lemmaPrepositional teoriya_N = "теории"
 lemmaPrepositional teplovatost_N = "тепловатости"
 lemmaPrepositional teplokrovnost_N = "теплокровности"
 lemmaPrepositional teplonapryazhennost_N = "теплонапряженности"
@@ -7989,29 +12429,217 @@ lemmaPrepositional teplonepronitsaemost_N = "теплонепроницаемо�
 lemmaPrepositional teploprozrachnost_N = "теплопрозрачности"
 lemmaPrepositional teplopronitsaemost_N = "теплопроницаемости"
 lemmaPrepositional teplofizika_N = "теплофизике"
-lemmaPrepositional termin_N = "термине"
-lemmaPrepositional toska_N = "тоске"
-lemmaPrepositional trevoga_N = "тревоге"
-lemmaPrepositional uslovie_N = "условии"
-lemmaPrepositional utverzhdenie_N = "утверждении"
-lemmaPrepositional utochnyat_V = "уточнять"
-lemmaPrepositional utrata_N = "утрате"
-lemmaPrepositional uhod_N = "уходе"
-lemmaPrepositional fakt_N = "факте"
-lemmaPrepositional filosofiya_N = "философии"
-lemmaPrepositional hrupkost_N = "хрупкости"
-lemmaPrepositional tsel_N = "цели"
-lemmaPrepositional tsifra_N = "цифре"
-lemmaPrepositional chestnost_N = "честности"
-lemmaPrepositional ekvivalentsiya_N = "эквиваленции"
-lemmaPrepositional eksplikatsiya_N = "экспликации"
-lemmaPrepositional entejlment_N = "энтейлменте"
-lemmaPrepositional yazyk_N = "языке"
-lemmaPrepositional yakor_N = "якоре"
+lemmaPrepositional termos_N = "термосе"
+lemmaPrepositional terrasa_N = "террасе"
+lemmaPrepositional territoriya_N = "территории"
+lemmaPrepositional tes_N = "тесе"
+lemmaPrepositional tesnota_N = "тесноте"
+lemmaPrepositional tehnika_N = "технике"
+lemmaPrepositional tehnologiya_N = "технологии"
+lemmaPrepositional tigr_N = "тигре"
+lemmaPrepositional tirazh_N = "тираже"
+lemmaPrepositional titul_N = "титуле"
+lemmaPrepositional tkan_N = "ткани"
+lemmaPrepositional tovar_N = "товаре"
+lemmaPrepositional tovarishch_N = "товарище"
+lemmaPrepositional tok_N = "токе"
+lemmaPrepositional tokenizatsiya_N = "токенизации"
+lemmaPrepositional tolpa_N = "толпе"
+lemmaPrepositional tolshchina_N = "толщине"
+lemmaPrepositional toplivo_N = "топливе"
+lemmaPrepositional tochka_N = "точке"
+lemmaPrepositional tochnost_N = "точности"
+lemmaPrepositional trava_N = "траве"
+lemmaPrepositional traditsiya_N = "традиции"
+lemmaPrepositional traektoriya_N = "траектории"
+lemmaPrepositional traktor_N = "тракторе"
+lemmaPrepositional tramvaj_N = "трамвае"
+lemmaPrepositional tranzaktsiya_N = "транзакции"
+lemmaPrepositional transport_N = "транспорте"
+lemmaPrepositional trassiruemost_N = "трассируемости"
+lemmaPrepositional traur_N = "трауре"
+lemmaPrepositional trener_N = "тренере"
+lemmaPrepositional trenie_N = "трении"
+lemmaPrepositional trenirovka_N = "тренировке"
+lemmaPrepositional trigger_N = "триггере"
+lemmaPrepositional tropa_N = "тропе"
+lemmaPrepositional trotuar_N = "тротуаре"
+lemmaPrepositional truba_N = "трубе"
+lemmaPrepositional trudnost_N = "трудности"
+lemmaPrepositional tryapka_N = "тряпке"
+lemmaPrepositional tuman_N = "тумане"
+lemmaPrepositional tykva_N = "тыкве"
+lemmaPrepositional tysyacha_N = "тысяче"
+lemmaPrepositional tyuk_N = "тюке"
+lemmaPrepositional tyurma_N = "тюрьме"
+lemmaPrepositional uborka_N = "уборке"
+lemmaPrepositional uvedomlenie_N = "уведомлении"
+lemmaPrepositional uverennost_N = "уверенности"
+lemmaPrepositional ugol_N = "угле"
+lemmaPrepositional udalennost_N = "удаленности"
+lemmaPrepositional udobstvo_N = "удобстве"
+lemmaPrepositional udovletvorenie_N = "удовлетворении"
+lemmaPrepositional udochka_N = "удочке"
+lemmaPrepositional ukaz_N = "указе"
+lemmaPrepositional ukus_N = "укусе"
+lemmaPrepositional ulitsa_N = "улице"
+lemmaPrepositional umozaklyuchenie_N = "умозаключении"
+lemmaPrepositional universitet_N = "университете"
+lemmaPrepositional unifikatsiya_N = "унификации"
+lemmaPrepositional uniforma_N = "униформе"
+lemmaPrepositional upakovka_N = "упаковке"
+lemmaPrepositional upravlenie_N = "управлении"
+lemmaPrepositional uprugost_N = "упругости"
+lemmaPrepositional uragan_N = "урагане"
+lemmaPrepositional uroven_N = "уровне"
+lemmaPrepositional urozhaj_N = "урожае"
+lemmaPrepositional us_N = "усе"
+lemmaPrepositional uskorenie_N = "ускорении"
+lemmaPrepositional usluga_N = "услуге"
+lemmaPrepositional uspeh_N = "успехе"
+lemmaPrepositional usta_N = "устах"
+lemmaPrepositional ustav_N = "уставе"
+lemmaPrepositional ustojchivost_N = "устойчивости"
+lemmaPrepositional ustrojstvo_N = "устройстве"
+lemmaPrepositional utka_N = "утке"
+lemmaPrepositional uho_N = "ухе"
+lemmaPrepositional uchastnik_N = "участнике"
+lemmaPrepositional uchastok_N = "участке"
+lemmaPrepositional ucheba_N = "учебе"
+lemmaPrepositional uchebnik_N = "учебнике"
+lemmaPrepositional uchitel_N = "учителе"
+lemmaPrepositional fabrika_N = "фабрике"
+lemmaPrepositional fakel_N = "факеле"
+lemmaPrepositional fanera_N = "фанере"
+lemmaPrepositional fantaziya_N = "фантазии"
+lemmaPrepositional fantom_N = "фантоме"
+lemmaPrepositional fasad_N = "фасаде"
+lemmaPrepositional fevral_N = "феврале"
+lemmaPrepositional ferma_N = "ферме"
+lemmaPrepositional fermer_N = "фермере"
+lemmaPrepositional figura_N = "фигуре"
+lemmaPrepositional fizika_N = "физике"
+lemmaPrepositional film_N = "фильме"
+lemmaPrepositional filtratsiya_N = "фильтрации"
+lemmaPrepositional final_N = "финале"
+lemmaPrepositional firma_N = "фирме"
+lemmaPrepositional flejta_N = "флейте"
+lemmaPrepositional flot_N = "флоте"
+lemmaPrepositional fokus_N = "фокусе"
+lemmaPrepositional formalizatsiya_N = "формализации"
+lemmaPrepositional fraza_N = "фразе"
+lemmaPrepositional front_N = "фронте"
+lemmaPrepositional frukt_N = "фрукте"
+lemmaPrepositional funt_N = "фунте"
+lemmaPrepositional furgon_N = "фургоне"
+lemmaPrepositional halat_N = "халате"
+lemmaPrepositional harakteristika_N = "характеристике"
+lemmaPrepositional hvost_N = "хвосте"
+lemmaPrepositional hvoya_N = "хвое"
+lemmaPrepositional hleb_N = "хлебе"
+lemmaPrepositional hlopok_N = "хлопке"
+lemmaPrepositional hozyain_N = "хозяине"
+lemmaPrepositional holod_N = "холоде"
+lemmaPrepositional holodilnik_N = "холодильнике"
+lemmaPrepositional horosho_N = "хорошо"
+lemmaPrepositional hram_N = "храме"
+lemmaPrepositional hren_N = "хрене"
+lemmaPrepositional tsarstvo_N = "царстве"
+lemmaPrepositional tsvet_N = "цвете"
+lemmaPrepositional tsvetok_N = "цветке"
+lemmaPrepositional tselostnost_N = "целостности"
+lemmaPrepositional tsepochka_N = "цепочке"
+lemmaPrepositional tseremoniya_N = "церемонии"
+lemmaPrepositional tserkov_N = "церкви"
+lemmaPrepositional tsiklon_N = "циклоне"
+lemmaPrepositional tsilindr_N = "цилиндре"
+lemmaPrepositional tsink_N = "цинке"
+lemmaPrepositional tsirk_N = "цирке"
+lemmaPrepositional tsitata_N = "цитате"
+lemmaPrepositional chastitsa_N = "частице"
+lemmaPrepositional chastota_N = "частоте"
+lemmaPrepositional chasy_N = "часах"
+lemmaPrepositional chashka_N = "чашке"
+lemmaPrepositional chek_N = "чеке"
+lemmaPrepositional chelyust_N = "челюсти"
+lemmaPrepositional chemodan_N = "чемодане"
+lemmaPrepositional cherv_N = "черве"
+lemmaPrepositional cherep_N = "черепе"
+lemmaPrepositional cherepaha_N = "черепахе"
+lemmaPrepositional chernika_N = "чернике"
+lemmaPrepositional cherta_N = "черте"
+lemmaPrepositional chertezh_N = "чертеже"
+lemmaPrepositional chest_N = "чести"
+lemmaPrepositional chetverg_N = "четверге"
+lemmaPrepositional chehol_N = "чехле"
+lemmaPrepositional chin_N = "чине"
+lemmaPrepositional chitatel_N = "читателе"
+lemmaPrepositional chuvstvitelnost_N = "чувствительности"
+lemmaPrepositional chulan_N = "чулане"
+lemmaPrepositional chulok_N = "чулке"
+lemmaPrepositional shalash_N = "шалаше"
+lemmaPrepositional shapka_N = "шапке"
+lemmaPrepositional shar_N = "шаре"
+lemmaPrepositional shahmaty_N = "шахматах"
+lemmaPrepositional shahta_N = "шахте"
+lemmaPrepositional shinel_N = "шинели"
+lemmaPrepositional shirina_N = "ширине"
+lemmaPrepositional shifrovanie_N = "шифровании"
+lemmaPrepositional shkala_N = "шкале"
+lemmaPrepositional shkaf_N = "шкафе"
+lemmaPrepositional shkval_N = "шквале"
+lemmaPrepositional shlagbaum_N = "шлагбауме"
+lemmaPrepositional shlyapa_N = "шляпе"
+lemmaPrepositional shtab_N = "штабе"
+lemmaPrepositional shtil_N = "штиле"
+lemmaPrepositional shtorm_N = "шторме"
+lemmaPrepositional shtuka_N = "штуке"
+lemmaPrepositional shcheka_N = "щеке"
+lemmaPrepositional shchelk_N = "щелке"
+lemmaPrepositional shchepka_N = "щепке"
+lemmaPrepositional shchit_N = "щите"
+lemmaPrepositional ekvivalentnost_N = "эквивалентности"
+lemmaPrepositional ekzamen_N = "экзамене"
+lemmaPrepositional ekonomiya_N = "экономии"
+lemmaPrepositional ekran_N = "экране"
+lemmaPrepositional ekspeditsiya_N = "экспедиции"
+lemmaPrepositional eksperiment_N = "эксперименте"
+lemmaPrepositional ekspert_N = "эксперте"
+lemmaPrepositional ekstrapolyatsiya_N = "экстраполяции"
+lemmaPrepositional elektrichestvo_N = "электричестве"
+lemmaPrepositional element_N = "элементе"
+lemmaPrepositional embargo_N = "эмбарго"
+lemmaPrepositional emotsiya_N = "эмоции"
+lemmaPrepositional energiya_N = "энергии"
+lemmaPrepositional entuziazm_N = "энтузиазме"
+lemmaPrepositional epizod_N = "эпизоде"
+lemmaPrepositional epoha_N = "эпохе"
+lemmaPrepositional eskalatsiya_N = "эскалации"
+lemmaPrepositional estrada_N = "эстраде"
+lemmaPrepositional etazh_N = "этаже"
+lemmaPrepositional etiket_N = "этикете"
+lemmaPrepositional effekt_N = "эффекте"
+lemmaPrepositional yubilej_N = "юбилее"
+lemmaPrepositional yug_N = "юге"
+lemmaPrepositional yunosha_N = "юноше"
+lemmaPrepositional yabloko_N = "яблоке"
+lemmaPrepositional yablonya_N = "яблоне"
+lemmaPrepositional yavlenie_N = "явлении"
+lemmaPrepositional yagoda_N = "ягоде"
+lemmaPrepositional yadernyj_N = "ядерном"
+lemmaPrepositional yajtso_N = "яйце"
+lemmaPrepositional yama_N = "яме"
+lemmaPrepositional yanvar_N = "январе"
+lemmaPrepositional yarmarka_N = "ярмарке"
+lemmaPrepositional yarost_N = "ярости"
+lemmaPrepositional yasli_N = "яслях"
+lemmaPrepositional yasnost_N = "ясности"
+lemmaPrepositional yastreb_N = "ястребе"
+lemmaPrepositional yachmen_N = "ячмене"
 
 lemmaCount : Nat
-lemmaCount = 1998
+lemmaCount = 3155
 
-lemmaCountExpected : lemmaCount ≡ 1998
+lemmaCountExpected : lemmaCount ≡ 3155
 lemmaCountExpected = refl
 
