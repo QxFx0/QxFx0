@@ -1,22 +1,23 @@
 # EN Lexicon Parity Release
 
 **Date**: 2026-05-15
-**Run ID**: ci-20260515-170038
+**Run ID**: ci-20260515-175819
 **Status**: PASS
 
 ## Summary
 
-Expanded English lexicon from 2205 to 3023 unique lemmas, achieving parity target (>=3000) while maintaining zero dangerous collisions and perfect EN render path quality.
+Expanded English lexicon from 2205 to 3026 unique lemmas, achieving parity target (>=3000) while maintaining zero dangerous collisions and perfect EN render path quality.
 
 ## Before/After Metrics
 
 | Metric | Before | After | Delta |
 |--------|--------|-------|-------|
-| EN rows | 2242 | 3060 | +818 |
-| EN unique lemmas | 2205 | 3023 | +818 |
-| EN unique fun_ids | 2240 | 3058 | +818 |
-| RU rows | 2242 | 3155 | +913 (from previous RU expansion) |
-| RU unique lemmas | 2236 | 3155 | +919 (from previous RU expansion) |
+| EN rows | 2242 | 3203 | +961 |
+| EN unique lemmas | 2205 | 3026 | +821 |
+| EN unique fun_ids | 2240 | 3065 | +825 |
+| RU rows | 2242 | 2242 | 0 (unchanged) |
+| RU unique lemmas | 2236 | 2236 | 0 (unchanged) |
+| RU unique fun_ids | 2238 | 2238 | 0 (unchanged) |
 
 ## EN Gate Metrics
 
@@ -39,7 +40,7 @@ Expanded English lexicon from 2205 to 3023 unique lemmas, achieving parity targe
 
 ## Thematic Groups Added
 
-Added 17 thematic groups (G1-G17) with 818 new EN entries:
+Added 20 thematic groups (G1-G20) with 961 new EN entries:
 
 - **G1**: Epistemics/Cognition (50 entries)
 - **G2**: Causality/Explanation (40 entries)
@@ -58,6 +59,9 @@ Added 17 thematic groups (G1-G17) with 818 new EN entries:
 - **G15**: Additional Abstract Concepts (68 entries)
 - **G16**: Common Everyday Vocabulary (114 entries)
 - **G17**: Additional Common Verbs (103 entries)
+- **G18**: Additional Abstract/Conceptual Vocabulary (90 entries)
+- **G19**: Additional Descriptive Adjectives (94 entries)
+- **G20**: Additional Common Nouns (130 entries)
 
 ## Generation Script Fixes
 
@@ -66,13 +70,13 @@ Fixed sorting in `scripts/export_lexicon.py` to ensure deterministic ordering of
 ## Core Contract Status
 
 **CONTRACT_VERDICT: PROD_GO**
-- Run ID: ci-20260515-170038
+- Run ID: ci-20260515-175819
 - Profile: core
 - All gates: PASS
 
 ## Files Changed
 
-- `spec/gf/lexicon_bilingual.tsv` - Added 818 EN entries
+- `spec/gf/lexicon_bilingual.tsv` - Added 961 EN entries
 - `scripts/expand_en_lexicon.py` - New EN expansion script
 - `scripts/export_lexicon.py` - Fixed deterministic sorting
 - `spec/gf/QxFx0Lexicon.gf` - Regenerated
