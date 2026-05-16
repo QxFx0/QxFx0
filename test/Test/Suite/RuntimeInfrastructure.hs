@@ -85,6 +85,7 @@ runtimeInfrastructureTests =
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testSaveStateReturnsRightOnSuccess
   , testSaveStateWithProjectionFailureRollsBackTransaction
+  , testStepRowPropagatesSqliteStepErrors
   , testRunTurnPersistsTurnQuality
   , testPersistedSystemStateSessionIdMatchesBootstrapId
   , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
@@ -1095,6 +1096,36 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
     afterCount <- Runtime.withRuntimeDb rt $ \db ->
       queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'"
     assertEqual "failed projection persistence must rollback turn_quality insert" beforeCount afterCount
+
+testStepRowPropagatesSqliteStepErrors :: Test
+testStepRowPropagatesSqliteStepErrors = TestCase $ do
+  withRuntimeEnv "qxfx0_test_step_row_error.db" $ do
+    dbPath <- Runtime.resolveDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("Cannot open SQLite DB: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    assertExec db "create uniqueness table" $
+      T.unlines
+        [ "DROP TABLE IF EXISTS step_row_uniqueness;"
+        , "CREATE TABLE step_row_uniqueness(x INTEGER PRIMARY KEY);"
+        ]
+    mStmt <- NSQL.prepare db "INSERT INTO step_row_uniqueness(x) VALUES (1),(1);"
+    case mStmt of
+      Left err -> do
+        NSQL.close db
+        assertFailure ("Cannot prepare duplicate insert statement: " <> T.unpack err)
+      Right stmt -> do
+        stepResult <- try (NSQL.stepRow stmt) :: IO (Either QxFx0Exception Bool)
+        NSQL.finalize stmt
+        NSQL.close db
+        case stepResult of
+          Left (SQLiteError detail) ->
+            assertBool "stepRow should expose sqlite step failure details" ("step failed:" `T.isInfixOf` detail)
+          Left other ->
+            assertFailure ("Expected SQLiteError from stepRow, got: " <> show other)
+          Right hasRow ->
+            assertFailure ("Expected stepRow failure, got Right " <> show hasRow)
 
 testRunTurnPersistsTurnQuality :: Test
 testRunTurnPersistsTurnQuality = TestCase $ do

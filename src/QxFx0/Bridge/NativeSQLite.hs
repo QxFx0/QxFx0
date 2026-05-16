@@ -143,8 +143,14 @@ step stmt = do
 
 stepRow :: Statement -> IO Bool
 stepRow stmt = do
-  rc <- c_sqlite3_step stmt
-  return (rc == sqlRow)
+  stepResult <- step stmt
+  case stepResult of
+    Right rc | rc == sqlRow -> pure True
+    Right rc | rc == sqlDone -> pure False
+    Right rc ->
+      throwQxFx0 (SQLiteError ("sqlite3_step returned unexpected code: " <> T.pack (show rc)))
+    Left err ->
+      throwQxFx0 (SQLiteError err)
 
 bindText :: Statement -> CInt -> Text -> IO (Either Text ())
 bindText stmt idx val = do
