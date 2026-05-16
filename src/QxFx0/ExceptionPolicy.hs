@@ -21,6 +21,14 @@ data QxFx0Exception
   | EmbeddingError Text
   | ThresholdParseError Text
   | AgdaGateError Text
+  | IdentityRupture !Text
+    -- ^ Structural self-identity ('QxFx0.Self.Types.SelfBlanket')
+    -- violated. Categorical failure: the running system is no longer
+    -- /this system/. Not recoverable in the @PersistenceError@ /
+    -- @RuntimeInitError@ sense; the session must be re-bootstrapped
+    -- (or, in production, the process restarted). Payload is the
+    -- semicolon-joined rendering of one or more
+    -- 'QxFx0.Self.Types.BlanketViolation' values.
   deriving stock (Eq, Show)
 
 instance Exception QxFx0Exception

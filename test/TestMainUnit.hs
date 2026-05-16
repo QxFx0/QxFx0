@@ -10,6 +10,7 @@ import Test.Suite.TurnPipelineProtocol (turnPipelineProtocolTests)
 import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.VecProperties (vecPropertiesTests)
 import Test.Suite.EgoRead (egoReadTests)
+import Test.Suite.SelfBlanket (selfBlanketTests)
 
 main :: IO ()
 main = do
@@ -21,6 +22,7 @@ main = do
         ++ lexiconTests
         ++ vecPropertiesTests
         ++ egoReadTests
+        ++ selfBlanketTests
         )
   if errors testCounts + failures testCounts > 0
     then exitFailure

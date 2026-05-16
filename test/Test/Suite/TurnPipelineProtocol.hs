@@ -12,6 +12,7 @@ import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.List (sort)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (Day(ModifiedJulianDay))
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
@@ -1250,7 +1251,20 @@ trackConcurrentEffect activeRef maxRef action = do
 
 buildPreparedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals)
 buildPreparedFixture rawInput = do
+  -- Phase-1 SelfBlanket invariants require a non-empty session id and
+  -- a non-empty morphology to consider the state /this system/. Test
+  -- fixtures must therefore supply at least the minimum needed to
+  -- satisfy 'checkInitialBlanket' / 'checkBlanketTransition'; the
+  -- specific values are synthetic and orthogonal to the assertions
+  -- in this suite.
   let ss = emptySystemState
+        { ssSessionId  = "fixture-session"
+        , ssMorphology = MorphologyData
+            (Map.singleton "о" "preposition")
+            Map.empty
+            Map.empty
+            Map.empty
+        }
       preparePlan = planPrepareEffects ss rawInput
   prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
   let ti = buildTurnInput ss "request-prop" "session-prop" preparePlan prepareResults

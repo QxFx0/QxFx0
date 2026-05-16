@@ -24,6 +24,8 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Types.Persistence (LoadStateResult(..), renderPersistenceDiagnostics)
 import QxFx0.Bridge.StatePersistence (loadState)
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0, tryIO, tryQxFx0)
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Invariants (checkInitialBlanket, renderBlanketViolations)
 import QxFx0.Resources
   ( ReadinessMode(..)
   , assessResourceReadiness
@@ -149,6 +151,14 @@ bootstrapSession quiet sessionId = do
               }
             , ssSessionId = sessionId
             })
+  -- Phase 1: verify that the freshly bootstrapped state forms a
+  -- structurally coherent self (see docs/THEORY.md §4.1 and
+  -- docs/adr/0007-dual-mode-conatus.md). Failure here is categorical:
+  -- the session was unable to come into being as /this system/, and
+  -- there is nothing to recover.
+  case checkInitialBlanket (computeSelfBlanket restored) of
+    [] -> pure ()
+    vs -> throwQxFx0 (IdentityRupture ("bootstrap: " <> renderBlanketViolations vs))
   hydrateRuntimeTurnState runtime restored
   pure Session
     { sessSystemState = restored

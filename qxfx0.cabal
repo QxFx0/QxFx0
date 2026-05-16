@@ -74,6 +74,9 @@ library
     QxFx0.Types.TurnProjection
     QxFx0.Types.Vec
     QxFx0.ExceptionPolicy
+    QxFx0.Self.Types
+    QxFx0.Self.Blanket
+    QxFx0.Self.Invariants
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -352,6 +355,7 @@ common test-common
     Test.Suite.RussianQuality
     Test.Suite.VecProperties
     Test.Suite.EgoRead
+    Test.Suite.SelfBlanket
 
 test-suite qxfx0-test-unit
   import:        test-common

@@ -30,10 +30,12 @@ import QxFx0.Core.TurnPipeline.Finalize.State (finalizeMetrics)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(PersistenceError)
+  ( QxFx0Exception(IdentityRupture, PersistenceError)
   , throwQxFx0
   , tryAsync
   )
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
 import QxFx0.Types
 import QxFx0.Core.TurnPipeline.Types (RenderedTurn(..))
 
@@ -58,6 +60,18 @@ resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitRe
 resolveFinalizeCommit pipelineIO commitPlan = do
   unless (fcpRewireEventsCount commitPlan == 0) $
     hPutStrLnWarning ("Dream rewiring: " ++ show (fcpRewireEventsCount commitPlan) ++ " edges adjusted")
+
+  -- Phase 1: verify that the prepared next-state preserves the
+  -- system's structural self-identity relative to the previous state
+  -- (see docs/THEORY.md §4.1). A rupture here means we are about to
+  -- persist a state that is no longer /this system/ — fail fast
+  -- before touching persistence rather than corrupt the snapshot.
+  case checkBlanketTransition
+         (computeSelfBlanket (fcpPreviousState commitPlan))
+         (computeSelfBlanket (fcpSaveState commitPlan)) of
+    []         -> pure ()
+    violations ->
+      throwQxFx0 (IdentityRupture ("commit: " <> renderBlanketViolations violations))
 
   saveStart <- resolveCommitCurrentTime pipelineIO
   saveResult <-
