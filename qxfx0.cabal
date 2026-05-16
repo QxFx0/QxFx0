@@ -83,7 +83,6 @@ library
     QxFx0.Lexicon.Resolver
     QxFx0.Lexicon.Inflection
 
-    QxFx0.Policy.Templates
     QxFx0.Resources
     QxFx0.Core
     QxFx0.Core.PipelineIO
@@ -151,7 +150,6 @@ library
     QxFx0.Semantic.Proposition
     QxFx0.Semantic.SemanticScene
     QxFx0.Semantic.SemanticInput
-    QxFx0.Semantic.Input
      QxFx0.Render.Dialogue
      QxFx0.Render.Semantic
      QxFx0.Render.Text
@@ -164,7 +162,6 @@ library
     QxFx0.Core.GameTheory.LP
     QxFx0.Core.Bayesian
     QxFx0.Core.Spectral
-    QxFx0.Core.Vec
     QxFx0.Types.Bayesian
     QxFx0.Types.Thresholds.GameTheory
     QxFx0.Types.Decision.Enums
@@ -217,7 +214,6 @@ library
     QxFx0.Resources.Paths
     QxFx0.Resources.Morphology
     QxFx0.Resources.Readiness
-    QxFx0.Runtime.Context
     QxFx0.Runtime.Gate
     QxFx0.Runtime.Mode
     QxFx0.Runtime.Paths
