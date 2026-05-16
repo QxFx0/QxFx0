@@ -16,7 +16,6 @@ module QxFx0.Semantic.Lexicon.RuntimeParadigms
   , loadRuntimeParadigms
   , loadDefaultRuntimeParadigms
    , emptyRuntimeParadigms
-   , testRuntimeParadigms
   , NounCase(..)
   , Number(..)
   , Gender(..)
@@ -56,7 +55,6 @@ import GHC.Generics (Generic)
 import qualified Data.ByteString as BS
 import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
-import System.IO.Unsafe (unsafePerformIO)
 import Control.DeepSeq (NFData)
 
 --------------------------------------------------------------------------------
@@ -96,11 +94,6 @@ loadRuntimeParadigms bs = do
 
 emptyRuntimeParadigms :: RuntimeParadigms
 emptyRuntimeParadigms = RuntimeParadigms mempty mempty
-
--- | Test helper: loaded paradigms for test suites. Not for production use.
-testRuntimeParadigms :: RuntimeParadigms
-testRuntimeParadigms = unsafePerformIO loadDefaultRuntimeParadigms
-{-# NOINLINE testRuntimeParadigms #-}
 
 -- | Load paradigms + exceptions from default paths. Pure IO — no global cache.
 loadDefaultRuntimeParadigms :: IO RuntimeParadigms

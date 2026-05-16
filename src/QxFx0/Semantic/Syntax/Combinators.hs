@@ -75,8 +75,6 @@ import Control.Monad (when)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import System.IO (hPutStrLn, stderr)
-import System.IO.Unsafe (unsafePerformIO)
 
 import QxFx0.Semantic.Lexicon.RuntimeParadigms
   ( RuntimeParadigms
@@ -107,14 +105,6 @@ data MorphError
   | CaseMismatch !Text !Text
   | InvalidPOS !Text !Text
   deriving stock (Eq, Show)
-
--- | Deprecated: was swallowing morphological errors. Use strict constructors (mkNP, mkVP, mkAP) instead.
-warnMorphFallback :: Text -> Text -> MorphError -> a -> a
-warnMorphFallback fn lemma err result =
-  unsafePerformIO $ do
-    hPutStrLn stderr $ "[morph-fallback] " ++ T.unpack fn ++ " lemma=" ++ T.unpack lemma ++ " err=" ++ show err
-    pure result
-{-# NOINLINE warnMorphFallback #-}
 
 --------------------------------------------------------------------------------
 -- Conjunction / subordination types
