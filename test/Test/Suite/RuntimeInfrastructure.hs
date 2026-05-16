@@ -1117,7 +1117,9 @@ testStepRowPropagatesSqliteStepErrors = TestCase $ do
         assertFailure ("Cannot prepare duplicate insert statement: " <> T.unpack err)
       Right stmt -> do
         stepResult <- try (NSQL.stepRow stmt) :: IO (Either QxFx0Exception Bool)
-        NSQL.finalize stmt
+        -- When sqlite3_step fails with CONSTRAINT, sqlite3_finalize may
+        -- return the same code. We only assert stepRow error propagation here.
+        _ <- try (NSQL.finalize stmt) :: IO (Either QxFx0Exception ())
         NSQL.close db
         case stepResult of
           Left (SQLiteError detail) ->

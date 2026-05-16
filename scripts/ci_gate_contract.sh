@@ -29,6 +29,7 @@ QXFX0_STATE_DIR="${QXFX0_STATE_DIR:-$ROOT/.test-tmp/qxfx0-state}"
 CABAL_TMP_DIR="${QXFX0_CABAL_TMP_DIR:-$ROOT/.test-tmp/cabal-ci}"
 CABAL_BUILD_SUMMARY="${QXFX0_CABAL_BUILD_SUMMARY:-$CABAL_TMP_DIR/build.log}"
 CABAL_CONFIG="${QXFX0_CABAL_CONFIG:-$CABAL_TMP_DIR/config}"
+CABAL_LOGS_DIR="${QXFX0_CABAL_LOGS_DIR:-$CABAL_TMP_DIR/logs}"
 DEFAULT_CABAL_CONFIG="${HOME:-/home/liskil}/.cabal/config"
 CABAL_DIR="${CABAL_DIR:-${HOME:-/home/liskil}/.cabal}"
 
@@ -43,6 +44,11 @@ if grep -q '^build-summary:' "$CABAL_CONFIG"; then
 else
   printf '\nbuild-summary: %s\n' "$CABAL_BUILD_SUMMARY" >> "$CABAL_CONFIG"
 fi
+if grep -q '^logs-dir:' "$CABAL_CONFIG"; then
+  sed -E -i "s|^logs-dir:.*$|logs-dir: $CABAL_LOGS_DIR|" "$CABAL_CONFIG"
+else
+  printf 'logs-dir: %s\n' "$CABAL_LOGS_DIR" >> "$CABAL_CONFIG"
+fi
 
 export CABAL_DIR
 export CABAL_CONFIG
@@ -52,6 +58,7 @@ export XDG_CACHE_HOME
 export QXFX0_STATE_DIR
 mkdir -p \
   "$CABAL_TMP_DIR" \
+  "$CABAL_LOGS_DIR" \
   "$XDG_STATE_HOME" \
   "$XDG_DATA_HOME" \
   "$XDG_CACHE_HOME" \
@@ -255,7 +262,9 @@ if [ "$PROFILE" = "core" ]; then
   # release-smoke already acquires the same lock in run_local_cabal.
   # Nested flock on the same fd from a child process causes deadlock.
   SMOKE_LOG="$GATES_DIR/11_release_smoke_${RUN_ID}_${PROFILE}.log"
-  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" \
+  SMOKE_SHARED_LOGS_DIR="$CABAL_TMP_DIR/release-smoke-logs"
+  mkdir -p "$SMOKE_SHARED_LOGS_DIR"
+  QXFX0_RUN_SLOW_TESTS=0 QXFX0_RELEASE_SMOKE_MODE=degraded-local QXFX0_RUNTIME_MODE=degraded-local QXFX0_REQUIRE_AGDA=0 QXFX0_GF_RUNTIME="${QXFX0_GF_RUNTIME:-1}" QXFX0_SHARED_CABAL_LOGS="$SMOKE_SHARED_LOGS_DIR" \
   bash -c "cd '$ROOT' && bash scripts/release-smoke.sh" > "$SMOKE_LOG" 2>&1 || true
 
   FAILED_COUNT=$(grep -oP 'Failed:\s*\K[0-9]+' "$SMOKE_LOG" | tail -1 || echo "UNKNOWN")
