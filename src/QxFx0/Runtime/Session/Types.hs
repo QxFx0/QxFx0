@@ -17,7 +17,7 @@ import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), withText)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Resources (ReadinessMode)
-import QxFx0.Runtime.Context (RuntimeContext)
+import QxFx0.Runtime.Wiring (RuntimeContext)
 import QxFx0.Types.Decision (DialogueOutputMode(..))
 import QxFx0.Types.State (SystemState)
 

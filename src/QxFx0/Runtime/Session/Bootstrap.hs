@@ -30,7 +30,7 @@ import QxFx0.Resources
   , computeReadinessMode
   , loadMorphologyData
   )
-import QxFx0.Runtime.Context
+import QxFx0.Runtime.Wiring
   ( hydrateRuntimeTurnState
   , initRuntimeContext
   , releaseRuntimeContext

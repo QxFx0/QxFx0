@@ -18,7 +18,7 @@ import QxFx0.Runtime.Gate
   )
 import QxFx0.Runtime.Mode (resolveRuntimeMode, isStrictRuntimeMode)
 import QxFx0.Types.Thresholds (maxInputLength)
-import QxFx0.Runtime.Context (RuntimeContext, withRuntimeSession, toPipelineIO)
+import QxFx0.Runtime.Wiring (RuntimeContext, withRuntimeSession, toPipelineIO)
 import QxFx0.Runtime.Session
   ( Session(..)
   , RuntimeOutputMode(..)

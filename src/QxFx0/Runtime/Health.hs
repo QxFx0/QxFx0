@@ -17,7 +17,7 @@ import QxFx0.Types.Readiness
   , agdaVerificationReady
   )
 
-import QxFx0.Runtime.Context
+import QxFx0.Runtime.Wiring
   ( RuntimeContext(..)
   , probeBackendReadiness
   , wireRuntimeReadiness

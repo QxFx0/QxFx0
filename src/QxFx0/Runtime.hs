@@ -31,7 +31,7 @@ module QxFx0.Runtime
 
 import QxFx0.Bridge.SQLite (ensureSchemaMigrations)
 import QxFx0.Bridge.AgdaWitness (AgdaWitnessReport(..), readAgdaWitnessReport, writeAgdaWitness)
-import QxFx0.Runtime.Context
+import QxFx0.Runtime.Wiring
   ( RuntimeContext
   , withRuntimeDb
   )
