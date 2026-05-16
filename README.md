@@ -79,6 +79,28 @@ without exposing Bayesian as a separate PROD API.
 - `spec/*.agda`: proof/spec layer + generated lexicon artifacts
 - `docs/**`: runtime invariants, CI profile, runbooks
 
+## Theoretical Foundation
+
+QxFx0 commits to a documented theoretical position. Architectural and code
+changes are expected to honor it.
+
+- `docs/THEORY.md` — three foundational theses (consciousness as structured
+  duality, intensive specification, conatus as primary algorithm) and their
+  unified synthesis as the implementation contract.
+- `docs/ARCHITECTURE.md` — layered architecture (8 horizontal layers),
+  enforced dependency invariants, turn pipeline structure, and the planned
+  dual-mode (Left ⊣ Right) extension.
+- `docs/adr/0007-dual-mode-conatus.md` — the architecture decision record
+  operationalizing THEORY.md as a phased modernization (P0–P8) toward a
+  self-preserving dual-mode runtime with formal `SelfBlanket` invariants
+  and a `Conatus` functional.
+
+External readers familiar with active inference (Friston), autopoiesis
+(Maturana & Varela), hemispheric duality (McGilchrist), or paraconsistent
+logic (Priest, da Costa) will recognize the intellectual lineage; readers
+without that background should treat `docs/THEORY.md` as the binding
+contract that subsequent code answers to.
+
 ## Core Design Principles
 
 1. Route first, render second.
