@@ -136,9 +136,10 @@ fi
 
 # ── Gate 2: Fast tests ──────────────────────────────────────────────────
 FAST_LOG="$GATES_DIR/02_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
-if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test" > "$FAST_LOG" 2>&1; then
+FAST_SUITE="${QXFX0_FAST_TEST_SUITE:-qxfx0-test-fast}"
+if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test '$FAST_SUITE'" > "$FAST_LOG" 2>&1; then
   if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
-    log_gate "cabal test fast" "0" "PASS" "0 errors, 0 failures"
+    log_gate "cabal test fast" "0" "PASS" "suite=$FAST_SUITE, 0 errors, 0 failures"
   else
     log_gate "cabal test fast" "0" "FAIL" "errors or failures detected"
     fail_contract "Gate 2 (fast tests)"
