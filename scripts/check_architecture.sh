@@ -6,7 +6,6 @@ SRC="$ROOT/src"
 APP="$ROOT/app"
 VIOLATIONS=0
 CORE_SEMANTIC_PORT_PREFIX="src/QxFx0/Core/Semantic/"
-CORE_RENDER_PORT_PREFIX="src/QxFx0/Core/Render/"
 CORE_POLICY_PORT_PREFIX="src/QxFx0/Core/Policy/"
 
 fail_violation() {
@@ -17,11 +16,6 @@ fail_violation() {
 is_core_semantic_port_module() {
   local candidate="$1"
   [[ "$candidate" == "$CORE_SEMANTIC_PORT_PREFIX"* ]]
-}
-
-is_core_render_port_module() {
-  local candidate="$1"
-  [[ "$candidate" == "$CORE_RENDER_PORT_PREFIX"* ]]
 }
 
 is_core_policy_port_module() {
@@ -58,18 +52,8 @@ done < <(find "$SRC/QxFx0/Render" -name "*.hs" 2>/dev/null || true)
 echo "  [2c] Core→Semantic imports — port modules removed; direct imports allowed..."
 # (Core.Semantic.* facade modules were consolidated into direct QxFx0.Semantic.* imports)
 
-echo "  [2d] Core→Render imports must stay inside Core render port modules..."
-while IFS= read -r file; do
-  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.Render' "$file" >/dev/null 2>&1; then
-    rel="${file#$ROOT/}"
-    if ! is_core_render_port_module "$rel"; then
-      fail_violation "$rel imports Render directly (use QxFx0.Core.Render.* port)"
-    fi
-  fi
-done < <(
-  { find "$SRC/QxFx0" -path "$SRC/QxFx0/Core.hs" -type f 2>/dev/null || true; \
-    find "$SRC/QxFx0/Core" -name "*.hs" 2>/dev/null || true; } | sort -u
-)
+echo "  [2d] Core→Render imports — port modules removed; direct imports allowed..."
+# (Core.Render.* facade modules were consolidated into direct QxFx0.Render.* imports)
 
 echo "  [2e] Core→Policy imports — port modules removed; direct imports allowed..."
 # (Core.Policy.* facade modules were consolidated into direct QxFx0.Policy.* imports)

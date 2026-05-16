@@ -42,7 +42,7 @@ import QxFx0.Core.TurnRender
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
-import QxFx0.Core.Render.Dialogue
+import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
   , renderArtifactViaAssembly

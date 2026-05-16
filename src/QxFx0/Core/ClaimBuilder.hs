@@ -18,7 +18,7 @@ import QxFx0.Types.Thresholds
   , criticalTensionThreshold
   , lowAgencyThreshold
   )
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( tokenizeKeywordText
   , containsKeywordPhrase
   )

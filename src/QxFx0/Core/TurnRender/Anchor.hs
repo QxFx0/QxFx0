@@ -11,7 +11,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.IdentitySignal (IdentitySignal(..))
-import QxFx0.Core.Semantic.SemanticInput (SemanticInput(..))
+import QxFx0.Semantic.SemanticInput (SemanticInput(..))
 import QxFx0.Types
 import QxFx0.Types.Thresholds
   ( clamp01

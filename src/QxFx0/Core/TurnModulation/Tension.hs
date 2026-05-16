@@ -8,11 +8,11 @@ module QxFx0.Core.TurnModulation.Tension
 
 import Data.Text (Text)
 
-import QxFx0.Core.Policy.ParserKeywords
+import QxFx0.Policy.ParserKeywords
   ( tensionDistressKeywords
   , tensionNegativeKeywords
   )
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( containsAnyKeywordPhrase
   , tokenizeKeywordText
   )

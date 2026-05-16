@@ -33,7 +33,7 @@ import QxFx0.Core.R5Dynamics
   )
 import QxFx0.Core.TurnModulation (computeTensionDelta)
 import QxFx0.Core.TurnRouting.Types (RoutingPhase(..))
-import QxFx0.Core.Semantic.SemanticInput (SemanticInput(..), buildSemanticInputSimple)
+import QxFx0.Semantic.SemanticInput (SemanticInput(..), buildSemanticInputSimple)
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
 import QxFx0.Types
 

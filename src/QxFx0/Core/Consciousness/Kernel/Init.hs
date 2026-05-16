@@ -9,7 +9,7 @@ module QxFx0.Core.Consciousness.Kernel.Init
 
 import Data.Text (Text)
 import QxFx0.Core.Consciousness.Types
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( consciousnessInitialFocus
   , consciousnessInitialNarrative
   , desireList

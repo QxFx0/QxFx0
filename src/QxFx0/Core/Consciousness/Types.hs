@@ -32,7 +32,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import QxFx0.Types.Consciousness (ConsciousnessNarrative(..))
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( deepContentGeneralization
   , deepContentLowConfidence
   , deepContentNarrowing

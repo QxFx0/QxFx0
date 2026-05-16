@@ -225,6 +225,7 @@ library
     QxFx0.Runtime.Session.UI
     QxFx0.Runtime.Wiring
     QxFx0.Runtime.Wiring.Context
+    QxFx0.Runtime.Wiring.Handlers
     QxFx0.Runtime.Wiring.Readiness
     QxFx0.Runtime.Wiring.Pipeline
     QxFx0.Semantic.KeywordMatch
@@ -247,20 +248,6 @@ library
     QxFx0.Core.Consciousness.Kernel.Init
     QxFx0.Core.Consciousness.Kernel.Pulse
     QxFx0.Core.Consciousness.Narrative
-    QxFx0.Core.Semantic.Embedding
-    QxFx0.Core.Semantic.KeywordMatch
-    QxFx0.Core.Semantic.Logic
-    QxFx0.Core.Semantic.MeaningAtoms
-    QxFx0.Core.Semantic.Morphology
-    QxFx0.Core.Semantic.Proposition
-    QxFx0.Core.Semantic.Input
-    QxFx0.Core.Semantic.SemanticInput
-    QxFx0.Core.Semantic.SemanticScene
-    QxFx0.Core.Render.Dialogue
-    QxFx0.Core.Render.Semantic
-    QxFx0.Core.Policy.Consciousness
-    QxFx0.Core.Policy.Contracts
-    QxFx0.Core.Policy.ParserKeywords
     QxFx0.Core.TurnPlanning.Modulation
     QxFx0.Core.TurnPlanning.Builders
     QxFx0.Core.TurnPlanning.Templates

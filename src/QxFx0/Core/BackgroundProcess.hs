@@ -25,7 +25,7 @@ import QxFx0.Types.Thresholds
   , backgroundProductModeResistanceDelta
   , backgroundSurfacingThreshold
   )
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( desireConflictPrefix, productModeSkillLabel
   , surfacingDesireConflictPrefix, surfacingPatternNoticePrefix
   , surfacingSelfModelGapPrefix, surfacingTrajectoryInsightPrefix

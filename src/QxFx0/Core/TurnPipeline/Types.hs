@@ -19,8 +19,8 @@ import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
-import QxFx0.Core.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
-import QxFx0.Core.Semantic.SemanticInput (SemanticInput)
+import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
+import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 
 import Data.Text (Text)

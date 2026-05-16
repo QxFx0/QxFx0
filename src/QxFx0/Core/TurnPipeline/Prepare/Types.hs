@@ -11,7 +11,7 @@ import QxFx0.Types
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 import QxFx0.Types.Intuition (IntuitiveFlash)
-import QxFx0.Core.Semantic.Embedding (EmbeddingResult)
+import QxFx0.Semantic.Embedding (EmbeddingResult)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)

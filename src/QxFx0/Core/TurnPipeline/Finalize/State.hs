@@ -29,8 +29,8 @@ import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.TurnLegitimacy (safeOutputText)
 import QxFx0.Core.Observability
 import QxFx0.Core.Intuition (IntuitiveFlash(..))
-import QxFx0.Core.Render.Semantic (renderSemanticIntrospection)
-import QxFx0.Core.Semantic.Embedding (embeddingQualityText)
+import QxFx0.Render.Semantic (renderSemanticIntrospection)
+import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Types.Text (textShow)
 
 import Data.Sequence (Seq)

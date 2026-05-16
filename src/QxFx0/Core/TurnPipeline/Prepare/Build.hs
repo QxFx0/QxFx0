@@ -17,7 +17,7 @@ import QxFx0.Core.TurnPipeline.Prepare.Types
   , PrepareTimeline(..)
   )
 import QxFx0.Core.TurnPipeline.Types
-import QxFx0.Core.Semantic.Embedding
+import QxFx0.Semantic.Embedding
   ( EmbeddingQuality(..)
   , cosineSimilarity
   , erEmbedding

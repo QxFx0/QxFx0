@@ -28,7 +28,7 @@ import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
   )
-import QxFx0.Core.Semantic.Embedding (textToEmbeddingResult)
+import QxFx0.Semantic.Embedding (textToEmbeddingResult)
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (NixGuardStatus(..))
 import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))

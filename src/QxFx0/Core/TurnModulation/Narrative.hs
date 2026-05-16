@@ -13,7 +13,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( narrativeSkillAnalyzeName
   , narrativeSkillHoldName
   , narrativeSkillListenName
@@ -23,7 +23,7 @@ import QxFx0.Core.Policy.Consciousness
   , narrativeSkillSilenceName
   , narrativeSkillTeachName
   )
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( containsKeywordPhrase
   , tokenizeKeywordText
   )

@@ -13,7 +13,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.Consciousness.Types
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( consciousnessConflictPrefix
   , consciousnessDesiresLabel
   , consciousnessKernelLabel

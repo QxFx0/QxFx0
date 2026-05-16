@@ -19,7 +19,7 @@ import QxFx0.Types
 import QxFx0.Core.TurnPipeline.Types (RoutingDecision(..))
 import QxFx0.Core.Ego (updateEgoFromTurn)
 import QxFx0.Core.IdentitySignal (buildIdentitySignalSimple)
-import QxFx0.Core.Semantic.SemanticInput (buildSemanticInputSimple)
+import QxFx0.Semantic.SemanticInput (buildSemanticInputSimple)
 import QxFx0.Core.TurnModulation (computeTensionDelta)
 import QxFx0.Core.TurnRender
   ( deriveSemanticAnchor

@@ -19,11 +19,11 @@ import qualified Data.Text as T
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 import QxFx0.Types (PressureBand(..))
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( tokenizeKeywordText
   , containsAnyKeywordPhrase
   )
-import QxFx0.Core.Policy.Contracts
+import QxFx0.Policy.Contracts
   ( correctionMarkers, authorityMarkers, emotionalMarkers
   , newInfoMarkers, insistenceMarkers
   , holdGroundDirective, openToUpdateDirective, acknowledgeAndHoldDirective

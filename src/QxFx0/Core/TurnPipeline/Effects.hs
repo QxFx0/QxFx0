@@ -16,12 +16,12 @@ import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence
   , ShadowSnapshotId
   )
-import QxFx0.Core.Semantic.Embedding (EmbeddingResult)
-import QxFx0.Core.Semantic.MeaningAtoms (collectAtoms, updateTrace, extractObjectFromAtom)
-import QxFx0.Core.Semantic.Logic (runSemanticLogic)
-import QxFx0.Core.Semantic.Proposition (parseProposition)
-import QxFx0.Core.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
-import QxFx0.Core.Policy.Contracts (fallbackWord)
+import QxFx0.Semantic.Embedding (EmbeddingResult)
+import QxFx0.Semantic.MeaningAtoms (collectAtoms, updateTrace, extractObjectFromAtom)
+import QxFx0.Semantic.Logic (runSemanticLogic)
+import QxFx0.Semantic.Proposition (parseProposition)
+import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
+import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Types.Intuition (IntuitiveFlash)

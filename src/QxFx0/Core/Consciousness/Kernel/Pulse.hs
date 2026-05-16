@@ -10,7 +10,7 @@ import Data.Ord (Down(..), comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Core.Consciousness.Types
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( abstractKeywords
   , concreteKeywords
   , deepContentGeneralizationKeywords
@@ -34,12 +34,12 @@ import QxFx0.Core.Policy.Consciousness
   , temporalPastKeywords
   , temporalPresent
   )
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( containsAnyKeywordPhrase
   , countKeywordPhraseHits
   , tokenizeKeywordText
   )
-import QxFx0.Core.Semantic.SemanticInput (SemanticInput(..))
+import QxFx0.Semantic.SemanticInput (SemanticInput(..))
 import QxFx0.Types
   ( CanonicalMoveFamily(..)
   , ClauseForm(..)

@@ -56,7 +56,7 @@ import QxFx0.Types.Thresholds
   , intuitionSignalSteadyBonusScale
   , intuitionCooldownTurns
   )
-import QxFx0.Core.Policy.Consciousness
+import QxFx0.Policy.Consciousness
   ( triggerDeepResonance, triggerCrisisMoment, triggerPureKernel, triggerConvergence
   , kernelSignalPresence, kernelSignalDepth
   , triggerContextDeepResonance, triggerContextCrisisMoment

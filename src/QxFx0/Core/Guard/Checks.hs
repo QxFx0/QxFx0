@@ -10,7 +10,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.Guard.Types
-import QxFx0.Core.Policy.Contracts
+import QxFx0.Policy.Contracts
   ( driftPatterns
   , guardEmptyResponse
   , guardMarkupLeak
@@ -22,7 +22,7 @@ import QxFx0.Core.Policy.Contracts
   , injectionPatterns
   , toxicPatterns
   )
-import QxFx0.Core.Semantic.KeywordMatch
+import QxFx0.Semantic.KeywordMatch
   ( containsKeywordPhrase
   , tokenizeKeywordText
   )

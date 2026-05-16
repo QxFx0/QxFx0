@@ -32,7 +32,7 @@ import QxFx0.Types.Thresholds
   , egoAgencyDeltaConfront
   , egoAgencyDeltaNextStep
   )
-import QxFx0.Core.Policy.Contracts (missionTexts)
+import QxFx0.Policy.Contracts (missionTexts)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Types.Text (textShow)

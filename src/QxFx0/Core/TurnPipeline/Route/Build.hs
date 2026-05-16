@@ -45,8 +45,8 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnSignals(..)
   )
 import QxFx0.Core.TurnPolicy
-import QxFx0.Core.Semantic.SemanticScene (defaultScenes, inferActiveScene)
-import QxFx0.Core.Semantic.Proposition (diagnosticPropositionFamily)
+import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
+import QxFx0.Semantic.Proposition (diagnosticPropositionFamily)
 import QxFx0.Types
 import QxFx0.Types.Thresholds (agdaVerificationPenalty)
 

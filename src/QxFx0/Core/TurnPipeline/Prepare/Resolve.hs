@@ -31,7 +31,7 @@ import QxFx0.ExceptionPolicy
   ( QxFx0Exception(PersistenceError)
   , throwQxFx0
   )
-import QxFx0.Core.Semantic.Embedding
+import QxFx0.Semantic.Embedding
   ( EmbeddingResult(..)
   , EmbeddingSource(..)
   )

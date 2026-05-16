@@ -15,7 +15,7 @@ import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
   , threeStageModulation
   )
-import QxFx0.Core.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
+import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
 import QxFx0.Types
 
 buildRMP :: CanonicalMoveFamily -> InputPropositionFrame -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan

@@ -16,7 +16,7 @@ import QxFx0.Core.PipelineIO
   , ShadowResult(..)
   )
 import QxFx0.Core.Legitimacy (legitimacyScore)
-import QxFx0.Core.Semantic.Embedding (EmbeddingQuality(..))
+import QxFx0.Semantic.Embedding (EmbeddingQuality(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
   , ShadowDivergenceKind(..)
