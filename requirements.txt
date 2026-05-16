@@ -1,0 +1,5 @@
+# Python dependencies for CI scripts and lexicon/morphology tooling.
+# Runtime production services do not import these modules directly.
+
+pymorphy3>=2.0,<3.0
+spacy>=3.7,<4.0

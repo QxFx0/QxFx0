@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master, feature/glm-fixes-audit-round1]
+    branches: [main, master]
   pull_request:
     branches: [main, master]
   schedule:
@@ -150,80 +150,3 @@ jobs:
           path: |
             reports/baseline_v2/final_gates/_gate_results_*.md
             reports/baseline_v2/final_gates/_gate_results_*.tsv
-
-  # ═══════════════════════════════════════════════════════════════════════
-  # Legacy fast-gates job (kept for granular step visibility on PRs)
-  # ═══════════════════════════════════════════════════════════════════════
-  build-test:
-    name: Build & Fast Gates (granular)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Haskell
-        uses: haskell-actions/setup@v2
-        with:
-          ghc-version: '9.6.6'
-          cabal-version: '3.10'
-
-      - name: Cache Cabal store
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cabal/store
-            dist-newstyle
-          key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project.freeze', 'qxfx0.cabal') }}
-          restore-keys: |
-            ${{ runner.os }}-cabal-
-
-      - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Cabal update
-        run: cabal update
-
-      - name: Cabal build
-        run: cabal build all --extra-lib-dirs=/tmp/gf-install/usr/lib
-
-      - name: Cabal test (fast)
-        run: cabal test qxfx0-test-fast --extra-lib-dirs=/tmp/gf-install/usr/lib
-
-      - name: Cabal test (unit)
-        run: cabal test qxfx0-test-unit --extra-lib-dirs=/tmp/gf-install/usr/lib
-
-      - name: Cabal test (property)
-        run: cabal test qxfx0-test-property --extra-lib-dirs=/tmp/gf-install/usr/lib
-
-      - name: Cabal test (integration)
-        run: cabal test qxfx0-test-integration --extra-lib-dirs=/tmp/gf-install/usr/lib
-
-      - name: Cabal check
-        run: cabal check
-
-      - name: Architecture boundary check
-        run: bash scripts/check_architecture.sh
-
-      - name: Schema contract check
-        run: python3 scripts/check_schema_contract.py
-
-      - name: Schema consistency check
-        run: python3 scripts/check_schema_consistency.py
-
-      - name: Agda/Haskell constructor sync check
-        run: python3 scripts/verify_agda_sync.py
-
-      - name: Lexicon contour check
-        run: bash scripts/check_lexicon.sh
-
-      - name: Generated artifacts drift check
-        run: bash scripts/check_generated_artifacts.sh
-
-      - name: GF quality gate
-        run: bash scripts/gf_quality_gate.sh
-
-      - name: Haddock module header check
-        run: bash scripts/check_haddock.sh

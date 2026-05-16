@@ -7,6 +7,8 @@ cabal.project.local
 cabal.project.local~
 *.hi
 *.o
+scripts/*.hi
+scripts/*.o
 *.db
 *.db-shm
 *.db-wal
