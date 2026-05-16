@@ -3497,8 +3497,6 @@ bonus_N	бонус	ru	noun	бонус	бонуса	бонусе	бонус	бо�
 bonus_N	bonus	en	noun	bonus															
 bop_N	боп	ru	noun	боп	бопа	бопе	боп	бопом											
 bop_N	bop	en	noun	bop															
-bora_N	бора	ru	noun	бора	боры	боре	бору	борой											
-bora_N	bora	en	noun	bora															
 borat_N	борат	ru	noun	борат	бората	борате	борат	боратом											
 borat_N	borat	en	noun	borat															
 bord_N	борд	ru	noun	борд	борда	борде	борд	бордом											
@@ -3575,8 +3573,6 @@ brom_N	бром	ru	noun	бром	брома	броме	бром	бромом
 brom_N	brom	en	noun	brom															
 bronh_N	бронх	ru	noun	бронх	бронха	бронхе	бронх	бронхом											
 bronh_N	bronh	en	noun	bronh															
-bron_N	бронь	ru	noun	бронь	брони	брони	бронь	бронью											
-bron_N	bron	en	noun	bron															
 brosh_N	брошь	ru	noun	брошь	броши	броши	брошь	брошью											
 brosh_N	brosh	en	noun	brosh															
 brus_N	брус	ru	noun	брус	бруса	брусе	брус	брусом											
@@ -3839,8 +3835,6 @@ venets_N	венец	ru	noun	венец	венца	венце	венец	венц
 venets_N	venets	en	noun	venets															
 venik_N	веник	ru	noun	веник	веника	венике	веник	веником											
 venik_N	venik	en	noun	venik															
-venka_N	венка	ru	noun	венка	венки	венке	венку	венкой											
-venka_N	venka	en	noun	venka															
 veno_N	вено	ru	noun	вено	вена	вене	вено	веном											
 veno_N	veno	en	noun	veno															
 vepr_N	вепрь	ru	noun	вепрь	вепря	вепре	вепря	вепрем											
@@ -4051,10 +4045,6 @@ vor_N	вор	ru	noun	вор	вора	воре	вора	вором
 vor_N	vor	en	noun	vor															
 vorog_N	ворог	ru	noun	ворог	ворога	вороге	ворога	ворогом											
 vorog_N	vorog	en	noun	vorog															
-voron_N	ворон	ru	noun	ворон	ворона	вороне	ворона	вороном											
-voron_N	voron	en	noun	voron															
-vorot_N	ворот	ru	noun	ворот	ворота	вороте	ворот	воротом											
-vorot_N	vorot	en	noun	vorot															
 voroh_N	ворох	ru	noun	ворох	вороха	ворохе	ворох	ворохом											
 voroh_N	voroh	en	noun	voroh															
 vors_N	ворс	ru	noun	ворс	ворса	ворсе	ворс	ворсом											
@@ -5857,3 +5847,925 @@ snake_N	snake	en	noun	snake
 lizard_N	lizard	en	noun	lizard														
 frog_N	frog	en	noun	frog														
 turtle_N	turtle	en	noun	turtle														
+abstrakciya_N	абстракция	ru	noun	абстракция	абстракции	абстракции	абстракцию	абстракцией									
+abstrakciya_N	abstraction	en	noun	abstraction												
+algoritmichnost_N	алгоритмичность	ru	noun	алгоритмичность	алгоритмичности	алгоритмичности	алгоритмичность	алгоритмичностью									
+algoritmichnost_N	algorithmicity	en	noun	algorithmicity												
+arhetip_N	архетип	ru	noun	архетип	архетипа	архетипе	архетип	архетипом									
+arhetip_N	archetype	en	noun	archetype												
+asimmetriya_N	асимметрия	ru	noun	асимметрия	асимметрии	асимметрии	асимметрию	асимметрией									
+asimmetriya_N	asymmetry	en	noun	asymmetry												
+balansirovka_N	балансировка	ru	noun	балансировка	балансировки	балансировке	балансировку	балансировкой									
+balansirovka_N	balancing	en	noun	balancing												
+bespristrastnost_N	беспристрастность	ru	noun	беспристрастность	беспристрастности	беспристрастности	беспристрастность	беспристрастностью									
+bespristrastnost_N	impartiality	en	noun	impartiality												
+bezoshibochnost_N	безошибочность	ru	noun	безошибочность	безошибочности	безошибочности	безошибочность	безошибочностью									
+bezoshibochnost_N	error-freeness	en	noun	error-freeness												
+blagorazumie_N	благоразумие	ru	noun	благоразумие	благоразумия	благоразумии	благоразумие	благоразумием									
+blagorazumie_N	prudence	en	noun	prudence												
+celepolaganie_N	целеполагание	ru	noun	целеполагание	целеполагания	целеполагании	целеполагание	целеполаганием									
+celepolaganie_N	goal-setting	en	noun	goal-setting												
+cena_N	цена	ru	noun	цена	цены	цене	цену	ценой									
+cena_N	price	en	noun	price												
+chas2_N	час	ru	noun	час	часа	часе	час	часом									
+chas2_N	hour	en	noun	hour												
+chlen_N	член	ru	noun	член	члена	члене	член	членом									
+chlen_N	member	en	noun	member												
+dalnovidnost_N	дальновидность	ru	noun	дальновидность	дальновидности	дальновидности	дальновидность	дальновидностью									
+dalnovidnost_N	farsightedness	en	noun	farsightedness												
+demarkaciya_N	демаркация	ru	noun	демаркация	демаркации	демаркации	демаркацию	демаркацией									
+demarkaciya_N	demarcation	en	noun	demarcation												
+den2_N	день	ru	noun	день	дня	дне	день	днём									
+den2_N	day	en	noun	day												
+detalizaciya_N	детализация	ru	noun	детализация	детализации	детализации	детализацию	детализацией									
+detalizaciya_N	detailing	en	noun	detailing												
+dialogichnost_N	диалогичность	ru	noun	диалогичность	диалогичности	диалогичности	диалогичность	диалогичностью									
+dialogichnost_N	dialogicity	en	noun	dialogicity												
+differenciaciya_N	дифференциация	ru	noun	дифференциация	дифференциации	дифференциации	дифференциацию	дифференциацией									
+differenciaciya_N	differentiation	en	noun	differentiation												
+dlina_N	длина	ru	noun	длина	длины	длине	длину	длиной									
+dlina_N	length	en	noun	length												
+dohod_N	доход	ru	noun	доход	дохода	доходе	доход	доходом									
+dohod_N	income	en	noun	income												
+dokazuemost_N	доказуемость	ru	noun	доказуемость	доказуемости	доказуемости	доказуемость	доказуемостью									
+dokazuemost_N	provability	en	noun	provability												
+dom_N	дом	ru	noun	дом	дома	доме	дом	домом									
+dom_N	house	en	noun	house												
+dozhd_N	дождь	ru	noun	дождь	дождя	дожде	дождь	дождём									
+dozhd_N	rain	en	noun	rain												
+dver_N	дверь	ru	noun	дверь	двери	двери	дверь	дверью									
+dver_N	door	en	noun	door												
+dvoysmyslennost_N	двусмысленность	ru	noun	двусмысленность	двусмысленности	двусмысленности	двусмысленность	двусмысленностью									
+dvoysmyslennost_N	ambiguity	en	noun	ambiguity												
+effektivnost_N	эффективность	ru	noun	эффективность	эффективности	эффективности	эффективность	эффективностью									
+effektivnost_N	effectiveness	en	noun	effectiveness												
+etap_N	этап	ru	noun	этап	этапа	этапе	этап	этапом									
+etap_N	stage	en	noun	stage												
+evristichnost_N	эвристичность	ru	noun	эвристичность	эвристичности	эвристичности	эвристичность	эвристичностью									
+evristichnost_N	heuristicity	en	noun	heuristicity												
+faza_N	фаза	ru	noun	фаза	фазы	фазе	фазу	фазой									
+faza_N	phase	en	noun	phase												
+funkcionalnost_N	функциональность	ru	noun	функциональность	функциональности	функциональности	функциональность	функциональностью									
+funkcionalnost_N	functionality	en	noun	functionality												
+gipotetichnost_N	гипотетичность	ru	noun	гипотетичность	гипотетичности	гипотетичности	гипотетичность	гипотетичностью									
+gipotetichnost_N	hypotheticality	en	noun	hypotheticality												
+glubinnost_N	глубинность	ru	noun	глубинность	глубинности	глубинности	глубинность	глубинностью									
+glubinnost_N	depth	en	noun	depth												
+gomomorfizm_N	гомоморфизм	ru	noun	гомоморфизм	гомоморфизма	гомоморфизме	гомоморфизм	гомоморфизмом									
+gomomorfizm_N	homomorphism	en	noun	homomorphism												
+gore_N	горе	ru	noun	горе	горя	горе	горе	горем									
+gore_N	grief	en	noun	grief												
+graduirovka_N	градуировка	ru	noun	градуировка	градуировки	градуировке	градуировку	градуировкой									
+graduirovka_N	graduation	en	noun	graduation												
+invariantnost_N	инвариантность	ru	noun	инвариантность	инвариантности	инвариантности	инвариантность	инвариантностью									
+invariantnost_N	invariance	en	noun	invariance												
+ischerpayemost_N	исчерпываемость	ru	noun	исчерпываемость	исчерпываемости	исчерпываемости	исчерпываемость	исчерпываемостью									
+ischerpayemost_N	exhaustibility	en	noun	exhaustibility												
+izmerimost_N	измеримость	ru	noun	измеримость	измеримости	измеримости	измеримость	измеримостью									
+izmerimost_N	measurability	en	noun	measurability												
+izobretatelnost_N	изобретательность	ru	noun	изобретательность	изобретательности	изобретательности	изобретательность	изобретательностью									
+izobretatelnost_N	inventiveness	en	noun	inventiveness												
+izomorfizm_N	изоморфизм	ru	noun	изоморфизм	изоморфизма	изоморфизме	изоморфизм	изоморфизмом									
+izomorfizm_N	isomorphism	en	noun	isomorphism												
+kamen_N	камень	ru	noun	камень	камня	камне	камень	камнем									
+kamen_N	stone	en	noun	stone												
+kanal_N	канал	ru	noun	канал	канала	канале	канал	каналом									
+kanal_N	channel	en	noun	channel												
+klass_N	класс	ru	noun	класс	класса	классе	класс	классом									
+klass_N	class	en	noun	class												
+kodifikaciya_N	кодификация	ru	noun	кодификация	кодификации	кодификации	кодификацию	кодификацией									
+kodifikaciya_N	codification	en	noun	codification												
+kogerentnost_N	когерентность	ru	noun	когерентность	когерентности	когерентности	когерентность	когерентностью									
+kogerentnost_N	coherence	en	noun	coherence												
+kombinatorika_N	комбинаторика	ru	noun	комбинаторика	комбинаторики	комбинаторике	комбинаторику	комбинаторикой									
+kombinatorika_N	combinatorics	en	noun	combinatorics												
+kompaktnost_N	компактность	ru	noun	компактность	компактности	компактности	компактность	компактностью									
+kompaktnost_N	compactness	en	noun	compactness												
+konets_N	конец	ru	noun	конец	конца	конце	конец	концом									
+konets_N	end	en	noun	end												
+kongruentnost_N	конгруэнтность	ru	noun	конгруэнтность	конгруэнтности	конгруэнтности	конгруэнтность	конгруэнтностью									
+kongruentnost_N	congruence	en	noun	congruence												
+konkretnost1_N	конкретизация	ru	noun	конкретизация	конкретизации	конкретизации	конкретизацию	конкретизацией									
+konkretnost1_N	concretization	en	noun	concretization												
+kontekstualnost_N	контекстуальность	ru	noun	контекстуальность	контекстуальности	контекстуальности	контекстуальность	контекстуальностью									
+kontekstualnost_N	contextuality	en	noun	contextuality												
+korrektiruemost_N	корректируемость	ru	noun	корректируемость	корректируемости	корректируемости	корректируемость	корректируемостью									
+korrektiruemost_N	correctability	en	noun	correctability												
+kriterialnost_N	критериальность	ru	noun	критериальность	критериальности	критериальности	критериальность	критериальностью									
+kriterialnost_N	criteriality	en	noun	criteriality												
+liniya_N	линия	ru	noun	линия	линии	линии	линию	линией									
+liniya_N	line	en	noun	line												
+mera2_N	мера	ru	noun	мера	меры	мере	меру	мерой									
+mera2_N	measure	en	noun	measure												
+mesyac_N	месяц	ru	noun	месяц	месяца	месяце	месяц	месяцем									
+mesyac_N	month	en	noun	month												
+metastabilnost_N	метастабильность	ru	noun	метастабильность	метастабильности	метастабильности	метастабильность	метастабильностью									
+metastabilnost_N	metastability	en	noun	metastability												
+metodologichnost_N	методологичность	ru	noun	методологичность	методологичности	методологичности	методологичность	методологичностью									
+metodologichnost_N	methodologicality	en	noun	methodologicality												
+minuta2_N	минута	ru	noun	минута	минуты	минуте	минуту	минутой									
+minuta2_N	minute	en	noun	minute												
+modulnost_N	модульность	ru	noun	модульность	модульности	модульности	модульность	модульностью									
+modulnost_N	modularity	en	noun	modularity												
+nadezhnost2_N	надёжность	ru	noun	надёжность	надёжности	надёжности	надёжность	надёжностью									
+nadezhnost2_N	reliability	en	noun	reliability												
+narod_N	народ	ru	noun	народ	народа	народе	народ	народом									
+narod_N	people	en	noun	people												
+nasyshchennost_N	насыщенность	ru	noun	насыщенность	насыщенности	насыщенности	насыщенность	насыщенностью									
+nasyshchennost_N	saturation	en	noun	saturation												
+nedelya_N	неделя	ru	noun	неделя	недели	неделе	неделю	неделей									
+nedelya_N	week	en	noun	week												
+normativnost_N	нормативность	ru	noun	нормативность	нормативности	нормативности	нормативность	нормативностью									
+normativnost_N	normativity	en	noun	normativity												
+obektiviruemost_N	объективируемость	ru	noun	объективируемость	объективируемости	объективируемости	объективируемость	объективируемостью									
+obektiviruemost_N	objectifiability	en	noun	objectifiability												
+obratimost_N	обратимость	ru	noun	обратимость	обратимости	обратимости	обратимость	обратимостью									
+obratimost_N	reversibility	en	noun	reversibility												
+odnoznachnost_N	однозначность	ru	noun	однозначность	однозначности	однозначности	однозначность	однозначностью									
+odnoznachnost_N	unambiguity	en	noun	unambiguity												
+ofis_N	офис	ru	noun	офис	офиса	офисе	офис	офисом									
+ofis_N	office	en	noun	office												
+okno_N	окно	ru	noun	окно	окна	окне	окно	окном									
+okno_N	window	en	noun	window												
+operacionalnost_N	операциональность	ru	noun	операциональность	операциональности	операциональности	операциональность	операциональностью									
+operacionalnost_N	operationality	en	noun	operationality												
+opredelimost_N	определимость	ru	noun	определимость	определимости	определимости	определимость	определимостью									
+opredelimost_N	definability	en	noun	definability												
+optimiziruemost_N	оптимизируемость	ru	noun	оптимизируемость	оптимизируемости	оптимизируемости	оптимизируемость	оптимизируемостью									
+optimiziruemost_N	optimizability	en	noun	optimizability												
+organichnost_N	органичность	ru	noun	органичность	органичности	органичности	органичность	органичностью									
+organichnost_N	organicity	en	noun	organicity												
+os_N	ось	ru	noun	ось	оси	оси	ось	осью									
+os_N	axis	en	noun	axis												
+osmyslennost_N	осмысленность	ru	noun	осмысленность	осмысленности	осмысленности	осмысленность	осмысленностью									
+osmyslennost_N	meaningfulness	en	noun	meaningfulness												
+otchuzhdennost_N	отчуждённость	ru	noun	отчуждённость	отчуждённости	отчуждённости	отчуждённость	отчуждённостью									
+otchuzhdennost_N	alienation	en	noun	alienation												
+paradigmalnost_N	парадигмальность	ru	noun	парадигмальность	парадигмальности	парадигмальности	парадигмальность	парадигмальностью									
+paradigmalnost_N	paradigmaticity	en	noun	paradigmaticity												
+pereopredelyaemost_N	переопределяемость	ru	noun	переопределяемость	переопределяемости	переопределяемости	переопределяемость	переопределяемостью									
+pereopredelyaemost_N	redefinability	en	noun	redefinability												
+persistentnost_N	персистентность	ru	noun	персистентность	персистентности	персистентности	персистентность	персистентностью									
+persistentnost_N	persistence	en	noun	persistence												
+pismo_N	письмо	ru	noun	письмо	письма	письме	письмо	письмом									
+pismo_N	letter	en	noun	letter												
+podtverzhdaemost_N	подтверждаемость	ru	noun	подтверждаемость	подтверждаемости	подтверждаемости	подтверждаемость	подтверждаемостью									
+podtverzhdaemost_N	confirmability	en	noun	confirmability												
+pokazatelnost_N	показательность	ru	noun	показательность	показательности	показательности	показательность	показательностью									
+pokazatelnost_N	indicativeness	en	noun	indicativeness												
+polnotsennost_N	полноценность	ru	noun	полноценность	полноценности	полноценности	полноценность	полноценностью									
+polnotsennost_N	full-fledgedness	en	noun	full-fledgedness												
+prediktivnost_N	предиктивность	ru	noun	предиктивность	предиктивности	предиктивности	предиктивность	предиктивностью									
+prediktivnost_N	predictiveness	en	noun	predictiveness												
+procedurnost_N	процедурность	ru	noun	процедурность	процедурности	процедурности	процедурность	процедурностью									
+procedurnost_N	procedurality	en	noun	procedurality												
+proporcionalnost_N	пропорциональность	ru	noun	пропорциональность	пропорциональности	пропорциональности	пропорциональность	пропорциональностью									
+proporcionalnost_N	proportionality	en	noun	proportionality												
+prorabotannost_N	проработанность	ru	noun	проработанность	проработанности	проработанности	проработанность	проработанностью									
+prorabotannost_N	thoroughness	en	noun	thoroughness												
+punktualnost_N	пунктуальность	ru	noun	пунктуальность	пунктуальности	пунктуальности	пунктуальность	пунктуальностью									
+punktualnost_N	punctuality	en	noun	punctuality												
+put_N	путь	ru	noun	путь	пути	пути	путь	путём									
+put_N	path	en	noun	path												
+racionaliziruemost_N	рационализируемость	ru	noun	рационализируемость	рационализируемости	рационализируемости	рационализируемость	рационализируемостью									
+racionaliziruemost_N	rationalizability	en	noun	rationalizability												
+razborchivost_N	разборчивость	ru	noun	разборчивость	разборчивости	разборчивости	разборчивость	разборчивостью									
+razborchivost_N	discrimination	en	noun	discrimination												
+razumnost_N	разумность	ru	noun	разумность	разумности	разумности	разумность	разумностью									
+razumnost_N	reasonableness	en	noun	reasonableness												
+realistichnost_N	реалистичность	ru	noun	реалистичность	реалистичности	реалистичности	реалистичность	реалистичностью									
+realistichnost_N	realism	en	noun	realism												
+reduciruemost_N	редуцируемость	ru	noun	редуцируемость	редуцируемости	редуцируемости	редуцируемость	редуцируемостью									
+reduciruemost_N	reducibility	en	noun	reducibility												
+reglamentirovannost_N	регламентированность	ru	noun	регламентированность	регламентированности	регламентированности	регламентированность	регламентированностью									
+reglamentirovannost_N	regulation	en	noun	regulation												
+regulyarnost_N	регулярность	ru	noun	регулярность	регулярности	регулярности	регулярность	регулярностью									
+regulyarnost_N	regularity	en	noun	regularity												
+risk_N	риск	ru	noun	риск	риска	риске	риск	риском									
+risk_N	risk	en	noun	risk												
+ritmichnost_N	ритмичность	ru	noun	ритмичность	ритмичности	ритмичности	ритмичность	ритмичностью									
+ritmichnost_N	rhythmicity	en	noun	rhythmicity												
+sad_N	сад	ru	noun	сад	сада	саду	сад	садом									
+sad_N	garden	en	noun	garden												
+samosoglasovannost_N	самосогласованность	ru	noun	самосогласованность	самосогласованности	самосогласованности	самосогласованность	самосогласованностью									
+samosoglasovannost_N	self-consistency	en	noun	self-consistency												
+sekunda_N	секунда	ru	noun	секунда	секунды	секунде	секунду	секундой									
+sekunda_N	second	en	noun	second												
+shkola_N	школа	ru	noun	школа	школы	школе	школу	школой									
+shkola_N	school	en	noun	school												
+shodimost_N	сходимость	ru	noun	сходимость	сходимости	сходимости	сходимость	сходимостью									
+shodimost_N	convergence	en	noun	convergence												
+sila2_N	сила	ru	noun	сила	силы	силе	силу	силой									
+sila2_N	force	en	noun	force												
+sistematichnost_N	систематичность	ru	noun	систематичность	систематичности	систематичности	систематичность	систематичностью									
+sistematichnost_N	systematicity	en	noun	systematicity												
+sluchay2_N	случай	ru	noun	случай	случая	случае	случай	случаем									
+sluchay2_N	case	en	noun	case												
+son_N	сон	ru	noun	сон	сна	сне	сон	сном									
+son_N	sleep	en	noun	sleep												
+sopostavimost_N	сопоставимость	ru	noun	сопоставимость	сопоставимости	сопоставимости	сопоставимость	сопоставимостью									
+sopostavimost_N	comparability	en	noun	comparability												
+sostoyatelnost_N	состоятельность	ru	noun	состоятельность	состоятельности	состоятельности	состоятельность	состоятельностью									
+sostoyatelnost_N	validity	en	noun	validity												
+soyuz_N	союз	ru	noun	союз	союза	союзе	союз	союзом									
+soyuz_N	union	en	noun	union												
+spor_N	спор	ru	noun	спор	спора	споре	спор	спором									
+spor_N	dispute	en	noun	dispute												
+srok_N	срок	ru	noun	срок	срока	сроке	срок	сроком									
+srok_N	term	en	noun	term												
+stabiliziruemost_N	стабилизируемость	ru	noun	стабилизируемость	стабилизируемости	стабилизируемости	стабилизируемость	стабилизируемостью									
+stabiliziruemost_N	stabilizability	en	noun	stabilizability												
+strukturiruemost_N	структурируемость	ru	noun	структурируемость	структурируемости	структурируемости	структурируемость	структурируемостью									
+strukturiruemost_N	structurability	en	noun	structurability												
+stsenarnost_N	сценарность	ru	noun	сценарность	сценарности	сценарности	сценарность	сценарностью									
+stsenarnost_N	scenario-based	en	noun	scenario-based												
+subektnost_N	субъектность	ru	noun	субъектность	субъектности	субъектности	субъектность	субъектностью									
+subektnost_N	subjectivity	en	noun	subjectivity												
+svoistvo2_N	свойство	ru	noun	свойство	свойства	свойстве	свойство	свойством									
+svoistvo2_N	property	en	noun	property												
+svyazannost_N	связанность	ru	noun	связанность	связанности	связанности	связанность	связанностью									
+svyazannost_N	connectedness	en	noun	connectedness												
+taktichnost_N	тактичность	ru	noun	тактичность	тактичности	тактичности	тактичность	тактичностью									
+taktichnost_N	tactfulness	en	noun	tactfulness												
+tema_N	тема	ru	noun	тема	темы	теме	тему	темой									
+tema_N	topic	en	noun	topic												
+ten_N	тень	ru	noun	тень	тени	тени	тень	тенью									
+ten_N	shadow	en	noun	shadow												
+ugol_N	угол	ru	noun	угол	угла	угле	угол	углом									
+ugol_N	angle	en	noun	angle												
+utro_N	утро	ru	noun	утро	утра	утре	утро	утром									
+utro_N	morning	en	noun	morning												
+uzel_N	узел	ru	noun	узел	узла	узле	узел	узлом									
+uzel_N	node	en	noun	node												
+vannaya_N	ванная	ru	noun	ванная	ванной	ванной	ванную	ванной									
+vannaya_N	bathroom	en	noun	bathroom												
+vera2_N	вера	ru	noun	вера	веры	вере	веру	верой									
+vera2_N	faith	en	noun	faith												
+verificiruemost_N	верифицируемость	ru	noun	верифицируемость	верифицируемости	верифицируемости	верифицируемость	верифицируемостью									
+verificiruemost_N	verifiability	en	noun	verifiability												
+vnyatnost_N	внятность	ru	noun	внятность	внятности	внятности	внятность	внятностью									
+vnyatnost_N	clarity	en	noun	clarity												
+vovlechennost1_N	вовлечённость	ru	noun	вовлечённость	вовлечённости	вовлечённости	вовлечённость	вовлечённостью									
+vovlechennost1_N	engagement	en	noun	engagement												
+vpechatlitelnost_N	впечатлительность	ru	noun	впечатлительность	впечатлительности	впечатлительности	впечатлительность	впечатлительностью									
+vpechatlitelnost_N	impressionability	en	noun	impressionability												
+vyderzhka_N	выдержка	ru	noun	выдержка	выдержки	выдержке	выдержку	выдержкой									
+vyderzhka_N	endurance	en	noun	endurance												
+vyrazitelnost_N	выразительность	ru	noun	выразительность	выразительности	выразительности	выразительность	выразительностью									
+vyrazitelnost_N	expressiveness	en	noun	expressiveness												
+vzaimoobuslovlennost_N	взаимообусловленность	ru	noun	взаимообусловленность	взаимообусловленности	взаимообусловленности	взаимообусловленность	взаимообусловленностью									
+vzaimoobuslovlennost_N	mutual conditionality	en	noun	mutual conditionality												
+vzaimosvyazannost1_N	взаимосвязность	ru	noun	взаимосвязность	взаимосвязности	взаимосвязности	взаимосвязность	взаимосвязностью									
+vzaimosvyazannost1_N	interconnectedness	en	noun	interconnectedness												
+zakony_N	закон	ru	noun	закон	закона	законе	закон	законом									
+zakony_N	law	en	noun	law												
+zamknutost_N	замкнутость	ru	noun	замкнутость	замкнутости	замкнутости	замкнутость	замкнутостью									
+zamknutost_N	closedness	en	noun	closedness												
+zaryad_N	заряд	ru	noun	заряд	заряда	заряде	заряд	зарядом									
+zaryad_N	charge	en	noun	charge												
+zavershennost_N	завершённость	ru	noun	завершённость	завершённости	завершённости	завершённость	завершённостью									
+zavershennost_N	completeness	en	noun	completeness												
+zhiznesposobnost_N	жизнеспособность	ru	noun	жизнеспособность	жизнеспособности	жизнеспособности	жизнеспособность	жизнеспособностью									
+zhiznesposobnost_N	viability	en	noun	viability												
+zona_N	зона	ru	noun	зона	зоны	зоне	зону	зоной									
+zona_N	zone	en	noun	zone												
+abazhur_N	абажур	ru	noun	абажур	абажура	абажуре	абажур	абажуром									
+abazhur_N	lampshade	en	noun	lampshade												
+administrator_N	администратор	ru	noun	администратор	администратора	администраторе	администратора	администратором									
+administrator_N	administrator	en	noun	administrator												
+agregat_N	агрегат	ru	noun	агрегат	агрегата	агрегате	агрегат	агрегатом									
+agregat_N	aggregate	en	noun	aggregate												
+akcent_N	акцент	ru	noun	акцент	акцента	акценте	акцент	акцентом									
+akcent_N	accent	en	noun	accent												
+akkr_N	аккумулятор	ru	noun	аккумулятор	аккумулятора	аккумуляторе	аккумулятор	аккумулятором									
+akkr_N	battery	en	noun	battery												
+akrobat_N	акробат	ru	noun	акробат	акробата	акробате	акробата	акробатом									
+akrobat_N	acrobat	en	noun	acrobat												
+alegriya_N	аллегория	ru	noun	аллегория	аллегории	аллегории	аллегорию	аллегорией									
+alegriya_N	allegory	en	noun	allegory												
+algebra_N	алгебра	ru	noun	алгебра	алгебры	алгебре	алгебру	алгеброй									
+algebra_N	algebra	en	noun	algebra												
+alid_N	алкид	ru	noun	алкид	алкида	алкиде	алкид	алкидом									
+alid_N	alkyd	en	noun	alkyd												
+alloy_N	алюминий	ru	noun	алюминий	алюминия	алюминии	алюминий	алюминием									
+alloy_N	aluminum	en	noun	aluminum												
+alp_N	альп	ru	noun	альп	альпа	альпе	альп	альпом									
+alp_N	alpine	en	noun	alpine												
+alpinist_N	альпинист	ru	noun	альпинист	альпиниста	альпинисте	альпиниста	альпинистом									
+alpinist_N	climber	en	noun	climber												
+altruist_N	альтруист	ru	noun	альтруист	альтруиста	альтруисте	альтруиста	альтруистом									
+altruist_N	altruist	en	noun	altruist												
+amerika_N	америка	ru	noun	америка	америки	америке	америку	америкой									
+amerika_N	america	en	noun	america												
+ametist_N	аметист	ru	noun	аметист	аметиста	аметисте	аметист	аметистом									
+ametist_N	amethyst	en	noun	amethyst												
+amfibia_N	амфибия	ru	noun	амфибия	амфибии	амфибии	амфибию	амфибией									
+amfibia_N	amphibian	en	noun	amphibian												
+ammoniak_N	аммиак	ru	noun	аммиак	аммиака	аммиаке	аммиак	аммиаком									
+ammoniak_N	ammonia	en	noun	ammonia												
+amplifier_N	усилитель	ru	noun	усилитель	усилителя	усилителе	усилитель	усилителем									
+amplifier_N	amplifier	en	noun	amplifier												
+amulet_N	амулет	ru	noun	амулет	амулета	амулете	амулет	амулетом									
+amulet_N	amulet	en	noun	amulet												
+analgin_N	анальгин	ru	noun	анальгин	анальгина	анальгине	анальгин	анальгином									
+analgin_N	analgin	en	noun	analgin												
+analitik_N	аналитик	ru	noun	аналитик	аналитика	аналитике	аналитика	аналитиком									
+analitik_N	analyst	en	noun	analyst												
+ananas_N	ананас	ru	noun	ананас	ананаса	ананасе	ананас	ананасом									
+ananas_N	pineapple	en	noun	pineapple												
+anarh_N	анарх	ru	noun	анарх	анарха	анархе	анарха	анархом									
+anarh_N	anarchist	en	noun	anarchist												
+anatomiya_N	анатомия	ru	noun	анатомия	анатомии	анатомии	анатомию	анатомией									
+anatomiya_N	anatomy	en	noun	anatomy												
+anekdot_N	анекдот	ru	noun	анекдот	анекдота	анекдоте	анекдот	анекдотом									
+anekdot_N	anecdote	en	noun	anecdote												
+anemoniya_N	анемона	ru	noun	анемона	анемоны	анемоне	анемону	анемоной									
+anemoniya_N	anemone	en	noun	anemone												
+angina_N	ангина	ru	noun	ангина	ангины	ангине	ангину	ангиной									
+angina_N	angina	en	noun	angina												
+anima_N	анима	ru	noun	анима	анимы	аниме	аниму	анимой									
+anima_N	anima	en	noun	anima												
+anketa_N	анкета	ru	noun	анкета	анкеты	анкете	анкету	анкетой									
+anketa_N	questionnaire	en	noun	questionnaire												
+ankl_N	анкл	ru	noun	анкл	анкла	анкле	анкл	анклом									
+ankl_N	anchor	en	noun	anchor												
+annuity_N	аннуитет	ru	noun	аннуитет	аннуитета	аннуитете	аннуитет	аннуитетом									
+annuity_N	annuity	en	noun	annuity												
+anonym_N	аноним	ru	noun	аноним	анонима	анониме	анонима	анонимом									
+anonym_N	anonymous	en	noun	anonymous												
+ansamble_N	ансамбль	ru	noun	ансамбль	ансамбля	ансамбле	ансамбль	ансамблем									
+ansamble_N	ensemble	en	noun	ensemble												
+antarktida_N	антарктида	ru	noun	антарктида	антарктиды	антарктиде	антарктиду	антарктидой									
+antarktida_N	antarctica	en	noun	antarctica												
+antibiotik_N	антибиотик	ru	noun	антибиотик	антибиотика	антибиотике	антибиотика	антибиотиком									
+antibiotik_N	antibiotic	en	noun	antibiotic												
+antigon_N	антигон	ru	noun	антигон	антигона	антигоне	антигона	антигоном									
+antigon_N	antigon	en	noun	antigon												
+antipode_N	антипода	ru	noun	антипода	антиподы	антиподе	антиподу	антиподой									
+antipode_N	antipode	en	noun	antipode												
+antiseptik_N	антисептик	ru	noun	антисептик	антисептика	антисептике	антисептика	антисептиком									
+antiseptik_N	antiseptic	en	noun	antiseptic												
+antitela_N	антитела	ru	noun	антитела	антител	антителах	антитела	антителами									
+antitela_N	antibodies	en	noun	antibodies												
+antitsiklon_N	антициклон	ru	noun	антициклон	антициклона	антициклоне	антициклон	антициклоном									
+antitsiklon_N	anticyclone	en	noun	anticyclone												
+apelsin_N	апельсин	ru	noun	апельсин	апельсина	апельсине	апельсин	апельсином									
+apelsin_N	orange	en	noun	orange												
+apendicit_N	аппендицит	ru	noun	аппендицит	аппендицита	аппендиците	аппендицит	аппендицитом									
+apendicit_N	appendicitis	en	noun	appendicitis												
+aplik_N	аплик	ru	noun	аплик	аплика	аплике	аплику	апликом									
+aplik_N	applicator	en	noun	applicator												
+apof_N	апоф	ru	noun	апоф	апофа	апофе	апофа	апофом									
+apof_N	apoph	en	noun	apoph												
+apostol_N	апостол	ru	noun	апостол	апостола	апостоле	апостола	апостолом									
+apostol_N	apostle	en	noun	apostle												
+apparat_N	аппарат	ru	noun	аппарат	аппарата	аппарате	аппарат	аппаратом									
+apparat_N	apparatus	en	noun	apparatus												
+apsid_N	апсида	ru	noun	апсида	апсиды	апсиде	апсиду	апсидой									
+apsid_N	apsis	en	noun	apsis												
+arbitr_N	арбитр	ru	noun	арбитр	арбитра	арбитре	арбитра	арбитром									
+arbitr_N	arbitrator	en	noun	arbitrator												
+arbitrazh_N	арбитраж	ru	noun	арбитраж	арбитража	арбитраже	арбитраж	арбитражом									
+arbitrazh_N	arbitration	en	noun	arbitration												
+arc_N	дуга	ru	noun	дуга	дуги	дуге	дугу	дугой									
+arc_N	arc	en	noun	arc												
+archeolog_N	археолог	ru	noun	археолог	археолога	археологе	археолога	археологом									
+archeolog_N	archaeologist	en	noun	archaeologist												
+architektor_N	архитектор	ru	noun	архитектор	архитектора	архитекторе	архитектора	архитектором									
+architektor_N	architect	en	noun	architect												
+argentin_N	аргентина	ru	noun	аргентина	аргентины	аргентине	арентину	арентиной									
+argentin_N	argentina	en	noun	argentina												
+arifmetik_N	арифметика	ru	noun	арифметика	арифметики	арифметике	арифметику	арифметикой									
+arifmetik_N	arithmetic	en	noun	arithmetic												
+aristokrat_N	аристократ	ru	noun	аристократ	аристократа	аристократе	аристократа	аристократом									
+aristokrat_N	aristocrat	en	noun	aristocrat												
+armor_N	броня	ru	noun	броня	брони	броне	броню	броней									
+armor_N	armor	en	noun	armor												
+aroma_N	аромат	ru	noun	аромат	аромата	аромате	аромат	ароматом									
+aroma_N	aroma	en	noun	aroma												
+art_N	арт	ru	noun	арт	арта	арте	арт	артом									
+art_N	art	en	noun	art												
+artist_N	артист	ru	noun	артист	артиста	артисте	артиста	артистом									
+artist_N	artist	en	noun	artist												
+artur_N	артур	ru	noun	артур	артура	артуре	артура	артуром									
+artur_N	arthur	en	noun	arthur												
+arx_N	арх	ru	noun	арх	арха	архе	арха	архом									
+arx_N	arch	en	noun	arch												
+ash_N	пепел	ru	noun	пепел	пепла	пепле	пепел	пеплом									
+ash_N	ash	en	noun	ash												
+asid_N	ацид	ru	noun	ацид	ацида	ациде	ацид	ацидом									
+asid_N	acid	en	noun	acid												
+asin_N	асин	ru	noun	асин	асина	асине	асина	асином									
+asin_N	asin	en	noun	asin												
+aspirin_N	аспирин	ru	noun	аспирин	аспирина	аспирине	аспирин	аспирином									
+aspirin_N	aspirin	en	noun	aspirin												
+ass1_N	осел	ru	noun	осел	осла	осле	осла	ослом									
+ass1_N	donkey	en	noun	donkey												
+assistent_N	ассистент	ru	noun	ассистент	ассистента	ассистенте	ассистента	ассистентом									
+assistent_N	assistant	en	noun	assistant												
+assoc_N	ассоциация	ru	noun	ассоциация	ассоциации	ассоциации	ассоциацию	ассоциацией									
+assoc_N	association	en	noun	association												
+asteroid_N	астероид	ru	noun	астероид	астероида	астероиде	астероид	астероидом									
+asteroid_N	asteroid	en	noun	asteroid												
+astronom_N	астроном	ru	noun	астроном	астронома	астрономе	астронома	астрономом									
+astronom_N	astronomer	en	noun	astronomer												
+atmos_N	атмос	ru	noun	атмос	атмоса	атмосе	атмос	атмосом									
+atmos_N	atmosphere	en	noun	atmosphere												
+atrakcion_N	аттракцион	ru	noun	аттракцион	аттракциона	аттракционе	аттракцион	аттракционом									
+atrakcion_N	attraction	en	noun	attraction												
+auditor_N	аудитор	ru	noun	аудитор	аудитора	аудиторе	аудитора	аудитором									
+auditor_N	auditor	en	noun	auditor												
+auditoriya_N	аудитория	ru	noun	аудитория	аудитории	аудитории	аудиторию	аудиторией									
+auditoriya_N	auditorium	en	noun	auditorium												
+august_N	август	ru	noun	август	августа	августе	август	августом									
+august_N	august	en	noun	august												
+aur_N	авр	ru	noun	авр	авра	авре	авра	авром									
+aur_N	aurora	en	noun	aurora												
+aus_N	аус	ru	noun	аус	ауса	аусе	аус	аусом									
+aus_N	aus	en	noun	aus												
+autodrom_N	автодром	ru	noun	автодром	автодрома	автодроме	автодром	автодромом									
+autodrom_N	racetrack	en	noun	racetrack												
+avtopark_N	автопарк	ru	noun	автопарк	автопарка	автопарке	автопарк	автопарком									
+avtopark_N	fleet	en	noun	fleet												
+avtoport_N	автопорт	ru	noun	автопорт	автопорта	автопорте	автопорт	автопортом									
+avtoport_N	autoport	en	noun	autoport												
+avtozavod_N	автозавод	ru	noun	автозавод	автозавода	автозаводе	автозавод	автозаводом									
+avtozavod_N	auto_factory	en	noun	auto_factory												
+azimut_N	азимут	ru	noun	азимут	азимута	азимуте	азимут	азимутом									
+azimut_N	azimuth	en	noun	azimuth												
+bakteriya_N	бактерия	ru	noun	бактерия	бактерии	бактерии	бактерию	бактерией									
+bakteriya_N	bacteria	en	noun	bacteria												
+balalaika_N	балалайка	ru	noun	балалайка	балалайки	балалайке	балалайку	балалайкой									
+balalaika_N	balalaika	en	noun	balalaika												
+balon_N	баллон	ru	noun	баллон	баллона	баллоне	баллон	баллоном									
+balon_N	cylinder	en	noun	cylinder												
+bandit_N	бандит	ru	noun	бандит	бандита	бандите	бандита	бандитом									
+bandit_N	bandit	en	noun	bandit												
+bankir_N	банкир	ru	noun	банкир	банкира	банкире	банкира	банкиром									
+bankir_N	banker	en	noun	banker												
+bankrot_N	банкрот	ru	noun	банкрот	банкрота	банкроте	банкрота	банкротом									
+bankrot_N	bankrupt	en	noun	bankrupt												
+barhat_N	бархат	ru	noun	бархат	бархата	бархате	бархат	бархатом									
+barhat_N	velvet	en	noun	velvet												
+barynya_N	барыня	ru	noun	барыня	барыни	барыне	барышню	барышней									
+barynya_N	lady	en	noun	lady												
+baza_N	база	ru	noun	база	базы	базе	базу	базой									
+baza_N	base	en	noun	base												
+bazalt_N	базальт	ru	noun	базальт	базальта	базальте	базальт	базальтом									
+bazalt_N	basalt	en	noun	basalt												
+belok2_N	белок	ru	noun	белок	белка	белке	белок	белком									
+belok2_N	protein	en	noun	protein												
+beresta_N	береста	ru	noun	береста	бересты	бересте	бересту	берестой									
+beresta_N	birch_bark	en	noun	birch_bark												
+berloga_N	берлога	ru	noun	берлога	берлоги	берлоге	берлогу	берлогой									
+berloga_N	den	en	noun	den												
+bessmertie_N	бессмертие	ru	noun	бессмертие	бессмертия	бессмертии	бессмертие	бессмертием									
+bessmertie_N	immortality	en	noun	immortality												
+bestseller_N	бестселлер	ru	noun	бестселлер	бестселлера	бестселлере	бестселлера	бестселлером									
+bestseller_N	bestseller	en	noun	bestseller												
+bezdelnik_N	бездельник	ru	noun	бездельник	бездельника	бездельнике	бездельника	бездельником									
+bezdelnik_N	idler	en	noun	idler												
+bezrabot_N	безработица	ru	noun	безработица	безработицы	безработице	безработицу	безработицей									
+bezrabot_N	unemployment	en	noun	unemployment												
+bezum_N	безумие	ru	noun	безумие	безумия	безумии	безумие	безумием									
+bezum_N	madness	en	noun	madness												
+biznes_N	бизнес	ru	noun	бизнес	бизнеса	бизнесе	бизнес	бизнесом									
+biznes_N	business	en	noun	business												
+biznesmen_N	бизнесмен	ru	noun	бизнесмен	бизнесмена	бизнесмене	бизнесмена	бизнесменом									
+biznesmen_N	businessman	en	noun	businessman												
+blagodarnost_N	благодарность	ru	noun	благодарность	благодарности	благодарности	благодарность	благодарностью									
+blagodarnost_N	gratitude	en	noun	gratitude												
+blagorodstvo_N	благородство	ru	noun	благородство	благородства	благородстве	благородство	благородством									
+blagorodstvo_N	nobility	en	noun	nobility												
+blestka_N	блестка	ru	noun	блестка	блестки	блестке	блестку	блесткой									
+blestka_N	sparkle	en	noun	sparkle												
+bliznec_N	близнец	ru	noun	близнец	близнеца	близнеце	близнеца	близнецом									
+bliznec_N	twin	en	noun	twin												
+blok2_N	блок	ru	noun	блок	блока	блоке	блок	блоком									
+blok2_N	block	en	noun	block												
+bloknot_N	блокнот	ru	noun	блокнот	блокнота	блокноте	блокнот	блокнотом									
+bloknot_N	notebook	en	noun	notebook												
+bob_N	боб	ru	noun	боб	боба	бобе	боб	бобом									
+bob_N	bean	en	noun	bean												
+bodrost_N	бодрость	ru	noun	бодрость	бодрости	бодрости	бодрость	бодростью									
+bodrost_N	vigor	en	noun	vigor												
+bor_N	бор	ru	noun	бор	бора	боре	бор	бором									
+bor_N	pine_forest	en	noun	pine_forest												
+bordyur_N	бордюр	ru	noun	бордюр	бордюра	бордюре	бордюр	бордюром									
+bordyur_N	curb	en	noun	curb												
+botanika_N	ботаника	ru	noun	ботаника	ботаники	ботанике	ботанику	ботаникой									
+botanika_N	botany	en	noun	botany												
+bratva_N	братва	ru	noun	братва	братвы	братве	братву	братвой									
+bratva_N	gang	en	noun	gang												
+brigadir_N	бригадир	ru	noun	бригадир	бригадира	бригадире	бригадира	бригадиром									
+brigadir_N	foreman	en	noun	foreman												
+briket_N	брикет	ru	noun	брикет	брикета	брикете	брикет	брикетом									
+briket_N	briquette	en	noun	briquette												
+britva_N	бритва	ru	noun	бритва	бритвы	бритве	бритву	бритвой									
+britva_N	razor	en	noun	razor												
+brizg_N	брызг	ru	noun	брызг	брызга	брызге	брызг	брызгом									
+brizg_N	splash	en	noun	splash												
+brod_N	брод	ru	noun	брод	брода	броде	брод	бродом									
+brod_N	ford	en	noun	ford												
+brosok_N	бросок	ru	noun	бросок	броска	броске	бросок	броском									
+brosok_N	throw	en	noun	throw												
+brush_N	брюки	ru	noun	брюки	брюк	брюках	брюки	брюками									
+brush_N	pants	en	noun	pants												
+bryuk_N	брюква	ru	noun	брюква	брюквы	брюкве	брюкву	брюквой									
+bryuk_N	rutabaga	en	noun	rutabaga												
+bryzga_N	брызга	ru	noun	брызга	брызги	брызге	брызгу	брызгой									
+bryzga_N	splash	en	noun	splash												
+bublik_N	бублик	ru	noun	бублик	бублика	бублике	бублик	бубликом									
+bublik_N	bagel	en	noun	bagel												
+budilnik_N	будильник	ru	noun	будильник	будильника	будильнике	будильник	будильником									
+budilnik_N	alarm_clock	en	noun	alarm_clock												
+buklet_N	буклет	ru	noun	буклет	буклета	буклете	буклет	буклетом									
+buklet_N	brochure	en	noun	brochure												
+buro_N	бюро	ru	noun	бюро	бюро	бюро	бюро	бюро									
+buro_N	office	en	noun	office												
+bus_N	бусина	ru	noun	бусина	бусины	бусине	бусину	бусиной									
+bus_N	bead	en	noun	bead												
+valenok_N	валенок	ru	noun	валенок	валенка	валенке	валенка	валенком									
+valenok_N	felt_boot	en	noun	felt_boot												
+vampir_N	вампир	ru	noun	вампир	вампира	вампире	вампира	вампиром									
+vampir_N	vampire	en	noun	vampire												
+van_N	ван	ru	noun	ван	вана	ване	вана	ваном									
+van_N	van	en	noun	van												
+vanil_N	ваниль	ru	noun	ваниль	ванили	ванили	ваниль	ванилью									
+vanil_N	vanilla	en	noun	vanilla												
+vara_N	вариация	ru	noun	вариация	вариации	вариации	вариацию	вариацией									
+vara_N	variation	en	noun	variation												
+varvar_N	варвар	ru	noun	варвар	варвара	варваре	варвара	варваром									
+varvar_N	barbarian	en	noun	barbarian												
+vataga_N	ватага	ru	noun	ватага	ватаги	ватаге	ватагу	ватагой									
+vataga_N	gang	en	noun	gang												
+vatman_N	ватман	ru	noun	ватман	ватмана	ватмане	ватмана	ватманом									
+vatman_N	coachman	en	noun	coachman												
+vatr_N	ватра	ru	noun	ватра	ватры	ватре	ватру	ватрой									
+vatr_N	fire	en	noun	fire												
+vecherinka_N	вечеринка	ru	noun	вечеринка	вечеринки	вечеринке	вечеринку	вечеринкой									
+vecherinka_N	party	en	noun	party												
+vechernya_N	вечерня	ru	noun	вечерня	вечерни	вечерне	вечерню	вечерней									
+vechernya_N	vespers	en	noun	vespers												
+vedomost_N	ведомость	ru	noun	ведомость	ведомости	ведомости	ведомость	ведомостью									
+vedomost_N	statement	en	noun	statement												
+veka_N	век	ru	noun	век	века	веке	век	веком									
+veka_N	century	en	noun	century												
+velichie_N	величие	ru	noun	величие	величия	величии	величие	величием									
+velichie_N	greatness	en	noun	greatness												
+velichina_N	величина	ru	noun	величина	величины	величине	величину	величиной									
+velichina_N	magnitude	en	noun	magnitude												
+venchik_N	венчик	ru	noun	венчик	венчика	венчике	венчик	венчиком									
+venchik_N	whisk	en	noun	whisk												
+venok_N	венок	ru	noun	венок	венка	венке	венок	венком									
+venok_N	wreath	en	noun	wreath												
+vershina_N	вершина	ru	noun	вершина	вершины	вершине	вершину	вершиной									
+vershina_N	peak	en	noun	peak												
+vest1_N	вестник	ru	noun	вестник	вестника	вестнике	вестника	вестником									
+vest1_N	herald	en	noun	herald												
+vestibul_N	вестибюль	ru	noun	вестибюль	вестибюля	вестибюле	вестибюль	вестибюлем									
+vestibul_N	vestibule	en	noun	vestibule												
+vetchina_N	ветчина	ru	noun	ветчина	ветчины	ветчине	ветчину	ветчиной									
+vetchina_N	ham	en	noun	ham												
+veteran_N	ветеран	ru	noun	ветеран	ветерана	ветеране	ветерана	ветераном									
+veteran_N	veteran	en	noun	veteran												
+veterinar_N	ветеринар	ru	noun	ветеринар	ветеринара	ветеринаре	ветеринара	ветеринаром									
+veterinar_N	veterinarian	en	noun	veterinarian												
+video_N	видео	ru	noun	видео	видео	видео	видео	видео									
+video_N	video	en	noun	video												
+vidzhet_N	виджет	ru	noun	виджет	виджета	виджете	виджет	виджетом									
+vidzhet_N	widget	en	noun	widget												
+vino_N	вино	ru	noun	вино	вина	вине	вино	вином									
+vino_N	wine	en	noun	wine												
+violonchel_N	виолончель	ru	noun	виолончель	виолончели	виолончели	виолончель	виолончелью									
+violonchel_N	cello	en	noun	cello												
+viski_N	виски	ru	noun	виски	виски	виски	виски	виски									
+viski_N	whisky	en	noun	whisky												
+vizitka_N	визитка	ru	noun	визитка	визитки	визитке	визитку	визиткой									
+vizitka_N	business_card	en	noun	business_card												
+vladel_N	владелец	ru	noun	владелец	владельца	владельце	владельца	владельцем									
+vladel_N	owner	en	noun	owner												
+vladenie_N	владение	ru	noun	владение	владения	владении	владение	владением									
+vladenie_N	possession	en	noun	possession												
+vlechenie_N	влечение	ru	noun	влечение	влечения	влечении	влечение	влечением									
+vlechenie_N	attraction	en	noun	attraction												
+voditel_N	водитель	ru	noun	водитель	водителя	водителе	водителя	водителем									
+voditel_N	driver	en	noun	driver												
+vodonapor_N	водонапор	ru	noun	водонапор	водонапора	водонапоре	водонапор	водонапором									
+vodonapor_N	water_pressure	en	noun	water_pressure												
+vodopad_N	водопад	ru	noun	водопад	водопада	водопаде	водопад	водопадом									
+vodopad_N	waterfall	en	noun	waterfall												
+vodorod_N	водород	ru	noun	водород	водорода	водороде	водород	водородом									
+vodorod_N	hydrogen	en	noun	hydrogen												
+voenkomat_N	военкомат	ru	noun	военкомат	военкомата	военкомате	военкомат	военкоматом									
+voenkomat_N	military_enlistment	en	noun	military_enlistment												
+voysko_N	войско	ru	noun	войско	войска	войске	войско	войском									
+voysko_N	army	en	noun	army												
+voz_N	воз	ru	noun	воз	воза	возе	воз	возом									
+voz_N	cart	en	noun	cart												
+vozduhoplav_N	воздухоплавание	ru	noun	воздухоплавание	воздухоплавания	воздухоплавании	воздухоплавание	воздухоплаванием									
+vozduhoplav_N	aeronautics	en	noun	aeronautics												
+vozmesdie_N	возмездие	ru	noun	возмездие	возмездия	возмездии	возмездие	возмездием									
+vozmesdie_N	retribution	en	noun	retribution												
+vozrast_N	возраст	ru	noun	возраст	возраста	возрасте	возраст	возрастом									
+vozrast_N	age	en	noun	age												
+vozvyshenie_N	возвышение	ru	noun	возвышение	возвышения	возвышении	возвышение	возвышением									
+vozvyshenie_N	elevation	en	noun	elevation												
+vzryvchatka_N	взрывчатка	ru	noun	взрывчатка	взрывчатки	взрывчатке	взрывчатку	взрывчаткой									
+vzryvchatka_N	explosive	en	noun	explosive												
+g_N	г	ru	noun	г	г	г	г	г									
+g_N	gram	en	noun	gram												
+gadalka_N	гадалка	ru	noun	гадалка	гадалки	гадалке	гадалку	гадалкой									
+gadalka_N	fortune_teller	en	noun	fortune_teller												
+galstuk_N	галстук	ru	noun	галстук	галстука	галстуке	галстук	галстуком									
+galstuk_N	tie	en	noun	tie												
+garant_N	гарант	ru	noun	гарант	гаранта	гаранте	гаранта	гарантом									
+garant_N	guarantor	en	noun	guarantor												
+gazirovka_N	газировка	ru	noun	газировка	газировки	газировке	газировку	газировкой									
+gazirovka_N	carbonation	en	noun	carbonation												
+geolog_N	геолог	ru	noun	геолог	геолога	геологе	геолога	геологом									
+geolog_N	geologist	en	noun	geologist												
+geometriya_N	геометрия	ru	noun	геометрия	геометрии	геометрии	геометрию	геометрией									
+geometriya_N	geometry	en	noun	geometry												
+gitara_N	гитара	ru	noun	гитара	гитары	гитаре	гитару	гитарой									
+gitara_N	guitar	en	noun	guitar												
+gitarist_N	гитарист	ru	noun	гитарист	гитариста	гитаристе	гитариста	гитаристом									
+gitarist_N	guitarist	en	noun	guitarist												
+glagol_N	глагол	ru	noun	глагол	глагола	глаголе	глагол	глаголом									
+glagol_N	verb	en	noun	verb												
+glo_N	глоб	ru	noun	глоб	глоба	глобе	глоб	глобом									
+glo_N	globe	en	noun	globe												
+gloss_N	глосс	ru	noun	глосс	глосса	глоссе	глосса	глоссом									
+gloss_N	gloss	en	noun	gloss												
+glotok_N	глоток	ru	noun	глоток	глотка	глотке	глоток	глотком									
+glotok_N	sip	en	noun	sip												
+glupost_N	глупость	ru	noun	глупость	глупости	глупости	глупость	глупостью									
+glupost_N	stupidity	en	noun	stupidity												
+gol_N	гол	ru	noun	гол	гола	голе	гол	голом									
+gol_N	goal	en	noun	goal												
+golod_N	голод	ru	noun	голод	голода	голоде	голод	голодом									
+golod_N	hunger	en	noun	hunger												
+golos_N	голос	ru	noun	голос	голоса	голосе	голос	голосом									
+golos_N	voice	en	noun	voice												
+golova_N	голова	ru	noun	голова	головы	голове	голову	головой									
+golova_N	head	en	noun	head												
+gondola_N	гондола	ru	noun	гондола	гондолы	гондоле	гондолу	гондолой									
+gondola_N	gondola	en	noun	gondola												
+gorb_N	горб	ru	noun	горб	горба	горбе	горб	горбом									
+gorb_N	hump	en	noun	hump												
+gorka_N	горка	ru	noun	горка	горки	горке	горку	горкой									
+gorka_N	slide	en	noun	slide												
+gorod_N	город	ru	noun	город	города	городе	город	городом									
+gorod_N	city	en	noun	city												
+goroh_N	горох	ru	noun	горох	гороха	горохе	горох	горохом									
+goroh_N	peas	en	noun	peas												
+grabej_N	грабеж	ru	noun	грабеж	грабежа	грабеже	грабеж	грабежом									
+grabej_N	robbery	en	noun	robbery												
+graf_N	граф	ru	noun	граф	графа	графе	графа	графом									
+graf_N	graph	en	noun	graph												
+grafoman_N	графоман	ru	noun	графоман	графомана	графомане	графомана	графоманом									
+grafoman_N	graphomaniac	en	noun	graphomaniac												
+gram_N	грамм	ru	noun	грамм	грамма	грамме	грамм	граммом									
+gram_N	gram	en	noun	gram												
+gramotey_N	грамотей	ru	noun	грамотей	грамотея	грамотее	грамотея	грамотеем									
+gramotey_N	literate_person	en	noun	literate_person												
+granit_N	гранит	ru	noun	гранит	гранита	граните	гранит	гранитом									
+granit_N	granite	en	noun	granite												
+grib_N	гриб	ru	noun	гриб	гриба	грибе	гриб	грибом									
+grib_N	mushroom	en	noun	mushroom												
+grid_N	грид	ru	noun	грид	грида	гриде	грид	гридом									
+grid_N	grid	en	noun	grid												
+grisha_N	гриша	ru	noun	гриша	гриши	грише	гришу	гришей									
+grisha_N	Grisha	en	noun	Grisha												
+grizun_N	грызун	ru	noun	грызун	грызуна	грызуне	грызуна	грызуном									
+grizun_N	rodent	en	noun	rodent												
+grum_N	грум	ru	noun	грум	грума	груме	грума	грумом									
+grum_N	groom	en	noun	groom												
+grust_N	грусть	ru	noun	грусть	грусти	грусти	грусть	грустью									
+grust_N	sadness	en	noun	sadness												
+gudok_N	гудок	ru	noun	гудок	гудка	гудке	гудок	гудком									
+gudok_N	whistle	en	noun	whistle												
+gustota_N	густота	ru	noun	густота	густоты	густоте	густоту	густотой									
+gustota_N	density	en	noun	density												
+volchok_N	волчок	ru	noun	волчок	волчка	волчке	волчка	волчком									
+volchok_N	spinning_top	en	noun	spinning_top												
+vorobey_N	воробей	ru	noun	воробей	воробья	воробье	воробья	воробьём									
+vorobey_N	sparrow	en	noun	sparrow												
+vorona_N	ворона	ru	noun	ворона	вороны	вороне	ворону	вороной									
+vorona_N	crow	en	noun	crow												
+vorota_N	ворота	ru	noun	ворота	ворот	воротах	ворота	воротами									
+vorota_N	gate	en	noun	gate												
+vpravka_N	вправка	ru	noun	вправка	вправки	вправке	вправку	вправкой									
+vpravka_N	setting	en	noun	setting												
+dacha_N	дача	ru	noun	дача	дачи	даче	дачу	дачей									
+dacha_N	dacha	en	noun	dacha												
+dada_N	дада	ru	noun	дада	дады	даде	даду	дадой									
+dada_N	dad	en	noun	dad												
+dama_N	дама	ru	noun	дама	дамы	даме	даму	дамой									
+dama_N	lady	en	noun	lady												
+danger_N	данжер	ru	noun	данжер	данжера	данжере	данжер	данжером									
+danger_N	danger	en	noun	danger												
+datchik_N	датчик	ru	noun	датчик	датчика	датчике	датчика	датчиком									
+datchik_N	sensor	en	noun	sensor												
+deputat_N	депутат	ru	noun	депутат	депутата	депутате	депутата	депутатом									
+deputat_N	deputy	en	noun	deputy												
+der_N	дерьмо	ru	noun	дерьмо	дерьма	дерьме	дерьмо	дерьмом									
+der_N	shit	en	noun	shit												
+deti_N	дети	ru	noun	дети	детей	детях	дети	детьми									
+deti_N	children	en	noun	children												
+detstvo_N	детство	ru	noun	детство	детства	детстве	детство	детством									
+detstvo_N	childhood	en	noun	childhood												
+diana_N	диана	ru	noun	диана	дианы	диане	диану	дианой									
+diana_N	Diana	en	noun	Diana												
+dig_N	диг	ru	noun	диг	дига	диге	диг	дигом									
+dig_N	dig	en	noun	dig												
+dim_N	дим	ru	noun	дим	дима	диме	дима	димом									
+dim_N	dim	en	noun	dim												
+dinamo_N	динамо	ru	noun	динамо	динамо	динамо	динамо	динамо									
+dinamo_N	dynamo	en	noun	dynamo												
+dinozav_N	динозавр	ru	noun	динозавр	динозавра	динозавре	динозавра	динозавром									
+dinozav_N	dinosaur	en	noun	dinosaur												
+disk_N	диск	ru	noun	диск	диска	диске	диск	диском									
+disk_N	disk	en	noun	disk												
+disp_N	дисп	ru	noun	дисп	диспа	диспе	дисп	диспом									
+disp_N	disp	en	noun	disp												
+dist_N	дист	ru	noun	дист	диста	дисте	дист	дистом									
+dist_N	dist	en	noun	dist												
+dobro_N	добро	ru	noun	добро	добра	добре	добро	добром									
+dobro_N	good	en	noun	good												
+dok_N	док	ru	noun	док	дока	доке	дока	доком									
+dok_N	doc	en	noun	doc												
+doktor_N	доктор	ru	noun	доктор	доктора	докторе	доктора	доктором									
+doktor_N	doctor	en	noun	doctor												
+don_N	дон	ru	noun	дон	дона	доне	дона	доном									
+don_N	Don	en	noun	Don												
+dospehi_N	доспехи	ru	noun	доспехи	доспехов	доспехах	доспехи	доспехами									
+dospehi_N	armor	en	noun	armor												
+dost_N	достоинство	ru	noun	достоинство	достоинства	достоинстве	достоинство	достоинством									
+dost_N	dignity	en	noun	dignity												
+dostup_N	доступ	ru	noun	доступ	доступа	доступе	доступ	доступом									
+dostup_N	access	en	noun	access												
+dosug_N	досуг	ru	noun	досуг	досуга	досуге	досуг	досугом									
+dosug_N	leisure	en	noun	leisure												
+dovolstvo_N	довольство	ru	noun	довольство	довольства	довольстве	довольство	довольством									
+dovolstvo_N	satisfaction	en	noun	satisfaction												
+dra_N	дра	ru	noun	дра	дры	дра	дра	драм									
+dra_N	dra	en	noun	dra												
+drakon_N	дракон	ru	noun	дракон	дракона	драконе	дракона	драконом									
+drakon_N	dragon	en	noun	dragon												
+drama_N	драма	ru	noun	драма	драмы	драме	драму	драмой									
+drama_N	drama	en	noun	drama												
+drob_N	дробь	ru	noun	дробь	дроби	дроби	дробь	дробью									
+drob_N	fraction	en	noun	fraction												
+drozh_N	дрожь	ru	noun	дрожь	дрожи	дрожи	дрожь	дрожью									
+drozh_N	tremor	en	noun	tremor												
+drozhki_N	дрожки	ru	noun	дрожки	дрожек	дрожках	дрожки	дрожками									
+drozhki_N	yeast	en	noun	yeast												
+drug_N	друг	ru	noun	друг	друга	друге	друга	другом									
+drug_N	friend	en	noun	friend												
+drugoy_N	другой	ru	noun	другой	другого	другому	другой	другим									
+drugoy_N	other	en	noun	other												
+dubl_N	дубль	ru	noun	дубль	дубля	дубле	дубль	дублём									
+dubl_N	double	en	noun	double												
+duh_N	дух	ru	noun	дух	духа	духе	дух	духом									
+duh_N	spirit	en	noun	spirit												
+dusha_N	душа	ru	noun	душа	души	душе	душу	душой									
+dusha_N	soul	en	noun	soul												
+eda_N	еда	ru	noun	еда	еды	еде	еду	едой									
+eda_N	food	en	noun	food												
+efir_N	эфир	ru	noun	эфир	эфира	эфире	эфир	эфиром									
+efir_N	ether	en	noun	ether												
+eho_N	эхо	ru	noun	эхо	эха	эхе	эхо	эхом									
+eho_N	echo	en	noun	echo												
+ekonomika_N	экономика	ru	noun	экономика	экономики	экономике	экономику	экономикой									
+ekonomika_N	economics	en	noun	economics												
+elektron_N	электрон	ru	noun	электрон	электрона	электроне	электрона	электроном									
+elektron_N	electron	en	noun	electron												
+elka_N	ёлка	ru	noun	ёлка	ёлки	ёлке	ёлку	ёлкой									
+elka_N	spruce	en	noun	spruce												
+epidemiya_N	эпидемия	ru	noun	эпидемия	эпидемии	эпидемии	эпидемию	эпидемией									
+epidemiya_N	epidemic	en	noun	epidemic												
+era_N	эра	ru	noun	эра	эры	эре	эру	эрой									
+era_N	era	en	noun	era												
+ermitaj_N	эрмитаж	ru	noun	эрмитаж	эрмитажа	эрмитаже	эрмитаж	эрмитажем									
+ermitaj_N	hermitage	en	noun	hermitage												
+eshelon_N	эшелон	ru	noun	эшелон	эшелона	эшелоне	эшелон	эшелоном									
+eshelon_N	echelon	en	noun	echelon												
+estakada_N	эстакада	ru	noun	эстакада	эстакады	эстакаде	эстакаду	эстакадой									
+estakada_N	overpass	en	noun	overpass												
+estetika_N	эстетика	ru	noun	эстетика	эстетики	эстетике	эстетику	эстетикой									
+estetika_N	aesthetics	en	noun	aesthetics												
+etalon_N	эталон	ru	noun	эталон	эталона	эталоне	эталон	эталоном									
+etalon_N	standard	en	noun	standard												
+etnografiya_N	этнография	ru	noun	этнография	этнографии	этнографии	этнографию	этнографией									
+etnografiya_N	ethnography	en	noun	ethnography												
+etyud_N	этюд	ru	noun	этюд	этюда	этюде	этюд	этюдом									
+etyud_N	study	en	noun	study												
+ezda_N	езда	ru	noun	езда	езды	езде	езду	ездой									
+ezda_N	riding	en	noun	riding												
+yaponiec_N	японец	ru	noun	японец	японца	японце	японца	японцем									
+yaponiec_N	japanese	en	noun	japanese												
+yaponiya_N	япония	ru	noun	япония	японии	японии	японию	японией									
+yaponiya_N	japan	en	noun	japan												
+yarkost_N	яркость	ru	noun	яркость	яркости	яркости	яркость	яркостью									
+yarkost_N	brightness	en	noun	brightness												
+yarmo_N	ярмо	ru	noun	ярмо	ярма	ярме	ярмо	ярмом									
+yarmo_N	yoke	en	noun	yoke												
+yasen_N	ясень	ru	noun	ясень	ясеня	ясене	ясень	ясенем									
+yasen_N	ash	en	noun	ash												
+yasericza_N	ящерица	ru	noun	ящерица	ящерицы	ящерице	ящерицу	ящерицей									
+yasericza_N	lizard	en	noun	lizard												
+yasik_N	ящик	ru	noun	ящик	ящика	ящике	ящик	ящиком									
+yasik_N	box	en	noun	box												
+yasvo_N	яство	ru	noun	яство	яства	ястве	яство	яством									
+yasvo_N	food	en	noun	food												
+yavor_N	явор	ru	noun	явор	явора	яворе	явора	явором									
+yavor_N	maple	en	noun	maple												
+yazva_N	язва	ru	noun	язва	язвы	язве	язву	язвой									
+yazva_N	ulcer	en	noun	ulcer												
+yubka_N	юбка	ru	noun	юбка	юбки	юбке	юбку	юбкой									
+yubka_N	skirt	en	noun	skirt												
+yunost_N	юность	ru	noun	юность	юности	юности	юность	юностью									
+yunost_N	youth	en	noun	youth												
+yurisprudenciya_N	юриспруденция	ru	noun	юриспруденция	юриспруденции	юриспруденции	юриспруденцию	юриспруденцией									
+yurisprudenciya_N	jurisprudence	en	noun	jurisprudence												
+absorbirovanie_N	абсорбирование	ru	noun	абсорбированье	абсорбированья	абсорбированье	абсорбированье	абсорбированьем											
+absorbirovanie_N	absorbirovanie	en	noun	absorbirovanie															
+avenyu_N	авеню	ru	noun	авеню	авеню	авеню	авеню	авеню											
+avenyu_N	avenyu	en	noun	avenyu															
+aviaimushchestvo_N	авиаимущество	ru	noun	авиаимущество	авиаимущества	авиаимуществе	авиаимущество	авиаимуществом											
+aviaimushchestvo_N	aviaimushchestvo	en	noun	aviaimushchestvo															
+aviaipoteka_N	авиаипотека	ru	noun	авиаипотека	авиаипотеки	авиаипотеке	авиаипотеку	авиаипотекою											
+aviaipoteka_N	aviaipoteka	en	noun	aviaipoteka															
+aviaopylivanie_N	авиаопыливание	ru	noun	авиаопыливанье	авиаопыливанья	авиаопыливанье	авиаопыливанье	авиаопыливаньем											
+aviaopylivanie_N	aviaopylivanie	en	noun	aviaopylivanie															
+aviasoobshchenie_N	авиасообщение	ru	noun	авиасообщение	авиасообщения	авиасообщении	авиасообщение	авиасообщением											
+aviasoobshchenie_N	aviasoobshchenie	en	noun	aviasoobshchenie															
+aviatoplivo_N	авиатопливо	ru	noun	авиатопливо	авиатоплива	авиатопливе	авиатопливо	авиатопливом											
+aviatoplivo_N	aviatoplivo	en	noun	aviatoplivo															
+avizo_N	авизо	ru	noun	авизо	авизо	авизо	авизо	авизо											
+avizo_N	avizo	en	noun	avizo															
+avizovanie_N	авизование	ru	noun	авизованье	авизованья	авизованье	авизованье	авизованьем											
+avizovanie_N	avizovanie	en	noun	avizovanie															
+avrora_N	аврора	ru	noun	аврора	авроры	авроре	аврору	авророю											
+avrora_N	avrora	en	noun	avrora															
+avstraliana_N	австралиана	ru	noun	австралиана	австралианы	австралиане	австралиану	австралианою											
+avstraliana_N	avstraliana	en	noun	avstraliana															
+avto_N	авто	ru	noun	авто	авто	авто	авто	авто											
+avto_N	avto	en	noun	avto															
+avtolihachestvo_N	автолихачество	ru	noun	автолихачество	автолихачества	автолихачестве	автолихачество	автолихачеством											
+avtolihachestvo_N	avtolihachestvo	en	noun	avtolihachestvo															
+avtopolo_N	автополо	ru	noun	автополо	автополо	автополо	автополо	автополо											
+avtopolo_N	avtopolo	en	noun	avtopolo															
+avtorezyume_N	авторезюме	ru	noun	авторезюме	авторезюме	авторезюме	авторезюме	авторезюме											
+avtorezyume_N	avtorezyume	en	noun	avtorezyume															
+avtoshou_N	автошоу	ru	noun	автошоу	автошоу	автошоу	автошоу	автошоу											
+avtoshou_N	avtoshou	en	noun	avtoshou															
+agami_N	агами	ru	noun	агами	агами	агами	агами	агами											
+agami_N	agami	en	noun	agami															
+agentirovanie_N	агентирование	ru	noun	агентирование	агентирования	агентировании	агентирование	агентированием											
+agentirovanie_N	agentirovanie	en	noun	agentirovanie															
+agli_N	агли	ru	noun	агли	агли	агли	агли	агли											
+agli_N	agli	en	noun	agli															
+agora_N	агора	ru	noun	агора	агоры	агоре	агору	агорою											
+agora_N	agora	en	noun	agora															
+agregatirovanie_N	агрегатирование	ru	noun	агрегатированье	агрегатированья	агрегатированье	агрегатированье	агрегатированьем											
+agregatirovanie_N	agregatirovanie	en	noun	agregatirovanie															
+agrobiohimik_N	агробиохимик	ru	noun	агробиохимик	агробиохимика	агробиохимике	агробиохимика	агробиохимиком											
+agrobiohimik_N	agrobiohimik	en	noun	agrobiohimik															
+aguti_N	агути	ru	noun	агути	агути	агути	агути	агути											
+aguti_N	aguti	en	noun	aguti															
+adresovanie_N	адресование	ru	noun	адресованье	адресованья	адресованье	адресованье	адресованьем											
+adresovanie_N	adresovanie	en	noun	adresovanie															
+azhio_N	ажио	ru	noun	ажио	ажио	ажио	ажио	ажио											
+azhio_N	azhio	en	noun	azhio															
+azotirovanie_N	азотирование	ru	noun	азотированье	азотированья	азотированье	азотированье	азотированьем											
+azotirovanie_N	azotirovanie	en	noun	azotirovanie															
+azotopodavlenie_N	азотоподавление	ru	noun	азотоподавление	азотоподавления	азотоподавлении	азотоподавление	азотоподавлением											
+azotopodavlenie_N	azotopodavlenie	en	noun	azotopodavlenie															
+ajra_N	айра	ru	noun	айра	айры	айре	айру	айрою											
+ajra_N	ajra	en	noun	ajra															
+akazhu_N	акажу	ru	noun	акажу	акажу	акажу	акажу	акажу											
+akazhu_N	akazhu	en	noun	akazhu															
+aktivirovanie_N	активирование	ru	noun	активированье	активированья	активированье	активированье	активированьем											
+aktivirovanie_N	aktivirovanie	en	noun	aktivirovanie															
+akupunktura_N	акупунктура	ru	noun	акупунктура	акупунктуры	акупунктуре	акупунктуру	акупунктурою											
+akupunktura_N	akupunktura	en	noun	akupunktura															
+aktseptovanie_N	акцептование	ru	noun	акцептованье	акцептованья	акцептованье	акцептованье	акцептованьем											
+aktseptovanie_N	aktseptovanie	en	noun	aktseptovanie															
+aktsionirovanie_N	акционирование	ru	noun	акционирование	акционирования	акционировании	акционирование	акционированием											
+aktsionirovanie_N	aktsionirovanie	en	noun	aktsionirovanie															
+alzina_N	алзина	ru	noun	алзина	алзины	алзине	алзину	алзиною											
+alzina_N	alzina	en	noun	alzina															
+alibi_N	алиби	ru	noun	алиби	алиби	алиби	алиби	алиби											
+alibi_N	alibi	en	noun	alibi															
+alitirovanie_N	алитирование	ru	noun	алитированье	алитированья	алитированье	алитированье	алитированьем											
+alitirovanie_N	alitirovanie	en	noun	alitirovanie															
+alkilirovanie_N	алкилирование	ru	noun	алкилирование	алкилирования	алкилировании	алкилирование	алкилированием											
+alkilirovanie_N	alkilirovanie	en	noun	alkilirovanie															
+allegretto_N	аллегретто	ru	noun	аллегретто	аллегретто	аллегретто	аллегретто	аллегретто											
+allegretto_N	allegretto	en	noun	allegretto															
+aloe_N	алоэ	ru	noun	алоэ	алоэ	алоэ	алоэ	алоэ											
+aloe_N	aloe	en	noun	aloe															
+alchba_N	алчба	ru	noun	алчба	алчбы	алчбе	алчбу	алчбою											
+alchba_N	alchba	en	noun	alchba															
