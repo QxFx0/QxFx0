@@ -12,10 +12,15 @@
   3. Regenerated the GF, Agda, and Haskell artifacts.
 
 ## Metrics
-* **RU unique lemmas:** 3587 -> 3608
-* **EN unique lemmas:** 139 -> 139
+* **RU unique lemmas (morphology quality metric):** 3587 -> 3608
+* **RU unique lemmas (TSV, current):** 2692
+* **EN unique lemmas (TSV):** 3813 -> 3813 (unchanged in RU recovery scope)
 * **Score:** 10.00 -> 10.00
 * **Dangerous collisions:** 8 -> 0
+
+> Note: `resources/morphology/lexicon_quality.json` tracks morphology-side lemma coverage
+> (`lemma_count=3608`), while `spec/gf/lexicon_bilingual.tsv` has larger multilingual rows and
+> a different uniqueness basis (`lang+lemma`), so these metrics are expected to differ.
 
 ## Core Gates (RUN_ID: `ci-20260516-042551`)
 * `cabal build all`: PASS
