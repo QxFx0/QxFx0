@@ -11,6 +11,7 @@ import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.VecProperties (vecPropertiesTests)
 import Test.Suite.EgoRead (egoReadTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
+import Test.Suite.SelfConatus (selfConatusTests)
 
 main :: IO ()
 main = do
@@ -22,6 +23,7 @@ main = do
         ++ lexiconTests
         ++ vecPropertiesTests
         ++ egoReadTests
+        ++ selfConatusTests
         ++ selfBlanketTests
         )
   if errors testCounts + failures testCounts > 0

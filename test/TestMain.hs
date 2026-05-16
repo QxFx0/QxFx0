@@ -15,11 +15,12 @@ import Test.Suite.LegalAdapter (legalAdapterTests)
 import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.RussianQuality (russianQualityTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
+import Test.Suite.SelfConatus (selfConatusTests)
 
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
- ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests)
+ ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
