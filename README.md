@@ -90,6 +90,7 @@ without exposing Bayesian as a separate PROD API.
 ## Quick Start
 
 ```bash
+python3 -m pip install -r requirements.txt
 cabal build all
 cabal test qxfx0-test
 bash scripts/check_architecture.sh
@@ -138,6 +139,17 @@ Endpoints:
 
 Operational semantics are documented in this repo and enforced by smoke gates.
 
+## Governance and Project Meta
+
+- Contribution guide: `CONTRIBUTING.md`
+- Code of conduct: `CODE_OF_CONDUCT.md`
+- Security policy: `SECURITY.md`
+- Governance model: `GOVERNANCE.md`
+- Roadmap: `ROADMAP.md`
+- Third-party notices: `THIRD_PARTY_NOTICES.md`
+- Changelog: `CHANGELOG.md`
+- Citation metadata: `CITATION.cff`
+
 ## Lexicon and GF Pipeline
 
 Canonical flow:
@@ -177,7 +189,7 @@ QxFx0 has experimental English support with the following characteristics:
 
 **Capabilities:**
 - GF-based English linearization via `QxFx0SyntaxEng`
-- Bilingual lexicon with ~2000 EN lemmas in `spec/gf/lexicon_bilingual.tsv`
+- Bilingual lexicon with 3000+ EN lemmas in `spec/gf/lexicon_bilingual.tsv`
 - Language routing: pure Latin input → English GF path (conservative policy)
 - EN-localized recovery surfaces for degraded/confidence scenarios
 - EN quality gate: `scripts/check_en_render_path.sh`

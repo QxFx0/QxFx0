@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: "QxFx0"
+message: "If you use QxFx0 in research, please cite this repository."
+type: software
+license: MIT
+repository-code: "https://github.com/QxFx0/QxFx0"
+url: "https://github.com/QxFx0/QxFx0"
+abstract: >
+  QxFx0 is a spec-first dialogue runtime that prioritizes typed routing and
+  deterministic contracts over unconstrained sampling.
+keywords:
+  - haskell
+  - dialogue
+  - grammar-framework
+  - symbolic-ai
+  - deterministic-runtime
+authors:
+  - family-names: "Gnilitski"
+    given-names: "Gleb"
