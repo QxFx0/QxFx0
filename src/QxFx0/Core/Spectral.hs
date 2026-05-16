@@ -31,6 +31,20 @@ import qualified Data.Text as T
 
 import QxFx0.Types.Observability (MeaningGraph(..), MeaningEdge(..), MeaningStateId)
 
+listAt :: [a] -> Int -> Maybe a
+listAt xs i
+  | i < 0 = Nothing
+  | otherwise =
+      case drop i xs of
+        (x:_) -> Just x
+        [] -> Nothing
+
+matAt :: [[Double]] -> Int -> Int -> Double
+matAt mat i j =
+  case listAt mat i of
+    Just row -> maybe 0.0 id (listAt row j)
+    Nothing -> 0.0
+
 data ClusterInsight
   = NoClusters
   | TwoClusters [Text] [Text] Double
@@ -73,12 +87,18 @@ buildDenseLaplacian mg =
         let neighbors = M.findWithDefault M.empty node adj
             degree = sum (M.elems neighbors)
         in [ if i == j then degree
-             else negate (M.findWithDefault 0.0 (nodes !! j) neighbors)
+             else
+               case listAt nodes j of
+                 Just neighborId -> negate (M.findWithDefault 0.0 neighborId neighbors)
+                 Nothing -> 0.0
            | let i = maybe (-1) id (M.lookup node (M.fromList (zip nodes [0..])))
            , j <- [0..n-1] ]
   in (map row nodes, nodes)
 
 type Vec = [Double]
+
+vecAt :: Vec -> Int -> Double
+vecAt v i = maybe 0.0 id (listAt v i)
 
 dot :: Vec -> Vec -> Double
 dot a b = sum (zipWith (*) a b)
@@ -105,26 +125,37 @@ jacobiSolve :: [[Double]] -> Vec -> Int -> Vec
 jacobiSolve mat rhs maxIter = go (replicate n 0.0) maxIter
   where
     n = length rhs
-    diag = [ mat !! i !! i | i <- [0..n-1] ]
+    diag = [ matAt mat i i | i <- [0..n-1] ]
     go _ 0 = replicate n 0.0
     go x k =
-      let xNew = [ let diagElem = diag !! i
-                   in if diagElem > 1e-15
-                      then (rhs !! i + sum [ mat !! i !! j * x !! j
-                                           | j <- [0..n-1], j /= i ])
-                           / diagElem
-                      else 0.0
-                 | i <- [0..n-1]
-                 ]
+      let xNew =
+            [ let diagElem = maybe 0.0 id (listAt diag i)
+              in if diagElem > 1e-15
+                   then
+                     ( vecAt rhs i
+                       + sum
+                           [ matAt mat i j * vecAt x j
+                           | j <- [0..n-1]
+                           , j /= i
+                           ]
+                     )
+                       / diagElem
+                   else 0.0
+            | i <- [0..n-1]
+            ]
       in go xNew (k - 1)
 
 inverseIteration :: [[Double]] -> Int -> (Double, Vec)
 inverseIteration mat maxIter =
   let n = length mat
-      diag = map (\i -> mat !! i !! i) [0..n-1]
+      diag = map (\i -> matAt mat i i) [0..n-1]
       shift = minimum diag * 0.99
-      shifted = [ [ mat !! i !! j - (if i == j then shift else 0.0)
-                  | j <- [0..n-1] ] | i <- [0..n-1] ]
+      shifted =
+        [ [ matAt mat i j - (if i == j then shift else 0.0)
+          | j <- [0..n-1]
+          ]
+        | i <- [0..n-1]
+        ]
       initVec = take n (cycle [1.0, -1.0])
       go v 0 = (rayleigh mat v, v)
       go v k =

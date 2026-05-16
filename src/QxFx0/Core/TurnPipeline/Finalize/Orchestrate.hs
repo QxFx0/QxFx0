@@ -42,6 +42,7 @@ finalizeTurnState pipelineIO systemState sessionId _requestId turnInput turnSign
           precommitResults
       commitPlan = planFinalizeCommit sessionId systemState turnSignals turnArtifacts precommitBundle
   commitResults <- resolveFinalizeCommit pipelineIO commitPlan
-  let turnResult = buildFinalizeTurnResult turnInput turnSignals turnArtifacts precommitBundle commitResults
+  let rendered = RenderedTurn turnInput turnSignals turnPlan turnArtifacts
+      turnResult = buildFinalizeTurnResult rendered precommitBundle commitResults
   resolveFinalizePostCommit (trMetrics turnResult)
   pure turnResult

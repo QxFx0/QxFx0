@@ -49,6 +49,29 @@ For auditors/reviewers, see:
 ## Architecture Snapshot
 
 - `src/QxFx0/**`: runtime core, routing, render pipeline, state, observability
+
+### Legal knowledge adapter (narrow, live stub)
+
+`QxFx0.Legal.Adapter` is **not** dead code: the render phase calls `retrieveLegalFact` when the
+knowledge topic matches a small in-memory legal corpus (WP3). Hits enrich the response with a
+traceable fragment plus a mandatory disclaimer (`legalDisclaimer`). Non-legal topics are unchanged.
+This is a **bounded stub**, not legal advice software — see `test/Test/Suite/LegalAdapter.hs`.
+
+### Datalog shadow (live shadow contour)
+
+Soufflé-backed shadow verification runs in the **route** phase (`TurnReqShadow` via
+`QxFx0.Bridge.Datalog`). When the executable is missing, the pipeline records `ShadowUnavailable`
+and continues (no hidden retry). Divergence severity feeds legitimacy scoring and typed local
+recovery (`Recovery*` causes in the turn trace). Shadow is a **parallel check**, not the primary
+family selector — cascade + thresholds remain authoritative for PROD routing.
+
+### Intuition and experimental Bayesian nudge
+
+Production flashes use `QxFx0.Core.Intuition` (threshold posteriors). A light **experimental**
+belief nudge from `Core.Bayesian` (`other-modules`) is folded into `checkIntuitionWithInput` via
+`bayesianBeliefNudge` — it slightly adjusts resonance/tension before the standard posterior update,
+without exposing Bayesian as a separate PROD API.
+
 - `app/**`: CLI surfaces
 - `scripts/**`: gates, checks, release orchestration, artifact generators
 - `spec/sql/**`: schema + lexicon seeds + contract tables

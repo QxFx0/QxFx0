@@ -3,10 +3,12 @@
 module QxFx0.Core.Observability
   ( RequestId
   , PhaseTiming(..)
+  , ThresholdProbe(..)
   , TurnMetrics(..)
   , emptyTurnMetrics
   , recordPhase
   , addPhase
+  , recordThresholdProbe
   , renderMetricsLog
   , logMetrics
   , hPutStrLnWarning
@@ -27,10 +29,17 @@ data PhaseTiming = PhaseTiming
   , ptEnd   :: !UTCTime
   }
 
+data ThresholdProbe = ThresholdProbe
+  { thrSignal    :: !Text
+  , thrThreshold :: !Double
+  , thrFired     :: !Bool
+  }
+
 data TurnMetrics = TurnMetrics
   { tmRequestId    :: !RequestId
   , tmSessionId    :: !Text
   , tmPhases       :: ![PhaseTiming]
+  , tmThresholds   :: ![ThresholdProbe]
   , tmTurnCount    :: !Int
   , tmFamily       :: !Text
   , tmEmbeddingSource :: !Text
@@ -45,6 +54,7 @@ emptyTurnMetrics rid sid = TurnMetrics
   { tmRequestId    = rid
   , tmSessionId    = sid
   , tmPhases       = []
+  , tmThresholds   = []
   , tmTurnCount    = 0
   , tmFamily       = ""
   , tmEmbeddingSource = ""
@@ -60,6 +70,13 @@ recordPhase = PhaseTiming
 addPhase :: PhaseTiming -> TurnMetrics -> TurnMetrics
 addPhase pt tm = tm { tmPhases = pt : tmPhases tm }
 
+recordThresholdProbe :: Text -> Double -> Bool -> TurnMetrics -> TurnMetrics
+recordThresholdProbe signal threshold fired tm =
+  tm
+    { tmThresholds =
+        ThresholdProbe signal threshold fired : tmThresholds tm
+    }
+
 renderMetricsLog :: TurnMetrics -> Text
 renderMetricsLog TurnMetrics{..} = T.intercalate " "
   [ "qxfx0_turn"
@@ -72,11 +89,20 @@ renderMetricsLog TurnMetrics{..} = T.intercalate " "
   , "safety=" <> tmSafetyStatus
   , "api_healthy=" <> (if tmApiHealthy then "1" else "0")
   , "phases=" <> T.intercalate "," (map renderPhaseTiming tmPhases)
+  , "thresholds=" <> T.intercalate "," (map renderThresholdProbe tmThresholds)
   , "total_ms=" <> textShow (totalDurationMs tmPhases)
   , case tmError of
       Nothing -> ""
       Just e  -> "error=" <> e
   ]
+
+renderThresholdProbe :: ThresholdProbe -> Text
+renderThresholdProbe ThresholdProbe{..} =
+  thrSignal
+    <> ":"
+    <> textShow thrThreshold
+    <> ":"
+    <> (if thrFired then "1" else "0")
 
 renderPhaseTiming :: PhaseTiming -> Text
 renderPhaseTiming PhaseTiming{..} = ptPhase <> ":" <> textShow (phaseDurationMs ptStart ptEnd) <> "ms"

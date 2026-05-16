@@ -1000,9 +1000,12 @@ testParserLowConfidenceUsesDistinguishCandidates = TestCase $
             }
         tp =
           tp0
-            { tpPreShadowFamily = CMGround
+            { tpRouting =
+                (tpRouting tp0)
+                  { rdFamily = CMGround
+                  , rdStrategyFamily = Just CMDistinguish
+                  }
             , tpFinalFamily = CMDescribe
-            , tpStrategyFamily = Just CMDistinguish
             , tpShadowStatus = ShadowMatch
             , tpShadowDivergence = False
             }
@@ -1108,8 +1111,9 @@ testProtocolInterpreter request =
     TurnReqConsciousness semanticInput humanTheta resonance -> do
       let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
       pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
-    TurnReqIntuition resonance tension turnNumber -> do
-      let (mFlash, intuitionState) = Intuition.checkIntuition resonance tension turnNumber Intuition.defaultIntuitiveState
+    TurnReqIntuition inputText resonance tension turnNumber -> do
+      let (mFlash, intuitionState) =
+            Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
       pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)
     TurnReqApiHealth ->
       pure (TurnResApiHealth True)
@@ -1152,7 +1156,7 @@ trackedPrepareInterpreter activeRef maxRef request =
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
     TurnReqConsciousness _ _ _ ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
-    TurnReqIntuition _ _ _ ->
+    TurnReqIntuition _ _ _ _ ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
     TurnReqApiHealth ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)

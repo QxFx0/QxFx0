@@ -13,6 +13,8 @@ module QxFx0.Core.Intuition
   , updateLongPosterior
   , flashThreshold
   , checkIntuition
+  , checkIntuitionWithInput
+  , bayesianBeliefNudge
   , triggerToGapDomains
   , intuitionSignalStrength
   , effectivePosterior
@@ -74,6 +76,9 @@ import QxFx0.Types.Intuition
   , IntuitiveFlash(..)
   )
 import QxFx0.Types.Vec (CoreVec(..))
+import QxFx0.Types.SemanticConfig (SemanticConfig(..), defaultSemanticConfig)
+import QxFx0.Types.Bayesian (initialBeliefs)
+import QxFx0.Core.Bayesian (bayesianUpdateFromText, maxBelief)
 import Text.Printf (printf)
 
 flashThreshold :: Double
@@ -120,6 +125,17 @@ qxfx0CoreVec =
     intuitionCoreVecAutonomy
     intuitionCoreVecDirectiveness
     intuitionCoreVecSteadiness
+
+bayesianBeliefNudge :: SemanticConfig -> Text -> Double
+bayesianBeliefNudge cfg raw =
+  clamp01 (maxBelief (bayesianUpdateFromText cfg initialBeliefs raw) * 0.08)
+
+checkIntuitionWithInput :: Text -> Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
+checkIntuitionWithInput raw resonance tension turnNumber state =
+  let nudge = bayesianBeliefNudge defaultSemanticConfig raw
+      adjustedResonance = clamp01 (resonance + nudge * 0.25)
+      adjustedTension = clamp01 (tension + nudge * 0.15)
+  in checkIntuition adjustedResonance adjustedTension turnNumber state
 
 checkIntuition :: Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
 checkIntuition resonance tension turnNumber state =

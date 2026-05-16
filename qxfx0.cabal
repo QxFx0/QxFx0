@@ -133,7 +133,6 @@ library
     QxFx0.Bridge.TxStatement
 
     QxFx0.CLI.Parser
-    QxFx0.Semantic
     QxFx0.Semantic.MeaningAtoms
     QxFx0.Semantic.MeaningAtom
     QxFx0.Semantic.MeaningAssembly
@@ -355,6 +354,8 @@ common test-common
     Test.Suite.LegalAdapter
     Test.Suite.RenderDialogueCoverage
     Test.Suite.RussianQuality
+    Test.Suite.VecProperties
+    Test.Suite.EgoRead
 
 test-suite qxfx0-test-unit
   import:        test-common

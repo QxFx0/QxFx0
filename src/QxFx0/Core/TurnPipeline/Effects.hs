@@ -37,7 +37,7 @@ data TurnEffectRequest
   = TurnReqEmbedding !Text
   | TurnReqNixGuard !Text !Double !Double
   | TurnReqConsciousness !SemanticInput !Double !Double
-  | TurnReqIntuition !Double !Double !Int
+  | TurnReqIntuition !Text !Double !Double !Int
   | TurnReqApiHealth
   | TurnReqShadow !CanonicalMoveFamily !IllocutionaryForce ![AtomTag]
   | TurnReqAgdaVerify
@@ -91,7 +91,7 @@ data PrepareEffectRequest
   = PrepareReqEmbedding !Text
   | PrepareReqNixGuard !Text !Double !Double
   | PrepareReqConsciousness !SemanticInput !Double !Double
-  | PrepareReqIntuition !Double !Double !Int
+  | PrepareReqIntuition !Text !Double !Double !Int
   | PrepareReqApiHealth
   deriving stock (Eq, Show)
 
@@ -153,7 +153,8 @@ buildPrepareEffectPlan ss input =
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
       , pepConsciousnessRequest = PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance
-      , pepIntuitionRequest = PrepareReqIntuition resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1)
+      , pepIntuitionRequest =
+          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1)
       , pepApiHealthRequest = PrepareReqApiHealth
       }
   where

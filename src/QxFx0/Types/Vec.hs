@@ -89,4 +89,3 @@ clampVecNorm maxNorm v
   | otherwise = vecScale (maxNorm / normV) v
   where
     normV = vecNorm v
-{-# LANGUAGE OverloadedStrings #-}

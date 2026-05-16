@@ -6,7 +6,20 @@ module QxFx0.Core.TurnPipeline.Types
   , TurnPlan(..)
   , TurnArtifacts(..)
   , TurnResult(..)
+  , RenderedTurn(..)
   , RoutingDecision(..)
+  , turnResultOutput
+  , tpNewEgo
+  , tpIdentitySignal
+  , tpGuardReport
+  , tpSemanticAnchor
+  , tpRenderStrategy
+  , tpUpdatedOrbital
+  , tpFromMs
+  , tpToMs
+  , tpStrategyFamily
+  , tpPreShadowFamily
+  , tpPrincipledModePair
   ) where
 
 import QxFx0.Types
@@ -72,20 +85,11 @@ data TurnSignals = TurnSignals
   , tsApiHealthy :: !Bool
   }
 
+{-| Route-phase plan: cascade snapshot plus shadow/legitimacy/render derivations. -}
 data TurnPlan = TurnPlan
-  { tpFamily :: !CanonicalMoveFamily
-  , tpNewEgo :: !EgoState
-  , tpIdentitySignal :: !IdentitySignal
-  , tpGuardReport :: !IdentityGuardReport
-  , tpSemanticAnchor :: !(Maybe SemanticAnchor)
-  , tpRenderStrategy :: !ResponseStrategy
+  { tpRouting :: !RoutingDecision
+  , tpFamily :: !CanonicalMoveFamily
   , tpRenderStyle :: !Text
-  , tpPrincipledMode :: !(Maybe (PressureSignal, PrincipledMode))
-  , tpUpdatedOrbital :: !OrbitalMemory
-  , tpFromMs :: !MeaningState
-  , tpToMs :: !MeaningState
-  , tpStrategyFamily :: !(Maybe CanonicalMoveFamily)
-  , tpPreShadowFamily :: !CanonicalMoveFamily
   , tpRmpAfterLegit :: !ResponseMeaningPlan
   , tpRcpFinal :: !ResponseContentPlan
   , tpFinalFamily :: !CanonicalMoveFamily
@@ -103,6 +107,42 @@ data TurnPlan = TurnPlan
   , tpShadowMessage :: !Text
   , tpMetrics :: !TurnMetrics
   }
+
+tpNewEgo :: TurnPlan -> EgoState
+tpNewEgo tp = rdNewEgo (tpRouting tp)
+
+tpIdentitySignal :: TurnPlan -> IdentitySignal
+tpIdentitySignal tp = rdIdentitySignal (tpRouting tp)
+
+tpGuardReport :: TurnPlan -> IdentityGuardReport
+tpGuardReport tp = rdGuardReport (tpRouting tp)
+
+tpSemanticAnchor :: TurnPlan -> Maybe SemanticAnchor
+tpSemanticAnchor tp = rdSemanticAnchor (tpRouting tp)
+
+tpRenderStrategy :: TurnPlan -> ResponseStrategy
+tpRenderStrategy tp = rdRenderStrategy (tpRouting tp)
+
+tpUpdatedOrbital :: TurnPlan -> OrbitalMemory
+tpUpdatedOrbital tp = rdUpdatedOrbital (tpRouting tp)
+
+tpFromMs :: TurnPlan -> MeaningState
+tpFromMs tp = rdFromMs (tpRouting tp)
+
+tpToMs :: TurnPlan -> MeaningState
+tpToMs tp = rdToMs (tpRouting tp)
+
+tpStrategyFamily :: TurnPlan -> Maybe CanonicalMoveFamily
+tpStrategyFamily tp = rdStrategyFamily (tpRouting tp)
+
+tpPreShadowFamily :: TurnPlan -> CanonicalMoveFamily
+tpPreShadowFamily tp = rdFamily (tpRouting tp)
+
+tpPrincipledModePair :: TurnPlan -> Maybe (PressureSignal, PrincipledMode)
+tpPrincipledModePair tp =
+  case (rdPressure (tpRouting tp), rdPrincipledMode (tpRouting tp)) of
+    (Just p, Just pm) -> Just (p, pm)
+    _ -> Nothing
 
 data TurnArtifacts = TurnArtifacts
   { taPreSafetyRendered :: !Text
@@ -122,8 +162,14 @@ data TurnArtifacts = TurnArtifacts
   , taKnowledgeSource :: !(Maybe Text)
   }
 
+data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts
+
 data TurnResult = TurnResult
-  { trNextSs :: !SystemState
+  { trRendered :: !RenderedTurn
+  , trNextSs :: !SystemState
   , trOutput :: !Text
   , trMetrics :: !TurnMetrics
   }
+
+turnResultOutput :: TurnResult -> Text
+turnResultOutput = trOutput

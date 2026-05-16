@@ -35,6 +35,7 @@ import QxFx0.ExceptionPolicy
   , tryAsync
   )
 import QxFx0.Types
+import QxFx0.Core.TurnPipeline.Types (RenderedTurn(..))
 
 planFinalizeCommit :: Text -> SystemState -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
 planFinalizeCommit sessionId previousState turnSignals turnArtifacts bundle =
@@ -113,9 +114,10 @@ resolveFinalizeCommit pipelineIO commitPlan = do
       , fcrSaveEnd = saveEnd
       }
 
-buildFinalizeTurnResult :: TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitResults -> TurnResult
-buildFinalizeTurnResult turnInput turnSignals turnArtifacts bundle commitResults =
-  let savedState = fcrSavedSs commitResults
+buildFinalizeTurnResult :: RenderedTurn -> FinalizePrecommitBundle -> FinalizeCommitResults -> TurnResult
+buildFinalizeTurnResult rendered bundle commitResults =
+  let RenderedTurn turnInput turnSignals _turnPlan turnArtifacts = rendered
+      savedState = fcrSavedSs commitResults
       metricsFinal =
         finalizeMetrics
           turnInput
@@ -128,7 +130,8 @@ buildFinalizeTurnResult turnInput turnSignals turnArtifacts bundle commitResults
           (fcrSaveStart commitResults)
           (fcrSaveEnd commitResults)
    in TurnResult
-        { trNextSs = savedState
+        { trRendered = rendered
+        , trNextSs = savedState
         , trOutput = fpbOutput bundle
         , trMetrics = metricsFinal
         }

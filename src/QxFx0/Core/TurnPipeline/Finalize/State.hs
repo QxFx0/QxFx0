@@ -175,7 +175,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpParserMode = ParserFrameV1
       , tqpParserConfidence = parserConfidence
       , tqpParserErrors = parserErrors
-      , tqpPlannerMode = case tpPrincipledMode tp of Just _ -> PrincipledPlanner; Nothing -> DefaultPlanner
+      , tqpPlannerMode = case tpPrincipledModePair tp of Just _ -> PrincipledPlanner; Nothing -> DefaultPlanner
       , tqpPlannerDecision = tpFamily tp
       , tqpAtomRegister = asRegister (tiAtomSet ti)
       , tqpAtomLoad = asLoad (tiAtomSet ti)

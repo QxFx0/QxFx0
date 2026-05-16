@@ -126,7 +126,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       rcpFinal = tpRcpFinal tp
       semanticAnchor = tpSemanticAnchor tp
       (mPressure, principledModeResult) =
-        case tpPrincipledMode tp of
+        case tpPrincipledModePair tp of
           Just (p, pmr) -> (Just p, Just pmr)
           Nothing -> (Nothing, Nothing)
       identityClaims = integrateIdentityClaims (ssIdentityClaims ss) (tpFamily tp) bestTopic

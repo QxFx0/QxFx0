@@ -74,11 +74,13 @@ import QxFx0.Core.TurnPipeline.Effects
   )
 import QxFx0.Core.TurnPipeline.Types
   ( RoutingDecision(..)
+  , RenderedTurn(..)
   , TurnArtifacts(..)
   , TurnInput(..)
   , TurnPlan(..)
   , TurnResult(..)
   , TurnSignals(..)
+  , turnResultOutput
   )
 import QxFx0.Core.Observability (TurnMetrics)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
@@ -111,7 +113,6 @@ import Data.Sequence (Seq)
 
 data PreparedTurn = PreparedTurn !TurnInput !TurnSignals
 data PlannedTurn = PlannedTurn !TurnInput !TurnSignals !TurnPlan
-data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts
 
 planPrepareEffects :: SystemState -> Text -> PrepareEffectPlan
 planPrepareEffects = buildPrepareEffectPlan
@@ -161,7 +162,7 @@ planFinalizeCommit = Finalize.planFinalizeCommit
 resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
 resolveFinalizeCommit = Finalize.resolveFinalizeCommit
 
-buildFinalizeTurnResult :: TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitResults -> TurnResult
+buildFinalizeTurnResult :: RenderedTurn -> FinalizePrecommitBundle -> FinalizeCommitResults -> TurnResult
 buildFinalizeTurnResult = Finalize.buildFinalizeTurnResult
 
 resolveFinalizePostCommit :: TurnMetrics -> IO ()
@@ -196,6 +197,6 @@ finalizeTurn pio ss sessionId _requestId (RenderedTurn ti ts tp ta) = do
   let precommitBundle = Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
       commitPlan = Finalize.planFinalizeCommit sessionId ss ts ta precommitBundle
   commitResults <- Finalize.resolveFinalizeCommit pio commitPlan
-  let turnResult = Finalize.buildFinalizeTurnResult ti ts ta precommitBundle commitResults
+  let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults
   Finalize.resolveFinalizePostCommit (trMetrics turnResult)
   pure turnResult

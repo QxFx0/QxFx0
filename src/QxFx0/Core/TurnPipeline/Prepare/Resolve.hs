@@ -152,8 +152,8 @@ prepareRequestToTurnEffect request =
       Just (TurnReqNixGuard concept currentLoad atomLoad)
     PrepareReqConsciousness semanticInput humanTheta resonance ->
       Just (TurnReqConsciousness semanticInput humanTheta resonance)
-    PrepareReqIntuition resonance tension turnNumber ->
-      Just (TurnReqIntuition resonance tension turnNumber)
+    PrepareReqIntuition inputText resonance tension turnNumber ->
+      Just (TurnReqIntuition inputText resonance tension turnNumber)
     PrepareReqApiHealth ->
       Just TurnReqApiHealth
 

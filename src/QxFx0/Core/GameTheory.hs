@@ -24,6 +24,8 @@ import qualified Data.Map.Strict as M
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 
+import Data.Maybe (listToMaybe)
+
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 import QxFx0.Types.State.Discourse (EngagementLevel(..), DialogPhase(..))
 import QxFx0.Policy.SemanticScoring
@@ -160,18 +162,30 @@ payoffMatrix gs =
 
 {-| Pure-strategy saddle-point (Nash equilibrium) for a zero-sum game.
   A saddle point exists when max_i min_j a_{ij} = min_j max_i a_{ij}. -}
+matrixAt :: [[Double]] -> Int -> Int -> Double
+matrixAt mat i j =
+  case drop i mat of
+    (row:_) ->
+      case drop j row of
+        (x:_) -> x
+        _ -> 0.0
+    _ -> 0.0
+
+familyAt :: Int -> Maybe CanonicalMoveFamily
+familyAt i = listToMaybe (drop i families)
+
 nashEquilibrium :: [[Double]] -> Maybe CanonicalMoveFamily
 nashEquilibrium matrix =
   let n = length families
       rowMins = map minimum matrix
-      colMaxs = [maximum [matrix !! i !! j | i <- [0..n-1]] | j <- [0..n-1]]
+      colMaxs = [maximum [matrixAt matrix i j | i <- [0..n-1]] | j <- [0..n-1]]
       maxMin = maximum rowMins
       minMax = minimum colMaxs
       eps = 1e-6
   in if abs (maxMin - minMax) < eps
-     then case filter (\(i,_) -> abs (rowMins !! i - maxMin) < eps) (zip [0..] rowMins) of
-          (i,_):_ -> Just (families !! i)
-          []      -> Nothing
+     then case filter (\(i, rowMin) -> abs (rowMin - maxMin) < eps) (zip [0..] rowMins) of
+          (i, _):_ -> familyAt i
+          [] -> Nothing
      else Nothing
 
 {-| Mixed-strategy Nash equilibrium via proper LP simplex solver. -}

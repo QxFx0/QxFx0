@@ -29,7 +29,7 @@ import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProj
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoop)
-import QxFx0.Core.Intuition (checkIntuition, effectivePosterior)
+import QxFx0.Core.Intuition (checkIntuitionWithInput, effectivePosterior)
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
@@ -73,9 +73,10 @@ handleTurnEffect ctx request =
           currentNarrative = clLastNarrative nextLoop
           narrativeFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
-    TurnReqIntuition resonance tension turnNumber -> do
+    TurnReqIntuition inputText resonance tension turnNumber -> do
       intuitive <- readIntuition ctx
-      let (mFlash, intuitionState) = checkIntuition resonance tension turnNumber intuitive
+      let (mFlash, intuitionState) =
+            checkIntuitionWithInput inputText resonance tension turnNumber intuitive
       pure (TurnResIntuition mFlash (effectivePosterior intuitionState) intuitionState)
     TurnReqCommitRuntimeState previewLoop previewIntuition observation -> do
       commitRuntimeTurnState ctx previewLoop previewIntuition observation

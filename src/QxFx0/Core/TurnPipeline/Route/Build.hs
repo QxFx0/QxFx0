@@ -7,7 +7,8 @@ module QxFx0.Core.TurnPipeline.Route.Build
   , renderTurnOutput
   ) where
 
-import QxFx0.Core.Intuition (IntuitiveFlash(..))
+import QxFx0.Core.Intuition (flashThreshold)
+import QxFx0.Core.Observability (recordThresholdProbe)
 import QxFx0.Core.Legitimacy (legitimacyRecoveryBonus)
 import QxFx0.Core.PipelineIO
   ( PipelineIO
@@ -48,7 +49,11 @@ import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily)
 import QxFx0.Types
-import QxFx0.Types.Thresholds (agdaVerificationPenalty)
+import QxFx0.Types.Thresholds
+  ( agdaVerificationPenalty
+  , legitimacyPassThreshold
+  , parserLowConfidenceThreshold
+  )
 
 buildRouteTurnPlan :: ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
@@ -110,23 +115,19 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
           then rcpFinal0
           else (buildRCP finalFamily rmpAfterLegit) {rcpStyle = rcpStyle rcpFinal0}
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
+      metricsWithThresholds =
+        recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
+          . recordThresholdProbe "legitimacy_pass" legitimacyPassThreshold
+              (legitScore >= legitimacyPassThreshold)
+          . recordThresholdProbe "parser_low_confidence" parserLowConfidenceThreshold
+              (ipfConfidence (tiFrame ti) < parserLowConfidenceThreshold)
+          . recordThresholdProbe "intuition_flash" flashThreshold
+              (intuitPosterior >= flashThreshold)
+          $ tiMetrics ti
    in TurnPlan
-        { tpFamily = family
-        , tpNewEgo = newEgo
-        , tpIdentitySignal = rdIdentitySignal rd
-        , tpGuardReport = rdGuardReport rd
-        , tpSemanticAnchor = rdSemanticAnchor rd
-        , tpRenderStrategy = renderStrategy
+        { tpRouting = rd
+        , tpFamily = family
         , tpRenderStyle = renderStyleText renderStyle
-        , tpPrincipledMode =
-            case (rdPressure rd, rdPrincipledMode rd) of
-              (Just p, Just pmr) -> Just (p, pmr)
-              _ -> Nothing
-        , tpUpdatedOrbital = rdUpdatedOrbital rd
-        , tpFromMs = rdFromMs rd
-        , tpToMs = rdToMs rd
-        , tpStrategyFamily = rdStrategyFamily rd
-        , tpPreShadowFamily = rdFamily rd
         , tpRmpAfterLegit = rmpAfterLegit
         , tpRcpFinal = rcpFinal
         , tpFinalFamily = finalFamily
@@ -142,7 +143,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
         , tpShadowFamily = scShadowFamily sc
         , tpShadowForce = scShadowForce sc
         , tpShadowMessage = scShadowMessage sc
-        , tpMetrics = tiMetrics ti
+        , tpMetrics = metricsWithThresholds
         }
 
 routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO TurnPlan

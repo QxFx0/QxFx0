@@ -86,7 +86,7 @@ defaultTestInterpreter request =
           nextNarrative = clLastNarrative nextLoop
           nextFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop nextNarrative nextFragment)
-    TurnReqIntuition resonance tension turnNumber -> do
+    TurnReqIntuition _inputText resonance tension turnNumber -> do
       let (mFlash, intuitive') = checkIntuition resonance tension turnNumber defaultIntuitiveState
       pure (TurnResIntuition mFlash (effectivePosterior intuitive') intuitive')
     TurnReqApiHealth ->

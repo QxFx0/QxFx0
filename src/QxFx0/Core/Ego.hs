@@ -4,6 +4,7 @@
 {-| Ego-state update rules and trend estimation across dialogue turns. -}
 module QxFx0.Core.Ego
   ( updateEgoFromTurn
+  , readAgencyFromHistory
   ) where
 
 import QxFx0.Types
@@ -36,6 +37,11 @@ import QxFx0.Policy.Contracts (missionTexts)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Types.Text (textShow)
+import Text.Read (readMaybe)
+
+readAgencyFromHistory :: Text -> Double
+readAgencyFromHistory t =
+  maybe 0.0 id (readMaybe (T.unpack t))
 
 updateEgoFromTurn :: EgoState -> CanonicalMoveFamily -> Double -> EgoState
 updateEgoFromTurn ego fam tensionDelta =
@@ -89,7 +95,7 @@ detectTrend vals =
 updateSubjectDynamics :: SubjectDynamics -> Double -> SubjectDynamics
 updateSubjectDynamics sd agency =
   let histTexts = sdSemanticHistory sd
-      histDoubles = map safeRead histTexts
+      histDoubles = map readAgencyFromHistory histTexts
       newHistDoubles = agency : take egoHistoryRetention histDoubles
       newHistTexts = take egoHistoryLimit $ map (T.pack . show) newHistDoubles
       trend = detectTrend newHistDoubles
@@ -99,7 +105,3 @@ updateSubjectDynamics sd agency =
       , sdSemanticHistory = newHistTexts
       , sdLastShiftTurn = shiftTurn
       }
-  where
-    safeRead t = case reads (T.unpack t) of
-      [(d, "")] -> d
-      _ -> 0.0
