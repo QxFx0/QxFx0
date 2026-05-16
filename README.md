@@ -16,8 +16,13 @@ If you need deterministic dialogue infrastructure with strict operational semant
 
 ## What Is Implemented
 
-- Typed semantic routing (`CanonicalMoveFamily`, `IllocutionaryForce`)
+- Typed semantic routing (`CanonicalMoveFamily`, `IllocutionaryForce`) via `Semantic.Logic`
+  and a guarded cascade (parser lock, meaning-graph strategy hints, principled pressure,
+  threshold intuition flashes, identity/guard gating)
 - Multi-layer runtime: Haskell core + SQLite persistence + GF surface generation
+- Experimental scientific modules (`Core.GameTheory`, `Core.Spectral`, `Core.Bayesian`)
+  compile as `other-modules` for the extended contour; they are not part of the PROD
+  turn pipeline
 - Constitutional readiness contour (Nix policy checks)
 - CLI runtime and HTTP sidecar with live-session continuity contract
 - Gate contract for release decisions (`scripts/ci_gate_contract.sh`)

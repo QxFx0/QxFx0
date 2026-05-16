@@ -111,7 +111,7 @@ interactiveMain sessionId =
   Runtime.withBootstrappedSession False sessionId $ \session -> do
     T.putStrLn ""
     T.putStrLn "QxFx0 - Flagship Philosophical Dialogue System"
-    T.putStrLn "Consciousness kernel + Bayesian intuition + Meaning graph + Dream rewiring"
+    T.putStrLn "Semantic.Logic routing + threshold intuition + meaning graph + dream rewiring"
     T.putStrLn "Commands: :help, :state, :dialogue, :semantic, :quit"
     T.putStrLn $ "Session: " <> Runtime.sessSessionId session
     T.putStrLn $ "State: " <> textShow (Runtime.sessStateOrigin session)

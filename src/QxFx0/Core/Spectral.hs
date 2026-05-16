@@ -1,6 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-|
+Experimental spectral analysis via inverse iteration for the Fiedler vector.
+
+Not wired into the production turn pipeline. Topic routing in production uses
+Dijkstra geodesics ('QxFx0.Core.TopicTransition'). Kept for extended scientific
+contour experiments only.
+
 Pure-Haskell spectral analysis via inverse iteration for the Fiedler vector.
 No external C dependencies (hmatrix/BLAS/LAPACK removed).
 

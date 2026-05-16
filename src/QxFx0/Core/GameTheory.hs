@@ -2,7 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-|
+Experimental zero-sum routing game (payoff matrix, Nash / LP mixed strategy).
 
+Not wired into the production turn pipeline. Runtime family selection uses
+'Semantic.Logic' and the turn-routing cascade. Kept for extended scientific
+contour experiments only.
+-}
 module QxFx0.Core.GameTheory
   ( GameState(..)
   , utility
@@ -36,7 +42,7 @@ import QxFx0.Policy.SemanticScoring
   , semanticFallbackNextStepWeight
   , semanticSpecialDescribeWeight
   )
-import QxFx0.Types.Thresholds ( depthCostDeepen, depthCostHypothesis, depthCostDefine
+import QxFx0.Types.Thresholds.GameTheory ( depthCostDeepen, depthCostHypothesis, depthCostDefine
                          , depthCostDistinguish, depthCostDefault
                          , engagementPenaltyMedium, engagementPenaltyLow
                          , phaseMultiplierOpening, phaseMultiplierExploring, phaseMultiplierDeep, phaseMultiplierClosing

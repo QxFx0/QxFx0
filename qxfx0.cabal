@@ -2,11 +2,13 @@ cabal-version: 3.4
 name:          qxfx0
 version:       0.1.0.0
 synopsis:      QxFx0 Flagship Philosophical Dialogue Thinking System
-description:   A synthesis of five experiments combining Agda, Nix, SQL, and Haskell
-               for a Russian-language philosophical dialogue thinking system with
-               14 CanonicalMoveFamily types, R5 verdict routing, evidence graphs,
-               consciousness kernel, Bayesian intuition, and meaning graph with
-               dream rewiring.
+description:   Deterministic Russian philosophical dialogue runtime: typed
+               CanonicalMoveFamily routing via Semantic.Logic and a guarded
+               cascade (intuition thresholds, meaning graph, consciousness),
+               GF-constrained surface generation, and gate-driven release.
+               Experimental modules (game-theory LP, spectral clustering,
+               discrete belief update) compile as other-modules for the
+               extended scientific contour only.
 category:      AI
 author:        QxFx Research
 maintainer:    QxFx Research <qxfx@research.example>
@@ -64,8 +66,6 @@ library
     QxFx0.Types.State
     QxFx0.Types.State.Discourse
     QxFx0.Types.Thresholds
-    QxFx0.Types.Thresholds.GameTheory
-    QxFx0.Types.Bayesian
     QxFx0.Types.Orbital
     QxFx0.Types.IdentityGuard
     QxFx0.Types.ShadowDivergence
@@ -86,7 +86,6 @@ library
     QxFx0.Policy.Templates
     QxFx0.Resources
     QxFx0.Core
-    QxFx0.Core.Vec
     QxFx0.Core.PipelineIO
     QxFx0.Core.Guard
     QxFx0.Core.Consciousness
@@ -96,10 +95,6 @@ library
     QxFx0.Core.MeaningGraph
     QxFx0.Core.DreamDynamics
     QxFx0.Core.TopicTransition
-    QxFx0.Core.GameTheory
-    QxFx0.Core.GameTheory.LP
-    QxFx0.Core.Bayesian
-    QxFx0.Core.Spectral
 
     QxFx0.Core.BackgroundProcess
     QxFx0.Runtime
@@ -166,6 +161,13 @@ library
       QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
+    QxFx0.Core.GameTheory
+    QxFx0.Core.GameTheory.LP
+    QxFx0.Core.Bayesian
+    QxFx0.Core.Spectral
+    QxFx0.Core.Vec
+    QxFx0.Types.Bayesian
+    QxFx0.Types.Thresholds.GameTheory
     QxFx0.Types.Decision.Enums
     QxFx0.Types.Decision.Enums.Support
     QxFx0.Types.Decision.Enums.Conversation

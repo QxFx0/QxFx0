@@ -230,6 +230,80 @@ PY
   fail_violation "acceptance gates/docs drifted from local-recovery architecture"
 fi
 
+echo "  [11] Exposed QxFx0.Core.* modules must be reachable from Runtime/TurnPipeline..."
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+cabal = (root / "qxfx0.cabal").read_text(encoding="utf-8")
+
+exposed_core: list[str] = []
+in_library = False
+in_exposed = False
+for line in cabal.splitlines():
+    if line.startswith("library"):
+        in_library = True
+    if in_library and line.startswith("executable"):
+        break
+    if in_library and line.strip() == "exposed-modules:":
+        in_exposed = True
+        continue
+    if in_library and in_exposed:
+        stripped = line.strip()
+        if stripped == "other-modules:" or stripped.startswith("hs-source-dirs:"):
+            in_exposed = False
+            continue
+        if stripped.startswith("QxFx0.Core."):
+            exposed_core.append(stripped)
+
+import_re = re.compile(
+    r"^\s*import\s+(?:qualified\s+)?(QxFx0\.(?:Core|Runtime)[A-Za-z0-9.]*)",
+    re.MULTILINE,
+)
+
+def module_path(mod: str) -> pathlib.Path:
+    return root / "src" / (mod.replace("QxFx0.", "QxFx0/").replace(".", "/") + ".hs")
+
+roots = [
+    * (root / "src/QxFx0/Runtime").rglob("*.hs"),
+    * (root / "src/QxFx0/Core/TurnPipeline").rglob("*.hs"),
+]
+reachable: set[str] = set()
+visited_files: set[pathlib.Path] = set()
+queue = [p for p in roots if p.is_file()]
+
+while queue:
+    path = queue.pop()
+    if path in visited_files:
+        continue
+    visited_files.add(path)
+    text = path.read_text(encoding="utf-8")
+    for mod in import_re.findall(text):
+        if not mod.startswith("QxFx0.Core."):
+            continue
+        reachable.add(mod)
+        mod_path = module_path(mod)
+        if mod_path.is_file() and mod_path not in visited_files:
+            queue.append(mod_path)
+
+def allowed(mod: str) -> bool:
+    if mod == "QxFx0.Core":
+        return True
+    if mod == "QxFx0.Core.TurnPipeline" or mod.startswith("QxFx0.Core.TurnPipeline."):
+        return True
+    return mod in reachable
+
+orphans = [m for m in sorted(exposed_core) if not allowed(m)]
+if orphans:
+    for mod in orphans:
+        print(f"orphan exposed core module: {mod}", file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "exposed Core module not reachable from Runtime/TurnPipeline"
+fi
+
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"
   exit 1

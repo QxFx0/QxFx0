@@ -15,7 +15,6 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Types.Observability (GeodesicPlan(..), MeaningGraph(..), MeaningEdge(..), MeaningStateId)
-import QxFx0.Core.DreamDynamics (buildTransitionMatrix)
 
 buildAdjacency :: MeaningGraph -> Map MeaningStateId (Map MeaningStateId Double)
 buildAdjacency mg =

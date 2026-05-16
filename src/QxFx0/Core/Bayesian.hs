@@ -1,26 +1,20 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-|
+Experimental discrete belief update over hidden user intents (lemma likelihoods).
 
+Not wired into the production turn pipeline. Runtime routing uses
+'Semantic.Logic' for family selection and 'QxFx0.Core.Intuition' for
+threshold-based flash hints. See spec/BayesianCoverage.agda in the extended
+scientific contour.
+-}
 module QxFx0.Core.Bayesian
   ( bayesianUpdate
   , bayesianUpdateFromText
   , detectInsight
   , likelihood
   , maxBelief
-  , likelihoodGivenFlash
-  , likelihoodGivenNoFlash
-  , updatePosterior
-  , posteriorAfterFlash
-  , longPosteriorAfterFlash
-  , updateLongPosterior
-  , checkIntuition
-  , triggerToGapDomains
-  , intuitionSignalStrength
   ) where
 
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
@@ -31,59 +25,7 @@ import QxFx0.Semantic.Input.Parse (ParsedInput(..), ParsedToken(..))
 import QxFx0.Types.Bayesian
   ( HiddenBelief(..)
   , BeliefState
-  , initialBeliefs
   )
-import QxFx0.Types.Intuition
-  ( IntuitiveState(..)
-  , FlashTrigger(..)
-  , IntuitiveFlash(..)
-  , basePrior
-  , defaultIntuitiveState
-  , effectivePosterior
-  )
-import QxFx0.Types.Vec (CoreVec(..))
-import QxFx0.Types.Thresholds
-  ( clamp01
-  , intuitionFlashThreshold
-  , intuitionHighResonanceThreshold
-  , intuitionElevatedResonanceThreshold
-  , intuitionDeepResonanceThreshold
-  , intuitionHighTensionThreshold
-  , intuitionElevatedTensionThreshold
-  , intuitionCrisisTensionThreshold
-  , intuitionNoFlashBaselineLikelihood
-  , intuitionFlashLikelihoodConvergent
-  , intuitionFlashLikelihoodElevated
-  , intuitionFlashLikelihoodDeep
-  , intuitionFlashLikelihoodBaseline
-  , intuitionNoFlashLikelihoodConvergent
-  , intuitionNoFlashLikelihoodElevated
-  , intuitionNoFlashLikelihoodDeep
-  , intuitionPosteriorAfterFlashDecayFactor
-  , intuitionLongPosteriorAfterFlashDecayFactor
-  , intuitionLongPosteriorPriorWeight
-  , intuitionLongPosteriorCurrentWeight
-  , intuitionFlashOverrideStrengthThreshold
-  , intuitionCoreVecPresence
-  , intuitionCoreVecDepth
-  , intuitionCoreVecAutonomy
-  , intuitionCoreVecDirectiveness
-  , intuitionCoreVecSteadiness
-  , intuitionSteadinessBaseline
-  , intuitionSignalSteadyBonusScale
-  , intuitionCooldownTurns
-  )
-import QxFx0.Policy.Consciousness
-  ( triggerDeepResonance, triggerCrisisMoment, triggerPureKernel, triggerConvergence
-  , kernelSignalPresence, kernelSignalDepth
-  , triggerContextDeepResonance, triggerContextCrisisMoment
-  , triggerContextPureKernel, triggerContextConvergence
-  , intuitionHeaderPrefix, intuitionTriggerLabel
-  , intuitionOverrideDirective, intuitionSupplementaryDirective
-  , intuitionFormDirective
-  )
--- Distress lemmas now come from SemanticConfig, not a hardcoded list.
-import Text.Printf (printf)
 
 bayesianUpdate :: SemanticConfig -> BeliefState -> ParsedInput -> BeliefState
 bayesianUpdate cfg prior obs =
@@ -156,132 +98,3 @@ detectInsight bs =
 
 maxBelief :: BeliefState -> Double
 maxBelief bs = if M.null bs then 0.0 else maximum (M.elems bs)
-
---------------------------------------------------------------------------------
--- Intuition: posterior updates, flash detection, signal strength
---------------------------------------------------------------------------------
-
-likelihoodGivenFlash :: Double -> Double -> Double
-likelihoodGivenFlash resonance tension
-  | resonance > intuitionHighResonanceThreshold && tension > intuitionHighTensionThreshold = intuitionFlashLikelihoodConvergent
-  | resonance > intuitionElevatedResonanceThreshold || tension > intuitionElevatedTensionThreshold = intuitionFlashLikelihoodElevated
-  | resonance > intuitionDeepResonanceThreshold = intuitionFlashLikelihoodDeep
-  | otherwise = intuitionFlashLikelihoodBaseline
-
-likelihoodGivenNoFlash :: Double -> Double -> Double
-likelihoodGivenNoFlash resonance tension
-  | resonance > intuitionHighResonanceThreshold && tension > intuitionHighTensionThreshold = intuitionNoFlashLikelihoodConvergent
-  | resonance > intuitionElevatedResonanceThreshold || tension > intuitionElevatedTensionThreshold = intuitionNoFlashLikelihoodElevated
-  | resonance > intuitionDeepResonanceThreshold = intuitionNoFlashLikelihoodDeep
-  | otherwise = intuitionNoFlashBaselineLikelihood
-
-updatePosterior :: Double -> Double -> Double -> Double
-updatePosterior resonance tension prior =
-  let pEH  = likelihoodGivenFlash  resonance tension
-      pEnH = likelihoodGivenNoFlash resonance tension
-      pE   = pEH * prior + pEnH * (1.0 - prior)
-  in clamp01 ((pEH * prior) / max 1e-9 pE)
-
-posteriorAfterFlash :: Double -> Double
-posteriorAfterFlash posterior =
-  max basePrior (posterior * intuitionPosteriorAfterFlashDecayFactor)
-
-longPosteriorAfterFlash :: Double -> Double
-longPosteriorAfterFlash posterior =
-  max basePrior (posterior * intuitionLongPosteriorAfterFlashDecayFactor)
-
-updateLongPosterior :: Double -> Double -> Double -> Double
-updateLongPosterior resonance tension prior =
-  clamp01
-    ( prior * intuitionLongPosteriorPriorWeight
-      + updatePosterior resonance tension prior * intuitionLongPosteriorCurrentWeight
-    )
-
-triggerToGapDomains :: FlashTrigger -> [Text]
-triggerToGapDomains ConvergenceTrigger   = ["HumanPsychology", "CausalChains"]
-triggerToGapDomains CrisisMomentTrigger  = ["HumanPsychology"]
-triggerToGapDomains DeepResonanceTrigger = ["HumanPsychology", "CulturalAnthropology"]
-triggerToGapDomains PureKernelTrigger    = ["CausalChains", "RhetoricalAnalysis"]
-
-intuitionSignalStrength :: Double
-intuitionSignalStrength =
-  let v = CoreVec
-            intuitionCoreVecPresence
-            intuitionCoreVecDepth
-            intuitionCoreVecAutonomy
-            intuitionCoreVecDirectiveness
-            intuitionCoreVecSteadiness
-      base = cvPresence v * cvDepth v * (1.0 - cvDirectiveness v) * cvAutonomy v
-      steadyBonus = 1.0 + (cvSteadiness v - intuitionSteadinessBaseline) * intuitionSignalSteadyBonusScale
-  in base * steadyBonus
-
-checkIntuition :: Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
-checkIntuition resonance tension turnNumber state =
-  let newPost = updatePosterior resonance tension (isPosterior state)
-      newLongPost = updateLongPosterior resonance tension (isLongPosterior state)
-      newCooldown = max 0 (isCooldown state - 1)
-      state' = state
-        { isPosterior = newPost
-        , isLongPosterior = newLongPost
-        , isCooldown = newCooldown
-        }
-      currentPosterior = effectivePosterior state'
-  in if newCooldown > 0
-     then (Nothing, state')
-     else if currentPosterior >= intuitionFlashThreshold
-          then let flash = buildFlash resonance tension currentPosterior
-                   state'' = state'
-                     { isPosterior  = posteriorAfterFlash newPost
-                     , isLongPosterior = longPosteriorAfterFlash newLongPost
-                     , isCooldown   = intuitionCooldownTurns
-                     , isFlashCount = isFlashCount state + 1
-                     , isLastTurn   = turnNumber
-                     }
-               in (Just flash, state'')
-          else (Nothing, state')
-
-renderTrigger :: FlashTrigger -> Text
-renderTrigger DeepResonanceTrigger = triggerDeepResonance
-renderTrigger CrisisMomentTrigger  = triggerCrisisMoment
-renderTrigger PureKernelTrigger    = triggerPureKernel
-renderTrigger ConvergenceTrigger   = triggerConvergence
-
-triggerContext :: FlashTrigger -> Text
-triggerContext DeepResonanceTrigger = triggerContextDeepResonance
-triggerContext CrisisMomentTrigger  = triggerContextCrisisMoment
-triggerContext PureKernelTrigger    = triggerContextPureKernel
-triggerContext ConvergenceTrigger   = triggerContextConvergence
-
-selectTrigger :: Double -> Double -> FlashTrigger
-selectTrigger resonance tension
-  | resonance > intuitionHighResonanceThreshold && tension > intuitionHighTensionThreshold = ConvergenceTrigger
-  | tension > intuitionCrisisTensionThreshold = CrisisMomentTrigger
-  | resonance > intuitionHighResonanceThreshold = DeepResonanceTrigger
-  | otherwise = PureKernelTrigger
-
-buildFlash :: Double -> Double -> Double -> IntuitiveFlash
-buildFlash resonance tension posterior =
-  let trigger = selectTrigger resonance tension
-      strength = clamp01 ((posterior - intuitionFlashThreshold) / (1.0 - intuitionFlashThreshold))
-      kernelSig = buildKernelSignal trigger
-      directive = buildDirective trigger strength
-  in IntuitiveFlash strength trigger kernelSig directive (strength > intuitionFlashOverrideStrengthThreshold)
-
-buildKernelSignal :: FlashTrigger -> Text
-buildKernelSignal trigger = T.intercalate ". "
-  [ kernelSignalPresence
-  , kernelSignalDepth
-  , triggerContext trigger
-  ]
-
-buildDirective :: FlashTrigger -> Double -> Text
-buildDirective trigger strength =
-  let header = intuitionHeaderPrefix <> fmtPctText strength <> "]"
-      trig   = intuitionTriggerLabel <> renderTrigger trigger
-      ovrd   = if strength > intuitionFlashOverrideStrengthThreshold
-               then intuitionOverrideDirective
-               else intuitionSupplementaryDirective
-  in T.unlines [header, trig, ovrd, intuitionFormDirective]
-
-fmtPctText :: Double -> Text
-fmtPctText value = T.pack (printf "%.0f%%" (value * 100.0) :: String)
