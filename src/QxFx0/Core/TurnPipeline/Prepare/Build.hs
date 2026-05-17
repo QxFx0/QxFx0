@@ -86,6 +86,8 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       , tiConceptToCheck = psConceptToCheck prepareStatic
       , tiBestTopic = psBestTopic prepareStatic
       , tiMetrics = metrics6
+      , tiConatusEnergy = psConatusEnergy prepareStatic
+      , tiBlanketViolationCount = psBlanketViolationCount prepareStatic
       }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals

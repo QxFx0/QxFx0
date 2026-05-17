@@ -25,10 +25,9 @@ import QxFx0.Core.TurnRender
   ( deriveSemanticAnchor
   , renderStyleFromDecisionWithSalience
   )
-import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Field (emptyField)
-import QxFx0.Self.Invariants (checkInitialBlanket)
-import QxFx0.Self.Salience (salienceFromBlanket)
+import QxFx0.Self.Salience (salienceFromConatusEnergy)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Core.TurnRouting.Cascade
   ( applyGuardGating
@@ -51,11 +50,19 @@ import QxFx0.Core.TurnRouting.Types
 
 import Data.Text (Text)
 
+-- | Phase 6 (M6): 'routeFamily' takes the per-turn 'ConatusEnergy'
+-- precomputed by the Prepare stage
+-- (see 'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy', threaded
+-- through 'QxFx0.Core.TurnPipeline.Types.tiConatusEnergy'). The
+-- previous local 'computeSelfBlanket' \/ 'checkInitialBlanket' \/
+-- 'salienceFromBlanket' triple has been collapsed to a direct
+-- 'salienceFromConatusEnergy' call to keep the routing salience
+-- aligned with the Prepare-stage Conatus snapshot.
 routeFamily :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
             -> SystemState -> [Text] -> Text -> Bool -> Text
-            -> Maybe ConsciousnessNarrative -> Double
+            -> Maybe ConsciousnessNarrative -> Double -> ConatusEnergy
             -> RoutingDecision
-routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior =
+routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked
       FamilyCascade{..} = cascade
@@ -67,9 +74,7 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       semanticInput = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)
       semanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) semanticInput currentTopic (ssTurnCount ss + 1)
       renderStrategy = rpChosenStrategy
-      blanket = computeSelfBlanket ss
-      violations = checkInitialBlanket blanket
-      routingSalience = salienceFromBlanket blanket violations emptyField
+      routingSalience = salienceFromConatusEnergy conatusEnergy emptyField
       renderStyle = renderStyleFromDecisionWithSalience routingSalience renderStrategy rpPrincipledModeResult identitySignal semanticAnchor semanticInput
   in RoutingDecision
        { rdFamily = fcFinalFamily

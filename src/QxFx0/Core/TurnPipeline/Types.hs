@@ -32,6 +32,7 @@ import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
+import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -73,6 +74,19 @@ data TurnInput = TurnInput
   , tiConceptToCheck :: !Text
   , tiBestTopic :: !Text
   , tiMetrics :: !TurnMetrics
+  , tiConatusEnergy :: !ConatusEnergy
+    -- ^ Phase 6 (M6): runtime Conatus energy carried from
+    --   'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy'.
+    --   Single source of truth across the turn: route-stage
+    --   ('buildLocalRecoveryPlan') and finalize-stage trace
+    --   ('buildTurnProjection') previously each recomputed
+    --   'computeConatusEnergy' independently; now both reads
+    --   funnel through this field for the pre-turn state.
+  , tiBlanketViolationCount :: !Int
+    -- ^ Phase 6 (M6): violation count from
+    --   'QxFx0.Core.TurnPipeline.Effects.psBlanketViolationCount',
+    --   used by 'buildLocalRecoveryPlan' to construct the
+    --   @"blanket_violations=N"@ evidence line.
   }
 
 data TurnSignals = TurnSignals

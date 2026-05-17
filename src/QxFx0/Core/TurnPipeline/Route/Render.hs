@@ -41,9 +41,7 @@ import QxFx0.Core.TurnRender
   , snapshotIdentitySignal
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
-import QxFx0.Self.Blanket (computeSelfBlanket)
-import QxFx0.Self.Conatus (ceScalar, computeConatusEnergy)
-import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Conatus (ceScalar)
 import QxFx0.Self.Salience (conatusGateFires)
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Render.Dialogue
@@ -343,9 +341,9 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
           <> if hasCandidateSplit
             then ["candidate_families=" <> renderCandidateFamilies candidateFamilies]
             else []
-      -- Phase 2.5 (M2d): the Conatus gate is the highest-priority
-      -- recovery driver. When the runtime Conatus energy drops
-      -- below 'conatusGateThreshold' (see
+      -- Phase 2.5 (M2d) + Phase 6 (M6): the Conatus gate is the
+      -- highest-priority recovery driver. When the runtime
+      -- Conatus energy drops below 'conatusGateThreshold' (see
       -- 'QxFx0.Self.Salience.defaultSalienceWeights'), the system
       -- is in structural risk and 'StrategySafeRecovery' is forced
       -- regardless of shadow / parser / legitimacy / runtime-mode
@@ -354,13 +352,21 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
       -- with this guard so the trace and the JSON schema can
       -- distinguish a structural-Conatus event from an
       -- environmental 'RecoveryRuntimeDegraded' event.
-      conatusBlanket    = computeSelfBlanket ss
-      conatusViolations = checkInitialBlanket conatusBlanket
-      conatusEnergy     = computeConatusEnergy conatusBlanket conatusViolations
+      --
+      -- M6: the energy and the violation count are read straight
+      -- from 'TurnInput', where the Prepare stage stored them
+      -- (see 'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy'
+      -- and 'psBlanketViolationCount'). This is the
+      -- single-source-of-truth for the pre-turn Conatus snapshot;
+      -- the previous local 'computeSelfBlanket' \/
+      -- 'checkInitialBlanket' \/ 'computeConatusEnergy' triple has
+      -- been removed to eliminate the duplicate computation.
+      conatusEnergy     = tiConatusEnergy ti
+      conatusViolationCount = tiBlanketViolationCount ti
       conatusEvidence =
         [ "conatus_gate_fired"
         , "conatus_energy=" <> T.pack (show (ceScalar conatusEnergy))
-        , "blanket_violations=" <> T.pack (show (length conatusViolations))
+        , "blanket_violations=" <> T.pack (show conatusViolationCount)
         ]
       candidate =
         case () of

@@ -63,6 +63,7 @@ planRouteEffects ss ti ts =
           (tiBestTopic ti)
           (tsCurrentNarrative ts)
           intuitPosterior
+          (tiConatusEnergy ti)
       family = rdFamily rd
       atomTags = map maTag (asAtoms atomSet)
    in RouteEffectPlan

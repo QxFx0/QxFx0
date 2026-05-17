@@ -95,6 +95,13 @@ data PrepareStatic = PrepareStatic
     --   sites (e.g. 'buildLocalRecoveryPlan' in
     --   'QxFx0.Core.TurnPipeline.Route.Render') can priority-check
     --   the Conatus gate without recomputing from 'SystemState'.
+  , psBlanketViolationCount :: !Int
+    -- ^ Phase 6 (M6): the count of 'BlanketViolation's reported
+    --   by 'checkInitialBlanket' on the current 'SelfBlanket'.
+    --   Stored alongside 'psConatusEnergy' so the recovery-plan
+    --   evidence line @"blanket_violations=N"@ at the
+    --   render-stage call site can be reconstructed without a
+    --   second 'computeSelfBlanket' + 'checkInitialBlanket' pass.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -149,6 +156,7 @@ buildPrepareEffectPlan ss input =
       blanket = computeSelfBlanket ss
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
+      violationCount = length violations
       static = PrepareStatic
         { psInputText = input
         , psAtomSet = atomSet
@@ -161,6 +169,7 @@ buildPrepareEffectPlan ss input =
         , psResonance = resonance
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy
+        , psBlanketViolationCount = violationCount
         }
   in PrepareEffectPlan
       { pepStatic = static
