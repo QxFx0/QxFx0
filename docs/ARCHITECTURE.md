@@ -24,7 +24,7 @@ for the future Left/Right adjunction split, see §5).
 ├────────────────────────────────────────────────────────────────┤
 │  Core              consciousness loop, turn pipeline, guard    │  src/QxFx0/Core/*
 ├────────────────────────────────────────────────────────────────┤
-│  Self (new)        SelfBlanket invariants, conatus functional  │  src/QxFx0/Self/*
+│  Self              SelfBlanket, Conatus, Adjunction, Field     │  src/QxFx0/Self/*
 ├────────────────────────────────────────────────────────────────┤
 │  Bridge            SQLite, Datalog, Agda witnesses, persist.   │  src/QxFx0/Bridge/*
 ├────────────────────────────────────────────────────────────────┤
@@ -50,9 +50,13 @@ for the future Left/Right adjunction split, see §5).
   utility `Runtime.GF.Morphology` is allowed as a leaf utility.
 - **Bridge** — persistent and external boundaries: SQLite pool, Datalog
   shadow, Agda witnesses. Must not import Core (Rule [4]).
-- **Self** *(introduced by Phase 1 modernization)* — types and pure functions
-  that describe *what makes this system this system*. Importable by Core,
-  Bridge, Runtime. Imports only Types.
+- **Self** — types and pure functions that describe *what makes this system
+  this system*. Importable by Core, Bridge, Runtime. Imports only `base`
+  (the Self subtree is dependency-light by design). Currently provides:
+  `Self.Types`, `Self.Blanket`, `Self.Invariants`, `Self.Conatus`
+  (Phase 1–2, commits `62d0338` / `a5fad49`); `Self.Adjunction`
+  (Phase 3, ADR-0008, commit `20d5611`); `Self.Field` (Phase 4,
+  ADR-0009, commit `036f70f`).
 - **Core** — consciousness loop, turn pipeline (Prepare → Route → Render →
   Finalize), guard/recovery, identity. Must not import Bridge or Runtime
   (Rule [4]); reaches IO only via `PipelineIO` abstraction.
@@ -106,7 +110,7 @@ Future:
 
 | ID    | Rule (planned)                                                           |
 |-------|--------------------------------------------------------------------------|
-| [12]  | `Left.*` and `Right.*` namespaces communicate only through `QxFx0.Adjunction` (Phase 3) |
+| [12]  | Pipeline call sites must access `Holistic` / `Formal` only through `QxFx0.Self.Adjunction` (Phase 5; Phase 3 has shipped the algebra under `Self.Adjunction`, but the rule cannot be enforced until Phase 5 introduces concrete consumers) |
 
 ## 3. Turn pipeline
 
@@ -154,10 +158,17 @@ conatus gradient** rather than by rule-based dispatch. The rule-based
 cascade remains as a fallback ordering when multiple actions yield
 comparable conatus deltas.
 
-## 5. Dual-mode (Left ⊣ Right) — planned
+## 5. Dual-mode (`Holistic ⊣ Formal`)
 
-The modernization roadmap (`docs/adr/0007-dual-mode-conatus.md`) introduces
-a formal split of the processing surface into two adjoint modes:
+> **Status (2026-05-17)**: the algebra is shipped (Phase 3, ADR-0008,
+> commit `20d5611`); the right-hemispheric `Field` it is parameterised
+> over is shipped (Phase 4, ADR-0009, commit `036f70f`). The salience
+> controller and the actual Holistic-aware re-shaping of the pipeline
+> remain planned (Phase 5, ADR-0010 not yet drafted).
+
+The modernization roadmap (`docs/adr/0007-dual-mode-conatus.md`,
+ADR-0008, ADR-0009) introduces a formal split of the processing surface
+into two adjoint modes:
 
 ```
                     ┌────────────────────────┐
@@ -184,22 +195,31 @@ a formal split of the processing surface into two adjoint modes:
                     └────────────────────────┘
 ```
 
-- **Left mode** inherits the majority of current pipeline modules
-  (`Semantic.Syntax.*`, `Core.TurnRender.*`, `Lexicon.Resolver`, etc.).
-  These will be reorganized under `QxFx0.Left.*` via reexport shims so that
-  existing call-sites continue to compile during the transition (Phase 3).
-- **Right mode** is new (Phase 4). Five submodules:
-  `Right.Resonance` (analogical lookup), `Right.Atmosphere` (latent mood),
-  `Right.FieldConfidence` (distribution-based uncertainty),
-  `Right.Consolidation` (off-line MeaningGraph rewire, extends Dream),
-  `Right.Counterfactual` (replay-based "what-if").
-- **Salience controller** (Phase 5) decides which mode leads per turn,
-  based on ambiguity / novelty / formal-failure / time-pressure signals.
-  Antikorrelyation is enforced: the non-leading mode listens but does not
-  emit.
-- **Adjunction** typing (Phase 3) makes the relationship between the modes
-  formal: `unit : Id ⇒ Right ∘ Left`, `counit : Left ∘ Right ⇒ Id`, triangle
-  identities checked by property tests.
+- **Formal mode** (right adjoint, left-hemispheric) inherits the majority
+  of current pipeline modules (`Semantic.Syntax.*`, `Core.TurnRender.*`,
+  `Lexicon.Resolver`, etc.). Phase 5 will retag the existing routing /
+  R5 / render commit surfaces as `Formal a` values; current code still
+  treats them as plain product types.
+- **Holistic mode** (left adjoint, right-hemispheric) is shipped
+  algebraically. The right-hemispheric observation summary is the
+  five-component `Field` record in `QxFx0.Self.Field`:
+  `Resonance` (peak echo of the current turn against its recent
+  context), `Atmosphere` (two-dimensional valence–arousal affect),
+  `FieldConfidence` (derived internal-coherence score),
+  `Consolidation` (narrative-integration scalar over a window),
+  `Counterfactual` (diversity of plausible alternative parses). Source
+  wiring (which runtime signal feeds which component) is Phase-5 work.
+- **Salience controller** (Phase 5, planned) will decide which mode leads
+  per turn, based on ambiguity / novelty / formal-failure / time-pressure
+  signals reflected through `Field`. Anti-correlation will be enforced:
+  the non-leading mode listens but does not emit.
+- **Adjunction** typing (Phase 3, ADR-0008, **shipped**) makes the
+  relationship between the modes formal:
+  `unit  : a → Formal (Holistic a)`,
+  `counit : Holistic (Formal a) → a`,
+  with both triangle identities and the hom-set isomorphism
+  (`leftAdjunct` / `rightAdjunct`) verified as QuickCheck properties
+  in `Test.Suite.SelfAdjunction`.
 
 ## 6. Module structure (current)
 
@@ -217,7 +237,7 @@ src/QxFx0/
 ├── Render/            Dialogue, Semantic, Text
 ├── Resources/         data file paths, readiness assessment, morphology loading
 ├── Runtime/           sessions, gates, health, wiring, GF/PGF, paths
-├── Self/              [planned] SelfBlanket, Conatus, invariants
+├── Self/              SelfBlanket, Conatus, Adjunction, Field (Phases 1–4)
 ├── Semantic/          parsing, meaning atoms/assembly/decomposition, embeddings
 └── Types/             pure data definitions (decision, domain, state, thresholds, …)
 ```

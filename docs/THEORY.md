@@ -111,6 +111,12 @@ are not aspirational; they are checkable.
 
 ### 4.1 Self layer
 
+> **Status (2026-05-17)**: shipped as a pure subtree under `QxFx0.Self.*`.
+> Phase 1 (`SelfBlanket` + `IdentityRupture`, commit `62d0338`) and
+> Phase 2 (`Conatus` functional, commit `a5fad49`) are landed; Phase 2.5
+> (Conatus-gradient as the primary recovery driver in the turn pipeline)
+> is the next integration step.
+
 There must exist a dedicated `QxFx0.Self.*` layer whose types describe
 *what makes this system this system*, independent of any particular turn,
 session, or interaction. Specifically:
@@ -118,25 +124,57 @@ session, or interaction. Specifically:
 - `SelfBlanket` — a finite set of structural invariants whose simultaneous
   preservation defines the system's continuity-of-being. Violation of any
   invariant is a categorical failure (`IdentityRupture`), not a recoverable
-  error.
+  error. Implementation: `QxFx0.Self.Blanket`, `QxFx0.Self.Types`,
+  `QxFx0.Self.Invariants`.
 - `Conatus` — a scalar functional `RuntimeState → ℝ` whose gradient supplies
   the primary direction for recovery and effect interpretation.
+  Implementation: `QxFx0.Self.Conatus` (energy + gradient + weights).
+- `Holistic`, `Formal` — the two adjoint functors of the dual-mode runtime
+  (Phase 3, see §4.2). Implementation: `QxFx0.Self.Adjunction`.
+- `Field` and its five components (`Resonance`, `Atmosphere`,
+  `FieldConfidence`, `Consolidation`, `Counterfactual`) — the
+  right-hemispheric observation summary (Phase 4, see §4.2).
+  Implementation: `QxFx0.Self.Field`.
 
 ### 4.2 Adjunction discipline
 
-The processing surface is split into two formally adjoint modes — `Left` and
-`Right` — each of which is a functor in its own right, related by natural
-transformations satisfying the triangle identities. These are *not* metaphors:
-the architecture check (`scripts/check_architecture.sh`) enforces that
-`Left.*` and `Right.*` namespaces communicate **only** through
-`QxFx0.Adjunction`.
+> **Status (2026-05-17)**: the algebra is shipped (Phase 3, ADR-0008,
+> commit `20d5611`) and the right-hemispheric `Field` it is parameterised
+> over is shipped (Phase 4, ADR-0009, commit `036f70f`). Re-shaping the
+> existing call sites to actually consume `Holistic` / `Formal` is
+> Phase 5 work (salience controller, ADR-0010, planned).
 
-Left-mode characteristics: narrow, fixated, formally-spec-driven, type-checked,
-deterministic. Inherits the majority of the current pipeline.
+The processing surface is split into two formally adjoint modes —
+`Holistic` (left adjoint, right-hemispheric: value perceived together with
+its field, generative) and `Formal` (right adjoint, left-hemispheric:
+value as a strategy across fields, constraint-respecting) — related by
+natural transformations satisfying the triangle identities. These are
+*not* metaphors:
 
-Right-mode characteristics: holistic, resonance-based, embedding-driven,
-distribution-shaped, off-line-consolidated. Currently underdeveloped; primary
-target of Phase 4 modernization.
+- `Holistic ⊣ Formal` is the textbook product–exponential adjunction
+  `(- × Field) ⊣ (Field → -)` instantiated in `Hask`, with explicit
+  `unit` / `counit` / `leftAdjunct` / `rightAdjunct` and functional
+  dependencies `l → r, r → l` on the `Adjunction` class.
+- Both triangle identities are verified as QuickCheck properties in
+  `Test.Suite.SelfAdjunction`, alongside the hom-set round-trips and
+  the value-level coherence of `groundIn` / `rebroaden`.
+- The right-hemispheric `Field` is a five-component snapshot, not a
+  history; per-component combinators (`combineResonance`, …) replace a
+  phantom global `Monoid` because the natural combination law differs by
+  component (max for Resonance / Counterfactual, min for FieldConfidence,
+  weighted-average for Atmosphere, additive-clipped for Consolidation).
+
+Formal-mode characteristics: narrow, fixated, formally-spec-driven,
+type-checked, deterministic. Inherits the majority of the current
+pipeline; Phase 5 will retag the existing routing / R5 / render commit
+surfaces as `Formal a` values.
+
+Holistic-mode characteristics: holistic, resonance-based, embedding-driven,
+distribution-shaped, off-line-consolidated. Phase 4 ships the algebraic
+shape; Phase 5 wires the actual signals (cosine over the embedding
+window → `Resonance`, consciousness-loop tone → `Atmosphere`,
+posterior diversity → `Counterfactual`, claim-graph trajectory →
+`Consolidation`, derived → `FieldConfidence`).
 
 ### 4.3 Effects carry conatus prior
 
