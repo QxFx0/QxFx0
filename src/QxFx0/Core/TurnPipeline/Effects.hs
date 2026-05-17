@@ -31,6 +31,7 @@ import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
 import QxFx0.Self.Field
   ( Field (..)
   , emptyField
+  , mkAtmosphere
   , mkConsolidation
   , mkCounterfactual
   , mkResonance
@@ -177,17 +178,35 @@ buildPrepareEffectPlan ss input =
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
-      -- Phase 5.5d: populate Resonance (atom-trace load),
-      -- Consolidation (topic-stability heuristic: same focused
-      -- topic as previous turn -> 0.8; topic changed or first
-      -- turn -> 0.2), and Counterfactual (candidate-family
-      -- ambiguity: ratio of second-best to best family weight
-      -- in the semantic-logic ranking; >0 only when at least
-      -- two families are ranked). Atmosphere alone stays at
-      -- 'emptyField' default pending a follow-up commit
-      -- (valence-source design decision). 'fieldConfidence'
-      -- stays at 1.0 (the 'emptyField' default) which per
-      -- ADR-0009 §4.4 means "uninformed, not unconfident".
+      -- Phase 5.5d: populate four of five Field components
+      -- from runtime signals:
+      --   * Resonance      <- atom-trace current load (already
+      --                       computed above as 'resonance').
+      --   * Consolidation  <- topic-stability heuristic: same
+      --                       focused topic as previous turn
+      --                       => 0.8; topic changed or first
+      --                       turn => 0.2.
+      --   * Counterfactual <- candidate-family ambiguity:
+      --                       ratio of second-best to best
+      --                       family weight in the semantic-
+      --                       logic ranking; > 0 only when at
+      --                       least two families are ranked.
+      --   * Atmosphere     <- Ego differential:
+      --                         valence = agency - tension
+      --                                   (high agency + low
+      --                                    tension = positive;
+      --                                    low agency + high
+      --                                    tension = negative)
+      --                         arousal = tension (structural
+      --                                   proxy for activation
+      --                                   level).
+      -- 'fieldConfidence' stays at 1.0 (the 'emptyField'
+      -- default) which per ADR-0009 §4.4 means "uninformed,
+      -- not unconfident" — a derived confidence signal across
+      -- the four channels is left for a later refinement
+      -- (could call 'deriveFieldConfidence' here, but the
+      -- current four sources are still heuristic so a
+      -- derived confidence would risk false precision).
       topicStability =
         if not (T.null bestTopic) && bestTopic == ssLastTopic ss
           then 0.8
@@ -195,8 +214,11 @@ buildPrepareEffectPlan ss input =
       counterfactualAmbiguity = case sortedLogic of
         (_, w1) : (_, w2) : _ | w1 > 0 -> w2 / w1
         _ -> 0.0
+      atmosphereValence = egoAgency (ssEgo ss) - egoTension (ssEgo ss)
+      atmosphereArousal = egoTension (ssEgo ss)
       preparedField = emptyField
         { fieldResonance      = mkResonance resonance
+        , fieldAtmosphere     = mkAtmosphere atmosphereValence atmosphereArousal
         , fieldConsolidation  = mkConsolidation topicStability
         , fieldCounterfactual = mkCounterfactual counterfactualAmbiguity
         }
