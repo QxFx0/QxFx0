@@ -31,6 +31,7 @@ import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
 import QxFx0.Self.Field
   ( Field (..)
   , emptyField
+  , mkConsolidation
   , mkResonance
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
@@ -175,15 +176,23 @@ buildPrepareEffectPlan ss input =
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
       -- Phase 5.5d: populate Resonance from the atom-trace
-      -- 'resonance' already computed above. Other four Field
-      -- components default to 'emptyField' pending a follow-up
-      -- commit that derives them from runtime signals (Ego
-      -- tension/agency for Atmosphere, topic-stability for
-      -- Consolidation, candidate-family ambiguity for
-      -- Counterfactual). 'fieldConfidence' stays at 1.0 (the
-      -- 'emptyField' default) which per ADR-0009 §4.4 means
-      -- "uninformed, not unconfident".
-      preparedField = emptyField { fieldResonance = mkResonance resonance }
+      -- 'resonance' already computed above, and Consolidation
+      -- from a topic-stability heuristic (same focused topic
+      -- as the previous turn -> high consolidation; topic
+      -- changed or first turn -> low). Atmosphere and
+      -- Counterfactual stay at 'emptyField' defaults pending
+      -- follow-up commits (Atmosphere from Ego, Counterfactual
+      -- from candidate-family ambiguity). 'fieldConfidence'
+      -- stays at 1.0 (the 'emptyField' default) which per
+      -- ADR-0009 §4.4 means "uninformed, not unconfident".
+      topicStability =
+        if not (T.null bestTopic) && bestTopic == ssLastTopic ss
+          then 0.8
+          else 0.2
+      preparedField = emptyField
+        { fieldResonance     = mkResonance resonance
+        , fieldConsolidation = mkConsolidation topicStability
+        }
       static = PrepareStatic
         { psInputText = input
         , psAtomSet = atomSet
