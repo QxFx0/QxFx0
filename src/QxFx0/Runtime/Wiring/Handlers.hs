@@ -29,7 +29,21 @@ import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProj
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoop)
-import QxFx0.Core.Intuition (checkIntuitionWithInput, effectivePosterior)
+import QxFx0.Core.Intuition (checkIntuitionWithInputAndSalience, effectivePosterior)
+import QxFx0.Self.Conatus
+  ( ConatusComponents(..)
+  , ConatusEnergy(..)
+  )
+import QxFx0.Self.Field
+  ( emptyField
+  , fieldResonance
+  , mkResonance
+  )
+import QxFx0.Self.Salience
+  ( Salience
+  , computeSalience
+  , defaultSalienceWeights
+  )
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
@@ -75,8 +89,10 @@ handleTurnEffect ctx request =
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
     TurnReqIntuition inputText resonance tension turnNumber -> do
       intuitive <- readIntuition ctx
-      let (mFlash, intuitionState) =
-            checkIntuitionWithInput inputText resonance tension turnNumber intuitive
+      let salience = intuitionSalience resonance
+          (mFlash, intuitionState) =
+            checkIntuitionWithInputAndSalience
+              salience inputText resonance tension turnNumber intuitive
       pure (TurnResIntuition mFlash (effectivePosterior intuitionState) intuitionState)
     TurnReqCommitRuntimeState previewLoop previewIntuition observation -> do
       commitRuntimeTurnState ctx previewLoop previewIntuition observation
@@ -224,3 +240,35 @@ allowedReadEnvKeys =
     , "QXFX0_GF_LANG"
     , "QXFX0_GF_PGF_PATH"
     ]
+
+-- | Build a salience verdict at the intuition call site from the
+-- runtime signals available here.
+--
+-- Phase 5.5a establishes the structural connection between the
+-- intuition handler and the 'QxFx0.Self.Salience' controller.
+-- The Field signals available so far are limited (only resonance
+-- is in scope at this layer), so the 'salienceHolisticBias'
+-- remains in the holistic-leaning half (above @0.5@) whenever
+-- resonance is non-trivial. With the multiplier in
+-- 'salienceFlashMultiplier' capped at @1.0@, this means 5.5a is a
+-- structural no-op behaviourally: the runtime now consults
+-- 'computeSalience' on every intuition turn, but flash strength
+-- is unchanged.
+--
+-- The placeholder 'ConatusEnergy' below (positive scalar so the
+-- gate does not trip) is the explicit deferral point: M2d will
+-- replace it with a real Conatus energy computed from the current
+-- 'QxFx0.Self.Blanket.SelfBlanket' state.
+intuitionSalience :: Double -> Salience
+intuitionSalience resonance =
+  let field    = emptyField { fieldResonance = mkResonance resonance }
+      conatus  = ConatusEnergy
+        { ceScalar     = 1.0
+        , ceComponents = ConatusComponents
+            { ccMorphology = 0.0
+            , ccIdentity   = 0.0
+            , ccTurns      = 0.0
+            , ccPenalty    = 0.0
+            }
+        }
+  in computeSalience defaultSalienceWeights conatus field

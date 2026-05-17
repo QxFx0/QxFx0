@@ -14,6 +14,10 @@ module QxFx0.Core.Intuition
   , flashThreshold
   , checkIntuition
   , checkIntuitionWithInput
+  , checkIntuitionWithSalience
+  , checkIntuitionWithInputAndSalience
+  , applySalienceToFlash
+  , salienceFlashMultiplier
   , bayesianBeliefNudge
   , triggerToGapDomains
   , intuitionSignalStrength
@@ -79,6 +83,7 @@ import QxFx0.Types.Vec (CoreVec(..))
 import QxFx0.Types.SemanticConfig (SemanticConfig(..), defaultSemanticConfig)
 import QxFx0.Types.Bayesian (initialBeliefs)
 import QxFx0.Core.Bayesian (bayesianUpdateFromText, maxBelief)
+import QxFx0.Self.Salience (Salience, salienceHolisticBias)
 import Text.Printf (printf)
 
 flashThreshold :: Double
@@ -223,3 +228,50 @@ intuitionSignalStrength =
       base = cvPresence v * cvDepth v * (1.0 - cvDirectiveness v) * cvAutonomy v
       steadyBonus = 1.0 + (cvSteadiness v - intuitionSteadinessBaseline) * intuitionSignalSteadyBonusScale
   in base * steadyBonus
+
+-- | Multiplier applied to flash strength under a 'Salience' verdict.
+--
+-- Capped at @1.0@ so neutral or holistic-leaning salience never
+-- /boosts/ flashes above their base strength; only formal-leaning
+-- salience attenuates. At @salienceHolisticBias = 0.5@ (the
+-- neutral / dead-band point) the multiplier is exactly @1.0@,
+-- so wiring the salience controller into a call site that does
+-- not yet supply rich Field signals is a strict no-op.
+salienceFlashMultiplier :: Salience -> Double
+salienceFlashMultiplier salience = min 1.0 (2.0 * salienceHolisticBias salience)
+
+-- | Re-shape an 'IntuitiveFlash' under a salience verdict. The
+-- flash strength is scaled by 'salienceFlashMultiplier'; the
+-- override flag and directive text are recomputed so the trace
+-- stays internally consistent.
+applySalienceToFlash :: Salience -> IntuitiveFlash -> IntuitiveFlash
+applySalienceToFlash salience flash =
+  let multiplier   = salienceFlashMultiplier salience
+      newStrength  = clamp01 (ifStrength flash * multiplier)
+      newOverride  = newStrength > intuitionFlashOverrideStrengthThreshold
+      newDirective = buildDirective (ifTrigger flash) newStrength
+  in flash
+       { ifStrength     = newStrength
+       , ifDirective    = newDirective
+       , ifOverridesAll = newOverride
+       }
+
+-- | Salience-aware variant of 'checkIntuition'. The flash-detection
+-- decision is unchanged; the produced flash, if any, is
+-- post-processed via 'applySalienceToFlash'.
+checkIntuitionWithSalience
+  :: Salience
+  -> Double -> Double -> Int -> IntuitiveState
+  -> (Maybe IntuitiveFlash, IntuitiveState)
+checkIntuitionWithSalience salience resonance tension turnNumber state =
+  let (mFlash, state') = checkIntuition resonance tension turnNumber state
+  in (fmap (applySalienceToFlash salience) mFlash, state')
+
+-- | Salience-aware variant of 'checkIntuitionWithInput'.
+checkIntuitionWithInputAndSalience
+  :: Salience
+  -> Text -> Double -> Double -> Int -> IntuitiveState
+  -> (Maybe IntuitiveFlash, IntuitiveState)
+checkIntuitionWithInputAndSalience salience raw resonance tension turnNumber state =
+  let (mFlash, state') = checkIntuitionWithInput raw resonance tension turnNumber state
+  in (fmap (applySalienceToFlash salience) mFlash, state')
