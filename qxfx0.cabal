@@ -364,6 +364,7 @@ common test-common
     Test.Suite.SelfAdjunction
     Test.Suite.SelfField
     Test.Suite.SelfSalience
+    Test.Suite.PhaseM2d
 
 test-suite qxfx0-test-unit
   import:        test-common
