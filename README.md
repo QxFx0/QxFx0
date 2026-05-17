@@ -35,7 +35,39 @@ If you need deterministic dialogue infrastructure with strict operational semant
 - Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
 - CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
 
-## Status Snapshot (2026-05-13)
+## Status Snapshot (2026-05-17)
+
+Post-M2d landing (Phase 2.5 dual-mode Conatus + Phase 5.5d/e Field
+broadening + Phase 6 effect-system refactor). The chain is
+committed in source form but **end-to-end verification (full lib
+build + 5 test variants + `verify.sh` + `release-smoke.sh`) is
+pending on an adequate-RAM runner** — see Roadmap "Near term"
+item 1.
+
+What landed:
+
+- Runtime Conatus integrated into recovery as the primary,
+  priority-overriding driver. Conatus gate fires before all other
+  recovery guards (shadow / parser / legitimacy / runtime-mode);
+  see ADR-0010 addendum (2026-05-17).
+- Dedicated `RecoveryConatusGate` cause in the trace and JSON
+  schema, distinct from `RecoveryRuntimeDegraded`; see ADR-0005
+  addendum.
+- Salience controller verdict emitted in `TurnReplayTrace`
+  (`trcSalienceDriver`, `trcSalienceHolisticBias`,
+  `trcSalienceConfidence`); audit consumers can reconstruct *why*
+  the controller dispatched, not just *what*.
+- Canonical pre-turn `Field` populated with four runtime-sourced
+  components (Resonance, Atmosphere, Consolidation,
+  Counterfactual); see ADR-0009 addendum.
+- Single-source-of-truth Conatus refactor: three duplicate
+  computation sites collapsed; Prepare stage is canonical.
+- New unit suite `Test.Suite.PhaseM2d` (8 tests) + a pipeline-
+  level integration test (`testConatusGateFiresRecoveryConatusGate`).
+
+See `CHANGELOG.md` for the full record.
+
+## Status Snapshot (2026-05-13, prior baseline)
 
 - Canonical core run: `ci-20260513-195724`
 - Core verdict: `CONTRACT_VERDICT: PROD_GO`
@@ -64,6 +96,26 @@ Soufflé-backed shadow verification runs in the **route** phase (`TurnReqShadow`
 and continues (no hidden retry). Divergence severity feeds legitimacy scoring and typed local
 recovery (`Recovery*` causes in the turn trace). Shadow is a **parallel check**, not the primary
 family selector — cascade + thresholds remain authoritative for PROD routing.
+
+### Recovery decision and the Conatus gate (Phase 2.5 / M2d)
+
+The local-recovery decision in `buildLocalRecoveryPlan` is
+priority-ordered. The **Conatus gate** is the highest-priority
+guard: when the runtime `ConatusEnergy` drops below
+`conatusGateThreshold` (see `QxFx0.Self.Salience`), the system
+is in structural risk and `StrategySafeRecovery` is forced
+regardless of shadow, parser, legitimacy, or runtime-mode
+signals. The cause is tagged with the dedicated
+`RecoveryConatusGate` variant of `LocalRecoveryCause` (snake_case
+JSON tag `"conatus_gate"`), distinct from the environmental
+`RecoveryRuntimeDegraded`. See ADR-0010 addendum (2026-05-17)
+and ADR-0005 addendum (2026-05-17) for the full specification.
+
+The pre-turn `ConatusEnergy` and `Field` are computed once per
+turn in `buildPrepareEffectPlan` and threaded through
+`PrepareStatic` → `TurnInput` as the single source of truth
+(Phase 6 refactor); routing salience and the recovery decision
+are read-only consumers of these values.
 
 ### Intuition and experimental Bayesian nudge
 
@@ -94,6 +146,15 @@ changes are expected to honor it.
   operationalizing THEORY.md as a phased modernization (P0–P8) toward a
   self-preserving dual-mode runtime with formal `SelfBlanket` invariants
   and a `Conatus` functional.
+- `docs/adr/0009-right-hemisphere-field.md` — the algebraic shape of the
+  right-hemispheric observation summary (`Field`: Resonance, Atmosphere,
+  Consolidation, Counterfactual, FieldConfidence) and the 2026-05-17
+  addendum recording each component's runtime source.
+- `docs/adr/0010-salience-controller.md` — the Phase-5 Salience
+  controller that turns `(ConatusEnergy, Field)` into a
+  `(holisticBias, confidence, driver)` verdict; the 2026-05-17
+  addendum records the integration into routing salience, the
+  Conatus-gate priority override, and the trace-side audit fields.
 
 External readers familiar with active inference (Friston), autopoiesis
 (Maturana & Varela), hemispheric duality (McGilchrist), or paraconsistent
@@ -249,6 +310,10 @@ This is useful for domains where explainability, control, and reproducibility ma
 1. Reduce template fallback paths and expand GF-native Russian generation quality.
 2. Improve practical RU/EN dual-language conversational parity.
 3. Add traceable domain adapters (for example legal/structured knowledge corpora) without breaking deterministic core contracts.
+4. **Phase 2.5 (M2d, landed 2026-05-17)** — runtime Conatus as the
+   primary recovery driver, with audit observability of the
+   Salience controller verdict in the replay trace. End-to-end
+   verification on adequate-RAM infrastructure is pending.
 
 ## Repository References
 
