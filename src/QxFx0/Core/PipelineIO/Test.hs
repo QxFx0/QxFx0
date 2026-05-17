@@ -11,8 +11,9 @@ module QxFx0.Core.PipelineIO.Test
 import QxFx0.Core.ConsciousnessLoop
   ( clLastNarrative
   , initialLoop
-  , runConsciousnessLoop
+  , runConsciousnessLoopWithSalience
   )
+import QxFx0.Self.Salience (salienceFromResonance)
 import QxFx0.Core.Intuition
   ( checkIntuition
   , defaultIntuitiveState
@@ -82,7 +83,9 @@ defaultTestInterpreter request =
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard (Unavailable "nix_unavailable_default_test_pipeline"))
     TurnReqConsciousness semanticInput humanTheta resonance -> do
-      let (nextLoop, fragment) = runConsciousnessLoop initialLoop semanticInput humanTheta resonance
+      let salience = salienceFromResonance resonance
+          (nextLoop, fragment) =
+            runConsciousnessLoopWithSalience salience initialLoop semanticInput humanTheta resonance
           nextNarrative = clLastNarrative nextLoop
           nextFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop nextNarrative nextFragment)

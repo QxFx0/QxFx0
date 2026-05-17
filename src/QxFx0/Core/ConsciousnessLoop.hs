@@ -5,6 +5,9 @@ module QxFx0.Core.ConsciousnessLoop
   , ResponseObservation(..)
   , initialLoop
   , runConsciousnessLoop
+  , runConsciousnessLoopWithSalience
+  , applySalienceToNarrativeFragment
+  , narrativeConfidenceThreshold
   , updateAfterResponse
   , addCoreSignal
   ) where
@@ -33,6 +36,12 @@ import QxFx0.Core.Consciousness
 import QxFx0.Core.BackgroundProcess
   ( BackgroundState(..), SurfacingEvent(..)
   , initialBackground, runBackgroundCycle
+  )
+import QxFx0.Self.Salience
+  ( Salience
+  , SalienceDriver(..)
+  , salienceConfidence
+  , salienceDriver
   )
 
 data CoreRegime = MonolithicMajority | BalancedSymmetry | ChildDominant
@@ -88,6 +97,78 @@ runConsciousnessLoop loop semanticInput humanTheta resonance =
         }
       fragment = narrativeToPromptFragment narrative
   in (loop', fragment)
+
+-- | Salience-aware variant of 'runConsciousnessLoop'. Runs the
+-- consciousness loop unchanged, then weights the resulting
+-- narrative fragment under the supplied 'Salience' verdict via
+-- 'applySalienceToNarrativeFragment'.
+--
+-- The 'ConsciousnessLoop' itself (model state, previous output,
+-- current narrative, background, surfacing, turn counter) is
+-- updated exactly as in 'runConsciousnessLoop' regardless of
+-- salience.
+-- Salience only weights the contribution of the narrative to the
+-- /prompt/, never the kernel state. This keeps the consciousness
+-- model's internal evolution decoupled from the controller, which
+-- is the strict reading of ADR-0010 \u00a75 anti-correlation discipline
+-- on this channel.
+--
+-- Behaviour at neutral salience ('salienceConfidence' \u2265 the
+-- threshold and 'salienceDriver' /= 'DrivenByConatusGate') is
+-- identity, so any call site that does not yet supply rich Field
+-- signals observes no behaviour change.
+runConsciousnessLoopWithSalience
+  :: Salience
+  -> ConsciousnessLoop
+  -> SemanticInput
+  -> Double
+  -> Double
+  -> (ConsciousnessLoop, Text)
+runConsciousnessLoopWithSalience salience loop semanticInput humanTheta resonance =
+  let (loop', fragment) = runConsciousnessLoop loop semanticInput humanTheta resonance
+      weighted          = applySalienceToNarrativeFragment salience fragment
+  in (loop', weighted)
+
+-- | Confidence threshold below which the narrative fragment is
+-- suppressed (replaced by an empty 'Text') by
+-- 'applySalienceToNarrativeFragment'.
+--
+-- The threshold is conservative: only configurations where the
+-- salience drivers are strongly dispersed (no clear winner among
+-- the five drivers) suppress the narrative. At neutral signals
+-- ('emptyField' + placeholder Conatus), 'salienceConfidence' is
+-- @1.0@ and the threshold is never tripped. See the doc on
+-- 'QxFx0.Self.Salience.computeConfidence' for the dispersion
+-- semantics.
+narrativeConfidenceThreshold :: Double
+narrativeConfidenceThreshold = 0.25
+
+-- | Weight a narrative fragment by a 'Salience' verdict.
+--
+-- Decision rule (matches ADR-0010 \u00a74 and \u00a75):
+--
+--   * 'DrivenByConatusGate' (structural risk) overrides every
+--     other verdict and suppresses the narrative entirely. Under
+--     structural risk, the controller refuses to let the
+--     consciousness narrative pollute the prompt.
+--   * 'salienceConfidence' below 'narrativeConfidenceThreshold'
+--     suppresses the narrative as well. The drivers disagree too
+--     much for the verdict to be trusted, so the contribution is
+--     dropped.
+--   * Otherwise the fragment passes through unchanged. There is
+--     no fractional weighting on the text \u2014 contribution is
+--     binary at this layer (full or zero).
+--
+-- The downstream call sites already gate on @T.null fragment@
+-- before adding the fragment to the prompt, so an empty fragment
+-- naturally disappears from the prompt without further plumbing.
+applySalienceToNarrativeFragment :: Salience -> Text -> Text
+applySalienceToNarrativeFragment salience fragment =
+  case salienceDriver salience of
+    DrivenByConatusGate -> T.empty
+    _
+      | salienceConfidence salience < narrativeConfidenceThreshold -> T.empty
+      | otherwise                                                   -> fragment
 
 updateAfterResponse :: ConsciousnessLoop -> ResponseObservation -> ConsciousnessLoop
 updateAfterResponse loop observation =

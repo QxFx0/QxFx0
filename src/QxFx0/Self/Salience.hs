@@ -100,6 +100,7 @@ module QxFx0.Self.Salience
   , chooseBranch
     -- * Phase-5.5 transitional helpers
   , salienceFromField
+  , salienceFromResonance
   ) where
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
@@ -111,6 +112,8 @@ import QxFx0.Self.Field
   , Field (..)
   , FieldConfidence (..)
   , Resonance (..)
+  , emptyField
+  , mkResonance
   )
 
 -- ---------------------------------------------------------------------------
@@ -315,6 +318,21 @@ salienceFromField =
           , ccPenalty    = 0.0
           }
       }
+
+-- | Build a 'Salience' from a single resonance signal, using
+-- 'salienceFromField' on an otherwise-empty 'Field'.
+--
+-- This is the Phase-5.5 wiring primitive shared by all call
+-- sites that still operate at the resonance-only level of Field
+-- plumbing (currently: the intuition handler in
+-- 'QxFx0.Runtime.Wiring.Handlers' and the consciousness-loop
+-- dispatch in 'QxFx0.Core.ConsciousnessLoop'). Phase 5.5+ will
+-- broaden these call sites to richer 'Field' values, at which
+-- point this helper is replaced by direct 'salienceFromField'
+-- (or 'computeSalience' once M2d threads runtime Conatus).
+salienceFromResonance :: Double -> Salience
+salienceFromResonance resonance =
+  salienceFromField (emptyField { fieldResonance = mkResonance resonance })
 
 -- ---------------------------------------------------------------------------
 -- Internals

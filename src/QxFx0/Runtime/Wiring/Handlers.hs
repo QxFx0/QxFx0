@@ -28,17 +28,9 @@ import QxFx0.Bridge.SQLite (maybeCheckpoint)
 import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProjection)
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
-import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoop)
+import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoopWithSalience)
 import QxFx0.Core.Intuition (checkIntuitionWithInputAndSalience, effectivePosterior)
-import QxFx0.Self.Field
-  ( emptyField
-  , fieldResonance
-  , mkResonance
-  )
-import QxFx0.Self.Salience
-  ( Salience
-  , salienceFromField
-  )
+import QxFx0.Self.Salience (salienceFromResonance)
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
@@ -78,13 +70,15 @@ handleTurnEffect ctx request =
       pure (TurnResNixGuard status)
     TurnReqConsciousness semanticInput humanTheta resonance -> do
       cl <- readConsciousLoop ctx
-      let (nextLoop, fragment) = runConsciousnessLoop cl semanticInput humanTheta resonance
+      let salience = salienceFromResonance resonance
+          (nextLoop, fragment) =
+            runConsciousnessLoopWithSalience salience cl semanticInput humanTheta resonance
           currentNarrative = clLastNarrative nextLoop
           narrativeFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
     TurnReqIntuition inputText resonance tension turnNumber -> do
       intuitive <- readIntuition ctx
-      let salience = intuitionSalience resonance
+      let salience = salienceFromResonance resonance
           (mFlash, intuitionState) =
             checkIntuitionWithInputAndSalience
               salience inputText resonance tension turnNumber intuitive
@@ -236,24 +230,3 @@ allowedReadEnvKeys =
     , "QXFX0_GF_PGF_PATH"
     ]
 
--- | Build a salience verdict at the intuition call site from the
--- runtime signals available here.
---
--- Phase 5.5a establishes the structural connection between the
--- intuition handler and the 'QxFx0.Self.Salience' controller.
--- The Field signals available so far are limited (only resonance
--- is in scope at this layer), so the 'salienceHolisticBias'
--- remains in the holistic-leaning half (above @0.5@) whenever
--- resonance is non-trivial. With the multiplier in
--- 'salienceFlashMultiplier' capped at @1.0@, this means 5.5a is a
--- structural no-op behaviourally: the runtime now consults
--- 'computeSalience' on every intuition turn, but flash strength
--- is unchanged.
---
--- The placeholder 'ConatusEnergy' below (positive scalar so the
--- gate does not trip) is the explicit deferral point: M2d will
--- replace it with a real Conatus energy computed from the current
--- 'QxFx0.Self.Blanket.SelfBlanket' state.
-intuitionSalience :: Double -> Salience
-intuitionSalience resonance =
-  salienceFromField (emptyField { fieldResonance = mkResonance resonance })
