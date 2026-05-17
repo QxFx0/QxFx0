@@ -28,6 +28,11 @@ import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
+import QxFx0.Self.Field
+  ( Field (..)
+  , emptyField
+  , mkResonance
+  )
 import QxFx0.Self.Invariants (checkInitialBlanket)
 
 import Data.Text (Text)
@@ -102,6 +107,18 @@ data PrepareStatic = PrepareStatic
     --   evidence line @"blanket_violations=N"@ at the
     --   render-stage call site can be reconstructed without a
     --   second 'computeSelfBlanket' + 'checkInitialBlanket' pass.
+  , psField :: !Field
+    -- ^ Phase 5.5d: per-turn 'QxFx0.Self.Field.Field' snapshot.
+    --   Currently only 'fieldResonance' is populated from
+    --   'psResonance' (atom-trace current load); the remaining
+    --   four components ('fieldAtmosphere', 'fieldConfidence',
+    --   'fieldConsolidation', 'fieldCounterfactual') stay at
+    --   their 'emptyField' defaults pending the broader Field-
+    --   broadening work (Atmosphere from Ego, Consolidation
+    --   from topic stability, Counterfactual from candidate
+    --   ambiguity). Threaded through 'tiField' so all routing
+    --   and salience-decision call sites share one canonical
+    --   pre-turn Field.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -157,6 +174,16 @@ buildPrepareEffectPlan ss input =
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
+      -- Phase 5.5d: populate Resonance from the atom-trace
+      -- 'resonance' already computed above. Other four Field
+      -- components default to 'emptyField' pending a follow-up
+      -- commit that derives them from runtime signals (Ego
+      -- tension/agency for Atmosphere, topic-stability for
+      -- Consolidation, candidate-family ambiguity for
+      -- Counterfactual). 'fieldConfidence' stays at 1.0 (the
+      -- 'emptyField' default) which per ADR-0009 §4.4 means
+      -- "uninformed, not unconfident".
+      preparedField = emptyField { fieldResonance = mkResonance resonance }
       static = PrepareStatic
         { psInputText = input
         , psAtomSet = atomSet
@@ -170,6 +197,7 @@ buildPrepareEffectPlan ss input =
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy
         , psBlanketViolationCount = violationCount
+        , psField = preparedField
         }
   in PrepareEffectPlan
       { pepStatic = static

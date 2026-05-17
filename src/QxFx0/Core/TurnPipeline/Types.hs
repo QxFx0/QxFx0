@@ -33,6 +33,7 @@ import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.Field (Field)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -87,6 +88,16 @@ data TurnInput = TurnInput
     --   'QxFx0.Core.TurnPipeline.Effects.psBlanketViolationCount',
     --   used by 'buildLocalRecoveryPlan' to construct the
     --   @"blanket_violations=N"@ evidence line.
+  , tiField :: !Field
+    -- ^ Phase 5.5d: per-turn 'QxFx0.Self.Field.Field' carried
+    --   from 'QxFx0.Core.TurnPipeline.Effects.psField'.
+    --   Currently only 'fieldResonance' is populated; the
+    --   remaining four components stay at 'emptyField'
+    --   defaults pending follow-up Field-broadening work.
+    --   Single source of truth across the turn so routing
+    --   ('routeFamily') and finalize-stage trace
+    --   ('buildTurnProjection') share the same Field instead
+    --   of each constructing 'emptyField' independently.
   }
 
 data TurnSignals = TurnSignals
