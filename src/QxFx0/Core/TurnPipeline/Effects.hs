@@ -32,6 +32,7 @@ import QxFx0.Self.Field
   ( Field (..)
   , emptyField
   , mkConsolidation
+  , mkCounterfactual
   , mkResonance
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
@@ -145,7 +146,8 @@ buildPrepareEffectPlan ss input =
       newTrace = updateTrace (ssTrace ss) (ssTurnCount ss) atomSet
       nextUserState = inferUserState (ssClusters ss) input
       logicResults = runSemanticLogic atomSet
-      recommendedFamily = case L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) logicResults of
+      sortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) logicResults
+      recommendedFamily = case sortedLogic of
         ((fam, _):_) -> fam
         [] -> CMGround
       frame = parseProposition input
@@ -175,23 +177,28 @@ buildPrepareEffectPlan ss input =
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
-      -- Phase 5.5d: populate Resonance from the atom-trace
-      -- 'resonance' already computed above, and Consolidation
-      -- from a topic-stability heuristic (same focused topic
-      -- as the previous turn -> high consolidation; topic
-      -- changed or first turn -> low). Atmosphere and
-      -- Counterfactual stay at 'emptyField' defaults pending
-      -- follow-up commits (Atmosphere from Ego, Counterfactual
-      -- from candidate-family ambiguity). 'fieldConfidence'
+      -- Phase 5.5d: populate Resonance (atom-trace load),
+      -- Consolidation (topic-stability heuristic: same focused
+      -- topic as previous turn -> 0.8; topic changed or first
+      -- turn -> 0.2), and Counterfactual (candidate-family
+      -- ambiguity: ratio of second-best to best family weight
+      -- in the semantic-logic ranking; >0 only when at least
+      -- two families are ranked). Atmosphere alone stays at
+      -- 'emptyField' default pending a follow-up commit
+      -- (valence-source design decision). 'fieldConfidence'
       -- stays at 1.0 (the 'emptyField' default) which per
       -- ADR-0009 §4.4 means "uninformed, not unconfident".
       topicStability =
         if not (T.null bestTopic) && bestTopic == ssLastTopic ss
           then 0.8
           else 0.2
+      counterfactualAmbiguity = case sortedLogic of
+        (_, w1) : (_, w2) : _ | w1 > 0 -> w2 / w1
+        _ -> 0.0
       preparedField = emptyField
-        { fieldResonance     = mkResonance resonance
-        , fieldConsolidation = mkConsolidation topicStability
+        { fieldResonance      = mkResonance resonance
+        , fieldConsolidation  = mkConsolidation topicStability
+        , fieldCounterfactual = mkCounterfactual counterfactualAmbiguity
         }
       static = PrepareStatic
         { psInputText = input
