@@ -556,3 +556,117 @@ We do not claim this is *the* decomposition; we claim it is
 and test coverage. Future ADRs may revise the set without
 disturbing the Phase-3 algebra above it, because the algebra
 treats `Field` opaquely.
+
+## Addendum (2026-05-17, Phase 5.5d) — runtime sourcing
+
+The body above (Phase 4) deliberately deferred *where* each
+Field component is sourced from at runtime: "This module is the
+algebraic shape... Sourcing of values from runtime signals
+(semantic embedding, consciousness-loop narrative tone,
+Bayesian posterior diversity, etc.) is Phase-5 work and lives
+outside this module."
+
+This addendum records the concrete sourcing decisions for the
+pre-turn `Field` carried by `psField` (in
+`QxFx0.Core.TurnPipeline.Effects.PrepareStatic`), threaded
+through `tiField` in `TurnInput`, and consumed by routing-side
+salience in `QxFx0.Core.TurnRouting.routeFamily`. Four of the
+five components are now populated from runtime signals; the
+fifth (`FieldConfidence`) remains at the `emptyField` default
+of `1.0` for the reasons documented at the end.
+
+### Resonance ← atom-trace current load
+
+```
+fieldResonance = mkResonance resonance
+  where resonance = atCurrentLoad newTrace
+        newTrace = updateTrace (ssTrace ss) (ssTurnCount ss) atomSet
+```
+
+The atom-trace `currentLoad` already exists as
+`QxFx0.Semantic.MeaningAtoms.atCurrentLoad`, in `[0, 1]`, and
+measures recent meaning-atom activation density. This is
+structurally what Resonance documents ("strongest echo found"
+in §2.1 of this ADR's Phase 5 successor). No new signal source.
+
+### Atmosphere ← Ego differential
+
+```
+atmosphereValence = egoAgency (ssEgo ss) - egoTension (ssEgo ss)
+atmosphereArousal = egoTension (ssEgo ss)
+fieldAtmosphere   = mkAtmosphere atmosphereValence atmosphereArousal
+```
+
+- *Arousal* maps directly to Ego tension. Both quantities
+  measure activation/intensity level, so they are
+  structurally the same signal; no additional sourcing.
+- *Valence* maps to the agency-minus-tension differential.
+  High agency + low tension reads as confident/positive;
+  low agency + high tension reads as overwhelmed/negative.
+  Both Ego components are clamped to `[0, 1]` by their
+  smart constructors, so the difference naturally lies in
+  `[-1, 1]`; `mkAtmosphere` clamps defensively.
+
+### FieldConfidence ← `1.0` (deferred)
+
+Stays at the `emptyField` default. Per §4.4: "a system that
+has not yet observed anything is uninformed, not unconfident".
+We could call `deriveFieldConfidence preparedFieldPartial`
+once the other four components are populated, but with all
+four sources still heuristic (per Phase 7 calibration debt),
+a derived confidence would risk false precision. The
+`deriveFieldConfidence` wiring is tracked as an explicit
+follow-up in the project todo (`Optional-deriveFieldConfidence`)
+and is gated on Phase 7 calibration data.
+
+### Consolidation ← topic-stability heuristic
+
+```
+topicStability =
+  if not (T.null bestTopic) && bestTopic == ssLastTopic ss
+    then 0.8
+    else 0.2
+fieldConsolidation = mkConsolidation topicStability
+```
+
+Per §2.2: "Consolidation accumulates over a window". In a
+1-turn window the natural minimum signal is whether the
+focused topic carried over. The `0.8` / `0.2` levels (not
+`1.0` / `0.0`) keep the contribution to Salience meaningful
+without saturating the sigmoid. The empty-focus case
+(`T.null bestTopic`) is treated as "topic changed" rather
+than "topic same", to avoid spuriously consolidating on the
+empty-string degenerate case.
+
+### Counterfactual ← candidate-family ambiguity
+
+```
+counterfactualAmbiguity = case sortedLogic of
+  (_, w1) : (_, w2) : _ | w1 > 0 -> w2 / w1
+  _ -> 0.0
+fieldCounterfactual = mkCounterfactual counterfactualAmbiguity
+```
+
+Per §2.5: "diversity of plausible alternative
+interpretations… normalised to `[0, 1]`. High = posterior
+was spread; low = posterior was peaked." The semantic-logic
+ranking (`runSemanticLogic`) enumerates plausible
+canonical-move families with weights; the ratio of the
+runner-up weight to the leader captures the spread/peaked
+dichotomy exactly. When `w1 > w2` (strictly peaked), the
+ratio is `< 1`; when `w1 ≈ w2` (genuine ambiguity), the
+ratio approaches `1`. The `w1 > 0` guard handles the all-zero
+degenerate case; `mkCounterfactual` clamps defensively.
+
+### Calibration debt (Phase 7)
+
+All four sourcing formulas above are *heuristic*. The
+specific constants (`0.8` / `0.2` for Consolidation;
+`agency - tension` for Atmosphere valence; the linear
+ratio for Counterfactual) are defensible but not calibrated
+against production traces. They are tracked in the project
+todo (`M7`) for tuning once labelled trace data is
+available; until then, the SelfSalience monotonicity
+properties guarantee that the directions of the
+contributions are correct even if the magnitudes are
+imprecise.

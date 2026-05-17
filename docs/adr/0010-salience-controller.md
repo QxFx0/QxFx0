@@ -468,3 +468,110 @@ The Phase-5 implementation will be considered complete when:
   module reproduces, models, or has anything to say about the
   biological mechanisms that underlie attentional salience in
   living systems. The borrow is operational, not theoretical.
+
+## Addendum (2026-05-17, Phase 5.5d + 5.5e + 6)
+
+This addendum records the Phase-5+ wiring decisions that landed
+after the body of this ADR was accepted, all of which keep the
+Phase-5 controller interface in place and only refine *what*
+inputs the controller sees and *what* outputs are observable.
+
+### Routing salience now reads the real pre-turn `Field`
+
+Previously `routeFamily` in `QxFx0.Core.TurnRouting` called
+`salienceFromBlanket blanket violations emptyField` — i.e. the
+controller saw the runtime Conatus but a zeroed-out `Field`.
+After Phase 5.5d the call site is:
+
+```
+routingSalience = salienceFromConatusEnergy conatusEnergy preparedField
+  where preparedField = tiField ti   -- Phase 5.5d
+        conatusEnergy = tiConatusEnergy ti   -- Phase 6
+```
+
+The pre-turn `Field` is constructed once per turn in
+`QxFx0.Core.TurnPipeline.Effects.buildPrepareEffectPlan` with
+four runtime-sourced components and one `emptyField` default
+(see ADR-0009 addendum 2026-05-17 for the per-component
+sourcing). The controller's algebra is unchanged; only its
+inputs are now informative rather than zero.
+
+### Single-source-of-truth Conatus (Phase 6)
+
+The pre-turn `ConatusEnergy` is computed exactly once per turn
+in `buildPrepareEffectPlan` and threaded through
+`PrepareStatic.psConatusEnergy` → `TurnInput.tiConatusEnergy`.
+Three downstream call sites that previously recomputed it
+(`routeFamily`, `buildLocalRecoveryPlan`, and the Prepare-stage
+handler dispatch) now read from `TurnInput` instead. The
+Finalize-stage trace Conatus is computed independently from
+`nextSs`, because it is structurally a different snapshot
+(post-turn) used to record what the controller *would*
+dispatch on the committed state.
+
+### `DrivenByConatusGate` priority override (Phase 2.5 / M2d)
+
+The `conatusGateFires` predicate from §5 of this ADR is now
+the first guard inspected by
+`QxFx0.Core.TurnPipeline.Route.Render.buildLocalRecoveryPlan`.
+When it fires, the resulting `LocalRecoveryPlan` carries the
+dedicated `RecoveryConatusGate` cause (added in
+`QxFx0.Types.Recovery`, snake_case JSON tag `"conatus_gate"`)
+and `StrategySafeRecovery` strategy, regardless of any
+other recovery cause that would have been eligible
+(`RecoveryShadowDivergence`, `RecoveryParserLowConfidence`,
+`RecoveryLowLegitimacy`, `RecoveryRenderBlocked`,
+`RecoveryUnknownTopic`, `RecoveryRuntimeDegraded`).
+
+This was previously emitted as `RecoveryRuntimeDegraded`
+(an overloaded tag); the dedicated cause keeps the
+trace and JSON schema able to distinguish a structural-
+Conatus event from an environmental runtime-degraded
+event.
+
+### `renderSalienceDriver` and `TurnReplayTrace` audit fields (Phase 5.5e)
+
+`QxFx0.Self.Salience.renderSalienceDriver :: SalienceDriver -> Text`
+provides stable snake_case tag rendering for the seven
+driver variants:
+
+```
+DrivenByResonance       -> "resonance"
+DrivenByAtmosphere      -> "atmosphere"
+DrivenByConsolidation   -> "consolidation"
+DrivenByCounterfactual  -> "counterfactual"
+DrivenByFieldConfidence -> "field_confidence"
+DrivenByConatusGate     -> "conatus_gate"
+DrivenByDefault         -> "default"
+```
+
+`QxFx0.Types.TurnProjection.TurnReplayTrace` now carries
+three new fields populated by
+`QxFx0.Core.TurnPipeline.Finalize.State.buildTurnProjection`
+from the controller's verdict on the post-turn state:
+
+```
+trcSalienceDriver       :: !Text     -- via renderSalienceDriver
+trcSalienceHolisticBias :: !Double   -- in [0, 1]
+trcSalienceConfidence   :: !Double   -- in [0, 1]
+```
+
+Audit consumers (replay-diff tooling, regression dashboards)
+can now answer the question "on turn N, why did the controller
+dispatch the way it did?" directly from the trace, without
+inferring it from `trcRecoveryCause` / `trcLegitimacyReason` /
+`trcFinalFamily` alone.
+
+### `chooseBranch` status
+
+The `chooseBranch` dispatcher (§4 of this ADR) currently has
+no consumer outside the SelfSalience test suite. The function
+remains in the public surface because it represents the
+*intended* dispatch shape — the operational dispatchers in
+`routeFamily` / `buildLocalRecoveryPlan` / `Finalize/State.hs`
+all derive from the same controller verdict, but each currently
+uses a more direct branching tailored to its decision domain.
+A future refactor may collapse these into a shared
+`chooseBranch` invocation; until then, the function is
+documented as dead-API-by-design in
+`QxFx0.Self.Salience`.
