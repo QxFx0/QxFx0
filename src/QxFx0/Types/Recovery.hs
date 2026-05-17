@@ -30,6 +30,15 @@ data LocalRecoveryCause
   | RecoveryRenderBlocked
   | RecoveryUnknownTopic
   | RecoveryRuntimeDegraded
+  | RecoveryConatusGate
+    -- ^ Phase 2.5 (M2d): the runtime Conatus energy dropped
+    --   below 'conatusGateThreshold' indicating structural risk.
+    --   Triggered exclusively by
+    --   'QxFx0.Self.Salience.conatusGateFires' in
+    --   'QxFx0.Core.TurnPipeline.Route.Render.buildLocalRecoveryPlan'.
+    --   Distinct from 'RecoveryRuntimeDegraded' (which means
+    --   the runtime mode itself is degraded for environmental
+    --   reasons, e.g. shadow unavailability, partial DB).
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
@@ -61,6 +70,7 @@ renderLocalRecoveryCause RecoveryShadowDivergence = "shadow_divergence"
 renderLocalRecoveryCause RecoveryRenderBlocked = "render_blocked"
 renderLocalRecoveryCause RecoveryUnknownTopic = "unknown_topic"
 renderLocalRecoveryCause RecoveryRuntimeDegraded = "runtime_degraded"
+renderLocalRecoveryCause RecoveryConatusGate = "conatus_gate"
 
 renderLocalRecoveryStrategy :: LocalRecoveryStrategy -> Text
 renderLocalRecoveryStrategy StrategyAskClarification = "ask_clarification"

@@ -349,10 +349,11 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
       -- 'QxFx0.Self.Salience.defaultSalienceWeights'), the system
       -- is in structural risk and 'StrategySafeRecovery' is forced
       -- regardless of shadow / parser / legitimacy / runtime-mode
-      -- signals. The cause is tagged 'RecoveryRuntimeDegraded'
-      -- (the closest existing 'LocalRecoveryCause' for a structural
-      -- degradation; a dedicated 'RecoveryConatusGate' cause may be
-      -- added in a later phase).
+      -- signals. The cause is tagged 'RecoveryConatusGate' — a
+      -- dedicated 'LocalRecoveryCause' variant introduced together
+      -- with this guard so the trace and the JSON schema can
+      -- distinguish a structural-Conatus event from an
+      -- environmental 'RecoveryRuntimeDegraded' event.
       conatusBlanket    = computeSelfBlanket ss
       conatusViolations = checkInitialBlanket conatusBlanket
       conatusEnergy     = computeConatusEnergy conatusBlanket conatusViolations
@@ -366,7 +367,7 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
           _
             | conatusGateFires conatusEnergy ->
                 Just
-                  ( RecoveryRuntimeDegraded
+                  ( RecoveryConatusGate
                   , StrategySafeRecovery
                   , conatusEvidence
                   )
