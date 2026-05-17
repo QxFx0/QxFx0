@@ -49,6 +49,17 @@ data TurnReplayTrace = TurnReplayTrace
   , trcLinearizationLang :: !(Maybe Text)
   , trcLinearizationOk :: !Bool
   , trcFallbackReason :: !(Maybe Text)
+  , trcSalienceDriver :: !Text
+    -- ^ Phase 5.5e: rendered snake_case tag for the dominant
+    --   'QxFx0.Self.Salience.SalienceDriver' on this turn.
+    --   Closed enum tag; stable across builds.
+  , trcSalienceHolisticBias :: !Double
+    -- ^ Phase 5.5e: 'salienceHolisticBias' in @[0, 1]@.
+    --   @0@ = pure formal, @1@ = pure holistic, @0.5@ = neutral.
+  , trcSalienceConfidence :: !Double
+    -- ^ Phase 5.5e: 'salienceConfidence' in @[0, 1]@.
+    --   @1@ = one driver decisively dominates,
+    --   @0@ = contributions cancel.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

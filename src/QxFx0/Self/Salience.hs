@@ -106,7 +106,11 @@ module QxFx0.Self.Salience
   , salienceFromConatusResonance
   , salienceFromBlanket
   , conatusGateFires
+    -- * Trace rendering (Phase 5.5e)
+  , renderSalienceDriver
   ) where
+
+import Data.Text (Text)
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
 import QxFx0.Self.Conatus
@@ -414,6 +418,25 @@ salienceFromBlanket b violations =
 conatusGateFires :: ConatusEnergy -> Bool
 conatusGateFires ce =
   ceScalar ce < conatusGateThreshold defaultSalienceWeights
+
+-- ---------------------------------------------------------------------------
+-- Trace rendering (Phase 5.5e)
+-- ---------------------------------------------------------------------------
+
+-- | Render a 'SalienceDriver' to a stable snake_case 'Text' tag
+-- for inclusion in 'QxFx0.Types.TurnProjection.TurnReplayTrace'
+-- and JSON-encoded turn projections.
+--
+-- The tags are closed-set and trace-stable: any change to a tag
+-- is a breaking change to the replay-trace JSON schema.
+renderSalienceDriver :: SalienceDriver -> Text
+renderSalienceDriver DrivenByResonance       = "resonance"
+renderSalienceDriver DrivenByAtmosphere      = "atmosphere"
+renderSalienceDriver DrivenByConsolidation   = "consolidation"
+renderSalienceDriver DrivenByCounterfactual  = "counterfactual"
+renderSalienceDriver DrivenByFieldConfidence = "field_confidence"
+renderSalienceDriver DrivenByConatusGate     = "conatus_gate"
+renderSalienceDriver DrivenByDefault         = "default"
 
 -- ---------------------------------------------------------------------------
 -- Internals

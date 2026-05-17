@@ -1078,6 +1078,9 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
+              , trcSalienceDriver = "default"
+              , trcSalienceHolisticBias = 0.5
+              , trcSalienceConfidence = 1.0
               }
           , tqpDivergence = True
           }
@@ -1365,6 +1368,9 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
+              , trcSalienceDriver = "default"
+              , trcSalienceHolisticBias = 0.5
+              , trcSalienceConfidence = 1.0
               }
           , tqpDivergence = True
           }

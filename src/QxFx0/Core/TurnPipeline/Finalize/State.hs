@@ -31,6 +31,15 @@ import QxFx0.Core.Observability
 import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Conatus (computeConatusEnergy)
+import QxFx0.Self.Field (emptyField)
+import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Salience
+  ( Salience (..)
+  , renderSalienceDriver
+  , salienceFromConatusEnergy
+  )
 import QxFx0.Types.Text (textShow)
 
 import Data.Sequence (Seq)
@@ -137,6 +146,19 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 (Just RecoveryRuntimeDegraded, Just StrategyNarrowScope, ["runtime_mode=degraded"])
           Nothing ->
             (Nothing, Nothing, [])
+      -- Phase 5.5e: canonical trace Salience. Same Conatus +
+      -- emptyField pair the routing layer uses in
+      -- 'QxFx0.Core.TurnRouting.routeFamily' (resonance and the
+      -- four other Field signals are not yet plumbed at the
+      -- trace site; Phase 5.5d broadens this). The verdict
+      -- recorded here is what the controller would dispatch on
+      -- post-turn state, not necessarily what fired the
+      -- pre-turn handlers — audit traces are a snapshot of the
+      -- /post-turn/ structural shape.
+      traceBlanket    = computeSelfBlanket nextSs
+      traceViolations = checkInitialBlanket traceBlanket
+      traceConatus    = computeConatusEnergy traceBlanket traceViolations
+      traceSalience   = salienceFromConatusEnergy traceConatus emptyField
       replayTrace =
         TurnReplayTrace
           { trcRequestId = requestId
@@ -169,6 +191,9 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcLinearizationLang = taLinearizationLang ta
           , trcLinearizationOk = taLinearizationOk ta
           , trcFallbackReason = taLinearizationFallbackReason ta
+          , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
+          , trcSalienceHolisticBias = salienceHolisticBias traceSalience
+          , trcSalienceConfidence = salienceConfidence traceSalience
           }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
