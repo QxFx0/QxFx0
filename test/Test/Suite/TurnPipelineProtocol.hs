@@ -80,6 +80,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , resolveRouteEffects
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
+import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Morphology as Morph
 import qualified QxFx0.Core.Intuition as Intuition
@@ -154,6 +155,7 @@ turnPipelineProtocolTests =
   , testRuntimeDegradedUsesVisibleLocalRecovery
   , testParserLowConfidenceUsesDistinguishCandidates
   , testRenderBlockedPersistsSafeRecoveryTrace
+  , testConatusGateFiresRecoveryConatusGate
   , testFinalizePrecommitResolveConcurrently
   ]
 
@@ -983,6 +985,55 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
     assertEqual "degraded runtime replay trace should keep typed recovery strategy"
       (Just StrategyNarrowScope)
       (trcRecoveryStrategy replayTrace)
+
+testConatusGateFiresRecoveryConatusGate :: Test
+testConatusGateFiresRecoveryConatusGate = TestCase $
+  withDeterministicEmbedding $ do
+    -- Phase 2.5 (M2d) + RecoveryConatusGate integration test:
+    -- when the runtime Conatus energy drops below the gate
+    -- threshold (default 0.0), 'buildLocalRecoveryPlan' inside
+    -- 'planRenderEffectsForRuntime' must emit the dedicated
+    -- 'RecoveryConatusGate' cause with 'StrategySafeRecovery'
+    -- as the highest-priority recovery driver, regardless of
+    -- the runtime mode being 'RuntimeStrict' (so this is /not/
+    -- the environmental 'RecoveryRuntimeDegraded' path).
+    --
+    -- Strategy: build a viable fixture, then forcibly override
+    -- only 'tiConatusEnergy' to a negative scalar. This is the
+    -- single field 'conatusGateFires' inspects, and is the
+    -- canonical M6 single-source-of-truth threading site, so
+    -- the override is enough to drive the entire decision
+    -- branch without rebuilding the rest of the fixture.
+    (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -1.0
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate firing must expose a visible local recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "Conatus gate must produce RecoveryConatusGate cause"
+          RecoveryConatusGate
+          (lrpCause recoveryPlan)
+        assertEqual "Conatus gate must force StrategySafeRecovery"
+          StrategySafeRecovery
+          (lrpStrategy recoveryPlan)
+        assertBool "evidence must include conatus_gate_fired tag"
+          ("conatus_gate_fired" `elem` lrpEvidence recoveryPlan)
+        assertBool "evidence must include blanket_violations=2 line"
+          ("blanket_violations=2" `elem` lrpEvidence recoveryPlan)
 
 testParserLowConfidenceUsesDistinguishCandidates :: Test
 testParserLowConfidenceUsesDistinguishCandidates = TestCase $
