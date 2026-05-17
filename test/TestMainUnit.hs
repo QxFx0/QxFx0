@@ -14,6 +14,7 @@ import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 import Test.Suite.SelfField (selfFieldTests)
+import Test.Suite.SelfSalience (selfSalienceTests)
 
 main :: IO ()
 main = do
@@ -29,6 +30,7 @@ main = do
         ++ selfBlanketTests
         ++ selfAdjunctionTests
         ++ selfFieldTests
+        ++ selfSalienceTests
         )
   if errors testCounts + failures testCounts > 0
     then exitFailure

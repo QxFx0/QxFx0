@@ -80,6 +80,7 @@ library
     QxFx0.Self.Invariants
     QxFx0.Self.Field
     QxFx0.Self.Adjunction
+    QxFx0.Self.Salience
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -362,6 +363,7 @@ common test-common
     Test.Suite.SelfConatus
     Test.Suite.SelfAdjunction
     Test.Suite.SelfField
+    Test.Suite.SelfSalience
 
 test-suite qxfx0-test-unit
   import:        test-common
