@@ -30,10 +30,6 @@ import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoop)
 import QxFx0.Core.Intuition (checkIntuitionWithInputAndSalience, effectivePosterior)
-import QxFx0.Self.Conatus
-  ( ConatusComponents(..)
-  , ConatusEnergy(..)
-  )
 import QxFx0.Self.Field
   ( emptyField
   , fieldResonance
@@ -41,8 +37,7 @@ import QxFx0.Self.Field
   )
 import QxFx0.Self.Salience
   ( Salience
-  , computeSalience
-  , defaultSalienceWeights
+  , salienceFromField
   )
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
@@ -261,14 +256,4 @@ allowedReadEnvKeys =
 -- 'QxFx0.Self.Blanket.SelfBlanket' state.
 intuitionSalience :: Double -> Salience
 intuitionSalience resonance =
-  let field    = emptyField { fieldResonance = mkResonance resonance }
-      conatus  = ConatusEnergy
-        { ceScalar     = 1.0
-        , ceComponents = ConatusComponents
-            { ccMorphology = 0.0
-            , ccIdentity   = 0.0
-            , ccTurns      = 0.0
-            , ccPenalty    = 0.0
-            }
-        }
-  in computeSalience defaultSalienceWeights conatus field
+  salienceFromField (emptyField { fieldResonance = mkResonance resonance })

@@ -98,10 +98,12 @@ module QxFx0.Self.Salience
   , salienceVerdict
     -- * Adjunction-aware dispatch
   , chooseBranch
+    -- * Phase-5.5 transitional helpers
+  , salienceFromField
   ) where
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
-import QxFx0.Self.Conatus    (ConatusEnergy (..))
+import QxFx0.Self.Conatus    (ConatusComponents (..), ConatusEnergy (..))
 import QxFx0.Self.Field
   ( Atmosphere (..)
   , Consolidation (..)
@@ -286,6 +288,33 @@ chooseBranch v holistic formal = case v of
   PreferHolistic _ -> holistic
   PreferFormal   _ -> rightAdjunct formal
   Tied             -> rightAdjunct formal
+
+-- ---------------------------------------------------------------------------
+-- Phase-5.5 transitional helpers
+-- ---------------------------------------------------------------------------
+
+-- | Compute a 'Salience' from a 'Field' alone, using a placeholder
+-- positive 'ConatusEnergy' so the gate does not fire and
+-- 'defaultSalienceWeights'.
+--
+-- This is the Phase-5.5 wiring helper. Call sites that already
+-- have access to a runtime 'ConatusEnergy' should call
+-- 'computeSalience' directly. Phase 2.5 (M2d) replaces every use
+-- of this helper with a 'computeSalience' that consumes a
+-- 'ConatusEnergy' computed from the runtime 'SelfBlanket'.
+salienceFromField :: Field -> Salience
+salienceFromField =
+  computeSalience defaultSalienceWeights placeholderConatusEnergy
+  where
+    placeholderConatusEnergy = ConatusEnergy
+      { ceScalar     = 1.0
+      , ceComponents = ConatusComponents
+          { ccMorphology = 0.0
+          , ccIdentity   = 0.0
+          , ccTurns      = 0.0
+          , ccPenalty    = 0.0
+          }
+      }
 
 -- ---------------------------------------------------------------------------
 -- Internals

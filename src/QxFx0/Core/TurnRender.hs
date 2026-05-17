@@ -2,6 +2,8 @@
 module QxFx0.Core.TurnRender
   ( applyRenderStrategy
   , renderStyleFromDecision
+  , renderStyleFromDecisionWithSalience
+  , applySalienceToStyle
   , deriveSemanticAnchor
   , snapshotIdentitySignal
   , renderPrincipledPrefix
@@ -29,7 +31,9 @@ import QxFx0.Core.TurnRender.Prefix
   )
 import QxFx0.Core.TurnRender.Strategy
   ( applyRenderStrategy
+  , applySalienceToStyle
   , renderStyleFromDecision
+  , renderStyleFromDecisionWithSalience
   , responseStanceToMarker
   , strategyDepthLabel
   , strategyDepthMode

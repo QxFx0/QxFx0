@@ -5,6 +5,8 @@
 module QxFx0.Core.TurnRender.Strategy
   ( applyRenderStrategy
   , renderStyleFromDecision
+  , renderStyleFromDecisionWithSalience
+  , applySalienceToStyle
   , strategyDepthMode
   , strategyToAnswerStrategy
   , responseStanceToMarker
@@ -17,6 +19,14 @@ import Data.Text (Text)
 import QxFx0.Core.IdentitySignal (IdentitySignal(..))
 import QxFx0.Core.PrincipledCore (PrincipledMode(..))
 import QxFx0.Core.R5Dynamics (EncounterMode(..))
+import QxFx0.Self.Salience
+  ( Salience
+  , SalienceDriver(..)
+  , SalienceVerdict(..)
+  , defaultSalienceWeights
+  , salienceDriver
+  , salienceVerdict
+  )
 import QxFx0.Semantic.SemanticInput (SemanticInput(..))
 import QxFx0.Types
 import QxFx0.Types.Thresholds
@@ -50,6 +60,65 @@ renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInpu
       byIdentity = styleFromIdentity identitySignal byPrincipled
       bySemantic = styleFromSemantic semanticInput byIdentity
    in maybe bySemantic (`styleFromAnchor` bySemantic) semanticAnchor
+
+-- | Salience-aware variant of 'renderStyleFromDecision'. The base
+-- style is picked by the existing strategy/principled/identity/
+-- semantic/anchor chain, then post-processed under the salience
+-- verdict via 'applySalienceToStyle'.
+--
+-- Behaviour at neutral salience ('Tied' verdict, 'DrivenByDefault'
+-- driver) is identity, so any call site that does not yet supply
+-- rich Field signals observes no behaviour change.
+renderStyleFromDecisionWithSalience
+  :: Salience
+  -> ResponseStrategy
+  -> Maybe PrincipledMode
+  -> IdentitySignal
+  -> Maybe SemanticAnchor
+  -> SemanticInput
+  -> RenderStyle
+renderStyleFromDecisionWithSalience salience strategy mode identitySignal semanticAnchor semanticInput =
+  applySalienceToStyle
+    salience
+    (renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput)
+
+-- | Re-shape a 'RenderStyle' under a 'Salience' verdict.
+--
+-- Decision rule (matches ADR-0010 §4 and §5):
+--
+--   * 'DrivenByConatusGate' (structural risk) overrides every
+--     other verdict and forces 'StyleRecovery'. This is the strict
+--     reading of the Conatus-gate priority discipline.
+--   * 'PreferFormal' verdict leans neutral and warm picks toward
+--     formal/contract-respecting variants.
+--   * 'PreferHolistic' verdict leans neutral and direct picks
+--     toward expressive/holistic variants.
+--   * 'Tied' verdict is identity — the dead band preserves the
+--     style picked by the existing strategy chain.
+--
+-- Already-specialised picks (Clinical, Cautious, Recovery, and the
+-- styles already aligned with the verdict) are preserved on every
+-- branch so the controller does not /override/ a more informative
+-- pick from the strategy chain.
+applySalienceToStyle :: Salience -> RenderStyle -> RenderStyle
+applySalienceToStyle salience baseStyle =
+  case salienceDriver salience of
+    DrivenByConatusGate -> StyleRecovery
+    _ ->
+      case salienceVerdict defaultSalienceWeights salience of
+        Tied             -> baseStyle
+        PreferFormal _   -> formalLean baseStyle
+        PreferHolistic _ -> holisticLean baseStyle
+  where
+    formalLean StyleStandard = StyleFormal
+    formalLean StyleWarm     = StyleFormal
+    formalLean StyleDirect   = StyleFormal
+    formalLean other         = other
+
+    holisticLean StyleStandard = StylePoetic
+    holisticLean StyleFormal   = StylePoetic
+    holisticLean StyleDirect   = StyleWarm
+    holisticLean other         = other
 
 strategyDepthMode :: ResponseDepth -> DepthMode
 strategyDepthMode DeepResp = DeepDepth
