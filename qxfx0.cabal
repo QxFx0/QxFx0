@@ -78,6 +78,7 @@ library
     QxFx0.Self.Blanket
     QxFx0.Self.Conatus
     QxFx0.Self.Invariants
+    QxFx0.Self.Field
     QxFx0.Self.Adjunction
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
@@ -360,6 +361,7 @@ common test-common
     Test.Suite.SelfBlanket
     Test.Suite.SelfConatus
     Test.Suite.SelfAdjunction
+    Test.Suite.SelfField
 
 test-suite qxfx0-test-unit
   import:        test-common

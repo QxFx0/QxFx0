@@ -63,7 +63,7 @@ module QxFx0.Self.Adjunction
   ( -- * The adjunction class
     Adjunction (..)
     -- * Concrete adjunction for Phase 3
-  , Field (..)
+  , Field
   , Holistic (..)
   , Formal   (..)
     -- * Derived combinators
@@ -71,6 +71,8 @@ module QxFx0.Self.Adjunction
   , rebroaden
   , probe
   ) where
+
+import QxFx0.Self.Field (Field)
 
 -- | Categorical adjunction @l ⊣ r@: a pair of functors with a
 -- natural hom-set isomorphism witnessed by @leftAdjunct@ and
@@ -99,16 +101,6 @@ class (Functor l, Functor r) => Adjunction l r | l -> r, r -> l where
   -- @Hom(l a, b) ≅ Hom(a, r b)@.
   rightAdjunct :: (a -> r b) -> (l a -> b)
   rightAdjunct k la = counit (fmap k la)
-
--- | Phase-3 stub for the right-hemispheric observation summary.
---
--- A single intensity scalar; in Phase 4 this becomes a record of
--- the right-hemispheric components named in ADR-0007 (atmosphere,
--- resonance, field confidence, consolidation, counterfactual). We
--- keep the stub minimal so this module can ship and be tested in
--- isolation, before Phase 4 lands the substantive Field record.
-newtype Field = Field { fieldIntensity :: Double }
-  deriving stock (Eq, Show)
 
 -- | Right-hemispheric mode: a value perceived /with/ its field,
 -- inseparable from its ground.

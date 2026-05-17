@@ -44,12 +44,21 @@ import Test.QuickCheck.Test (isSuccess)
 
 import QxFx0.Self.Adjunction
   ( Adjunction (..)
-  , Field (..)
+  , Field
   , Formal (..)
   , Holistic (..)
   , groundIn
   , probe
   , rebroaden
+  )
+import QxFx0.Self.Field
+  ( Field (..)
+  , Resonance (..)
+  , deriveFieldConfidence
+  , mkAtmosphere
+  , mkConsolidation
+  , mkCounterfactual
+  , mkResonance
   )
 
 -- ---------------------------------------------------------------------------
@@ -89,8 +98,34 @@ quickCheckProperty label prop = TestCase $ do
 -- Generators
 -- ---------------------------------------------------------------------------
 
+-- | A composite generator for 'Field': each component is drawn
+-- from its valid range and run through its smart constructor.
+-- 'fieldConfidence' is then re-derived so the generated value is
+-- internally consistent with the other four components.
 arbitraryField :: Gen Field
-arbitraryField = Field <$> choose (-10.0, 10.0)
+arbitraryField = do
+  r  <- choose (0.0, 1.0)
+  v  <- choose (-1.0, 1.0)
+  ar <- choose (0.0, 1.0)
+  c  <- choose (0.0, 1.0)
+  cf <- choose (0.0, 1.0)
+  let scaffold =
+        Field
+          { fieldResonance      = mkResonance r
+          , fieldAtmosphere     = mkAtmosphere v ar
+          , fieldConfidence     = error "unused; deriveFieldConfidence below replaces it"
+          , fieldConsolidation  = mkConsolidation c
+          , fieldCounterfactual = mkCounterfactual cf
+          }
+      withConf = scaffold { fieldConfidence = deriveFieldConfidence scaffold }
+  pure withConf
+
+-- | Single-scalar projection used by the affine test functions
+-- below. We use 'Resonance' as the canonical probe channel; any
+-- other component would do equally well — the laws under test are
+-- natural in 'Field' and do not depend on which scalar we pick.
+fieldProbeScalar :: Field -> Double
+fieldProbeScalar = unResonance . fieldResonance
 
 arbitraryInt :: Gen Int
 arbitraryInt = choose (-100, 100)
@@ -114,7 +149,7 @@ probeFields = vectorOf 6 arbitraryField
 -- QuickCheck can 'Show' counter-examples (function types have no
 -- meaningful 'Show').
 formalFromSeeds :: Int -> Int -> Formal Int
-formalFromSeeds k m = Formal (\(Field x) -> k + m * round x)
+formalFromSeeds k m = Formal (\fd -> k + m * round (fieldProbeScalar fd))
 
 -- | Pointwise equality of two 'Formal' values on a given probe set.
 formalEqOn :: Eq a => [Field] -> Formal a -> Formal a -> Bool
@@ -135,7 +170,7 @@ propLeftRightId =
   forAll arbitraryInt $ \seed ->
   forAll arbitraryHolisticInt $ \h ->
     let g :: Holistic Int -> Int
-        g (Holistic (a, Field x)) = a + seed + round x
+        g (Holistic (a, fd)) = a + seed + round (fieldProbeScalar fd)
         g' = rightAdjunct (leftAdjunct g)
     in g h == g' h
 
@@ -149,7 +184,7 @@ propRightLeftId =
   forAll arbitraryInt $ \a ->
   forAll probeFields $ \probes ->
     let k :: Int -> Formal Int
-        k x = Formal (\(Field y) -> x * seed + round y)
+        k x = Formal (\fd -> x * seed + round (fieldProbeScalar fd))
         k' :: Int -> Formal Int
         k' = leftAdjunct (rightAdjunct k)
     in formalEqOn probes (k a) (k' a)

@@ -13,6 +13,7 @@ import Test.Suite.EgoRead (egoReadTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
+import Test.Suite.SelfField (selfFieldTests)
 
 main :: IO ()
 main = do
@@ -27,6 +28,7 @@ main = do
         ++ selfConatusTests
         ++ selfBlanketTests
         ++ selfAdjunctionTests
+        ++ selfFieldTests
         )
   if errors testCounts + failures testCounts > 0
     then exitFailure

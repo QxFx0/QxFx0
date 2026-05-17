@@ -12,10 +12,11 @@ import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
+import Test.Suite.SelfField (selfFieldTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
