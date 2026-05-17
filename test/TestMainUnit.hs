@@ -12,6 +12,7 @@ import Test.Suite.VecProperties (vecPropertiesTests)
 import Test.Suite.EgoRead (egoReadTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
+import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 
 main :: IO ()
 main = do
@@ -25,6 +26,7 @@ main = do
         ++ egoReadTests
         ++ selfConatusTests
         ++ selfBlanketTests
+        ++ selfAdjunctionTests
         )
   if errors testCounts + failures testCounts > 0
     then exitFailure
