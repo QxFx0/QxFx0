@@ -292,6 +292,23 @@ salienceVerdict w s
 -- contract-driven mode is the safe default). This is the
 -- single-output-channel half of the anti-correlation discipline
 -- (ADR-0010 §5).
+--
+-- __Status (as of M2d):__ no runtime call site currently consumes
+-- 'chooseBranch'. The 5.5a\/5.5b\/5.5c integrations use direct
+-- @case salienceVerdict ... of@ post-processors because the
+-- channels in question (intuition flash strength, 'RenderStyle',
+-- narrative fragment text) do not naturally factor through the
+-- 'Holistic'\/'Formal' adjoint pair — they are all
+-- @Salience -> a -> a@ rewrites, not Field-parameterized
+-- dispatches.
+--
+-- This API is retained as the typed realisation of ADR-0008's
+-- adjunction-aware dispatch promise; wire-up is deferred to a
+-- later phase that introduces a naturally Field-parameterized
+-- dispatch point (candidate: Phase 5.5d Field broadening, where
+-- a Field-dependent computation may emerge naturally). Until
+-- then, property-test coverage in @Test.Suite.SelfSalience@
+-- exercises the adjunction laws on the type level only.
 chooseBranch
   :: SalienceVerdict
   -> (Holistic a -> b)   -- ^ Holistic-first branch.
