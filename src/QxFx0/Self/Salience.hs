@@ -101,10 +101,20 @@ module QxFx0.Self.Salience
     -- * Phase-5.5 transitional helpers
   , salienceFromField
   , salienceFromResonance
+    -- * Phase-2.5 runtime-Conatus helpers
+  , salienceFromConatusEnergy
+  , salienceFromConatusResonance
+  , salienceFromBlanket
+  , conatusGateFires
   ) where
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
-import QxFx0.Self.Conatus    (ConatusComponents (..), ConatusEnergy (..))
+import QxFx0.Self.Conatus
+  ( ConatusComponents (..)
+  , ConatusEnergy (..)
+  , computeConatusEnergy
+  )
+import QxFx0.Self.Types (BlanketViolation, SelfBlanket)
 import QxFx0.Self.Field
   ( Atmosphere (..)
   , Consolidation (..)
@@ -333,6 +343,60 @@ salienceFromField =
 salienceFromResonance :: Double -> Salience
 salienceFromResonance resonance =
   salienceFromField (emptyField { fieldResonance = mkResonance resonance })
+
+-- ---------------------------------------------------------------------------
+-- Phase-2.5 runtime-Conatus helpers (M2d)
+-- ---------------------------------------------------------------------------
+
+-- | Compute a 'Salience' from a precomputed 'ConatusEnergy' and a
+-- 'Field'. Uses 'defaultSalienceWeights'.
+--
+-- This is the canonical entry point for the M2d wiring: every
+-- runtime call site that has access to a real 'ConatusEnergy'
+-- (either by computing it directly from a 'SelfBlanket' or by
+-- receiving a precomputed one through 'PrepareStatic') goes
+-- through this helper. The Conatus gate is now a real runtime
+-- force; under structural risk ('ceScalar' below
+-- 'conatusGateThreshold') the verdict 'salienceDriver' becomes
+-- 'DrivenByConatusGate' and the 5.5b\/5.5c post-processors
+-- automatically dispatch to 'StyleRecovery' and suppress the
+-- narrative fragment, respectively.
+salienceFromConatusEnergy :: ConatusEnergy -> Field -> Salience
+salienceFromConatusEnergy = computeSalience defaultSalienceWeights
+
+-- | Convenience: build a 'Salience' from a precomputed
+-- 'ConatusEnergy' and a single resonance signal (otherwise-empty
+-- 'Field'). Used by the runtime handlers that receive the Conatus
+-- via the request constructor and have resonance in scope.
+salienceFromConatusResonance :: ConatusEnergy -> Double -> Salience
+salienceFromConatusResonance ce resonance =
+  salienceFromConatusEnergy
+    ce
+    (emptyField { fieldResonance = mkResonance resonance })
+
+-- | Compute a 'Salience' from a 'SelfBlanket', its current list
+-- of 'BlanketViolation's, and a 'Field'.
+--
+-- The 'ConatusEnergy' is computed by 'computeConatusEnergy'
+-- internally. Used by call sites that have direct access to the
+-- runtime 'SystemState' (and hence to a 'SelfBlanket') without
+-- needing to thread Conatus through a request shape.
+salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Salience
+salienceFromBlanket b violations =
+  salienceFromConatusEnergy (computeConatusEnergy b violations)
+
+-- | Predicate: does the Conatus gate fire on this energy under
+-- 'defaultSalienceWeights'?
+--
+-- This is the same boundary used by 'computeSalience' to decide
+-- whether to short-circuit to 'DrivenByConatusGate'. Exposed so
+-- that the recovery-decision call site in
+-- 'QxFx0.Core.TurnPipeline.Route.Render' can priority-override
+-- other recovery causes when the gate fires, keeping the
+-- decision boundary single-sourced.
+conatusGateFires :: ConatusEnergy -> Bool
+conatusGateFires ce =
+  ceScalar ce < conatusGateThreshold defaultSalienceWeights
 
 -- ---------------------------------------------------------------------------
 -- Internals

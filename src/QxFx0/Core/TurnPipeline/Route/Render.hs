@@ -41,6 +41,10 @@ import QxFx0.Core.TurnRender
   , snapshotIdentitySignal
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Conatus (ceScalar, computeConatusEnergy)
+import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Salience (conatusGateFires)
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
@@ -339,9 +343,33 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
           <> if hasCandidateSplit
             then ["candidate_families=" <> renderCandidateFamilies candidateFamilies]
             else []
+      -- Phase 2.5 (M2d): the Conatus gate is the highest-priority
+      -- recovery driver. When the runtime Conatus energy drops
+      -- below 'conatusGateThreshold' (see
+      -- 'QxFx0.Self.Salience.defaultSalienceWeights'), the system
+      -- is in structural risk and 'StrategySafeRecovery' is forced
+      -- regardless of shadow / parser / legitimacy / runtime-mode
+      -- signals. The cause is tagged 'RecoveryRuntimeDegraded'
+      -- (the closest existing 'LocalRecoveryCause' for a structural
+      -- degradation; a dedicated 'RecoveryConatusGate' cause may be
+      -- added in a later phase).
+      conatusBlanket    = computeSelfBlanket ss
+      conatusViolations = checkInitialBlanket conatusBlanket
+      conatusEnergy     = computeConatusEnergy conatusBlanket conatusViolations
+      conatusEvidence =
+        [ "conatus_gate_fired"
+        , "conatus_energy=" <> T.pack (show (ceScalar conatusEnergy))
+        , "blanket_violations=" <> T.pack (show (length conatusViolations))
+        ]
       candidate =
         case () of
           _
+            | conatusGateFires conatusEnergy ->
+                Just
+                  ( RecoveryRuntimeDegraded
+                  , StrategySafeRecovery
+                  , conatusEvidence
+                  )
             | tpShadowStatus tp == ShadowDiverged
                 && tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory ->
                 Just

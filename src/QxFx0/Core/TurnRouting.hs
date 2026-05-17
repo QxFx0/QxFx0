@@ -25,8 +25,10 @@ import QxFx0.Core.TurnRender
   ( deriveSemanticAnchor
   , renderStyleFromDecisionWithSalience
   )
+import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Field (emptyField)
-import QxFx0.Self.Salience (salienceFromField)
+import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Salience (salienceFromBlanket)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Core.TurnRouting.Cascade
   ( applyGuardGating
@@ -65,7 +67,9 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       semanticInput = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)
       semanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) semanticInput currentTopic (ssTurnCount ss + 1)
       renderStrategy = rpChosenStrategy
-      routingSalience = salienceFromField emptyField
+      blanket = computeSelfBlanket ss
+      violations = checkInitialBlanket blanket
+      routingSalience = salienceFromBlanket blanket violations emptyField
       renderStyle = renderStyleFromDecisionWithSalience routingSalience renderStrategy rpPrincipledModeResult identitySignal semanticAnchor semanticInput
   in RoutingDecision
        { rdFamily = fcFinalFamily

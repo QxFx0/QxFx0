@@ -30,7 +30,7 @@ import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoopWithSalience)
 import QxFx0.Core.Intuition (checkIntuitionWithInputAndSalience, effectivePosterior)
-import QxFx0.Self.Salience (salienceFromResonance)
+import QxFx0.Self.Salience (salienceFromConatusResonance)
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
@@ -68,17 +68,17 @@ handleTurnEffect ctx request =
       nixPath <- resolveNixPath ctx
       status <- checkNixWithCache (rtcNix (rcCaches ctx)) nixPath concept agency tension
       pure (TurnResNixGuard status)
-    TurnReqConsciousness semanticInput humanTheta resonance -> do
+    TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy -> do
       cl <- readConsciousLoop ctx
-      let salience = salienceFromResonance resonance
+      let salience = salienceFromConatusResonance conatusEnergy resonance
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience cl semanticInput humanTheta resonance
           currentNarrative = clLastNarrative nextLoop
           narrativeFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
-    TurnReqIntuition inputText resonance tension turnNumber -> do
+    TurnReqIntuition inputText resonance tension turnNumber conatusEnergy -> do
       intuitive <- readIntuition ctx
-      let salience = salienceFromResonance resonance
+      let salience = salienceFromConatusResonance conatusEnergy resonance
           (mFlash, intuitionState) =
             checkIntuitionWithInputAndSalience
               salience inputText resonance tension turnNumber intuitive

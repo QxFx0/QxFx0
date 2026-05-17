@@ -26,6 +26,9 @@ import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
+import QxFx0.Self.Invariants (checkInitialBlanket)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -36,8 +39,8 @@ import Data.Time.Clock (UTCTime)
 data TurnEffectRequest
   = TurnReqEmbedding !Text
   | TurnReqNixGuard !Text !Double !Double
-  | TurnReqConsciousness !SemanticInput !Double !Double
-  | TurnReqIntuition !Text !Double !Double !Int
+  | TurnReqConsciousness !SemanticInput !Double !Double !ConatusEnergy
+  | TurnReqIntuition !Text !Double !Double !Int !ConatusEnergy
   | TurnReqApiHealth
   | TurnReqShadow !CanonicalMoveFamily !IllocutionaryForce ![AtomTag]
   | TurnReqAgdaVerify
@@ -85,13 +88,20 @@ data PrepareStatic = PrepareStatic
   , psBestTopic :: !Text
   , psResonance :: !Double
   , psAtomLoad :: !Double
+  , psConatusEnergy :: !ConatusEnergy
+    -- ^ Phase 2.5 (M2d): the runtime Conatus energy computed
+    --   from the current 'SelfBlanket' and its 'BlanketViolation's.
+    --   Stored once per turn so downstream recovery-decision call
+    --   sites (e.g. 'buildLocalRecoveryPlan' in
+    --   'QxFx0.Core.TurnPipeline.Route.Render') can priority-check
+    --   the Conatus gate without recomputing from 'SystemState'.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
   = PrepareReqEmbedding !Text
   | PrepareReqNixGuard !Text !Double !Double
-  | PrepareReqConsciousness !SemanticInput !Double !Double
-  | PrepareReqIntuition !Text !Double !Double !Int
+  | PrepareReqConsciousness !SemanticInput !Double !Double !ConatusEnergy
+  | PrepareReqIntuition !Text !Double !Double !Int !ConatusEnergy
   | PrepareReqApiHealth
   deriving stock (Eq, Show)
 
@@ -136,6 +146,9 @@ buildPrepareEffectPlan ss input =
           recommendedFamily
           (ipfRegisterHint frame)
           (ipfSemanticLayer frame)
+      blanket = computeSelfBlanket ss
+      violations = checkInitialBlanket blanket
+      conatusEnergy = computeConatusEnergy blanket violations
       static = PrepareStatic
         { psInputText = input
         , psAtomSet = atomSet
@@ -147,14 +160,16 @@ buildPrepareEffectPlan ss input =
         , psBestTopic = bestTopic
         , psResonance = resonance
         , psAtomLoad = atomLoad
+        , psConatusEnergy = conatusEnergy
         }
   in PrepareEffectPlan
       { pepStatic = static
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
-      , pepConsciousnessRequest = PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance
+      , pepConsciousnessRequest =
+          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy
       , pepIntuitionRequest =
-          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1)
+          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy
       , pepApiHealthRequest = PrepareReqApiHealth
       }
   where
