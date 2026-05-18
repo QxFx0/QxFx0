@@ -35,8 +35,10 @@ import QxFx0.Self.Field
   , mkConsolidation
   , mkCounterfactual
   , mkResonance
+  , deriveFieldConfidence
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Salience (conatusGateFires)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -110,18 +112,31 @@ data PrepareStatic = PrepareStatic
     --   evidence line @"blanket_violations=N"@ at the
     --   render-stage call site can be reconstructed without a
     --   second 'computeSelfBlanket' + 'checkInitialBlanket' pass.
+  , psConatusGateFired :: !Bool
+    -- ^ Phase 6 addendum (M6.1): single-source-of-truth flag for
+    --   the Conatus gate.  Computed once in 'buildPrepareEffectPlan'
+    --   by 'conatusGateFires', then read by both the salience
+    --   controller and the recovery-decision site in
+    --   'buildLocalRecoveryPlan'.  Eliminates the previous
+    --   duplicate call to 'conatusGateFires'.
   , psField :: !Field
-    -- ^ Phase 5.5d: per-turn 'QxFx0.Self.Field.Field' snapshot.
-    --   Currently only 'fieldResonance' is populated from
-    --   'psResonance' (atom-trace current load); the remaining
-    --   four components ('fieldAtmosphere', 'fieldConfidence',
-    --   'fieldConsolidation', 'fieldCounterfactual') stay at
-    --   their 'emptyField' defaults pending the broader Field-
-    --   broadening work (Atmosphere from Ego, Consolidation
-    --   from topic stability, Counterfactual from candidate
-    --   ambiguity). Threaded through 'tiField' so all routing
-    --   and salience-decision call sites share one canonical
-    --   pre-turn Field.
+    -- ^ Per-turn 'QxFx0.Self.Field.Field' snapshot.  All five
+    --   components are populated from runtime signals:
+    --
+    --     * 'fieldResonance'      — atom-trace current load
+    --       ('psResonance').
+    --     * 'fieldAtmosphere'     — valence = (ego agency −
+    --       ego tension) modulated by legitimacy; arousal =
+    --       ego tension.
+    --     * 'fieldConsolidation'  — sliding-window narrative
+    --       success rate, optionally floored by topic stability.
+    --     * 'fieldCounterfactual' — normalised entropy of
+    --       candidate family weights, boosted by holistic streak.
+    --     * 'fieldConfidence'     — derived by
+    --       'deriveFieldConfidence' from the four above.
+    --
+    --   Threaded through 'tiField' so all routing and salience-
+    --   decision call sites share one canonical pre-turn Field.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -178,6 +193,7 @@ buildPrepareEffectPlan ss input =
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
+      conatusGateFired = conatusGateFires conatusEnergy
       -- Phase 5.5d: populate four of five Field components
       -- from runtime signals:
       --   * Resonance      <- atom-trace current load (already
@@ -200,27 +216,52 @@ buildPrepareEffectPlan ss input =
       --                         arousal = tension (structural
       --                                   proxy for activation
       --                                   level).
-      -- 'fieldConfidence' stays at 1.0 (the 'emptyField'
-      -- default) which per ADR-0009 §4.4 means "uninformed,
-      -- not unconfident" — a derived confidence signal across
-      -- the four channels is left for a later refinement
-      -- (could call 'deriveFieldConfidence' here, but the
-      -- current four sources are still heuristic so a
-      -- derived confidence would risk false precision).
+      -- 'fieldConfidence' is now derived via 'deriveFieldConfidence'
+      -- on the four populated components (Resonance, Atmosphere,
+      -- Consolidation, Counterfactual).  The default formula reduces
+      -- Atmosphere to arousal magnitude and computes 1 - dispersion
+      -- (variance of the four scalars).  This is still heuristic,
+      -- but it is no longer the fixed 1.0 default.
+      -- Step 6a: sliding-window narrative-consolidation replaces
+      -- the old binary topic-stability heuristic.
+      recentSuccess = take 5 $ ssRecentNarrativeSuccess ss
+      narrativeRate = if null recentSuccess
+                        then 0.2
+                        else fromIntegral (length (filter id recentSuccess))
+                             / fromIntegral (length recentSuccess)
       topicStability =
         if not (T.null bestTopic) && bestTopic == ssLastTopic ss
-          then 0.8
-          else 0.2
-      counterfactualAmbiguity = case sortedLogic of
-        (_, w1) : (_, w2) : _ | w1 > 0 -> w2 / w1
-        _ -> 0.0
-      atmosphereValence = egoAgency (ssEgo ss) - egoTension (ssEgo ss)
+          then max 0.5 narrativeRate
+          else narrativeRate
+      -- Step 6b: entropy-based counterfactual replaces the w2/w1 gap.
+      -- 1.0 = all families equiprobable, 0.0 = one family dominates.
+      weights = map snd sortedLogic
+      totalWeight = sum weights
+      normWeights = map (/ max 1e-9 totalWeight) weights
+      entropy = negate $ sum [p * log (max 1e-9 p) | p <- normWeights]
+      maxEntropy = log (fromIntegral (max 1 (length normWeights)))
+      counterfactualAmbiguity = if maxEntropy > 0 then entropy / maxEntropy else 0.0
+      -- Step 4: feedback bias from holistic streak into counterfactual
+      -- ambiguity.  Long unbroken holistic runs raise the "what if we
+      -- had chosen differently?" signal, which dampens salience
+      -- confidence and can trigger a mode switch via the controller.
+      streakBoost = min (fromIntegral (ssHolisticStreak ss) * 0.05) 0.2
+      adjustedCounterfactual = min 1.0 (counterfactualAmbiguity + streakBoost)
+      -- Step 6c: legitimacy score modulates atmosphere valence.
+      -- High legitimacy -> positive affect; low -> negative.
+      valenceBase = egoAgency (ssEgo ss) - egoTension (ssEgo ss)
+      legitScore = obsLastLegitimacyScore (ssObservability ss)
+      legitBonus = (legitScore - 0.5) * 0.4
+      atmosphereValence = max (-1.0) (min 1.0 (valenceBase + legitBonus))
       atmosphereArousal = egoTension (ssEgo ss)
-      preparedField = emptyField
+      preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
         , fieldAtmosphere     = mkAtmosphere atmosphereValence atmosphereArousal
         , fieldConsolidation  = mkConsolidation topicStability
-        , fieldCounterfactual = mkCounterfactual counterfactualAmbiguity
+        , fieldCounterfactual = mkCounterfactual adjustedCounterfactual
+        }
+      preparedField = preparedField0
+        { fieldConfidence = deriveFieldConfidence preparedField0
         }
       static = PrepareStatic
         { psInputText = input
@@ -235,6 +276,7 @@ buildPrepareEffectPlan ss input =
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy
         , psBlanketViolationCount = violationCount
+        , psConatusGateFired = conatusGateFired
         , psField = preparedField
         }
   in PrepareEffectPlan

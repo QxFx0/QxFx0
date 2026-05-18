@@ -31,14 +31,19 @@ import QxFx0.Core.Observability
 import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
-import QxFx0.Self.Blanket (computeSelfBlanket)
-import QxFx0.Self.Conatus (computeConatusEnergy)
-import QxFx0.Self.Field (emptyField)
-import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Salience
   ( Salience (..)
   , renderSalienceDriver
   , salienceFromConatusEnergy
+  , isHolisticFamily
+  )
+import QxFx0.Self.Deliberation
+  ( renderAgreement
+  , renderReconcileRule
+  , renderNarrativeTone
+  , Deliberation(..)
+  , DeliberationTrace(..)
+  , Plan(..)
   )
 import QxFx0.Types.Text (textShow)
 
@@ -46,12 +51,26 @@ import Data.Sequence (Seq)
 import qualified Data.Foldable as F
 import qualified Data.Set as Set
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
+
+-- | Local helper: derive the canonical pre-turn Salience verdict
+-- from a 'TurnInput'.  Used by both 'buildNextSystemState' (for
+-- 'dsLastSalienceBias' on the persisted state) and
+-- 'buildTurnProjection' (for the @trcSalience*@ trace fields).
+-- Computed identically in both call sites; centralised here so
+-- they cannot drift.
+turnInputSalience :: TurnInput -> Salience
+turnInputSalience ti = salienceFromConatusEnergy (tiConatusEnergy ti) (tiField ti)
 
 buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> SystemState
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
+      turnSalience = turnInputSalience ti
+      newHolisticStreak = if isHolisticFamily outcomeFamily then ssHolisticStreak ss + 1 else 0
+      narrativeSuccess = maybe False (not . T.null) (tsNarrativeFragment ts)
+      newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
   in ss
       { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
@@ -66,6 +85,9 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
           , dsTurnCount = ssTurnCount ss + 1
           , dsConsecutiveReflect = consecReflect
           , dsLastEmbedding = Just (tiEmbedding ti)
+          , dsLastSalienceBias = salienceHolisticBias turnSalience
+          , dsHolisticStreak = newHolisticStreak
+          , dsRecentNarrativeSuccess = newNarrativeSuccess
           }
       , ssIdentity = (ssIdentity ss)
           { idsEgo = tpNewEgo tp
@@ -146,19 +168,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 (Just RecoveryRuntimeDegraded, Just StrategyNarrowScope, ["runtime_mode=degraded"])
           Nothing ->
             (Nothing, Nothing, [])
-      -- Phase 5.5e: canonical trace Salience. Same Conatus +
-      -- emptyField pair the routing layer uses in
-      -- 'QxFx0.Core.TurnRouting.routeFamily' (resonance and the
-      -- four other Field signals are not yet plumbed at the
-      -- trace site; Phase 5.5d broadens this). The verdict
-      -- recorded here is what the controller would dispatch on
-      -- post-turn state, not necessarily what fired the
-      -- pre-turn handlers — audit traces are a snapshot of the
-      -- /post-turn/ structural shape.
-      traceBlanket    = computeSelfBlanket nextSs
-      traceViolations = checkInitialBlanket traceBlanket
-      traceConatus    = computeConatusEnergy traceBlanket traceViolations
-      traceSalience   = salienceFromConatusEnergy traceConatus emptyField
+      -- Canonical trace Salience.  The Conatus and Field values
+      -- are the pre-turn snapshot (single source of truth from
+      -- 'PrepareStatic') so the trace reflects the actual signals
+      -- that drove the routing decision.
+      traceSalience   = turnInputSalience ti
       replayTrace =
         TurnReplayTrace
           { trcRequestId = requestId
@@ -191,10 +205,22 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcLinearizationLang = taLinearizationLang ta
           , trcLinearizationOk = taLinearizationOk ta
           , trcFallbackReason = taLinearizationFallbackReason ta
-          , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
-          , trcSalienceHolisticBias = salienceHolisticBias traceSalience
-          , trcSalienceConfidence = salienceConfidence traceSalience
-          }
+           , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
+           , trcSalienceHolisticBias = salienceHolisticBias traceSalience
+           , trcSalienceConfidence = salienceConfidence traceSalience
+           , trcDeliberationRule =
+               tpDeliberation tp >>= \d ->
+                 Just (renderReconcileRule (dtRule (delibTrace d)))
+           , trcDeliberationAgreement =
+               tpDeliberation tp >>= \d ->
+                 Just (renderAgreement (dtAgreement (delibTrace d)))
+           , trcDeliberationDivergence =
+               tpDeliberation tp >>= \d ->
+                 Just (dtDivergence (delibTrace d))
+           , trcDeliberationNarrativeTone =
+               tpDeliberation tp >>= \d ->
+                 Just (renderNarrativeTone (planNarrativeTone (delibReconciled d)))
+           }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
       , tqpParserMode = ParserFrameV1

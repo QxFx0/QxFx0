@@ -27,14 +27,16 @@ faithful to the categorical laws on the test family.
 -}
 module Test.Suite.SelfAdjunction
   ( selfAdjunctionTests
+  , arbitraryField
   ) where
 
-import Test.HUnit (Test (..), assertFailure)
+import Test.HUnit (Test (..), assertBool, assertFailure)
 import Test.QuickCheck
   ( Gen
   , Property
   , choose
   , forAll
+  , generate
   , maxSuccess
   , quickCheckWithResult
   , stdArgs
@@ -58,7 +60,14 @@ import QxFx0.Self.Field
   , mkAtmosphere
   , mkConsolidation
   , mkCounterfactual
+  , mkFieldConfidence
   , mkResonance
+  , unResonance
+  , atmosphereValence
+  , atmosphereArousal
+  , unFieldConfidence
+  , unConsolidation
+  , unCounterfactual
   )
 
 -- ---------------------------------------------------------------------------
@@ -81,6 +90,8 @@ selfAdjunctionTests =
       quickCheckProperty "Functor id on Holistic" propFunctorIdHolistic
   , TestLabel "Functor identity on Formal: fmap id ≡ id (pointwise)" $
       quickCheckProperty "Functor id on Formal" propFunctorIdFormal
+  , TestLabel "arbitraryField smallest shrink is well-formed (regression lock)" $
+      TestCase testArbitraryFieldSmallestShrinkIsWellFormed
   ]
 
 -- ---------------------------------------------------------------------------
@@ -113,7 +124,7 @@ arbitraryField = do
         Field
           { fieldResonance      = mkResonance r
           , fieldAtmosphere     = mkAtmosphere v ar
-          , fieldConfidence     = error "unused; deriveFieldConfidence below replaces it"
+          , fieldConfidence     = mkFieldConfidence 0.0
           , fieldConsolidation  = mkConsolidation c
           , fieldCounterfactual = mkCounterfactual cf
           }
@@ -248,3 +259,25 @@ propFunctorIdFormal =
   forAll probeFields $ \probes ->
     let f = formalFromSeeds k m
     in formalEqOn probes (fmap id f) f
+
+-- | F3-lock (regression): 'arbitraryField' must always produce a
+-- well-formed Field with finite components and confidence in [0,1].
+-- If the generator still contains 'error "unimplemented"', this
+-- test crashes immediately — catching the regression without
+-- dependence on QuickCheck seeds.
+testArbitraryFieldSmallestShrinkIsWellFormed :: IO ()
+testArbitraryFieldSmallestShrinkIsWellFormed = do
+  fd <- generate arbitraryField
+  let r  = unResonance (fieldResonance fd)
+      v  = atmosphereValence (fieldAtmosphere fd)
+      a  = atmosphereArousal (fieldAtmosphere fd)
+      c  = unFieldConfidence (fieldConfidence fd)
+      co = unConsolidation (fieldConsolidation fd)
+      cf = unCounterfactual (fieldCounterfactual fd)
+  assertBool "resonance must be finite" (not (isNaN r) && not (isInfinite r))
+  assertBool "atmosphere valence must be finite" (not (isNaN v) && not (isInfinite v))
+  assertBool "atmosphere arousal must be finite" (not (isNaN a) && not (isInfinite a))
+  assertBool "confidence must be finite" (not (isNaN c) && not (isInfinite c))
+  assertBool "confidence must be in [0,1]" (c >= 0.0 && c <= 1.0)
+  assertBool "consolidation must be finite" (not (isNaN co) && not (isInfinite co))
+  assertBool "counterfactual must be finite" (not (isNaN cf) && not (isInfinite cf))

@@ -60,6 +60,10 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ Phase 5.5e: 'salienceConfidence' in @[0, 1]@.
     --   @1@ = one driver decisively dominates,
     --   @0@ = contributions cancel.
+  , trcDeliberationRule :: !(Maybe Text)
+  , trcDeliberationAgreement :: !(Maybe Text)
+  , trcDeliberationDivergence :: !(Maybe Double)
+  , trcDeliberationNarrativeTone :: !(Maybe Text)
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

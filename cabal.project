@@ -1,2 +1,16 @@
 packages: .
+import: cabal.project.freeze
 
+with-compiler: /home/liskil/.ghcup/ghc/9.6.6/bin/ghc
+with-hc-pkg: /home/liskil/.ghcup/ghc/9.6.6/bin/ghc-pkg
+tests: True
+extra-lib-dirs: /home/liskil/gf-core/src/runtime/c/.libs
+extra-include-dirs: /home/liskil/gf-core/src/runtime/c
+
+test-show-details: streaming
+
+-- RAM guard for 10 GB hosts: build single-target, cap GHC heap at 8 GB.
+jobs: 1
+
+package qxfx0
+  ghc-options: +RTS -M8G -RTS -optl-Wl,-rpath,/home/liskil/gf-core/src/runtime/c/.libs

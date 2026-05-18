@@ -42,7 +42,8 @@ import QxFx0.Core.TurnRender
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ceScalar)
-import QxFx0.Self.Salience (conatusGateFires)
+import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
+-- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
@@ -289,6 +290,15 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
             case localRecoveryPlan of
               Just plan -> (Just (lrpCause plan), Just (lrpStrategy plan), lrpEvidence plan)
               Nothing -> (Nothing, Nothing, [])
+      -- Phase 8 (M3): deliberation override of recovery cause.
+      -- We merge by severity rather than simple Maybe-fallback so
+      -- that future hemispheric proposals (Package D and beyond)
+      -- cannot silently downgrade a more severe local cause.
+      -- Today this is semantically equivalent because the only
+      -- deliberation-produced cause is RecoveryConatusGate
+      -- (severity 100, dominates everything).
+      delibRecoveryCause = tpDeliberation tp >>= planRecoveryCause . delibReconciled
+      finalRecoveryCause = pickHigherSeverity delibRecoveryCause recoveryCause
       decision = TurnDecision
         { tdFamily = case surfaceProv of FromRecovery -> CMRepair; _ -> tpFinalFamily tp
         , tdForce = case surfaceProv of FromRecovery -> IFOffer; _ -> tpFinalForce tp
@@ -316,9 +326,9 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       , taLinearizationOk = draLinearizationOk (rsTemplateArtifact renderStatic)
       , taLinearizationFallbackReason = draFallbackReason (rsTemplateArtifact renderStatic)
       , taDecision = decision
-      , taLocalRecoveryCause = recoveryCause
-      , taLocalRecoveryStrategy = recoveryStrategy
-      , taLocalRecoveryEvidence = recoveryEvidence
+       , taLocalRecoveryCause = finalRecoveryCause
+       , taLocalRecoveryStrategy = recoveryStrategy
+       , taLocalRecoveryEvidence = recoveryEvidence
       , taMetrics = metrics4
       , taKnowledgeSource = rerKnowledgeFactSource effectResults
       }
@@ -371,7 +381,7 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
       candidate =
         case () of
           _
-            | conatusGateFires conatusEnergy ->
+            | tiConatusGateFired ti ->
                 Just
                   ( RecoveryConatusGate
                   , StrategySafeRecovery

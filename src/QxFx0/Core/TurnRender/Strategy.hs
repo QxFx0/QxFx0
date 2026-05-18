@@ -19,10 +19,13 @@ import Data.Text (Text)
 import QxFx0.Core.IdentitySignal (IdentitySignal(..))
 import QxFx0.Core.PrincipledCore (PrincipledMode(..))
 import QxFx0.Core.R5Dynamics (EncounterMode(..))
+import QxFx0.Self.Adjunction (Holistic(..), Formal(..), Adjunction(..))
+import QxFx0.Self.Field (Field)
 import QxFx0.Self.Salience
   ( Salience
   , SalienceDriver(..)
   , SalienceVerdict(..)
+  , chooseBranch
   , defaultSalienceWeights
   , salienceDriver
   , salienceVerdict
@@ -71,18 +74,23 @@ renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInpu
 -- rich Field signals observes no behaviour change.
 renderStyleFromDecisionWithSalience
   :: Salience
+  -> Field
   -> ResponseStrategy
   -> Maybe PrincipledMode
   -> IdentitySignal
   -> Maybe SemanticAnchor
   -> SemanticInput
   -> RenderStyle
-renderStyleFromDecisionWithSalience salience strategy mode identitySignal semanticAnchor semanticInput =
+renderStyleFromDecisionWithSalience salience field strategy mode identitySignal semanticAnchor semanticInput =
   applySalienceToStyle
     salience
+    field
     (renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput)
 
--- | Re-shape a 'RenderStyle' under a 'Salience' verdict.
+-- | Re-shape a 'RenderStyle' under a 'Salience' verdict via the
+-- 'Holistic ⊣ Formal' adjunction.  This is the first runtime call
+-- site of 'chooseBranch', making the adjunction types participate
+-- in execution rather than remaining pure algebra.
 --
 -- Decision rule (matches ADR-0010 §4 and §5):
 --
@@ -100,15 +108,16 @@ renderStyleFromDecisionWithSalience salience strategy mode identitySignal semant
 -- styles already aligned with the verdict) are preserved on every
 -- branch so the controller does not /override/ a more informative
 -- pick from the strategy chain.
-applySalienceToStyle :: Salience -> RenderStyle -> RenderStyle
-applySalienceToStyle salience baseStyle =
+applySalienceToStyle :: Salience -> Field -> RenderStyle -> RenderStyle
+applySalienceToStyle salience field baseStyle =
   case salienceDriver salience of
     DrivenByConatusGate -> StyleRecovery
     _ ->
-      case salienceVerdict defaultSalienceWeights salience of
-        Tied             -> baseStyle
-        PreferFormal _   -> formalLean baseStyle
-        PreferHolistic _ -> holisticLean baseStyle
+      chooseBranch
+        (salienceVerdict defaultSalienceWeights salience)
+        (\(Holistic (base, _field)) -> holisticLean base)
+        (\base -> Formal (\_field -> formalLean base))
+        (Holistic (baseStyle, field))
   where
     formalLean StyleStandard = StyleFormal
     formalLean StyleWarm     = StyleFormal

@@ -49,6 +49,9 @@ data DialogueState = DialogueState
   , dsRecentFamilies :: ![CanonicalMoveFamily]
   , dsActiveScene :: !SemanticScene
   , dsUserState :: !UserState
+  , dsLastSalienceBias :: !Double
+  , dsHolisticStreak :: !Int
+  , dsRecentNarrativeSuccess :: ![Bool]
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -72,6 +75,9 @@ emptyDialogueState = DialogueState
   , dsRecentFamilies = []
   , dsActiveScene = emptyDialogueActiveScene
   , dsUserState = defaultNeutralUserState
+  , dsLastSalienceBias = 0.0
+  , dsHolisticStreak = 0
+  , dsRecentNarrativeSuccess = []
   }
 
 appendHistoryBounded :: Int -> Seq Text -> Text -> Seq Text

@@ -28,6 +28,12 @@ import QxFx0.Core.TurnRouting.Types
   ( FamilyCascade(..)
   , RoutingPhase(..)
   )
+import QxFx0.Self.Salience
+  ( Salience(..)
+  , SalienceDriver(..)
+  , SalienceModulation(..)
+  , defaultSalienceModulation
+  )
 import QxFx0.Types
 import QxFx0.Types.Thresholds
   ( identityGuardDefaultAgencyBaseline
@@ -36,8 +42,8 @@ import QxFx0.Types.Thresholds
   )
 
 runFamilyCascade :: RoutingPhase -> SystemState -> UserState -> InputPropositionFrame -> AtomSet -> [Text] -> Text
-                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> FamilyCascade
-runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked =
+                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> FamilyCascade
+runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience =
   let parserLockedFamily =
         if ipfConfidence frame >= parserHighConfidenceThreshold
              && ipfPropositionType frame /= T.pack "PlainAssert"
@@ -60,9 +66,9 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
       familyAfterPrincipled =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
-          Nothing -> applyPrincipledFamily rpPrincipledModeResult familyAfterIntuition
+          Nothing -> applyPrincipledFamilyModulated salience rpPrincipledModeResult familyAfterIntuition
       guardReportPre = buildGuardReport (ssLastGuardReport systemState) (ssEgo systemState) rpPreEgo
-      familyAfterGuard = applyGuardGating guardReportPre familyAfterPrincipled
+      familyAfterGuard = applyGuardGatingModulated salience guardReportPre familyAfterPrincipled
       familyCascade = fromMaybe familyAfterGuard (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterGuard)
       finalFamily = if isNixBlocked then CMRepair else familyCascade
    in FamilyCascade
@@ -90,6 +96,22 @@ applyPrincipledFamily mode family =
       | otherwise -> family
     Nothing -> family
 
+-- | Salience-modulated principled-family application.
+-- When the controller strongly prefers Holistic (above
+-- 'smModulationHolisticBiasFloor'), principled constraints are
+-- relaxed so intuition/narrative signals retain more influence.
+-- Conatus-gate events force the strict formal path.
+--
+-- Threshold sourced from 'defaultSalienceModulation'; Phase 7
+-- calibration goes through that single record rather than this
+-- function.
+applyPrincipledFamilyModulated :: Salience -> Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
+applyPrincipledFamilyModulated salience mode family =
+  case salienceDriver salience of
+    DrivenByConatusGate -> family
+    _ | salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
+    _ -> applyPrincipledFamily mode family
+
 applyGuardGating :: IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
 applyGuardGating guardReport family
   | igrWithinBounds guardReport = family
@@ -105,6 +127,20 @@ applyGuardGating guardReport family
         CMHypothesis -> CMGround
         _ -> family
   | otherwise = family
+
+-- | Salience-modulated guard gating.
+-- Holistic-preferring turns (above
+-- 'smModulationHolisticBiasFloor') keep all families except
+-- agency-collapse (which is always repaired).  Formal/Conatus
+-- turns apply the full guard cascade.
+--
+-- Threshold sourced from 'defaultSalienceModulation'.
+applyGuardGatingModulated :: Salience -> IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
+applyGuardGatingModulated salience guard family
+  | salienceDriver salience == DrivenByConatusGate = applyGuardGating guard family
+  | salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
+      if GuardAgencyCollapse `elem` igrWarnings guard then CMRepair else family
+  | otherwise = applyGuardGating guard family
 
 buildGuardReport :: Maybe IdentityGuardReport -> EgoState -> EgoState -> IdentityGuardReport
 buildGuardReport lastGuard oldEgo newEgo =

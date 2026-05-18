@@ -1081,6 +1081,10 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
               , trcSalienceConfidence = 1.0
+              , trcDeliberationRule = Nothing
+              , trcDeliberationAgreement = Nothing
+              , trcDeliberationDivergence = Nothing
+              , trcDeliberationNarrativeTone = Nothing
               }
           , tqpDivergence = True
           }
@@ -1371,6 +1375,10 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
               , trcSalienceConfidence = 1.0
+              , trcDeliberationRule = Nothing
+              , trcDeliberationAgreement = Nothing
+              , trcDeliberationDivergence = Nothing
+              , trcDeliberationNarrativeTone = Nothing
               }
           , tqpDivergence = True
           }

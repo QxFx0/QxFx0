@@ -14,11 +14,12 @@ import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 import Test.Suite.SelfField (selfFieldTests)
 import Test.Suite.SelfSalience (selfSalienceTests)
+import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ phaseM2dTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ phaseM2dTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

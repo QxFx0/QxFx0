@@ -33,7 +33,7 @@ import qualified Data.Map.Strict as Map
 import Data.Aeson (Value (String), toJSON)
 import Test.HUnit (Test (..), (@?=), assertBool, assertFailure)
 
-import QxFx0.Core.TurnPipeline.Effects
+import QxFx0.Core.TurnPipeline
   ( PrepareEffectPlan (..)
   , PrepareEffectRequest (..)
   , PrepareStatic (..)

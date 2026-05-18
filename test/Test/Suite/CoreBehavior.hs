@@ -66,6 +66,16 @@ import QxFx0.Core (routeFamily, mergeFamilySignals, computeTensionDelta
                     , modulateRMPWithNarrative, modulateRCPWithFlash
                     , narrativeFamilyHint, intuitionFamilyHint
                     )
+import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.Field (emptyField, fieldAtmosphere, fieldResonance, mkResonance, mkAtmosphere)
+import QxFx0.Self.Deliberation
+  ( Deliberation(..)
+  , DeliberationTrace(..)
+  , Agreement(..)
+  , ReconcileRule(..)
+  , Plan(..)
+  , NarrativeTone(..)
+  )
 import QxFx0.Core.TurnPipeline (RoutingDecision(..))
 import qualified QxFx0.Core.MeaningGraph as MeaningGraph
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
@@ -88,6 +98,12 @@ import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.CLI.Parser (decodeWorkerCommand, parseMode, parseJsonStringArray, extractSessionArgs, RuntimeOutputMode(..), WorkerCommand(..))
 import Test.Support (withEnvVar)
+
+dummyConatusEnergy :: ConatusEnergy
+dummyConatusEnergy = ConatusEnergy
+  { ceScalar = 1.0
+  , ceComponents = ConatusComponents { ccMorphology = 0.0, ccIdentity = 0.0, ccTurns = 0.0, ccPenalty = 0.0 }
+  }
 
 testSI :: SemanticLayer -> AtomSet -> CanonicalMoveFamily -> SemanticInput
 testSI layer atoms fam = SemanticInput
@@ -210,6 +226,12 @@ coreBehaviorTests =
     , testRouteFamilyNarrativeHintChangesFamily
     , testRouteFamilyOperationalQuestionResistsReflectNarrative
     , testRouteFamilyIntuitionHintChangesFamily
+    , testRouteFamilyHolisticFieldKeepsCMDeepen
+     , testRouteFamilyEmptyFieldKeepsCascadeFamily
+    , testRouteFamilyDeliberationPopulated
+    , testRouteFamilyConatusOverrideDeliberation
+    , testRouteFamilyAgreementIdempotence
+    , testRouteFamilyHolisticFieldDeliberationDivergence
     , testIsVapidTopicEmpty
     , testIsVapidTopicVapidWord
     , testIsVapidTopicNonVapid
@@ -1313,7 +1335,7 @@ testRouteFamilyInputPropagated = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0 dummyConatusEnergy emptyField
   assertBool "Input should propagate to semanticInput (not empty)" (siRawInput (rdSemanticInput rd) == input)
   assertBool "Pressure should be detected from actual input" (isJust (rdPressure rd))
   assertBool "PrincipledMode should activate from actual input" (isJust (rdPrincipledMode rd))
@@ -1328,7 +1350,7 @@ testRouteFamilyNixBlocked = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField
   assertEqual "Nix-blocked should force CMRepair" CMRepair (rdFamily rd)
 
 testNixGuardCyrillicConceptDoesNotUnsafeBlock :: Test
@@ -1354,7 +1376,7 @@ testRouteFamilyAnchorUsesCurrentTopic = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       currentTopic = "свобода"
       atomSet = collectAtoms input []
-      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0
+      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0 dummyConatusEnergy emptyField
   assertBool "Anchor secondary channel should reflect current topic"
     (fmap saSecondaryChannel (rdSemanticAnchor rd) == Just (Just "свобода"))
 
@@ -1479,13 +1501,13 @@ testRouteFamilyNarrativeHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
       silenceNarrative = Just ConsciousnessNarrative
         { cnKernelState = "test", cnActiveDesires = "test"
         , cnSkillInPlay = "\1052\1086\1083\1095\1072\1090\1100"
         , cnSelfView = "test", cnConflict = "", cnLimitation = ""
         }
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0 dummyConatusEnergy emptyField
   assertBool "Silence narrative hint should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "Silence narrative should route to CMAnchor" CMAnchor (rdFamily rdWithHint)
@@ -1502,7 +1524,7 @@ testRouteFamilyOperationalQuestionResistsReflectNarrative = TestCase $ do
         , cnSkillInPlay = "unknown skill"
         , cnSelfView = "test", cnConflict = "Внутренний конфликт: test", cnLimitation = ""
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0 dummyConatusEnergy emptyField
   assertBool "diagnostic operational question should not be overridden into reflect by conflict narrative" (rdFamily rd /= CMReflect)
 
 testRouteFamilyIntuitionHintChangesFamily :: Test
@@ -1512,11 +1534,168 @@ testRouteFamilyIntuitionHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField
   assertBool "High intuition posterior should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "High intuition posterior should route to CMDeepen" CMDeepen (rdFamily rdWithHint)
+
+-- | F1-lock (regression): holistic-leaning Field must route to CMDeepen.
+-- If this fails, someone changed escalation or the salience controller
+-- so that a high-resonance / positive-atmosphere field no longer wins.
+testRouteFamilyHolisticFieldKeepsCMDeepen :: Test
+testRouteFamilyHolisticFieldKeepsCMDeepen = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField
+  assertEqual "holistic-leaning field must keep CMDeepen (not escalate to formal default)" CMDeepen (rdFamily rd)
+  case rdDeliberation rd of
+    Nothing -> assertFailure "rdDeliberation must be populated"
+    Just d  -> assertEqual "reconciled family must match observable rdFamily" (rdFamily rd) (planFamily (delibReconciled d))
+
+-- | F1-lock (regression): empty/neutral Field with high intuition
+-- posterior must preserve the cascade family. After Package D
+-- (B.2), applySalienceEscalation is removed; the observable
+-- family is fcFinalFamily reconciled through the deliberation
+-- framework, and rdFamily must equal delibReconciled.planFamily.
+testRouteFamilyEmptyFieldKeepsCascadeFamily :: Test
+testRouteFamilyEmptyFieldKeepsCascadeFamily = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy emptyField
+  assertEqual "empty field with high intuition must preserve cascade family (no salience escalation)" CMDeepen (rdFamily rd)
+  case rdDeliberation rd of
+    Nothing -> assertFailure "rdDeliberation must be populated"
+    Just d  -> assertEqual "reconciled family must match observable rdFamily" (rdFamily rd) (planFamily (delibReconciled d))
+
+-- | Phase-8 (M1/M2): baseline deliberation trace is populated and
+-- identical proposals yield RuleAgreement.
+testRouteFamilyDeliberationPopulated :: Test
+testRouteFamilyDeliberationPopulated = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+  case rdDeliberation rd of
+    Nothing -> assertFailure "routeFamily must populate rdDeliberation"
+    Just deliberation -> do
+      assertEqual "baseline staged integration should yield RuleAgreement"
+        RuleAgreement
+        (dtRule (delibTrace deliberation))
+      assertEqual "baseline proposals should agree"
+        Agree
+        (dtAgreement (delibTrace deliberation))
+      assertEqual "reconciled family should match rdFamily"
+        (rdFamily rd)
+        (planFamily (delibReconciled deliberation))
+      assertEqual "divergence should be zero for identical proposals"
+        0.0
+        (dtDivergence (delibTrace deliberation))
+
+-- | Phase-8 (M1/M2): conatus gate override must surface in
+-- rdDeliberation as RuleConatusOverride with forced recovery shape.
+testRouteFamilyConatusOverrideDeliberation :: Test
+testRouteFamilyConatusOverrideDeliberation = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      forcedConatus = ConatusEnergy
+        { ceScalar = -1.0
+        , ceComponents = ConatusComponents
+            { ccMorphology = 0.0
+            , ccIdentity   = 0.0
+            , ccTurns      = 0.0
+            , ccPenalty    = 1.0
+            }
+        }
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField
+  case rdDeliberation rd of
+    Nothing -> assertFailure "routeFamily must populate rdDeliberation under conatus override"
+    Just deliberation -> do
+      assertEqual "conatus gate must trigger RuleConatusOverride"
+        RuleConatusOverride
+        (dtRule (delibTrace deliberation))
+      assertEqual "reconciled plan must force StyleRecovery"
+        StyleRecovery
+        (planRenderStyle (delibReconciled deliberation))
+      assertEqual "reconciled plan must force RecoveryConatusGate"
+        (Just RecoveryConatusGate)
+        (planRecoveryCause (delibReconciled deliberation))
+      assertEqual "reconciled plan must force NarrativeRecovery"
+        NarrativeRecovery
+        (planNarrativeTone (delibReconciled deliberation))
+
+-- | Phase-8 (M1/M2): identical inputs must produce identical
+-- Deliberation values (determinism) and RuleAgreement on staged
+-- identical proposals.
+testRouteFamilyAgreementIdempotence :: Test
+testRouteFamilyAgreementIdempotence = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      rd1 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rd2 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+  case (rdDeliberation rd1, rdDeliberation rd2) of
+    (Just d1, Just d2) -> do
+      assertEqual "identical inputs must yield identical deliberation"
+        d1
+        d2
+      assertEqual "staged identical proposals must produce RuleAgreement"
+        RuleAgreement
+        (dtRule (delibTrace d1))
+    _ ->
+      assertFailure "routeFamily must populate rdDeliberation for agreement idempotence"
+
+-- | Phase-8 Package C: genuine hemispheric divergence on narrative tone.
+-- When the field atmosphere carries positive valence + high arousal,
+-- the holistic proposal should emit NarrativeWarm while the formal
+-- proposal stays NarrativeNeutral.  reconcile should resolve this via
+-- DivergeOnTone (single-axis disagreement) and, under the strong
+-- holistic field, RuleSalienceLead preferring the holistic side.
+testRouteFamilyHolisticFieldDeliberationDivergence :: Test
+testRouteFamilyHolisticFieldDeliberationDivergence = TestCase $ do
+  let input = "Расскажи про свободу"
+      ss = emptySystemState
+      frame = parseProposition input
+      nextUserState = inferUserState (ssClusters ss) input
+      atomSet = collectAtoms input []
+      -- Positive valence + high arousal triggers NarrativeWarm on the
+      -- holistic side while the formal side stays Neutral.
+      divergentField = emptyField
+        { fieldResonance = mkResonance 0.8
+        , fieldAtmosphere = mkAtmosphere 0.5 0.7
+        }
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy divergentField
+  assertEqual "holistic-leaning field must keep CMDeepen"
+    CMDeepen (rdFamily rd)
+  case rdDeliberation rd of
+    Nothing -> assertFailure "routeFamily must populate rdDeliberation under divergence"
+    Just deliberation -> do
+      assertEqual "genuine divergence should appear as DivergeOnTone"
+        DivergeOnTone
+        (dtAgreement (delibTrace deliberation))
+      assertEqual "high-confidence holistic field should trigger RuleSalienceLead"
+        RuleSalienceLead
+        (dtRule (delibTrace deliberation))
+      assertEqual "reconciled tone should carry holistic warmth"
+        NarrativeWarm
+        (planNarrativeTone (delibReconciled deliberation))
+      assertBool "divergence should be exactly one axis (tone)"
+        (abs (dtDivergence (delibTrace deliberation) - 0.25) < 1e-12)
 
 testIsVapidTopicEmpty :: Test
 testIsVapidTopicEmpty = TestCase $ do

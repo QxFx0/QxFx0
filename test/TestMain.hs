@@ -19,12 +19,15 @@ import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 import Test.Suite.SelfField (selfFieldTests)
 import Test.Suite.SelfSalience (selfSalienceTests)
+import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
+import Test.Suite.VecProperties (vecPropertiesTests)
+import Test.Suite.EgoRead (egoReadTests)
 
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
- ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ phaseM2dTests)
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ phaseM2dTests ++ vecPropertiesTests ++ egoReadTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

@@ -2,7 +2,25 @@
 
 All notable changes are documented in this file.
 
-## [Unreleased]
+## [v0.2.0-test-parity] — 2026-05-18
+
+### Added
+
+- Package A — Test parity restored:
+  - F1 regression lock: `routeFamily_holisticField_keepsCMDeepen` and
+    `routeFamily_emptyField_escalatesToCMDescribe` in
+    `Test.Suite.CoreBehavior` (pins salience-escalation behaviour).
+  - F2 regression lock: `conatusGateFlag_drivesLocalRecoveryPlan` and
+    `conatusGateEnergyWithoutFlagDoesNotProduceConatusCause` in
+    `Test.Suite.TurnPipelineProtocol` (pins M6 single-source-of-truth
+    invariant: the flag, not the scalar, drives recovery).
+  - F3 regression lock: `arbitraryField_smallestShrink_isWellFormed`
+    in `Test.Suite.SelfAdjunction` (pins generator well-formedness).
+  - Haddock status markers on `Self.Adjunction` dead API
+    (`groundIn`, `rebroaden`, `probe`, `leftAdjunct`) —
+    documentation-only pending Phase 8 deliberation framework.
+  - Pending architectural work migrated from `progress.txt` to
+    `ROADMAP.md` (Mid term / Long term).
 
 ### Added
 

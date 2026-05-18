@@ -45,10 +45,11 @@ record.
    `scripts/verify.sh`, and `scripts/release-smoke.sh`. The
    chain was committed in source form but not yet built or run
    on this machine (RAM-budget constraint).
-2. Optional wiring of `deriveFieldConfidence` in
-   `buildPrepareEffectPlan` once Phase 7 calibration data is
-   available (currently `fieldConfidence` stays at the
-   `emptyField` default of `1.0`).
+2. ~~Optional wiring of `deriveFieldConfidence` in
+   `buildPrepareEffectPlan`~~ **(landed)** — `fieldConfidence` is
+   now derived from the other four components in `Effects.hs:258`.
+   Phase 7 calibration will replace the default `1 − dispersion`
+   formula with an empirically-tuned alternative.
 3. Harden core contract reproducibility from clean checkout.
 4. Reduce fallback surfaces in RU/EN rendering while preserving
    deterministic gating.
@@ -68,6 +69,11 @@ record.
    `Finalize/State.hs` — the trace currently uses `emptyField`
    on the post-turn path, while the pre-turn `tiField` is real;
    making the trace symmetric closes the Phase 5.5d work.
+5. **`runtimeMode :: Text` → `PipelineRuntimeMode`.** Type discipline
+   in `Finalize/State.hs` (string-compares `"degraded"` while the
+   rest of the stack uses the enum). Small, purely mechanical
+   refactor; blocked on agreeing the migration path for test
+   fixtures that currently rely on the string literal).
 
 ## Long term
 
@@ -76,8 +82,31 @@ record.
    Counterfactual, Atmosphere) against production-grade trace
    corpora. The current weights and formulas are defensible
    per ADR-0009/0010 but not empirically tuned.
-2. Domain-specific constrained reasoning packs (e.g.
+2. **Phase 8 Package D — genuine family-level divergence** (queued).
+   Packages A/B/C landed (see `progress.txt`): the deliberation
+   framework now produces a `Deliberation` per turn, with
+   trace-visible `DivergeOnTone` under strong field signals.
+   Package D will:
+     - swap the adjunction caller mapping so formal `probe`s the
+       field and holistic stays field-independent (ADR-0011 §9);
+     - unify the threefold family-modulation path
+       (`applySalienceEscalation` + cascade modulation +
+       `reconcile`) into a single deliberation-led decision;
+     - retarget the three regression locks that currently pin
+       `applySalienceEscalation` to instead pin `rdFamily`
+       (observable contract);
+     - then enable hemisphere-level family disagreement behind
+       a feature flag, allowing `RuleHolisticAdvantage` /
+       `RuleFormalAdvantage` to actually fire in production.
+
+   `Self.Adjunction` combinators `groundIn` and `probe` are
+   already production code in `QxFx0.Self.Deliberation.reconcile`.
+   `rebroaden` and `leftAdjunct` remain documentation-only.
+3. Domain-specific constrained reasoning packs (e.g.
    legal/medical corpora) with explicit uncertainty boundaries.
-3. Stronger release artifact reproducibility and evidence index
+4. Stronger release artifact reproducibility and evidence index
    discipline.
-4. Broader interoperability documentation for external integrators.
+5. Broader interoperability documentation for external integrators.
+6. **Effects-interpreter conatus-aware prior** (ADR-0007 §4.3).
+   Long-horizon. Effects today are dispatched without conatus-weighted
+   priority.

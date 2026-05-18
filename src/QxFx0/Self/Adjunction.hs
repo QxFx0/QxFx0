@@ -94,6 +94,9 @@ class (Functor l, Functor r) => Adjunction l r | l -> r, r -> l where
 
   -- | The forward direction of the hom-set isomorphism
   -- @Hom(l a, b) ≅ Hom(a, r b)@.
+  --
+  -- __Status (Phase A consolidation):__ documentation-only; production
+  -- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
   leftAdjunct  :: (l a -> b) -> (a -> r b)
   leftAdjunct g a = fmap g (unit a)
 
@@ -133,11 +136,17 @@ instance Adjunction Holistic Formal where
 -- level; together they witness the basic correspondence
 --
 -- @groundIn (Holistic (a, fd)) ≡ runFormal (rebroaden a) fd ≡ a@
+--
+-- __Status (Phase A consolidation):__ documentation-only; production
+-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
 groundIn :: Holistic a -> a
 groundIn (Holistic (a, _fd)) = a
 
 -- | Broaden: lift a bare value to a formal strategy that ignores
 -- the field on which it is evaluated.
+--
+-- __Status (Phase A consolidation):__ documentation-only; production
+-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
 rebroaden :: a -> Formal a
 rebroaden a = Formal (\_fd -> a)
 
@@ -148,5 +157,8 @@ rebroaden a = Formal (\_fd -> a)
 -- (diagnostic) uses distinct from genuine grounding. Production
 -- code should generally go through 'rightAdjunct' rather than call
 -- 'probe' directly.
+--
+-- __Status (Phase A consolidation):__ documentation-only; production
+-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
 probe :: Formal a -> Field -> a
 probe = runFormal

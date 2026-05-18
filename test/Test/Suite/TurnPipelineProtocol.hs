@@ -81,6 +81,15 @@ import QxFx0.Core.TurnPipeline.Protocol
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+import QxFx0.Self.Deliberation
+  ( Deliberation(..)
+  , DeliberationTrace(..)
+  , Plan(..)
+  , Agreement(..)
+  , ReconcileRule(..)
+  , defaultPlan
+  )
+import QxFx0.Self.Salience (SalienceDriver(..))
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Morphology as Morph
 import qualified QxFx0.Core.Intuition as Intuition
@@ -155,9 +164,12 @@ turnPipelineProtocolTests =
   , testRuntimeDegradedUsesVisibleLocalRecovery
   , testParserLowConfidenceUsesDistinguishCandidates
   , testRenderBlockedPersistsSafeRecoveryTrace
-  , testConatusGateFiresRecoveryConatusGate
-  , testFinalizePrecommitResolveConcurrently
-  ]
+   , testConatusGateFiresRecoveryConatusGate
+   , testConatusGateFlagDrivesLocalRecoveryPlan
+   , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
+   , testDeliberationRecoveryNotSilenced
+   , testFinalizePrecommitResolveConcurrently
+   ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
@@ -1017,6 +1029,7 @@ testConatusGateFiresRecoveryConatusGate = TestCase $
         ti = ti0
           { tiConatusEnergy         = forcedConatus
           , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -1034,6 +1047,103 @@ testConatusGateFiresRecoveryConatusGate = TestCase $
           ("conatus_gate_fired" `elem` lrpEvidence recoveryPlan)
         assertBool "evidence must include blanket_violations=2 line"
           ("blanket_violations=2" `elem` lrpEvidence recoveryPlan)
+
+-- | F2-lock (regression): conatus gate *flag* must drive the recovery plan.
+-- This pins the M6 single-source-of-truth invariant: the energy scalar
+-- alone is not enough; tiConatusGateFired must be True.
+testConatusGateFlagDrivesLocalRecoveryPlan :: Test
+testConatusGateFlagDrivesLocalRecoveryPlan = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -0.1
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate flag=True must expose a visible local recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "Conatus gate flag must produce RecoveryConatusGate cause"
+          RecoveryConatusGate
+          (lrpCause recoveryPlan)
+        assertEqual "Conatus gate must force StrategySafeRecovery"
+          StrategySafeRecovery
+          (lrpStrategy recoveryPlan)
+        assertBool "evidence must include conatus_gate_fired tag"
+          ("conatus_gate_fired" `elem` lrpEvidence recoveryPlan)
+
+-- | F2-lock (regression): energy below threshold WITHOUT the flag must NOT
+-- produce RecoveryConatusGate. This proves the flag is the actual driver,
+-- not the scalar alone.
+testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause :: Test
+testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -0.1
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = False
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing -> pure ()  -- acceptable: no recovery plan at all
+      Just recoveryPlan ->
+        assertBool "energy below threshold without gate flag must NOT produce RecoveryConatusGate"
+          (lrpCause recoveryPlan /= RecoveryConatusGate)
+
+-- | Phase-8 (M3): deliberation recovery cause must not be silenced
+-- by an absent local recovery plan.  When the reconciled Plan carries
+-- a recovery cause (e.g. injected via upstream deliberation), the
+-- artifact trace must preserve it even if buildLocalRecoveryPlan
+-- returns Nothing.
+testDeliberationRecoveryNotSilenced :: Test
+testDeliberationRecoveryNotSilenced = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let syntheticDelib = Deliberation
+          { delibHolistic = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
+          , delibFormal   = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
+          , delibReconciled = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
+          , delibTrace = DeliberationTrace
+              { dtAgreement = Agree
+              , dtDivergence = 0.0
+              , dtRule = RuleAgreement
+              , dtSalienceDriver = DrivenByDefault
+              }
+          }
+        tp' = tp { tpDeliberation = Just syntheticDelib }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp'
+    -- Baseline: this clean input should not trigger a local recovery plan.
+    assertEqual "baseline local recovery plan should be absent"
+      Nothing
+      (repLocalRecoveryPlan renderPlan)
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp' renderPlan renderResults
+    assertEqual "deliberation recovery cause must survive even when local plan is absent"
+      (Just RecoveryConatusGate)
+      (taLocalRecoveryCause turnArtifacts)
 
 testParserLowConfidenceUsesDistinguishCandidates :: Test
 testParserLowConfidenceUsesDistinguishCandidates = TestCase $

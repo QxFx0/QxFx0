@@ -1,0 +1,129 @@
+# QxFx0 progress tracker
+
+Lightweight session-to-session log. Update only when there is real
+news; do not turn this into changelog noise.
+
+## Test-suite landscape (snapshot)
+
+Last verified: 2026-05-18.
+
+| Suite                      | Status | Note                                |
+|----------------------------|--------|-------------------------------------|
+| `qxfx0-test-integration`   | PASS   | 25 / 25                             |
+| `qxfx0-test-slow`          | PASS   | 91 / 91                             |
+| `qxfx0-test-property`      | PASS   | 73 / 73                             |
+| `qxfx0-test-fast`          | PASS   | 431 / 431                           |
+| `qxfx0-test-unit`          | PASS   | 437 / 437                           |
+| `qxfx0-test`  (meta)       | PASS   | 553 / 553 — Package D adjunction swap + family divergence flag complete |
+
+Repro: `cabal test all`.
+
+All 8 historical failures resolved; see git log for fix commits.
+
+## Regression locks (Package A consolidation)
+
+Narrowly-scoped tests that will break if the corresponding fix is
+regressed. Added 2026-05-18.
+
+| Lock | File | What it guards |
+|------|------|--------------|
+| F1 | `Test.Suite.CoreBehavior` | `routeFamily` with holistic-leaning Field keeps `CMDeepen`; empty Field preserves cascade family (no salience escalation).  Retargeted to observable contract `rdFamily == delibReconciled.planFamily`. |
+| F2 | `Test.Suite.TurnPipelineProtocol` | `tiConatusGateFired = True` drives `RecoveryConatusGate`; same energy without flag does NOT produce that cause (M6 invariant). |
+| F3 | `Test.Suite.SelfAdjunction` | `arbitraryField` generator never crashes and always produces well-formed components (no `error` in generator path). |
+
+## Recently landed (working tree, uncommitted)
+
+- Package A (consolidation): three regression locks (F1/F2/F3),
+  doc sync, dead-API Haddock markers, pending-work moved to
+  ROADMAP.md.
+- M2d (Phase 2.5): Conatus into Recovery as primary driver.
+- Phase 5.5d: full pre-turn `Field` population (Resonance,
+  Atmosphere, Consolidation, Counterfactual, Confidence).
+- Phase 5.5e: trace observability for salience verdict.
+- Phase 6 + M6.1: single-source-of-truth `tiConatusEnergy` /
+  `tiConatusGateFired` / `tiField` plumbed through `PrepareStatic`
+  → `TurnInput`.
+- Audit follow-up: docstring sync (`Salience.hs:301`,
+  `Salience.hs:341`, `Effects.hs:213`); deduplicated
+  `isHolisticFamily` / `isFormalFamily` into `Self.Salience`.
+- Audit follow-up (previous session): centralised modulation
+  thresholds into `SalienceModulation` /
+  `defaultSalienceModulation` in `Self.Salience`.
+- Phase 8 Package B seed: pure `QxFx0.Self.Deliberation`
+  reconciliation layer plus property locks for conatus override,
+  agreement/idempotence, recovery preservation, tied fallback,
+  divergence bounds, determinism, and trace tag totality.
+- Phase 8 Package B (runtime integration): M1/M2/M3 wired
+  (`routeFamily` → `reconcile` → `rdDeliberation` → `TurnPlan` →
+  `buildLocalRecoveryPlan` override → `buildTurnProjection` trace
+  population).  Four integration tests landed:
+  - `testRouteFamilyDeliberationPopulated` (trace field population,
+    `RuleAgreement`, zero divergence)
+  - `testRouteFamilyConatusOverrideDeliberation` (`StyleRecovery` +
+    `RecoveryConatusGate` when gate fires)
+  - `testRouteFamilyAgreementIdempotence` (determinism / identical
+    inputs yield identical `Deliberation`)
+  - `testDeliberationRecoveryNotSilenced` (M3: deliberation cause
+    survives even when local recovery planner returns `Nothing`).
+- ADR-0011 accepted and written (`docs/adr/0011-deliberation-framework.md`).
+  Updated with §9 Package C honest limits (observability-only divergence,
+  inverted adjunction caller mapping noted for Package D fix, tone stub
+  status) and §11 Package C completion addendum.
+- Phase 8 Package C (observability-grade divergence): the holistic
+  proposal now derives `planNarrativeTone` from field atmosphere
+  (`NarrativeWarm` when arousal > floor and valence ≥ neutral,
+  `NarrativeTerse` when arousal > floor and valence < neutral,
+  `NarrativeNeutral` otherwise), while the formal proposal stays
+  `NarrativeNeutral`.  Family and style remain identical
+  (behaviour-preserving baseline), creating trace-visible
+  `DivergeOnTone` under strong field signals without changing
+  runtime output.
+  New test `testRouteFamilyHolisticFieldDeliberationDivergence`
+  asserts `DivergeOnTone`, `RuleSalienceLead`, reconciled tone
+  `NarrativeWarm`, and exact 0.25 divergence.
+- `DeliberationModulation` / `defaultDeliberationModulation` added
+  to `Self.Deliberation` to centralise tone thresholds; previously
+  hardcoded `0.5` / `0.0` in `routeFamily` now read from the record.
+  This is the fifth modulation parameter family in the project
+  (after legitimacy, parser, conatus, salience).
+- `routeFamily` stale comment (Phase 8 M1/M2 era) rewritten to
+  reflect Package C reality: tone-only divergence, observability-only.
+- Regression locks F1/F2/F3 still active; no new locks required
+  because Package C is tone-only divergence on an observability axis.
+- Plan A (tech-debt cleanup, 2026-05-18): 8 S-effort fixes landed
+  without runtime behaviour change:
+  - A.1 `pickHigherSeverity` replaces Maybe-fallback for recovery
+    cause merge in `Route/Render.hs` (Critical trap for Package D).
+  - A.2 Dead import `renderStyleFromDecisionWithSalience` removed
+    from `TurnRouting.hs`.
+  - A.3 `turnInputSalience` helper deduplicates two inline copies
+    of `salienceFromConatusEnergy` in `Finalize/State.hs`.
+  - A.4 / A.5 Stale `tiField` / `psField` docstrings synced: all
+    five components now populated, not just resonance.
+  - A.6 `AGENTS.md` updated: landed phases 1-2/3/4/5/5.5d/5.5e/6/8
+    explicitly listed; remaining work is Phase 7 + Package D.
+  - A.7 `ROADMAP.md` updated: Near term #2 crossed out (landed),
+    Long term #2 rewritten as Package D queue with accurate status
+    of adjunction combinators (groundIn/probe production).
+  - A.8 Verified: 553/553 PASS, zero new warnings.
+- Phase 8 Package D (adjunction swap + family modulation cleanup):
+  - `applySalienceEscalation` removed from `TurnRouting.hs`;
+    `runFamilyCascade` (which already receives `routingSalience`) is
+    now the single pre-deliberation family source.
+  - `familyDivergenceEnabled = False` feature flag added;
+    `nearestHolistic` retained as local helper for future B.3 work.
+  - Adjunction caller mapping corrected (ADR-0008 orthodoxy):
+    formal hemisphere probes the field, holistic hemisphere carries
+    atmosphere-derived tone already baked into the Plan and is paired
+    with `emptyField`.
+  - Pre-mirror block (`preEgo`, `preIdentitySignal`, `preGuardReport`,
+    `preSemanticInput`, `preSemanticAnchor`) inlined into `baseStyle`
+    computation to remove redundant let-bindings.
+  - F1 regression lock renamed from
+    `testRouteFamilyEmptyFieldEscalatesToCMDescribe` to
+    `testRouteFamilyEmptyFieldKeepsCascadeFamily`; retargeted to
+    observable contract (`rdFamily == delibReconciled.planFamily`).
+  - ADR-0011 §6.1 updated with new code structure, §9 inverted
+    adjunction note marked resolved, §12 Package D addendum added.
+  - Verified: 553/553 PASS (meta), 431/431 (fast), 437/437 (unit),
+    25/25 (integration), 74/74 (property), zero new warnings.

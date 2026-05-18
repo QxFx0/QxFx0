@@ -304,6 +304,13 @@ PY
   fail_violation "exposed Core module not reachable from Runtime/TurnPipeline"
 fi
 
+echo "  [12] Pipeline call sites must access Holistic/Formal only through Self.Adjunction..."
+while IFS= read -r file; do
+  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.Self\.(Holistic|Formal)(\s|$)' "$file" >/dev/null 2>&1; then
+    fail_violation "$file imports QxFx0.Self.Holistic or QxFx0.Self.Formal directly (use QxFx0.Self.Adjunction)"
+  fi
+done < <(find "$SRC/QxFx0/Core/TurnPipeline" -name "*.hs" 2>/dev/null || true)
+
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"
   exit 1

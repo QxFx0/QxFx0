@@ -35,6 +35,9 @@ module QxFx0.Types.State.System
   , ssDreamState
   , ssDreamAxiom
   , ssIntuitionState
+  , ssLastSalienceBias
+  , ssHolisticStreak
+  , ssRecentNarrativeSuccess
   , emptySystemState
   ) where
 
@@ -125,8 +128,11 @@ instance ToJSON SystemState where
     , "consecutiveReflect" .= dsConsecutiveReflect (ssDialogue ss)
     , "recentFamilies" .= dsRecentFamilies (ssDialogue ss)
     , "activeScene" .= dsActiveScene (ssDialogue ss)
-    , "userState" .= dsUserState (ssDialogue ss)
-    , "ego" .= idsEgo (ssIdentity ss)
+     , "userState" .= dsUserState (ssDialogue ss)
+     , "lastSalienceBias" .= dsLastSalienceBias (ssDialogue ss)
+     , "holisticStreak" .= dsHolisticStreak (ssDialogue ss)
+     , "recentNarrativeSuccess" .= dsRecentNarrativeSuccess (ssDialogue ss)
+     , "ego" .= idsEgo (ssIdentity ss)
     , "identityClaims" .= idsIdentityClaims (ssIdentity ss)
     , "orbitalMemory" .= idsOrbitalMemory (ssIdentity ss)
     , "lastGuardReport" .= idsLastGuardReport (ssIdentity ss)
@@ -160,6 +166,9 @@ instance FromJSON SystemState where
       <*> o .: "recentFamilies"
       <*> o .: "activeScene"
       <*> o .: "userState"
+      <*> o .:? "lastSalienceBias" .!= 0.0
+      <*> o .:? "holisticStreak" .!= 0
+      <*> o .:? "recentNarrativeSuccess" .!= []
     ids <- IdentityState
       <$> o .: "ego"
       <*> o .: "identityClaims"
@@ -270,6 +279,15 @@ ssDreamState = semDreamState . ssSemantic
 
 ssIntuitionState :: SystemState -> Maybe IntuitiveState
 ssIntuitionState = semIntuitionState . ssSemantic
+
+ssLastSalienceBias :: SystemState -> Double
+ssLastSalienceBias = dsLastSalienceBias . ssDialogue
+
+ssHolisticStreak :: SystemState -> Int
+ssHolisticStreak = dsHolisticStreak . ssDialogue
+
+ssRecentNarrativeSuccess :: SystemState -> [Bool]
+ssRecentNarrativeSuccess = dsRecentNarrativeSuccess . ssDialogue
 
 emptySystemState :: SystemState
 emptySystemState = SystemState

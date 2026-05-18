@@ -2,6 +2,7 @@
 module QxFx0.Types
   ( module QxFx0.Types.Domain
   , module QxFx0.Types.Decision
+  , module QxFx0.Types.Consciousness
   , module QxFx0.Types.Dream
   , module QxFx0.Types.Intuition
   , module QxFx0.Types.State
@@ -15,6 +16,7 @@ module QxFx0.Types
 
 import QxFx0.Types.Domain
 import QxFx0.Types.Decision
+import QxFx0.Types.Consciousness
 import QxFx0.Types.Dream
 import QxFx0.Types.Intuition
 import QxFx0.Types.State

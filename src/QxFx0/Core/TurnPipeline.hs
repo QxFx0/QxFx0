@@ -13,6 +13,10 @@ module QxFx0.Core.TurnPipeline
   , planTurn
   , renderTurn
   , finalizeTurn
+  , PrepareStatic(..)
+  , PrepareEffectPlan(..)
+  , PrepareEffectRequest(..)
+  , buildPrepareEffectPlan
   ) where
 
 import QxFx0.Core.TurnPipeline.Protocol
@@ -29,4 +33,10 @@ import QxFx0.Core.TurnPipeline.Protocol
   , planTurn
   , renderTurn
   , finalizeTurn
+  )
+import QxFx0.Core.TurnPipeline.Effects
+  ( PrepareStatic(..)
+  , PrepareEffectPlan(..)
+  , PrepareEffectRequest(..)
+  , buildPrepareEffectPlan
   )

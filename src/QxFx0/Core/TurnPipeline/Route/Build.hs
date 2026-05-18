@@ -125,26 +125,27 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
               (intuitPosterior >= flashThreshold)
           $ tiMetrics ti
    in TurnPlan
-        { tpRouting = rd
-        , tpFamily = family
-        , tpRenderStyle = renderStyleText renderStyle
-        , tpRmpAfterLegit = rmpAfterLegit
-        , tpRcpFinal = rcpFinal
-        , tpFinalFamily = finalFamily
-        , tpFinalForce = finalForce
-        , tpLegitScore = legitScore
-        , tpActiveScene = activeScene
-        , tpShadowStatus = scShadowStatus sc
-        , tpShadowDivergence = scShadowHasDivergence sc
-        , tpShadowDivergenceKind = scShadowDivergenceKind sc
-        , tpShadowDivergenceSeverity = scShadowDivergenceSeverity sc
-        , tpShadowGateTriggered = srGateTriggered shadowResolution
-        , tpShadowSnapshotId = scShadowSnapshotId sc
-        , tpShadowFamily = scShadowFamily sc
-        , tpShadowForce = scShadowForce sc
-        , tpShadowMessage = scShadowMessage sc
-        , tpMetrics = metricsWithThresholds
-        }
+         { tpRouting = rd
+         , tpFamily = family
+         , tpRenderStyle = renderStyleText renderStyle
+         , tpRmpAfterLegit = rmpAfterLegit
+         , tpRcpFinal = rcpFinal
+         , tpFinalFamily = finalFamily
+         , tpFinalForce = finalForce
+         , tpLegitScore = legitScore
+         , tpActiveScene = activeScene
+         , tpShadowStatus = scShadowStatus sc
+         , tpShadowDivergence = scShadowHasDivergence sc
+         , tpShadowDivergenceKind = scShadowDivergenceKind sc
+         , tpShadowDivergenceSeverity = scShadowDivergenceSeverity sc
+         , tpShadowGateTriggered = srGateTriggered shadowResolution
+         , tpShadowSnapshotId = scShadowSnapshotId sc
+         , tpShadowFamily = scShadowFamily sc
+         , tpShadowForce = scShadowForce sc
+         , tpShadowMessage = scShadowMessage sc
+         , tpMetrics = metricsWithThresholds
+         , tpDeliberation = rdDeliberation rd
+         }
 
 routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO TurnPlan
 routeTurnPlan pio ss ti ts = do

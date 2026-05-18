@@ -33,6 +33,7 @@ import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.Deliberation (Deliberation)
 import QxFx0.Self.Field (Field)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
@@ -56,6 +57,7 @@ data RoutingDecision = RoutingDecision
   , rdFromMs         :: !MeaningState
   , rdToMs           :: !MeaningState
   , rdStrategyFamily :: !(Maybe CanonicalMoveFamily)
+  , rdDeliberation   :: !(Maybe Deliberation)
   }
 
 data TurnInput = TurnInput
@@ -88,16 +90,22 @@ data TurnInput = TurnInput
     --   'QxFx0.Core.TurnPipeline.Effects.psBlanketViolationCount',
     --   used by 'buildLocalRecoveryPlan' to construct the
     --   @"blanket_violations=N"@ evidence line.
+  , tiConatusGateFired :: !Bool
+    -- ^ Phase 6 addendum (M6.1): precomputed Conatus gate flag
+    --   from 'psConatusGateFired'.  Single source of truth for
+    --   both recovery and salience decisions.
   , tiField :: !Field
-    -- ^ Phase 5.5d: per-turn 'QxFx0.Self.Field.Field' carried
-    --   from 'QxFx0.Core.TurnPipeline.Effects.psField'.
-    --   Currently only 'fieldResonance' is populated; the
-    --   remaining four components stay at 'emptyField'
-    --   defaults pending follow-up Field-broadening work.
-    --   Single source of truth across the turn so routing
-    --   ('routeFamily') and finalize-stage trace
-    --   ('buildTurnProjection') share the same Field instead
-    --   of each constructing 'emptyField' independently.
+    -- ^ Per-turn 'QxFx0.Self.Field.Field' carried from
+    --   'QxFx0.Core.TurnPipeline.Effects.psField'.  All five
+    --   components are populated from runtime signals
+    --   (Resonance from atom-trace, Atmosphere from Ego +
+    --   legitimacy, Consolidation from narrative-success window,
+    --   Counterfactual from candidate-family entropy, Confidence
+    --   derived from the other four).  Single source of truth
+    --   across the turn so routing ('routeFamily'), salience
+    --   computation, and finalize-stage trace share the same
+    --   Field instead of each constructing 'emptyField'
+    --   independently.
   }
 
 data TurnSignals = TurnSignals
@@ -131,6 +139,7 @@ data TurnPlan = TurnPlan
   , tpShadowForce :: !(Maybe IllocutionaryForce)
   , tpShadowMessage :: !Text
   , tpMetrics :: !TurnMetrics
+  , tpDeliberation :: !(Maybe Deliberation)
   }
 
 tpNewEgo :: TurnPlan -> EgoState

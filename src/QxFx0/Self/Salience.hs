@@ -94,6 +94,9 @@ module QxFx0.Self.Salience
     -- * Tunable weights
   , SalienceWeights (..)
   , defaultSalienceWeights
+    -- * Tunable behavioural thresholds
+  , SalienceModulation (..)
+  , defaultSalienceModulation
     -- * Controller
   , computeSalience
   , salienceVerdict
@@ -109,6 +112,9 @@ module QxFx0.Self.Salience
   , conatusGateFires
     -- * Trace rendering (Phase 5.5e)
   , renderSalienceDriver
+    -- * Family classification (Holistic / Formal)
+  , isHolisticFamily
+  , isFormalFamily
   ) where
 
 import Data.Text (Text)
@@ -130,6 +136,7 @@ import QxFx0.Self.Field
   , emptyField
   , mkResonance
   )
+import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 
 -- ---------------------------------------------------------------------------
 -- Verdict types
@@ -234,6 +241,47 @@ defaultSalienceWeights = SalienceWeights
   }
 
 -- ---------------------------------------------------------------------------
+-- Tunable behavioural thresholds
+-- ---------------------------------------------------------------------------
+
+-- | Tunable thresholds of the /behavioural/ layer that consumes a
+-- 'Salience' verdict — cascade modulation
+-- ('QxFx0.Core.TurnRouting.Cascade.applyPrincipledFamilyModulated' \/
+-- 'applyGuardGatingModulated') and soft family escalation
+-- ('QxFx0.Core.TurnRouting.applySalienceEscalation').
+--
+-- Distinct from 'SalienceWeights' (which calibrates the
+-- /computation/ of 'Salience'); this record calibrates how
+-- downstream code /uses/ it. Like 'defaultSalienceWeights', the
+-- defaults here are pinned to make the property and integration
+-- tests pass; Phase 7 (lifeness gates) is the calibration step.
+data SalienceModulation = SalienceModulation
+  { smModulationHolisticBiasFloor :: !Double
+    -- ^ Above this 'salienceHolisticBias', the principled-cascade
+    --   and guard-gating modulation paths /relax/ (intuition and
+    --   narrative hints retain more influence; only
+    --   agency-collapse remains hard-blocked). Default: @0.6@.
+  , smEscalationConfidenceFloor   :: !Double
+    -- ^ Above this 'salienceConfidence', soft family escalation
+    --   nudges the cascade family to its nearest Holistic \/ Formal
+    --   counterpart when bias and family side disagree.
+    --   Default: @0.7@.
+  }
+  deriving stock (Eq, Show)
+
+-- | The Phase-5.5 default modulation thresholds.
+--
+-- Pinned to match the values previously embedded as magic
+-- constants in 'QxFx0.Core.TurnRouting.applySalienceEscalation'
+-- and 'QxFx0.Core.TurnRouting.Cascade.applyPrincipledFamilyModulated'
+-- \/ 'applyGuardGatingModulated' before centralisation.
+defaultSalienceModulation :: SalienceModulation
+defaultSalienceModulation = SalienceModulation
+  { smModulationHolisticBiasFloor = 0.6
+  , smEscalationConfidenceFloor   = 0.7
+  }
+
+-- ---------------------------------------------------------------------------
 -- Controller
 -- ---------------------------------------------------------------------------
 
@@ -298,22 +346,18 @@ salienceVerdict w s
 -- single-output-channel half of the anti-correlation discipline
 -- (ADR-0010 §5).
 --
--- __Status (as of M2d):__ no runtime call site currently consumes
--- 'chooseBranch'. The 5.5a\/5.5b\/5.5c integrations use direct
--- @case salienceVerdict ... of@ post-processors because the
--- channels in question (intuition flash strength, 'RenderStyle',
--- narrative fragment text) do not naturally factor through the
--- 'Holistic'\/'Formal' adjoint pair — they are all
--- @Salience -> a -> a@ rewrites, not Field-parameterized
--- dispatches.
+-- __Status (as of Phase 5.5e):__ 'chooseBranch' is now consumed by
+-- 'QxFx0.Core.TurnRender.Strategy.applySalienceToStyle' (the
+-- render-style dispatch point). This is the first production
+-- call site that threads a real 'Field' into the adjunction.
+-- Other channels (intuition flash strength, narrative fragment)
+-- still use direct @case salienceVerdict ... of@ rewrites
+-- because they are @Salience -> a -> a@ post-processors, not
+-- Field-parameterized dispatches.
 --
--- This API is retained as the typed realisation of ADR-0008's
--- adjunction-aware dispatch promise; wire-up is deferred to a
--- later phase that introduces a naturally Field-parameterized
--- dispatch point (candidate: Phase 5.5d Field broadening, where
--- a Field-dependent computation may emerge naturally). Until
--- then, property-test coverage in @Test.Suite.SelfSalience@
--- exercises the adjunction laws on the type level only.
+-- Property-test coverage in @Test.Suite.SelfSalience@ exercises
+-- the adjunction laws on the type level; the runtime call site
+-- exercises them on the value level.
 chooseBranch
   :: SalienceVerdict
   -> (Holistic a -> b)   -- ^ Holistic-first branch.
@@ -328,43 +372,28 @@ chooseBranch v holistic formal = case v of
 -- Phase-5.5 transitional helpers
 -- ---------------------------------------------------------------------------
 
--- | Compute a 'Salience' from a 'Field' alone, using a placeholder
--- positive 'ConatusEnergy' so the gate does not fire and
--- 'defaultSalienceWeights'.
+-- | Compute a 'Salience' from a 'ConatusEnergy' and a 'Field'.
+-- Uses 'defaultSalienceWeights'.  The Conatus gate is evaluated
+-- with the real runtime energy; there is no placeholder.
 --
--- This is the Phase-5.5 wiring helper. Call sites that already
--- have access to a runtime 'ConatusEnergy' should call
--- 'computeSalience' directly. Phase 2.5 (M2d) replaces every use
--- of this helper with a 'computeSalience' that consumes a
--- 'ConatusEnergy' computed from the runtime 'SelfBlanket'.
-salienceFromField :: Field -> Salience
-salienceFromField =
-  computeSalience defaultSalienceWeights placeholderConatusEnergy
-  where
-    placeholderConatusEnergy = ConatusEnergy
-      { ceScalar     = 1.0
-      , ceComponents = ConatusComponents
-          { ccMorphology = 0.0
-          , ccIdentity   = 0.0
-          , ccTurns      = 0.0
-          , ccPenalty    = 0.0
-          }
-      }
+-- This is the Phase-5.5 wiring helper.  Call sites that already
+-- have access to a runtime 'ConatusEnergy' (e.g. from
+-- 'PrepareStatic' or 'TurnInput') should pass it here.
+salienceFromField :: ConatusEnergy -> Field -> Salience
+salienceFromField ce =
+  computeSalience defaultSalienceWeights ce
 
 -- | Build a 'Salience' from a single resonance signal, using
 -- 'salienceFromField' on an otherwise-empty 'Field'.
 --
--- This is the Phase-5.5 wiring primitive shared by all call
--- sites that still operate at the resonance-only level of Field
--- plumbing (currently: the intuition handler in
--- 'QxFx0.Runtime.Wiring.Handlers' and the consciousness-loop
--- dispatch in 'QxFx0.Core.ConsciousnessLoop'). Phase 5.5+ will
--- broaden these call sites to richer 'Field' values, at which
--- point this helper is replaced by direct 'salienceFromField'
--- (or 'computeSalience' once M2d threads runtime Conatus).
-salienceFromResonance :: Double -> Salience
-salienceFromResonance resonance =
-  salienceFromField (emptyField { fieldResonance = mkResonance resonance })
+-- This helper is kept for call sites that only have a resonance
+-- scalar (e.g. the intuition handler in
+-- 'QxFx0.Runtime.Wiring.Handlers').  Full-pipeline call sites
+-- (routing, render-style, recovery) already use 'salienceFromField'
+-- with a five-component 'Field'.
+salienceFromResonance :: ConatusEnergy -> Double -> Salience
+salienceFromResonance ce resonance =
+  salienceFromField ce (emptyField { fieldResonance = mkResonance resonance })
 
 -- ---------------------------------------------------------------------------
 -- Phase-2.5 runtime-Conatus helpers (M2d)
@@ -513,3 +542,19 @@ computeConfidence cs
       ]
     dominant = maximum magnitudes
     other    = sum magnitudes - dominant
+
+-- | Classify a 'CanonicalMoveFamily' as holistic (right-hemispheric).
+-- This is the single source of truth for the Holistic / Formal
+-- partition used by the salience controller and the feedback loop.
+isHolisticFamily :: CanonicalMoveFamily -> Bool
+isHolisticFamily CMReflect    = True
+isHolisticFamily CMDefine     = True
+isHolisticFamily CMHypothesis = True
+isHolisticFamily CMDeepen     = True
+isHolisticFamily CMPurpose    = True
+isHolisticFamily _            = False
+
+-- | Inverse of 'isHolisticFamily'.  Kept explicit so callers do
+-- not need to remember which side is default.
+isFormalFamily :: CanonicalMoveFamily -> Bool
+isFormalFamily = not . isHolisticFamily
