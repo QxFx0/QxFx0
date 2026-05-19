@@ -89,8 +89,11 @@ jobs:
     timeout-minutes: 45
     if: |
       github.event_name == 'schedule' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'extended') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.profile == 'extended')
+    # NOTE: Push-to-main trigger removed because the high-mem runner
+    # (>=32 GB RAM) is not guaranteed to be available on every push.
+    # Extended contract runs only on scheduled weekly cron + manual
+    # workflow_dispatch.  See docs/EXTENDED_CONTRACT_RUNBOOK.md.
     needs: core-contract
     env:
       QXFX0_CONTRACT_PROFILE: extended
