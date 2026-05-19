@@ -135,7 +135,14 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
   case renderStructuredDialogueArtifact frame rmp (rcpStyle rcp) morph of
     Just artifact -> artifact
     Nothing ->
-      if isEnglishInput (ipfRawText frame)
+      let fallbackReason =
+            case propositionTypeFromText (ipfPropositionType frame) of
+              Nothing -> "unknown_proposition_type"
+              Just ptype ->
+                if structuredDialogueType ptype
+                  then "structured_body_returned_plain"
+                  else "proposition_type_not_structured"
+      in if isEnglishInput (ipfRawText frame)
       then
         let topicText = cleanTopic topic
             enBody = "I am here to continue the dialogue in English."
@@ -150,7 +157,7 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             , draClaimAst = Nothing
             , draLinearizationLang = Just "en_fallback"
             , draLinearizationOk = False
-            , draFallbackReason = Just "en_unstructured_fallback"
+            , draFallbackReason = Just ("en_unstructured_fallback:" <> fallbackReason)
             , draDialogAtoms = emptyDialogAtoms
             }
       else
@@ -181,7 +188,7 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             , draClaimAst = Nothing
             , draLinearizationLang = Nothing
             , draLinearizationOk = False
-            , draFallbackReason = Nothing
+            , draFallbackReason = Just ("ru_unstructured_fallback:" <> fallbackReason)
             , draDialogAtoms = emptyDialogAtoms
             }
 
