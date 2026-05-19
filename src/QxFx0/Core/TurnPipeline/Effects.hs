@@ -148,10 +148,6 @@ data PrepareStatic = PrepareStatic
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
     --   'buildNextSystemState' sees the canonical trajectory.
-  , psEssenceCommitmentEnabled :: !Bool
-    -- ^ Phase 10: feature flag for essence commitment transition.
-    --   Default False; set True for integration replay testing.
-    --   Threaded through 'TurnInput' as single source of truth.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -251,7 +247,6 @@ buildPrepareEffectPlan ss input =
         --   Threaded through 'TurnInput' so downstream stages
         --   (e.g. salience computation) can read the same record.
       , psEssence = ssEssence ss
-      , psEssenceCommitmentEnabled = False
       }
   in PrepareEffectPlan
       { pepStatic = static

@@ -116,9 +116,6 @@ data TurnInput = TurnInput
     -- ^ Phase 9: the pre-turn essence carrier, populated by
     --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source
     --   of truth for the turn's essence-layer reads.
-  , tiEssenceCommitmentEnabled :: !Bool
-    -- ^ Phase 10: feature flag for essence commitment transition.
-    --   Mirrors 'psEssenceCommitmentEnabled' from 'PrepareStatic'.
   }
 
 data TurnSignals = TurnSignals
