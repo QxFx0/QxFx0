@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StrictData #-}
 
@@ -88,6 +90,8 @@ module QxFx0.Self.Field
   , computeConsolidation
   , computeCounterfactual
   , computeAtmosphere
+    -- * Phase-B bounded post-commitment adaptation
+  , adaptFieldHeuristics
     -- * Component combinators
   , combineResonance
   , combineAtmosphere
@@ -104,6 +108,10 @@ module QxFx0.Self.Field
   , summariseFrom
   , unFieldHistory
   ) where
+
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 
 -- ---------------------------------------------------------------------------
 -- Component newtypes
@@ -266,7 +274,8 @@ data FieldHeuristics = FieldHeuristics
     -- ^ Multiplier on (legitimacy − midpoint) that is added
     --   to the ego-derived valence base. Default: 0.4.
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Phase-7 default heuristic parameters.  These reproduce the
 -- behaviour of the hardcoded constants that shipped in Phase 5.5d.
@@ -328,6 +337,38 @@ computeAtmosphere fh egoAgency egoTension legitScore =
       valence     = valenceBase + legitBonus
       arousal     = egoTension
   in mkAtmosphere valence arousal
+
+-- | Bounded adaptation of field-heuristic parameters.
+--
+-- Only the 'Double' fields are adapted; 'Int' fields (window size)
+-- are left unchanged to avoid brittle integer drift.  Each adapted
+-- value is clamped to @[0.0, 1.0]@ and further constrained to stay
+-- within @±0.5@ of its default, providing an anti-drift guardrail.
+--
+-- Signal in @[-1, 1]@; learning rate capped at @0.02@ per turn.
+-- Empirical signal generation is deferred to Phase 7; this function
+-- wires the bounded mechanics.
+adaptFieldHeuristics :: Double -> FieldHeuristics -> FieldHeuristics
+adaptFieldHeuristics rawSignal fh =
+  let lr        = 0.02
+      signal    = max (-1.0) (min 1.0 rawSignal)
+      delta     = signal * lr
+      -- Anti-drift only applies when we are actually adapting;
+      -- signal=0 must be identity to respect the gating contract.
+      bounded target x =
+        let adapted = max 0.0 (min 1.0 (x + delta))
+        in if abs delta < 1e-12
+             then x
+             else max (target - 0.5) (min (target + 0.5) adapted)
+      def       = defaultFieldHeuristics
+  in fh
+       { fhDefaultNarrativeRate    = bounded (fhDefaultNarrativeRate    def) (fhDefaultNarrativeRate    fh)
+       , fhTopicStabilityBoost     = bounded (fhTopicStabilityBoost     def) (fhTopicStabilityBoost     fh)
+       , fhHolisticStreakBoostRate = bounded (fhHolisticStreakBoostRate def) (fhHolisticStreakBoostRate fh)
+       , fhHolisticStreakBoostCap  = bounded (fhHolisticStreakBoostCap  def) (fhHolisticStreakBoostCap  fh)
+       , fhLegitimacyMidpoint      = bounded (fhLegitimacyMidpoint      def) (fhLegitimacyMidpoint      fh)
+       , fhLegitimacyBonusScale    = bounded (fhLegitimacyBonusScale    def) (fhLegitimacyBonusScale    fh)
+       }
 
 -- ---------------------------------------------------------------------------
 -- Per-component combinators

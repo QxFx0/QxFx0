@@ -62,6 +62,8 @@ import QxFx0.Self.Essence
   , validatePlan
   , witness
   )
+import QxFx0.Self.Salience (adaptSalienceWeights)
+import QxFx0.Self.Field (adaptFieldHeuristics)
 import QxFx0.Types.Text (textShow)
 
 import Data.Maybe (fromMaybe)
@@ -133,20 +135,31 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                    , Just trigger
                    )
           EssenceCommitted trajectory commitment ->
-            -- Sticky: committed essences are never reverted. We still
-            -- ingest a witness so etAngstLevel/etConatusFloor track
-            -- post-commit deliberation for diagnostics.
-            let trajectory' =
-                  witness
-                    defaultEssenceModulation
-                    (ssTurnCount ss + 1)
-                    (tiConatusEnergy ti)
-                    (tiField ti)
-                    (fromMaybe defaultDeliberation (tpDeliberation tp))
-                    trajectory
-            in (EssenceCommitted trajectory' commitment, Nothing)
-   in ( ss
-      { ssDialogue = (ssDialogue ss)
+             -- Sticky: committed essences are never reverted. We still
+             -- ingest a witness so etAngstLevel/etConatusFloor track
+             -- post-commit deliberation for diagnostics.
+             let trajectory' =
+                   witness
+                     defaultEssenceModulation
+                     (ssTurnCount ss + 1)
+                     (tiConatusEnergy ti)
+                     (tiField ti)
+                     (fromMaybe defaultDeliberation (tpDeliberation tp))
+                     trajectory
+             in (EssenceCommitted trajectory' commitment, Nothing)
+      -- Phase-B: post-commitment bounded self-tuning.
+      -- Empirical signal generation is deferred to Phase 7;
+      -- signal=0.0 means no drift until calibration is available.
+      (adaptedWeights, adaptedHeuristics) =
+        case nextEssence of
+          EssenceCommitted _ _ ->
+            let signal = 0.0
+            in ( adaptSalienceWeights signal (ssSalienceWeights ss)
+               , adaptFieldHeuristics signal (ssFieldHeuristics ss)
+               )
+          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss)
+    in ( ss
+       { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
           , dsActiveScene = tpActiveScene tp
           , dsLastFamily = outcomeFamily
@@ -195,6 +208,8 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
           , obsLastLegitimacyScore = tpLegitScore tp
           }
       , ssEssence = nextEssence
+      , ssSalienceWeights = adaptedWeights
+      , ssFieldHeuristics = adaptedHeuristics
       }
     , commitmentTrigger
     )

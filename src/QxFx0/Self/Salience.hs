@@ -117,6 +117,8 @@ module QxFx0.Self.Salience
     -- * Family classification (Holistic / Formal)
   , isHolisticFamily
   , isFormalFamily
+    -- * Phase-B bounded post-commitment adaptation
+  , adaptSalienceWeights
   ) where
 
 import Control.DeepSeq (NFData)
@@ -214,8 +216,8 @@ data SalienceWeights = SalienceWeights
   , weightFieldConfidence :: !Double
     -- ^ Multiplier on 'fieldConfidence'. Direction: inverse
     --   (lower field confidence ⇒ more bias toward Formal, in
-    --   keeping with \"the system can\'t trust holistic signals;
-    --   fall back to formal contracts\").
+    --   keeping with "the system can\'t trust holistic signals;
+    --   fall back to formal contracts").
   , conatusGateThreshold  :: !Double
     -- ^ If @ceScalar < this@, force 'PreferFormal' with full
     --   confidence and 'DrivenByConatusGate' driver.
@@ -226,7 +228,8 @@ data SalienceWeights = SalienceWeights
     -- ^ Slope parameter for the @sigmoid (raw \/ temperature)@
     --   squash. @1.0@ is the textbook default.
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | The Phase-5 default weights.
 --
@@ -473,6 +476,44 @@ renderSalienceDriver DrivenByCounterfactual  = "counterfactual"
 renderSalienceDriver DrivenByFieldConfidence = "field_confidence"
 renderSalienceDriver DrivenByConatusGate     = "conatus_gate"
 renderSalienceDriver DrivenByDefault         = "default"
+
+-- ---------------------------------------------------------------------------
+-- Phase-B bounded post-commitment adaptation
+-- ---------------------------------------------------------------------------
+
+-- | Bounded adaptation of salience weights.
+--
+-- * @signal@ in @[-1, 1]@: positive reinforces Holistic-bias weights,
+--   negative reinforces Formal-bias weights.
+-- * Learning rate capped at @0.02@ per turn.
+-- * All adapted weights clamped to @[0.0, 2.0]@.
+-- * Anti-drift: total deviation from 'defaultSalienceWeights'
+--   per weight cannot exceed @1.0@.
+--
+-- Empirical signal generation is deferred to Phase 7; this
+-- function provides the bounded mechanics so that future
+-- calibration only needs to change the caller-supplied signal.
+adaptSalienceWeights :: Double -> SalienceWeights -> SalienceWeights
+adaptSalienceWeights rawSignal w =
+  let lr        = 0.02
+      signal    = max (-1.0) (min 1.0 rawSignal)
+      delta     = signal * lr
+      def       = defaultSalienceWeights
+      clamped x = max 0.0 (min 2.0 x)
+      -- Anti-drift only applies when we are actually adapting;
+      -- signal=0 must be identity to respect the gating contract.
+      bounded target x =
+        let adapted = clamped (x + delta)
+        in if abs delta < 1e-12
+             then x
+             else max (target - 1.0) (min (target + 1.0) adapted)
+  in w
+       { weightResonance       = bounded (weightResonance       def) (weightResonance       w)
+       , weightAtmosphere      = bounded (weightAtmosphere      def) (weightAtmosphere      w)
+       , weightConsolidation   = bounded (weightConsolidation   def) (weightConsolidation   w)
+       , weightCounterfactual  = bounded (weightCounterfactual  def) (weightCounterfactual  w)
+       , weightFieldConfidence = bounded (weightFieldConfidence def) (weightFieldConfidence w)
+       }
 
 -- ---------------------------------------------------------------------------
 -- Internals

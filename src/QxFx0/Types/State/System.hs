@@ -38,6 +38,8 @@ module QxFx0.Types.State.System
   , ssLastSalienceBias
   , ssHolisticStreak
   , ssRecentNarrativeSuccess
+  , ssSalienceWeights
+  , ssFieldHeuristics
   , emptySystemState
   ) where
 
@@ -104,6 +106,8 @@ import QxFx0.Types.State.Semantic
 import QxFx0.Types.Vec (zeroVec)
 import QxFx0.Types.Dream (emptyDreamState)
 import QxFx0.Self.Essence (Essence, emptyEssence)
+import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
+import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -117,6 +121,12 @@ data SystemState = SystemState
     -- ^ Phase 9: essence-selection trajectory accumulator.
     --   Carries the uncommitted (or committed) 'Essence' across
     --   turns.  Initialised to 'emptyEssence'.
+  , ssSalienceWeights :: !SalienceWeights
+    -- ^ Phase B: mutable salience weights for post-commitment
+    --   bounded self-tuning.  Initialised to 'defaultSalienceWeights'.
+  , ssFieldHeuristics :: !FieldHeuristics
+    -- ^ Phase B: mutable field heuristics for post-commitment
+    --   bounded self-tuning.  Initialised to 'defaultFieldHeuristics'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -155,6 +165,8 @@ instance ToJSON SystemState where
     , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
     , "observability" .= ssObservability ss
     , "essence" .= ssEssence ss
+    , "salienceWeights" .= ssSalienceWeights ss
+    , "fieldHeuristics" .= ssFieldHeuristics ss
     ]
 
 instance FromJSON SystemState where
@@ -197,6 +209,8 @@ instance FromJSON SystemState where
       <*> o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty
       <*> o .: "observability"
       <*> o .:? "essence" .!= emptyEssence
+      <*> o .:? "salienceWeights" .!= defaultSalienceWeights
+      <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -306,4 +320,6 @@ emptySystemState = SystemState
   , ssMorphology = MorphologyData M.empty M.empty M.empty M.empty
   , ssObservability = emptyObservabilityState
   , ssEssence = emptyEssence
+  , ssSalienceWeights = defaultSalienceWeights
+  , ssFieldHeuristics = defaultFieldHeuristics
   }
