@@ -23,6 +23,14 @@ AUTO_SEED_TSV = ROOT / "spec" / "sql" / "lexicon" / "seed_ru_auto.tsv"
 IMPORT_SCRIPT = ROOT / "scripts" / "import_ru_opencorpora.py"
 
 MORPH_DIR = ROOT / "resources" / "morphology"
+
+# Known forms-by-surface collisions that are legitimate Russian homonymy
+# and should not block the generation pipeline.
+# Format: "surface:lemma1,lemma2,…"
+KNOWN_FBS_COLLISIONS = {
+    "вина:вино,вина",
+    "вине:вино,вина",
+}
 GF_DIR = ROOT / "spec" / "gf"
 OUT_NOMINATIVE = MORPH_DIR / "nominative.json"
 OUT_GENITIVE = MORPH_DIR / "genitive.json"
@@ -544,8 +552,14 @@ def load_rows() -> Tuple[List[Lexeme], Dict[str, List[List[object]]]]:
     conn = sqlite3.connect(":memory:")
     try:
         conn.executescript(SQL_SCHEMA.read_text(encoding="utf-8"))
-        seed_path = SQL_SEED_CURATED if SQL_SEED_CURATED.exists() else SQL_SEED_FALLBACK
-        conn.executescript(seed_path.read_text(encoding="utf-8"))
+        conn.executescript(SQL_SEED_FALLBACK.read_text(encoding="utf-8"))
+        if SQL_SEED_CURATED.exists():
+            curated_text = SQL_SEED_CURATED.read_text(encoding="utf-8")
+            curated_text = curated_text.replace(
+                "INSERT INTO lexicon_entries",
+                "INSERT OR IGNORE INTO lexicon_entries"
+            )
+            conn.executescript(curated_text)
         if SQL_SEED_BRAIN_REVIEWED.exists():
             conn.executescript(SQL_SEED_BRAIN_REVIEWED.read_text(encoding="utf-8"))
         _load_auto_source(conn)
@@ -1316,7 +1330,9 @@ def analyze_forms_by_surface_collisions(
         has_curated = "curated" in tiers
 
         desc = f"{surface}:{','.join(lemmas)}"
-        if has_curated:
+        if desc in KNOWN_FBS_COLLISIONS:
+            expected_ambiguity.append(desc)
+        elif has_curated:
             dangerous.append(desc)
         elif len(pos_tags) > 1:
             harmless.append(desc)
