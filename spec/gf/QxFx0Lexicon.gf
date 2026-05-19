@@ -16,6 +16,7 @@ abstract QxFx0Lexicon = {
     abris_N : Lexeme ;
     absorbirovanie_N : Lexeme ;
     abstraktsiya_N : Lexeme ;
+    absurd_N : Lexeme ;
     abhaz_N : Lexeme ;
     abtsug_N : Lexeme ;
     aval_N : Lexeme ;
@@ -55,6 +56,7 @@ abstract QxFx0Lexicon = {
     avtomedtehnika_N : Lexeme ;
     avtomobil_N : Lexeme ;
     avtomototehnika_N : Lexeme ;
+    avtonomiya_N : Lexeme ;
     avtopark_N : Lexeme ;
     avtopolo_N : Lexeme ;
     avtoport_N : Lexeme ;
@@ -143,6 +145,7 @@ abstract QxFx0Lexicon = {
     akrobat_N : Lexeme ;
     aks_N : Lexeme ;
     akses_N : Lexeme ;
+    aksioma_N : Lexeme ;
     aksiomatiziruemost_N : Lexeme ;
     akson_N : Lexeme ;
     akter_N : Lexeme ;
@@ -267,6 +270,7 @@ abstract QxFx0Lexicon = {
     antipoda_N : Lexeme ;
     antirefleksivnost_N : Lexeme ;
     antiseptik_N : Lexeme ;
+    antitezis_N : Lexeme ;
     antitela_N : Lexeme ;
     antitsiklon_N : Lexeme ;
     anus_N : Lexeme ;
@@ -301,6 +305,7 @@ abstract QxFx0Lexicon = {
     argal_N : Lexeme ;
     argentina_N : Lexeme ;
     argon_N : Lexeme ;
+    argument_N : Lexeme ;
     argumentatsiya_N : Lexeme ;
     argumentirovannost_N : Lexeme ;
     argus_N : Lexeme ;
@@ -663,6 +668,7 @@ abstract QxFx0Lexicon = {
     bolid_N : Lexeme ;
     boloto_N : Lexeme ;
     bolt_N : Lexeme ;
+    bol_Nv2 : Lexeme ;
     bolnitsa_N : Lexeme ;
     bolyus_N : Lexeme ;
     bomba_N : Lexeme ;
@@ -825,6 +831,7 @@ abstract QxFx0Lexicon = {
     valet_N : Lexeme ;
     valets_N : Lexeme ;
     validatsiya_N : Lexeme ;
+    validnost_N : Lexeme ;
     valik_N : Lexeme ;
     valka_N : Lexeme ;
     valuj_N : Lexeme ;
@@ -909,6 +916,7 @@ abstract QxFx0Lexicon = {
     verifikatsiya_N : Lexeme ;
     verifitsiruemost_N : Lexeme ;
     veronika_N : Lexeme ;
+    veroyatnost_N : Lexeme ;
     verp_N : Lexeme ;
     versionirovanie_N : Lexeme ;
     versiya_N : Lexeme ;
@@ -934,6 +942,7 @@ abstract QxFx0Lexicon = {
     veche_N : Lexeme ;
     vecherinka_N : Lexeme ;
     vechernya_N : Lexeme ;
+    vechnost_N : Lexeme ;
     veshalka_N : Lexeme ;
     veshka_N : Lexeme ;
     veshchestvo_N : Lexeme ;
@@ -987,6 +996,7 @@ abstract QxFx0Lexicon = {
     vilka_N : Lexeme ;
     villa_N : Lexeme ;
     vilt_N : Lexeme ;
+    vina_N : Lexeme ;
     vinil_N : Lexeme ;
     vino_N : Lexeme ;
     vinograd_N : Lexeme ;
@@ -1051,6 +1061,7 @@ abstract QxFx0Lexicon = {
     vozka_N : Lexeme ;
     vozmezdie_N : Lexeme ;
     vozmezdnost_N : Lexeme ;
+    vozmozhnost_N : Lexeme ;
     voznya_N : Lexeme ;
     vozrast_N : Lexeme ;
     voin_N : Lexeme ;
@@ -1068,10 +1079,12 @@ abstract QxFx0Lexicon = {
     volhv_N : Lexeme ;
     volchok_N : Lexeme ;
     volt_N : Lexeme ;
+    volya_N : Lexeme ;
     vomer_N : Lexeme ;
     vona_N : Lexeme ;
     von_N : Lexeme ;
     vopl_N : Lexeme ;
+    vopros_N : Lexeme ;
     vor_N : Lexeme ;
     vorobej_N : Lexeme ;
     vorog_N : Lexeme ;
@@ -1100,6 +1113,7 @@ abstract QxFx0Lexicon = {
     vral_N : Lexeme ;
     vrach_N : Lexeme ;
     vrashchenie_N : Lexeme ;
+    vremya_N : Lexeme ;
     vrub_N : Lexeme ;
     vrun_N : Lexeme ;
     vrusha_N : Lexeme ;
@@ -1119,10 +1133,13 @@ abstract QxFx0Lexicon = {
     vchera_N : Lexeme ;
     vezd_N : Lexeme ;
     vybeg_N : Lexeme ;
+    vybor_N : Lexeme ;
     vyborka_N : Lexeme ;
     vyborochnost_N : Lexeme ;
     vyval_N : Lexeme ;
     vyvih_N : Lexeme ;
+    vyvod_N : Lexeme ;
+    vyvodimost_N : Lexeme ;
     vyvoz_N : Lexeme ;
     vygib_N : Lexeme ;
     vygoda_N : Lexeme ;
@@ -1170,6 +1187,7 @@ abstract QxFx0Lexicon = {
     vyruchka_N : Lexeme ;
     vysev_N : Lexeme ;
     vysed_N : Lexeme ;
+    vyskazyvanie_N : Lexeme ;
     vysov_N : Lexeme ;
     vysota_N : Lexeme ;
     vystavka_N : Lexeme ;
@@ -1291,6 +1309,7 @@ abstract QxFx0Lexicon = {
     gimnastika_N : Lexeme ;
     gineya_N : Lexeme ;
     gioid_N : Lexeme ;
+    gipoteza_N : Lexeme ;
     gipotetichnost_N : Lexeme ;
     gips_N : Lexeme ;
     gipyur_N : Lexeme ;
@@ -1338,6 +1357,7 @@ abstract QxFx0Lexicon = {
     glyuk_N : Lexeme ;
     glyuon_N : Lexeme ;
     gmina_N : Lexeme ;
+    gnev_N : Lexeme ;
     gnezdo_N : Lexeme ;
     gnejs_N : Lexeme ;
     gnet_N : Lexeme ;
@@ -1370,6 +1390,7 @@ abstract QxFx0Lexicon = {
     gonets_N : Lexeme ;
     gonimost_N : Lexeme ;
     gorb_N : Lexeme ;
+    gordost_N : Lexeme ;
     gore_N : Lexeme ;
     gorenie_N : Lexeme ;
     gorizont_N : Lexeme ;
@@ -1392,6 +1413,7 @@ abstract QxFx0Lexicon = {
     gramotej_N : Lexeme ;
     granat_N : Lexeme ;
     granit_N : Lexeme ;
+    granitsa_N : Lexeme ;
     graf_N : Lexeme ;
     grafik_N : Lexeme ;
     grafoman_N : Lexeme ;
@@ -1457,6 +1479,7 @@ abstract QxFx0Lexicon = {
     dekabr_N : Lexeme ;
     deklassirovannost_N : Lexeme ;
     dekompozitsiya_N : Lexeme ;
+    delat_V : Lexeme ;
     delegirovanie_N : Lexeme ;
     delo_N : Lexeme ;
     demarkatsiya_N : Lexeme ;
@@ -1479,6 +1502,7 @@ abstract QxFx0Lexicon = {
     deti_N : Lexeme ;
     detorozhdaemost_N : Lexeme ;
     detstvo_N : Lexeme ;
+    definitsiya_N : Lexeme ;
     defitsit_N : Lexeme ;
     deformatsiya_N : Lexeme ;
     deshifrovanie_N : Lexeme ;
@@ -1511,21 +1535,26 @@ abstract QxFx0Lexicon = {
     dispetcher_N : Lexeme ;
     dist_N : Lexeme ;
     distantsiya_N : Lexeme ;
+    distinktsiya_N : Lexeme ;
     differentsiatsiya_N : Lexeme ;
     differentsiruemost_N : Lexeme ;
     dlina_N : Lexeme ;
     dnevnik_N : Lexeme ;
     dobro_N : Lexeme ;
     dobycha_N : Lexeme ;
+    doverie_N : Lexeme ;
+    dovod_N : Lexeme ;
     dovolstvo_N : Lexeme ;
     dogovor_N : Lexeme ;
     dozhd_N : Lexeme ;
     dok_N : Lexeme ;
+    dokazatelstvo_N : Lexeme ;
     dokazuemost_N : Lexeme ;
     doklad_N : Lexeme ;
     doktor_N : Lexeme ;
     dokument_N : Lexeme ;
     dokumentalistika_N : Lexeme ;
+    dolg_N : Lexeme ;
     dolgosrochnost_N : Lexeme ;
     dolina_N : Lexeme ;
     dom_N : Lexeme ;
@@ -1536,11 +1565,14 @@ abstract QxFx0Lexicon = {
     dopolnitelnost_N : Lexeme ;
     dopolnyaemost_N : Lexeme ;
     dopusk_N : Lexeme ;
+    dopushchenie_N : Lexeme ;
     doroga_N : Lexeme ;
     doska_N : Lexeme ;
     dospehi_N : Lexeme ;
     dostavka_N : Lexeme ;
+    dostatochnost_N : Lexeme ;
     dostizhenie_N : Lexeme ;
+    dostovernost_N : Lexeme ;
     dostoinstvo_N : Lexeme ;
     dostup_N : Lexeme ;
     dostupnost_N : Lexeme ;
@@ -1607,6 +1639,7 @@ abstract QxFx0Lexicon = {
     zhivot_N : Lexeme ;
     zhivotnoe_N : Lexeme ;
     zhiznesposobnost_N : Lexeme ;
+    zhizn_N : Lexeme ;
     zhurnal_N : Lexeme ;
     zhurnalist_N : Lexeme ;
     zabava_N : Lexeme ;
@@ -1621,11 +1654,13 @@ abstract QxFx0Lexicon = {
     zavtra_N : Lexeme ;
     zagadka_N : Lexeme ;
     zagruzhenost_N : Lexeme ;
+    zadacha_N : Lexeme ;
     zaderzhka_N : Lexeme ;
     zazhatost_N : Lexeme ;
     zaika_N : Lexeme ;
     zakaz_N : Lexeme ;
     zakat_N : Lexeme ;
+    zaklyuchenie_N : Lexeme ;
     zakompleksovannost_N : Lexeme ;
     zakon_N : Lexeme ;
     zakonnorozhdennost_N : Lexeme ;
@@ -1650,6 +1685,7 @@ abstract QxFx0Lexicon = {
     zapah_N : Lexeme ;
     zapis_N : Lexeme ;
     zapolnennost_N : Lexeme ;
+    zapret_N : Lexeme ;
     zapreshchennost_N : Lexeme ;
     zarya_N : Lexeme ;
     zaryad_N : Lexeme ;
@@ -1679,6 +1715,7 @@ abstract QxFx0Lexicon = {
     zmeya_N : Lexeme ;
     znakovost_N : Lexeme ;
     znamya_N : Lexeme ;
+    znat_V : Lexeme ;
     znachenie_N : Lexeme ;
     zoloto_N : Lexeme ;
     zona_N : Lexeme ;
@@ -1688,6 +1725,7 @@ abstract QxFx0Lexicon = {
     idempotentnost_N : Lexeme ;
     identifikatsiya_N : Lexeme ;
     identifitsiruemost_N : Lexeme ;
+    identichnost_N : Lexeme ;
     idiotichnost_N : Lexeme ;
     ierarhiya_N : Lexeme ;
     ieroglifika_N : Lexeme ;
@@ -1708,9 +1746,11 @@ abstract QxFx0Lexicon = {
     izrezannost_N : Lexeme ;
     ikona_N : Lexeme ;
     ikonika_N : Lexeme ;
+    illyuziya_N : Lexeme ;
     imbetsilnost_N : Lexeme ;
     immunogenetika_N : Lexeme ;
     imperiya_N : Lexeme ;
+    implikatsiya_N : Lexeme ;
     impuls_N : Lexeme ;
     imya_N : Lexeme ;
     invariant_N : Lexeme ;
@@ -1736,10 +1776,12 @@ abstract QxFx0Lexicon = {
     interes_N : Lexeme ;
     internatsionalnost_N : Lexeme ;
     interpolyatsiya_N : Lexeme ;
+    interpretatsiya_N : Lexeme ;
     interpretiruemost_N : Lexeme ;
     interfejs_N : Lexeme ;
     interfejsnost_N : Lexeme ;
     intriga_N : Lexeme ;
+    inferentsiya_N : Lexeme ;
     informativnost_N : Lexeme ;
     informatika_N : Lexeme ;
     informatsionnost_N : Lexeme ;
@@ -1750,6 +1792,7 @@ abstract QxFx0Lexicon = {
     ionika_N : Lexeme ;
     irregulyarnost_N : Lexeme ;
     isk_N : Lexeme ;
+    isklyuchenie_N : Lexeme ;
     iskra_N : Lexeme ;
     iskrennost_N : Lexeme ;
     iskushennost_N : Lexeme ;
@@ -1760,6 +1803,8 @@ abstract QxFx0Lexicon = {
     ispravlenie_N : Lexeme ;
     ispytanie_N : Lexeme ;
     issledovannost_N : Lexeme ;
+    istina_N : Lexeme ;
+    istinnost_N : Lexeme ;
     istorik_N : Lexeme ;
     istochnik_N : Lexeme ;
     istrepannost_N : Lexeme ;
@@ -1802,6 +1847,7 @@ abstract QxFx0Lexicon = {
     kvadriruemost_N : Lexeme ;
     kvazioptika_N : Lexeme ;
     kvantil_N : Lexeme ;
+    kvantor_N : Lexeme ;
     kvartal_N : Lexeme ;
     kvartira_N : Lexeme ;
     kvelost_N : Lexeme ;
@@ -1890,13 +1936,16 @@ abstract QxFx0Lexicon = {
     kontrakt_N : Lexeme ;
     kontroliruemost_N : Lexeme ;
     kontrol_N : Lexeme ;
+    kontrprimer_N : Lexeme ;
     kontur_N : Lexeme ;
     konusnost_N : Lexeme ;
     konusoobraznost_N : Lexeme ;
     konfeta_N : Lexeme ;
     konfigurirovanie_N : Lexeme ;
     konfidentsialnost_N : Lexeme ;
+    konflikt_N : Lexeme ;
     konfliktnost_N : Lexeme ;
+    konfrontatsiya_N : Lexeme ;
     kontsentrirovannost_N : Lexeme ;
     kontsert_N : Lexeme ;
     konyunkturnost_N : Lexeme ;
@@ -1912,8 +1961,10 @@ abstract QxFx0Lexicon = {
     koridor_N : Lexeme ;
     korobka_N : Lexeme ;
     korova_N : Lexeme ;
+    korollarij_N : Lexeme ;
     korpus_N : Lexeme ;
     korrektiruemost_N : Lexeme ;
+    korrektnost_N : Lexeme ;
     korrektsiya_N : Lexeme ;
     korrelirovannost_N : Lexeme ;
     korrelyatsiya_N : Lexeme ;
@@ -1939,6 +1990,7 @@ abstract QxFx0Lexicon = {
     kristall_N : Lexeme ;
     kristallizatsiya_N : Lexeme ;
     kriterialnost_N : Lexeme ;
+    kriterij_N : Lexeme ;
     krovat_N : Lexeme ;
     krovnost_N : Lexeme ;
     krolik_N : Lexeme ;
@@ -1976,6 +2028,7 @@ abstract QxFx0Lexicon = {
     lezhak_N : Lexeme ;
     lezhkost_N : Lexeme ;
     leksikostatistika_N : Lexeme ;
+    lemma_N : Lexeme ;
     lepestok_N : Lexeme ;
     lesnik_N : Lexeme ;
     leto_N : Lexeme ;
@@ -1994,6 +2047,7 @@ abstract QxFx0Lexicon = {
     lodka_N : Lexeme ;
     lozhka_N : Lexeme ;
     lozhnost_N : Lexeme ;
+    lozh_N : Lexeme ;
     loza_N : Lexeme ;
     lokomotiv_N : Lexeme ;
     lokon_N : Lexeme ;
@@ -2134,11 +2188,13 @@ abstract QxFx0Lexicon = {
     mnogotsvetnost_N : Lexeme ;
     mnogoyadnost_N : Lexeme ;
     mnozhestvo_N : Lexeme ;
+    modalnost_N : Lexeme ;
     modul_N : Lexeme ;
     modulnost_N : Lexeme ;
     molektronika_N : Lexeme ;
     molekula_N : Lexeme ;
     molniya_N : Lexeme ;
+    molchanie_N : Lexeme ;
     molyarnost_N : Lexeme ;
     moment_N : Lexeme ;
     monah_N : Lexeme ;
@@ -2170,6 +2226,7 @@ abstract QxFx0Lexicon = {
     muravej_N : Lexeme ;
     mutagennost_N : Lexeme ;
     mutantnost_N : Lexeme ;
+    myslit_V : Lexeme ;
     mysh_N : Lexeme ;
     mer_N : Lexeme ;
     myach_N : Lexeme ;
@@ -2178,8 +2235,10 @@ abstract QxFx0Lexicon = {
     naves_N : Lexeme ;
     nagrada_N : Lexeme ;
     nagruzka_N : Lexeme ;
+    nadezhda_N : Lexeme ;
     nadezhnost_N : Lexeme ;
     naznachaemost_N : Lexeme ;
+    naznachenie_N : Lexeme ;
     naigrannost_N : Lexeme ;
     namerenie_N : Lexeme ;
     nametannost_N : Lexeme ;
@@ -2260,6 +2319,7 @@ abstract QxFx0Lexicon = {
     nenapolnennost_N : Lexeme ;
     nenasyshchennost_N : Lexeme ;
     neobrabotannost_N : Lexeme ;
+    neobhodimost_N : Lexeme ;
     neobyasnimost_N : Lexeme ;
     neopasnost_N : Lexeme ;
     neopravdannost_N : Lexeme ;
@@ -2308,6 +2368,7 @@ abstract QxFx0Lexicon = {
     neproglyadnost_N : Lexeme ;
     neprodumannost_N : Lexeme ;
     neprozrachnost_N : Lexeme ;
+    neprotivorechivost_N : Lexeme ;
     nerazdelennost_N : Lexeme ;
     nerazlichimost_N : Lexeme ;
     nerazmennost_N : Lexeme ;
@@ -2332,6 +2393,7 @@ abstract QxFx0Lexicon = {
     nesmetnost_N : Lexeme ;
     nesminaemost_N : Lexeme ;
     nesovershennost_N : Lexeme ;
+    nesovmestimost_N : Lexeme ;
     nesovremennost_N : Lexeme ;
     nesoglasie_N : Lexeme ;
     nesokratimost_N : Lexeme ;
@@ -2372,6 +2434,7 @@ abstract QxFx0Lexicon = {
     niva_N : Lexeme ;
     niz_N : Lexeme ;
     nichejnost_N : Lexeme ;
+    nichto_N : Lexeme ;
     novost_N : Lexeme ;
     nozh_N : Lexeme ;
     nozhka_N : Lexeme ;
@@ -2395,6 +2458,7 @@ abstract QxFx0Lexicon = {
     obeskurazhennost_N : Lexeme ;
     obespokoennost_N : Lexeme ;
     obeshchanie_N : Lexeme ;
+    obida_N : Lexeme ;
     oblagaemost_N : Lexeme ;
     oblako_N : Lexeme ;
     oblast_N : Lexeme ;
@@ -2406,6 +2470,7 @@ abstract QxFx0Lexicon = {
     oborvannost_N : Lexeme ;
     oboronoustojchivost_N : Lexeme ;
     oborotosposobnost_N : Lexeme ;
+    obosnovanie_N : Lexeme ;
     obosnovannost_N : Lexeme ;
     obrabotka_N : Lexeme ;
     obrabotchik_N : Lexeme ;
@@ -2425,12 +2490,17 @@ abstract QxFx0Lexicon = {
     obshchinnost_N : Lexeme ;
     obedinenie_N : Lexeme ;
     obektiviruemost_N : Lexeme ;
+    obyasnenie_N : Lexeme ;
     obyasnimost_N : Lexeme ;
     obem_N : Lexeme ;
+    obyazannost_N : Lexeme ;
+    obyazatelstvo_N : Lexeme ;
     ovrag_N : Lexeme ;
     ovtsa_N : Lexeme ;
     ognennost_N : Lexeme ;
     ogorod_N : Lexeme ;
+    ogranichenie_N : Lexeme ;
+    odinochestvo_N : Lexeme ;
     odnoatomnost_N : Lexeme ;
     odnodetnost_N : Lexeme ;
     odnozvuchnost_N : Lexeme ;
@@ -2464,12 +2534,15 @@ abstract QxFx0Lexicon = {
     operezhenie_N : Lexeme ;
     operennost_N : Lexeme ;
     opilki_N : Lexeme ;
+    opisanie_N : Lexeme ;
     oposredstvovannost_N : Lexeme ;
     oppozitsiya_N : Lexeme ;
     opravdannost_N : Lexeme ;
     opravdyvaemost_N : Lexeme ;
+    opredelenie_N : Lexeme ;
     opredelimost_N : Lexeme ;
     oprovergaemost_N : Lexeme ;
+    oproverzhenie_N : Lexeme ;
     oproverzhimost_N : Lexeme ;
     opros_N : Lexeme ;
     optimizatsiya_N : Lexeme ;
@@ -2499,7 +2572,9 @@ abstract QxFx0Lexicon = {
     oslablennost_N : Lexeme ;
     osmotr_N : Lexeme ;
     osmyslennost_N : Lexeme ;
+    osnovanie_N : Lexeme ;
     osnovnost_N : Lexeme ;
+    osnovyvat_V : Lexeme ;
     osobennost_N : Lexeme ;
     osolonennost_N : Lexeme ;
     ostanovka_N : Lexeme ;
@@ -2511,6 +2586,8 @@ abstract QxFx0Lexicon = {
     osminog_N : Lexeme ;
     otbornost_N : Lexeme ;
     otvaga_N : Lexeme ;
+    otvet_N : Lexeme ;
+    otvetstvennost_N : Lexeme ;
     otdel_N : Lexeme ;
     otdyh_N : Lexeme ;
     otel_N : Lexeme ;
@@ -2529,6 +2606,7 @@ abstract QxFx0Lexicon = {
     otpusk_N : Lexeme ;
     otrava_N : Lexeme ;
     otradnost_N : Lexeme ;
+    otrazhenie_N : Lexeme ;
     otritsanie_N : Lexeme ;
     otryad_N : Lexeme ;
     otslezhivaemost_N : Lexeme ;
@@ -2546,6 +2624,7 @@ abstract QxFx0Lexicon = {
     ochumelost_N : Lexeme ;
     oshalelost_N : Lexeme ;
     oshejnik_N : Lexeme ;
+    oshibka_N : Lexeme ;
     oshibkoustojchivost_N : Lexeme ;
     pajplajn_N : Lexeme ;
     palata_N : Lexeme ;
@@ -2554,6 +2633,7 @@ abstract QxFx0Lexicon = {
     paleogeofizika_N : Lexeme ;
     palets_N : Lexeme ;
     pamyatnik_N : Lexeme ;
+    pamyat_N : Lexeme ;
     panel_N : Lexeme ;
     papa_N : Lexeme ;
     papaha_N : Lexeme ;
@@ -2684,6 +2764,7 @@ abstract QxFx0Lexicon = {
     pozhar_N : Lexeme ;
     pozharobezopasnost_N : Lexeme ;
     pozharoopasnost_N : Lexeme ;
+    pozitsiya_N : Lexeme ;
     pokazatelnost_N : Lexeme ;
     pokinutost_N : Lexeme ;
     pokoj_N : Lexeme ;
@@ -2722,7 +2803,10 @@ abstract QxFx0Lexicon = {
     pomidor_N : Lexeme ;
     pomoshch_N : Lexeme ;
     ponedelnik_N : Lexeme ;
+    ponimanie_N : Lexeme ;
+    ponimat_V : Lexeme ;
     poncho_N : Lexeme ;
+    ponyatie_N : Lexeme ;
     ponyatnost_N : Lexeme ;
     pop_N : Lexeme ;
     popytka_N : Lexeme ;
@@ -2746,6 +2830,7 @@ abstract QxFx0Lexicon = {
     postupok_N : Lexeme ;
     postuslovie_N : Lexeme ;
     postylost_N : Lexeme ;
+    posylka_N : Lexeme ;
     potaennost_N : Lexeme ;
     poterya_N : Lexeme ;
     potok_N : Lexeme ;
@@ -2754,9 +2839,11 @@ abstract QxFx0Lexicon = {
     pochta_N : Lexeme ;
     poetapnost_N : Lexeme ;
     poyas_N : Lexeme ;
+    pravda_N : Lexeme ;
     pravilo_N : Lexeme ;
     pravilnost_N : Lexeme ;
     pravitelstvo_N : Lexeme ;
+    pravo_N : Lexeme ;
     pravosubektivnost_N : Lexeme ;
     pravosubektnost_N : Lexeme ;
     prazdnik_N : Lexeme ;
@@ -2769,6 +2856,8 @@ abstract QxFx0Lexicon = {
     predlozhenie_N : Lexeme ;
     predmet_N : Lexeme ;
     predohranitelnost_N : Lexeme ;
+    predpolozhenie_N : Lexeme ;
+    predposylka_N : Lexeme ;
     predpriyatie_N : Lexeme ;
     predskazuemost_N : Lexeme ;
     predstavimost_N : Lexeme ;
@@ -2796,6 +2885,7 @@ abstract QxFx0Lexicon = {
     prikovannost_N : Lexeme ;
     prilegaemost_N : Lexeme ;
     primetnost_N : Lexeme ;
+    prinuzhdenie_N : Lexeme ;
     prints_N : Lexeme ;
     printsip_N : Lexeme ;
     prinyatie_N : Lexeme ;
@@ -2807,6 +2897,8 @@ abstract QxFx0Lexicon = {
     prirodoemkost_N : Lexeme ;
     prisposablivaemost_N : Lexeme ;
     pristyzhennost_N : Lexeme ;
+    prisutstvie_N : Lexeme ;
+    prichina_N : Lexeme ;
     prichinnost_N : Lexeme ;
     prishiblennost_N : Lexeme ;
     priem_Nv2 : Lexeme ;
@@ -2815,6 +2907,7 @@ abstract QxFx0Lexicon = {
     problema_N : Lexeme ;
     problemnost_N : Lexeme ;
     probnost_N : Lexeme ;
+    proverka_N : Lexeme ;
     provintsiya_N : Lexeme ;
     provod_N : Lexeme ;
     provodimost_N : Lexeme ;
@@ -2835,6 +2928,7 @@ abstract QxFx0Lexicon = {
     proksemika_N : Lexeme ;
     promaslennost_N : Lexeme ;
     promezhutochnost_N : Lexeme ;
+    proniknut_V : Lexeme ;
     proportsionalnost_N : Lexeme ;
     propusk_N : Lexeme ;
     propusknaya_sposobnost_N : Lexeme ;
@@ -2852,6 +2946,7 @@ abstract QxFx0Lexicon = {
     protivooreolnost_N : Lexeme ;
     protivopokazannost_N : Lexeme ;
     protivopravnost_N : Lexeme ;
+    protivorechie_N : Lexeme ;
     protogalaktika_N : Lexeme ;
     protokol_N : Lexeme ;
     professiya_N : Lexeme ;
@@ -2884,6 +2979,7 @@ abstract QxFx0Lexicon = {
     puzyr_N : Lexeme ;
     pult_N : Lexeme ;
     punktualnost_N : Lexeme ;
+    pustota_N : Lexeme ;
     putanost_N : Lexeme ;
     puteshestvie_N : Lexeme ;
     putnik_N : Lexeme ;
@@ -2900,6 +2996,7 @@ abstract QxFx0Lexicon = {
     ravnodostupnost_N : Lexeme ;
     ravnodushie_N : Lexeme ;
     ravnopravie_N : Lexeme ;
+    ravnosilnost_N : Lexeme ;
     radzha_N : Lexeme ;
     radiatsiya_N : Lexeme ;
     radioakustika_N : Lexeme ;
@@ -2909,6 +3006,7 @@ abstract QxFx0Lexicon = {
     radioneprozrachnost_N : Lexeme ;
     radius_N : Lexeme ;
     radonoopasnost_N : Lexeme ;
+    radost_N : Lexeme ;
     raduga_N : Lexeme ;
     raz_N : Lexeme ;
     razbavlennost_N : Lexeme ;
@@ -2916,19 +3014,25 @@ abstract QxFx0Lexicon = {
     razborchivost_N : Lexeme ;
     razvedka_N : Lexeme ;
     razgovor_N : Lexeme ;
+    razgranichenie_N : Lexeme ;
     razdacha_N : Lexeme ;
     razdelimost_N : Lexeme ;
     razzhizhennost_N : Lexeme ;
+    razlichat_V : Lexeme ;
+    razlichie_N : Lexeme ;
     razlichimost_N : Lexeme ;
     razluka_N : Lexeme ;
     razmer_N : Lexeme ;
     razmytost_N : Lexeme ;
+    raznitsa_N : Lexeme ;
+    razreshenie_N : Lexeme ;
     razreshimost_N : Lexeme ;
     razrushaemost_N : Lexeme ;
     razrushimost_N : Lexeme ;
     razryvnost_N : Lexeme ;
     razryad_N : Lexeme ;
     razryazhennost_N : Lexeme ;
+    razum_N : Lexeme ;
     razumnost_N : Lexeme ;
     razezzhennost_N : Lexeme ;
     raj_N : Lexeme ;
@@ -2936,6 +3040,7 @@ abstract QxFx0Lexicon = {
     rak_N : Lexeme ;
     raketa_N : Lexeme ;
     raketodinamika_N : Lexeme ;
+    rakurs_N : Lexeme ;
     ramka_N : Lexeme ;
     ranennost_N : Lexeme ;
     raskrashennost_N : Lexeme ;
@@ -2993,6 +3098,7 @@ abstract QxFx0Lexicon = {
     relevantnost_N : Lexeme ;
     reliz_N : Lexeme ;
     rels_N : Lexeme ;
+    remont_N : Lexeme ;
     remontoprigodnost_N : Lexeme ;
     remontosposobnost_N : Lexeme ;
     rentosposobnost_N : Lexeme ;
@@ -3008,6 +3114,7 @@ abstract QxFx0Lexicon = {
     refrakternost_N : Lexeme ;
     retsenziya_N : Lexeme ;
     rech_N : Lexeme ;
+    reshenie_N : Lexeme ;
     ris_N : Lexeme ;
     risk_N : Lexeme ;
     ritmichnost_N : Lexeme ;
@@ -3083,6 +3190,7 @@ abstract QxFx0Lexicon = {
     svetoprochnost_N : Lexeme ;
     svecha_N : Lexeme ;
     svidanie_N : Lexeme ;
+    svidetelstvo_N : Lexeme ;
     svinya_N : Lexeme ;
     sviter_N : Lexeme ;
     svishchevatost_N : Lexeme ;
@@ -3135,6 +3243,7 @@ abstract QxFx0Lexicon = {
     sidene_N : Lexeme ;
     sila_N : Lexeme ;
     silach_N : Lexeme ;
+    sillogizm_N : Lexeme ;
     silogizm_N : Lexeme ;
     simpatiya_N : Lexeme ;
     singulyarnost_N : Lexeme ;
@@ -3146,6 +3255,7 @@ abstract QxFx0Lexicon = {
     siren_N : Lexeme ;
     sistematichnost_N : Lexeme ;
     sistemotehnika_N : Lexeme ;
+    skazat_V : Lexeme ;
     skazka_N : Lexeme ;
     skala_N : Lexeme ;
     skamya_N : Lexeme ;
@@ -3165,6 +3275,7 @@ abstract QxFx0Lexicon = {
     slava_N : Lexeme ;
     sladkoglasnost_N : Lexeme ;
     sledovanie_N : Lexeme ;
+    sledstvie_N : Lexeme ;
     sleza_N : Lexeme ;
     slepoj_N : Lexeme ;
     sliva_N : Lexeme ;
@@ -3180,12 +3291,15 @@ abstract QxFx0Lexicon = {
     smazannost_N : Lexeme ;
     smachivaemost_N : Lexeme ;
     smena_N : Lexeme ;
+    smert_N : Lexeme ;
     smes_N : Lexeme ;
     smeshannost_N : Lexeme ;
     smeshchaemost_N : Lexeme ;
     sminaemost_N : Lexeme ;
+    smirenie_N : Lexeme ;
     smirnost_N : Lexeme ;
     smola_N : Lexeme ;
+    smysl_N : Lexeme ;
     sneg_N : Lexeme ;
     snegovik_N : Lexeme ;
     snegurka_N : Lexeme ;
@@ -3197,6 +3311,8 @@ abstract QxFx0Lexicon = {
     sovest_N : Lexeme ;
     sovet_N : Lexeme ;
     sovmestimost_N : Lexeme ;
+    soglasie_N : Lexeme ;
+    soglasovannost_N : Lexeme ;
     sognutost_N : Lexeme ;
     soznanie_N : Lexeme ;
     sok_N : Lexeme ;
@@ -3204,6 +3320,7 @@ abstract QxFx0Lexicon = {
     sokrashchaemost_N : Lexeme ;
     soldat_N : Lexeme ;
     solntsestoyanie_N : Lexeme ;
+    somnenie_N : Lexeme ;
     son_N : Lexeme ;
     sonika_N : Lexeme ;
     soobshchenie_N : Lexeme ;
@@ -3246,6 +3363,8 @@ abstract QxFx0Lexicon = {
     spokojnost_N : Lexeme ;
     spor_N : Lexeme ;
     sposob_N : Lexeme ;
+    sposobnost_N : Lexeme ;
+    spravedlivost_N : Lexeme ;
     spravka_N : Lexeme ;
     sputannost_N : Lexeme ;
     sreda_N : Lexeme ;
@@ -3287,8 +3406,10 @@ abstract QxFx0Lexicon = {
     storona_N : Lexeme ;
     stohastichnost_N : Lexeme ;
     stoyanka_N : Lexeme ;
+    stradanie_N : Lexeme ;
     stranitsa_N : Lexeme ;
     strast_N : Lexeme ;
+    strah_N : Lexeme ;
     strela_N : Lexeme ;
     strelovidnost_N : Lexeme ;
     stremyanka_N : Lexeme ;
@@ -3298,12 +3419,15 @@ abstract QxFx0Lexicon = {
     struna_N : Lexeme ;
     student_N : Lexeme ;
     stul_N : Lexeme ;
+    styd_N : Lexeme ;
     subatsidnost_N : Lexeme ;
     subgarmonika_N : Lexeme ;
     subektnost_N : Lexeme ;
     sud_N : Lexeme ;
     sudno_N : Lexeme ;
+    sudba_N : Lexeme ;
     sudbonosnost_N : Lexeme ;
+    suzhdenie_N : Lexeme ;
     sumasbrodnost_N : Lexeme ;
     sumerechnost_N : Lexeme ;
     sumka_N : Lexeme ;
@@ -3314,6 +3438,8 @@ abstract QxFx0Lexicon = {
     supruga_N : Lexeme ;
     surdotehnika_N : Lexeme ;
     sutki_N : Lexeme ;
+    sushchestvovanie_N : Lexeme ;
+    sushchestvovat_V : Lexeme ;
     sfera_N : Lexeme ;
     shema_N : Lexeme ;
     shodimost_N : Lexeme ;
@@ -3342,6 +3468,7 @@ abstract QxFx0Lexicon = {
     tachka_N : Lexeme ;
     tvar_N : Lexeme ;
     tverd_N : Lexeme ;
+    tezis_N : Lexeme ;
     tektonofizika_N : Lexeme ;
     televizor_N : Lexeme ;
     telega_N : Lexeme ;
@@ -3349,6 +3476,7 @@ abstract QxFx0Lexicon = {
     telemetriya_N : Lexeme ;
     teleradiotehnika_N : Lexeme ;
     telefon_N : Lexeme ;
+    telo_N : Lexeme ;
     tema_N : Lexeme ;
     temnitsa_N : Lexeme ;
     temperatura_N : Lexeme ;
@@ -3356,6 +3484,7 @@ abstract QxFx0Lexicon = {
     tender_N : Lexeme ;
     tenor_N : Lexeme ;
     ten_N : Lexeme ;
+    teorema_N : Lexeme ;
     teoriya_N : Lexeme ;
     teplovatost_N : Lexeme ;
     teplokrovnost_N : Lexeme ;
@@ -3365,6 +3494,7 @@ abstract QxFx0Lexicon = {
     teploprozrachnost_N : Lexeme ;
     teplopronitsaemost_N : Lexeme ;
     teplofizika_N : Lexeme ;
+    termin_N : Lexeme ;
     termos_N : Lexeme ;
     terrasa_N : Lexeme ;
     territoriya_N : Lexeme ;
@@ -3383,6 +3513,7 @@ abstract QxFx0Lexicon = {
     tolpa_N : Lexeme ;
     tolshchina_N : Lexeme ;
     toplivo_N : Lexeme ;
+    toska_N : Lexeme ;
     tochka_N : Lexeme ;
     tochnost_N : Lexeme ;
     trava_N : Lexeme ;
@@ -3394,6 +3525,7 @@ abstract QxFx0Lexicon = {
     transport_N : Lexeme ;
     trassiruemost_N : Lexeme ;
     traur_N : Lexeme ;
+    trevoga_N : Lexeme ;
     trener_N : Lexeme ;
     trenie_N : Lexeme ;
     trenirovka_N : Lexeme ;
@@ -3433,15 +3565,20 @@ abstract QxFx0Lexicon = {
     us_N : Lexeme ;
     usilitel_N : Lexeme ;
     uskorenie_N : Lexeme ;
+    uslovie_N : Lexeme ;
     usluga_N : Lexeme ;
     uspeh_N : Lexeme ;
     usta_N : Lexeme ;
     ustav_N : Lexeme ;
     ustojchivost_N : Lexeme ;
     ustrojstvo_N : Lexeme ;
+    utverzhdenie_N : Lexeme ;
     utka_N : Lexeme ;
+    utochnyat_V : Lexeme ;
+    utrata_N : Lexeme ;
     utro_N : Lexeme ;
     uho_N : Lexeme ;
+    uhod_N : Lexeme ;
     uchastnik_N : Lexeme ;
     uchastok_N : Lexeme ;
     ucheba_N : Lexeme ;
@@ -3450,6 +3587,7 @@ abstract QxFx0Lexicon = {
     fabrika_N : Lexeme ;
     faza_N : Lexeme ;
     fakel_N : Lexeme ;
+    fakt_N : Lexeme ;
     fanera_N : Lexeme ;
     fantaziya_N : Lexeme ;
     fantom_N : Lexeme ;
@@ -3459,6 +3597,7 @@ abstract QxFx0Lexicon = {
     fermer_N : Lexeme ;
     figura_N : Lexeme ;
     fizika_N : Lexeme ;
+    filosofiya_N : Lexeme ;
     film_N : Lexeme ;
     filtratsiya_N : Lexeme ;
     final_N : Lexeme ;
@@ -3485,11 +3624,13 @@ abstract QxFx0Lexicon = {
     horosho_N : Lexeme ;
     hram_N : Lexeme ;
     hren_N : Lexeme ;
+    hrupkost_N : Lexeme ;
     tsarstvo_N : Lexeme ;
     tsvet_N : Lexeme ;
     tsvetok_N : Lexeme ;
     tselepolaganie_N : Lexeme ;
     tselostnost_N : Lexeme ;
+    tsel_N : Lexeme ;
     tsena_N : Lexeme ;
     tsepochka_N : Lexeme ;
     tseremoniya_N : Lexeme ;
@@ -3499,6 +3640,7 @@ abstract QxFx0Lexicon = {
     tsink_N : Lexeme ;
     tsirk_N : Lexeme ;
     tsitata_N : Lexeme ;
+    tsifra_N : Lexeme ;
     chas_N : Lexeme ;
     chastitsa_N : Lexeme ;
     chastota_N : Lexeme ;
@@ -3513,6 +3655,7 @@ abstract QxFx0Lexicon = {
     chernika_N : Lexeme ;
     cherta_N : Lexeme ;
     chertezh_N : Lexeme ;
+    chestnost_N : Lexeme ;
     chest_N : Lexeme ;
     chetverg_N : Lexeme ;
     chehol_N : Lexeme ;
@@ -3546,6 +3689,7 @@ abstract QxFx0Lexicon = {
     shchit_N : Lexeme ;
     evristichnost_N : Lexeme ;
     ekvivalentnost_N : Lexeme ;
+    ekvivalentsiya_N : Lexeme ;
     ekzamen_N : Lexeme ;
     ekonomika_N : Lexeme ;
     ekonomiya_N : Lexeme ;
@@ -3553,6 +3697,7 @@ abstract QxFx0Lexicon = {
     ekspeditsiya_N : Lexeme ;
     eksperiment_N : Lexeme ;
     ekspert_N : Lexeme ;
+    eksplikatsiya_N : Lexeme ;
     ekstrapolyatsiya_N : Lexeme ;
     elektrichestvo_N : Lexeme ;
     elektron_N : Lexeme ;
@@ -3560,6 +3705,7 @@ abstract QxFx0Lexicon = {
     embargo_N : Lexeme ;
     emotsiya_N : Lexeme ;
     energiya_N : Lexeme ;
+    entejlment_N : Lexeme ;
     entuziazm_N : Lexeme ;
     epidemiya_N : Lexeme ;
     epizod_N : Lexeme ;
@@ -3594,7 +3740,9 @@ abstract QxFx0Lexicon = {
     yagoda_N : Lexeme ;
     yadernyj_N : Lexeme ;
     yazva_N : Lexeme ;
+    yazyk_N : Lexeme ;
     yajtso_N : Lexeme ;
+    yakor_N : Lexeme ;
     yama_N : Lexeme ;
     yanvar_N : Lexeme ;
     yaponets_N : Lexeme ;
