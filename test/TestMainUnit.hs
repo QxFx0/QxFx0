@@ -17,6 +17,7 @@ import Test.Suite.SelfField (selfFieldTests)
 import Test.Suite.SelfSalience (selfSalienceTests)
 import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.SelfEssence (selfEssenceTests)
+import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 
 main :: IO ()
@@ -35,8 +36,9 @@ main = do
         ++ selfFieldTests
          ++ selfSalienceTests
          ++ selfDeliberationTests
-         ++ selfEssenceTests
-         ++ phaseM2dTests
+          ++ selfEssenceTests
+          ++ selfEssenceCommitTests
+          ++ phaseM2dTests
         )
   if errors testCounts + failures testCounts > 0
     then exitFailure

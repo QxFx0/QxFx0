@@ -36,7 +36,7 @@ import QxFx0.Core.TurnPipeline.Types
   )
 import QxFx0.Core.TurnPolicy (routeFamily)
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0)
-import QxFx0.Self.Essence (Essence(..))
+import QxFx0.Self.Essence (Essence(..), validatePlan)
 import QxFx0.Types
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
@@ -51,6 +51,11 @@ planRouteEffects ss ti ts =
       atomSet = tiAtomSet ti
       recommendedFamily = tiRecommendedFamily ti
       intuitPosterior = tsIntuitPosterior ts
+      mCommitment =
+        case tiEssence ti of
+          EssenceCommitted _ c -> Just c
+          EssenceUncommitted _ -> Nothing
+      courtesyPred = fmap (\c p -> case validatePlan c p of Right _ -> True; Left _ -> False) mCommitment
       rd =
         routeFamily
           recommendedFamily
@@ -66,7 +71,7 @@ planRouteEffects ss ti ts =
           intuitPosterior
           (tiConatusEnergy ti)
           (tiField ti)
-          Nothing
+          courtesyPred
       family = rdFamily rd
       atomTags = map maTag (asAtoms atomSet)
    in RouteEffectPlan

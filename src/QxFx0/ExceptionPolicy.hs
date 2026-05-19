@@ -29,6 +29,12 @@ data QxFx0Exception
     -- (or, in production, the process restarted). Payload is the
     -- semicolon-joined rendering of one or more
     -- 'QxFx0.Self.Types.BlanketViolation' values.
+  | EssenceRupture !Text
+    -- ^ Post-commitment 'Plan' violates committed 'EssenceMode'.
+    -- Categorical failure: the system has acted contrary to what
+    -- it has chosen to be. Not recoverable; the session must abort
+    -- the turn (no persistence). Co-located with 'IdentityRupture'
+    -- in 'Finalize.Commit'; the two failures are orthogonal.
   deriving stock (Eq, Show)
 
 instance Exception QxFx0Exception

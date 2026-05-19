@@ -34,6 +34,7 @@ import QxFx0.Core.TurnPipeline.Finalize.State
   ( buildFinalOutput
   , buildNextSystemState
   , buildTurnProjection
+  , computeEssenceValidation
   )
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
@@ -146,6 +147,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
         , fpbOutcomeFamily = fsOutcomeFamily static
         , fpbDecision = taDecision turnArtifacts
         , fpbRewireEventsCount = rewireEventsCount
+        , fpbEssenceValidation = computeEssenceValidation turnInput turnPlan
         }
 
 resolveCurrentTime :: PipelineIO -> FinalizePrecommitPlan -> IO UTCTime

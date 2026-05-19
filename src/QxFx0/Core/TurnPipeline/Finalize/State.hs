@@ -8,6 +8,7 @@ module QxFx0.Core.TurnPipeline.Finalize.State
   , buildTurnProjection
   , buildFinalOutput
   , finalizeMetrics
+  , computeEssenceValidation
   ) where
 
 import QxFx0.Types
@@ -51,9 +52,13 @@ import QxFx0.Self.Essence
   , EssenceMode (..)
   , EssenceTrajectory (..)
   , EssenceCommitment (..)
+  , EssenceViolation(..)
   , defaultEssenceModulation
   , renderEssenceMode
   , renderCommitmentTrigger
+  , shouldCommit
+  , commit
+  , validatePlan
   , witness
   )
 import QxFx0.Types.Text (textShow)
@@ -75,6 +80,22 @@ import Data.Time.Clock (UTCTime)
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience ti = salienceFromConatusEnergy (tiConatusEnergy ti) (tiField ti)
 
+-- | Phase 10: validate the reconciled 'Plan' against a pre-turn
+-- committed essence when the commitment flag is enabled.
+-- This is the guard that later becomes 'EssenceRupture' in
+-- 'Finalize.Commit'.
+computeEssenceValidation :: TurnInput -> TurnPlan -> Either EssenceViolation ()
+computeEssenceValidation ti tp =
+  if not (tiEssenceCommitmentEnabled ti)
+    then Right ()
+    else case tiEssence ti of
+           EssenceCommitted _ commitment
+             | Just delib <- tpDeliberation tp
+             -> case validatePlan commitment (delibReconciled delib) of
+                  Right _ -> Right ()
+                  Left v  -> Left v
+           _ -> Right ()
+
 buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> SystemState
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
@@ -83,11 +104,27 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       newHolisticStreak = if isHolisticFamily outcomeFamily then ssHolisticStreak ss + 1 else 0
       narrativeSuccess = maybe False (not . T.null) (tsNarrativeFragment ts)
       newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
-      -- Phase 9: witness ingestion.  Runtime state remains
-      -- 'EssenceUncommitted' — commitment is infrastructure-only
-      -- in this phase.
+      -- Phase 10: conditional commitment transition.
+      -- Only evaluated when 'tiEssenceCommitmentEnabled' is True;
+      -- otherwise behaves identically to Phase 9 (always Uncommitted).
       nextEssence =
         case tiEssence ti of
+          EssenceUncommitted trajectory
+            | tiEssenceCommitmentEnabled ti ->
+                let trajectory' =
+                      witness
+                        defaultEssenceModulation
+                        (ssTurnCount ss + 1)
+                        (tiConatusEnergy ti)
+                        (tiField ti)
+                        (fromMaybe defaultDeliberation (tpDeliberation tp))
+                        trajectory
+                in case shouldCommit defaultEssenceModulation trajectory' of
+                     Nothing      -> EssenceUncommitted trajectory'
+                     Just trigger ->
+                       EssenceCommitted
+                         trajectory'
+                         (commit (ssTurnCount ss + 1) trigger trajectory')
           EssenceUncommitted trajectory ->
             EssenceUncommitted $
               witness
@@ -97,7 +134,19 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                 (tiField ti)
                 (fromMaybe defaultDeliberation (tpDeliberation tp))
                 trajectory
-          committed -> committed
+          EssenceCommitted trajectory commitment ->
+            -- Sticky: committed essences are never reverted. We still
+            -- ingest a witness so etAngstLevel/etConatusFloor track
+            -- post-commit deliberation for diagnostics.
+            let trajectory' =
+                  witness
+                    defaultEssenceModulation
+                    (ssTurnCount ss + 1)
+                    (tiConatusEnergy ti)
+                    (tiField ti)
+                    (fromMaybe defaultDeliberation (tpDeliberation tp))
+                    trajectory
+            in EssenceCommitted trajectory' commitment
    in ss
       { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory

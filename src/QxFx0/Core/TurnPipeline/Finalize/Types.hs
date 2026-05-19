@@ -17,8 +17,7 @@ import Data.Time.Clock (UTCTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
--- Phase 9: Essence types are not yet used in finalize bundles.
--- Commitment and validation wiring lands in Phase 10.
+import QxFx0.Self.Essence (EssenceViolation)
 import QxFx0.Types
 
 data FinalizeStatic = FinalizeStatic
@@ -57,6 +56,11 @@ data FinalizePrecommitBundle = FinalizePrecommitBundle
   , fpbOutcomeFamily :: !CanonicalMoveFamily
   , fpbDecision :: !TurnDecision
   , fpbRewireEventsCount :: !Int
+  , fpbEssenceValidation :: !(Either EssenceViolation ())
+    -- ^ Phase 10: pre-commitment essence validation result.
+    --   Computed from the pre-turn 'tiEssence' against the
+    --   reconciled 'Plan'.  Passed to 'Finalize.Commit' via the
+    --   commit plan bundle.
   } deriving stock (Eq, Show)
 
 data FinalizeCommitPlan = FinalizeCommitPlan
@@ -68,6 +72,10 @@ data FinalizeCommitPlan = FinalizeCommitPlan
   , fcpSessionId :: !Text
   , fcpProjection :: !TurnProjection
   , fcpRewireEventsCount :: !Int
+  , fcpEssenceValidation :: !(Either EssenceViolation ())
+    -- ^ Phase 10: pre-commitment essence validation result.
+    --   A 'Left' here becomes 'EssenceRupture' in
+    --   'resolveFinalizeCommit' before persistence.
   } deriving stock (Show)
 
 data FinalizeCommitResults = FinalizeCommitResults

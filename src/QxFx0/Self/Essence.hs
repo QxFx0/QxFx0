@@ -35,6 +35,13 @@ module QxFx0.Self.Essence
   , EssenceMode (..)
   , CommitmentTrigger (..)
   , EssenceCommitment (..)
+    -- * Violations and validation (Phase 10)
+  , EssenceViolation (..)
+  , validatePlan
+  , renderEssenceViolation
+  , admissibleFamilies
+  , admissibleTones
+  , admissibleStyles
     -- * Modulation
   , EssenceModulation (..)
   , defaultEssenceModulation
@@ -415,6 +422,84 @@ commit turnOrdinal trigger traj =
           + fromEnum (ewReconcileRule w) * 13
           + fromEnum (ewAgreement w) * 11
           + round (ewDivergence w * 100)
+
+-- ---------------------------------------------------------------------------
+-- Post-commitment validation (Phase 10)
+-- ---------------------------------------------------------------------------
+
+-- | A commitment violation.  Priority order: family → tone → style;
+-- the first mismatch is the one reported.
+data EssenceViolation
+  = ViolationFamilyMismatch !EssenceMode !CanonicalMoveFamily
+  | ViolationToneMismatch   !EssenceMode !NarrativeTone
+  | ViolationStyleMismatch  !EssenceMode !RenderStyle
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Snake_case JSON-schema-stable summary of a violation.
+renderEssenceViolation :: EssenceViolation -> Text
+renderEssenceViolation = \case
+  ViolationFamilyMismatch m f ->
+    "family_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show f)
+  ViolationToneMismatch m t ->
+    "tone_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show t)
+  ViolationStyleMismatch m s ->
+    "style_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show s)
+
+-- | Admissible 'CanonicalMoveFamily' sets per committed mode.
+-- 'CMRepair' is admissible in every mode (recovery is orthogonal
+-- to essence).
+admissibleFamilies :: EssenceMode -> Set CanonicalMoveFamily
+admissibleFamilies = \case
+  EssenceContemplative ->
+    Set.fromList [CMDescribe, CMHypothesis, CMPurpose, CMRepair]
+  EssenceDialogical    ->
+    Set.fromList [CMContact, CMDeepen, CMRepair, CMReflect]
+  EssenceIntegrative   -> Set.fromList [minBound .. maxBound]
+  EssenceWitnessing    -> Set.fromList [minBound .. maxBound]
+
+-- | Admissible 'NarrativeTone' sets per committed mode.
+-- 'NarrativeNeutral' is admissible in every mode (tonal neutrality
+-- is never an essence violation).
+admissibleTones :: EssenceMode -> Set NarrativeTone
+admissibleTones = \case
+  EssenceContemplative ->
+    Set.fromList [NarrativeNeutral, NarrativeTerse]
+  EssenceDialogical    ->
+    Set.fromList [NarrativeNeutral, NarrativeWarm]
+  EssenceIntegrative   ->
+    Set.fromList [NarrativeNeutral, NarrativeWarm, NarrativeFormal,
+                  NarrativeTerse, NarrativeRecovery]
+  EssenceWitnessing    ->
+    Set.fromList [NarrativeNeutral, NarrativeWarm, NarrativeFormal,
+                  NarrativeTerse, NarrativeRecovery]
+
+-- | Admissible 'RenderStyle' sets per committed mode.
+-- Contemplative excludes "warm" styles; Dialogical excludes
+-- "recovery" styles.  Integrative / Witnessing admit all.
+admissibleStyles :: EssenceMode -> Set RenderStyle
+admissibleStyles = \case
+  EssenceContemplative ->
+    Set.fromList [StyleFormal, StyleDirect, StylePoetic,
+                  StyleClinical, StyleCautious, StyleRecovery,
+                  StyleStandard]
+  EssenceDialogical    ->
+    Set.fromList [StyleFormal, StyleWarm, StyleDirect, StylePoetic,
+                  StyleClinical, StyleCautious, StyleStandard]
+  EssenceIntegrative   -> Set.fromList [minBound .. maxBound]
+  EssenceWitnessing    -> Set.fromList [minBound .. maxBound]
+
+-- | Validate a reconciled 'Plan' against a committed essence.
+-- Priority order: family → tone → style; first mismatch wins.
+validatePlan :: EssenceCommitment -> Plan -> Either EssenceViolation Plan
+validatePlan c p
+  | not (planFamily        p `Set.member` admissibleFamilies (ecMode c))
+      = Left (ViolationFamilyMismatch (ecMode c) (planFamily p))
+  | not (planNarrativeTone p `Set.member` admissibleTones    (ecMode c))
+      = Left (ViolationToneMismatch  (ecMode c) (planNarrativeTone p))
+  | not (planRenderStyle   p `Set.member` admissibleStyles   (ecMode c))
+      = Left (ViolationStyleMismatch (ecMode c) (planRenderStyle p))
+  | otherwise = Right p
 
 -- ---------------------------------------------------------------------------
 -- Renderers

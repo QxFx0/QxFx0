@@ -370,6 +370,7 @@ common test-common
     Test.Suite.SelfSalience
     Test.Suite.SelfDeliberation
     Test.Suite.SelfEssence
+    Test.Suite.SelfEssenceCommit
     Test.Suite.PhaseM2d
 
 test-suite qxfx0-test-unit

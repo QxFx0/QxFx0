@@ -92,6 +92,7 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       , tiField = psField prepareStatic
       , tiFieldHeuristics = psFieldHeuristics prepareStatic
       , tiEssence = psEssence prepareStatic
+      , tiEssenceCommitmentEnabled = psEssenceCommitmentEnabled prepareStatic
       }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals

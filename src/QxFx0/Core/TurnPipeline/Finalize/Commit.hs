@@ -30,10 +30,11 @@ import QxFx0.Core.TurnPipeline.Finalize.State (finalizeMetrics)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(IdentityRupture, PersistenceError)
+  ( QxFx0Exception(EssenceRupture, IdentityRupture, PersistenceError)
   , throwQxFx0
   , tryAsync
   )
+import QxFx0.Self.Essence (EssenceViolation, renderEssenceViolation)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
 import QxFx0.Types
@@ -54,6 +55,7 @@ planFinalizeCommit sessionId previousState turnSignals turnArtifacts bundle =
     , fcpSessionId = sessionId
     , fcpProjection = fpbProjection bundle
     , fcpRewireEventsCount = fpbRewireEventsCount bundle
+    , fcpEssenceValidation = fpbEssenceValidation bundle
     }
 
 resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
@@ -72,6 +74,13 @@ resolveFinalizeCommit pipelineIO commitPlan = do
     []         -> pure ()
     violations ->
       throwQxFx0 (IdentityRupture ("commit: " <> renderBlanketViolations violations))
+
+  -- Phase 10: post-commitment essence guard.  Co-located with
+  -- 'IdentityRupture' above; both abort the turn before persistence.
+  case fcpEssenceValidation commitPlan of
+    Right () -> pure ()
+    Left v   -> throwQxFx0
+                  (EssenceRupture ("commit: " <> renderEssenceViolation v))
 
   saveStart <- resolveCommitCurrentTime pipelineIO
   saveResult <-
