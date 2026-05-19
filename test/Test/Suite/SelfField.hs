@@ -75,6 +75,7 @@ import QxFx0.Self.Field
   , computeConsolidation
   , computeCounterfactual
   , computeAtmosphere
+  , adaptFieldHeuristics
   )
 
 -- ---------------------------------------------------------------------------
@@ -159,6 +160,14 @@ selfFieldTests =
     -- Phase 6.7: heuristics override honored
   , TestLabel "overridden FieldHeuristics changes computeAtmosphere" $
       TestCase testHeuristicsOverrideHonored
+
+    -- Phase-B bounded post-commitment adaptation
+  , TestLabel "adaptFieldHeuristics signal=0 is identity" $
+      quickCheckProperty "adapt identity" propAdaptFieldHeuristicsIdentity
+  , TestLabel "adaptFieldHeuristics clamps adapted doubles to [0,1]" $
+      quickCheckProperty "adapt clamp" propAdaptFieldHeuristicsClamp
+  , TestLabel "adaptFieldHeuristics anti-drift keeps doubles within ±0.5 of default" $
+      quickCheckProperty "adapt anti-drift" propAdaptFieldHeuristicsAntiDrift
   ]
 
 -- ---------------------------------------------------------------------------
@@ -494,3 +503,52 @@ testHeuristicsOverrideHonored = do
       tweakedAtm = computeAtmosphere tweaked 0.5 0.5 0.8
   assertBool "override must change valence"
     (atmosphereValence tweakedAtm /= atmosphereValence defaultAtm)
+
+-- ---------------------------------------------------------------------------
+-- Phase-B bounded post-commitment adaptation
+-- ---------------------------------------------------------------------------
+
+arbitraryFieldHeuristics :: Gen FieldHeuristics
+arbitraryFieldHeuristics = do
+  nw   <- choose (1, 20)
+  dnr  <- choose (0.0, 1.0)
+  tsb  <- choose (0.0, 1.0)
+  ee   <- choose (1e-12, 1e-6)
+  hsbr <- choose (0.0, 1.0)
+  hsbc <- choose (0.0, 1.0)
+  lm   <- choose (0.0, 1.0)
+  lbs  <- choose (0.0, 1.0)
+  pure $ FieldHeuristics nw dnr tsb ee hsbr hsbc lm lbs
+
+propAdaptFieldHeuristicsIdentity :: Property
+propAdaptFieldHeuristicsIdentity =
+  forAll arbitraryFieldHeuristics $ \fh ->
+    adaptFieldHeuristics 0.0 fh == fh
+
+propAdaptFieldHeuristicsClamp :: Property
+propAdaptFieldHeuristicsClamp =
+  forAll arbitraryFieldHeuristics $ \fh ->
+  forAll (choose (-10.0, 10.0)) $ \signal ->
+    let adapted = adaptFieldHeuristics signal fh
+    in all (\x -> x >= 0.0 && x <= 1.0)
+         [ fhDefaultNarrativeRate adapted
+         , fhTopicStabilityBoost adapted
+         , fhHolisticStreakBoostRate adapted
+         , fhHolisticStreakBoostCap adapted
+         , fhLegitimacyMidpoint adapted
+         , fhLegitimacyBonusScale adapted
+         ]
+
+propAdaptFieldHeuristicsAntiDrift :: Property
+propAdaptFieldHeuristicsAntiDrift =
+  forAll arbitraryFieldHeuristics $ \fh ->
+  forAll (choose (-10.0, 10.0)) $ \signal ->
+    let adapted = adaptFieldHeuristics signal fh
+        def = defaultFieldHeuristics
+        withinDrift x target = abs (x - target) <= 0.5 + 1e-12
+    in withinDrift (fhDefaultNarrativeRate adapted)    (fhDefaultNarrativeRate def)
+    && withinDrift (fhTopicStabilityBoost adapted)     (fhTopicStabilityBoost def)
+    && withinDrift (fhHolisticStreakBoostRate adapted) (fhHolisticStreakBoostRate def)
+    && withinDrift (fhHolisticStreakBoostCap adapted)  (fhHolisticStreakBoostCap def)
+    && withinDrift (fhLegitimacyMidpoint adapted)      (fhLegitimacyMidpoint def)
+    && withinDrift (fhLegitimacyBonusScale adapted)    (fhLegitimacyBonusScale def)

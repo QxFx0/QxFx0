@@ -64,6 +64,7 @@ import QxFx0.Self.Salience
   , SalienceDriver (..)
   , SalienceVerdict (..)
   , SalienceWeights (..)
+  , adaptSalienceWeights
   , chooseBranch
   , computeSalience
   , conatusGateFires
@@ -136,6 +137,14 @@ selfSalienceTests =
       quickCheckProperty "field ignored under gate" propFieldIgnoredWhenConatusGateFires
   , TestLabel "healthy Conatus confidence is in [0,1]" $
       quickCheckProperty "healthy confidence range" propHealthyConatusConfidenceRange
+
+    -- Phase-B bounded post-commitment adaptation
+  , TestLabel "adaptSalienceWeights signal=0 is identity" $
+      quickCheckProperty "adapt identity" propAdaptSalienceIdentity
+  , TestLabel "adaptSalienceWeights clamps adapted weights to [0,2]" $
+      quickCheckProperty "adapt clamp" propAdaptSalienceClamp
+  , TestLabel "adaptSalienceWeights anti-drift keeps weights within ±1.0 of default" $
+      quickCheckProperty "adapt anti-drift" propAdaptSalienceAntiDrift
   ]
 
 -- ---------------------------------------------------------------------------
@@ -511,3 +520,50 @@ propHealthyConatusConfidenceRange =
   forAll arbitraryField $ \f ->
     let c = salienceConfidence (computeSalience defaultSalienceWeights ce f)
     in c >= 0.0 && c <= 1.0 + 1e-12
+
+-- ---------------------------------------------------------------------------
+-- Phase-B bounded post-commitment adaptation
+-- ---------------------------------------------------------------------------
+
+arbitrarySalienceWeights :: Gen SalienceWeights
+arbitrarySalienceWeights = do
+  wr  <- choose (0.0, 2.0)
+  wa  <- choose (0.0, 2.0)
+  wc  <- choose (0.0, 2.0)
+  wcf <- choose (0.0, 2.0)
+  wfc <- choose (0.0, 2.0)
+  cgt <- choose (-1.0, 1.0)
+  vt  <- choose (0.0, 0.5)
+  st  <- choose (0.1, 2.0)
+  pure $ SalienceWeights wr wa wc wcf wfc cgt vt st
+
+propAdaptSalienceIdentity :: Property
+propAdaptSalienceIdentity =
+  forAll arbitrarySalienceWeights $ \w ->
+    adaptSalienceWeights 0.0 w == w
+
+propAdaptSalienceClamp :: Property
+propAdaptSalienceClamp =
+  forAll arbitrarySalienceWeights $ \w ->
+  forAll (choose (-10.0, 10.0)) $ \signal ->
+    let adapted = adaptSalienceWeights signal w
+    in all (\x -> x >= 0.0 && x <= 2.0)
+         [ weightResonance adapted
+         , weightAtmosphere adapted
+         , weightConsolidation adapted
+         , weightCounterfactual adapted
+         , weightFieldConfidence adapted
+         ]
+
+propAdaptSalienceAntiDrift :: Property
+propAdaptSalienceAntiDrift =
+  forAll arbitrarySalienceWeights $ \w ->
+  forAll (choose (-10.0, 10.0)) $ \signal ->
+    let adapted = adaptSalienceWeights signal w
+        def = defaultSalienceWeights
+        withinDrift x target = abs (x - target) <= 1.0 + 1e-12
+    in withinDrift (weightResonance adapted)       (weightResonance def)
+    && withinDrift (weightAtmosphere adapted)      (weightAtmosphere def)
+    && withinDrift (weightConsolidation adapted)   (weightConsolidation def)
+    && withinDrift (weightCounterfactual adapted)  (weightCounterfactual def)
+    && withinDrift (weightFieldConfidence adapted) (weightFieldConfidence def)

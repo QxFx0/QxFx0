@@ -168,15 +168,16 @@ turnPipelineProtocolTests =
    , testConatusGateFlagDrivesLocalRecoveryPlan
    , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
    , testDeliberationRecoveryNotSilenced
-   , testFinalizePrecommitResolveConcurrently
-   ]
+    , testFinalizePrecommitResolveConcurrently
+    , testPrepareCurrentTimeDeterministicInjection
+    ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
   forAll (elements prepareInputs) $ \rawInput ->
     let input = T.pack rawInput
-        plan1 = summarizePreparePlan (planPrepareEffects emptySystemState input)
-        plan2 = summarizePreparePlan (planPrepareEffects emptySystemState input)
+        plan1 = summarizePreparePlan (planPrepareEffects emptySystemState input testEpochZero)
+        plan2 = summarizePreparePlan (planPrepareEffects emptySystemState input testEpochZero)
     in plan1 == plan2
   where
     prepareInputs =
@@ -197,6 +198,16 @@ testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect plan
         , pepApiHealthRequest plan
         ]
       )
+
+-- | Phase C: verify that 'buildPrepareEffectPlan' injects the caller-supplied
+-- time into 'psCurrentTime', which is then used by 'buildTurnInput' for
+-- 'tiStartTime' instead of the resolved timeline (non-deterministic in unit tests).
+testPrepareCurrentTimeDeterministicInjection :: Test
+testPrepareCurrentTimeDeterministicInjection = TestCase $ do
+  let fixedTime = UTCTime (ModifiedJulianDay 12345) 3600
+      plan = planPrepareEffects emptySystemState "deterministic time test" fixedTime
+  assertEqual "psCurrentTime must match injected time"
+    fixedTime (psCurrentTime (pepStatic plan))
 
 testRouteEffectPlanDeterministicProperty :: Test
 testRouteEffectPlanDeterministicProperty = quickCheckTest "route effect planning is deterministic" $
@@ -343,7 +354,7 @@ testPrepareEffectsResolveConcurrently = TestCase $ do
           defaultTestPipelineConfig
             { tpcInterpreter = trackedPrepareInterpreter activeRef maxRef
             }
-      preparePlan = planPrepareEffects emptySystemState "что такое свобода"
+      preparePlan = planPrepareEffects emptySystemState "что такое свобода" testEpochZero
   _ <- resolvePrepareEffects pio preparePlan
   maxActive <- readIORef maxRef
   assertBool "prepare effects should overlap instead of running strictly one-by-one" (maxActive >= 3)
@@ -352,7 +363,7 @@ testPrepareMetricsExposeHonestPhaseNames :: Test
 testPrepareMetricsExposeHonestPhaseNames = TestCase $
   withDeterministicEmbedding $ do
     let ss = emptySystemState
-        preparePlan = planPrepareEffects ss "что такое свобода"
+        preparePlan = planPrepareEffects ss "что такое свобода" testEpochZero
     prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
     let ti = buildTurnInput ss "request-phase" "session-phase" preparePlan prepareResults
         phaseNames = sort (map ptPhase (tmPhases (tiMetrics ti)))
@@ -1426,7 +1437,7 @@ buildPreparedFixture rawInput = do
             Map.empty
             Map.empty
         }
-      preparePlan = planPrepareEffects ss rawInput
+      preparePlan = planPrepareEffects ss rawInput testEpochZero
   prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
   let ti = buildTurnInput ss "request-prop" "session-prop" preparePlan prepareResults
       ts = buildTurnSignals prepareResults
@@ -1545,3 +1556,6 @@ quickCheckTest label prop = TestCase $ do
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)
+
+testEpochZero :: UTCTime
+testEpochZero = UTCTime (ModifiedJulianDay 0) 0
