@@ -34,7 +34,8 @@ import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Deliberation (Deliberation)
-import QxFx0.Self.Field (Field)
+import QxFx0.Self.Field (Field, FieldHeuristics)
+import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -106,6 +107,15 @@ data TurnInput = TurnInput
     --   computation, and finalize-stage trace share the same
     --   Field instead of each constructing 'emptyField'
     --   independently.
+  , tiFieldHeuristics :: !FieldHeuristics
+    -- ^ Phase 6.7: the heuristic parameters used to build
+    --   'tiField'.  Mirrors 'psFieldHeuristics' from
+    --   'PrepareStatic' so downstream stages can read the
+    --   same record without reconstructing defaults.
+  , tiEssence :: !Essence
+    -- ^ Phase 9: the pre-turn essence carrier, populated by
+    --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source
+    --   of truth for the turn's essence-layer reads.
   }
 
 data TurnSignals = TurnSignals

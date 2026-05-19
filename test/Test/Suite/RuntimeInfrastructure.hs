@@ -1085,6 +1085,10 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcDeliberationAgreement = Nothing
               , trcDeliberationDivergence = Nothing
               , trcDeliberationNarrativeTone = Nothing
+              , trcEssenceMode = Nothing
+              , trcEssenceCommitted = Nothing
+              , trcEssenceAngstLevel = Nothing
+              , trcEssenceTrigger = Nothing
               }
           , tqpDivergence = True
           }
@@ -1379,6 +1383,10 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcDeliberationAgreement = Nothing
               , trcDeliberationDivergence = Nothing
               , trcDeliberationNarrativeTone = Nothing
+              , trcEssenceMode = Nothing
+              , trcEssenceCommitted = Nothing
+              , trcEssenceAngstLevel = Nothing
+              , trcEssenceTrigger = Nothing
               }
           , tqpDivergence = True
           }

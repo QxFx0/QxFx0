@@ -31,10 +31,11 @@ module Test.Suite.SelfField
   ( selfFieldTests
   ) where
 
-import Test.HUnit (Test (..), assertFailure)
+import Test.HUnit (Test (..), assertBool, assertFailure)
 import Test.QuickCheck
   ( Gen
   , Property
+  , arbitrary
   , choose
   , forAll
   , maxSuccess
@@ -69,6 +70,11 @@ import QxFx0.Self.Field
   , mkCounterfactual
   , mkFieldConfidence
   , mkResonance
+  , FieldHeuristics(..)
+  , defaultFieldHeuristics
+  , computeConsolidation
+  , computeCounterfactual
+  , computeAtmosphere
   )
 
 -- ---------------------------------------------------------------------------
@@ -133,6 +139,26 @@ selfFieldTests =
   -- Adjunction smoke test
   , TestLabel "Field round-trips through Holistic / Formal (smoke)" $
       quickCheckProperty "Adjunction smoke" propAdjunctionSmoke
+
+  -- Phase-7 heuristic lifeness gates
+  , TestLabel "computeConsolidation is in [0,1]" $
+      quickCheckProperty "computeConsolidation in range" propComputeConsolidationInRange
+  , TestLabel "computeCounterfactual is in [0,1]" $
+      quickCheckProperty "computeCounterfactual in range" propComputeCounterfactualInRange
+  , TestLabel "computeAtmosphere valence is in [-1,1]" $
+      quickCheckProperty "computeAtmosphere valence in range" propComputeAtmosphereValenceInRange
+  , TestLabel "computeAtmosphere arousal is in [0,1]" $
+      quickCheckProperty "computeAtmosphere arousal in range" propComputeAtmosphereArousalInRange
+  , TestLabel "sameTopic boosts consolidation" $
+      quickCheckProperty "sameTopic boosts consolidation" propSameTopicBoostsConsolidation
+  , TestLabel "streak boosts counterfactual" $
+      quickCheckProperty "streak boosts counterfactual" propStreakBoostsCounterfactual
+  , TestLabel "higher legitimacy raises valence" $
+      quickCheckProperty "higher legitimacy raises valence" propHighLegitimacyRaisesValence
+
+    -- Phase 6.7: heuristics override honored
+  , TestLabel "overridden FieldHeuristics changes computeAtmosphere" $
+      TestCase testHeuristicsOverrideHonored
   ]
 
 -- ---------------------------------------------------------------------------
@@ -396,3 +422,75 @@ propAdjunctionSmoke =
     let h        = Holistic (a, fd)
         rebuilt  = counit (fmap unit h)
     in h == rebuilt
+
+-- ---------------------------------------------------------------------------
+-- Phase-7 heuristic lifeness gates
+-- ---------------------------------------------------------------------------
+
+propComputeConsolidationInRange :: Property
+propComputeConsolidationInRange =
+  forAll arbitrary $ \recentSuccess ->
+  forAll (choose (False, True)) $ \sameTopic ->
+    let Consolidation c = computeConsolidation defaultFieldHeuristics (recentSuccess :: [Bool]) sameTopic
+    in c >= 0.0 && c <= 1.0
+
+propComputeCounterfactualInRange :: Property
+propComputeCounterfactualInRange =
+  forAll arbitrary $ \weights ->
+  forAll (choose (0, 100 :: Int)) $ \streak ->
+    let Counterfactual c = computeCounterfactual defaultFieldHeuristics (weights :: [Double]) streak
+    in c >= 0.0 && c <= 1.0
+
+propComputeAtmosphereValenceInRange :: Property
+propComputeAtmosphereValenceInRange =
+  forAll arbitraryWideDouble $ \egoAgency ->
+  forAll arbitraryWideDouble $ \egoTension ->
+  forAll arbitraryWideDouble $ \legitScore ->
+    let Atmosphere v _ = computeAtmosphere defaultFieldHeuristics egoAgency egoTension legitScore
+    in v >= -1.0 && v <= 1.0
+
+propComputeAtmosphereArousalInRange :: Property
+propComputeAtmosphereArousalInRange =
+  forAll arbitraryWideDouble $ \egoAgency ->
+  forAll arbitraryWideDouble $ \egoTension ->
+  forAll arbitraryWideDouble $ \legitScore ->
+    let Atmosphere _ a = computeAtmosphere defaultFieldHeuristics egoAgency egoTension legitScore
+    in a >= 0.0 && a <= 1.0
+
+propSameTopicBoostsConsolidation :: Property
+propSameTopicBoostsConsolidation =
+  forAll arbitrary $ \recentSuccess ->
+    let off = computeConsolidation defaultFieldHeuristics (recentSuccess :: [Bool]) False
+        on  = computeConsolidation defaultFieldHeuristics recentSuccess True
+    in unConsolidation on >= unConsolidation off
+
+propStreakBoostsCounterfactual :: Property
+propStreakBoostsCounterfactual =
+  forAll arbitrary $ \weights ->
+  forAll (choose (0, 50 :: Int)) $ \low ->
+  forAll (choose (low, 100 :: Int)) $ \high ->
+    let lowCF  = computeCounterfactual defaultFieldHeuristics (weights :: [Double]) low
+        highCF = computeCounterfactual defaultFieldHeuristics weights high
+    in unCounterfactual highCF >= unCounterfactual lowCF
+
+propHighLegitimacyRaisesValence :: Property
+propHighLegitimacyRaisesValence =
+  forAll arbitraryWideDouble $ \egoAgency ->
+  forAll arbitraryWideDouble $ \egoTension ->
+  forAll arbitraryWideDouble $ \lowLegit ->
+  forAll (choose (lowLegit, 100.0)) $ \highLegit ->
+    let lowAtm  = computeAtmosphere defaultFieldHeuristics egoAgency egoTension lowLegit
+        highAtm = computeAtmosphere defaultFieldHeuristics egoAgency egoTension highLegit
+    in atmosphereValence highAtm >= atmosphereValence lowAtm
+
+-- | Phase 6.7: verify that a non-default heuristic parameter
+-- actually changes the compute function output.  If this test
+-- fails, the plumbing is broken (the override is not reaching
+-- the compute site).
+testHeuristicsOverrideHonored :: IO ()
+testHeuristicsOverrideHonored = do
+  let defaultAtm = computeAtmosphere defaultFieldHeuristics 0.5 0.5 0.8
+      tweaked    = defaultFieldHeuristics { fhLegitimacyBonusScale = 0.99 }
+      tweakedAtm = computeAtmosphere tweaked 0.5 0.5 0.8
+  assertBool "override must change valence"
+    (atmosphereValence tweakedAtm /= atmosphereValence defaultAtm)

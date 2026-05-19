@@ -192,7 +192,7 @@ propConatusOverridesEverything =
     let conatusSalience = salience { salienceDriver = DrivenByConatusGate }
         hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d  = reconcile conatusSalience hp fp fd
+        d  = reconcile Nothing conatusSalience hp fp fd
         r  = delibReconciled d
         t  = delibTrace d
      in planRenderStyle r == StyleRecovery
@@ -212,7 +212,7 @@ propAgreementIsIdempotent =
   forAll arbitraryNonConatusSalience $ \salience ->
     let hp = holisticProposal plan fd
         fp = formalProposal (\_ -> plan)
-        d  = reconcile salience hp fp fd
+        d  = reconcile Nothing salience hp fp fd
         r  = delibReconciled d
         t  = delibTrace d
      in r == plan
@@ -230,7 +230,7 @@ propRecoveryNeverSilenced =
         fHasRecovery = planRecoveryCause fPlan /= Nothing
         hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d  = reconcile salience hp fp fd
+        d  = reconcile Nothing salience hp fp fd
         r  = delibReconciled d
      in (hHasRecovery || fHasRecovery)
         ==> (planRecoveryCause r /= Nothing)
@@ -248,7 +248,7 @@ propTiedFallbackIsFormal =
           }
         hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d  = reconcile salience hp fp fd
+        d  = reconcile Nothing salience hp fp fd
         r  = delibReconciled d
         t  = delibTrace d
      in dtRule t == RuleTiedFallback
@@ -263,7 +263,7 @@ propDivergenceBounded =
   forAll arbitrarySalience $ \salience ->
     let hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d  = reconcile salience hp fp fd
+        d  = reconcile Nothing salience hp fp fd
         divg = dtDivergence (delibTrace d)
      in divg >= 0.0 && divg <= 1.0
 
@@ -276,8 +276,8 @@ propDeterminism =
   forAll arbitrarySalience $ \salience ->
     let hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d1 = reconcile salience hp fp fd
-        d2 = reconcile salience hp fp fd
+        d1 = reconcile Nothing salience hp fp fd
+        d2 = reconcile Nothing salience hp fp fd
      in d1 == d2
 
 -- Extra: renderAgreement is total (no pattern-match failure)

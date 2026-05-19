@@ -51,11 +51,7 @@ import QxFx0.Self.Conatus
   )
 import QxFx0.Self.Field
   ( Atmosphere (..)
-  , Consolidation (..)
-  , Counterfactual (..)
   , Field (..)
-  , FieldConfidence (..)
-  , Resonance (..)
   , deriveFieldConfidence
   , mkAtmosphere
   , mkConsolidation
@@ -70,6 +66,7 @@ import QxFx0.Self.Salience
   , SalienceWeights (..)
   , chooseBranch
   , computeSalience
+  , conatusGateFires
   , defaultSalienceWeights
   , salienceVerdict
   )
@@ -123,6 +120,22 @@ selfSalienceTests =
     -- Determinism
   , TestLabel "computeSalience is deterministic" $
       quickCheckProperty "determinism" propDeterminism
+
+    -- Phase-7 lifeness gates (structural calibration infrastructure)
+  , TestLabel "Conatus gate fires exactly when predicate says so" $
+      quickCheckProperty "gate predicate equivalence" propConatusGateFiresExactlyWhenPredicate
+  , TestLabel "Conatus gate bias is exactly 0.0" $
+      quickCheckProperty "gate bias zero" propConatusGateBiasIsZero
+  , TestLabel "Conatus gate confidence is exactly 1.0" $
+      quickCheckProperty "gate confidence one" propConatusGateConfidenceIsOne
+  , TestLabel "bias is non-decreasing in Atmosphere arousal" $
+      quickCheckProperty "monotone in Atmosphere arousal" propMonotoneAtmosphereArousal
+  , TestLabel "Atmosphere valence does not affect salience" $
+      quickCheckProperty "valence irrelevant" propAtmosphereValenceIrrelevant
+  , TestLabel "Field is ignored when Conatus gate fires" $
+      quickCheckProperty "field ignored under gate" propFieldIgnoredWhenConatusGateFires
+  , TestLabel "healthy Conatus confidence is in [0,1]" $
+      quickCheckProperty "healthy confidence range" propHealthyConatusConfidenceRange
   ]
 
 -- ---------------------------------------------------------------------------
@@ -181,6 +194,13 @@ arbitraryUnhealthyConatus = do
   s <- choose (-5.0, -0.001)
   pure (placeholderConatus s)
 
+-- | A 'ConatusEnergy' whose @ceScalar@ spans both sides of the
+-- default threshold, for priority / boundary tests.
+arbitraryConatus :: Gen ConatusEnergy
+arbitraryConatus = do
+  s <- choose (-5.0, 5.0)
+  pure (placeholderConatus s)
+
 placeholderConatus :: Double -> ConatusEnergy
 placeholderConatus s = ConatusEnergy
   { ceScalar     = s
@@ -206,6 +226,11 @@ withCounterfactual c f = f { fieldCounterfactual = mkCounterfactual c }
 
 withFieldConfidence :: Double -> Field -> Field
 withFieldConfidence c f = f { fieldConfidence = mkFieldConfidence c }
+
+withAtmosphereArousal :: Double -> Field -> Field
+withAtmosphereArousal a f =
+  let atm = fieldAtmosphere f
+  in f { fieldAtmosphere = atm { atmosphereArousal = a } }
 
 -- ---------------------------------------------------------------------------
 -- Totality and range
@@ -410,3 +435,79 @@ propDeterminism =
     let s1 = computeSalience defaultSalienceWeights ce f
         s2 = computeSalience defaultSalienceWeights ce f
     in s1 == s2
+
+-- ---------------------------------------------------------------------------
+-- Phase-7 lifeness gates (structural calibration infrastructure)
+-- ---------------------------------------------------------------------------
+
+-- | The 'conatusGateFires' predicate and the resulting driver tag
+-- are in exact bijection.
+propConatusGateFiresExactlyWhenPredicate :: Property
+propConatusGateFiresExactlyWhenPredicate =
+  forAll arbitraryConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+    let s = computeSalience defaultSalienceWeights ce f
+        gateFired = conatusGateFires ce
+        driverIsConatus = salienceDriver s == DrivenByConatusGate
+    in gateFired == driverIsConatus
+
+-- | When the Conatus gate fires the bias is clamped to exactly 0.0.
+propConatusGateBiasIsZero :: Property
+propConatusGateBiasIsZero =
+  forAll arbitraryUnhealthyConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+    salienceHolisticBias (computeSalience defaultSalienceWeights ce f) == 0.0
+
+-- | When the Conatus gate fires the confidence is clamped to
+-- exactly 1.0.
+propConatusGateConfidenceIsOne :: Property
+propConatusGateConfidenceIsOne =
+  forAll arbitraryUnhealthyConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+    salienceConfidence (computeSalience defaultSalienceWeights ce f) == 1.0
+
+-- | Atmosphere arousal has a non-negative weight, so increasing it
+-- (holding everything else fixed) does not decrease bias.
+propMonotoneAtmosphereArousal :: Property
+propMonotoneAtmosphereArousal =
+  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+  forAll arbitraryUnitDouble $ \lo ->
+  forAll (choose (0.0, 1.0)) $ \delta ->
+    let hi = min 1.0 (lo + delta)
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal lo f))
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal hi f))
+    in bHi >= bLo - 1e-12
+
+-- | Atmosphere valence is not read by the salience controller;
+-- changing it while holding arousal fixed leaves the verdict
+-- unchanged.
+propAtmosphereValenceIrrelevant :: Property
+propAtmosphereValenceIrrelevant =
+  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+  forAll arbitraryValenceDouble $ \v1 ->
+  forAll arbitraryValenceDouble $ \v2 ->
+    let f1 = f { fieldAtmosphere = (fieldAtmosphere f) { atmosphereValence = v1 } }
+        f2 = f { fieldAtmosphere = (fieldAtmosphere f) { atmosphereValence = v2 } }
+        s1 = computeSalience defaultSalienceWeights ce f1
+        s2 = computeSalience defaultSalienceWeights ce f2
+    in s1 == s2
+
+-- | When the Conatus gate fires the field is completely ignored:
+-- two different fields produce the identical Salience.
+propFieldIgnoredWhenConatusGateFires :: Property
+propFieldIgnoredWhenConatusGateFires =
+  forAll arbitraryUnhealthyConatus $ \ce ->
+  forAll arbitraryField $ \f1 ->
+  forAll arbitraryField $ \f2 ->
+    computeSalience defaultSalienceWeights ce f1
+      == computeSalience defaultSalienceWeights ce f2
+
+-- | For healthy Conatus energy the confidence is always in [0,1].
+propHealthyConatusConfidenceRange :: Property
+propHealthyConatusConfidenceRange =
+  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryField $ \f ->
+    let c = salienceConfidence (computeSalience defaultSalienceWeights ce f)
+    in c >= 0.0 && c <= 1.0 + 1e-12

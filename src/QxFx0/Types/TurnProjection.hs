@@ -14,6 +14,7 @@ import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
+import QxFx0.Self.Essence (Essence (..), EssenceTrajectory (..), EssenceCommitment (..), renderEssenceMode, renderCommitmentTrigger)
 import Data.Aeson (ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -64,6 +65,22 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDeliberationAgreement :: !(Maybe Text)
   , trcDeliberationDivergence :: !(Maybe Double)
   , trcDeliberationNarrativeTone :: !(Maybe Text)
+  , trcEssenceMode :: !(Maybe Text)
+    -- ^ Phase 9: snake_case 'renderEssenceMode' tag of the
+    --   post-turn essence.  @Just "witnessing"@ pre-commit;
+    --   @Just "contemplative" | "dialogical" | "integrative"@
+    --   post-commit (Phase 10).  @Nothing@ only when the essence
+    --   layer is statically disabled (not currently exposed).
+  , trcEssenceCommitted :: !(Maybe Bool)
+    -- ^ Phase 9: @Just False@ pre-commit, @Just True@ post-commit
+    --   (Phase 10).  Always @Just False@ in Phase 9 by contract.
+  , trcEssenceAngstLevel :: !(Maybe Double)
+    -- ^ Phase 9: 'etAngstLevel' of the post-turn trajectory in
+    --   @[0, 1]@.  Tracks accumulated unresolved divergence.
+  , trcEssenceTrigger :: !(Maybe Text)
+    -- ^ Phase 9: snake_case 'renderCommitmentTrigger' tag set only
+    --   on the turn a commitment fires (Phase 10).  Always
+    --   @Nothing@ in Phase 9.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

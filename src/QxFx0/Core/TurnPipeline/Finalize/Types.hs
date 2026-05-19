@@ -17,6 +17,8 @@ import Data.Time.Clock (UTCTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
+-- Phase 9: Essence types are not yet used in finalize bundles.
+-- Commitment and validation wiring lands in Phase 10.
 import QxFx0.Types
 
 data FinalizeStatic = FinalizeStatic

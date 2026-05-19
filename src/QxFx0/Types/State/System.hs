@@ -103,6 +103,7 @@ import QxFx0.Types.State.Semantic
   )
 import QxFx0.Types.Vec (zeroVec)
 import QxFx0.Types.Dream (emptyDreamState)
+import QxFx0.Self.Essence (Essence, emptyEssence)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -112,6 +113,10 @@ data SystemState = SystemState
   , ssOutputMode :: !DialogueOutputMode
   , ssMorphology :: !MorphologyData
   , ssObservability :: !ObservabilityState
+  , ssEssence :: !Essence
+    -- ^ Phase 9: essence-selection trajectory accumulator.
+    --   Carries the uncommitted (or committed) 'Essence' across
+    --   turns.  Initialised to 'emptyEssence'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -149,6 +154,7 @@ instance ToJSON SystemState where
     , "sessionId" .= ssSessionId ss
     , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
     , "observability" .= ssObservability ss
+    , "essence" .= ssEssence ss
     ]
 
 instance FromJSON SystemState where
@@ -190,6 +196,7 @@ instance FromJSON SystemState where
       <*> (parseDialogueOutputMode <$> o .: "outputMode")
       <*> o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty
       <*> o .: "observability"
+      <*> o .:? "essence" .!= emptyEssence
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -298,4 +305,5 @@ emptySystemState = SystemState
   , ssOutputMode = DialogueOutput
   , ssMorphology = MorphologyData M.empty M.empty M.empty M.empty
   , ssObservability = emptyObservabilityState
+  , ssEssence = emptyEssence
   }

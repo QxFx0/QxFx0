@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
@@ -117,7 +119,10 @@ module QxFx0.Self.Salience
   , isFormalFamily
   ) where
 
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
+import GHC.Generics (Generic)
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
 import QxFx0.Self.Conatus
@@ -152,7 +157,8 @@ data SalienceDriver
   | DrivenByFieldConfidence
   | DrivenByConatusGate
   | DrivenByDefault
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Bounded, Enum, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | The controller's verdict for a single turn.
 --

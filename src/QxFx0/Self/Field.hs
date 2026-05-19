@@ -82,6 +82,12 @@ module QxFx0.Self.Field
   , Field (..)
   , emptyField
   , deriveFieldConfidence
+    -- * Phase-7 tunable heuristics (lifeness gates)
+  , FieldHeuristics (..)
+  , defaultFieldHeuristics
+  , computeConsolidation
+  , computeCounterfactual
+  , computeAtmosphere
     -- * Component combinators
   , combineResonance
   , combineAtmosphere
@@ -224,6 +230,104 @@ deriveFieldConfidence f =
     -- Maximum variance for n=4 samples in [0,1] is 0.25
     -- (achieved when half are 0 and half are 1).
     normalised = var / 0.25
+
+-- ---------------------------------------------------------------------------
+-- Phase-7 tunable heuristics (lifeness gates / calibration)
+-- ---------------------------------------------------------------------------
+
+-- | Tunable parameters for the four Phase-5.5d heuristics that
+-- populate a 'Field' from runtime signals.  Previously these were
+-- magic constants embedded in 'buildPrepareEffectPlan'; Phase 7
+-- extracts them into a single calibration record so that
+-- property-based lifeness gates can vary the parameters and
+-- verify boundary behaviour.
+data FieldHeuristics = FieldHeuristics
+  { fhNarrativeWindowSize     :: !Int
+    -- ^ Window over 'ssRecentNarrativeSuccess' used for the
+    --   consolidation narrative-rate computation. Default: 5.
+  , fhDefaultNarrativeRate    :: !Double
+    -- ^ Consolidation fallback when the window is empty.
+    --   Default: 0.2.
+  , fhTopicStabilityBoost     :: !Double
+    -- ^ Floor applied to consolidation when the current topic
+    --   matches the previous turn's topic. Default: 0.5.
+  , fhEntropyEpsilon          :: !Double
+    -- ^ Small additive guard against division-by-zero when
+    --   normalising family weights for entropy. Default: 1e-9.
+  , fhHolisticStreakBoostRate :: !Double
+    -- ^ Increment added to counterfactual per unbroken holistic
+    --   turn in the streak. Default: 0.05.
+  , fhHolisticStreakBoostCap  :: !Double
+    -- ^ Maximum total streak boost. Default: 0.2.
+  , fhLegitimacyMidpoint      :: !Double
+    -- ^ Legitimacy score treated as neutral for atmosphere
+    --   valence modulation. Default: 0.5.
+  , fhLegitimacyBonusScale    :: !Double
+    -- ^ Multiplier on (legitimacy − midpoint) that is added
+    --   to the ego-derived valence base. Default: 0.4.
+  }
+  deriving stock (Eq, Show)
+
+-- | Phase-7 default heuristic parameters.  These reproduce the
+-- behaviour of the hardcoded constants that shipped in Phase 5.5d.
+defaultFieldHeuristics :: FieldHeuristics
+defaultFieldHeuristics = FieldHeuristics
+  { fhNarrativeWindowSize     = 5
+  , fhDefaultNarrativeRate    = 0.2
+  , fhTopicStabilityBoost   = 0.5
+  , fhEntropyEpsilon        = 1e-9
+  , fhHolisticStreakBoostRate = 0.05
+  , fhHolisticStreakBoostCap  = 0.2
+  , fhLegitimacyMidpoint      = 0.5
+  , fhLegitimacyBonusScale    = 0.4
+  }
+
+-- | Compute 'Consolidation' from a window of recent narrative
+-- success flags and a topic-stability indicator.
+--
+-- Lifeness gate: result is always in @[0, 1]@ because the raw
+-- value is routed through 'mkConsolidation'.
+computeConsolidation :: FieldHeuristics -> [Bool] -> Bool -> Consolidation
+computeConsolidation fh recentSuccess sameTopic =
+  let window = take (fhNarrativeWindowSize fh) recentSuccess
+      rate   = if null window
+                 then fhDefaultNarrativeRate fh
+                 else fromIntegral (length (filter id window))
+                      / fromIntegral (length window)
+      raw    = if sameTopic then max (fhTopicStabilityBoost fh) rate else rate
+  in mkConsolidation raw
+
+-- | Compute 'Counterfactual' from a list of semantic-logic family
+-- weights and the current holistic streak length.
+--
+-- Lifeness gate: result is always in @[0, 1]@ because the raw
+-- value is routed through 'mkCounterfactual'.
+computeCounterfactual :: FieldHeuristics -> [Double] -> Int -> Counterfactual
+computeCounterfactual fh weights streak =
+  let totalWeight  = sum weights
+      epsilon      = fhEntropyEpsilon fh
+      normWeights  = map (/ max epsilon totalWeight) weights
+      entropy      = negate $ sum [ p * log (max epsilon p) | p <- normWeights ]
+      maxEntropy   = log (fromIntegral (max 1 (length normWeights)))
+      ambiguity    = if maxEntropy > 0 then entropy / maxEntropy else 0.0
+      boost        = min (fromIntegral streak * fhHolisticStreakBoostRate fh)
+                         (fhHolisticStreakBoostCap fh)
+      raw          = min 1.0 (ambiguity + boost)
+  in mkCounterfactual raw
+
+-- | Compute 'Atmosphere' from ego agency, ego tension, and the
+-- last legitimacy score.
+--
+-- Lifeness gate: the returned 'Atmosphere' is always well-formed
+-- because 'mkAtmosphere' clamps both axes.
+computeAtmosphere :: FieldHeuristics -> Double -> Double -> Double -> Atmosphere
+computeAtmosphere fh egoAgency egoTension legitScore =
+  let valenceBase = egoAgency - egoTension
+      legitBonus  = (legitScore - fhLegitimacyMidpoint fh)
+                    * fhLegitimacyBonusScale fh
+      valence     = valenceBase + legitBonus
+      arousal     = egoTension
+  in mkAtmosphere valence arousal
 
 -- ---------------------------------------------------------------------------
 -- Per-component combinators

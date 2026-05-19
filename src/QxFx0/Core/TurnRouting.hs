@@ -85,8 +85,9 @@ nearestHolistic other         = other
 routeFamily :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
             -> SystemState -> [Text] -> Text -> Bool -> Text
             -> Maybe ConsciousnessNarrative -> Double -> ConatusEnergy -> Field
+            -> Maybe (Plan -> Bool)
             -> RoutingDecision
-routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField =
+routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField mCourtesy =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
       routingSalience = salienceFromConatusEnergy conatusEnergy preparedField
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience
@@ -136,7 +137,7 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       -- Package D: formal hemisphere probes the field; holistic
       -- hemisphere carries atmosphere-derived tone already baked
       -- into the Plan, so the wrapper is field-independent.
-      deliberation = reconcile routingSalience (holisticProposal holisticPlan emptyField) (formalProposal (\_fd -> formalPlan)) preparedField
+      deliberation = reconcile mCourtesy routingSalience (holisticProposal holisticPlan emptyField) (formalProposal (\_fd -> formalPlan)) preparedField
       reconciledPlan = delibReconciled deliberation
       reconciledFamily = planFamily reconciledPlan
       reconciledStyle  = planRenderStyle reconciledPlan

@@ -1335,7 +1335,7 @@ testRouteFamilyInputPropagated = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0 dummyConatusEnergy emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0 dummyConatusEnergy emptyField Nothing
   assertBool "Input should propagate to semanticInput (not empty)" (siRawInput (rdSemanticInput rd) == input)
   assertBool "Pressure should be detected from actual input" (isJust (rdPressure rd))
   assertBool "PrincipledMode should activate from actual input" (isJust (rdPrincipledMode rd))
@@ -1350,7 +1350,7 @@ testRouteFamilyNixBlocked = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
   assertEqual "Nix-blocked should force CMRepair" CMRepair (rdFamily rd)
 
 testNixGuardCyrillicConceptDoesNotUnsafeBlock :: Test
@@ -1376,7 +1376,7 @@ testRouteFamilyAnchorUsesCurrentTopic = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       currentTopic = "свобода"
       atomSet = collectAtoms input []
-      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0 dummyConatusEnergy emptyField
+      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0 dummyConatusEnergy emptyField Nothing
   assertBool "Anchor secondary channel should reflect current topic"
     (fmap saSecondaryChannel (rdSemanticAnchor rd) == Just (Just "свобода"))
 
@@ -1501,13 +1501,13 @@ testRouteFamilyNarrativeHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
       silenceNarrative = Just ConsciousnessNarrative
         { cnKernelState = "test", cnActiveDesires = "test"
         , cnSkillInPlay = "\1052\1086\1083\1095\1072\1090\1100"
         , cnSelfView = "test", cnConflict = "", cnLimitation = ""
         }
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0 dummyConatusEnergy emptyField
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0 dummyConatusEnergy emptyField Nothing
   assertBool "Silence narrative hint should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "Silence narrative should route to CMAnchor" CMAnchor (rdFamily rdWithHint)
@@ -1524,7 +1524,7 @@ testRouteFamilyOperationalQuestionResistsReflectNarrative = TestCase $ do
         , cnSkillInPlay = "unknown skill"
         , cnSelfView = "test", cnConflict = "Внутренний конфликт: test", cnLimitation = ""
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0 dummyConatusEnergy emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0 dummyConatusEnergy emptyField Nothing
   assertBool "diagnostic operational question should not be overridden into reflect by conflict narrative" (rdFamily rd /= CMReflect)
 
 testRouteFamilyIntuitionHintChangesFamily :: Test
@@ -1534,9 +1534,9 @@ testRouteFamilyIntuitionHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
       holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField Nothing
   assertBool "High intuition posterior should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "High intuition posterior should route to CMDeepen" CMDeepen (rdFamily rdWithHint)
@@ -1552,7 +1552,7 @@ testRouteFamilyHolisticFieldKeepsCMDeepen = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
       holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField Nothing
   assertEqual "holistic-leaning field must keep CMDeepen (not escalate to formal default)" CMDeepen (rdFamily rd)
   case rdDeliberation rd of
     Nothing -> assertFailure "rdDeliberation must be populated"
@@ -1570,7 +1570,7 @@ testRouteFamilyEmptyFieldKeepsCascadeFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy emptyField Nothing
   assertEqual "empty field with high intuition must preserve cascade family (no salience escalation)" CMDeepen (rdFamily rd)
   case rdDeliberation rd of
     Nothing -> assertFailure "rdDeliberation must be populated"
@@ -1585,7 +1585,7 @@ testRouteFamilyDeliberationPopulated = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
   case rdDeliberation rd of
     Nothing -> assertFailure "routeFamily must populate rdDeliberation"
     Just deliberation -> do
@@ -1620,7 +1620,7 @@ testRouteFamilyConatusOverrideDeliberation = TestCase $ do
             , ccPenalty    = 1.0
             }
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField Nothing
   case rdDeliberation rd of
     Nothing -> assertFailure "routeFamily must populate rdDeliberation under conatus override"
     Just deliberation -> do
@@ -1647,8 +1647,8 @@ testRouteFamilyAgreementIdempotence = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd1 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
-      rd2 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField
+      rd1 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd2 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
   case (rdDeliberation rd1, rdDeliberation rd2) of
     (Just d1, Just d2) -> do
       assertEqual "identical inputs must yield identical deliberation"
@@ -1679,7 +1679,7 @@ testRouteFamilyHolisticFieldDeliberationDivergence = TestCase $ do
         { fieldResonance = mkResonance 0.8
         , fieldAtmosphere = mkAtmosphere 0.5 0.7
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy divergentField
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy divergentField Nothing
   assertEqual "holistic-leaning field must keep CMDeepen"
     CMDeepen (rdFamily rd)
   case rdDeliberation rd of

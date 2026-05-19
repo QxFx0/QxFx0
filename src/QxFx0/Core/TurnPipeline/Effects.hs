@@ -30,15 +30,18 @@ import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
 import QxFx0.Self.Field
   ( Field (..)
+  , FieldHeuristics
   , emptyField
-  , mkAtmosphere
-  , mkConsolidation
-  , mkCounterfactual
   , mkResonance
   , deriveFieldConfidence
+  , defaultFieldHeuristics
+  , computeConsolidation
+  , computeCounterfactual
+  , computeAtmosphere
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Salience (conatusGateFires)
+import QxFx0.Self.Essence (Essence)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -137,6 +140,14 @@ data PrepareStatic = PrepareStatic
     --
     --   Threaded through 'tiField' so all routing and salience-
     --   decision call sites share one canonical pre-turn Field.
+  , psFieldHeuristics :: !FieldHeuristics
+    -- ^ Phase 6.7: the heuristic parameters used to populate
+    --   'psField'.  Threaded through 'TurnInput' so downstream
+    --   stages read the same record the prepare stage used.
+  , psEssence :: !Essence
+    -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
+    --   Threaded through 'tiEssence' so witness ingestion in
+    --   'buildNextSystemState' sees the canonical trajectory.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -194,71 +205,24 @@ buildPrepareEffectPlan ss input =
       conatusEnergy = computeConatusEnergy blanket violations
       violationCount = length violations
       conatusGateFired = conatusGateFires conatusEnergy
-      -- Phase 5.5d: populate four of five Field components
-      -- from runtime signals:
-      --   * Resonance      <- atom-trace current load (already
-      --                       computed above as 'resonance').
-      --   * Consolidation  <- topic-stability heuristic: same
-      --                       focused topic as previous turn
-      --                       => 0.8; topic changed or first
-      --                       turn => 0.2.
-      --   * Counterfactual <- candidate-family ambiguity:
-      --                       ratio of second-best to best
-      --                       family weight in the semantic-
-      --                       logic ranking; > 0 only when at
-      --                       least two families are ranked.
-      --   * Atmosphere     <- Ego differential:
-      --                         valence = agency - tension
-      --                                   (high agency + low
-      --                                    tension = positive;
-      --                                    low agency + high
-      --                                    tension = negative)
-      --                         arousal = tension (structural
-      --                                   proxy for activation
-      --                                   level).
-      -- 'fieldConfidence' is now derived via 'deriveFieldConfidence'
-      -- on the four populated components (Resonance, Atmosphere,
-      -- Consolidation, Counterfactual).  The default formula reduces
-      -- Atmosphere to arousal magnitude and computes 1 - dispersion
-      -- (variance of the four scalars).  This is still heuristic,
-      -- but it is no longer the fixed 1.0 default.
-      -- Step 6a: sliding-window narrative-consolidation replaces
-      -- the old binary topic-stability heuristic.
-      recentSuccess = take 5 $ ssRecentNarrativeSuccess ss
-      narrativeRate = if null recentSuccess
-                        then 0.2
-                        else fromIntegral (length (filter id recentSuccess))
-                             / fromIntegral (length recentSuccess)
-      topicStability =
-        if not (T.null bestTopic) && bestTopic == ssLastTopic ss
-          then max 0.5 narrativeRate
-          else narrativeRate
-      -- Step 6b: entropy-based counterfactual replaces the w2/w1 gap.
-      -- 1.0 = all families equiprobable, 0.0 = one family dominates.
-      weights = map snd sortedLogic
-      totalWeight = sum weights
-      normWeights = map (/ max 1e-9 totalWeight) weights
-      entropy = negate $ sum [p * log (max 1e-9 p) | p <- normWeights]
-      maxEntropy = log (fromIntegral (max 1 (length normWeights)))
-      counterfactualAmbiguity = if maxEntropy > 0 then entropy / maxEntropy else 0.0
-      -- Step 4: feedback bias from holistic streak into counterfactual
-      -- ambiguity.  Long unbroken holistic runs raise the "what if we
-      -- had chosen differently?" signal, which dampens salience
-      -- confidence and can trigger a mode switch via the controller.
-      streakBoost = min (fromIntegral (ssHolisticStreak ss) * 0.05) 0.2
-      adjustedCounterfactual = min 1.0 (counterfactualAmbiguity + streakBoost)
-      -- Step 6c: legitimacy score modulates atmosphere valence.
-      -- High legitimacy -> positive affect; low -> negative.
-      valenceBase = egoAgency (ssEgo ss) - egoTension (ssEgo ss)
-      legitScore = obsLastLegitimacyScore (ssObservability ss)
-      legitBonus = (legitScore - 0.5) * 0.4
-      atmosphereValence = max (-1.0) (min 1.0 (valenceBase + legitBonus))
-      atmosphereArousal = egoTension (ssEgo ss)
+      -- Phase 7: populate four of five Field components via
+      -- the calibrated 'FieldHeuristics' compute functions.
+      -- 'fieldConfidence' is derived below.
+      -- Phase 6.7: heuristics are now threaded through PrepareStatic
+      -- so they can be overridden (env-var or config) in the future.
+      fieldHeuristics = defaultFieldHeuristics
       preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
-        , fieldAtmosphere     = mkAtmosphere atmosphereValence atmosphereArousal
-        , fieldConsolidation  = mkConsolidation topicStability
-        , fieldCounterfactual = mkCounterfactual adjustedCounterfactual
+        , fieldAtmosphere     = computeAtmosphere fieldHeuristics
+                                  (egoAgency (ssEgo ss))
+                                  (egoTension (ssEgo ss))
+                                  (obsLastLegitimacyScore (ssObservability ss))
+        , fieldConsolidation  = computeConsolidation fieldHeuristics
+                                  (ssRecentNarrativeSuccess ss)
+                                  (not (T.null bestTopic) && bestTopic == ssLastTopic ss)
+        , fieldCounterfactual = computeCounterfactual fieldHeuristics
+                                  (map snd sortedLogic)
+                                  (ssHolisticStreak ss)
         }
       preparedField = preparedField0
         { fieldConfidence = deriveFieldConfidence preparedField0
@@ -276,9 +240,14 @@ buildPrepareEffectPlan ss input =
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy
         , psBlanketViolationCount = violationCount
-        , psConatusGateFired = conatusGateFired
-        , psField = preparedField
-        }
+      , psConatusGateFired = conatusGateFired
+      , psField = preparedField
+      , psFieldHeuristics = fieldHeuristics
+        -- ^ Phase 6.7: heuristics used to build 'psField'.
+        --   Threaded through 'TurnInput' so downstream stages
+        --   (e.g. salience computation) can read the same record.
+      , psEssence = ssEssence ss
+      }
   in PrepareEffectPlan
       { pepStatic = static
       , pepEmbeddingRequest = PrepareReqEmbedding input

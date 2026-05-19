@@ -44,9 +44,21 @@ import QxFx0.Self.Deliberation
   , Deliberation(..)
   , DeliberationTrace(..)
   , Plan(..)
+  , defaultDeliberation
+  )
+import QxFx0.Self.Essence
+  ( Essence(..)
+  , EssenceMode (..)
+  , EssenceTrajectory (..)
+  , EssenceCommitment (..)
+  , defaultEssenceModulation
+  , renderEssenceMode
+  , renderCommitmentTrigger
+  , witness
   )
 import QxFx0.Types.Text (textShow)
 
+import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Foldable as F
 import qualified Data.Set as Set
@@ -71,7 +83,22 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       newHolisticStreak = if isHolisticFamily outcomeFamily then ssHolisticStreak ss + 1 else 0
       narrativeSuccess = maybe False (not . T.null) (tsNarrativeFragment ts)
       newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
-  in ss
+      -- Phase 9: witness ingestion.  Runtime state remains
+      -- 'EssenceUncommitted' — commitment is infrastructure-only
+      -- in this phase.
+      nextEssence =
+        case tiEssence ti of
+          EssenceUncommitted trajectory ->
+            EssenceUncommitted $
+              witness
+                defaultEssenceModulation
+                (ssTurnCount ss + 1)
+                (tiConatusEnergy ti)
+                (tiField ti)
+                (fromMaybe defaultDeliberation (tpDeliberation tp))
+                trajectory
+          committed -> committed
+   in ss
       { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
           , dsActiveScene = tpActiveScene tp
@@ -120,6 +147,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
           , obsEmbeddingApiHealthy = tsApiHealthy ts
           , obsLastLegitimacyScore = tpLegitScore tp
           }
+      , ssEssence = nextEssence
       }
 
 buildTurnProjection
@@ -173,6 +201,20 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       -- 'PrepareStatic') so the trace reflects the actual signals
       -- that drove the routing decision.
       traceSalience   = turnInputSalience ti
+      postEssence = ssEssence nextSs
+      (modeTag, committedFlag, angst, triggerTag) = case postEssence of
+        EssenceUncommitted t ->
+          ( Just (renderEssenceMode EssenceWitnessing)
+          , Just False
+          , Just (etAngstLevel t)
+          , Nothing
+          )
+        EssenceCommitted t c ->
+          ( Just (renderEssenceMode (ecMode c))
+          , Just True
+          , Just (etAngstLevel t)
+          , Just (renderCommitmentTrigger (ecTrigger c))
+          )
       replayTrace =
         TurnReplayTrace
           { trcRequestId = requestId
@@ -217,10 +259,14 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
            , trcDeliberationDivergence =
                tpDeliberation tp >>= \d ->
                  Just (dtDivergence (delibTrace d))
-           , trcDeliberationNarrativeTone =
-               tpDeliberation tp >>= \d ->
-                 Just (renderNarrativeTone (planNarrativeTone (delibReconciled d)))
-           }
+            , trcDeliberationNarrativeTone =
+                tpDeliberation tp >>= \d ->
+                  Just (renderNarrativeTone (planNarrativeTone (delibReconciled d)))
+            , trcEssenceMode = modeTag
+            , trcEssenceCommitted = committedFlag
+            , trcEssenceAngstLevel = angst
+            , trcEssenceTrigger = triggerTag
+            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
       , tqpParserMode = ParserFrameV1

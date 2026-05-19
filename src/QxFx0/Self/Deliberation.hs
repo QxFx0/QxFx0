@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
@@ -99,13 +101,18 @@ module QxFx0.Self.Deliberation
   , pickHigherSeverity
     -- * The deliberation morphism
   , reconcile
-    -- * Trace rendering (Phase-8 observability)
-  , renderAgreement
-  , renderReconcileRule
-  , renderNarrativeTone
-  ) where
+     -- * Trace rendering (Phase-8 observability)
+   , renderAgreement
+   , renderReconcileRule
+   , renderNarrativeTone
+     -- * Default fallback (Phase-9 witness ingestion)
+   , defaultDeliberation
+   ) where
 
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
+import GHC.Generics (Generic)
 
 import QxFx0.Self.Adjunction
   ( Field
@@ -147,7 +154,8 @@ data NarrativeTone
   | NarrativeFormal
   | NarrativeTerse
   | NarrativeRecovery
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- ---------------------------------------------------------------------------
 -- Plan: hemispheric proposal payload
@@ -272,7 +280,8 @@ data Agreement
   | DivergeOnRecovery
   | DivergeOnTone
   | DivergeMultiple
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Bounded, Enum, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Closed enumeration of the rule that produced the reconciled
 -- 'Plan'. Exactly one is chosen per call to 'reconcile'; rules
@@ -286,7 +295,8 @@ data ReconcileRule
   | RuleHolisticAdvantage
   | RuleFormalAdvantage
   | RuleTiedFallback
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Bounded, Enum, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Per-turn observability record produced by 'reconcile'. Carried
 -- alongside the reconciled 'Plan' in 'Deliberation'; intended to
@@ -366,6 +376,28 @@ pickHigherSeverity a b
   | otherwise = b
 
 -- ---------------------------------------------------------------------------
+-- Default fallback (Phase-9 witness ingestion)
+-- ---------------------------------------------------------------------------
+
+-- | A placeholder 'Deliberation' used when a turn did not run
+-- 'reconcile' (e.g. Conatus-gated early exit).  Fields are chosen
+-- to have minimal impact on the 'EssenceTrajectory': agreement
+-- with zero divergence, neutral tone, and a stable driver so that
+-- 'witness' does not accrue or decay angst artificially.
+defaultDeliberation :: Deliberation
+defaultDeliberation = Deliberation
+  { delibHolistic   = defaultPlan
+  , delibFormal     = defaultPlan
+  , delibReconciled = defaultPlan
+  , delibTrace      = DeliberationTrace
+      { dtAgreement      = Agree
+      , dtDivergence     = 0.0
+      , dtRule           = RuleSalienceLead
+      , dtSalienceDriver = DrivenByDefault
+      }
+  }
+
+-- ---------------------------------------------------------------------------
 -- The deliberation morphism
 -- ---------------------------------------------------------------------------
 
@@ -394,12 +426,18 @@ pickHigherSeverity a b
 -- regardless of which rule fires (except 'RuleConatusOverride',
 -- which forces 'Just' 'RecoveryConatusGate' wholesale).
 reconcile
-  :: Salience
+  :: Maybe (Plan -> Bool)   -- ^ Phase 10: optional courtesy predicate.
+                              -- When 'RuleTiedFallback' fires and this is
+                              -- 'Just p', the tie-break prefers the
+                              -- proposal that satisfies @p@, but only
+                              -- if exactly one does.  Never widens the
+                              -- admissible set.
+  -> Salience
   -> HolisticProposal
   -> FormalProposal
   -> Field
   -> Deliberation
-reconcile salience hp fp fd =
+reconcile mCourtesy salience hp fp fd =
   let hPlan          = groundIn hp
       fPlan          = probe fp fd
       driver         = salienceDriver salience
@@ -452,7 +490,13 @@ reconcile salience hp fp fd =
                in mkResult withRecovery rule
 
         _ ->
-              let fallback = fPlan { planRecoveryCause = mergedRecovery }
+              let baseFallback = fPlan { planRecoveryCause = mergedRecovery }
+                  fallback = case mCourtesy of
+                    Nothing -> baseFallback
+                    Just pred ->
+                      case (pred hPlan, pred fPlan) of
+                        (True, False) -> hPlan { planRecoveryCause = mergedRecovery }
+                        _             -> baseFallback
                in mkResult fallback RuleTiedFallback
 
 -- ---------------------------------------------------------------------------

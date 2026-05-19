@@ -77,11 +77,14 @@ record.
 
 ## Long term
 
-1. **Phase 7 — calibration of `defaultSalienceWeights` and the
-   four Phase-5.5d heuristics** (Resonance, Consolidation,
-   Counterfactual, Atmosphere) against production-grade trace
-   corpora. The current weights and formulas are defensible
-   per ADR-0009/0010 but not empirically tuned.
+1. ~~**Phase 7 — structural calibration infrastructure**~~
+    **(completed 2026-05-18)**. `FieldHeuristics` record + 3 pure
+    compute functions extracted from Phase-5.5d inline constants;
+    `defaultSalienceWeights` property-test lifeness gates (range,
+    monotonicity, Conatus-priority) landed in
+    `Test.Suite.SelfSalience`. Empirical tuning of weights against
+    production trace corpora remains deferred until labelled data
+    is available.
 2. **Phase 8 Package D — genuine family-level divergence** (queued).
    Packages A/B/C landed (see `progress.txt`): the deliberation
    framework now produces a `Deliberation` per turn, with
@@ -108,5 +111,26 @@ record.
    discipline.
 5. Broader interoperability documentation for external integrators.
 6. **Effects-interpreter conatus-aware prior** (ADR-0007 §4.3).
-   Long-horizon. Effects today are dispatched without conatus-weighted
-   priority.
+    Long-horizon. Effects today are dispatched without conatus-weighted
+    priority.
+7. **Runtime override of `FieldHeuristics`** — wire the record through
+    `PrepareStatic` / `TurnInput` so env-var or config-file can override
+    `defaultFieldHeuristics`. Available when a concrete consumer
+    (dashboard, A/B harness, or corpus replay) emerges; currently
+    hardcoded defaults reproduce Phase-5.5d behaviour exactly.
+8. ~~**Phase 9 — Essence selection infrastructure**
+    (ADR-0012, accepted 2026-05-19).~~ **Landed 2026-05-19.**
+    ~~**Phase 10 — Forced commitment and post-commitment guard.**~~
+    **Landed 2026-05-19.** `essenceCommitmentEnabled` flag with
+    forced commitments (`shouldCommit` → `commit`), post-commitment
+    `validatePlan` guard in `Finalize.Commit`, `EssenceRupture`
+    exception, sliding-window Conatus erosion, reconcile-time
+    courtesy that never widens. Eight regression locks
+    (E6, E7a/b, Q7, C1 + 3 unit) in `Test.Suite.SelfEssenceCommit`.
+    Default `essenceCommitmentEnabled = False`; flag-flip in
+    production deferred to a separate operations ticket once a
+    longer-session corpus exists.
+    - **Out of scope, deferred to future ADRs**:
+      cross-session essence persistence, multiple essences per
+      session, external essence summons, essence-aware
+      `ConatusWeights`.

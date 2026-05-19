@@ -36,6 +36,7 @@ import QxFx0.Core.TurnPipeline.Types
   )
 import QxFx0.Core.TurnPolicy (routeFamily)
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0)
+import QxFx0.Self.Essence (Essence(..))
 import QxFx0.Types
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
@@ -65,6 +66,7 @@ planRouteEffects ss ti ts =
           intuitPosterior
           (tiConatusEnergy ti)
           (tiField ti)
+          Nothing
       family = rdFamily rd
       atomTags = map maTag (asAtoms atomSet)
    in RouteEffectPlan
