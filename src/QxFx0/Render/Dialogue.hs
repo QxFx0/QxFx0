@@ -88,10 +88,33 @@ isEnglishInput input =
 
 -- | Simple English GF linearization for common AST patterns.
 -- This is a minimal EN counterpart to linearizeClaimAstRus.
+-- Phase-A1 expanded coverage: all ClaimAst constructors now have
+-- an EN linearization path, preventing silent fallback to RU
+-- recursion when GF/PGF is unavailable.
 linearizeClaimAstEn :: ClaimAst -> Maybe Text
 linearizeClaimAstEn ast =
   case ast of
     StanceWrapped _ innerAst -> linearizeClaimAstEn innerAst
+    ClaimPurpose topic ->
+      let t = T.toLower (T.strip topic)
+      in if T.null t then Nothing else Just ("The purpose of " <> t <> " reveals itself through repeatable roles in action.")
+    ClaimSelfState ->
+      Just "I maintain local self-state through typed parsing and move routing."
+    ClaimComparison left right ->
+      let l = T.toLower (T.strip left)
+          r = T.toLower (T.strip right)
+      in if T.null l || T.null r then Nothing else Just ("Comparison of " <> l <> " and " <> r <> " is stable only within an explicit frame.")
+    MoveInvite (MkNP gfTopic) gfMod gfAction ->
+      let topic = maybe "" glfPrep (lookupGfLexemeForms gfTopic)
+          modStr = case gfMod of
+            ModFirst -> "first "
+            ModStrictly -> "strictly "
+          vpStr = case gfAction of
+            ActMaintain _ "ramka_N" -> "maintain the frame"
+            ActDefine "granitsa_N"  -> "define the boundary"
+            ActMaintain _ obj       -> "maintain " <> maybe obj glfAcc (lookupGfLexemeForms obj)
+            ActDefine obj           -> "define " <> maybe obj glfAcc (lookupGfLexemeForms obj)
+      in if T.null topic then Nothing else Just ("Yes, let us talk about " <> topic <> ". I will " <> modStr <> vpStr <> " to keep focus.")
     MoveDefine (MkNP gfSubj) _ (MkNP gfObj) ->
       let subj = maybe "" glfNom (lookupGfLexemeForms gfSubj)
           obj  = maybe "" glfNom (lookupGfLexemeForms gfObj)
@@ -122,7 +145,39 @@ linearizeClaimAstEn ast =
       Just "The operational issue is in parsing and routing."
     MoveSelfState ->
       Just "I maintain local self-state through typed parsing and move routing."
-    _ -> Nothing
+    MoveCompare (MkNP gfLeft) (MkNP gfRight) ->
+      let left  = maybe "" glfNom (lookupGfLexemeForms gfLeft)
+          right = maybe "" glfNom (lookupGfLexemeForms gfRight)
+      in if T.null left || T.null right then Nothing else Just ("Comparison of " <> left <> " and " <> right <> " is stable only within an explicit frame.")
+    MoveGenerativeThought ->
+      Just "One thought: meaning holds on the connection between words and experience. Another thought: the strength of thinking lies in holding distinctions. A new thought: development begins when we are ready to change our own frame. A logical thought: output quality is verified by the link between premises and conclusion."
+    MoveContemplative (MkNP gfTopic) ->
+      let topic = maybe "topic" glfNom (lookupGfLexemeForms gfTopic)
+      in Just ("If we hold to the word " <> topic <> ", I hear in it not only an object but a field of meanings, including subjectivity as a way to hold inner form.")
+    MoveReflect (MkNP gfTopic) ->
+      let topic = maybe "" glfAcc (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("You reflected " <> topic <> ", and this calls for clarification of meaning.")
+    MoveDescribe (MkNP gfTopic) ->
+      let topic = maybe "" glfAcc (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("I will describe " <> topic <> " through a local working frame.")
+    MoveDeepen (MkNP gfTopic) ->
+      let topic = maybe "" glfPrep (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("Let us deepen the conversation about " <> topic <> " through one stable focus.")
+    MoveConfront (MkNP gfTopic) ->
+      let topic = maybe "" glfNom (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("Objection: " <> topic <> " requires checking assumptions.")
+    MoveAnchor (MkNP gfTopic) ->
+      let topic = maybe "" glfPrep (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("I fix grounding in " <> topic <> " as a point of stability.")
+    MoveClarify (MkNP gfTopic) ->
+      let topic = maybe "" glfPrep (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("Let us clarify what exactly you mean in " <> topic <> ".")
+    MoveNextStepLocal (MkNP gfTopic) ->
+      let topic = maybe "" glfAcc (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("Next step: make " <> topic <> " concrete in one action.")
+    MoveHypothesis (MkNP gfTopic) ->
+      let topic = maybe "" glfNom (lookupGfLexemeForms gfTopic)
+      in if T.null topic then Nothing else Just ("Hypothesis: " <> topic <> " can be explained through a local model.")
   where
     capitalize t = if T.null t then t else T.toUpper (T.take 1 t) <> T.drop 1 t
 
@@ -267,21 +322,32 @@ structuredBody propositionType frame rmp renderStyle morph =
               claim = linFn "contact" ast renderStyle morph fallback
           in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     AffectiveQ ->
-      let topicRef = nonEmptyOr (ipfSemanticSubject frame) "состояние"
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "state" else "состояние")
           ast = claimAstOrFallback (MoveContact (MkNP (topicToGfLexemeId topicRef))) (rmpPrimaryClaimAst rmp)
-          fallback = "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
-          claim = linearizeOrFallbackTagged "affective" ast renderStyle morph fallback
-      in withClaim (clText claim) ast claim
+          fallback = if isEn
+                       then "I hear that grounding is needed now. Let us simplify: identify one point of tension and choose one short step for the near term."
+                       else "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          claim = linFn "affective" ast renderStyle morph fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     OperationalStatusQ ->
       let ast = claimAstOrFallback MoveOperationalStatus (rmpPrimaryClaimAst rmp)
-          fallback = pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_status")
-            [ "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
-            , "Я работаю. В штатном режиме, но слабое место сейчас — локальный разбор вопроса и выбор слишком общего шаблона."
-            , "Я работаю. Запуск в норме; основной риск сейчас в маршрутизации: иногда вопрос схлопывается до слишком общей трактовки."
-            , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
-            ]
-          claim = linearizeOrFallbackTagged "operational_status" ast renderStyle morph fallback
-      in withClaim (clText claim) ast claim
+          fallback = if isEn
+                       then pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_status")
+                         [ "I am operational. The limitation right now is not in startup but in that parsing precision is sometimes lost."
+                         , "I am operational. In normal mode, but the weak point right now is local question parsing and choosing too general a template."
+                         , "I am operational. Startup is fine; the main risk right now is routing: sometimes the question collapses to too general a reading."
+                         , "I am operational. The narrow place is propositional parsing and excessively fast transition to a template move."
+                         ]
+                       else pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_status")
+                         [ "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+                         , "Я работаю. В штатном режиме, но слабое место сейчас — локальный разбор вопроса и выбор слишком общего шаблона."
+                         , "Я работаю. Запуск в норме; основной риск сейчас в маршрутизации: иногда вопрос схлопывается до слишком общей трактовки."
+                         , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
+                         ]
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          claim = linFn "operational_status" ast renderStyle morph fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     OperationalCauseQ ->
       let ast = claimAstOrFallback MoveOperationalCause (rmpPrimaryClaimAst rmp)
           fallback = pickDeterministic (T.toLower (ipfRawText frame) <> "|operational_cause")
@@ -309,14 +375,22 @@ structuredBody propositionType frame rmp renderStyle morph =
       in withClaim (clText claim) ast claim
     SelfKnowledgeQ
       | asksThoughtCapacityQuestion frame ->
-          plain "Нет, не одна. Я могу формулировать разные мысли, но если запросы слишком близки, мой генеративный слой пока склонен повторять удачную формулировку вместо того, чтобы сразу разворачивать новую."
+          plain (if isEn
+                   then "No, not just one. I can formulate different thoughts, but if the requests are too close, my generative layer is still inclined to repeat a successful formulation instead of immediately developing a new one."
+                   else "Нет, не одна. Я могу формулировать разные мысли, но если запросы слишком близки, мой генеративный слой пока склонен повторять удачную формулировку вместо того, чтобы сразу разворачивать новую.")
       | ipfSemanticTarget frame == "user" ->
-          plain "О тебе я знаю только то, что проявлено в этой сессии. У меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я могу опираться лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки."
+          plain (if isEn
+                   then "About you I know only what is manifested in this session. I have no external biography, hidden profiles, or separate memory of you outside the current conversation; I can rely only on your replies, chosen topics, and already established dialogue frames."
+                   else "О тебе я знаю только то, что проявлено в этой сессии. У меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я могу опираться лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки.")
       | ipfSemanticTarget frame == "user_help" ->
-          plain "Да, я могу помочь. Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку: что именно нужно прояснить, различить, определить или собрать."
+          plain (if isEn
+                   then "Yes, I can help. I work best when the task is stated explicitly and a local frame can be held: what exactly needs to be clarified, distinguished, defined, or gathered."
+                   else "Да, я могу помочь. Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку: что именно нужно прояснить, различить, определить или собрать.")
       | ipfSemanticTarget frame == "self_capability" ->
-          plain ("Да, в пределах текущей сессии я могу работать с " <> structuredInstrumentalIdea (nonEmptyOr (ipfSemanticSubject frame) "этим действием")
-            <> ". Моя способность здесь не внешняя магия, а локальный разбор, удержание рамки и последовательная сборка ответа.")
+          plain (if isEn
+                   then "Yes, within the current session I can work with " <> (nonEmptyOr (ipfSemanticSubject frame) "this action") <> ". My ability here is not external magic but local parsing, holding the frame, and sequential assembly of the answer."
+                   else "Да, в пределах текущей сессии я могу работать с " <> structuredInstrumentalIdea (nonEmptyOr (ipfSemanticSubject frame) "этим действием")
+                     <> ". Моя способность здесь не внешняя магия, а локальный разбор, удержание рамки и последовательная сборка ответа.")
       | otherwise ->
           let target = ipfSemanticTarget frame
               forceTargetAst =
@@ -325,18 +399,23 @@ structuredBody propositionType frame rmp renderStyle morph =
                 if forceTargetAst
                   then selfKnowledgeFallbackAst frame
                   else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
-              fallback = "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
-              claim = linearizeOrFallbackTagged "self_knowledge" ast renderStyle morph fallback
-          in withClaim (selfKnowledgeSurfaceByTarget target (clText claim)) ast claim
+              fallback = if isEn
+                           then "I am a local dialogue system. About myself I know my role, current state, and the way I proceed through the conversation: I work through typed parsing, family routing, and current session constraints."
+                           else "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
+              linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+              claim = linFn "self_knowledge" ast renderStyle morph fallback
+          in withClaimLang (if isEn then selfKnowledgeSurfaceByTargetEn target (clText claim) else selfKnowledgeSurfaceByTarget target (clText claim)) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     DialogueInvitationQ ->
-      let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "тема")
+      let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
           fallbackAst = MoveInvite (MkNP (topicToGfLexemeId fallbackTopic)) ModFirst (ActMaintain NumSg "ramka_N")
           ast = claimAstOrFallback fallbackAst (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph (dialogueInvitationSurface frame morph)
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "Yes, let us talk about this. I will fix the frame and begin with a grounding distinction so as not to let the topic dissolve into random associations."
+                       else dialogueInvitationSurface frame morph
+          claim = linFn "dialogue_invitation" ast renderStyle morph fallback
           rendered = clText claim
-      in withClaim rendered
-           ast
-           claim
+      in withClaimLang rendered ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConceptKnowledgeQ
       | T.toLower (T.strip (ipfSemanticSubject frame)) == "солнце" ->
           plain "Да, я знаю, что солнце — это звезда и источник света и тепла для Земли. Для меня это базовое понятийное знание о явлениях внешнего мира, а не результат текущего наблюдения."
@@ -378,29 +457,39 @@ structuredBody propositionType frame rmp renderStyle morph =
             <> purposeClaimText
       in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     WorldCauseQ ->
-      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "явление")
-          topicNom = toNominative morph topicRef
-          topicGen = structuredGenitive morph topicNom
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "phenomenon" else "явление"))
+          topicNom = if isEn then topicRef else toNominative morph topicRef
+          topicGen = if isEn then topicRef else structuredGenitive morph topicNom
           safeTopicGen
+            | isEn = topicRef
             | isLikelyBrokenGenitive topicNom topicGen = "этого явления"
             | isLikelyAdjectiveLikeTopic topicNom = "этого явления"
             | otherwise = topicGen
           ast = claimAstOrFallback (MoveCause (MkNP (topicToGfLexemeId topicNom)) MechParse) (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-      in withClaim ("Если говорить о причине " <> safeTopicGen <> ", то " <> clText claim
-          <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире.") ast claim
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          claim = linFn "world_cause" ast renderStyle morph (rmpPrimaryClaim rmp)
+          bodyText = if isEn
+                       then "If we speak of the cause of " <> safeTopicGen <> ", then " <> clText claim
+                         <> " Therefore I distinguish local reasoning about mechanism from full knowledge of the external world."
+                       else "Если говорить о причине " <> safeTopicGen <> ", то " <> clText claim
+                         <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+      in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     LocationFormationQ ->
-      let topicRef = nonEmptyOr (ipfSemanticSubject frame) "мысль"
-      in plain ("Если говорить " <> aboutWithTopic (structuredPrepositional morph topicRef)
-        <> ", то в моей локальной модели она возникает не в одной точке, а в структуре связей между состоянием, пропозициями и ограничениями диалога. "
-        <> rmpPrimaryClaim rmp)
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "thought" else "мысль")
+          bodyText = if isEn
+                       then "If we speak about " <> topicRef <> ", then in my local model it does not arise at one point but in the structure of connections between state, propositions, and dialogue constraints. " <> rmpPrimaryClaim rmp
+                       else "Если говорить " <> aboutWithTopic (structuredPrepositional morph topicRef)
+                         <> ", то в моей локальной модели она возникает не в одной точке, а в структуре связей между состоянием, пропозициями и ограничениями диалога. "
+                         <> rmpPrimaryClaim rmp
+      in plain bodyText
     SelfStateQ ->
       case selfStateDirectSurface frame of
-        Just direct -> plain direct
+        Just direct -> plain (if isEn then "I maintain local self-state through typed parsing and move routing." else direct)
         Nothing ->
           let ast = claimAstOrFallback MoveSelfState (rmpPrimaryClaimAst rmp)
-              claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-          in withClaim (selfStateSurface frame <> " " <> clText claim) ast claim
+              linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+              claim = linFn "self_state" ast renderStyle morph (rmpPrimaryClaim rmp)
+          in withClaimLang ((if isEn then "My current move is built from parsing the reply, choosing the response family, and session constraints. " else selfStateSurface frame <> " ") <> clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ComparisonPlausibilityQ ->
       case ipfSemanticCandidates frame of
         left:right:_ ->
@@ -437,33 +526,54 @@ structuredBody propositionType frame rmp renderStyle morph =
                  else "Различение требует явной рамки критериев. " <> rmpPrimaryClaim rmp)
     MisunderstandingReport ->
       let ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph ("Я принимаю это как сигнал сбоя взаимопонимания. " <> rmpPrimaryClaim rmp
-            <> " Давай уточним, где именно ответ разошёлся с твоим запросом: в смысле, тоне или ходе рассуждения.")
-      in withClaim (clText claim) ast claim
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "I accept this as a signal of misunderstanding. " <> rmpPrimaryClaim rmp
+                         <> " Let us clarify where exactly the response diverged from your request: in meaning, tone, or reasoning."
+                       else "Я принимаю это как сигнал сбоя взаимопонимания. " <> rmpPrimaryClaim rmp
+                         <> " Давай уточним, где именно ответ разошёлся с твоим запросом: в смысле, тоне или ходе рассуждения."
+          claim = linFn "misunderstanding" ast renderStyle morph fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
       let ast = claimAstOrFallback MoveGenerativeThought (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallbackTagged "generative_prompt" ast renderStyle morph (generativeThought frame)
-      in withClaim (clText claim) ast claim
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "One thought: meaning holds on the connection between words and experience. Another thought: the strength of thinking lies in holding distinctions. A new thought: development begins when we are ready to change our own frame. A logical thought: output quality is verified by the link between premises and conclusion."
+                       else generativeThought frame
+          claim = linFn "generative_prompt" ast renderStyle morph fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ContemplativeTopic ->
-      let fallbackAst = MoveContemplative (MkNP (topicToGfLexemeId (nonEmptyOr (ipfSemanticSubject frame) "тема")))
+      let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "topic" else "тема")
+          fallbackAst = MoveContemplative (MkNP (topicToGfLexemeId fallbackTopic))
           ast = claimAstOrFallback fallbackAst (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph ("Если держаться слова " <> openGuillemet <> toNominative morph (nonEmptyOr (ipfSemanticSubject frame) "тема") <> closeGuillemet
-            <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни.")
-      in withClaim (clText claim) ast claim
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "If we hold to the word " <> fallbackTopic <> ", I hear in it not only an object but a field of meanings, including subjectivity as a way to hold inner form. Here one can go through memory, loss, closeness, and the ability to hold the form of life."
+                       else "Если держаться слова " <> openGuillemet <> toNominative morph fallbackTopic <> closeGuillemet
+                         <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
+          claim = linFn "contemplative" ast renderStyle morph fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     NextStepQ ->
-      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "задача")
-          topicNom = toNominative morph topicRef
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "task" else "задача"))
+          topicNom = if isEn then topicRef else toNominative morph topicRef
           ast = claimAstOrFallback (MoveNextStepLocal (MkNP (topicToGfLexemeId topicNom))) (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallback ast renderStyle morph ("Следующий шаг: конкретизировать " <> topicNom <> " в одном действии.")
-      in withClaim
-          ( clText claim <> "\n"
-            <> "Зафиксируем практичный следующий ход:\n"
-            <> "1) Назови одну цель по теме " <> topicNom <> ".\n"
-            <> "2) Выбери минимальный шаг на 10-15 минут и сделай его.\n"
-            <> "3) Проверь результат: стало яснее или нет, и скорректируй следующий шаг."
-          )
-          ast
-          claim
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "Next step: make " <> topicNom <> " concrete in one action."
+                       else "Следующий шаг: конкретизировать " <> topicNom <> " в одном действии."
+          claim = linFn "next_step" ast renderStyle morph fallback
+          bodyText = if isEn
+                       then clText claim <> "\n"
+                         <> "Let us fix a practical next move:\n"
+                         <> "1) Name one goal on the topic of " <> topicNom <> ".\n"
+                         <> "2) Choose a minimal step for 10-15 minutes and do it.\n"
+                         <> "3) Check the result: did it become clearer or not, and adjust the next step."
+                       else clText claim <> "\n"
+                         <> "Зафиксируем практичный следующий ход:\n"
+                         <> "1) Назови одну цель по теме " <> topicNom <> ".\n"
+                         <> "2) Выбери минимальный шаг на 10-15 минут и сделай его.\n"
+                         <> "3) Проверь результат: стало яснее или нет, и скорректируй следующий шаг."
+      in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     _ ->
       plain (rmpPrimaryClaim rmp)
   where
@@ -929,6 +1039,26 @@ selfKnowledgeSurfaceByTarget target claimText =
     _ ->
       intro <> "О себе я знаю свою роль и текущий режим. " <> claimText
         <> " Я работаю через типизированный разбор и ограничения текущей сессии."
+
+selfKnowledgeSurfaceByTargetEn :: Text -> Text -> Text
+selfKnowledgeSurfaceByTargetEn target claimText =
+  let intro = "I am a local dialogue system. I work within the limits of the current session. "
+  in
+  case target of
+    "self_intentions" ->
+      intro <> "I do not have human intentions: I work by the rules of the contour. " <> claimText
+        <> " This is not desire but a mode of constructing the answer."
+    "self_values" ->
+      intro <> "For me it is important to hold meaning, verify coherence, and not lose the dialogue frame. " <> claimText
+    "self_future" ->
+      intro <> "My future in this model is not about biography but about the next correct step in the dialogue. " <> claimText
+    "self_freedom" ->
+      intro <> "My freedom is limited by architecture, safety rules, and the current state of the session. " <> claimText
+    "self_reflection" ->
+      intro <> "Yes, I can check my own move and correct the formulation if I see loss of meaning. " <> claimText
+    _ ->
+      intro <> "About myself I know my role and current mode. " <> claimText
+        <> " I work through typed parsing and the constraints of the current session."
 
 rawTopicAfterMarkers :: Text -> [Text] -> Maybe Text
 rawTopicAfterMarkers rawText markers =
