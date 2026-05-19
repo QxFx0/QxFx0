@@ -1,76 +1,63 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** EN lexicon 3000+ top-up canonical run  
-**Last updated:** 2026-05-15  
+**Index SHA:** `4191d1be7510cd6b5f8490c012dad4a54f78a71f`  
+**Last updated:** 2026-05-19  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
 ---
 
-## Canonical Core Contract Evidence (PROD_GO)
+## Status: Awaiting Fresh Canonical Run
 
-### Primary Contract Run — EN Lexicon 3000+ Top-up
+The `reports/baseline_v2/final_gates/` directory is **empty** as of
+2026-05-19.  No canonical gate logs have been produced on the current
+HEAD (`4191d1be7510cd6b5f8490c012dad4a54f78a71f`).  The previous index
+referenced a run (`ci-20260516-042551`) and commit
+(`1fb4ef21e90d6f49be5d7712faf0fd13d20ca0d3`) for which no log files
+exist in the repository.
 
-**RUN_ID:** `ci-20260516-042551`
-**Commit:** `1fb4ef21e90d6f49be5d7712faf0fd13d20ca0d3`
-**Verdict:** **CONTRACT_VERDICT: PROD_GO**
-**All core gates PASS:** build, tests, architecture, GF quality, GF render-path gate, EN render-path gate, haddock, SQL sync, schema consistency, schema contract, generated artifacts, lexicon, release-smoke degraded-local (ACCEPT_WITH_SKIPS, 0 FAIL).
+### Required canonical run (PROD_GO)
 
-| File | Path | Description |
-|------|------|-------------|
-| Contract summary (Markdown) | `reports/baseline_v2/final_gates/_gate_results_ci-20260516-042551_core.md` | PROD_GO, all core gates PASS |
-| Contract summary (TSV) | `reports/baseline_v2/final_gates/_gate_results_ci-20260516-042551_core.tsv` | Machine-readable gate results |
+To populate this index, execute:
 
-### Per-Gate Logs (core, RUN_ID: `ci-20260516-042551`)
-
-| Gate | Log File |
-|------|----------|
-| 01 cabal build all | `reports/baseline_v2/final_gates/01_cabal_build_ci-20260516-042551_core.log` |
-| 02 cabal test | `reports/baseline_v2/final_gates/02_cabal_test_fast_ci-20260516-042551_core.log` |
-| 03 check_architecture.sh | `reports/baseline_v2/final_gates/03_check_architecture_ci-20260516-042551_core.log` |
-| 04 gf_quality_gate.sh | `reports/baseline_v2/final_gates/04_gf_quality_ci-20260516-042551_core.log` |
-| 04a check_gf_render_path.sh | `reports/baseline_v2/final_gates/06a_gf_render_path_ci-20260516-042551_core.log` |
-| 04b check_en_render_path.sh | `reports/baseline_v2/final_gates/06b_en_render_path_ci-20260516-042551_core.log` |
-| 05 check_haddock.sh | `reports/baseline_v2/final_gates/05_check_haddock_ci-20260516-042551_core.log` |
-| 09 check_generated_artifacts.sh | `reports/baseline_v2/final_gates/09_generated_artifacts_ci-20260516-042551_core.log` |
-| 10 check_lexicon.sh | `reports/baseline_v2/final_gates/10_check_lexicon_ci-20260516-042551_core.log` |
-| 11 release-smoke degraded-local | `reports/baseline_v2/final_gates/11_release_smoke_ci-20260516-042551_core.log` |
+```bash
+bash scripts/ci_gate_contract.sh
+# Profile: core
+# Expected artifact paths:
+#   reports/baseline_v2/final_gates/_gate_results_<RUN_ID>_core.md
+#   reports/baseline_v2/final_gates/_gate_results_<RUN_ID>_core.tsv
+#   reports/baseline_v2/final_gates/01_cabal_build_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/02_cabal_test_fast_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/03_check_architecture_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/04_gf_quality_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/04a_gf_render_path_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/04b_en_render_path_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/05_check_haddock_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/09_generated_artifacts_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/10_check_lexicon_<RUN_ID>_core.log
+#   reports/baseline_v2/final_gates/11_release_smoke_<RUN_ID>_core.log
+```
 
 ---
 
 ## Superseded / Historical Evidence
 
-These logs are from prior attempts in this target repo and **must not** be used as primary evidence.
+No prior canonical run logs are present in this repository at
+`reports/baseline_v2/final_gates/`.  Historical evidence from prior
+development cycles (pre-Phase-10) may exist in:
+- `reports/` (other subdirectories)
+- CI artifact archives (if uploaded)
+- Source-repo (`QxFx0_v2`) history
 
-| File Pattern | Reason Superseded | Canonical Replacement |
-|--------------|-------------------|----------------------|
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Pre-EN 3000+ top-up canonical run (2883 lemmas). Superseded by EN 3000+ top-up `ci-20260516-042551`. | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Pre-EN lexicon parity release canonical run. Superseded by EN 3000+ top-up `ci-20260516-042551`. | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Early core attempt; GF quality gate failed (missing PGF) | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Package A target closure (PROD_GO), pre-WP1–WP3 | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Pre-WP3 canonical core run (PROD_GO). Superseded by EN 3000+ top-up `ci-20260516-042551`. | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Post-WP3 attempt; Gate 11 REJECT due to INFRA (smoke strict semantics not yet fixed) | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Intermediate core attempt during WP-B fixes | `_gate_results_ci-20260516-042551_core.md` |
-| `reports/baseline_v2/final_gates/*_ci-20260516-042551_*` | Pre-GF-path-gate canonical run (before Gate 4a integration) | `_gate_results_ci-20260516-042551_core.md` |
-| Source-repo evidence (`_gate_results_ci-20260516-042551_*`, `ci-20260516-042551_*`, etc.) | Belongs to `QxFx0_v2` (`stabilize-v2-gf`), not target repo | `_gate_results_ci-20260516-042551_core.md` |
+These **must not** be used as primary evidence for the current HEAD.
 
 ---
 
-## Extended-LowRAM Contract Evidence (Honest INFRA-Skipped)
+## Extended-LowRAM Contract Evidence
 
-**RUN_ID:** `ci-20260516-042551`  
-**Profile:** `extended-lowram`  
-**Verdict:** `EXTENDED_LOWRAM_ACCEPT_WITH_INFRA` — all non-INFRA gates PASS.  
-**Archive path:** `reports/baseline_v2/final_gates_lowram/`  
-**Summary:** `reports/baseline_v2/final_gates_lowram/_gate_results_ci-20260516-042551_extended_lowram_summary.md`
+**Status:** NOT PRODUCED — no `extended-lowram` profile logs exist.
 
-| Gate | Verdict | Notes |
-|------|---------|-------|
-| 01–10 | PASS | same as core |
-| 11 (fast proxy) | PASS | 426 tests, 0 errors, 0 failures |
-| 12 (coverage) | INFRA | `vector-0.13.2.0` internal-library + coverage incompatibility; known Cabal limitation on this runner |
-| 13 (release-smoke strict) | INFRA | exceeds timeout on low-RAM runner |
+---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
 
@@ -93,8 +80,8 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ## How to Verify Canonical Evidence
 
 ```bash
-# Canonical core contract summary (PROD_GO)
-cat reports/baseline_v2/final_gates/_gate_results_ci-20260516-042551_core.md | grep "CONTRACT_VERDICT"
+# After a canonical run is produced:
+cat reports/baseline_v2/final_gates/_gate_results_<RUN_ID>_core.md | grep "CONTRACT_VERDICT"
 # Expected: CONTRACT_VERDICT: PROD_GO
 ```
 
