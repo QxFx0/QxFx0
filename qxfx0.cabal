@@ -371,6 +371,7 @@ common test-common
     Test.Suite.SelfDeliberation
     Test.Suite.SelfEssence
     Test.Suite.SelfEssenceCommit
+    Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d
 
 test-suite qxfx0-test-unit

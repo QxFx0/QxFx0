@@ -1,0 +1,5 @@
+Error:
+    Internal libraries only supported with per-component builds.
+    Per-component builds were disabled because program coverage is enabled
+    In the package 'vector-0.13.2.0'
+

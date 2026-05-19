@@ -60,7 +60,7 @@ echo "  [2e] Core→Policy imports — port modules removed; direct imports allo
 
 echo "  [3] Bridge modules must not hardcode spec paths..."
 while IFS= read -r file; do
-  if rg -n '"spec/|"semantic_rules\.dl"' "$file" | rg -v ':[0-9]+:\s*--' >/dev/null 2>&1; then
+  if rg -n '"spec/|"semantic_rules\.dl"' "$file" | rg -v '[0-9]+:\s*--' >/dev/null 2>&1; then
     fail_violation "$file contains hardcoded spec path"
   fi
 done < <(find "$SRC/QxFx0/Bridge" -name "*.hs" 2>/dev/null || true)
@@ -94,35 +94,35 @@ fi
 
 echo "  [5] No SomeException in Bridge/Semantic/Core/Resources/app source (use IOException/ExceptionPolicy)..."
 while IFS= read -r file; do
-  if rg -n 'SomeException' "$file" | rg -v ':[0-9]+:\s*--' >/dev/null 2>&1; then
+  if rg -n 'SomeException' "$file" | rg -v '[0-9]+:\s*--' >/dev/null 2>&1; then
     fail_violation "$file uses SomeException (use IOException/ExceptionPolicy instead)"
   fi
 done < <(find "$SRC/QxFx0/Bridge" "$SRC/QxFx0/Semantic" "$SRC/QxFx0/Core" "$SRC/QxFx0/Resources" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [6] No partial read in source (use readMaybe/parseTimeM)..."
 while IFS= read -r file; do
-  if rg -n '\bread\s+\S+::\s*Int\b|\bread\s+"' "$file" | rg -v ':[0-9]+:\s*--' >/dev/null 2>&1; then
+  if rg -n '\bread\s+\S+::\s*Int\b|\bread\s+"' "$file" | rg -v '[0-9]+:\s*--' >/dev/null 2>&1; then
     fail_violation "$file uses partial read (use readMaybe/parseTimeM)"
   fi
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [7] No bare head/tail/init/last in source (use safe alternatives)..."
 while IFS= read -r file; do
-  if rg -n '\b(head|tail|init|last)\s+\S' "$file" | rg -v ':[0-9]+:\s*--|readMaybe|takeBaseName|import' >/dev/null 2>&1; then
+  if rg -n '\b(head|tail|init|last)\s+\S' "$file" | rg -v '[0-9]+:\s*--|readMaybe|takeBaseName|import' >/dev/null 2>&1; then
     fail_violation "$file uses bare partial functions (head/tail/init/last)"
   fi
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [8] No bare fail in IO context in source (use throwQxFx0 from ExceptionPolicy)..."
 while IFS= read -r file; do
-  if rg -n '\bfail\s+"' "$file" | rg -v ':[0-9]+:\s*--|FromJSON|ToJSON|Parser|Value' >/dev/null 2>&1; then
+  if rg -n '\bfail\s+"' "$file" | rg -v '[0-9]+:\s*--|FromJSON|ToJSON|Parser|Value' >/dev/null 2>&1; then
     fail_violation "$file uses bare fail in IO context (use throwQxFx0)"
   fi
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [8b] No raw userError in source (use throwQxFx0 from ExceptionPolicy)..."
 while IFS= read -r file; do
-  if rg -n '\bioError\s*\(\s*userError\b|\bthrowIO\s*\(\s*userError\b' "$file" | rg -v ':[0-9]+:\s*--' >/dev/null 2>&1; then
+  if rg -n '\bioError\s*\(\s*userError\b|\bthrowIO\s*\(\s*userError\b' "$file" | rg -v '[0-9]+:\s*--' >/dev/null 2>&1; then
     fail_violation "$file uses raw userError (use throwQxFx0)"
     continue
   fi

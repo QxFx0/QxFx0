@@ -502,11 +502,17 @@ testConatusErosionFiresUnderCorrectedFloor = do
         }
       ws = replicate 8 (mkWitness 5.0)
       traj = emptyTrajectory { etWitnesses = Seq.fromList ws }
-  -- With default floor = 0.5 (Phase 10 default), 5.0 is NOT sub-floor
-  -- → no trigger.  Conatus erosion only fires when all N witnesses
-  -- are below the structural floor.
+  -- With 'defaultEssenceModulation' (floor = 7.0), all witnesses
+  -- are sub-floor → Conatus erosion fires.
   case shouldCommit defaultEssenceModulation traj of
+    Just TriggerConatusErosion -> pure ()
+    other -> assertFailure
+      ("expected Just TriggerConatusErosion under corrected floor, got "
+       ++ show other)
+  -- With 'phase9EssenceModulation' (floor = 0.5), 5.0 is NOT sub-floor
+  -- → no trigger.  Regression lock against accidental reversion.
+  case shouldCommit phase9EssenceModulation traj of
     Nothing -> pure ()
     other -> assertFailure
-      ("expected Nothing on scalar 5.0 with floor 0.5, got "
+      ("Phase 9 buggy floor should NOT trigger on scalar 5.0, got "
        ++ show other)

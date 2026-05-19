@@ -213,7 +213,7 @@ PY
 echo "=== QxFx0 Verification Gate ==="
 
 echo "[1/9] Cabal build ..."
-if BUILD_OUT="$(run_cabal_check "cabal build all 2>&1")"; then
+if BUILD_OUT="$(run_cabal_check "cabal build all -j1 2>&1")"; then
   BUILD_ERRORS=$(echo "$BUILD_OUT" | grep -c 'error:' || true)
   if [ "$BUILD_ERRORS" -gt 0 ]; then
     echo "  FAIL ($BUILD_ERRORS errors)"

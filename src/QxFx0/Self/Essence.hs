@@ -45,6 +45,7 @@ module QxFx0.Self.Essence
     -- * Modulation
   , EssenceModulation (..)
   , defaultEssenceModulation
+  , phase9EssenceModulation
     -- * Pure morphisms
   , emptyEssence
   , emptyTrajectory
@@ -219,14 +220,13 @@ data EssenceModulation = EssenceModulation
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
--- | Phase 9 default modulation parameters.
---
--- All parameters calibrated against the synthetic unit-test
--- generators in 'Test.Suite.SelfEssence'.  Production runtime
--- calibration (long-session corpus replay) is deferred to
--- a future Phase 10 addendum.
-defaultEssenceModulation :: EssenceModulation
-defaultEssenceModulation = EssenceModulation
+-- | Original Phase 9 defaults, kept for backward-compat regression
+-- locks.  Note: @emConatusStructuralFloor = 0.5@ was a unit-mismatch
+-- error (calibrated against @arbitraryUnitDouble@ generators in
+-- 'Test.Suite.SelfEssence', not the production runtime where
+-- 'ceScalar' lives in log-scale [~5, ~20+]).  See ADR-0012 §15.1.
+phase9EssenceModulation :: EssenceModulation
+phase9EssenceModulation = EssenceModulation
   { emAngstCommitmentThreshold    = 0.75
   , emAngstAccrualRate            = 0.05
   , emAngstDecayRate              = 0.02
@@ -239,6 +239,19 @@ defaultEssenceModulation = EssenceModulation
   , emValenceLowEdge              = -0.33
   , emValenceHighEdge             = 0.33
   }
+
+-- | Calibrated defaults (post-Phase 10 §4).
+--
+-- * @emConatusStructuralFloor@ raised from 0.5 to 7.0 to match the
+--   production codomain of 'computeConatusEnergy' (log-scale
+--   unbounded, healthy range ~14-15).  See ADR-0012 §15.1.
+-- * Angst-side parameters remain at Phase 9 values because the
+--   synthetic long-session corpus could not reliably produce
+--   'RuleHolisticAdvantage' / 'RuleFormalAdvantage' with
+--   sufficient divergence.  Calibration deferred.  See ADR-0012 §15.2.
+defaultEssenceModulation :: EssenceModulation
+defaultEssenceModulation = phase9EssenceModulation
+  { emConatusStructuralFloor = 7.0 }
 
 -- ---------------------------------------------------------------------------
 -- Constructors

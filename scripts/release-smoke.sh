@@ -35,7 +35,9 @@ RELEASE_SMOKE_MODE="${QXFX0_RELEASE_SMOKE_MODE:-strict}"
 # Supported modes:
 #   strict         — CI/release; infra failures are treated as FAIL.
 #   degraded-local — local dev; infra failures are SKIP/WARN.
-START_TIME="$(date +%s)"
+# Reproducibility: SOURCE_DATE_EPOCH locks wall-clock time for
+# byte-identical smoke runs.
+START_TIME="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 PRE_SMOKE_STATUS=""
 RELEASE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/qxfx0-release-smoke.XXXXXX")"
 RELEASE_CACHE="$RELEASE_HOME/.cache"
@@ -366,7 +368,7 @@ cleanup() {
     fi
     rm -f "$DB"
     rm -rf "$RELEASE_HOME"
-    END_TIME="$(date +%s)"
+    END_TIME="${SOURCE_DATE_EPOCH:-$(date +%s)}"
     ELAPSED=$((END_TIME - START_TIME))
     echo ""
     echo "════════════════════════════════════════════════════════════"
@@ -418,7 +420,7 @@ echo "────────────────────────�
 cd "$ROOT"
 step_info "Running cabal build all..."
 BUILD_LOG="/tmp/qxfx0-build-$$.log"
-if run_local_cabal cabal build all >"$BUILD_LOG" 2>&1; then
+if run_local_cabal cabal build all -j1 >"$BUILD_LOG" 2>&1; then
     tail -3 "$BUILD_LOG"
     BIN="$(run_local_cabal cabal list-bin qxfx0-main 2>/dev/null || echo "")"
     if [ -n "$BIN" ] && [ -x "$BIN" ]; then
