@@ -17,7 +17,7 @@ import Data.Time.Clock (UTCTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
-import QxFx0.Self.Essence (EssenceViolation)
+import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
 
 data FinalizeStatic = FinalizeStatic
@@ -61,6 +61,11 @@ data FinalizePrecommitBundle = FinalizePrecommitBundle
     --   Computed from the pre-turn 'tiEssence' against the
     --   reconciled 'Plan'.  Passed to 'Finalize.Commit' via the
     --   commit plan bundle.
+  , fpbCommitmentTrigger :: !(Maybe CommitmentTrigger)
+    -- ^ WP1 (contour closure): the 'shouldCommit' result from
+    --   'buildNextSystemState'.  Used to detect
+    --   'ViolationRefusedCommitment' and to avoid re-computing
+    --   'shouldCommit' in 'computeEssenceValidation'.
   } deriving stock (Eq, Show)
 
 data FinalizeCommitPlan = FinalizeCommitPlan

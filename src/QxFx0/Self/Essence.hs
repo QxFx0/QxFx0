@@ -433,6 +433,10 @@ data EssenceViolation
   = ViolationFamilyMismatch !EssenceMode !CanonicalMoveFamily
   | ViolationToneMismatch   !EssenceMode !NarrativeTone
   | ViolationStyleMismatch  !EssenceMode !RenderStyle
+  | ViolationRefusedCommitment !CommitmentTrigger
+    -- ^ WP1 (contour closure): 'shouldCommit' fired with this trigger,
+    --   but the resulting state remained 'EssenceUncommitted'.
+    --   This is a structural inconsistency, not a content mismatch.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -445,6 +449,8 @@ renderEssenceViolation = \case
     "tone_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show t)
   ViolationStyleMismatch m s ->
     "style_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show s)
+  ViolationRefusedCommitment trigger ->
+    "refused_commitment:" <> renderCommitmentTrigger trigger
 
 -- | Admissible 'CanonicalMoveFamily' sets per committed mode.
 -- 'CMRepair' is admissible in every mode (recovery is orthogonal

@@ -109,7 +109,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           turnPlan
           turnArtifacts
           (fsMeaningGraphBase static)
-      nextSystemState =
+      (nextSystemState, commitmentTrigger) =
         buildNextSystemState
           updateHistory
           systemState
@@ -147,8 +147,14 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
         , fpbOutcomeFamily = fsOutcomeFamily static
         , fpbDecision = taDecision turnArtifacts
         , fpbRewireEventsCount = rewireEventsCount
-        , fpbEssenceValidation = computeEssenceValidation turnInput turnPlan
-        }
+         , fpbEssenceValidation =
+             computeEssenceValidation
+               turnInput
+               turnPlan
+               (ssEssence nextSystemState)
+               commitmentTrigger
+         , fpbCommitmentTrigger = commitmentTrigger
+         }
 
 resolveCurrentTime :: PipelineIO -> FinalizePrecommitPlan -> IO UTCTime
 resolveCurrentTime pipelineIO plan =

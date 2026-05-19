@@ -52,6 +52,7 @@ import QxFx0.Self.Essence
   , EssenceMode (..)
   , EssenceTrajectory (..)
   , EssenceCommitment (..)
+  , CommitmentTrigger (..)
   , EssenceViolation(..)
   , defaultEssenceModulation
   , renderEssenceMode
@@ -80,23 +81,28 @@ import Data.Time.Clock (UTCTime)
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience ti = salienceFromConatusEnergy (tiConatusEnergy ti) (tiField ti)
 
--- | Phase 10: validate the reconciled 'Plan' against a pre-turn
--- committed essence when the commitment flag is enabled.
--- This is the guard that later becomes 'EssenceRupture' in
--- 'Finalize.Commit'.
-computeEssenceValidation :: TurnInput -> TurnPlan -> Either EssenceViolation ()
-computeEssenceValidation ti tp =
-  if not (tiEssenceCommitmentEnabled ti)
-    then Right ()
-    else case tiEssence ti of
-           EssenceCommitted _ commitment
-             | Just delib <- tpDeliberation tp
-             -> case validatePlan commitment (delibReconciled delib) of
-                  Right _ -> Right ()
-                  Left v  -> Left v
-           _ -> Right ()
+-- | WP1 (contour closure): validate the reconciled 'Plan' against a
+-- pre-turn committed essence.  Only runs when the pre-turn state
+-- is already 'EssenceCommitted' — the commitment itself is law-driven
+-- in 'buildNextSystemState' and does not depend on a feature flag.
+computeEssenceValidation
+  :: TurnInput
+  -> TurnPlan
+  -> Essence          -- ^ post-'buildNextSystemState' essence
+  -> Maybe CommitmentTrigger
+  -> Either EssenceViolation ()
+computeEssenceValidation ti tp nextEssence mTrigger =
+  case (mTrigger, nextEssence) of
+    (Just trigger, EssenceUncommitted _) ->
+      Left (ViolationRefusedCommitment trigger)
+    (_, EssenceCommitted _ commitment)
+      | Just delib <- tpDeliberation tp
+      -> case validatePlan commitment (delibReconciled delib) of
+           Right _ -> Right ()
+           Left v  -> Left v
+    _ -> Right ()
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> SystemState
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger)
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
@@ -104,36 +110,28 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       newHolisticStreak = if isHolisticFamily outcomeFamily then ssHolisticStreak ss + 1 else 0
       narrativeSuccess = maybe False (not . T.null) (tsNarrativeFragment ts)
       newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
-      -- Phase 10: conditional commitment transition.
-      -- Only evaluated when 'tiEssenceCommitmentEnabled' is True;
-      -- otherwise behaves identically to Phase 9 (always Uncommitted).
-      nextEssence =
+      -- WP1 (contour closure): law-driven commitment.
+      -- 'shouldCommit' is always evaluated; no feature flag.
+      -- The trigger (if any) is exposed for downstream validation.
+      (nextEssence, commitmentTrigger) =
         case tiEssence ti of
-          EssenceUncommitted trajectory
-            | tiEssenceCommitmentEnabled ti ->
-                let trajectory' =
-                      witness
-                        defaultEssenceModulation
-                        (ssTurnCount ss + 1)
-                        (tiConatusEnergy ti)
-                        (tiField ti)
-                        (fromMaybe defaultDeliberation (tpDeliberation tp))
-                        trajectory
-                in case shouldCommit defaultEssenceModulation trajectory' of
-                     Nothing      -> EssenceUncommitted trajectory'
-                     Just trigger ->
-                       EssenceCommitted
-                         trajectory'
-                         (commit (ssTurnCount ss + 1) trigger trajectory')
           EssenceUncommitted trajectory ->
-            EssenceUncommitted $
-              witness
-                defaultEssenceModulation
-                (ssTurnCount ss + 1)
-                (tiConatusEnergy ti)
-                (tiField ti)
-                (fromMaybe defaultDeliberation (tpDeliberation tp))
-                trajectory
+            let trajectory' =
+                  witness
+                    defaultEssenceModulation
+                    (ssTurnCount ss + 1)
+                    (tiConatusEnergy ti)
+                    (tiField ti)
+                    (fromMaybe defaultDeliberation (tpDeliberation tp))
+                    trajectory
+            in case shouldCommit defaultEssenceModulation trajectory' of
+                 Nothing      -> (EssenceUncommitted trajectory', Nothing)
+                 Just trigger ->
+                   ( EssenceCommitted
+                       trajectory'
+                       (commit (ssTurnCount ss + 1) trigger trajectory')
+                   , Just trigger
+                   )
           EssenceCommitted trajectory commitment ->
             -- Sticky: committed essences are never reverted. We still
             -- ingest a witness so etAngstLevel/etConatusFloor track
@@ -146,8 +144,8 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                     (tiField ti)
                     (fromMaybe defaultDeliberation (tpDeliberation tp))
                     trajectory
-            in EssenceCommitted trajectory' commitment
-   in ss
+            in (EssenceCommitted trajectory' commitment, Nothing)
+   in ( ss
       { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
           , dsActiveScene = tpActiveScene tp
@@ -198,6 +196,8 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
           }
       , ssEssence = nextEssence
       }
+    , commitmentTrigger
+    )
 
 buildTurnProjection
   :: Text
