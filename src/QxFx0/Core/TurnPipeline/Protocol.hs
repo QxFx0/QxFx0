@@ -59,6 +59,7 @@ import QxFx0.Core.PipelineIO
   ( PipelineIO
   , PipelineRuntimeMode
   , ShadowPolicy
+  , resolveTurnEffect
   , pipelineRuntimeMode
   , pipelineShadowPolicy
   , pipelineLocalRecoveryPolicy
@@ -84,6 +85,7 @@ import QxFx0.Core.TurnPipeline.Types
   )
 import QxFx0.Core.Observability (TurnMetrics)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
+import Data.Time.Clock (UTCTime)
 import QxFx0.Core.TurnPipeline.Prepare (PrepareEffectResults(..))
 import qualified QxFx0.Core.TurnPipeline.Prepare as Prepare
 import QxFx0.Core.TurnPipeline.Route
@@ -114,7 +116,7 @@ import Data.Sequence (Seq)
 data PreparedTurn = PreparedTurn !TurnInput !TurnSignals
 data PlannedTurn = PlannedTurn !TurnInput !TurnSignals !TurnPlan
 
-planPrepareEffects :: SystemState -> Text -> PrepareEffectPlan
+planPrepareEffects :: SystemState -> Text -> UTCTime -> PrepareEffectPlan
 planPrepareEffects = buildPrepareEffectPlan
 
 resolvePrepareEffects :: PipelineIO -> PrepareEffectPlan -> IO PrepareEffectResults
@@ -170,11 +172,23 @@ resolveFinalizePostCommit = Finalize.resolveFinalizePostCommit
 
 prepareTurn :: PipelineIO -> SystemState -> Text -> Text -> Text -> IO PreparedTurn
 prepareTurn pio ss input sessionId requestId = do
-  let prepareEffects = buildPrepareEffectPlan ss input
+  -- Phase C: resolve time up-front so buildPrepareEffectPlan is deterministic
+  currentTime <- resolvePrepareCurrentTime pio
+  let prepareEffects = buildPrepareEffectPlan ss input currentTime
   prepareResults <- Prepare.resolvePrepareEffects pio prepareEffects
   let ti' = Prepare.buildTurnInput ss requestId sessionId prepareEffects prepareResults
       ts = Prepare.buildTurnSignals prepareResults
   pure (PreparedTurn ti' ts)
+
+-- | Resolve current time through the runtime effect boundary.
+-- Phase C abstraction: uses the same 'TimeSource' that backs
+-- 'TurnReqCurrentTime' so tests can override it via env var.
+resolvePrepareCurrentTime :: PipelineIO -> IO UTCTime
+resolvePrepareCurrentTime pio = do
+  result <- resolveTurnEffect pio TurnReqCurrentTime
+  case result of
+    TurnResCurrentTime t -> pure t
+    _ -> error "prepare time resolution returned unexpected result"
 
 planTurn :: PipelineIO -> SystemState -> PreparedTurn -> IO PlannedTurn
 planTurn pio ss (PreparedTurn ti ts) = do

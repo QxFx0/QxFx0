@@ -141,9 +141,14 @@ data PrepareStatic = PrepareStatic
     --   Threaded through 'tiField' so all routing and salience-
     --   decision call sites share one canonical pre-turn Field.
   , psFieldHeuristics :: !FieldHeuristics
-    -- ^ Phase 6.7: the heuristic parameters used to populate
-    --   'psField'.  Threaded through 'TurnInput' so downstream
-    --   stages read the same record the prepare stage used.
+    -- ^ Phase 6.7: heuristics used to build 'psField'.
+    --   Threaded through 'TurnInput' so downstream stages
+    --   (e.g. salience computation) can read the same record.
+  , psCurrentTime :: !UTCTime
+    -- ^ Phase C: deterministic time injection point.
+    --   Captured at prepare-stage entry so 'buildTurnInput' can
+    --   set 'tiStartTime' without relying on the resolved timeline.
+    --   Enables deterministic unit tests with a fixed time source.
   , psEssence :: !Essence
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
@@ -167,8 +172,8 @@ data PrepareEffectPlan = PrepareEffectPlan
   , pepApiHealthRequest :: !PrepareEffectRequest
   } deriving stock (Eq, Show)
 
-buildPrepareEffectPlan :: SystemState -> Text -> PrepareEffectPlan
-buildPrepareEffectPlan ss input =
+buildPrepareEffectPlan :: SystemState -> Text -> UTCTime -> PrepareEffectPlan
+buildPrepareEffectPlan ss input currentTime =
   let atomSet = collectAtoms input (ssClusters ss)
       newTrace = updateTrace (ssTrace ss) (ssTurnCount ss) atomSet
       nextUserState = inferUserState (ssClusters ss) input
@@ -246,6 +251,7 @@ buildPrepareEffectPlan ss input =
         -- ^ Phase 6.7: heuristics used to build 'psField'.
         --   Threaded through 'TurnInput' so downstream stages
         --   (e.g. salience computation) can read the same record.
+      , psCurrentTime = currentTime
       , psEssence = ssEssence ss
       }
   in PrepareEffectPlan
