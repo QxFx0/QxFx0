@@ -211,4 +211,11 @@ currentCalibrationVersion :: CalibrationLog -> Maybe CalibrationId
 currentCalibrationVersion (CalibrationLog log) =
   case filter ((== Accepted) . ceStatus) log of
     [] -> Nothing
-    xs -> Just (ceId (last xs))
+    xs -> Just (ceId (safeLast xs))
+  where
+    safeLast [] = error "safeLast: empty list (impossible by filter guard)"
+    safeLast ys = go ys
+      where
+        go [z]    = z
+        go (_:zs) = go zs
+        go []     = error "safeLast: empty list (impossible by outer case)"
