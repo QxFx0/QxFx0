@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `3f0f09f`  
+**Index SHA:** `5a3dd1b`  
 **Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -18,17 +18,21 @@ phase-2 persistence + phase-7 rooted learning + phase-8 external
 learning loop + phase-8 hardening + phase-9 calibration pipeline start +
 phase-8 external-query effect execution (request→render→finalize graft
 chain) + phase-8 telemetry source-of-truth hotfix +
-phase-9 autonomous exploratory learning MVP**
+phase-9 autonomous exploratory learning MVP +
+phase-10 offline training cycle (trace extraction, bounded candidate
+generation, proxy evaluation, promotion/rollback)**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
 applyCalibrationGated in SystemState + ExploratoryPrompt/
-exploratory query path/telemetry differentiation).
+exploratory query path/telemetry differentiation + TrainingCycle/
+offline candidate generation/proxy evaluation/typed reject reasons).
 
-Fast-test count increased from 556 → 564 and full-test count from
-683 → 691 due to autonomous exploratory learning tests (request
-absence, exploratory presence, graft success, guardrail blocking,
-telemetry tags, request-path non-regression).
+Fast-test count increased from 564 → 574 and full-test count from
+691 → 701 due to Phase 10 training cycle tests (dataset extraction
+determinism, candidate boundedness, sandbox reject/accept,
+promotion versioning, rollback restoration, telemetry fields,
+end-to-end cycle, stats accuracy, typed reject reasons).
 
 ---
 
@@ -36,9 +40,9 @@ telemetry tags, request-path non-regression).
 
 | # | Gate | Command | Exit | Verdict | Evidence |
 |---|------|---------|------|---------|----------|
-| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 249 modules compiled, 0 errors |
-| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 564/564 cases, 0 errors, 0 failures |
-| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 691/691 cases, 0 errors, 0 failures |
+| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
+| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 574/574 cases, 0 errors, 0 failures |
+| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 701/701 cases, 0 errors, 0 failures |
 | 4 | `check_architecture.sh` | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 | 5 | `gf_quality_gate.sh` | `bash scripts/gf_quality_gate.sh` | 0 | **PASS** | 0 errors, 0 warnings, PGF 312662 bytes, all core topics present |
 | 6 | `check_gf_render_path.sh` | `bash scripts/check_gf_render_path.sh` | — | **INFRA-DEFERRED** | timeout (>60 s) on low-RAM runner; individual constituent checks pass |
@@ -128,6 +132,8 @@ high-mem runner or CI environment:
 
 30. **Autonomous exploratory learning (Phase 9 MVP)** — When no request-driven query is planned, an active learning need exists, guardrails permit, and a reliable tool is available, the system autonomously initiates an external query. The result flows through the same parse→validate→sandbox→graft chain as request-driven results. Telemetry distinguishes `"request_concept"`, `"exploratory"`, and `"both"`. Guardrails (rate limit, circuit breaker) apply cumulatively to both paths. Tests: `testAutonomousExplorationRequestPopulated`, `testAutonomousExplorationResultPopulated`, `testAutonomousExplorationGraftApplied`, `testAutonomousExplorationFailClosed`, `testAutonomousExplorationGuardrailBlocks`, `testAutonomousExplorationTelemetry`, `testRequestDrivenPathNotRegressedByExploration`.
 
+31. **Offline training cycle (Phase 10)** — `runTrainingCycle` extracts a `TrainingDataset` from `ssCalibrationSnapshots`, generates a bounded pool of `SalienceWeights` / `FieldHeuristics` candidates (12 total), evaluates each with proxy metrics on a 70/30 eval subset, accepts only non-regressing candidates (strict fail-closed policy with typed `TrainingRejectReason`s), and promotes the best with `CalibrationId` versioning and rollback linkage. Pure offline: no live-turn state is mutated. Tests: `testDatasetExtractorDeterministic`, `testCandidateGenerationBounded`, `testSandboxRejectsRegressing`, `testSandboxAcceptsImproving`, `testPromotionVersionPointers`, `testRollbackRestoresPrevious`, `testTelemetryFieldsPresent`, `testRunFullCycleEndToEnd`, `testDatasetStatsAccuracy`, `testRejectReasonsTyped`.
+
 - Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
 
 ---
@@ -155,11 +161,11 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 564  Tried: 564  Errors: 0  Failures: 0
+# Expected: Cases: 574  Tried: 574  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 691  Tried: 691  Errors: 0  Failures: 0
+# Expected: Cases: 701  Tried: 701  Errors: 0  Failures: 0
 ```
 
 ---
