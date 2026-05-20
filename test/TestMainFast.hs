@@ -19,10 +19,11 @@ import Test.Suite.SelfEssence (selfEssenceTests)
 import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
+import Test.Suite.TrainingCycle (trainingCycleTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ phaseM2dTests ++ learningLoopTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
