@@ -266,16 +266,19 @@ renderSandboxRejectReason SbrNegativeNetScore   = "negative_net"
 renderSandboxRejectReason SbrMorphologyConflict = "morph_conflict"
 
 -- | Convenience wrapper: apply the learning loop to a system state
--- when an external query result is present in 'TurnInput'.
+-- when an external query result is present.
 -- If no result was carried, returns the state unchanged.
-applyExternalLearning :: SystemState -> TurnInput -> SystemState
-applyExternalLearning ss ti =
-  case tiExternalQueryResult ti of
+applyExternalLearning :: SystemState -> Maybe (Either ExternalQueryError ExternalQueryResponse) -> SystemState
+applyExternalLearning ss mResult =
+  case mResult of
     Nothing -> ss
     Just result ->
       let needState = ssLearningNeedState ss
           need = lnsCurrentNeed needState
           mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
           tool = fromMaybe (ExternalTool "unknown" DomainGeneral 0.5 False) mTool
-          (updated, _) = runLearningStep ss tool need (ipfRawText (tiFrame ti)) (Just result)
+          queryText = case result of
+            Right resp -> eqrToolName resp <> " " <> T.pack (show (eqrLatencyMs resp))
+            Left _     -> ""
+          (updated, _) = runLearningStep ss tool need queryText (Just result)
       in updated

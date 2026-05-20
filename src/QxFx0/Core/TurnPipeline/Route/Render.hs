@@ -43,6 +43,8 @@ import QxFx0.Core.TurnRender
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
+import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, defaultAvailableTools)
+import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
@@ -100,19 +102,27 @@ data RenderEffectPlan = RenderEffectPlan
   , repLocalRecoveryPlan :: !(Maybe LocalRecoveryPlan)
   , repRenderMorphologyWarning :: !(Maybe Text)
   , repKnowledgeTopic :: !Text
+  , repExternalQueryRequest :: !(Maybe (ExternalTool, LearningNeed, Text))
+    -- ^ Phase 8 gap closure: when a request strategy is chosen,
+    --   this field carries the tool, need, and query text for the
+    --   external query effect.  'Nothing' means no request strategy.
   } deriving stock (Eq, Show)
 
 data RenderTimeline = RenderTimeline
   { rtlRenderStart :: !UTCTime
   , rtlRenderEnd :: !UTCTime
   } deriving stock (Eq, Show)
-
 data RenderEffectResults = RenderEffectResults
   { rerRenderTimeline :: !RenderTimeline
   , rerResolvedRenderStatic :: !(Maybe RenderStatic)
   , rerKnowledgeFact :: !(Maybe Text)
   , rerKnowledgeFactSource :: !(Maybe Text)
-  } deriving stock (Eq, Show)
+  , rerExternalQueryResult :: !(Maybe (Either ExternalQueryError ExternalQueryResponse))
+    -- ^ Phase 8 gap closure: result of the external query effect
+    --   when a request strategy was chosen.  'Nothing' means no
+    --   request was attempted.
+  }
+  deriving stock (Eq, Show)
 
 planRenderEffects :: RuntimeParadigms -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
 planRenderEffects rp = planRenderEffectsForRuntimeImpl rp RuntimeStrict
@@ -193,6 +203,16 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           else Nothing
       localRecoveryPlan =
         buildLocalRecoveryPlan runtimeMode localRecoveryPolicy ss ti tp morphologyWarning
+      mExternalQueryRequest =
+        case localRecoveryPlan of
+          Just plan | isRequestStrategy (lrpStrategy plan) ->
+            let need = lnsCurrentNeed (ssLearningNeedState ss)
+                mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
+                queryText = buildExternalQueryText need (tiBestTopic ti)
+            in case mTool of
+                 Just tool -> Just (tool, need, queryText)
+                 Nothing   -> Nothing
+          _ -> Nothing
   in RenderEffectPlan
       { repRenderStatic = RenderStatic
           { rsRenderWithBg = renderWithBg
@@ -222,7 +242,24 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repLocalRecoveryPlan = localRecoveryPlan
       , repRenderMorphologyWarning = morphologyWarning
       , repKnowledgeTopic = bestTopic
+      , repExternalQueryRequest = mExternalQueryRequest
        }
+  where
+    isRequestStrategy StrategyRequestCalibration = True
+    isRequestStrategy StrategyRequestRule        = True
+    isRequestStrategy StrategyRequestConcept     = True
+    isRequestStrategy _                          = False
+
+    buildExternalQueryText :: LearningNeed -> Text -> Text
+    buildExternalQueryText need topic =
+      let topicText = if T.null topic then "concept" else topic
+      in case need of
+           -- Direct topic query for deterministic mock-table matching
+           -- (first word is the topic itself).
+           NeedLexiconExtension    -> topicText
+           NeedKeywordEnrichment   -> T.concat ["Explain ", topicText]
+           NeedSalienceCalibration -> T.concat ["Calibrate salience for ", topicText]
+           NeedNone                -> ""
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
@@ -240,6 +277,14 @@ resolveRenderEffects pio effectPlan = do
   mLegalFact <- retrieveLegalFact (repKnowledgeTopic effectPlan)
   let mKnowledgeFact = legalFactToKnowledgeFragment <$> mLegalFact
       mKnowledgeSource = lfSourceId <$> mLegalFact
+  -- Phase 8 gap closure: execute external query when a request strategy is chosen.
+  mExternalQueryResult <- case repExternalQueryRequest effectPlan of
+    Nothing -> pure Nothing
+    Just (tool, need, queryText) -> do
+      result <- resolveTurnEffect pio (TurnReqExternalQuery tool need queryText)
+      case result of
+        TurnResExternalQuery res -> pure (Just res)
+        _ -> pure (Just (Left (EqeInvalidResponse "unexpected_effect_result")))
   tRender1 <- resolveRenderCurrentTime pio
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
@@ -249,6 +294,7 @@ resolveRenderEffects pio effectPlan = do
     , rerResolvedRenderStatic = resolvedRenderStatic
     , rerKnowledgeFact = mKnowledgeFact
     , rerKnowledgeFactSource = mKnowledgeSource
+    , rerExternalQueryResult = mExternalQueryResult
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -331,9 +377,10 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taLocalRecoveryCause = finalRecoveryCause
        , taLocalRecoveryStrategy = recoveryStrategy
        , taLocalRecoveryEvidence = recoveryEvidence
-      , taMetrics = metrics4
-      , taKnowledgeSource = rerKnowledgeFactSource effectResults
-      }
+       , taMetrics = metrics4
+       , taKnowledgeSource = rerKnowledgeFactSource effectResults
+       , taExternalQueryResult = rerExternalQueryResult effectResults
+       }
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
 buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = Nothing

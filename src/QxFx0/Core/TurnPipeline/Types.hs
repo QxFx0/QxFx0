@@ -39,7 +39,7 @@ import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
-import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
+import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -215,6 +215,10 @@ data TurnArtifacts = TurnArtifacts
   , taLocalRecoveryEvidence :: ![Text]
   , taMetrics :: !TurnMetrics
   , taKnowledgeSource :: !(Maybe Text)
+  , taExternalQueryResult :: !(Maybe (Either ExternalQueryError ExternalQueryResponse))
+    -- ^ Phase 8 gap closure: result of the external query effect when a
+    --   request strategy was chosen.  Populated by the render phase and
+    --   consumed by 'applyExternalLearning' in finalize.
   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts

@@ -123,8 +123,10 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           (fsOutcomeFamily static)
           (fsOutcomeVerdict static)
           (fsConsecReflect static)
-      -- Phase 8: apply external learning-loop result if present.
-      nextSystemState = applyExternalLearning nextSystemState0 turnInput
+      -- Phase 8 gap closure: apply external learning-loop result from
+      -- the render-phase artifacts (populated by resolveRenderEffects
+      -- when a request strategy triggered TurnReqExternalQuery).
+      nextSystemState = applyExternalLearning nextSystemState0 (taExternalQueryResult turnArtifacts)
       projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)

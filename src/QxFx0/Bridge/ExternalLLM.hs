@@ -185,6 +185,11 @@ defaultMockTable =
     )
   , ( "llm-augment"
     , "NeedLexiconExtension"
+    , "тема"
+    , Right mockDefinitionPositive
+    )
+  , ( "llm-augment"
+    , "NeedLexiconExtension"
     , "как"
     , Right mockDeclensionPositive
     )

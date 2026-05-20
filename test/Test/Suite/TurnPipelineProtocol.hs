@@ -120,12 +120,19 @@ import QxFx0.Learning.Need
   , emptyLearningNeedState
   , detectLearningNeed
   )
+import QxFx0.Learning.KnowledgeTree
+  ( ktGraftedCount
+  )
 import QxFx0.Self.Field (Field(..), emptyField, FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Learning.Tool
   ( ExternalTool(..)
   , ToolDomain(..)
   , selectTool
   , defaultAvailableTools
+  )
+import QxFx0.Bridge.ExternalLLM
+  ( buildTransportFromEnv
+  , queryExternalTool
   )
 import QxFx0.Learning.Calibration
   ( CalibrationId(..)
@@ -213,61 +220,67 @@ turnPipelineProtocolTests =
      , testRollbackPathPreservesPrevAndCurrentIds
      , testCooldownStateSurvivesRestartViaJson
      , testOperationalDiagnosticQuestionRendersDirectStatus
-  , testOperationalCauseQuestionPreservesGroundDiagnosticFamily
-  , testSystemLogicQuestionRendersDirectExplanation
-  , testSelfKnowledgeAboutSelfRendersStructuredDescription
-  , testSelfKnowledgeAboutUserRendersStructuredBoundary
-  , testWorldCauseQuestionRendersGroundedExplanation
-  , testWorldCauseSkyQuestionRendersGroundedExplanation
-  , testLocationFormationQuestionRendersStructuredExplanation
-  , testEverydayPurchaseStatementAvoidsLexicalFallback
-  , testEverydayResidenceStatementAvoidsLexicalFallback
-  , testAffectiveHelpQuestionUsesContactWithoutLexicalFallback
-  , testGreetingSmallTalkUsesContactWithoutDistressFallback
-  , testSmallTalkHowLifeUsesContactWithoutDistressFallback
-  , testPurposeQuestionUsesObjectTopicWithoutCaseRegression
-  , testPurposeQuestionHandsAvoidsBrokenGenitive
-  , testPurposeQuestionExistenceAvoidsInfinitiveGenitive
-  , testConceptQuestionUsesPrepositionalFallbackCase
-  , testComparisonQuestionRendersStructuredDistinction
-  , testMisunderstandingReportRendersRepairWithoutLexicalFallback
-  , testDialogueInvitationRendersDeepenWithoutLexicalFallback
-  , testConceptKnowledgeQuestionRendersDefinitionWithoutLexicalFallback
-  , testConceptKnowledgeBeingSmartRendersNaturalFrame
-  , testSelfStateQuestionRendersDescriptionWithoutLexicalFallback
-  , testGenerativePromptRendersDirectThought
-  , testGenerativePromptAnotherThoughtRendersNewThought
-  , testGenerativePromptFreshThoughtRendersDistinctSurface
-  , testGenerativePromptLogicalQualityRendersLogicalSurface
-  , testSelfKnowledgeWhatYouAreRendersStructuredDescription
-  , testSelfKnowledgeThoughtCapacityRendersDirectAnswer
-  , testSelfKnowledgeCapabilityQuestionRendersCapabilitySurface
-  , testSelfKnowledgeHelpQuestionRendersHelpSurface
-  , testSelfKnowledgeUserIdentityQuestionRendersBoundarySurface
-  , testSystemLogicQuestionWithUtebyaRendersDirectExplanation
-  , testSystemIdentityProbeAvoidsReflectFallback
-  , testMustRouteNameQuestionUsesDescribe
-  , testMustRoutePurposeQuestionUsesPurpose
-  , testMustRouteDefineQuestionUsesDefine
-  , testMustRouteDistinguishQuestionUsesDistinguish
-  , testWorkEnableQuestionUsesOperationalStatusNotUserBoundary
-  , testContemplativeTopicRendersDeepenWithoutLexicalFallback
-  , testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback
-  , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
-  , testRuntimeDegradedUsesVisibleLocalRecovery
-  , testParserLowConfidenceUsesDistinguishCandidates
-  , testRenderBlockedPersistsSafeRecoveryTrace
-   , testConatusGateFiresRecoveryConatusGate
-   , testConatusGateFlagDrivesLocalRecoveryPlan
-    , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
-    , testConatusGradientMorphologyDominant
-    , testConatusGradientIdentityDominant
-    , testConatusGradientTemporalDominant
-    , testConatusGradientDegenerateTie
-    , testDeliberationRecoveryNotSilenced
-    , testFinalizePrecommitResolveConcurrently
-    , testPrepareCurrentTimeDeterministicInjection
-    ]
+     , testOperationalCauseQuestionPreservesGroundDiagnosticFamily
+     , testSystemLogicQuestionRendersDirectExplanation
+     , testSelfKnowledgeAboutSelfRendersStructuredDescription
+     , testSelfKnowledgeAboutUserRendersStructuredBoundary
+     , testWorldCauseQuestionRendersGroundedExplanation
+     , testWorldCauseSkyQuestionRendersGroundedExplanation
+     , testLocationFormationQuestionRendersStructuredExplanation
+     , testEverydayPurchaseStatementAvoidsLexicalFallback
+     , testEverydayResidenceStatementAvoidsLexicalFallback
+     , testAffectiveHelpQuestionUsesContactWithoutLexicalFallback
+     , testGreetingSmallTalkUsesContactWithoutDistressFallback
+     , testSmallTalkHowLifeUsesContactWithoutDistressFallback
+     , testPurposeQuestionUsesObjectTopicWithoutCaseRegression
+     , testPurposeQuestionHandsAvoidsBrokenGenitive
+     , testPurposeQuestionExistenceAvoidsInfinitiveGenitive
+     , testConceptQuestionUsesPrepositionalFallbackCase
+     , testComparisonQuestionRendersStructuredDistinction
+     , testMisunderstandingReportRendersRepairWithoutLexicalFallback
+     , testDialogueInvitationRendersDeepenWithoutLexicalFallback
+     , testConceptKnowledgeQuestionRendersDefinitionWithoutLexicalFallback
+     , testConceptKnowledgeBeingSmartRendersNaturalFrame
+     , testSelfStateQuestionRendersDescriptionWithoutLexicalFallback
+     , testGenerativePromptRendersDirectThought
+     , testGenerativePromptAnotherThoughtRendersNewThought
+     , testGenerativePromptFreshThoughtRendersDistinctSurface
+     , testGenerativePromptLogicalQualityRendersLogicalSurface
+     , testSelfKnowledgeWhatYouAreRendersStructuredDescription
+     , testSelfKnowledgeThoughtCapacityRendersDirectAnswer
+     , testSelfKnowledgeCapabilityQuestionRendersCapabilitySurface
+     , testSelfKnowledgeHelpQuestionRendersHelpSurface
+     , testSelfKnowledgeUserIdentityQuestionRendersBoundarySurface
+     , testSystemLogicQuestionWithUtebyaRendersDirectExplanation
+     , testSystemIdentityProbeAvoidsReflectFallback
+     , testMustRouteNameQuestionUsesDescribe
+     , testMustRoutePurposeQuestionUsesPurpose
+     , testMustRouteDefineQuestionUsesDefine
+     , testMustRouteDistinguishQuestionUsesDistinguish
+     , testWorkEnableQuestionUsesOperationalStatusNotUserBoundary
+     , testContemplativeTopicRendersDeepenWithoutLexicalFallback
+     , testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback
+     , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
+     , testRuntimeDegradedUsesVisibleLocalRecovery
+     , testParserLowConfidenceUsesDistinguishCandidates
+     , testRenderBlockedPersistsSafeRecoveryTrace
+     , testConatusGateFiresRecoveryConatusGate
+     , testConatusGateFlagDrivesLocalRecoveryPlan
+     , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
+     , testConatusGradientMorphologyDominant
+     , testConatusGradientIdentityDominant
+     , testConatusGradientTemporalDominant
+     , testConatusGradientDegenerateTie
+     , testDeliberationRecoveryNotSilenced
+     , testFinalizePrecommitResolveConcurrently
+     , testPrepareCurrentTimeDeterministicInjection
+     -- Phase 8 gap closure: external query end-to-end
+     , testExternalQueryRequestPopulatedWhenLearningNeedActive
+     , testExternalQueryResultPopulatedAfterRenderEffects
+     , testExternalQueryGraftAppliedInFinalize
+     , testExternalQueryFailClosedOnMockFailure
+     , testExternalQueryNotAttemptedWhenNoRequestStrategy
+     ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
@@ -1876,6 +1889,10 @@ testProtocolInterpreter request =
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
     TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
+    TurnReqExternalQuery tool need queryText -> do
+      transport <- buildTransportFromEnv
+      result <- queryExternalTool transport tool need queryText
+      pure (TurnResExternalQuery result)
 
 protocolFixedTime :: UTCTime
 protocolFixedTime = UTCTime (ModifiedJulianDay 0) 0
@@ -2483,3 +2500,66 @@ testCooldownStateSurvivesRestartViaJson = TestCase $ do
         (not (canSubmitProposal gs' 24))
       assertBool "circuit breaker must close after cooldown post-restart"
         (canSubmitProposal gs' 26)
+
+-- | Phase 8 gap closure: when learning need is active, the render effect
+-- plan carries an external query request.
+testExternalQueryRequestPopulatedWhenLearningNeedActive :: Test
+testExternalQueryRequestPopulatedWhenLearningNeedActive = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "что" NeedLexiconExtension
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState ss0 "что"
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  assertBool "external query request must be present for active learning need"
+    (repExternalQueryRequest renderPlan /= Nothing)
+
+-- | Phase 8 gap closure: after resolving render effects, the external
+-- query result is present in the artifacts.
+testExternalQueryResultPopulatedAfterRenderEffects :: Test
+testExternalQueryResultPopulatedAfterRenderEffects = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "что" NeedLexiconExtension
+  (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithState ss0 "что"
+  assertBool "external query result must be present after render effects"
+    (taExternalQueryResult ta /= Nothing)
+
+-- | Phase 8 gap closure: valid mock response flows through parse,
+-- validate, sandbox, and graft into the knowledge tree.
+testExternalQueryGraftAppliedInFinalize :: Test
+testExternalQueryGraftAppliedInFinalize = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "что" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let nextSs = fpbNextSs bundle
+  assertEqual "knowledge tree must have 1 grafted fruit after external success"
+    1 (ktGraftedCount (ssKnowledgeTree nextSs))
+
+-- | Phase 8 gap closure: mock failure (transport error) does not graft;
+-- fail-closed.
+testExternalQueryFailClosedOnMockFailure :: Test
+testExternalQueryFailClosedOnMockFailure = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "fail" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "fail"
+  let nextSs = fpbNextSs bundle
+  assertEqual "knowledge tree must remain empty after external failure"
+    0 (ktGraftedCount (ssKnowledgeTree nextSs))
+
+-- | Phase 8 gap closure: when no learning need is active, no external
+-- query is attempted.
+testExternalQueryNotAttemptedWhenNoRequestStrategy :: Test
+testExternalQueryNotAttemptedWhenNoRequestStrategy = TestCase $ do
+  (_ss, _ti, _ts, _tp, ta) <- buildRenderedFixture "что такое свобода"
+  assertEqual "external query result must be Nothing when no request strategy"
+    Nothing (taExternalQueryResult ta)
+
+-- | Helper: construct a SystemState with an active learning need and
+-- enough non-empty fields to avoid conatus gate firing.
+mkSystemStateWithNeed :: T.Text -> LearningNeed -> SystemState
+mkSystemStateWithNeed topic need =
+  let dialogue = ssDialogue emptySystemState
+  in emptySystemState
+    { ssDialogue = dialogue { dsLastTopic = topic }
+    , ssSessionId = "test-session"
+    , ssMorphology = MorphologyData Map.empty Map.empty (Map.singleton "a" "b") Map.empty
+    , ssLearningNeedState = emptyLearningNeedState
+        { lnsCurrentNeed = need
+        , lnsLevel = 0.8
+        , lnsHistory = [(1, 0.7), (2, 0.75), (3, 0.8)]
+        }
+    }
