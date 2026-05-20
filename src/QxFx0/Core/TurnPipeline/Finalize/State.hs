@@ -416,22 +416,22 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcEssenceAngstLevel = angst
             , trcEssenceTrigger = triggerTag
             , trcLearningQueryType =
-                case tiExternalQueryResult ti of
+                case taExternalQueryResult ta of
                   Nothing -> Nothing
                   Just _  -> Just "external"
             , trcExternalTool =
-                case tiExternalQueryResult ti of
+                case taExternalQueryResult ta of
                   Just (Right resp) -> Just (eqrToolName resp)
                   _ -> Nothing
             , trcLearningValidationStatus =
-                case tiExternalQueryResult ti of
+                case taExternalQueryResult ta of
                   Nothing           -> Just "not_attempted"
                   Just (Left _)     -> Just "transport_error"
                   Just (Right _)    -> Just "pending_validation"
             , trcLearningSandboxResult = Nothing
             , trcLearningGraftTurn = Nothing
             , trcLearningRejectReason =
-                case tiExternalQueryResult ti of
+                case taExternalQueryResult ta of
                   Just (Left err) -> Just (renderExternalQueryError err)
                   _ -> Nothing
             }
