@@ -64,6 +64,7 @@ import QxFx0.Self.Essence
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
 import QxFx0.Self.Field (adaptFieldHeuristics)
+import QxFx0.Learning.Need (detectLearningNeed)
 import QxFx0.Semantic.AtomAccretion
   ( observeNovelAtom
   , promoteProvisionalAtoms
@@ -164,6 +165,15 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                , adaptFieldHeuristics signal (ssFieldHeuristics ss)
                )
           _ -> (ssSalienceWeights ss, ssFieldHeuristics ss)
+      -- WP1: endogenous learning diagnostic drive.
+      newLearningNeedState =
+        detectLearningNeed
+          (tiConatusEnergy ti)
+          (tiField ti)
+          0 -- repairCount: historical recovery tracking deferred to Phase 7
+          (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
+          (ssTurnCount ss + 1)
+          (ssLearningNeedState ss)
     in ( ss
        { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
@@ -227,6 +237,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
               decayed = decayProvisionalAtoms currentTurn observed
               (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
           in resolveCollisions canonicalSet remaining
+      , ssLearningNeedState = newLearningNeedState
       }
     , commitmentTrigger
     )

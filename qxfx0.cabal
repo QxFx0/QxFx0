@@ -85,6 +85,10 @@ library
     QxFx0.Self.Salience
     QxFx0.Self.Deliberation
     QxFx0.Self.Essence
+    QxFx0.Learning.Need
+    QxFx0.Learning.Tool
+    QxFx0.Learning.Calibration
+    QxFx0.Learning.Guardrails
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated

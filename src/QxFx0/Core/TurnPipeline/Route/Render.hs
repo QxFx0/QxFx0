@@ -42,6 +42,7 @@ import QxFx0.Core.TurnRender
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
+import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
@@ -392,11 +393,34 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                            , "conatus_gradient_t=" <> T.pack (show (cgTurns gradient))
                            , "conatus_strategy=" <> renderLocalRecoveryStrategy strategy
                            ]
-                in Just
-                     ( RecoveryConatusGate
-                     , strategy
-                     , evidence
-                     )
+                 in Just
+                      ( RecoveryConatusGate
+                      , strategy
+                      , evidence
+                      )
+            -- WP3: learning-driven recovery.  Only triggered when a
+            -- persistent need (already stored in state from previous
+            -- turns) has a high deficit level.  This introduces one
+            -- turn of natural latency, acting as a lightweight
+            -- rate-limit / quarantine before escalating to an external
+            -- request strategy.
+            | learningNeedActive ss ->
+                let lns = ssLearningNeedState ss
+                    need = lnsCurrentNeed lns
+                    strategy = selectLearningRecoveryStrategy need
+                    evidence =
+                      [ "learning_need=" <> T.pack (show need)
+                      , "learning_level=" <> T.pack (show (lnsLevel lns))
+                      , "learning_persistence=" <> T.pack (show (lnsPersistence lns))
+                      , "learning_strategy=" <> renderLocalRecoveryStrategy strategy
+                      ]
+                 in Just
+                      ( RecoveryConatusGate
+                        -- Reuse RecoveryConatusGate tag for telemetry
+                        -- compactness; the evidence distinguishes the driver.
+                      , strategy
+                      , evidence
+                      )
             | tpShadowStatus tp == ShadowDiverged
                 && tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory ->
                 Just
@@ -471,11 +495,29 @@ selectConatusRecoveryStrategy g =
         , (cgTurns      g, StrategyTemporalDeepening)
         ]
       sorted = L.sortBy (\(a, _) (b, _) -> compare b a) comps
-  in case sorted of
-       ((v1, s1) : (v2, _) : _)
-         | v1 > v2   -> s1
-         | otherwise -> StrategySafeRecovery
-       _ -> StrategySafeRecovery
+   in case sorted of
+        ((v1, s1) : (v2, _) : _)
+          | v1 > v2   -> s1
+          | otherwise -> StrategySafeRecovery
+        _ -> StrategySafeRecovery
+
+-- | WP3: predicate for whether a persisted learning need is active
+-- and severe enough to trigger an external-request recovery strategy.
+-- The threshold (0.6) is chosen so that only high-deficit needs
+-- escalate beyond local strategies; moderate deficits remain handled
+-- by the normal turn pipeline.
+learningNeedActive :: SystemState -> Bool
+learningNeedActive ss =
+  let lns = ssLearningNeedState ss
+  in lnsCurrentNeed lns /= NeedNone && lnsLevel lns >= 0.6
+
+-- | WP3: map an active 'LearningNeed' to the corresponding
+-- 'LocalRecoveryStrategy' that requests external help.
+selectLearningRecoveryStrategy :: LearningNeed -> LocalRecoveryStrategy
+selectLearningRecoveryStrategy NeedSalienceCalibration = StrategyRequestCalibration
+selectLearningRecoveryStrategy NeedKeywordEnrichment   = StrategyRequestConcept
+selectLearningRecoveryStrategy NeedLexiconExtension    = StrategyRequestConcept
+selectLearningRecoveryStrategy NeedNone                = StrategySafeRecovery
 
 renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurface gfLang _cause strategy topic =
@@ -506,6 +548,12 @@ renderLocalRecoverySurfaceRu strategy topic =
           header <> " Укрепляю идентичностные утверждения для восстановления структурной когерентности."
         StrategyTemporalDeepening ->
           header <> " Углубляю темпоральную непрерывность для восстановления структурной устойчивости."
+        StrategyRequestCalibration ->
+          header <> " Запрашиваю внешнюю калибровку весов для устранения систематического смещения."
+        StrategyRequestRule ->
+          header <> " Запрашиваю внешнее правило маршрутизации для восполнения локального пробела."
+        StrategyRequestConcept ->
+          header <> " Запрашиваю внешнее понятие или ключевое слово для расширения локальной онтологии."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn strategy topic =
@@ -530,6 +578,12 @@ renderLocalRecoverySurfaceEn strategy topic =
           header <> " Reinforcing identity claims to restore structural coherence."
         StrategyTemporalDeepening ->
           header <> " Deepening temporal continuity to restore structural persistence."
+        StrategyRequestCalibration ->
+          header <> " Requesting external calibration data to correct systematic salience bias."
+        StrategyRequestRule ->
+          header <> " Requesting external routing rule to cover a local deliberation gap."
+        StrategyRequestConcept ->
+          header <> " Requesting external concept or keyword to extend local ontology."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =

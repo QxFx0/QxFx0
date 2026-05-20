@@ -61,6 +61,15 @@ data LocalRecoveryStrategy
   | StrategyTemporalDeepening
     -- ^ WP1 (GAP1): Conatus-gradient recovery — temporal component
     --   (∂t) is dominant; system should deepen temporal continuity.
+  | StrategyRequestCalibration
+    -- ^ WP3: learning-driven recovery — salience weights need
+    --   empirical calibration; system requests external calibration data.
+  | StrategyRequestRule
+    -- ^ WP3: learning-driven recovery — routing or deliberation
+    --   rule is insufficient; system requests a validated rule update.
+  | StrategyRequestConcept
+    -- ^ WP3: learning-driven recovery — concept / keyword gap
+    --   is persistent; system requests an external concept addition.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
@@ -91,3 +100,6 @@ renderLocalRecoveryStrategy StrategySafeRecovery = "safe_recovery"
 renderLocalRecoveryStrategy StrategyMorphologyExpansion = "morphology_expansion"
 renderLocalRecoveryStrategy StrategyIdentityReinforcement = "identity_reinforcement"
 renderLocalRecoveryStrategy StrategyTemporalDeepening = "temporal_deepening"
+renderLocalRecoveryStrategy StrategyRequestCalibration = "request_calibration"
+renderLocalRecoveryStrategy StrategyRequestRule = "request_rule"
+renderLocalRecoveryStrategy StrategyRequestConcept = "request_concept"

@@ -40,6 +40,7 @@ module QxFx0.Types.State.System
   , ssRecentNarrativeSuccess
   , ssSalienceWeights
   , ssFieldHeuristics
+  , ssLearningNeedState
   , emptySystemState
   ) where
 
@@ -109,6 +110,7 @@ import QxFx0.Self.Essence (Essence, emptyEssence)
 import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
+import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 
 data SystemState = SystemState
@@ -138,7 +140,11 @@ data SystemState = SystemState
     --   Atoms observed from user input that do not yet match canonical
     --   clusters are held here until they meet promotion criteria or
     --   decay.  Initialised to '[]'.
-    --   'defaultShadowVetoState'.
+  , ssLearningNeedState :: !LearningNeedState
+    -- ^ WP1: endogenous learning diagnostic drive state.
+    --   Tracks persistent deficit patterns (salience calibration,
+    --   keyword enrichment, lexicon extension) across turns.
+    --   Initialised to 'emptyLearningNeedState'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -179,9 +185,10 @@ instance ToJSON SystemState where
     , "essence" .= ssEssence ss
     , "salienceWeights" .= ssSalienceWeights ss
     , "fieldHeuristics" .= ssFieldHeuristics ss
-    , "shadowVetoState" .= ssShadowVetoState ss
-    , "provisionalAtoms" .= ssProvisionalAtoms ss
-    ]
+     , "shadowVetoState" .= ssShadowVetoState ss
+     , "provisionalAtoms" .= ssProvisionalAtoms ss
+     , "learningNeedState" .= ssLearningNeedState ss
+     ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -225,8 +232,9 @@ instance FromJSON SystemState where
       <*> o .:? "essence" .!= emptyEssence
       <*> o .:? "salienceWeights" .!= defaultSalienceWeights
       <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
-      <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
-      <*> o .:? "provisionalAtoms" .!= []
+       <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
+       <*> o .:? "provisionalAtoms" .!= []
+       <*> o .:? "learningNeedState" .!= emptyLearningNeedState
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -340,4 +348,5 @@ emptySystemState = SystemState
   , ssFieldHeuristics = defaultFieldHeuristics
   , ssShadowVetoState = defaultShadowVetoState
   , ssProvisionalAtoms = []
+  , ssLearningNeedState = emptyLearningNeedState
   }
