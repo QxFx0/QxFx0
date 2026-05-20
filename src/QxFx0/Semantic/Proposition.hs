@@ -30,6 +30,7 @@ import QxFx0.Policy.ParserKeywords
   , worldCauseKeywords, locationFormationKeywords, selfStateKeywords
   , comparisonPlausibilityKeywords, misunderstandingKeywords
   , generativePromptKeywords, contemplativeTopicKeywords
+  , exploratoryKeywords
   )
 import QxFx0.Semantic.KeywordMatch
   ( tokenizeKeywordText
@@ -119,6 +120,9 @@ data PropositionType
   | MisunderstandingReport
   | GenerativePrompt
   | ContemplativeTopic
+  | ExploratoryPrompt
+    -- ^ Phase 9: system-initiated exploratory learning prompt.
+    --   Triggered autonomously when learning needs are active.
   deriving stock (Eq, Ord, Show, Read, Bounded, Enum)
 
 propositionToFamily :: PropositionType -> CanonicalMoveFamily
@@ -155,6 +159,7 @@ propositionToFamily ComparisonPlausibilityQ = CMDistinguish
 propositionToFamily MisunderstandingReport = CMRepair
 propositionToFamily GenerativePrompt = CMDescribe
 propositionToFamily ContemplativeTopic = CMDeepen
+propositionToFamily ExploratoryPrompt = CMDescribe
 
 propositionTypeFromText :: Text -> Maybe PropositionType
 propositionTypeFromText = readMaybe . T.unpack
@@ -419,6 +424,7 @@ detectPropositionType rawText tokens = fromMaybe PlainAssert $ listToMaybe $ cat
   , detectRepairDirective rawText tokens
   , detectGenerativePrompt rawText tokens
   , detectContemplativeTopic rawText tokens
+  , detectExploratoryPrompt rawText tokens
   , detectKeywordFallbackType tokens
   ]
 
@@ -471,6 +477,8 @@ detectKeywordFallbackType tokens = listToMaybe $ catMaybes
   , matchKeywords requestKeywords RequestQ tokens
   , matchKeywords evaluationKeywords EvaluationQ tokens
   , matchKeywords narrativeKeywords NarrativeQ tokens
+  , matchKeywords contemplativeTopicKeywords ContemplativeTopic tokens
+  , matchKeywords exploratoryKeywords ExploratoryPrompt tokens
   ]
 
 detectContactSignal :: Text -> [Text] -> Maybe PropositionType
@@ -668,6 +676,7 @@ specialFocusEntity ComparisonPlausibilityQ = Just "сравнение"
 specialFocusEntity MisunderstandingReport = Just "понимание"
 specialFocusEntity GenerativePrompt = Just "мысль"
 specialFocusEntity ContemplativeTopic = Nothing
+specialFocusEntity ExploratoryPrompt = Just "исследование"
 specialFocusEntity _ = Nothing
 
 inferSemanticSlots :: Text -> [Text] -> PropositionType -> (Text, Text, [Text], [Text])
@@ -986,6 +995,11 @@ detectContemplativeTopic rawText tokens
       && not (null tokens)
       && all (`elem` contemplativeTopicKeywords) tokens = Just ContemplativeTopic
   | T.toLower (T.strip rawText) == "я" = Just ContemplativeTopic
+  | otherwise = Nothing
+
+detectExploratoryPrompt :: Text -> [Text] -> Maybe PropositionType
+detectExploratoryPrompt rawText tokens
+  | any (`T.isInfixOf` T.toLower rawText) exploratoryKeywords = Just ExploratoryPrompt
   | otherwise = Nothing
 
 hasConcreteWorldNoun :: [Text] -> Bool
@@ -1395,6 +1409,7 @@ computeConfidence propType keyPhrases semanticFrame =
         MisunderstandingReport -> propositionBaseConfidenceMisunderstanding
         GenerativePrompt -> propositionBaseConfidenceGenerativePrompt
         ContemplativeTopic -> propositionBaseConfidenceContemplativeTopic
+        ExploratoryPrompt -> 0.65
       keywordBonus =
         min propositionKeywordBonusCap
           (fromIntegral (length keyPhrases) * propositionKeywordBonusPerPhrase)
@@ -1412,6 +1427,7 @@ computeConfidence propType keyPhrases semanticFrame =
           ContactSignal -> 0.75
           PurposeQ -> 0.75
           RepairSignal -> 0.75
+          ExploratoryPrompt -> 0.55
           _ -> 0.0
   in max confidenceFloor blendedConfidence
 

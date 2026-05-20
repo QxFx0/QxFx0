@@ -416,24 +416,32 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcEssenceAngstLevel = angst
             , trcEssenceTrigger = triggerTag
             , trcLearningQueryType =
-                case taExternalQueryResult ta of
-                  Nothing -> Nothing
-                  Just _  -> Just "external"
+                case (taExternalQueryResult ta, taExploratoryQueryResult ta) of
+                  (Nothing, Nothing)       -> Nothing
+                  (Just _, Nothing)        -> Just "request_concept"
+                  (Nothing, Just _)        -> Just "exploratory"
+                  (Just _, Just _)         -> Just "both"
             , trcExternalTool =
                 case taExternalQueryResult ta of
                   Just (Right resp) -> Just (eqrToolName resp)
-                  _ -> Nothing
+                  _ -> case taExploratoryQueryResult ta of
+                         Just (Right resp) -> Just (eqrToolName resp)
+                         _ -> Nothing
             , trcLearningValidationStatus =
-                case taExternalQueryResult ta of
-                  Nothing           -> Just "not_attempted"
-                  Just (Left _)     -> Just "transport_error"
-                  Just (Right _)    -> Just "pending_validation"
+                case (taExternalQueryResult ta, taExploratoryQueryResult ta) of
+                  (Nothing, Nothing)       -> Just "not_attempted"
+                  (Just (Left _), _)       -> Just "transport_error"
+                  (Just (Right _), _)      -> Just "pending_validation"
+                  (Nothing, Just (Left _)) -> Just "exploratory_transport_error"
+                  (Nothing, Just (Right _)) -> Just "exploratory_pending_validation"
             , trcLearningSandboxResult = Nothing
             , trcLearningGraftTurn = Nothing
             , trcLearningRejectReason =
                 case taExternalQueryResult ta of
                   Just (Left err) -> Just (renderExternalQueryError err)
-                  _ -> Nothing
+                  _ -> case taExploratoryQueryResult ta of
+                         Just (Left err) -> Just (T.concat ["exploratory:", renderExternalQueryError err])
+                         _ -> Nothing
             }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

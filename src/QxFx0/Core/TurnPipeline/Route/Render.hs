@@ -43,8 +43,10 @@ import QxFx0.Core.TurnRender
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
-import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, defaultAvailableTools)
+import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, defaultAvailableTools, updateToolReliability)
+import QxFx0.Learning.Guardrails (canSubmitProposal)
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse)
+import qualified QxFx0.Learning.Guardrails as Guardrails
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
@@ -106,6 +108,12 @@ data RenderEffectPlan = RenderEffectPlan
     -- ^ Phase 8 gap closure: when a request strategy is chosen,
     --   this field carries the tool, need, and query text for the
     --   external query effect.  'Nothing' means no request strategy.
+  , repExploratoryQueryRequest :: !(Maybe (ExternalTool, LearningNeed, Text))
+    -- ^ Phase 9: autonomous exploratory learning query.  When the
+    --   system decides to explore autonomously (learning need active,
+    --   guardrails allow, no request-driven query already planned),
+    --   this field carries the exploratory query.  'Nothing' means
+    --   no autonomous exploration this turn.
   } deriving stock (Eq, Show)
 
 data RenderTimeline = RenderTimeline
@@ -121,6 +129,9 @@ data RenderEffectResults = RenderEffectResults
     -- ^ Phase 8 gap closure: result of the external query effect
     --   when a request strategy was chosen.  'Nothing' means no
     --   request was attempted.
+  , rerExploratoryQueryResult :: !(Maybe (Either ExternalQueryError ExternalQueryResponse))
+    -- ^ Phase 9: result of the autonomous exploratory external query.
+    --   'Nothing' means no exploratory query was attempted this turn.
   }
   deriving stock (Eq, Show)
 
@@ -213,8 +224,33 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                  Just tool -> Just (tool, need, queryText)
                  Nothing   -> Nothing
           _ -> Nothing
-  in RenderEffectPlan
-      { repRenderStatic = RenderStatic
+      -- Phase 9: autonomous exploratory learning query.
+      -- Triggered when:
+      --   1. No request-driven external query already planned
+      --   2. Learning need is active (not NeedNone)
+      --   3. Guardrails allow (rate limit, circuit breaker)
+      --   4. A suitable tool is available
+      mExploratoryQueryRequest =
+        case mExternalQueryRequest of
+          Just _ -> Nothing  -- request-driven query takes priority
+          Nothing ->
+            let need = lnsCurrentNeed (ssLearningNeedState ss)
+                lns = ssLearningNeedState ss
+                toolRel = ssToolReliability ss
+                guard = ssGuardrailState ss
+                currentTurn = ssTurnCount ss
+            in if need == NeedNone
+                  then Nothing
+                  else if not (canSubmitProposal guard currentTurn)
+                    then Nothing
+                    else
+                      let mTool = selectToolWithReliability need toolRel defaultAvailableTools
+                          queryText = buildExploratoryQueryText need (tiBestTopic ti)
+                      in case mTool of
+                           Just tool | etReliability tool >= 0.3 -> Just (tool, need, queryText)
+                           _ -> Nothing
+   in RenderEffectPlan
+       { repRenderStatic = RenderStatic
           { rsRenderWithBg = renderWithBg
           , rsTemplateArtifact = dialogueArtifact
           , rsPreferredGfLang = detectInputGfLang input
@@ -243,6 +279,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repRenderMorphologyWarning = morphologyWarning
       , repKnowledgeTopic = bestTopic
       , repExternalQueryRequest = mExternalQueryRequest
+      , repExploratoryQueryRequest = mExploratoryQueryRequest
        }
   where
     isRequestStrategy StrategyRequestCalibration = True
@@ -259,6 +296,15 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
            NeedLexiconExtension    -> topicText
            NeedKeywordEnrichment   -> T.concat ["Explain ", topicText]
            NeedSalienceCalibration -> T.concat ["Calibrate salience for ", topicText]
+           NeedNone                -> ""
+
+    buildExploratoryQueryText :: LearningNeed -> Text -> Text
+    buildExploratoryQueryText need topic =
+      let topicText = if T.null topic then "concept" else topic
+      in case need of
+           NeedLexiconExtension    -> T.concat ["Explore definition of ", topicText]
+           NeedKeywordEnrichment   -> T.concat ["Explore keywords for ", topicText]
+           NeedSalienceCalibration -> T.concat ["Explore salience calibration for ", topicText]
            NeedNone                -> ""
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
@@ -285,6 +331,14 @@ resolveRenderEffects pio effectPlan = do
       case result of
         TurnResExternalQuery res -> pure (Just res)
         _ -> pure (Just (Left (EqeInvalidResponse "unexpected_effect_result")))
+  -- Phase 9: execute autonomous exploratory external query.
+  mExploratoryQueryResult <- case repExploratoryQueryRequest effectPlan of
+    Nothing -> pure Nothing
+    Just (tool, need, queryText) -> do
+      result <- resolveTurnEffect pio (TurnReqExternalQuery tool need queryText)
+      case result of
+        TurnResExternalQuery res -> pure (Just res)
+        _ -> pure (Just (Left (EqeInvalidResponse "unexpected_effect_result")))
   tRender1 <- resolveRenderCurrentTime pio
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
@@ -295,6 +349,7 @@ resolveRenderEffects pio effectPlan = do
     , rerKnowledgeFact = mKnowledgeFact
     , rerKnowledgeFactSource = mKnowledgeSource
     , rerExternalQueryResult = mExternalQueryResult
+    , rerExploratoryQueryResult = mExploratoryQueryResult
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -380,6 +435,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taMetrics = metrics4
        , taKnowledgeSource = rerKnowledgeFactSource effectResults
        , taExternalQueryResult = rerExternalQueryResult effectResults
+       , taExploratoryQueryResult = rerExploratoryQueryResult effectResults
        }
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
@@ -601,6 +657,8 @@ renderLocalRecoverySurfaceRu strategy topic =
           header <> " Запрашиваю внешнее правило маршрутизации для восполнения локального пробела."
         StrategyRequestConcept ->
           header <> " Запрашиваю внешнее понятие или ключевое слово для расширения локальной онтологии."
+        StrategyExternalDialogue ->
+          header <> " Инициирую внешний диалог для автономного исследования: " <> topicText <> "."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn strategy topic =
@@ -631,6 +689,8 @@ renderLocalRecoverySurfaceEn strategy topic =
           header <> " Requesting external routing rule to cover a local deliberation gap."
         StrategyRequestConcept ->
           header <> " Requesting external concept or keyword to extend local ontology."
+        StrategyExternalDialogue ->
+          header <> " Initiating external dialogue for autonomous exploration: " <> topicText <> "."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =

@@ -158,7 +158,7 @@ isQuarantineExpired gs turn proposalId =
 -- Internal helpers
 
 circuitBreakerOpen :: GuardrailState -> Int -> Bool
-circuitBreakerOpen gs turn = turn <= gsCooldownExpiry gs
+circuitBreakerOpen gs turn = gsCooldownExpiry gs > 0 && turn <= gsCooldownExpiry gs
 
 rateLimitExceeded :: GuardrailState -> Int -> Bool
 rateLimitExceeded gs turn =

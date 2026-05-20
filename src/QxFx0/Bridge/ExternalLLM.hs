@@ -195,6 +195,11 @@ defaultMockTable =
     )
   , ( "llm-augment"
     , "NeedLexiconExtension"
+    , "Explore"
+    , Right mockDefinitionPositive
+    )
+  , ( "llm-augment"
+    , "NeedLexiconExtension"
     , "fail"
     , Left (EqeServerError "mock_injected_failure")
     )

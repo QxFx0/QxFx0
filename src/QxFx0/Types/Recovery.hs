@@ -70,6 +70,9 @@ data LocalRecoveryStrategy
   | StrategyRequestConcept
     -- ^ WP3: learning-driven recovery — concept / keyword gap
     --   is persistent; system requests an external concept addition.
+  | StrategyExternalDialogue
+    -- ^ Phase 9: autonomous exploratory learning — system initiates
+    --   an external dialogue query to acquire new knowledge.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
@@ -103,3 +106,4 @@ renderLocalRecoveryStrategy StrategyTemporalDeepening = "temporal_deepening"
 renderLocalRecoveryStrategy StrategyRequestCalibration = "request_calibration"
 renderLocalRecoveryStrategy StrategyRequestRule = "request_rule"
 renderLocalRecoveryStrategy StrategyRequestConcept = "request_concept"
+renderLocalRecoveryStrategy StrategyExternalDialogue = "external_dialogue"

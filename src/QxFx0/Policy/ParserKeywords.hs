@@ -293,6 +293,17 @@ generativePromptKeywords =
   , "произнеси мысль"
   ]
 
+exploratoryKeywords :: [Text]
+exploratoryKeywords =
+  [ "изучи"
+  , "исследуй"
+  , "разберись"
+  , "пойми"
+  , "explore"
+  , "investigate"
+  , "research"
+  ]
+
 contemplativeTopicKeywords :: [Text]
 contemplativeTopicKeywords =
   [ "я"

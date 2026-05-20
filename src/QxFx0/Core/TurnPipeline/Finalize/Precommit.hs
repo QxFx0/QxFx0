@@ -126,7 +126,9 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
       -- Phase 8 gap closure: apply external learning-loop result from
       -- the render-phase artifacts (populated by resolveRenderEffects
       -- when a request strategy triggered TurnReqExternalQuery).
-      nextSystemState = applyExternalLearning nextSystemState0 (taExternalQueryResult turnArtifacts)
+      nextSystemState1 = applyExternalLearning nextSystemState0 (taExternalQueryResult turnArtifacts)
+      -- Phase 9: apply autonomous exploratory learning-loop result.
+      nextSystemState = applyExternalLearning nextSystemState1 (taExploratoryQueryResult turnArtifacts)
       projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)
