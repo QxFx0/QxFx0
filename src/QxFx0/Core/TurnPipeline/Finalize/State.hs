@@ -12,6 +12,7 @@ module QxFx0.Core.TurnPipeline.Finalize.State
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.Thresholds
   ( legitimacyPassThreshold
   , legitimacyRecoveryThreshold
@@ -414,6 +415,25 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcEssenceCommitted = committedFlag
             , trcEssenceAngstLevel = angst
             , trcEssenceTrigger = triggerTag
+            , trcLearningQueryType =
+                case tiExternalQueryResult ti of
+                  Nothing -> Nothing
+                  Just _  -> Just "external"
+            , trcExternalTool =
+                case tiExternalQueryResult ti of
+                  Just (Right resp) -> Just (eqrToolName resp)
+                  _ -> Nothing
+            , trcLearningValidationStatus =
+                case tiExternalQueryResult ti of
+                  Nothing           -> Just "not_attempted"
+                  Just (Left _)     -> Just "transport_error"
+                  Just (Right _)    -> Just "pending_validation"
+            , trcLearningSandboxResult = Nothing
+            , trcLearningGraftTurn = Nothing
+            , trcLearningRejectReason =
+                case tiExternalQueryResult ti of
+                  Just (Left err) -> Just (renderExternalQueryError err)
+                  _ -> Nothing
             }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

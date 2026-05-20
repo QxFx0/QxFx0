@@ -81,6 +81,21 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ Phase 9: snake_case 'renderCommitmentTrigger' tag set only
     --   on the turn a commitment fires (Phase 10).  Always
     --   @Nothing@ in Phase 9.
+  , trcLearningQueryType :: !(Maybe Text)
+    -- ^ Phase 8: type of learning query, e.g. "definition",
+    --   "declension", "concept".  Nothing when no learning loop
+    --   was activated this turn.
+  , trcExternalTool :: !(Maybe Text)
+    -- ^ Phase 8: canonical tool name selected for the learning query.
+  , trcLearningValidationStatus :: !(Maybe Text)
+    -- ^ Phase 8: "accept" | "reject" | "invalid_response" |
+    --   "sandbox_reject" | "not_attempted".
+  , trcLearningSandboxResult :: !(Maybe Text)
+    -- ^ Phase 8: JSON-encoded 'SandboxMetrics' or reject reason.
+  , trcLearningGraftTurn :: !(Maybe Int)
+    -- ^ Phase 8: turn number when the fruit was grafted (if accepted).
+  , trcLearningRejectReason :: !(Maybe Text)
+    -- ^ Phase 8: human-readable reject reason for audit.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

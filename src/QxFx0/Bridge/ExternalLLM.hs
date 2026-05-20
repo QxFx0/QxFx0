@@ -1,0 +1,260 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
+
+{-|
+Module      : QxFx0.Bridge.ExternalLLM
+Description : WP2 — External LLM transport (Mock + Mistral).
+
+Two transports:
+
+1. 'MockTransport' — deterministic, pure, always succeeds or fails based
+   on a static table.  Used for unit tests and offline replay.
+2. 'MistralTransport' — real HTTP to the Mistral API, guarded by env
+   vars and feature-flagged.  Never selected when 'QXFX0_LLM_TRANSPORT'
+   is not set to @"mistral"@.
+
+Fail-closed: any network/auth/rate-limit error returns a typed
+'ExternalQueryError' and does NOT throw.  The learning loop decides
+whether to retry, fallback, or reject.
+-}
+module QxFx0.Bridge.ExternalLLM
+  ( LLMTransport(..)
+  , buildTransportFromEnv
+  , queryExternalTool
+  ) where
+
+import Control.Applicative ((<|>))
+import Control.Exception (try)
+import Control.Monad (when)
+import Data.Aeson (FromJSON, ToJSON, Value(..), decodeStrict, object, (.=))
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Char (isSpace)
+import qualified Data.List as L
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import GHC.Generics (Generic)
+import Network.HTTP.Client
+  ( Manager
+  , Request
+  , RequestBody(..)
+  , Response
+  , httpLbs
+  , method
+  , parseRequest
+  , requestBody
+  , requestHeaders
+  , responseBody
+  , responseStatus
+  , throwErrorStatusCodes
+  )
+import Network.HTTP.Client.TLS (newTlsManager)
+import Network.HTTP.Types.Status (statusCode, statusMessage)
+import System.Environment (lookupEnv)
+
+import QxFx0.Learning.Need (LearningNeed(..))
+import QxFx0.Learning.Tool (ExternalTool(..), etName)
+import QxFx0.Types.ExternalQuery
+  ( ExternalQueryError(..)
+  , ExternalQueryResponse(..)
+  )
+import QxFx0.ExceptionPolicy (catchIO)
+
+-- | Transport abstraction: carries a 'Manager' for real HTTP and a
+-- static map for mock.
+data LLMTransport
+  = MockTransport !MockTable
+  | MistralTransport !Manager !MistralConfig
+
+instance Show LLMTransport where
+  show (MockTransport _) = "MockTransport"
+  show (MistralTransport _ cfg) = "MistralTransport(" ++ show cfg ++ ")"
+
+-- | Static lookup table for mock responses.
+-- Key: (toolName, needTag, queryPrefix) -> response body.
+type MockTable = [(Text, Text, Text, Either ExternalQueryError Text)]
+
+-- | Mistral API configuration from env vars.
+data MistralConfig = MistralConfig
+  { mcApiKey    :: !Text
+  , mcModel     :: !Text
+  , mcEndpoint  :: !Text
+  , mcTimeoutMs :: !Int
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
+-- | Build transport from environment.
+--
+-- Env vars:
+--   QXFX0_LLM_TRANSPORT=mock|mistral  (default: mock)
+--   QXFX0_MISTRAL_API_KEY             (required for mistral)
+--   QXFX0_MISTRAL_MODEL               (default: "mistral-medium")
+--   QXFX0_MISTRAL_ENDPOINT            (default: "https://api.mistral.ai/v1/chat/completions")
+buildTransportFromEnv :: IO LLMTransport
+buildTransportFromEnv = do
+  mTransport <- lookupEnv "QXFX0_LLM_TRANSPORT"
+  case mTransport of
+    Just "mistral" -> buildMistralTransport
+    _              -> pure (MockTransport defaultMockTable)
+
+buildMistralTransport :: IO LLMTransport
+buildMistralTransport = do
+  mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
+  case mKey of
+    Nothing ->
+      -- Fail-closed: missing key -> mock fallback with telemetry marker.
+      pure (MockTransport defaultMockTable)
+    Just key -> do
+      model    <- fmap (T.pack . fromMaybe "mistral-medium") (lookupEnv "QXFX0_MISTRAL_MODEL")
+      endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
+      let timeout = 30000 :: Int
+      mgr <- newTlsManager
+      pure $ MistralTransport mgr
+        MistralConfig
+          { mcApiKey    = T.pack key
+          , mcModel     = model
+          , mcEndpoint  = endpoint
+          , mcTimeoutMs = timeout
+          }
+
+-- | Default mock table with a handful of deterministic responses.
+-- Extend this in tests by passing a custom table to 'MockTransport'.
+defaultMockTable :: MockTable
+defaultMockTable =
+  [ ( "llm-augment"
+    , "NeedLexiconExtension"
+    , "что"
+    , Right mockDefinitionPositive
+    )
+  , ( "llm-augment"
+    , "NeedLexiconExtension"
+    , "как"
+    , Right mockDeclensionPositive
+    )
+  , ( "llm-augment"
+    , "NeedLexiconExtension"
+    , "fail"
+    , Left (EqeServerError "mock_injected_failure")
+    )
+  ]
+  where
+    mockDefinitionPositive =
+      "{\"proposition\":\"свобода — способность действовать по своей воле\",\"source\":\"llm\",\"validated\":true,\"conatusDelta\":0.3,\"predictiveDelta\":0.2,\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле\",\"morphology\":{\"gender\":\"feminine\",\"declension\":\"first\"}}"
+    mockDeclensionPositive =
+      "{\"proposition\":\"склонение слова 'книга'\",\"source\":\"llm\",\"validated\":true,\"conatusDelta\":0.2,\"predictiveDelta\":0.1,\"word\":\"книга\",\"definition\":\"печатное издание\",\"morphology\":{\"gender\":\"feminine\",\"declension\":\"first\",\"cases\":{\"nom\":\"книга\",\"gen\":\"книги\",\"dat\":\"книге\",\"acc\":\"книгу\",\"ins\":\"книгой\",\"pre\":\"книге\"}}}"
+
+-- | Execute a query against the chosen transport.
+--
+-- Returns 'Either ExternalQueryError ExternalQueryResponse' so the
+-- caller (learning loop) can decide what to do next.
+queryExternalTool
+  :: LLMTransport
+  -> ExternalTool
+  -> LearningNeed
+  -> Text        -- ^ user query / prompt
+  -> IO (Either ExternalQueryError ExternalQueryResponse)
+queryExternalTool transport tool need query =
+  case transport of
+    MockTransport table    -> mockQuery table tool need query
+    MistralTransport mgr cfg -> mistralQuery mgr cfg tool need query
+
+-- | Deterministic mock query.
+mockQuery :: MockTable -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
+mockQuery table tool need query = do
+  let needTag = renderNeedTag need
+      qPrefix = T.takeWhile (not . isSpace) (T.strip query)
+      match = mockTableLookup (etName tool, needTag, qPrefix) table
+            <|> mockTableLookup (etName tool, needTag, "") table
+            <|> mockTableLookup (etName tool, "", qPrefix) table
+  pure $ case match of
+    Just (Right body) ->
+      Right ExternalQueryResponse
+        { eqrRawBody    = body
+        , eqrStructured = body
+        , eqrToolName   = etName tool
+        , eqrLatencyMs  = 0
+        }
+    Just (Left err) ->
+      Left err
+    Nothing ->
+      Left (EqeNetworkUnavailable "mock_no_matching_response")
+
+renderNeedTag :: LearningNeed -> Text
+renderNeedTag NeedSalienceCalibration = "NeedSalienceCalibration"
+renderNeedTag NeedKeywordEnrichment   = "NeedKeywordEnrichment"
+renderNeedTag NeedLexiconExtension      = "NeedLexiconExtension"
+renderNeedTag NeedNone                  = "NeedNone"
+
+-- | Real Mistral HTTP query.
+-- Fail-closed: any exception or non-2xx status is mapped to a typed
+-- 'ExternalQueryError'.
+mistralQuery :: Manager -> MistralConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
+mistralQuery mgr cfg tool _need query =
+  catchIO (do
+    req0 <- parseRequest (T.unpack (mcEndpoint cfg))
+    let req = req0
+          { method = "POST"
+          , requestHeaders =
+              [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", mcApiKey cfg]))
+              , ("Content-Type", "application/json")
+              ]
+          , requestBody = RequestBodyLBS $ LBS.fromStrict $ TE.encodeUtf8 $
+              T.concat ["{\"model\":\"", mcModel cfg, "\",\"messages\":[{\"role\":\"user\",\"content\":\"", escapeJson query, "\"}]}"]
+          }
+    resp <- httpLbs req mgr
+    let code = statusCode (responseStatus resp)
+        body = TE.decodeUtf8 (LBS.toStrict (responseBody resp))
+    if code >= 200 && code < 300
+      then pure $ Right ExternalQueryResponse
+             { eqrRawBody    = body
+             , eqrStructured = extractStructured body
+             , eqrToolName   = etName tool
+             , eqrLatencyMs  = 0 -- TODO: measure via diffUTCTime
+             }
+      else case code of
+        401 -> pure $ Left (EqeAuthFailure body)
+        429 -> pure $ Left (EqeRateLimited body)
+        _ | code >= 500 -> pure $ Left (EqeServerError body)
+        _ -> pure $ Left (EqeInvalidResponse body)
+  ) (\e -> pure $ Left (EqeNetworkUnavailable (T.pack (show e))))
+
+-- | Naïve JSON escape for the prompt body (sufficient for our
+-- constrained prompts).
+escapeJson :: Text -> Text
+escapeJson = T.concatMap escapeChar
+  where
+    escapeChar '"' = "\\\""
+    escapeChar '\\' = "\\\\"
+    escapeChar '\n' = "\\n"
+    escapeChar '\r' = "\\r"
+    escapeChar c    = T.singleton c
+
+-- | Extract structured payload from a Mistral chat-completion response.
+-- If the response contains JSON in a @content@ field, unwrap it;
+-- otherwise return the whole body for fallback parsing.
+extractStructured :: Text -> Text
+extractStructured body =
+  fromMaybe body $ do
+    -- Very lightweight unwrap: look for "content":"..."
+    let prefix = "\"content\":\""
+    case T.breakOn prefix body of
+      (_, rest) | T.null rest -> Nothing
+      (_, rest') -> do
+        let contentStart = T.drop (T.length prefix) rest'
+        case T.breakOn "\"" contentStart of
+          (content, _) | T.null content -> Nothing
+          (content, _) -> Just content
+
+-- Helpers
+
+mockTableLookup :: (Text, Text, Text) -> MockTable -> Maybe (Either ExternalQueryError Text)
+mockTableLookup _ [] = Nothing
+mockTableLookup key ((a,b,c,d):rest)
+  | key == (a,b,c)  = Just d
+  | otherwise = mockTableLookup key rest

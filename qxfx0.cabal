@@ -75,6 +75,7 @@ library
     QxFx0.Types.ClaimAst
     QxFx0.Types.TurnProjection
     QxFx0.Types.Vec
+    QxFx0.Types.ExternalQuery
     QxFx0.ExceptionPolicy
     QxFx0.Self.Types
     QxFx0.Self.Blanket
@@ -147,6 +148,12 @@ library
     QxFx0.Bridge.Datalog
     QxFx0.Bridge.StatePersistence
     QxFx0.Bridge.TxStatement
+    QxFx0.Bridge.ExternalLLM
+
+    QxFx0.Learning.Validator
+    QxFx0.Learning.Parser
+    QxFx0.Learning.Loop
+    QxFx0.Learning.Sandbox
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.AtomAccretion
@@ -307,6 +314,7 @@ library
     , process        >=1.6 && <1.7
     , http-conduit   >=2.3 && <2.4
     , http-client    >=0.7 && <0.8
+    , http-client-tls >=0.3 && <0.5
     , http-types     >=0.12 && <0.13
     , case-insensitive >=1.2 && <1.3
     , vector         >=0.12 && <0.14

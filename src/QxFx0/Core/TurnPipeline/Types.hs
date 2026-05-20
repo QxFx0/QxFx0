@@ -39,6 +39,7 @@ import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
+import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -116,6 +117,12 @@ data TurnInput = TurnInput
     -- ^ Phase 9: the pre-turn essence carrier, populated by
     --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source
     --   of truth for the turn's essence-layer reads.
+  , tiExternalQueryResult :: !(Maybe (Either ExternalQueryError ExternalQueryResponse))
+    -- ^ Phase 8: optional result from an external tool query
+    --   (e.g. LLM definition / declension response).  'Nothing'
+    --   means no query was attempted this turn.  Populated by
+    --   the render or finalize stage wiring when a learning need
+    --   triggers an external call.
   }
 
 data TurnSignals = TurnSignals

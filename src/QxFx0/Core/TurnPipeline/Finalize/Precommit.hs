@@ -36,6 +36,7 @@ import QxFx0.Core.TurnPipeline.Finalize.State
   , buildTurnProjection
   , computeEssenceValidation
   )
+import QxFx0.Learning.Loop (applyExternalLearning)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.ExceptionPolicy
@@ -109,7 +110,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           turnPlan
           turnArtifacts
           (fsMeaningGraphBase static)
-      (nextSystemState, commitmentTrigger) =
+      (nextSystemState0, commitmentTrigger) =
         buildNextSystemState
           updateHistory
           systemState
@@ -122,6 +123,8 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           (fsOutcomeFamily static)
           (fsOutcomeVerdict static)
           (fsConsecReflect static)
+      -- Phase 8: apply external learning-loop result if present.
+      nextSystemState = applyExternalLearning nextSystemState0 turnInput
       projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)

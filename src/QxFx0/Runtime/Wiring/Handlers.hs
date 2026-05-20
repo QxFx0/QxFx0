@@ -50,6 +50,7 @@ import QxFx0.Runtime.Wiring.Context
   )
 import QxFx0.Runtime.Wiring.Readiness (checkNixWithCache, wireVerifyAgda)
 import QxFx0.Semantic.Embedding (textToEmbeddingResult)
+import QxFx0.Bridge.ExternalLLM (buildTransportFromEnv, queryExternalTool)
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (r5Family, r5Force)
 import QxFx0.Types.ShadowDivergence
@@ -140,6 +141,10 @@ handleTurnEffect ctx request =
       TurnResLinearizeClaimAst <$> linearizeClaimAstGfLang mPgfPath lang claimAst
     TurnReqLinearizeDialogAtoms mPgfPath lang da ->
       TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLang mPgfPath lang da
+    TurnReqExternalQuery tool need query -> do
+      transport <- buildTransportFromEnv
+      result <- queryExternalTool transport tool need query
+      pure (TurnResExternalQuery result)
 
 generateRequestId :: TimeSource -> IO T.Text
 generateRequestId timeSource = do

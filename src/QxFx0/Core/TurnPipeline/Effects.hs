@@ -42,6 +42,9 @@ import QxFx0.Self.Field
 import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Salience (conatusGateFires)
 import QxFx0.Self.Essence (Essence)
+import QxFx0.Learning.Tool (ExternalTool)
+import QxFx0.Learning.Need (LearningNeed)
+import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -68,6 +71,8 @@ data TurnEffectRequest
   | TurnReqCheckpoint !Int
   | TurnReqLinearizeClaimAst !(Maybe FilePath) !Text !ClaimAst
   | TurnReqLinearizeDialogAtoms !(Maybe FilePath) !Text !DialogAtoms
+  | TurnReqExternalQuery !ExternalTool !LearningNeed !Text
+    -- ^ Phase 8: query an external tool (LLM, mentor, script).
   deriving stock (Show)
 
 data TurnEffectResult
@@ -89,6 +94,8 @@ data TurnEffectResult
   | TurnResCheckpointCompleted
   | TurnResLinearizeClaimAst !(Either Text Text)
   | TurnResLinearizeDialogAtoms !(Either Text Text)
+  | TurnResExternalQuery !(Either ExternalQueryError ExternalQueryResponse)
+    -- ^ Phase 8: response envelope from external tool query.
 
 data PrepareStatic = PrepareStatic
   { psInputText :: !Text
