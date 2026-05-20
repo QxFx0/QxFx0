@@ -154,6 +154,7 @@ library
     QxFx0.Learning.Parser
     QxFx0.Learning.Loop
     QxFx0.Learning.Sandbox
+    QxFx0.Learning.TrainingCycle
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.AtomAccretion
@@ -389,6 +390,7 @@ common test-common
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d
     Test.Suite.LearningLoop
+    Test.Suite.TrainingCycle
 
 test-suite qxfx0-test-unit
   import:        test-common
