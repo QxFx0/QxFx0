@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `4bd081e`  
+**Index SHA:** `a3e2237`  
 **Last updated:** 2026-05-20  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -13,10 +13,11 @@
 low-RAM environment (~10–11 GB).  All constituent gates that can run
 within RAM/time constraints were executed individually and passed.
 
-This index reflects the **post-commitment sustainability closure** run
-(GAP1–GAP3 verification).  Fast-test count increased from 469 → 484
-and full-test count from 596 → 611 due to new proven-claims tests for
-gradient recovery, bounded shadow veto, and provisional-atom lifecycle.
+This index reflects the **endogenous learning phase-1 closure**
+(WP1–WP5 verification).  Fast-test count increased from 484 → 509
+and full-test count from 611 → 636 due to new learning-loop
+regression checks (need detection, tool selection, request strategies,
+calibration versioning, guardrails).
 
 ---
 
@@ -24,9 +25,9 @@ gradient recovery, bounded shadow veto, and provisional-atom lifecycle.
 
 | # | Gate | Command | Exit | Verdict | Evidence |
 |---|------|---------|------|---------|----------|
-| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 237 modules compiled, 0 errors |
-| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 484/484 cases, 0 errors, 0 failures |
-| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 611/611 cases, 0 errors, 0 failures |
+| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 240 modules compiled, 0 errors |
+| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 509/509 cases, 0 errors, 0 failures |
+| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 636/636 cases, 0 errors, 0 failures |
 | 4 | `check_architecture.sh` | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 | 5 | `gf_quality_gate.sh` | `bash scripts/gf_quality_gate.sh` | 0 | **PASS** | 0 errors, 0 warnings, PGF 312662 bytes, all core topics present |
 | 6 | `check_gf_render_path.sh` | `bash scripts/check_gf_render_path.sh` | — | **INFRA-DEFERRED** | timeout (>60 s) on low-RAM runner; individual constituent checks pass |
@@ -64,6 +65,16 @@ The following claims are mechanically proven by the fast/full test suites:
 
 3. **Provisional-atom ontology accretion** — `observeNovelAtom` creates/bumps provisional atoms; `promoteProvisionalAtoms` requires ≥3 occurrences across ≥5 turns; `decayProvisionalAtoms` expires after 20 turns; `resolveCollisions` removes duplicates against the canonical `AtomSet`. Tests: `testObserveNovelAtomCreatesNew`, `testObserveNovelAtomBumpsExisting`, `testPromoteProvisionalAtomsMeetsCriteria`, `testPromoteProvisionalAtomsBelowThreshold`, `testDecayProvisionalAtomsRemovesStale`, `testDecayProvisionalAtomsKeepsFresh`, `testResolveCollisionsRemovesDuplicates`, `testResolveCollisionsKeepsNovel`.
 
+4. **Endogenous learning need detection (WP1)** — `detectLearningNeed` raises a typed `LearningNeed` only after 3 consecutive turns of persistent signal (low conatus + substrate gaps / low confidence + high counterfactual / high counterfactual + low consolidation). Single-turn noise does not create a need. Tests: `testLearningNeedRaisedOnPersistentPattern`, `testLearningNeedNotRaisedOnNoise`, `testLearningNeedWiredThroughFinalizePrecommit`.
+
+5. **External tool selection (WP2)** — `selectTool` maps a `LearningNeed` to the highest-reliability `validatable=True` tool whose `ToolDomain` matches the need. If no domain-specific tool exists, falls back to `DomainGeneral`. Non-validatable tools are rejected when a validatable alternative is available. Tests: `testToolSelectsBestMatchByDomainAndReliability`, `testToolRejectsMismatchDomain`, `testToolPrefersValidatableOverHigherReliability`, `testToolNoneForNoNeed`.
+
+6. **Learning-driven request strategies (WP3)** — When a persisted `LearningNeed` has `level >= 0.6`, `buildLocalRecoveryPlan` emits `StrategyRequestCalibration`, `StrategyRequestRule`, or `StrategyRequestConcept` instead of a local recovery surface. Low-deficit needs (< 0.6) do not trigger request strategies. Tests: `testLearningNeedHighDeficitTriggersRequestStrategy`, `testLearningNeedLowDeficitDoesNotTriggerRequest`, `testLearningNeedNoneDoesNotTriggerRequest`.
+
+7. **Calibration versioning and rollback (WP4)** — Every accepted proposal receives a monotonic `CalibrationId`, links to a `prevId`, and can be rolled back via `rollbackCalibration`. `monitorCalibration` detects degradation (level increased after acceptance window). Tests: `testCalibrationVerifyRejectsEmptyRule`, `testCalibrationVerifyRejectsBlockedRule`, `testCalibrationVerifyAcceptsValidConcept`, `testCalibrationAcceptCreatesEntry`, `testCalibrationMonitorOkWithinWindow`, `testCalibrationMonitorDetectsDegradation`, `testCalibrationRollbackReturnsPrevVersion`, `testCalibrationRollbackFailsForNonAccepted`, `testCalibrationCurrentVersionReturnsLastAccepted`.
+
+8. **Guardrails — rate limit, circuit breaker, quarantine (WP5)** — `canSubmitProposal` enforces max 2 proposals per 10-turn window, a 5-turn cooldown after 3 consecutive rejections, and a 2-turn quarantine before a proposal is eligible for verify/simulate. Tests: `testGuardrailRateLimitBlocksAfterMax`, `testGuardrailRateLimitResetsAfterWindow`, `testGuardrailCircuitBreakerOpensAfterRejections`, `testGuardrailCircuitBreakerClosesAfterCooldown`, `testGuardrailQuarantineExpiresAfterMinTurns`, `testGuardrailQuarantineBlocksBeforeMinTurns`.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -89,11 +100,11 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 484  Tried: 484  Errors: 0  Failures: 0
+# Expected: Cases: 509  Tried: 509  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 611  Tried: 611  Errors: 0  Failures: 0
+# Expected: Cases: 636  Tried: 636  Errors: 0  Failures: 0
 
 # Individual gates:
 bash scripts/check_architecture.sh      # -> "Architecture check passed."
