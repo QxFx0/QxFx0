@@ -114,6 +114,7 @@ import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
 import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
 import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
+import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 
 data SystemState = SystemState
@@ -163,6 +164,12 @@ data SystemState = SystemState
     -- ^ WP5: dynamic reliability overrides per tool name.
     --   Updated by acceptance/rejection outcomes.  Names not present
     --   fall back to static profile defaults.  Initialised to 'M.empty'.
+  , ssCalibrationSnapshots :: ![CalibrationSnapshot]
+    -- ^ Phase 9: audit trail of calibration signal computations.
+    --   Each turn that produces a signal appends a snapshot with
+    --   timestamp, run-id, components, and decision.  Bounded to
+    --   the most recent 100 entries to prevent unbounded growth.
+    --   Initialised to '[]'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -210,6 +217,7 @@ instance ToJSON SystemState where
      , "calibrationLog" .= ssCalibrationLog ss
      , "knowledgeTree" .= ssKnowledgeTree ss
      , "toolReliability" .= ssToolReliability ss
+     , "calibrationSnapshots" .= ssCalibrationSnapshots ss
      ]
 
 instance FromJSON SystemState where
@@ -261,6 +269,7 @@ instance FromJSON SystemState where
        <*> o .:? "calibrationLog" .!= emptyCalibrationLog
        <*> o .:? "knowledgeTree" .!= emptyKnowledgeTree
        <*> o .:? "toolReliability" .!= M.empty
+       <*> o .:? "calibrationSnapshots" .!= []
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -379,4 +388,5 @@ emptySystemState = SystemState
   , ssCalibrationLog = emptyCalibrationLog
   , ssKnowledgeTree = emptyKnowledgeTree
   , ssToolReliability = M.empty
+  , ssCalibrationSnapshots = []
   }

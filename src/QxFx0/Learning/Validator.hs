@@ -67,13 +67,25 @@ data MorphologyPayload = MorphologyPayload
     deriving anyclass (NFData, FromJSON, ToJSON)
 
 -- | Typed validation-failure taxonomy.
+-- Each constructor carries enough detail for telemetry and operator
+-- diagnosis without exposing the raw LLM response.
 data ValidationError
   = VeEmptyWord
+    -- ^ Word field is missing or empty after stripping.
   | VeEmptyDefinition
-  | VeDefinitionTooShort !Int !Int   -- ^ actual word count, required minimum
+    -- ^ Definition field is missing or empty.
+  | VeDefinitionTooShort !Int !Int
+    -- ^ actual word count, required minimum
+  | VeSemanticallyEmpty
+    -- ^ Definition consists only of stop-words / filler (e.g. "a thing").
   | VeMorphologyParseFailure !Text
-  | VeLexiconConflict !Text         -- ^ conflicting surface form
-  | VeInvalidField !Text !Text      -- ^ field name, reason
+    -- ^ Morphology JSON or map structure is malformed.
+  | VeLexiconConflict !Text
+    -- ^ Word+definition pair duplicates an existing lexicon entry.
+  | VeInvalidSchema !Text
+    -- ^ Top-level JSON schema mismatch; carries the expected field name.
+  | VeInvalidField !Text !Text
+    -- ^ field name, reason
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
@@ -82,6 +94,7 @@ minDefinitionWords :: Int
 minDefinitionWords = 3
 
 -- | Validate a payload against the current morphology/lexicon baseline.
+-- Fail-closed: any ambiguity or conflict results in Left.
 validateFruitPayload
   :: KnowledgeFruitPayload
   -> MorphologyData          -- ^ current runtime morphology (for conflict detection)
@@ -96,6 +109,10 @@ validateFruitPayload payload morphData = do
   let wordCount = length (T.words defStripped)
   when (wordCount < minDefinitionWords)
     (Left (VeDefinitionTooShort wordCount minDefinitionWords))
+
+  -- 2a. Semantic emptiness check: definition must not be only stop-words.
+  let meaningfulWords = filter (not . isStopWord) (T.words defStripped)
+  when (null meaningfulWords) (Left VeSemanticallyEmpty)
 
   -- 3. Morphology structural sanity (not deep paradigm fidelity)
   case kfpMorphology payload of
@@ -118,6 +135,24 @@ validateFruitPayload payload morphData = do
 
   pure payload
 
+-- | Minimal English stop-word list for semantic-emptiness detection.
+-- Expandable; kept small to avoid false positives in multilingual text.
+isStopWord :: Text -> Bool
+isStopWord w = T.toLower w `elem`
+  [ "a", "an", "the", "is", "are", "was", "were", "be", "been"
+  , "being", "have", "has", "had", "do", "does", "did", "will"
+  , "would", "could", "should", "may", "might", "must", "shall"
+  , "can", "need", "dare", "ought", "used", "to", "of", "in"
+  , "for", "on", "with", "at", "by", "from", "as", "into"
+  , "through", "during", "before", "after", "above", "below"
+  , "between", "under", "and", "but", "or", "yet", "so"
+  , "if", "because", "although", "though", "while", "where"
+  , "when", "that", "which", "who", "whom", "whose", "what"
+  , "this", "these", "those", "i", "you", "he", "she", "it"
+  , "we", "they", "me", "him", "her", "us", "them", "my"
+  , "your", "his", "its", "our", "their", "thing", "something"
+  ]
+
 renderValidationError :: ValidationError -> Text
 renderValidationError err =
   case err of
@@ -125,6 +160,8 @@ renderValidationError err =
     VeEmptyDefinition -> "empty_definition"
     VeDefinitionTooShort actual req ->
       T.concat ["definition_too_short: got ", T.pack (show actual), " words, need ", T.pack (show req)]
+    VeSemanticallyEmpty -> "semantically_empty"
     VeMorphologyParseFailure t -> T.concat ["morphology_parse: ", t]
     VeLexiconConflict t -> T.concat ["lexicon_conflict: ", t]
+    VeInvalidSchema t -> T.concat ["invalid_schema: ", t]
     VeInvalidField f r -> T.concat ["invalid_field: ", f, " -> ", r]

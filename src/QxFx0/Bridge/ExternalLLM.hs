@@ -23,7 +23,10 @@ whether to retry, fallback, or reject.
 module QxFx0.Bridge.ExternalLLM
   ( LLMTransport(..)
   , buildTransportFromEnv
+  , buildTransportFromConfig
   , queryExternalTool
+  , queryExternalToolWithConfig
+  , defaultExternalQueryConfig
   ) where
 
 import Control.Applicative ((<|>))
@@ -62,18 +65,24 @@ import QxFx0.Learning.Tool (ExternalTool(..), etName)
 import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
+  , ExternalQueryConfig(..)
+  , TransportFallbackReason(..)
+  , renderFallbackReason
   )
 import QxFx0.ExceptionPolicy (catchIO)
 
 -- | Transport abstraction: carries a 'Manager' for real HTTP and a
 -- static map for mock.
 data LLMTransport
-  = MockTransport !MockTable
+  = MockTransport !MockTable !(Maybe ExternalQueryConfig)
+    -- ^ Mock table plus optional config that led to fallback.
   | MistralTransport !Manager !MistralConfig
 
 instance Show LLMTransport where
-  show (MockTransport _) = "MockTransport"
-  show (MistralTransport _ cfg) = "MistralTransport(" ++ show cfg ++ ")"
+  show (MockTransport _ mcfg) =
+    "MockTransport(" ++ maybe "no_config" show mcfg ++ ")"
+  show (MistralTransport _ cfg) =
+    "MistralTransport(apiKey=<REDACTED>,model=" ++ show (mcModel cfg) ++ ")"
 
 -- | Static lookup table for mock responses.
 -- Key: (toolName, needTag, queryPrefix) -> response body.
@@ -89,38 +98,80 @@ data MistralConfig = MistralConfig
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
+-- | Default safe configuration when no env vars are present.
+defaultExternalQueryConfig :: ExternalQueryConfig
+defaultExternalQueryConfig = ExternalQueryConfig
+  { eqcTransportMode  = "mock"
+  , eqcApiKey         = Nothing
+  , eqcModel          = "mistral-small-latest"
+  , eqcEndpoint       = "https://api.mistral.ai/v1/chat/completions"
+  , eqcTimeoutMs      = 30000
+  , eqcFallbackReason = Just TfrExplicitMock
+  }
+
 -- | Build transport from environment.
 --
 -- Env vars:
 --   QXFX0_LLM_TRANSPORT=mock|mistral  (default: mock)
 --   QXFX0_MISTRAL_API_KEY             (required for mistral)
---   QXFX0_MISTRAL_MODEL               (default: "mistral-medium")
+--   QXFX0_MISTRAL_MODEL               (default: "mistral-small-latest")
 --   QXFX0_MISTRAL_ENDPOINT            (default: "https://api.mistral.ai/v1/chat/completions")
+--
+-- Fail-closed: any missing required config falls back to mock with an
+-- explicit 'TransportFallbackReason' in the returned 'ExternalQueryConfig'.
 buildTransportFromEnv :: IO LLMTransport
 buildTransportFromEnv = do
   mTransport <- lookupEnv "QXFX0_LLM_TRANSPORT"
-  case mTransport of
-    Just "mistral" -> buildMistralTransport
-    _              -> pure (MockTransport defaultMockTable)
+  let mode = fromMaybe "mock" mTransport
+  cfg0 <- if mode == "mistral"
+    then do
+      mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
+      case mKey of
+        Nothing -> pure $ defaultExternalQueryConfig
+          { eqcTransportMode = "mistral"
+          , eqcFallbackReason = Just TfrKeyMissing
+          }
+        Just key -> do
+          model    <- fmap (T.pack . fromMaybe "mistral-small-latest") (lookupEnv "QXFX0_MISTRAL_MODEL")
+          endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
+          let isHttps = T.isPrefixOf "https://" endpoint
+          if not isHttps
+            then pure $ defaultExternalQueryConfig
+              { eqcTransportMode = "mistral"
+              , eqcApiKey = Just (T.pack key)
+              , eqcModel = model
+              , eqcEndpoint = endpoint
+              , eqcFallbackReason = Just TfrUnsafeEndpoint
+              }
+            else pure $ ExternalQueryConfig
+              { eqcTransportMode = "mistral"
+              , eqcApiKey = Just (T.pack key)
+              , eqcModel = model
+              , eqcEndpoint = endpoint
+              , eqcTimeoutMs = 30000
+              , eqcFallbackReason = Nothing
+              }
+    else pure $ defaultExternalQueryConfig
+           { eqcTransportMode = T.pack mode
+           , eqcFallbackReason = if mode == "mock" then Just TfrExplicitMock else Just TfrEnvNotSet
+           }
+  buildTransportFromConfig cfg0
 
-buildMistralTransport :: IO LLMTransport
-buildMistralTransport = do
-  mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
-  case mKey of
-    Nothing ->
-      -- Fail-closed: missing key -> mock fallback with telemetry marker.
-      pure (MockTransport defaultMockTable)
-    Just key -> do
-      model    <- fmap (T.pack . fromMaybe "mistral-medium") (lookupEnv "QXFX0_MISTRAL_MODEL")
-      endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
-      let timeout = 30000 :: Int
+-- | Build transport from an explicit configuration record.
+-- Useful for tests and for deterministic fallback paths.
+buildTransportFromConfig :: ExternalQueryConfig -> IO LLMTransport
+buildTransportFromConfig cfg =
+  case eqcFallbackReason cfg of
+    Just reason -> pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+    Nothing -> do
       mgr <- newTlsManager
-      pure $ MistralTransport mgr
-        MistralConfig
-          { mcApiKey    = T.pack key
-          , mcModel     = model
-          , mcEndpoint  = endpoint
-          , mcTimeoutMs = timeout
+      case eqcApiKey cfg of
+        Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
+        Just key -> pure $ MistralTransport mgr MistralConfig
+          { mcApiKey = key
+          , mcModel = eqcModel cfg
+          , mcEndpoint = eqcEndpoint cfg
+          , mcTimeoutMs = eqcTimeoutMs cfg
           }
 
 -- | Default mock table with a handful of deterministic responses.
@@ -161,8 +212,19 @@ queryExternalTool
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalTool transport tool need query =
   case transport of
-    MockTransport table    -> mockQuery table tool need query
+    MockTransport table _    -> mockQuery table tool need query
     MistralTransport mgr cfg -> mistralQuery mgr cfg tool need query
+
+-- | Execute a query with explicit config (for tests and telemetry).
+queryExternalToolWithConfig
+  :: ExternalQueryConfig
+  -> ExternalTool
+  -> LearningNeed
+  -> Text
+  -> IO (Either ExternalQueryError ExternalQueryResponse)
+queryExternalToolWithConfig cfg tool need query = do
+  transport <- buildTransportFromConfig cfg
+  queryExternalTool transport tool need query
 
 -- | Deterministic mock query.
 mockQuery :: MockTable -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
@@ -193,7 +255,7 @@ renderNeedTag NeedNone                  = "NeedNone"
 
 -- | Real Mistral HTTP query.
 -- Fail-closed: any exception or non-2xx status is mapped to a typed
--- 'ExternalQueryError'.
+-- 'ExternalQueryError'.  Never returns a silent accept.
 mistralQuery :: Manager -> MistralConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
 mistralQuery mgr cfg tool _need query =
   catchIO (do
@@ -210,18 +272,23 @@ mistralQuery mgr cfg tool _need query =
     resp <- httpLbs req mgr
     let code = statusCode (responseStatus resp)
         body = TE.decodeUtf8 (LBS.toStrict (responseBody resp))
+        statusMsg = T.pack (show (statusMessage (responseStatus resp)))
     if code >= 200 && code < 300
-      then pure $ Right ExternalQueryResponse
-             { eqrRawBody    = body
-             , eqrStructured = extractStructured body
-             , eqrToolName   = etName tool
-             , eqrLatencyMs  = 0 -- TODO: measure via diffUTCTime
-             }
+      then if T.null (T.strip body)
+             then pure $ Left EqeEmptyResponse
+             else pure $ Right ExternalQueryResponse
+                    { eqrRawBody    = body
+                    , eqrStructured = extractStructured body
+                    , eqrToolName   = etName tool
+                    , eqrLatencyMs  = 0 -- TODO: measure via diffUTCTime
+                    }
       else case code of
-        401 -> pure $ Left (EqeAuthFailure body)
-        429 -> pure $ Left (EqeRateLimited body)
-        _ | code >= 500 -> pure $ Left (EqeServerError body)
-        _ -> pure $ Left (EqeInvalidResponse body)
+        401 -> pure $ Left (EqeAuthFailure (T.concat ["401 ", statusMsg, ": ", body]))
+        403 -> pure $ Left (EqeAuthFailure (T.concat ["403 ", statusMsg, ": ", body]))
+        429 -> pure $ Left (EqeRateLimited (T.concat ["429 ", statusMsg, ": ", body]))
+        _ | code >= 500 && code < 600 -> pure $ Left (EqeServerError (T.concat ["5xx ", T.pack (show code), " ", statusMsg, ": ", body]))
+        _ | code >= 400 && code < 500 -> pure $ Left (EqeInvalidResponse (T.concat ["4xx ", T.pack (show code), " ", statusMsg, ": ", body]))
+        _ -> pure $ Left (EqeInvalidResponse (T.concat ["unexpected ", T.pack (show code), ": ", body]))
   ) (\e -> pure $ Left (EqeNetworkUnavailable (T.pack (show e))))
 
 -- | Naïve JSON escape for the prompt body (sufficient for our

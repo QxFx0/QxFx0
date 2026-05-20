@@ -25,12 +25,20 @@ improving; adaptation should be conservative.
 module QxFx0.Learning.Signal
   ( CalibrationSignal(..)
   , SignalComponents(..)
+  , CalibrationSnapshot(..)
+  , CalibrationDecision(..)
+  , SignalPipelineConfig(..)
+  , defaultSignalPipelineConfig
   , computeCalibrationSignal
   , emptySignalComponents
+  , applyCalibrationGated
   ) where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 
 import QxFx0.Learning.Need (LearningNeedState(..), NeedTrend(..), lnsHistory)
@@ -68,6 +76,90 @@ emptySignalComponents = SignalComponents
   , scLoopRisk = 0.0
   , scBranchHealthTrend = 0.0
   }
+
+-- | Persisted snapshot of a calibration signal computation.
+-- Captures the full feature vector and decision so the pipeline is
+-- reproducible and auditable.
+data CalibrationSnapshot = CalibrationSnapshot
+  { csTimestamp   :: !UTCTime
+    -- ^ When the snapshot was taken (turn resolution time).
+  , csRunId       :: !Text
+    -- ^ Session + turn identifier for traceability.
+  , csComponents  :: !SignalComponents
+    -- ^ The four raw feature values that fed the signal.
+  , csSignal      :: !Double
+    -- ^ Final clamped signal value.
+  , csDecision    :: !CalibrationDecision
+    -- ^ What the system decided to do with the signal.
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Decision made by the calibration pipeline for a given snapshot.
+data CalibrationDecision
+  = CdApplySignal
+    -- ^ Signal confidence and guardrails passed; apply to weights/heuristics.
+  | CdHoldLowConfidence
+    -- ^ Signal magnitude below threshold or confidence insufficient.
+  | CdHoldGuardrails
+    -- ^ Guardrails blocked application (e.g. rate limit, circuit breaker open).
+  | CdHoldNoNeed
+    -- ^ No active learning need; signal computed but not actionable.
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Configuration for the calibration signal pipeline.
+-- Keeps the pipeline gated and conservative by default.
+data SignalPipelineConfig = SignalPipelineConfig
+  { spcMinConfidence      :: !Double
+    -- ^ Minimum |signal| to be considered actionable (default 0.15).
+  , spcApplyRateLimit     :: !Int
+    -- ^ Max applications per N turns (default 1 per 5 turns).
+  , spcApplyWindow        :: !Int
+    -- ^ Window size for rate limit (default 5 turns).
+  , spcConatusWeight      :: !Double
+    -- ^ Weight for conatus trend component (default 0.30).
+  , spcUncertaintyWeight  :: !Double
+    -- ^ Weight for uncertainty trend component (default 0.30).
+  , spcLoopRiskWeight     :: !Double
+    -- ^ Weight for loop risk component (default 0.20).
+  , spcBranchHealthWeight :: !Double
+    -- ^ Weight for branch health component (default 0.20).
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultSignalPipelineConfig :: SignalPipelineConfig
+defaultSignalPipelineConfig = SignalPipelineConfig
+  { spcMinConfidence      = 0.15
+  , spcApplyRateLimit     = 1
+  , spcApplyWindow        = 5
+  , spcConatusWeight      = 0.30
+  , spcUncertaintyWeight  = 0.30
+  , spcLoopRiskWeight     = 0.20
+  , spcBranchHealthWeight = 0.20
+  }
+
+-- | Gated application of a calibration signal.
+-- Returns 'True' if the signal should be applied to weights/heuristics,
+-- 'False' if held back by confidence threshold or rate limit.
+applyCalibrationGated
+  :: SignalPipelineConfig
+  -> CalibrationSignal
+  -> [CalibrationSnapshot]  -- ^ prior snapshots (for rate-limit check)
+  -> (Bool, CalibrationDecision)
+applyCalibrationGated cfg signal snapshots =
+  let s = unCalibrationSignal signal
+      absS = abs s
+      -- Rate limit: count recent CdApplySignal within window
+      recentApplies = length (filter (\cs -> csDecision cs == CdApplySignal)
+                              (take (spcApplyWindow cfg) snapshots))
+      rateLimitOk = recentApplies < spcApplyRateLimit cfg
+  in if absS < spcMinConfidence cfg
+       then (False, CdHoldLowConfidence)
+     else if not rateLimitOk
+       then (False, CdHoldGuardrails)
+     else (True, CdApplySignal)
 
 -- | Compute the bounded calibration signal.
 --

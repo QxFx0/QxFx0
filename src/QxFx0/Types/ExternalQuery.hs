@@ -15,7 +15,10 @@ responses deterministically.
 module QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
+  , ExternalQueryConfig(..)
+  , TransportFallbackReason(..)
   , renderExternalQueryError
+  , renderFallbackReason
   ) where
 
 import Control.DeepSeq (NFData)
@@ -63,6 +66,53 @@ data ExternalQueryResponse = ExternalQueryResponse
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Explicit configuration contract for external query transport.
+-- All fields are optional with safe defaults; the builder in
+-- 'Bridge.ExternalLLM' fills them from env vars.
+data ExternalQueryConfig = ExternalQueryConfig
+  { eqcTransportMode   :: !Text
+    -- ^ "mock" | "mistral"
+  , eqcApiKey          :: !(Maybe Text)
+    -- ^ Redacted in 'Show' / logs.
+  , eqcModel           :: !Text
+  , eqcEndpoint        :: !Text
+  , eqcTimeoutMs       :: !Int
+  , eqcFallbackReason  :: !(Maybe TransportFallbackReason)
+    -- ^ If transport fell back to mock, why.
+  }
+  deriving stock (Eq, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+instance Show ExternalQueryConfig where
+  show cfg =
+    "ExternalQueryConfig { transportMode=" ++ show (eqcTransportMode cfg)
+    ++ ", apiKey=<REDACTED>"
+    ++ ", model=" ++ show (eqcModel cfg)
+    ++ ", endpoint=" ++ show (eqcEndpoint cfg)
+    ++ ", timeoutMs=" ++ show (eqcTimeoutMs cfg)
+    ++ ", fallbackReason=" ++ show (eqcFallbackReason cfg)
+    ++ " }"
+
+-- | Why the transport fell back to mock instead of using the real
+-- Mistral API.  Used for telemetry and operator diagnosis.
+data TransportFallbackReason
+  = TfrEnvNotSet
+    -- ^ QXFX0_LLM_TRANSPORT is not "mistral".
+  | TfrKeyMissing
+    -- ^ QXFX0_MISTRAL_API_KEY is absent or empty.
+  | TfrExplicitMock
+    -- ^ User explicitly requested mock mode.
+  | TfrUnsafeEndpoint
+    -- ^ Endpoint does not use HTTPS.
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+renderFallbackReason :: TransportFallbackReason -> Text
+renderFallbackReason TfrEnvNotSet    = "env_not_set"
+renderFallbackReason TfrKeyMissing = "key_missing"
+renderFallbackReason TfrExplicitMock = "explicit_mock"
+renderFallbackReason TfrUnsafeEndpoint = "unsafe_endpoint"
 
 renderExternalQueryError :: ExternalQueryError -> Text
 renderExternalQueryError err =

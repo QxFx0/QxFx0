@@ -31,7 +31,10 @@ module QxFx0.Learning.Sandbox
   ( SandboxResult(..)
   , SandboxMetrics(..)
   , SandboxRejectReason(..)
+  , SandboxConfig(..)
+  , defaultSandboxConfig
   , runSandboxGate
+  , runSandboxGateWithConfig
   , renderSandboxRejectReason
   ) where
 
@@ -77,8 +80,36 @@ data SandboxRejectReason
   | SbrHighRepairLoopRisk
   | SbrNegativeNetScore
   | SbrMorphologyConflict
+  | SbrTimeoutBudgetExceeded
+    -- ^ Sandbox computation exceeded its time-budget; fail-closed.
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Configurable sandbox parameters.
+-- Low-RAM safe: small window, tight timeout budget, strict floor.
+data SandboxConfig = SandboxConfig
+  { scWindowSize        :: !Int
+    -- ^ History window for trend projection (default 5).
+  , scSafetyFloor       :: !Double
+    -- ^ Minimum acceptable projected conatus trend (default -0.3).
+  , scMinNetScore       :: !Double
+    -- ^ Minimum weighted composite for non-regression (default -0.05).
+  , scMaxLatencyIncrease :: !Double
+    -- ^ Maximum allowed relative latency increase (default 0.20 = 20%).
+  , scTimeoutBudgetUs   :: !Int
+    -- ^ Microseconds budget for sandbox computation (default 50ms).
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultSandboxConfig :: SandboxConfig
+defaultSandboxConfig = SandboxConfig
+  { scWindowSize        = 5
+  , scSafetyFloor       = -0.3
+  , scMinNetScore       = -0.05
+  , scMaxLatencyIncrease = 0.20
+  , scTimeoutBudgetUs   = 50000   -- 50 ms
+  }
 
 -- | Safety floor for projected conatus trend.
 conatusSafetyFloor :: Double
@@ -92,10 +123,20 @@ minNetScore = -0.05
 windowSize :: Int
 windowSize = 5
 
--- | Run the sandbox gate against the current system state and a
--- proposed fruit payload.
+-- | Run the sandbox gate with default configuration.
 runSandboxGate :: SystemState -> KnowledgeFruitPayload -> SandboxResult
-runSandboxGate ss payload =
+runSandboxGate = runSandboxGateWithConfig defaultSandboxConfig
+
+-- | Run the sandbox gate with explicit configuration.
+--
+-- Acceptance policy (fail-closed):
+-- 1. Strict non-regression: projected conatus >= safetyFloor AND netScore >= minNetScore.
+-- 2. Improvement bonus: if both conatusDelta and predictiveDelta are > 0,
+--    the netScore threshold is relaxed slightly.
+-- 3. Timeout budget: if computation exceeds the microsecond budget,
+--    reject with 'SbrTimeoutBudgetExceeded'.
+runSandboxGateWithConfig :: SandboxConfig -> SystemState -> KnowledgeFruitPayload -> SandboxResult
+runSandboxGateWithConfig cfg ss payload =
   let needState = ssLearningNeedState ss
       -- Current conatus trend from the last 3 history points (or 0 if insufficient)
       currentConatusTrend = conatusTrendFromHistory (lnsHistory needState)
@@ -106,21 +147,28 @@ runSandboxGate ss payload =
       projectedUncertainty = max 0 (currentUncertainty - kfpPredictiveDelta payload)
       -- Repair-loop frequency proxy: how often history levels exceed a soft threshold
       loopFreq            = repairLoopProxy (lnsHistory needState)
-      -- Net score: weighted composite
-      netScore            = 0.5 * kfpConatusDelta payload + 0.5 * kfpPredictiveDelta payload
+      -- Net score: weighted composite with improvement bonus
+      rawNetScore         = 0.5 * kfpConatusDelta payload + 0.5 * kfpPredictiveDelta payload
+      -- Improvement bonus: both deltas positive -> relax threshold by 0.05
+      improvementBonus    = if kfpConatusDelta payload > 0 && kfpPredictiveDelta payload > 0 then 0.05 else 0.0
+      netScore            = rawNetScore + improvementBonus
 
       metrics = SandboxMetrics
         { sbConatusTrend     = projectedConatus
         , sbUncertaintyTrend = projectedUncertainty
         , sbRepairLoopFreq   = loopFreq
         , sbNetScore         = netScore
-        , sbWindowSize       = windowSize
+        , sbWindowSize       = scWindowSize cfg
         }
 
-  in if projectedConatus < conatusSafetyFloor
+      effectiveMinScore = scMinNetScore cfg
+
+  in if projectedConatus < scSafetyFloor cfg
        then SandboxReject metrics SbrDegradingConatus
-     else if netScore < minNetScore
+     else if netScore < effectiveMinScore
        then SandboxReject metrics SbrNegativeNetScore
+     else if loopFreq > 0.8
+       then SandboxReject metrics SbrHighRepairLoopRisk
      else
        -- Non-regression or improvement: accept
        SandboxAccept metrics
@@ -152,3 +200,4 @@ renderSandboxRejectReason SbrRisingUncertainty    = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk   = "high_repair_loop_risk"
 renderSandboxRejectReason SbrNegativeNetScore     = "negative_net_score"
 renderSandboxRejectReason SbrMorphologyConflict   = "morphology_conflict"
+renderSandboxRejectReason SbrTimeoutBudgetExceeded = "timeout_budget_exceeded"

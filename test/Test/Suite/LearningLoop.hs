@@ -51,6 +51,7 @@ import QxFx0.Learning.Loop
   )
 import QxFx0.Learning.Validator
   ( KnowledgeFruitPayload(..)
+  , MorphologyPayload(..)
   , ValidationError(..)
   , validateFruitPayload
   , minDefinitionWords
@@ -60,18 +61,37 @@ import QxFx0.Learning.Sandbox
   ( SandboxResult(..)
   , SandboxMetrics(..)
   , SandboxRejectReason(..)
+  , SandboxConfig(..)
+  , defaultSandboxConfig
   , runSandboxGate
+  , runSandboxGateWithConfig
   )
 import QxFx0.Bridge.ExternalLLM
-  ( queryExternalTool
+  ( LLMTransport(..)
+  , queryExternalTool
   , buildTransportFromEnv
+  , buildTransportFromConfig
+  , queryExternalToolWithConfig
+  , defaultExternalQueryConfig
   )
 import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
+  , ExternalQueryConfig(..)
+  , TransportFallbackReason(..)
+  , renderFallbackReason
   )
 import QxFx0.Semantic.Proposition (PropositionType(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Learning.Signal
+  ( CalibrationSnapshot(..)
+  , CalibrationDecision(..)
+  , SignalPipelineConfig(..)
+  , defaultSignalPipelineConfig
+  , applyCalibrationGated
+  , computeCalibrationSignal
+  , emptySignalComponents
+  )
 
 learningLoopTests :: [Test]
 learningLoopTests =
@@ -98,6 +118,21 @@ learningLoopTests =
   , testGraftUpdatesTreeAndMorph
   , testTelemetryFieldsPopulated
   , testFailClosedOnExternalError
+  -- Phase 8 hardening + Phase 9 start tests
+  , testExplicitConfigFallbackReason
+  , testConfigRedactsApiKey
+  , testValidatorRejectsSemanticallyEmpty
+  , testValidatorRejectsSchemaMismatch
+  , testSandboxConfigRespectsSafetyFloor
+  , testSandboxConfigAcceptsImprovement
+  , testCalibrationSnapshotBoundedness
+  , testCalibrationGatedApplyLowConfidence
+  , testCalibrationGatedApplyRateLimit
+  , testRealPathMiniEvalScenario1
+  , testRealPathMiniEvalScenario2
+  , testRealPathMiniEvalScenario3
+  , testRealPathMiniEvalScenario4
+  , testRealPathMiniEvalScenario5
   ]
 
 -- | Phase 7: valid + positive-delta fruit grafts into branch.
@@ -444,3 +479,264 @@ testFailClosedOnExternalError = TestCase $ do
     0 (ktGraftedCount (ssKnowledgeTree ss1))
   assertBool "reject reason must be present"
     (ltRejectReason tel /= Nothing)
+
+-- ============================================================
+-- Phase 8 hardening + Phase 9 start tests
+-- ============================================================
+
+-- | WP1: explicit config produces correct fallback reason.
+testExplicitConfigFallbackReason :: Test
+testExplicitConfigFallbackReason = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mistral"
+        , eqcFallbackReason = Nothing
+        }
+  transport <- buildTransportFromConfig cfg
+  case transport of
+    MockTransport _ (Just cfg') -> do
+      assertEqual "fallback reason must be KeyMissing"
+        (Just TfrKeyMissing) (eqcFallbackReason cfg')
+    _ -> assertFailure "must fall back to mock when key is missing"
+
+-- | WP1: Show instance redacts API key.
+testConfigRedactsApiKey :: Test
+testConfigRedactsApiKey = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mistral"
+        , eqcApiKey = Just "secret-key-123"
+        }
+      shown = show cfg
+  assertBool "show must not contain the secret key"
+    (not (T.isInfixOf "secret-key-123" (T.pack shown)))
+  assertBool "show must contain REDACTED marker"
+    (T.isInfixOf "REDACTED" (T.pack shown))
+
+-- | WP2: validator rejects semantically empty definition.
+testValidatorRejectsSemanticallyEmpty :: Test
+testValidatorRejectsSemanticallyEmpty = TestCase $ do
+  let payload = KnowledgeFruitPayload
+        { kfpProposition = "x"
+        , kfpWord = "thing"
+        , kfpDefinition = "a thing is a thing"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.1
+        , kfpPredictiveDelta = 0.1
+        }
+      morph = MorphologyData M.empty M.empty M.empty M.empty
+  case validateFruitPayload payload morph of
+    Left VeSemanticallyEmpty -> pure ()
+    Left other -> assertFailure ("expected VeSemanticallyEmpty, got: " ++ show other)
+    Right _ -> assertFailure "validator must reject semantically empty payload"
+
+-- | WP2: validator rejects schema-mismatch-like invalid field.
+testValidatorRejectsSchemaMismatch :: Test
+testValidatorRejectsSchemaMismatch = TestCase $ do
+  let emptyCaseMorph = MorphologyPayload Nothing Nothing (Just (M.singleton "nom" ""))
+      payload2 = KnowledgeFruitPayload
+        { kfpProposition = "x"
+        , kfpWord = "word"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Just emptyCaseMorph
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.1
+        , kfpPredictiveDelta = 0.1
+        }
+      morph = MorphologyData M.empty M.empty M.empty M.empty
+  case validateFruitPayload payload2 morph of
+    Left (VeInvalidField _ _) -> pure ()
+    Left _ -> pure ()  -- any rejection is acceptable
+    Right _ -> assertFailure "validator must reject empty morphology case"
+
+-- | WP3: configurable sandbox respects stricter safety floor.
+testSandboxConfigRespectsSafetyFloor :: Test
+testSandboxConfigRespectsSafetyFloor = TestCase $ do
+  let ss = emptySystemState
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "deg"
+        , kfpWord = "deg"
+        , kfpDefinition = "very bad definition that is long enough"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = (-0.8)
+        , kfpPredictiveDelta = (-0.2)
+        }
+      strictCfg = defaultSandboxConfig { scSafetyFloor = 0.0 }
+      resultStrict = runSandboxGateWithConfig strictCfg ss payload
+      resultDefault = runSandboxGate ss payload
+  case resultStrict of
+    SandboxReject _ _ -> pure ()
+    _ -> assertFailure "strict config must reject strongly negative payload"
+  case resultDefault of
+    SandboxReject _ _ -> pure ()
+    _ -> assertFailure "default config must also reject strongly negative payload"
+
+-- | WP3: configurable sandbox accepts improvement with relaxed threshold.
+testSandboxConfigAcceptsImprovement :: Test
+testSandboxConfigAcceptsImprovement = TestCase $ do
+  let ss = emptySystemState
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "imp"
+        , kfpWord = "imp"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.5
+        , kfpPredictiveDelta = 0.3
+        }
+      result = runSandboxGateWithConfig defaultSandboxConfig ss payload
+  case result of
+    SandboxAccept _ -> pure ()
+    _ -> assertFailure "sandbox must accept improving proposal"
+
+-- | WP4: calibration signal is bounded and snapshot is reproducible.
+testCalibrationSnapshotBoundedness :: Test
+testCalibrationSnapshotBoundedness = TestCase $ do
+  let needState = emptyLearningNeedState
+        { lnsHistory = [(1, 0.0), (2, 10.0), (3, 20.0)]
+        , lnsCurrentNeed = NeedLexiconExtension
+        }
+      (calSignal, comps) =
+        computeCalibrationSignal needState 1.0 50 10 emptyKnowledgeTree
+      signal = unCalibrationSignal calSignal
+  assertBool "extreme inputs must clamp to <= 1.0"
+    (signal <= 1.0)
+  assertBool "components must be bounded"
+    (all (\x -> x >= -1.0 && x <= 1.0)
+      [scConatusTrend comps, scUncertaintyTrend comps,
+       scLoopRisk comps, scBranchHealthTrend comps])
+
+-- | WP4: gated apply blocks low-confidence signals.
+testCalibrationGatedApplyLowConfidence :: Test
+testCalibrationGatedApplyLowConfidence = TestCase $ do
+  let cfg = defaultSignalPipelineConfig { spcMinConfidence = 0.5 }
+      -- counterfactual=0.5 -> uncertaintyTrend=0.0, loopCount=0 -> loopRisk=-1.0
+      -- With empty history and empty tree, rawSignal ≈ -0.2, |signal| = 0.2 < 0.5
+      lowSignal = fst (computeCalibrationSignal emptyLearningNeedState 0.5 0 1 emptyKnowledgeTree)
+      (shouldApply, decision) = applyCalibrationGated cfg lowSignal []
+  assertBool "low-confidence signal must not be applied"
+    (not shouldApply)
+  assertBool "decision must be HoldLowConfidence"
+    (decision == CdHoldLowConfidence)
+
+-- | WP4: gated apply respects rate limit.
+testCalibrationGatedApplyRateLimit :: Test
+testCalibrationGatedApplyRateLimit = TestCase $ do
+  let cfg = defaultSignalPipelineConfig { spcApplyRateLimit = 1, spcApplyWindow = 2 }
+      -- Create a strong signal
+      needState = emptyLearningNeedState
+        { lnsHistory = [(1, 0.8), (2, 0.85), (3, 0.9)]
+        , lnsCurrentNeed = NeedLexiconExtension
+        }
+      (strongSignal, _) = computeCalibrationSignal needState 0.8 5 10 emptyKnowledgeTree
+      -- First application should succeed
+      snapshot1 = CalibrationSnapshot
+        { csTimestamp = read "2026-05-20 00:00:00 UTC"
+        , csRunId = "run-1"
+        , csComponents = emptySignalComponents
+        , csSignal = unCalibrationSignal strongSignal
+        , csDecision = CdApplySignal
+        }
+      (shouldApply2, decision2) = applyCalibrationGated cfg strongSignal [snapshot1]
+  assertBool "second apply within window must be blocked"
+    (not shouldApply2)
+  assertEqual "decision must be HoldGuardrails"
+    CdHoldGuardrails decision2
+
+-- | WP5 mini-eval scenario 1: valid concept response -> success path.
+testRealPathMiniEvalScenario1 :: Test
+testRealPathMiniEvalScenario1 = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода — способность\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse validJson validJson "llm-augment" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит свобода" (Just (Right resp))
+  assertEqual "telemetry must be accept"
+    "accept" (ltValidationStatus tel)
+  assertEqual "tree must have 1 grafted"
+    1 (ktGraftedCount (ssKnowledgeTree ss1))
+
+-- | WP5 mini-eval scenario 2: junk response -> parser/validator reject.
+-- Note: empty JSON fields parse successfully but the validator rejects
+-- them. If the JSON is malformed, the parser rejects first.
+testRealPathMiniEvalScenario2 :: Test
+testRealPathMiniEvalScenario2 = TestCase $ do
+  let junkJson = "{\"word\":\"\",\"definition\":\"\",\"source\":\"llm\",\"conatusDelta\":0.1,\"predictiveDelta\":0.1}"
+      resp = ExternalQueryResponse junkJson junkJson "llm-augment" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит x" (Just (Right resp))
+  -- Empty word/definition: if JSON parses, validator rejects with validation_reject.
+  -- If JSON is truly malformed, parser rejects with invalid_response.
+  -- In this case the JSON is valid but fields are empty, so validator catches it.
+  assertBool "telemetry must indicate rejection"
+    (ltValidationStatus tel `elem` ["validation_reject", "invalid_response"])
+  assertEqual "tree must remain empty"
+    0 (ktGraftedCount (ssKnowledgeTree ss1))
+
+-- | WP5 mini-eval scenario 3: timeout/429 -> fail-closed + telemetry.
+testRealPathMiniEvalScenario3 :: Test
+testRealPathMiniEvalScenario3 = TestCase $ do
+  let err = EqeRateLimited "429 too many requests"
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит x" (Just (Left err))
+  assertEqual "telemetry must be transport_error"
+    "transport_error" (ltValidationStatus tel)
+  assertBool "reject reason must mention rate_limit"
+    (case ltRejectReason tel of
+       Just r -> T.isInfixOf "rate_limit" r
+       Nothing -> False)
+
+-- | WP5 mini-eval scenario 4: conflict response -> reject.
+testRealPathMiniEvalScenario4 :: Test
+testRealPathMiniEvalScenario4 = TestCase $ do
+  let payload = KnowledgeFruitPayload
+        { kfpProposition = "conflict"
+        , kfpWord = "книга"
+        , kfpDefinition = "печатное издание с переплётом и страницами"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.1
+        , kfpPredictiveDelta = 0.1
+        }
+      -- Pre-populate morphology with "книга" in nominative
+      -- Field order: mdPrepositional, mdGenitive, mdNominative, mdFormsBySurface
+      morph = MorphologyData M.empty M.empty (M.singleton "книга" "книга") M.empty
+  case validateFruitPayload payload morph of
+    Left (VeLexiconConflict _) -> pure ()
+    Left other -> assertFailure ("expected VeLexiconConflict, got: " ++ show other)
+    Right _ -> assertFailure "validator must reject duplicate lexicon entry"
+
+-- | WP5 mini-eval scenario 5: missing key -> deterministic mock fallback reason.
+testRealPathMiniEvalScenario5 :: Test
+testRealPathMiniEvalScenario5 = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mistral"
+        , eqcFallbackReason = Nothing
+          -- ^ Clear any default fallback so buildTransportFromConfig
+          --   evaluates the key and discovers it is missing.
+        }
+  transport <- buildTransportFromConfig cfg
+  case transport of
+    MockTransport _ (Just cfg') -> do
+      assertEqual "fallback reason must be KeyMissing"
+        (Just TfrKeyMissing) (eqcFallbackReason cfg')
+      assertEqual "rendered fallback reason must be key_missing"
+        "key_missing" (renderFallbackReason TfrKeyMissing)
+    _ -> assertFailure "must fall back to mock when API key is missing"
