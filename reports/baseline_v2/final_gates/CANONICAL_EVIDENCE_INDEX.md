@@ -1,8 +1,8 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `c62eb95`  
-**Last updated:** 2026-05-20  
+**Index SHA:** `3f0f09f`  
+**Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
 ---
@@ -17,17 +17,18 @@ This index reflects the **endogenous learning phase-1 closure +
 phase-2 persistence + phase-7 rooted learning + phase-8 external
 learning loop + phase-8 hardening + phase-9 calibration pipeline start +
 phase-8 external-query effect execution (request→render→finalize graft
-chain) + phase-8 telemetry source-of-truth hotfix**
+chain) + phase-8 telemetry source-of-truth hotfix +
+phase-9 autonomous exploratory learning MVP**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
-applyCalibrationGated in SystemState).
+applyCalibrationGated in SystemState + ExploratoryPrompt/
+exploratory query path/telemetry differentiation).
 
-Fast-test count increased from 515 → 556 and full-test count from
-642 → 683 due to KnowledgeTree lifecycle, CalibrationSignal boundedness,
-Tool reliability coverage, Phase 8 vertical slice, Phase 8 hardening
-transport/validator/sandbox tests, Phase 9 calibration pipeline tests,
-and Phase 8 gap-closure end-to-end external query wiring tests.
+Fast-test count increased from 556 → 564 and full-test count from
+683 → 691 due to autonomous exploratory learning tests (request
+absence, exploratory presence, graft success, guardrail blocking,
+telemetry tags, request-path non-regression).
 
 ---
 
@@ -36,8 +37,8 @@ and Phase 8 gap-closure end-to-end external query wiring tests.
 | # | Gate | Command | Exit | Verdict | Evidence |
 |---|------|---------|------|---------|----------|
 | 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 249 modules compiled, 0 errors |
-| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 556/556 cases, 0 errors, 0 failures |
-| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 683/683 cases, 0 errors, 0 failures |
+| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 564/564 cases, 0 errors, 0 failures |
+| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 691/691 cases, 0 errors, 0 failures |
 | 4 | `check_architecture.sh` | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 | 5 | `gf_quality_gate.sh` | `bash scripts/gf_quality_gate.sh` | 0 | **PASS** | 0 errors, 0 warnings, PGF 312662 bytes, all core topics present |
 | 6 | `check_gf_render_path.sh` | `bash scripts/check_gf_render_path.sh` | — | **INFRA-DEFERRED** | timeout (>60 s) on low-RAM runner; individual constituent checks pass |
@@ -125,6 +126,8 @@ high-mem runner or CI environment:
 
 29. **Telemetry source of truth (Phase 8 Hotfix)** — The external-query telemetry fields in `buildTurnProjection` read from `taExternalQueryResult ta` (TurnArtifacts, populated by the render phase) rather than a stale `tiExternalQueryResult` on TurnInput. This ensures `trcLearningQueryType`, `trcExternalTool`, `trcLearningValidationStatus`, and `trcLearningRejectReason` reflect the actual external-query outcome. The dead `tiExternalQueryResult` field has been removed from `TurnInput` to prevent future drift.
 
+30. **Autonomous exploratory learning (Phase 9 MVP)** — When no request-driven query is planned, an active learning need exists, guardrails permit, and a reliable tool is available, the system autonomously initiates an external query. The result flows through the same parse→validate→sandbox→graft chain as request-driven results. Telemetry distinguishes `"request_concept"`, `"exploratory"`, and `"both"`. Guardrails (rate limit, circuit breaker) apply cumulatively to both paths. Tests: `testAutonomousExplorationRequestPopulated`, `testAutonomousExplorationResultPopulated`, `testAutonomousExplorationGraftApplied`, `testAutonomousExplorationFailClosed`, `testAutonomousExplorationGuardrailBlocks`, `testAutonomousExplorationTelemetry`, `testRequestDrivenPathNotRegressedByExploration`.
+
 - Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
 
 ---
@@ -152,11 +155,11 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 556  Tried: 556  Errors: 0  Failures: 0
+# Expected: Cases: 564  Tried: 564  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 683  Tried: 683  Errors: 0  Failures: 0
+# Expected: Cases: 691  Tried: 691  Errors: 0  Failures: 0
 ```
 
 ---
