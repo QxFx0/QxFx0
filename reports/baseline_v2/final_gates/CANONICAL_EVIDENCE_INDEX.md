@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `b9232ab8d8ed3f5d6d37a62a80433f528bdd7e66`  
+**Index SHA:** `d4563391aadd9e7cc206e7e29750cdda4549b831`  
 **Last updated:** 2026-05-20  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -28,6 +28,8 @@ within RAM/time constraints were executed individually and passed.
 | 7 | `check_en_render_path.sh` | `bash scripts/check_en_render_path.sh` | 0 | **PASS** | 30 turns, 0 timeouts, intent_fit=1.0000, fallback=0.0000 |
 | 8 | `check_generated_artifacts.sh` | `bash scripts/check_generated_artifacts.sh` | 0 | **PASS** | PGF present, GF compile skipped (infra) |
 | 9 | `check_lexicon.sh` | `bash scripts/check_lexicon.sh` | 0 | **PASS** | score=10.00, lemmas=3756, all quality metrics OK |
+| 10 | `nix run .#typecheck-agda` | `nix run .#typecheck-agda` | 0 | **PASS** | 6/6 modules: R5Core, Sovereignty, Legitimacy, LexiconData, LexiconProof, EssenceFormalization |
+| 11 | `nix flake check` | `nix flake check` | 0 | **PASS** | with pre-existing pgf2 broken warning (non-blocking) |
 
 ---
 
