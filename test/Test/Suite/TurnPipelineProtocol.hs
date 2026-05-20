@@ -7,7 +7,7 @@ module Test.Suite.TurnPipelineProtocol
 import Control.Concurrent (threadDelay)
 import Control.Exception (try)
 import Control.Monad (foldM, unless)
-import Data.Aeson (encode)
+import Data.Aeson (encode, decode)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.List (sort)
 import Data.Time.Clock (UTCTime(..))
@@ -206,6 +206,12 @@ turnPipelineProtocolTests =
      , testGuardrailCircuitBreakerClosesAfterCooldown
      , testGuardrailQuarantineExpiresAfterMinTurns
      , testGuardrailQuarantineBlocksBeforeMinTurns
+     , testGuardrailStateRoundTripsThroughJson
+     , testCalibrationLogRoundTripsThroughJson
+     , testGuardrailStatePersistsThroughTurnPipeline
+     , testCalibrationLogPersistsThroughTurnPipeline
+     , testRollbackPathPreservesPrevAndCurrentIds
+     , testCooldownStateSurvivesRestartViaJson
      , testOperationalDiagnosticQuestionRendersDirectStatus
   , testOperationalCauseQuestionPreservesGroundDiagnosticFamily
   , testSystemLogicQuestionRendersDirectExplanation
@@ -2030,6 +2036,59 @@ buildFinalizeFixture rawInput = do
           precommitResults
   pure (ss, ti, ts, tp, ta, bundle)
 
+-- | Variant of 'buildFinalizeFixture' that starts from a custom
+-- 'SystemState' instead of 'emptySystemState'.
+buildFinalizeFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts, FinalizePrecommitBundle)
+buildFinalizeFixtureWithState startSs rawInput = do
+  -- Override the emptySystemState used by buildRenderedFixture by
+  -- replicating the chain with the custom start state.
+  (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithState startSs rawInput
+  let precommitPlan = planFinalizePrecommit ss ti ts tp ta
+  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+  let bundle =
+        buildFinalizePrecommit
+          (pipelineUpdateHistory testProtocolPipelineIO)
+          ss
+          ti
+          ts
+          tp
+          ta
+          precommitPlan
+          precommitResults
+  pure (ss, ti, ts, tp, ta, bundle)
+
+buildRenderedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
+buildRenderedFixtureWithState startSs rawInput = do
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState startSs rawInput
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+  let ta = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+  pure (ss, ti, ts, tp, ta)
+
+buildPlannedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan)
+buildPlannedFixtureWithState startSs rawInput = do
+  (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
+  let routePlan = planRouteEffects ss ti ts
+  routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
+  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  pure (ss, ti, ts, tp)
+
+buildPreparedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals)
+buildPreparedFixtureWithState startSs rawInput = do
+  let preparePlan = planPrepareEffects startSs rawInput testEpochZero
+  prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
+  let ti = buildTurnInput startSs "request-prop" "session-prop" preparePlan prepareResults
+      ts = buildTurnSignals prepareResults
+  pure (startSs, ti, ts)
+
 withDeterministicEmbedding :: IO a -> IO a
 withDeterministicEmbedding =
   withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic")
@@ -2317,3 +2376,110 @@ testGuardrailQuarantineBlocksBeforeMinTurns = TestCase $ do
   let gs = emptyGuardrailState { gsQuarantine = [(5, CalibrationId 1)] }
   assertBool "quarantine must block before min turns"
     (not (isQuarantineExpired gs 6 (CalibrationId 1)))
+
+-- | WP-D: GuardrailState JSON round-trip preserves all counters.
+testGuardrailStateRoundTripsThroughJson :: Test
+testGuardrailStateRoundTripsThroughJson = TestCase $ do
+  let gs = GuardrailState
+        { gsLastProposalTurn = 7
+        , gsProposalsThisWindow = 2
+        , gsWindowStart = 3
+        , gsConsecutiveRejections = 1
+        , gsCooldownExpiry = 15
+        , gsQuarantine = [(5, CalibrationId 1), (6, CalibrationId 2)]
+        }
+      decoded = decode (encode gs) :: Maybe GuardrailState
+  assertEqual "GuardrailState must round-trip through JSON"
+    (Just gs) decoded
+
+-- | WP-D: CalibrationLog JSON round-trip preserves entries and version links.
+testCalibrationLogRoundTripsThroughJson :: Test
+testCalibrationLogRoundTripsThroughJson = TestCase $ do
+  let entry1 = CalibrationEntry
+        { ceId = CalibrationId 1
+        , ceProposal = ProposalConcept "concept-a"
+        , ceStatus = Accepted
+        , ceCreatedTurn = 5
+        , ceDecidedTurn = Just 5
+        , cePrevId = Nothing
+        }
+      entry2 = CalibrationEntry
+        { ceId = CalibrationId 2
+        , ceProposal = ProposalConcept "concept-b"
+        , ceStatus = RolledBack
+        , ceCreatedTurn = 8
+        , ceDecidedTurn = Just 10
+        , cePrevId = Just (CalibrationId 1)
+        }
+      log = CalibrationLog [entry1, entry2]
+      decoded = decode (encode log) :: Maybe CalibrationLog
+  assertEqual "CalibrationLog must round-trip through JSON"
+    (Just log) decoded
+
+-- | WP-D: GuardrailState survives one turn through buildNextSystemState.
+testGuardrailStatePersistsThroughTurnPipeline :: Test
+testGuardrailStatePersistsThroughTurnPipeline = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixture "что такое свобода"
+    let nextSs = fpbNextSs bundle
+    assertEqual "guardrail state must survive turn pipeline unchanged"
+      (ssGuardrailState ss)
+      (ssGuardrailState nextSs)
+
+-- | WP-D: CalibrationLog survives one turn through buildNextSystemState.
+testCalibrationLogPersistsThroughTurnPipeline :: Test
+testCalibrationLogPersistsThroughTurnPipeline = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = emptySystemState
+          { ssCalibrationLog = CalibrationLog
+              [ CalibrationEntry (CalibrationId 1) (ProposalConcept "x") Accepted 1 (Just 1) Nothing
+              ]
+          }
+    (ss, ti, ts, tp, ta, bundle) <- buildFinalizeFixtureWithState ss0 "что такое свобода"
+    let nextSs = fpbNextSs bundle
+    assertEqual "calibration log must survive turn pipeline unchanged"
+      (ssCalibrationLog ss0)
+      (ssCalibrationLog nextSs)
+
+-- | WP-D: rollback path preserves prevId and current version IDs.
+testRollbackPathPreservesPrevAndCurrentIds :: Test
+testRollbackPathPreservesPrevAndCurrentIds = TestCase $ do
+  let entry = CalibrationEntry
+        { ceId = CalibrationId 7
+        , ceProposal = ProposalConcept "rollback-test"
+        , ceStatus = Accepted
+        , ceCreatedTurn = 5
+        , ceDecidedTurn = Just 5
+        , cePrevId = Just (CalibrationId 6)
+        }
+      result = rollbackCalibration entry 20
+  case result of
+    Nothing -> assertFailure "rollback must succeed for Accepted entry with prevId"
+    Just (rolled, currentId) -> do
+      assertEqual "rolled-back entry must link to prevId 6"
+        (Just (CalibrationId 6))
+        (cePrevId rolled)
+      assertEqual "current version after rollback must be prevId"
+        (CalibrationId 6) currentId
+      assertEqual "rolled status must be RolledBack"
+        RolledBack (ceStatus rolled)
+
+-- | WP-D: cooldown/rate-limit state round-trips via JSON (restart survival).
+testCooldownStateSurvivesRestartViaJson :: Test
+testCooldownStateSurvivesRestartViaJson = TestCase $ do
+  let gs = emptyGuardrailState
+        { gsConsecutiveRejections = 3
+        , gsCooldownExpiry = 25
+        , gsWindowStart = 10
+        , gsProposalsThisWindow = 2
+        }
+      decoded = decode (encode gs) :: Maybe GuardrailState
+  assertEqual "cooldown state must survive JSON restart"
+    (Just gs) decoded
+  case decoded of
+    Nothing -> assertFailure "decode must succeed"
+    Just gs' -> do
+      assertBool "circuit breaker must still be open after restart"
+        (not (canSubmitProposal gs' 24))
+      assertBool "circuit breaker must close after cooldown post-restart"
+        (canSubmitProposal gs' 26)
