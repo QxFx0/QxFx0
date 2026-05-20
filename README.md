@@ -30,10 +30,28 @@ If you need deterministic dialogue infrastructure with strict operational semant
 
 ## Current Maturity
 
-- Core release contour: `PROD_GO` (core contract profile)
-- Extended scientific contour: deferred to high-memory runners
+- Core release contour: `PASS_BY_INDIVIDUAL_GATES` (low-RAM verified)
+- Scientific closure: `PASS_BY_INDIVIDUAL_GATES` with Agda/Nix reproducibility checks passing
+- Extended/high-memory contour: deferred to high-memory runners
 - Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
 - CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
+
+## Status Snapshot (2026-05-20)
+
+Phase A/B/C formal closure is complete:
+
+- EN rendering contour expanded and validated (`check_en_render_path.sh` PASS with
+  `intent_fit=1.0000`, `fallback=0.0000`, `ru_leakage=0.0000`).
+- Post-commitment adaptation infrastructure is wired with bounded updates and
+  guardrails (signal calibration remains a later phase).
+- Deterministic time injection is integrated in Prepare stage for reproducible tests.
+- Agda formalization pass completed (`nix run .#typecheck-agda` PASS).
+- Nix reproducibility checks completed (`nix flake check` PASS, with known non-blocking
+  pre-existing `pgf2` warning).
+
+Low-RAM core verification is green (build + fast suite + full meta suite + architecture + GF paths +
+artifacts + lexicon). Aggregate/high-memory scientific runs remain infrastructure-dependent and are
+tracked as deferred, not treated as PASS.
 
 ## Status Snapshot (2026-05-17)
 
