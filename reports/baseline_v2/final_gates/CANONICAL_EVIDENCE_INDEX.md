@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `e143b52`  
+**Index SHA:** `c62eb95`  
 **Last updated:** 2026-05-20  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -17,7 +17,7 @@ This index reflects the **endogenous learning phase-1 closure +
 phase-2 persistence + phase-7 rooted learning + phase-8 external
 learning loop + phase-8 hardening + phase-9 calibration pipeline start +
 phase-8 external-query effect execution (request→render→finalize graft
-chain)**
+chain) + phase-8 telemetry source-of-truth hotfix**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
@@ -122,6 +122,8 @@ high-mem runner or CI environment:
 27. **External-query render-phase execution (Phase 8 Gap Closure)** — When `learningNeedActive` fires with a request strategy, `planRenderEffects` builds a `TurnReqExternalQuery` effect, `resolveRenderEffects` executes it through the transport, and the result is stored in `taExternalQueryResult`. Tests: `testExternalQueryRequestPopulatedWhenLearningNeedActive`, `testExternalQueryResultPopulatedAfterRenderEffects`.
 
 28. **External-query finalize graft (Phase 8 Gap Closure)** — `applyExternalLearning` in `Finalize.Precommit` receives the render-phase result, runs parse→validate→sandbox→graft, and updates `ssKnowledgeTree` / `ssToolReliability` / `ssMorphology`. Fail-closed: transport/parse/validation/sandbox rejections skip graft and record telemetry. Tests: `testExternalQueryGraftAppliedInFinalize`, `testExternalQueryFailClosedOnMockFailure`, `testExternalQueryNotAttemptedWhenNoRequestStrategy`.
+
+29. **Telemetry source of truth (Phase 8 Hotfix)** — The external-query telemetry fields in `buildTurnProjection` read from `taExternalQueryResult ta` (TurnArtifacts, populated by the render phase) rather than a stale `tiExternalQueryResult` on TurnInput. This ensures `trcLearningQueryType`, `trcExternalTool`, `trcLearningValidationStatus`, and `trcLearningRejectReason` reflect the actual external-query outcome. The dead `tiExternalQueryResult` field has been removed from `TurnInput` to prevent future drift.
 
 - Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
 
