@@ -89,6 +89,8 @@ library
     QxFx0.Learning.Tool
     QxFx0.Learning.Calibration
     QxFx0.Learning.Guardrails
+    QxFx0.Learning.KnowledgeTree
+    QxFx0.Learning.Signal
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -378,6 +380,7 @@ common test-common
     Test.Suite.SelfEssenceCommit
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d
+    Test.Suite.LearningLoop
 
 test-suite qxfx0-test-unit
   import:        test-common

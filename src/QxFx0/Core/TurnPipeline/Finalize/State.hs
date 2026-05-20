@@ -63,8 +63,25 @@ import QxFx0.Self.Essence
   , witness
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
-import QxFx0.Self.Field (adaptFieldHeuristics)
+import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), fieldCounterfactual, Counterfactual(..))
 import QxFx0.Learning.Need (detectLearningNeed)
+import QxFx0.Learning.Signal (CalibrationSignal(..), computeCalibrationSignal, emptySignalComponents)
+import QxFx0.Learning.KnowledgeTree
+  ( KnowledgeTree(..)
+  , emptyKnowledgeTree
+  , graftFruit
+  , quarantineFruit
+  , promoteFromQuarantine
+  , pruneBranches
+  , pruneFruits
+  , rootStressSignal
+  )
+import QxFx0.Self.Essence
+  ( EssenceCommitment(..)
+  , EssenceMode(..)
+  , renderEssenceMode
+  , renderCommitmentTrigger
+  )
 import QxFx0.Semantic.AtomAccretion
   ( observeNovelAtom
   , promoteProvisionalAtoms
@@ -153,28 +170,56 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                      (tiField ti)
                      (fromMaybe defaultDeliberation (tpDeliberation tp))
                      trajectory
-             in (EssenceCommitted trajectory' commitment, Nothing)
-      -- Phase-B: post-commitment bounded self-tuning.
-      -- Empirical signal generation is deferred to Phase 7;
-      -- signal=0.0 means no drift until calibration is available.
-      (adaptedWeights, adaptedHeuristics) =
+              in (EssenceCommitted trajectory' commitment, Nothing)
+      -- Phase 7: bounded calibration signal + rooted tree maintenance.
+      -- Compute signal from conatus trend, uncertainty, loop risk,
+      -- and branch health.  Only adapt when committed.
+      (adaptedWeights, adaptedHeuristics, nextTree, _signalComponents) =
         case nextEssence of
-          EssenceCommitted _ _ ->
-            let signal = 0.0
+          EssenceCommitted _ commitment ->
+            let -- Extract counterfactual from the pre-turn Field
+                counterfactual =
+                  case tiField ti of
+                    field -> unCounterfactual (fieldCounterfactual field)
+                -- Proxy loop risk: blocked-concept count / 10 (window)
+                loopCount = length (ssBlockedConcepts ss)
+                windowSize = 10
+                (calSignal, sigComps) =
+                  computeCalibrationSignal
+                    (ssLearningNeedState ss)
+                    counterfactual
+                    loopCount
+                    windowSize
+                    (ssKnowledgeTree ss)
+                signal = unCalibrationSignal calSignal
+                -- Update knowledge tree root from commitment
+                treeWithRoot =
+                  (ssKnowledgeTree ss)
+                    { ktRootMode = renderEssenceMode (ecMode commitment)
+                    , ktRootTrigger = renderCommitmentTrigger (ecTrigger commitment)
+                    }
+                -- Structural maintenance: prune stale fruits and branches
+                currentTurn = ssTurnCount ss + 1
+                (treePruned, _prunedBranches) =
+                  pruneBranches currentTurn (-0.5) 3 treeWithRoot
+                (treeClean, _prunedFruits) =
+                  pruneFruits currentTurn treePruned
             in ( adaptSalienceWeights signal (ssSalienceWeights ss)
                , adaptFieldHeuristics signal (ssFieldHeuristics ss)
+               , treeClean
+               , sigComps
                )
-          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss)
+          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, emptySignalComponents)
       -- WP1: endogenous learning diagnostic drive.
       newLearningNeedState =
-        detectLearningNeed
-          (tiConatusEnergy ti)
-          (tiField ti)
-          0 -- repairCount: historical recovery tracking deferred to Phase 7
-          (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
-          (ssTurnCount ss + 1)
-          (ssLearningNeedState ss)
-    in ( ss
+         detectLearningNeed
+           (tiConatusEnergy ti)
+           (tiField ti)
+           0 -- repairCount: historical recovery tracking deferred to Phase 7
+           (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
+           (ssTurnCount ss + 1)
+           (ssLearningNeedState ss)
+     in ( ss
        { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
           , dsActiveScene = tpActiveScene tp
@@ -246,6 +291,9 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
         -- ^ WP4: calibration ledger currently pass through unchanged;
         --   accept/rollback mutations will be wired when the
         --   verify/simulate/accept loop is integrated end-to-end.
+      , ssKnowledgeTree = nextTree
+        -- ^ Phase 7: rooted knowledge tree.  Root updated from
+        --   committed essence; structural pruning applied each turn.
       }
     , commitmentTrigger
     )

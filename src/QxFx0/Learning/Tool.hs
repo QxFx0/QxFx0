@@ -20,12 +20,15 @@ module QxFx0.Learning.Tool
   ( ToolDomain(..)
   , ExternalTool(..)
   , selectTool
+  , selectToolWithReliability
+  , updateToolReliability
   , renderTool
   , defaultAvailableTools
   ) where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -103,6 +106,41 @@ selectTool need tools = do
         go best (y:ys)
           | etReliability y > etReliability best = go y ys
           | otherwise                            = go best ys
+
+-- | WP5: variant of 'selectTool' that overlays dynamic reliability
+-- from a runtime-maintained map.  If a tool's name is present in the
+-- map, the map value overrides 'etReliability' for selection
+-- purposes only; the static profile is not mutated.
+selectToolWithReliability
+  :: LearningNeed
+  -> M.Map Text Double   -- ^ dynamic reliability overrides
+  -> [ExternalTool]
+  -> Maybe ExternalTool
+selectToolWithReliability need relMap tools =
+  let tools' = map (\t -> case M.lookup (etName t) relMap of
+                            Just r  -> t { etReliability = clamp01 r }
+                            Nothing -> t)
+                 tools
+  in selectTool need tools'
+  where
+    clamp01 x = max 0.0 (min 1.0 x)
+
+-- | WP5: update tool reliability after an outcome.
+--
+-- * Acceptance → +0.05 (capped at 1.0)
+-- * Rejection  → -0.10 (floored at 0.0)
+--
+-- These deltas are chosen so that 3 consecutive rejections drop a
+-- perfectly reliable tool below 0.7, making it less attractive than
+-- a fresh alternative.
+updateToolReliability :: Text -> Bool -> M.Map Text Double -> M.Map Text Double
+updateToolReliability toolName accepted relMap =
+  let current = M.findWithDefault 0.5 toolName relMap
+      delta = if accepted then 0.05 else (-0.10)
+      updated = clamp01 (current + delta)
+  in M.insert toolName updated relMap
+  where
+    clamp01 x = max 0.0 (min 1.0 x)
 
 -- | Render an 'ExternalTool' to a short telemetry tag.
 renderTool :: ExternalTool -> Text

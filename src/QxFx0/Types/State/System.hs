@@ -113,6 +113,7 @@ import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
 import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
 import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
 import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
+import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 
 data SystemState = SystemState
@@ -153,6 +154,15 @@ data SystemState = SystemState
   , ssCalibrationLog :: !CalibrationLog
     -- ^ WP4: versioned calibration ledger (accepted/rolled-back
     --   proposals).  Initialised to 'emptyCalibrationLog'.
+  , ssKnowledgeTree :: !KnowledgeTree
+    -- ^ Phase 7: rooted knowledge tree anchored in the current
+    --   EssenceCommitment.  Branches keyed by reconcile rule;
+    --   fruits validated through verify/simulate gates.
+    --   Initialised to 'emptyKnowledgeTree'.
+  , ssToolReliability :: !(M.Map Text Double)
+    -- ^ WP5: dynamic reliability overrides per tool name.
+    --   Updated by acceptance/rejection outcomes.  Names not present
+    --   fall back to static profile defaults.  Initialised to 'M.empty'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -198,6 +208,8 @@ instance ToJSON SystemState where
      , "learningNeedState" .= ssLearningNeedState ss
      , "guardrailState" .= ssGuardrailState ss
      , "calibrationLog" .= ssCalibrationLog ss
+     , "knowledgeTree" .= ssKnowledgeTree ss
+     , "toolReliability" .= ssToolReliability ss
      ]
 
 instance FromJSON SystemState where
@@ -247,6 +259,8 @@ instance FromJSON SystemState where
        <*> o .:? "learningNeedState" .!= emptyLearningNeedState
        <*> o .:? "guardrailState" .!= emptyGuardrailState
        <*> o .:? "calibrationLog" .!= emptyCalibrationLog
+       <*> o .:? "knowledgeTree" .!= emptyKnowledgeTree
+       <*> o .:? "toolReliability" .!= M.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -363,4 +377,6 @@ emptySystemState = SystemState
   , ssLearningNeedState = emptyLearningNeedState
   , ssGuardrailState = emptyGuardrailState
   , ssCalibrationLog = emptyCalibrationLog
+  , ssKnowledgeTree = emptyKnowledgeTree
+  , ssToolReliability = M.empty
   }
