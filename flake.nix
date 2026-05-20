@@ -104,9 +104,10 @@
               ${pkgs.agda}/bin/agda R5Core.agda
               ${pkgs.agda}/bin/agda Sovereignty.agda
               ${pkgs.agda}/bin/agda Legitimacy.agda
-              ${pkgs.agda}/bin/agda LexiconData.agda
-              ${pkgs.agda}/bin/agda LexiconProof.agda
-              echo "Agda compilation complete."
+               ${pkgs.agda}/bin/agda LexiconData.agda
+               ${pkgs.agda}/bin/agda LexiconProof.agda
+               ${pkgs.agda}/bin/agda EssenceFormalization.agda
+               echo "Agda compilation complete."
             ''}";
           };
 
