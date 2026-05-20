@@ -1,10 +1,10 @@
 # Release Report: Endogenous Learning Phase-1 Closure (WP1–WP5)
 
 **Date:** 2026-05-20  
-**HEAD:** `a3e2237`  
+**HEAD:** `47e01a4`  
 **Branch:** `main`  
-**Status:** CLOSED  
-**Scope:** Endogenous Learning Architecture — WP1 (diagnostic drive), WP2 (tool awareness), WP3 (strategy expansion), WP4 (closed loop), WP5 (guardrails).
+**Status:** CLOSED (Phase-1 + Phase-2 persistence)  
+**Scope:** Endogenous Learning Architecture — WP1 (diagnostic drive), WP2 (tool awareness), WP3 (strategy expansion), WP4 (closed loop), WP5 (guardrails), WP-D (state persistence).
 
 ---
 
@@ -17,8 +17,8 @@ were weakened.  The architecture does not auto-patch runtime code;
 only validated config/weights/rules may be updated through the
 versioned calibration channel.
 
-**Fast tests:** 509/509 PASS (+25 from prior baseline 484)  
-**Full tests:** 636/636 PASS (+25 from prior baseline 611)  
+**Fast tests:** 515/515 PASS (+31 from prior baseline 484)  
+**Full tests:** 642/642 PASS (+31 from prior baseline 611)  
 **Architecture gate:** 12/12 invariants PASS  
 **GF quality gate:** 0 errors, 0 warnings PASS  
 **Agda typecheck:** 6/6 modules PASS
@@ -83,9 +83,9 @@ versioned calibration channel.
 
 | Gate | Exit | Verdict | Evidence |
 |------|------|---------|----------|
-| `cabal build all` | 0 | PASS | 240 modules, 0 errors |
-| `cabal test qxfx0-test-fast` | 0 | PASS | 509/509, 0 errors, 0 failures |
-| `cabal test qxfx0-test` | 0 | PASS | 636/636, 0 errors, 0 failures |
+| `cabal build all` | 0 | PASS | 242 modules, 0 errors |
+| `cabal test qxfx0-test-fast` | 0 | PASS | 515/515, 0 errors, 0 failures |
+| `cabal test qxfx0-test` | 0 | PASS | 642/642, 0 errors, 0 failures |
 | `check_architecture.sh` | 0 | PASS | 12 invariants OK |
 | `gf_quality_gate.sh` | 0 | PASS | 0 errors, 0 warnings |
 | `nix run .#typecheck-agda` | 0 | PASS | 6/6 modules |
@@ -104,16 +104,19 @@ versioned calibration channel.
 1. `3fbcd65` — `feat(learning): add endogenous drive, tool awareness, request strategies, calibration loop, guardrails`
 2. `8b2e2c0` — `test(learning): add wp1-wp5 coverage and regression checks`
 3. `a3e2237` — `fix(learning): replace bare last with safeLast in currentCalibrationVersion`
-4. *(pending)* — `docs(evidence): refresh canonical index after endogenous learning phase1`
-5. *(pending)* — `docs(release): add endogenous learning phase1 closure report`
+4. `b5b74a2` — `docs(evidence): refresh canonical index after endogenous learning phase1`
+5. *(report created in same commit)* — `docs(release): add endogenous learning phase1 closure report`
+6. `92950bd` — `feat(state): persist guardrail and calibration lifecycle state`
+7. `47e01a4` — `test(state): add persistence and rollback continuity coverage`
 
 ---
 
 ## Residual Risks & Next Steps
 
-1. **Phase-2 Persistence** — `GuardrailState` and `CalibrationLog` are
-   not yet persisted in `SystemState`.  JSON round-trip wiring and
-   turn-loop update are the next immediate work package.
+1. ~~**Phase-2 Persistence** — `GuardrailState` and `CalibrationLog` are
+   not yet persisted in `SystemState`.~~ **COMPLETED** in commits
+   `92950bd` and `47e01a4`.  JSON round-trip, backward-compatible
+   defaults, and turn-loop pass-through are verified.
 2. **Empirical Calibration** — `adaptSalienceWeights` and
    `adaptFieldHeuristics` still receive hardcoded `signal = 0.0`.
    Real empirical signal generation requires Phase-7 trace-corpus
