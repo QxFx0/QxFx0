@@ -42,6 +42,36 @@ import QxFx0.Learning.Need
   , emptyLearningNeedState
   , NeedTrend(..)
   )
+import QxFx0.Types.State (SystemState(..), emptySystemState, ssKnowledgeTree)
+import QxFx0.Semantic.Proposition (PropositionType(..))
+import QxFx0.Learning.Loop
+  ( LearningTelemetry(..)
+  , emptyLearningTelemetry
+  , runLearningStep
+  )
+import QxFx0.Learning.Validator
+  ( KnowledgeFruitPayload(..)
+  , ValidationError(..)
+  , validateFruitPayload
+  , minDefinitionWords
+  )
+import QxFx0.Learning.Parser (parseLLMResponseToFruit)
+import QxFx0.Learning.Sandbox
+  ( SandboxResult(..)
+  , SandboxMetrics(..)
+  , SandboxRejectReason(..)
+  , runSandboxGate
+  )
+import QxFx0.Bridge.ExternalLLM
+  ( queryExternalTool
+  , buildTransportFromEnv
+  )
+import QxFx0.Types.ExternalQuery
+  ( ExternalQueryError(..)
+  , ExternalQueryResponse(..)
+  )
+import QxFx0.Semantic.Proposition (PropositionType(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 
 learningLoopTests :: [Test]
 learningLoopTests =
@@ -57,6 +87,17 @@ learningLoopTests =
   , testToolReliabilityAffectsSelection
   , testKnowledgeTreeRoundTripsJson
   , testOldJsonLoadsWithDefaults
+  -- Phase 8 vertical slice tests
+  , testMockTransportSuccess
+  , testMockTransportFailure
+  , testValidatorRejectsJunk
+  , testParserValidSchema
+  , testParserRejectsMalformed
+  , testSandboxRejectsDegrading
+  , testSandboxAcceptsImproving
+  , testGraftUpdatesTreeAndMorph
+  , testTelemetryFieldsPopulated
+  , testFailClosedOnExternalError
   ]
 
 -- | Phase 7: valid + positive-delta fruit grafts into branch.
@@ -232,3 +273,174 @@ mkFruit prop src valid cDelta pDelta =
     , kfGraftedTurn = Nothing
     , kfObservedTurn = 1
     }
+
+-- ============================================================
+-- Phase 8 vertical slice tests
+-- ============================================================
+
+-- | WP2: mock transport returns a deterministic success.
+testMockTransportSuccess :: Test
+testMockTransportSuccess = TestCase $ do
+  transport <- buildTransportFromEnv
+  result <- queryExternalTool transport
+    (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+    NeedLexiconExtension
+    "что значит свобода"
+  assertBool "mock transport must return Right for known query"
+    (case result of
+       Right _ -> True
+       Left _  -> False)
+
+-- | WP2: mock transport returns typed error for injected failure.
+testMockTransportFailure :: Test
+testMockTransportFailure = TestCase $ do
+  transport <- buildTransportFromEnv
+  result <- queryExternalTool transport
+    (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+    NeedLexiconExtension
+    "fail"
+  assertBool "mock transport must return Left for 'fail' query"
+    (case result of
+       Left (EqeServerError _) -> True
+       _ -> False)
+
+-- | WP3: validator rejects empty definition and short text.
+testValidatorRejectsJunk :: Test
+testValidatorRejectsJunk = TestCase $ do
+  let payload = KnowledgeFruitPayload
+        { kfpProposition = "x"
+        , kfpWord = ""
+        , kfpDefinition = ""
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.1
+        , kfpPredictiveDelta = 0.1
+        }
+      morph = MorphologyData M.empty M.empty M.empty M.empty
+  case validateFruitPayload payload morph of
+    Left VeEmptyWord -> pure ()
+    Left VeEmptyDefinition -> pure ()
+    Left other -> assertFailure ("unexpected validation error: " ++ show other)
+    Right _ -> assertFailure "validator must reject junk payload"
+
+-- | WP4: parser handles a valid JSON schema response.
+testParserValidSchema :: Test
+testParserValidSchema = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода — способность\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse
+        { eqrRawBody = validJson
+        , eqrStructured = validJson
+        , eqrToolName = "llm-augment"
+        , eqrLatencyMs = 0
+        }
+      parsed = parseLLMResponseToFruit resp
+  assertBool "parser must accept valid JSON schema"
+    (parsed /= Nothing)
+
+-- | WP4: parser rejects malformed / non-JSON response.
+testParserRejectsMalformed :: Test
+testParserRejectsMalformed = TestCase $ do
+  let bad = "this is not json"
+      resp = ExternalQueryResponse
+        { eqrRawBody = bad
+        , eqrStructured = bad
+        , eqrToolName = "llm-augment"
+        , eqrLatencyMs = 0
+        }
+      parsed = parseLLMResponseToFruit resp
+  assertBool "parser must reject malformed response"
+    (parsed == Nothing)
+
+-- | WP5: sandbox rejects a proposal with strongly negative conatus delta.
+testSandboxRejectsDegrading :: Test
+testSandboxRejectsDegrading = TestCase $ do
+  let ss = emptySystemState
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "deg"
+        , kfpWord = "deg"
+        , kfpDefinition = "very bad definition that is long enough"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = (-0.8)
+        , kfpPredictiveDelta = (-0.2)
+        }
+      result = runSandboxGate ss payload
+  case result of
+    SandboxReject _ SbrDegradingConatus -> pure ()
+    SandboxReject _ SbrNegativeNetScore -> pure ()
+    _ -> assertFailure "sandbox must reject degrading proposal"
+
+-- | WP5: sandbox accepts a proposal with positive deltas.
+testSandboxAcceptsImproving :: Test
+testSandboxAcceptsImproving = TestCase $ do
+  let ss = emptySystemState
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "imp"
+        , kfpWord = "imp"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.5
+        , kfpPredictiveDelta = 0.3
+        }
+      result = runSandboxGate ss payload
+  case result of
+    SandboxAccept _ -> pure ()
+    _ -> assertFailure "sandbox must accept improving proposal"
+
+-- | WP6: runLearningStep grafts fruit and updates morphology on accept.
+testGraftUpdatesTreeAndMorph :: Test
+testGraftUpdatesTreeAndMorph = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода — способность\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse validJson validJson "llm-augment" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит свобода" (Just (Right resp))
+  assertEqual "telemetry status must be accept"
+    "accept" (ltValidationStatus tel)
+  assertEqual "grafted count must be 1"
+    1 (ktGraftedCount (ssKnowledgeTree ss1))
+
+-- | WP8: telemetry fields are populated after a learning step.
+testTelemetryFieldsPopulated :: Test
+testTelemetryFieldsPopulated = TestCase $ do
+  let validJson = "{\"proposition\":\"x\",\"word\":\"x\",\"definition\":\"a good definition that is long enough\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse validJson validJson "llm-augment" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (_ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит x" (Just (Right resp))
+  assertEqual "query type must be Just NeedLexiconExtension"
+    (Just "NeedLexiconExtension") (ltQueryType tel)
+  assertEqual "tool name must be Just llm-augment"
+    (Just "llm-augment") (ltExternalTool tel)
+  assertEqual "status must be accept"
+    "accept" (ltValidationStatus tel)
+
+-- | Fail-closed: transport error does not graft anything.
+testFailClosedOnExternalError :: Test
+testFailClosedOnExternalError = TestCase $ do
+  let err = EqeServerError "upstream 500"
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит x" (Just (Left err))
+  assertEqual "telemetry status must be transport_error"
+    "transport_error" (ltValidationStatus tel)
+  assertEqual "tree must remain empty"
+    0 (ktGraftedCount (ssKnowledgeTree ss1))
+  assertBool "reject reason must be present"
+    (ltRejectReason tel /= Nothing)

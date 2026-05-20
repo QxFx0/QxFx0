@@ -1089,6 +1089,12 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcEssenceCommitted = Nothing
               , trcEssenceAngstLevel = Nothing
               , trcEssenceTrigger = Nothing
+              , trcLearningQueryType = Nothing
+              , trcExternalTool = Nothing
+              , trcLearningValidationStatus = Nothing
+              , trcLearningSandboxResult = Nothing
+              , trcLearningGraftTurn = Nothing
+              , trcLearningRejectReason = Nothing
               }
           , tqpDivergence = True
           }
@@ -1387,6 +1393,12 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcEssenceCommitted = Nothing
               , trcEssenceAngstLevel = Nothing
               , trcEssenceTrigger = Nothing
+              , trcLearningQueryType = Nothing
+              , trcExternalTool = Nothing
+              , trcLearningValidationStatus = Nothing
+              , trcLearningSandboxResult = Nothing
+              , trcLearningGraftTurn = Nothing
+              , trcLearningRejectReason = Nothing
               }
           , tqpDivergence = True
           }
