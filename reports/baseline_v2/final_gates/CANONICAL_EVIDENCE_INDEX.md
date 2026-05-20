@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `eedcae0`  
+**Index SHA:** `e143b52`  
 **Last updated:** 2026-05-20  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -15,16 +15,19 @@ within RAM/time constraints were executed individually and passed.
 
 This index reflects the **endogenous learning phase-1 closure +
 phase-2 persistence + phase-7 rooted learning + phase-8 external
-learning loop + phase-8 hardening + phase-9 calibration pipeline start**
+learning loop + phase-8 hardening + phase-9 calibration pipeline start +
+phase-8 external-query effect execution (request→render→finalize graft
+chain)**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
 applyCalibrationGated in SystemState).
 
-Fast-test count increased from 515 → 551 and full-test count from
-642 → 678 due to KnowledgeTree lifecycle, CalibrationSignal boundedness,
+Fast-test count increased from 515 → 556 and full-test count from
+642 → 683 due to KnowledgeTree lifecycle, CalibrationSignal boundedness,
 Tool reliability coverage, Phase 8 vertical slice, Phase 8 hardening
-transport/validator/sandbox tests, and Phase 9 calibration pipeline tests.
+transport/validator/sandbox tests, Phase 9 calibration pipeline tests,
+and Phase 8 gap-closure end-to-end external query wiring tests.
 
 ---
 
@@ -33,8 +36,8 @@ transport/validator/sandbox tests, and Phase 9 calibration pipeline tests.
 | # | Gate | Command | Exit | Verdict | Evidence |
 |---|------|---------|------|---------|----------|
 | 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 249 modules compiled, 0 errors |
-| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 551/551 cases, 0 errors, 0 failures |
-| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 678/678 cases, 0 errors, 0 failures |
+| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 556/556 cases, 0 errors, 0 failures |
+| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 683/683 cases, 0 errors, 0 failures |
 | 4 | `check_architecture.sh` | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 | 5 | `gf_quality_gate.sh` | `bash scripts/gf_quality_gate.sh` | 0 | **PASS** | 0 errors, 0 warnings, PGF 312662 bytes, all core topics present |
 | 6 | `check_gf_render_path.sh` | `bash scripts/check_gf_render_path.sh` | — | **INFRA-DEFERRED** | timeout (>60 s) on low-RAM runner; individual constituent checks pass |
@@ -116,6 +119,12 @@ high-mem runner or CI environment:
 
 26. **Real-path mini-eval scenarios (Phase 8 Hardening)** — Five end-to-end scenarios cover valid concept graft, junk reject, 429 fail-closed, lexicon conflict, and deterministic mock fallback. Tests: `testRealPathMiniEvalScenario1`–`testRealPathMiniEvalScenario5`.
 
+27. **External-query render-phase execution (Phase 8 Gap Closure)** — When `learningNeedActive` fires with a request strategy, `planRenderEffects` builds a `TurnReqExternalQuery` effect, `resolveRenderEffects` executes it through the transport, and the result is stored in `taExternalQueryResult`. Tests: `testExternalQueryRequestPopulatedWhenLearningNeedActive`, `testExternalQueryResultPopulatedAfterRenderEffects`.
+
+28. **External-query finalize graft (Phase 8 Gap Closure)** — `applyExternalLearning` in `Finalize.Precommit` receives the render-phase result, runs parse→validate→sandbox→graft, and updates `ssKnowledgeTree` / `ssToolReliability` / `ssMorphology`. Fail-closed: transport/parse/validation/sandbox rejections skip graft and record telemetry. Tests: `testExternalQueryGraftAppliedInFinalize`, `testExternalQueryFailClosedOnMockFailure`, `testExternalQueryNotAttemptedWhenNoRequestStrategy`.
+
+- Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -141,15 +150,11 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 551  Tried: 551  Errors: 0  Failures: 0
+# Expected: Cases: 556  Tried: 556  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 678  Tried: 678  Errors: 0  Failures: 0
-
-# Individual gates:
-bash scripts/check_architecture.sh      # -> "Architecture check passed."
-bash scripts/gf_quality_gate.sh         # -> "VERDICT: PASS"
+# Expected: Cases: 683  Tried: 683  Errors: 0  Failures: 0
 ```
 
 ---
