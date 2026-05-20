@@ -113,6 +113,43 @@ import QxFx0.Semantic.AtomAccretion
   , decayProvisionalAtoms
   , resolveCollisions
   )
+import QxFx0.Learning.Need
+  ( LearningNeed(..)
+  , NeedTrend(..)
+  , LearningNeedState(..)
+  , emptyLearningNeedState
+  , detectLearningNeed
+  )
+import QxFx0.Self.Field (Field(..), emptyField, FieldConfidence(..), Consolidation(..), Counterfactual(..))
+import QxFx0.Learning.Tool
+  ( ExternalTool(..)
+  , ToolDomain(..)
+  , selectTool
+  , defaultAvailableTools
+  )
+import QxFx0.Learning.Calibration
+  ( CalibrationId(..)
+  , CalibrationProposal(..)
+  , CalibrationStatus(..)
+  , CalibrationEntry(..)
+  , CalibrationLog(..)
+  , emptyCalibrationLog
+  , verifyProposal
+  , simulateProposal
+  , acceptProposal
+  , monitorCalibration
+  , rollbackCalibration
+  , currentCalibrationVersion
+  )
+import QxFx0.Learning.Guardrails
+  ( GuardrailState(..)
+  , emptyGuardrailState
+  , canSubmitProposal
+  , recordProposalSubmission
+  , recordRejection
+  , recordAcceptance
+  , isQuarantineExpired
+  )
 import Test.Support (withEnvVar)
 
 turnPipelineProtocolTests :: [Test]
@@ -143,8 +180,33 @@ turnPipelineProtocolTests =
     , testDecayProvisionalAtomsRemovesStale
     , testDecayProvisionalAtomsKeepsFresh
     , testResolveCollisionsRemovesDuplicates
-    , testResolveCollisionsKeepsNovel
-    , testOperationalDiagnosticQuestionRendersDirectStatus
+     , testResolveCollisionsKeepsNovel
+     , testLearningNeedRaisedOnPersistentPattern
+     , testLearningNeedNotRaisedOnNoise
+     , testLearningNeedWiredThroughFinalizePrecommit
+     , testLearningNeedHighDeficitTriggersRequestStrategy
+     , testLearningNeedLowDeficitDoesNotTriggerRequest
+     , testLearningNeedNoneDoesNotTriggerRequest
+     , testToolSelectsBestMatchByDomainAndReliability
+     , testToolRejectsMismatchDomain
+     , testToolPrefersValidatableOverHigherReliability
+     , testToolNoneForNoNeed
+     , testCalibrationVerifyRejectsEmptyRule
+     , testCalibrationVerifyRejectsBlockedRule
+     , testCalibrationVerifyAcceptsValidConcept
+     , testCalibrationAcceptCreatesEntry
+     , testCalibrationMonitorOkWithinWindow
+     , testCalibrationMonitorDetectsDegradation
+     , testCalibrationRollbackReturnsPrevVersion
+     , testCalibrationRollbackFailsForNonAccepted
+     , testCalibrationCurrentVersionReturnsLastAccepted
+     , testGuardrailRateLimitBlocksAfterMax
+     , testGuardrailRateLimitResetsAfterWindow
+     , testGuardrailCircuitBreakerOpensAfterRejections
+     , testGuardrailCircuitBreakerClosesAfterCooldown
+     , testGuardrailQuarantineExpiresAfterMinTurns
+     , testGuardrailQuarantineBlocksBeforeMinTurns
+     , testOperationalDiagnosticQuestionRendersDirectStatus
   , testOperationalCauseQuestionPreservesGroundDiagnosticFamily
   , testSystemLogicQuestionRendersDirectExplanation
   , testSelfKnowledgeAboutSelfRendersStructuredDescription
@@ -723,6 +785,128 @@ testResolveCollisionsKeepsNovel = TestCase $ do
   assertEqual "non-colliding provisional atom must be kept"
     [Searching "novel"]
     (map paTag result)
+
+-- | WP1: persistent pattern (3 turns of low conatus + substrate gaps)
+-- must raise NeedLexiconExtension once persistence threshold is met.
+testLearningNeedRaisedOnPersistentPattern :: Test
+testLearningNeedRaisedOnPersistentPattern = TestCase $ do
+  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0)
+      field = emptyField
+        { fieldConfidence = FieldConfidence 0.3
+        , fieldCounterfactual = Counterfactual 0.6
+        , fieldConsolidation = Consolidation 0.2
+        }
+      step turn st = detectLearningNeed conatus field 0 3 turn st
+      st1 = step 1 emptyLearningNeedState
+      st2 = step 2 st1
+      st3 = step 3 st2
+  assertEqual "first turn must not raise need (persistence=1)"
+    NeedNone (lnsCurrentNeed st1)
+  assertEqual "second turn must not raise need (persistence=2)"
+    NeedNone (lnsCurrentNeed st2)
+  assertEqual "third turn must raise lexicon extension need (persistence=3)"
+    NeedLexiconExtension (lnsCurrentNeed st3)
+  assertEqual "level must be clamped to [0,1]"
+    1.0 (lnsLevel st3)
+  assertEqual "trend must be stable for identical levels"
+    TrendStable (lnsTrend st3)
+
+-- | WP1: single-turn noise must not create a learning need.
+testLearningNeedNotRaisedOnNoise :: Test
+testLearningNeedNotRaisedOnNoise = TestCase $ do
+  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0)
+      field = emptyField
+        { fieldConfidence = FieldConfidence 0.3
+        , fieldCounterfactual = Counterfactual 0.6
+        , fieldConsolidation = Consolidation 0.2
+        }
+      st1 = detectLearningNeed conatus field 0 3 1 emptyLearningNeedState
+      st2 = detectLearningNeed conatus field 0 3 2 st1
+  assertEqual "noise turn 1 must stay NeedNone"
+    NeedNone (lnsCurrentNeed st1)
+  assertEqual "noise turn 2 must stay NeedNone (below persistence threshold=3)"
+    NeedNone (lnsCurrentNeed st2)
+
+-- | WP1: verify detectLearningNeed is actually called inside
+-- buildNextSystemState via the finalize precommit bundle.
+testLearningNeedWiredThroughFinalizePrecommit :: Test
+testLearningNeedWiredThroughFinalizePrecommit = TestCase $
+  withDeterministicEmbedding $ do
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixture "что такое свобода"
+    let lns = ssLearningNeedState (fpbNextSs bundle)
+    assertEqual "learning need state must record the current turn"
+      1
+      (lnsLastSeenTurn lns)
+    assertBool "learning need state must have a non-empty history after one turn"
+      (not (null (lnsHistory lns)))
+
+-- | WP3: high-deficit learning need (level >= 0.6) must trigger a
+-- StrategyRequest* recovery plan.
+testLearningNeedHighDeficitTriggersRequestStrategy :: Test
+testLearningNeedHighDeficitTriggersRequestStrategy = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let highDeficitNeed = emptyLearningNeedState
+          { lnsCurrentNeed = NeedLexiconExtension
+          , lnsCandidateNeed = NeedLexiconExtension
+          , lnsLevel = 0.8
+          , lnsPersistence = 3
+          , lnsLastSeenTurn = 1
+          }
+        ss = ss0 { ssLearningNeedState = highDeficitNeed }
+        -- Ensure no higher-priority recovery drivers fire
+        ti = ti0
+          { tiConatusGateFired = False
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing -> assertFailure "high-deficit learning need must produce recovery plan"
+      Just recoveryPlan ->
+        assertEqual "high-deficit lexicon need must map to StrategyRequestConcept"
+          StrategyRequestConcept
+          (lrpStrategy recoveryPlan)
+
+-- | WP3: low-deficit learning need (level < 0.6) must NOT trigger a
+-- request strategy; normal routing continues.
+testLearningNeedLowDeficitDoesNotTriggerRequest :: Test
+testLearningNeedLowDeficitDoesNotTriggerRequest = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let lowDeficitNeed = emptyLearningNeedState
+          { lnsCurrentNeed = NeedLexiconExtension
+          , lnsCandidateNeed = NeedLexiconExtension
+          , lnsLevel = 0.4
+          , lnsPersistence = 3
+          , lnsLastSeenTurn = 1
+          }
+        ss = ss0 { ssLearningNeedState = lowDeficitNeed }
+        ti = ti0
+          { tiConatusGateFired = False
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    -- With no other recovery drivers, and learningNeedActive = False,
+    -- the plan should have no local recovery.
+    assertEqual "low-deficit learning need must not produce local recovery"
+      Nothing
+      (repLocalRecoveryPlan renderPlan)
+
+-- | WP3: NeedNone must never produce a request strategy.
+testLearningNeedNoneDoesNotTriggerRequest :: Test
+testLearningNeedNoneDoesNotTriggerRequest = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let noNeed = emptyLearningNeedState
+        ss = ss0 { ssLearningNeedState = noNeed }
+        ti = ti0
+          { tiConatusGateFired = False
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    assertEqual "NeedNone must not produce learning-driven recovery"
+      Nothing
+      (repLocalRecoveryPlan renderPlan)
 
 testOperationalDiagnosticQuestionRendersDirectStatus :: Test
 testOperationalDiagnosticQuestionRendersDirectStatus = TestCase $
@@ -1929,3 +2113,207 @@ quickCheckTest label prop = TestCase $ do
 
 testEpochZero :: UTCTime
 testEpochZero = UTCTime (ModifiedJulianDay 0) 0
+
+-- | WP2: selectTool picks the highest-reliability validatable tool
+-- whose domain matches the learning need.
+testToolSelectsBestMatchByDomainAndReliability :: Test
+testToolSelectsBestMatchByDomainAndReliability = TestCase $ do
+  let salienceTools =
+        [ ExternalTool "low-reliability-salience" DomainSalience 0.50 True
+        , ExternalTool "high-reliability-salience" DomainSalience 0.95 True
+        ]
+      result = selectTool NeedSalienceCalibration salienceTools
+  assertEqual "must select highest-reliability validatable salience tool"
+    (Just "high-reliability-salience")
+    (etName <$> result)
+
+-- | WP2: selectTool rejects a need when no tool covers its domain
+-- (and no general fallback exists).
+testToolRejectsMismatchDomain :: Test
+testToolRejectsMismatchDomain = TestCase $ do
+  let lexiconOnly =
+        [ ExternalTool "lexicon-script" DomainLexicon 0.90 True
+        ]
+      result = selectTool NeedSalienceCalibration lexiconOnly
+  assertEqual "must reject when no domain match and no general fallback"
+    Nothing
+    result
+
+-- | WP2: among matching tools, validatable is preferred even if a
+-- non-validatable tool has higher raw reliability.
+testToolPrefersValidatableOverHigherReliability :: Test
+testToolPrefersValidatableOverHigherReliability = TestCase $ do
+  let keywordTools =
+        [ ExternalTool "non-validatable-high-rel" DomainKeyword 0.99 False
+        , ExternalTool "validatable-lower-rel"    DomainKeyword 0.80 True
+        ]
+      result = selectTool NeedKeywordEnrichment keywordTools
+  assertEqual "must prefer validatable tool over higher-reliability non-validatable"
+    (Just "validatable-lower-rel")
+    (etName <$> result)
+
+-- | WP2: NeedNone must never select a tool.
+testToolNoneForNoNeed :: Test
+testToolNoneForNoNeed = TestCase $ do
+  let result = selectTool NeedNone defaultAvailableTools
+  assertEqual "NeedNone must not select any tool"
+    Nothing
+    result
+
+-- | WP4: verifyProposal rejects an empty rule.
+testCalibrationVerifyRejectsEmptyRule :: Test
+testCalibrationVerifyRejectsEmptyRule = TestCase $ do
+  let result = verifyProposal [] (ProposalRule "")
+  case result of
+    Left "empty_rule" -> pure ()
+    _ -> assertFailure "verify must reject empty rule"
+
+-- | WP4: verifyProposal rejects a blocked rule.
+testCalibrationVerifyRejectsBlockedRule :: Test
+testCalibrationVerifyRejectsBlockedRule = TestCase $ do
+  let result = verifyProposal ["blocked"] (ProposalRule "blocked")
+  case result of
+    Left "blocked_rule" -> pure ()
+    _ -> assertFailure "verify must reject blocked rule"
+
+-- | WP4: verifyProposal accepts a non-empty, non-blocked concept.
+testCalibrationVerifyAcceptsValidConcept :: Test
+testCalibrationVerifyAcceptsValidConcept = TestCase $ do
+  let result = verifyProposal ["blocked"] (ProposalConcept "new-concept")
+  case result of
+    Right () -> pure ()
+    Left err -> assertFailure ("verify must accept valid concept, got: " <> T.unpack err)
+
+-- | WP4: acceptProposal creates an Accepted entry and bumps version.
+testCalibrationAcceptCreatesEntry :: Test
+testCalibrationAcceptCreatesEntry = TestCase $ do
+  let (entry, nextId) =
+        acceptProposal (CalibrationId 7) (ProposalConcept "test") 42 (Just (CalibrationId 6))
+  assertEqual "status must be Accepted"
+    Accepted (ceStatus entry)
+  assertEqual "id must match input"
+    (CalibrationId 7) (ceId entry)
+  assertEqual "nextId must be incremented"
+    (CalibrationId 8) nextId
+  assertEqual "decidedTurn must be set"
+    (Just 42) (ceDecidedTurn entry)
+  assertEqual "prevId must be preserved"
+    (Just (CalibrationId 6)) (cePrevId entry)
+
+-- | WP4: monitorCalibration returns Right when within minMonitorWindow.
+testCalibrationMonitorOkWithinWindow :: Test
+testCalibrationMonitorOkWithinWindow = TestCase $ do
+  let result = monitorCalibration 0.5 0.8 2 5
+  case result of
+    Right () -> pure ()
+    Left err -> assertFailure ("monitor must not degrade within window, got: " <> T.unpack err)
+
+-- | WP4: monitorCalibration returns Left when level degrades past window.
+testCalibrationMonitorDetectsDegradation :: Test
+testCalibrationMonitorDetectsDegradation = TestCase $ do
+  let result = monitorCalibration 0.3 0.5 5 5
+  case result of
+    Left "degradation_detected" -> pure ()
+    _ -> assertFailure "monitor must detect degradation when level rises"
+
+-- | WP4: rollbackCalibration returns previous version for Accepted entry.
+testCalibrationRollbackReturnsPrevVersion :: Test
+testCalibrationRollbackReturnsPrevVersion = TestCase $ do
+  let entry = CalibrationEntry
+        { ceId = CalibrationId 7
+        , ceProposal = ProposalConcept "test"
+        , ceStatus = Accepted
+        , ceCreatedTurn = 10
+        , ceDecidedTurn = Just 10
+        , cePrevId = Just (CalibrationId 6)
+        }
+      result = rollbackCalibration entry 20
+  case result of
+    Nothing -> assertFailure "rollback must succeed for Accepted entry with prevId"
+    Just (rolled, currentId) -> do
+      assertEqual "rolled status must be RolledBack"
+        RolledBack (ceStatus rolled)
+      assertEqual "decidedTurn must update to rollback turn"
+        (Just 20) (ceDecidedTurn rolled)
+      assertEqual "currentId must be the prevId"
+        (CalibrationId 6) currentId
+
+-- | WP4: rollbackCalibration fails for non-Accepted entries.
+testCalibrationRollbackFailsForNonAccepted :: Test
+testCalibrationRollbackFailsForNonAccepted = TestCase $ do
+  let entry = CalibrationEntry
+        { ceId = CalibrationId 7
+        , ceProposal = ProposalConcept "test"
+        , ceStatus = Rejected
+        , ceCreatedTurn = 10
+        , ceDecidedTurn = Just 10
+        , cePrevId = Just (CalibrationId 6)
+        }
+      result = rollbackCalibration entry 20
+  assertEqual "rollback must fail for Rejected entry"
+    Nothing result
+
+-- | WP4: currentCalibrationVersion returns the last Accepted entry ID.
+testCalibrationCurrentVersionReturnsLastAccepted :: Test
+testCalibrationCurrentVersionReturnsLastAccepted = TestCase $ do
+  let entries =
+        [ CalibrationEntry (CalibrationId 1) (ProposalConcept "a") Rejected 1 (Just 1) Nothing
+        , CalibrationEntry (CalibrationId 2) (ProposalConcept "b") Accepted 2 (Just 2) Nothing
+        , CalibrationEntry (CalibrationId 3) (ProposalConcept "c") RolledBack 3 (Just 3) (Just (CalibrationId 2))
+        ]
+      log = CalibrationLog entries
+      result = currentCalibrationVersion log
+  assertEqual "current version must be the last Accepted entry"
+    (Just (CalibrationId 2)) result
+
+-- | WP5: rate limit blocks after maxProposalsPerWindow submissions.
+testGuardrailRateLimitBlocksAfterMax :: Test
+testGuardrailRateLimitBlocksAfterMax = TestCase $ do
+  let gs = emptyGuardrailState
+        { gsWindowStart = 1
+        , gsProposalsThisWindow = 2
+        }
+  assertBool "must block when window is full"
+    (not (canSubmitProposal gs 5))
+
+-- | WP5: rate limit resets when window expires.
+testGuardrailRateLimitResetsAfterWindow :: Test
+testGuardrailRateLimitResetsAfterWindow = TestCase $ do
+  let gs = emptyGuardrailState
+        { gsWindowStart = 1
+        , gsProposalsThisWindow = 2
+        }
+  assertBool "must allow when window expired"
+    (canSubmitProposal gs 12)
+
+-- | WP5: circuit breaker opens after maxConsecutiveRejections.
+testGuardrailCircuitBreakerOpensAfterRejections :: Test
+testGuardrailCircuitBreakerOpensAfterRejections = TestCase $ do
+  let gs = emptyGuardrailState { gsConsecutiveRejections = 3 }
+      gs' = recordRejection gs 10
+  assertBool "circuit breaker must be open after 3 rejections"
+    (not (canSubmitProposal gs' 11))
+
+-- | WP5: circuit breaker closes after cooldownTurns.
+testGuardrailCircuitBreakerClosesAfterCooldown :: Test
+testGuardrailCircuitBreakerClosesAfterCooldown = TestCase $ do
+  let gs = emptyGuardrailState
+        { gsConsecutiveRejections = 3
+        , gsCooldownExpiry = 15
+        }
+  assertBool "circuit breaker must close after cooldown"
+    (canSubmitProposal gs 16)
+
+-- | WP5: quarantine expires after minQuarantineTurns.
+testGuardrailQuarantineExpiresAfterMinTurns :: Test
+testGuardrailQuarantineExpiresAfterMinTurns = TestCase $ do
+  let gs = emptyGuardrailState { gsQuarantine = [(5, CalibrationId 1)] }
+  assertBool "quarantine must expire after min turns"
+    (isQuarantineExpired gs 7 (CalibrationId 1))
+
+-- | WP5: quarantine blocks before minQuarantineTurns.
+testGuardrailQuarantineBlocksBeforeMinTurns :: Test
+testGuardrailQuarantineBlocksBeforeMinTurns = TestCase $ do
+  let gs = emptyGuardrailState { gsQuarantine = [(5, CalibrationId 1)] }
+  assertBool "quarantine must block before min turns"
+    (not (isQuarantineExpired gs 6 (CalibrationId 1)))
