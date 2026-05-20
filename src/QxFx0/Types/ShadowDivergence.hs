@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
@@ -14,15 +16,18 @@ module QxFx0.Types.ShadowDivergence
   , emptyShadowDivergence
   , computeShadowLegitimacyPenalty
   , computeShadowLegitimacyPenaltyWithSeverity
+  , ShadowVetoState(..)
+  , defaultShadowVetoState
   ) where
 
 import Data.Bits (xor)
 import Data.Char (ord)
-import Data.Aeson (ToJSON(..))
+import Data.Aeson (FromJSON, ToJSON(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Numeric (showHex)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import QxFx0.Types.Domain
   ( AtomTag
   , CanonicalMoveFamily
@@ -35,6 +40,8 @@ import QxFx0.Types.Thresholds.Legitimacy
   , shadowPenaltyLayerMismatch
   , shadowPenaltyWarrantedMismatch
   )
+
+import Control.DeepSeq (NFData)
 
 data ShadowDivergenceKind
   = ShadowNoDivergence
@@ -151,3 +158,18 @@ computeShadowLegitimacyPenaltyWithSeverity severity divergence =
     ShadowSeveritySafety -> computeShadowLegitimacyPenalty divergence
     ShadowSeverityContract -> computeShadowLegitimacyPenalty divergence
     ShadowSeverityUnavailable -> computeShadowLegitimacyPenalty divergence
+
+-- | WP2 (GAP2): bounded shadow-veto state. Tracks how many shadow
+-- gate triggers have occurred within the current window so that
+-- repeated vetos cannot loop indefinitely.
+data ShadowVetoState = ShadowVetoState
+  { svsCount :: !Int
+    -- ^ Number of non-bypassed shadow gate triggers in the current window.
+  , svsWindowStart :: !Int
+    -- ^ Turn count (pre-turn) when the current window began.
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultShadowVetoState :: ShadowVetoState
+defaultShadowVetoState = ShadowVetoState 0 0

@@ -49,6 +49,7 @@ import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily)
 import QxFx0.Types
+import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.Thresholds
   ( agdaVerificationPenalty
   , legitimacyPassThreshold
@@ -69,7 +70,26 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
           (tiEmbeddingQuality ti)
           (tiEmbSimilarity ti)
           (tsApiHealthy ts)
-      shadowResolution = resolveShadowFamily shadowPolicy (rdFamily rd) sc
+      shadowResolution0 = resolveShadowFamily shadowPolicy (rdFamily rd) sc
+      -- WP2 (GAP2): bounded shadow-veto anti-loop.
+      -- If the shadow gate has triggered more than 'maxVetosPerWindow'
+      -- times within 'vetoWindowTurns', bypass the veto to prevent
+      -- infinite oscillation and emit exhaustion telemetry.
+      maxVetosPerWindow = 3
+      vetoWindowTurns = 10
+      currentTurn = ssTurnCount ss
+      oldVetoState = ssShadowVetoState ss
+      windowExpired = currentTurn - svsWindowStart oldVetoState > vetoWindowTurns
+      (vetoCount, windowStart) =
+        if windowExpired
+          then (0, currentTurn)
+          else (svsCount oldVetoState, svsWindowStart oldVetoState)
+      (shadowResolution, vetoExhausted, newVetoCount, newWindowStart) =
+        if srGateTriggered shadowResolution0
+          then if vetoCount >= maxVetosPerWindow
+                 then (shadowResolution0 { srGateTriggered = False }, True, vetoCount, windowStart)
+                 else (shadowResolution0, False, vetoCount + 1, windowStart)
+          else (shadowResolution0, False, vetoCount, windowStart)
       family = srEffectiveFamily shadowResolution
       recoveryBonus =
         legitimacyRecoveryBonus
@@ -138,14 +158,18 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
          , tpShadowDivergence = scShadowHasDivergence sc
          , tpShadowDivergenceKind = scShadowDivergenceKind sc
          , tpShadowDivergenceSeverity = scShadowDivergenceSeverity sc
-         , tpShadowGateTriggered = srGateTriggered shadowResolution
-         , tpShadowSnapshotId = scShadowSnapshotId sc
-         , tpShadowFamily = scShadowFamily sc
-         , tpShadowForce = scShadowForce sc
-         , tpShadowMessage = scShadowMessage sc
-         , tpMetrics = metricsWithThresholds
-         , tpDeliberation = rdDeliberation rd
-         }
+          , tpShadowGateTriggered = srGateTriggered shadowResolution
+          , tpShadowSnapshotId = scShadowSnapshotId sc
+          , tpShadowFamily = scShadowFamily sc
+          , tpShadowForce = scShadowForce sc
+          , tpShadowMessage =
+              if vetoExhausted
+                then scShadowMessage sc <> "|shadow_veto_exhausted"
+                else scShadowMessage sc
+          , tpShadowVetoState = ShadowVetoState newVetoCount newWindowStart
+          , tpMetrics = metricsWithThresholds
+          , tpDeliberation = rdDeliberation rd
+          }
 
 routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO TurnPlan
 routeTurnPlan pio ss ti ts = do

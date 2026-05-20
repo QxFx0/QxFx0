@@ -64,6 +64,12 @@ import QxFx0.Self.Essence
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
 import QxFx0.Self.Field (adaptFieldHeuristics)
+import QxFx0.Semantic.AtomAccretion
+  ( observeNovelAtom
+  , promoteProvisionalAtoms
+  , decayProvisionalAtoms
+  , resolveCollisions
+  )
 import QxFx0.Types.Text (textShow)
 
 import Data.Maybe (fromMaybe)
@@ -210,6 +216,17 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       , ssEssence = nextEssence
       , ssSalienceWeights = adaptedWeights
       , ssFieldHeuristics = adaptedHeuristics
+      , ssShadowVetoState = tpShadowVetoState tp
+      , ssProvisionalAtoms =
+          let currentTurn = ssTurnCount ss
+              canonicalSet = tiAtomSet ti
+              observed = foldr
+                (\atom acc -> observeNovelAtom (maTag atom) currentTurn acc)
+                (ssProvisionalAtoms ss)
+                (asAtoms canonicalSet)
+              decayed = decayProvisionalAtoms currentTurn observed
+              (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
+          in resolveCollisions canonicalSet remaining
       }
     , commitmentTrigger
     )

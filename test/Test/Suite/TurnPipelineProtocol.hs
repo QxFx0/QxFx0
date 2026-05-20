@@ -14,6 +14,7 @@ import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (Day(ModifiedJulianDay))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Vector as V
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
   ( Result(..)
@@ -27,11 +28,13 @@ import Test.QuickCheck
   )
 
 import QxFx0.Types
+import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
 import QxFx0.Types.Thresholds (blockedConceptsRetentionLimit, parserLowConfidenceThreshold)
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
+  , ShadowResult(..)
   , TestPipelineConfig(..)
   , defaultTestPipelineConfig
   , mkTestPipelineIO
@@ -52,6 +55,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , TurnEffectResult(..)
   , RouteEffectPlan(..)
   , RouteEffectRequest(..)
+  , RouteEffectResults(..)
   , RouteStatic(..)
   , RenderEffectPlan(..)
   , LocalRecoveryPlan(..)
@@ -96,8 +100,18 @@ import qualified QxFx0.Core.Intuition as Intuition
 import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import QxFx0.Types.ShadowDivergence
   ( ShadowSnapshotId(..)
+  , ShadowDivergence(..)
+  , ShadowDivergenceKind(..)
   , ShadowDivergenceSeverity(..)
+  , ShadowVetoState(..)
   , emptyShadowDivergence
+  )
+import QxFx0.Types.Domain.Atoms (ProvisionalAtom(..))
+import QxFx0.Semantic.AtomAccretion
+  ( observeNovelAtom
+  , promoteProvisionalAtoms
+  , decayProvisionalAtoms
+  , resolveCollisions
   )
 import Test.Support (withEnvVar)
 
@@ -118,8 +132,19 @@ turnPipelineProtocolTests =
   , testRouteEffectsResolveConcurrently
   , testRouteEffectsFailOnAgdaInStrictRuntime
   , testNarrativeHintCannotBypassShadowGate
-  , testAdvisoryShadowDivergenceDoesNotTriggerRecovery
-  , testOperationalDiagnosticQuestionRendersDirectStatus
+   , testAdvisoryShadowDivergenceDoesNotTriggerRecovery
+   , testShadowVetoAllowedWithinWindow
+   , testShadowVetoExhaustedAfterMax
+    , testShadowVetoWindowResets
+    , testObserveNovelAtomCreatesNew
+    , testObserveNovelAtomBumpsExisting
+    , testPromoteProvisionalAtomsMeetsCriteria
+    , testPromoteProvisionalAtomsBelowThreshold
+    , testDecayProvisionalAtomsRemovesStale
+    , testDecayProvisionalAtomsKeepsFresh
+    , testResolveCollisionsRemovesDuplicates
+    , testResolveCollisionsKeepsNovel
+    , testOperationalDiagnosticQuestionRendersDirectStatus
   , testOperationalCauseQuestionPreservesGroundDiagnosticFamily
   , testSystemLogicQuestionRendersDirectExplanation
   , testSelfKnowledgeAboutSelfRendersStructuredDescription
@@ -166,8 +191,12 @@ turnPipelineProtocolTests =
   , testRenderBlockedPersistsSafeRecoveryTrace
    , testConatusGateFiresRecoveryConatusGate
    , testConatusGateFlagDrivesLocalRecoveryPlan
-   , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
-   , testDeliberationRecoveryNotSilenced
+    , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
+    , testConatusGradientMorphologyDominant
+    , testConatusGradientIdentityDominant
+    , testConatusGradientTemporalDominant
+    , testConatusGradientDegenerateTie
+    , testDeliberationRecoveryNotSilenced
     , testFinalizePrecommitResolveConcurrently
     , testPrepareCurrentTimeDeterministicInjection
     ]
@@ -500,6 +529,200 @@ testAdvisoryShadowDivergenceDoesNotTriggerRecovery = TestCase $
     assertEqual "advisory shadow divergence must not persist recovery cause"
       Nothing
       (trcRecoveryCause replayTrace)
+
+-- | WP2 (GAP2): shadow gate trigger within window count < max → allowed.
+testShadowVetoAllowedWithinWindow :: Test
+testShadowVetoAllowedWithinWindow = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti, ts) <- buildPreparedFixture "что такое свобода"
+    let ss = ss0
+          { ssShadowVetoState = ShadowVetoState 2 0
+          , ssDialogue = (ssDialogue ss0) { dsTurnCount = 5 }
+          }
+        routePlan = planRouteEffects ss ti ts
+        shadowResult = ShadowResult
+          { srDatalogVerdict = Nothing
+          , srStatus = ShadowDiverged
+          , srDivergence = emptyShadowDivergence { sdKind = ShadowVerdictMismatch, sdFamilyMismatch = True }
+          , srSnapshotId = ShadowSnapshotId "veto-test"
+          , srDiagnostics = []
+          }
+        routeResults = RouteEffectResults shadowResult AgdaMissingInput
+        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+    assertBool "shadow gate must trigger when count < max"
+      (tpShadowGateTriggered turnPlan)
+    assertEqual "veto count must increment"
+      3
+      (svsCount (tpShadowVetoState turnPlan))
+    assertEqual "veto window start must stay at turn 0"
+      0
+      (svsWindowStart (tpShadowVetoState turnPlan))
+
+-- | WP2 (GAP2): shadow gate trigger at count == max → exhausted, bypassed.
+testShadowVetoExhaustedAfterMax :: Test
+testShadowVetoExhaustedAfterMax = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti, ts) <- buildPreparedFixture "что такое свобода"
+    let ss = ss0
+          { ssShadowVetoState = ShadowVetoState 3 0
+          , ssDialogue = (ssDialogue ss0) { dsTurnCount = 5 }
+          }
+        routePlan = planRouteEffects ss ti ts
+        shadowResult = ShadowResult
+          { srDatalogVerdict = Nothing
+          , srStatus = ShadowDiverged
+          , srDivergence = emptyShadowDivergence { sdKind = ShadowVerdictMismatch, sdFamilyMismatch = True }
+          , srSnapshotId = ShadowSnapshotId "veto-test"
+          , srDiagnostics = []
+          }
+        routeResults = RouteEffectResults shadowResult AgdaMissingInput
+        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+    assertBool "shadow gate must be bypassed when exhausted"
+      (not (tpShadowGateTriggered turnPlan))
+    assertBool "shadow message must contain exhaustion telemetry"
+      ("shadow_veto_exhausted" `T.isInfixOf` tpShadowMessage turnPlan)
+    assertEqual "veto count must not increment when exhausted"
+      3
+      (svsCount (tpShadowVetoState turnPlan))
+
+-- | WP2 (GAP2): window expiry resets the veto counter.
+testShadowVetoWindowResets :: Test
+testShadowVetoWindowResets = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti, ts) <- buildPreparedFixture "что такое свобода"
+    let ss = ss0
+          { ssShadowVetoState = ShadowVetoState 3 0
+          , ssDialogue = (ssDialogue ss0) { dsTurnCount = 11 }
+          }
+        routePlan = planRouteEffects ss ti ts
+        shadowResult = ShadowResult
+          { srDatalogVerdict = Nothing
+          , srStatus = ShadowDiverged
+          , srDivergence = emptyShadowDivergence { sdKind = ShadowVerdictMismatch, sdFamilyMismatch = True }
+          , srSnapshotId = ShadowSnapshotId "veto-test"
+          , srDiagnostics = []
+          }
+        routeResults = RouteEffectResults shadowResult AgdaMissingInput
+        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+    assertBool "shadow gate must trigger after window reset"
+      (tpShadowGateTriggered turnPlan)
+    assertEqual "veto count must reset to 1 after expiry"
+      1
+      (svsCount (tpShadowVetoState turnPlan))
+    assertEqual "veto window start must reset to current turn"
+      11
+      (svsWindowStart (tpShadowVetoState turnPlan))
+
+-- | WP3 (GAP3): observeNovelAtom creates a fresh ProvisionalAtom.
+testObserveNovelAtomCreatesNew :: Test
+testObserveNovelAtomCreatesNew = TestCase $ do
+  let tag = Searching "test"
+      result = observeNovelAtom tag 10 []
+  assertEqual "novel atom must create exactly one entry"
+    1
+    (length result)
+  assertEqual "novel atom must store the tag"
+    tag
+    (paTag (head result))
+  assertEqual "novel atom must have occurrence count 1"
+    1
+    (paOccurrences (head result))
+  assertEqual "novel atom must record first seen turn"
+    10
+    (paFirstSeenTurn (head result))
+  assertEqual "novel atom must record last seen turn"
+    10
+    (paLastSeenTurn (head result))
+
+-- | WP3 (GAP3): observeNovelAtom bumps an existing provisional atom.
+testObserveNovelAtomBumpsExisting :: Test
+testObserveNovelAtomBumpsExisting = TestCase $ do
+  let tag = Searching "test"
+      initial = [ProvisionalAtom tag 1 5 5 False]
+      result = observeNovelAtom tag 7 initial
+  assertEqual "bumped atom must still be a single entry"
+    1
+    (length result)
+  assertEqual "bumped atom must have occurrence count 2"
+    2
+    (paOccurrences (head result))
+  assertEqual "bumped atom must keep original first seen turn"
+    5
+    (paFirstSeenTurn (head result))
+  assertEqual "bumped atom must refresh last seen turn"
+    7
+    (paLastSeenTurn (head result))
+
+-- | WP3 (GAP3): promoteProvisionalAtoms promotes atoms meeting criteria.
+testPromoteProvisionalAtomsMeetsCriteria :: Test
+testPromoteProvisionalAtomsMeetsCriteria = TestCase $ do
+  let eligible = ProvisionalAtom (Searching "eligible") 3 1 7 False
+      (remaining, promoted) = promoteProvisionalAtoms 10 [eligible]
+  assertEqual "eligible atom must be promoted"
+    [Searching "eligible"]
+    promoted
+  assertBool "remaining list must contain the promoted atom marked True"
+    (all paPromoted remaining)
+
+-- | WP3 (GAP3): promoteProvisionalAtoms skips atoms below threshold.
+testPromoteProvisionalAtomsBelowThreshold :: Test
+testPromoteProvisionalAtomsBelowThreshold = TestCase $ do
+  let lowOccurrences = ProvisionalAtom (Searching "low-occ") 2 1 10 False
+      lowSpan = ProvisionalAtom (Searching "low-span") 5 1 5 False
+      (remaining1, promoted1) = promoteProvisionalAtoms 10 [lowOccurrences]
+      (remaining2, promoted2) = promoteProvisionalAtoms 10 [lowSpan]
+  assertEqual "low occurrences must not be promoted"
+    []
+    promoted1
+  assertBool "low occurrences must remain un-promoted"
+    (not (any paPromoted remaining1))
+  assertEqual "low span must not be promoted"
+    []
+    promoted2
+  assertBool "low span must remain un-promoted"
+    (not (any paPromoted remaining2))
+
+-- | WP3 (GAP3): decayProvisionalAtoms removes stale un-promoted atoms.
+testDecayProvisionalAtomsRemovesStale :: Test
+testDecayProvisionalAtomsRemovesStale = TestCase $ do
+  let stale = ProvisionalAtom (Searching "stale") 2 1 1 False
+      result = decayProvisionalAtoms 22 [stale]
+  assertEqual "stale atom beyond TTL must be removed"
+    []
+    result
+
+-- | WP3 (GAP3): decayProvisionalAtoms keeps fresh and promoted atoms.
+testDecayProvisionalAtomsKeepsFresh :: Test
+testDecayProvisionalAtomsKeepsFresh = TestCase $ do
+  let fresh = ProvisionalAtom (Searching "fresh") 2 10 15 False
+      promoted = ProvisionalAtom (Searching "promoted") 3 1 1 True
+      result = decayProvisionalAtoms 25 [fresh, promoted]
+  assertBool "fresh atom within TTL must be kept"
+    (Searching "fresh" `elem` map paTag result)
+  assertEqual "promoted atom must survive decay regardless of TTL"
+    2
+    (length result)
+
+-- | WP3 (GAP3): resolveCollisions removes provisional atoms colliding with canonical set.
+testResolveCollisionsRemovesDuplicates :: Test
+testResolveCollisionsRemovesDuplicates = TestCase $ do
+  let tag = Searching "collision"
+      canonical = AtomSet [MeaningAtom "" tag (V.fromList [])] 0.0 Neutral
+      provisional = [ProvisionalAtom tag 1 1 1 False]
+      result = resolveCollisions canonical provisional
+  assertEqual "colliding provisional atom must be removed"
+    []
+    result
+
+-- | WP3 (GAP3): resolveCollisions keeps non-colliding provisional atoms.
+testResolveCollisionsKeepsNovel :: Test
+testResolveCollisionsKeepsNovel = TestCase $ do
+  let canonical = AtomSet [MeaningAtom "" (Searching "canonical") (V.fromList [])] 0.0 Neutral
+      provisional = [ProvisionalAtom (Searching "novel") 1 1 1 False]
+      result = resolveCollisions canonical provisional
+  assertEqual "non-colliding provisional atom must be kept"
+    [Searching "novel"]
+    (map paTag result)
 
 testOperationalDiagnosticQuestionRendersDirectStatus :: Test
 testOperationalDiagnosticQuestionRendersDirectStatus = TestCase $
@@ -1121,8 +1344,155 @@ testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause = TestCase $
     case repLocalRecoveryPlan renderPlan of
       Nothing -> pure ()  -- acceptable: no recovery plan at all
       Just recoveryPlan ->
-        assertBool "energy below threshold without gate flag must NOT produce RecoveryConatusGate"
-          (lrpCause recoveryPlan /= RecoveryConatusGate)
+         assertBool "energy below threshold without gate flag must NOT produce RecoveryConatusGate"
+           (lrpCause recoveryPlan /= RecoveryConatusGate)
+
+-- | WP1 (GAP1): morphology-dominant Conatus gradient → StrategyMorphologyExpansion.
+-- ∂m = 1.0/(1+0) = 1.0, ∂c = 0.5/(1+9) = 0.05, ∂t = 0.25/(1+0) = 0.25.
+testConatusGradientMorphologyDominant :: Test
+testConatusGradientMorphologyDominant = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -1.0
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
+        ss = ss0
+          { ssMorphology = MorphologyData Map.empty Map.empty Map.empty Map.empty
+          , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = replicate 9 dummyClaim }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate must produce recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "morphology-dominant gradient must map to StrategyMorphologyExpansion"
+          StrategyMorphologyExpansion
+          (lrpStrategy recoveryPlan)
+        assertBool "evidence must include conatus_strategy tag"
+          (any ("conatus_strategy=" `T.isPrefixOf`) (lrpEvidence recoveryPlan))
+
+-- | WP1 (GAP1): identity-dominant Conatus gradient → StrategyIdentityReinforcement.
+-- ∂m = 1.0/(1+9) = 0.1, ∂c = 0.5/(1+0) = 0.5, ∂t = 0.25/(1+0) = 0.25.
+testConatusGradientIdentityDominant :: Test
+testConatusGradientIdentityDominant = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -1.0
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        ss = ss0
+          { ssMorphology = MorphologyData
+              (Map.fromList [("a","x"),("b","x"),("c","x"),("d","x"),("e","x"),("f","x"),("g","x"),("h","x"),("i","x")])
+              Map.empty Map.empty Map.empty
+          , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = [] }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate must produce recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "identity-dominant gradient must map to StrategyIdentityReinforcement"
+          StrategyIdentityReinforcement
+          (lrpStrategy recoveryPlan)
+
+-- | WP1 (GAP1): temporal-dominant Conatus gradient → StrategyTemporalDeepening.
+-- ∂m = 1.0/(1+4) = 0.2, ∂c = 0.5/(1+2) ≈ 0.167, ∂t = 0.25/(1+0) = 0.25.
+testConatusGradientTemporalDominant :: Test
+testConatusGradientTemporalDominant = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -1.0
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
+        ss = ss0
+          { ssMorphology = MorphologyData
+              (Map.fromList [("a","x"),("b","x"),("c","x"),("d","x")])
+              Map.empty Map.empty Map.empty
+          , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = replicate 2 dummyClaim }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate must produce recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "temporal-dominant gradient must map to StrategyTemporalDeepening"
+          StrategyTemporalDeepening
+          (lrpStrategy recoveryPlan)
+
+-- | WP1 (GAP1): degenerate (three-way tie) gradient → StrategySafeRecovery fallback.
+-- ∂m = 1.0/(1+3) = 0.25, ∂c = 0.5/(1+1) = 0.25, ∂t = 0.25/(1+0) = 0.25.
+testConatusGradientDegenerateTie :: Test
+testConatusGradientDegenerateTie = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let forcedConatus = ConatusEnergy
+          { ceScalar     = -1.0
+          , ceComponents = ConatusComponents
+              { ccMorphology = 0.0
+              , ccIdentity   = 0.0
+              , ccTurns      = 0.0
+              , ccPenalty    = 1.0
+              }
+          }
+        dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
+        ss = ss0
+          { ssMorphology = MorphologyData
+              (Map.fromList [("a","x"),("b","x"),("c","x")])
+              Map.empty Map.empty Map.empty
+          , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = [dummyClaim] }
+          }
+        ti = ti0
+          { tiConatusEnergy         = forcedConatus
+          , tiBlanketViolationCount = 2
+          , tiConatusGateFired      = True
+          }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "Conatus gate must produce recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "degenerate three-way tie must fall back to StrategySafeRecovery"
+          StrategySafeRecovery
+          (lrpStrategy recoveryPlan)
 
 -- | Phase-8 (M3): deliberation recovery cause must not be silenced
 -- by an absent local recovery plan.  When the reconciled Plan carries

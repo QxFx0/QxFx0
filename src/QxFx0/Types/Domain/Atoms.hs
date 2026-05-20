@@ -21,6 +21,10 @@ module QxFx0.Types.Domain.Atoms
   , LexemeNumber(..)
   , LexemeForm(..)
   , MorphologyData(..)
+  , ProvisionalAtom(..)
+  , defaultProvisionalAtomTTL
+  , defaultProvisionalAtomMinOccurrences
+  , defaultProvisionalAtomMinTurnSpan
   ) where
 
 import Control.DeepSeq (NFData)
@@ -312,3 +316,23 @@ instance FromJSON MorphologyData where
     <*> o .: "mdGenitive"
     <*> o .: "mdNominative"
     <*> o .:? "mdFormsBySurface" .!= M.empty
+
+-- | WP3 (GAP3): provisional-atom quarantine type.
+data ProvisionalAtom = ProvisionalAtom
+  { paTag :: !AtomTag
+  , paOccurrences :: !Int
+  , paFirstSeenTurn :: !Int
+  , paLastSeenTurn :: !Int
+  , paPromoted :: !Bool
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultProvisionalAtomTTL :: Int
+defaultProvisionalAtomTTL = 20
+
+defaultProvisionalAtomMinOccurrences :: Int
+defaultProvisionalAtomMinOccurrences = 3
+
+defaultProvisionalAtomMinTurnSpan :: Int
+defaultProvisionalAtomMinTurnSpan = 5

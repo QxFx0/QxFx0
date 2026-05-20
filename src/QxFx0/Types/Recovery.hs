@@ -52,6 +52,15 @@ data LocalRecoveryStrategy
   | StrategyDistinguishCandidates
   | StrategyExposeUncertainty
   | StrategySafeRecovery
+  | StrategyMorphologyExpansion
+    -- ^ WP1 (GAP1): Conatus-gradient recovery — morphology component
+    --   (∂m) is dominant; system should expand morphological substrate.
+  | StrategyIdentityReinforcement
+    -- ^ WP1 (GAP1): Conatus-gradient recovery — identity component
+    --   (∂c) is dominant; system should reinforce identity claims.
+  | StrategyTemporalDeepening
+    -- ^ WP1 (GAP1): Conatus-gradient recovery — temporal component
+    --   (∂t) is dominant; system should deepen temporal continuity.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
@@ -79,3 +88,6 @@ renderLocalRecoveryStrategy StrategyDefineKnownTerms = "define_known_terms"
 renderLocalRecoveryStrategy StrategyDistinguishCandidates = "distinguish_candidates"
 renderLocalRecoveryStrategy StrategyExposeUncertainty = "expose_uncertainty"
 renderLocalRecoveryStrategy StrategySafeRecovery = "safe_recovery"
+renderLocalRecoveryStrategy StrategyMorphologyExpansion = "morphology_expansion"
+renderLocalRecoveryStrategy StrategyIdentityReinforcement = "identity_reinforcement"
+renderLocalRecoveryStrategy StrategyTemporalDeepening = "temporal_deepening"

@@ -38,7 +38,7 @@ import QxFx0.Self.Field (Field, FieldHeuristics)
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
-import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
+import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -148,6 +148,10 @@ data TurnPlan = TurnPlan
   , tpShadowFamily :: !(Maybe CanonicalMoveFamily)
   , tpShadowForce :: !(Maybe IllocutionaryForce)
   , tpShadowMessage :: !Text
+  , tpShadowVetoState :: !ShadowVetoState
+    -- ^ WP2 (GAP2): bounded shadow-veto counter and window anchor
+    --   carried through the turn so that 'buildNextSystemState' can
+    --   persist it without recomputing the shadow policy.
   , tpMetrics :: !TurnMetrics
   , tpDeliberation :: !(Maybe Deliberation)
   }

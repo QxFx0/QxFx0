@@ -108,6 +108,8 @@ import QxFx0.Types.Dream (emptyDreamState)
 import QxFx0.Self.Essence (Essence, emptyEssence)
 import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
+import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
+import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -127,6 +129,16 @@ data SystemState = SystemState
   , ssFieldHeuristics :: !FieldHeuristics
     -- ^ Phase B: mutable field heuristics for post-commitment
     --   bounded self-tuning.  Initialised to 'defaultFieldHeuristics'.
+  , ssShadowVetoState :: !ShadowVetoState
+    -- ^ WP2 (GAP2): bounded shadow-veto counter and window anchor.
+    --   Tracks gate-trigger count within a sliding window to prevent
+    --   infinite shadow-verdict loops.  Initialised to
+  , ssProvisionalAtoms :: ![ProvisionalAtom]
+    -- ^ WP3 (GAP3): provisional-atom quarantine for ontology accretion.
+    --   Atoms observed from user input that do not yet match canonical
+    --   clusters are held here until they meet promotion criteria or
+    --   decay.  Initialised to '[]'.
+    --   'defaultShadowVetoState'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -167,6 +179,8 @@ instance ToJSON SystemState where
     , "essence" .= ssEssence ss
     , "salienceWeights" .= ssSalienceWeights ss
     , "fieldHeuristics" .= ssFieldHeuristics ss
+    , "shadowVetoState" .= ssShadowVetoState ss
+    , "provisionalAtoms" .= ssProvisionalAtoms ss
     ]
 
 instance FromJSON SystemState where
@@ -211,6 +225,8 @@ instance FromJSON SystemState where
       <*> o .:? "essence" .!= emptyEssence
       <*> o .:? "salienceWeights" .!= defaultSalienceWeights
       <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
+      <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
+      <*> o .:? "provisionalAtoms" .!= []
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -322,4 +338,6 @@ emptySystemState = SystemState
   , ssEssence = emptyEssence
   , ssSalienceWeights = defaultSalienceWeights
   , ssFieldHeuristics = defaultFieldHeuristics
+  , ssShadowVetoState = defaultShadowVetoState
+  , ssProvisionalAtoms = []
   }

@@ -41,7 +41,8 @@ import QxFx0.Core.TurnRender
   , snapshotIdentitySignal
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
-import QxFx0.Self.Conatus (ceScalar)
+import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
+import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
@@ -382,11 +383,20 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
         case () of
           _
             | tiConatusGateFired ti ->
-                Just
-                  ( RecoveryConatusGate
-                  , StrategySafeRecovery
-                  , conatusEvidence
-                  )
+                let gradient = computeConatusGradient (computeSelfBlanket ss)
+                    strategy = selectConatusRecoveryStrategy gradient
+                    evidence =
+                      conatusEvidence
+                        <> [ "conatus_gradient_m=" <> T.pack (show (cgMorphology gradient))
+                           , "conatus_gradient_c=" <> T.pack (show (cgIdentity gradient))
+                           , "conatus_gradient_t=" <> T.pack (show (cgTurns gradient))
+                           , "conatus_strategy=" <> renderLocalRecoveryStrategy strategy
+                           ]
+                in Just
+                     ( RecoveryConatusGate
+                     , strategy
+                     , evidence
+                     )
             | tpShadowStatus tp == ShadowDiverged
                 && tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory ->
                 Just
@@ -445,7 +455,27 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
             , lrpEvidence = evidence
             , lrpSurface = renderLocalRecoverySurface preferredLang cause strategy (tiBestTopic ti)
             })
-        candidate
+         candidate
+
+-- | WP1 (GAP1): map the Conatus gradient to a recovery strategy.
+-- The component with the strictly largest partial derivative is
+-- the axis that yields the highest marginal gain in Conatus energy
+-- and therefore determines the recovery direction.
+-- If two or more components tie for the maximum (degenerate gradient),
+-- fall back to 'StrategySafeRecovery'.
+selectConatusRecoveryStrategy :: ConatusGradient -> LocalRecoveryStrategy
+selectConatusRecoveryStrategy g =
+  let comps =
+        [ (cgMorphology g, StrategyMorphologyExpansion)
+        , (cgIdentity   g, StrategyIdentityReinforcement)
+        , (cgTurns      g, StrategyTemporalDeepening)
+        ]
+      sorted = L.sortBy (\(a, _) (b, _) -> compare b a) comps
+  in case sorted of
+       ((v1, s1) : (v2, _) : _)
+         | v1 > v2   -> s1
+         | otherwise -> StrategySafeRecovery
+       _ -> StrategySafeRecovery
 
 renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurface gfLang _cause strategy topic =
@@ -470,6 +500,12 @@ renderLocalRecoverySurfaceRu strategy topic =
           header <> " Уверенность снижена; продолжу с явной пометкой неопределенности вместо внешней догадки."
         StrategySafeRecovery ->
           header <> " Ответ переведен в безопасную форму восстановления хода."
+        StrategyMorphologyExpansion ->
+          header <> " Расширяю морфологический субстрат для восстановления структурной целостности."
+        StrategyIdentityReinforcement ->
+          header <> " Укрепляю идентичностные утверждения для восстановления структурной когерентности."
+        StrategyTemporalDeepening ->
+          header <> " Углубляю темпоральную непрерывность для восстановления структурной устойчивости."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn strategy topic =
@@ -488,6 +524,12 @@ renderLocalRecoverySurfaceEn strategy topic =
           header <> " Confidence is reduced; I will proceed with explicit uncertainty instead of external guessing."
         StrategySafeRecovery ->
           header <> " The response was switched to a safe recovery form."
+        StrategyMorphologyExpansion ->
+          header <> " Expanding morphological substrate to restore structural integrity."
+        StrategyIdentityReinforcement ->
+          header <> " Reinforcing identity claims to restore structural coherence."
+        StrategyTemporalDeepening ->
+          header <> " Deepening temporal continuity to restore structural persistence."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =
