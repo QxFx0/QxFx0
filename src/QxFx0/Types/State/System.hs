@@ -111,6 +111,8 @@ import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
 import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
+import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
+import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 
 data SystemState = SystemState
@@ -145,6 +147,12 @@ data SystemState = SystemState
     --   Tracks persistent deficit patterns (salience calibration,
     --   keyword enrichment, lexicon extension) across turns.
     --   Initialised to 'emptyLearningNeedState'.
+  , ssGuardrailState :: !GuardrailState
+    -- ^ WP5: guardrail counters for rate limit, circuit breaker,
+    --   and quarantine.  Initialised to 'emptyGuardrailState'.
+  , ssCalibrationLog :: !CalibrationLog
+    -- ^ WP4: versioned calibration ledger (accepted/rolled-back
+    --   proposals).  Initialised to 'emptyCalibrationLog'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -188,6 +196,8 @@ instance ToJSON SystemState where
      , "shadowVetoState" .= ssShadowVetoState ss
      , "provisionalAtoms" .= ssProvisionalAtoms ss
      , "learningNeedState" .= ssLearningNeedState ss
+     , "guardrailState" .= ssGuardrailState ss
+     , "calibrationLog" .= ssCalibrationLog ss
      ]
 
 instance FromJSON SystemState where
@@ -235,6 +245,8 @@ instance FromJSON SystemState where
        <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
        <*> o .:? "provisionalAtoms" .!= []
        <*> o .:? "learningNeedState" .!= emptyLearningNeedState
+       <*> o .:? "guardrailState" .!= emptyGuardrailState
+       <*> o .:? "calibrationLog" .!= emptyCalibrationLog
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -349,4 +361,6 @@ emptySystemState = SystemState
   , ssShadowVetoState = defaultShadowVetoState
   , ssProvisionalAtoms = []
   , ssLearningNeedState = emptyLearningNeedState
+  , ssGuardrailState = emptyGuardrailState
+  , ssCalibrationLog = emptyCalibrationLog
   }

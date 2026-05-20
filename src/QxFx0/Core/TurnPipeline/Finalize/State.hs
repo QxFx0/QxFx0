@@ -238,6 +238,14 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
               (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
           in resolveCollisions canonicalSet remaining
       , ssLearningNeedState = newLearningNeedState
+      , ssGuardrailState = ssGuardrailState ss
+        -- ^ WP5: guardrails currently pass through unchanged;
+        --   proposal-submission tracking will be wired when the
+        --   external-tool bridge is integrated.
+      , ssCalibrationLog = ssCalibrationLog ss
+        -- ^ WP4: calibration ledger currently pass through unchanged;
+        --   accept/rollback mutations will be wired when the
+        --   verify/simulate/accept loop is integrated end-to-end.
       }
     , commitmentTrigger
     )
