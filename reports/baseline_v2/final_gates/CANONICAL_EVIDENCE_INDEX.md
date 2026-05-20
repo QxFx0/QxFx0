@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `47e01a4`  
+**Index SHA:** `bc4849e`  
 **Last updated:** 2026-05-20  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -14,11 +14,13 @@ low-RAM environment (~10–11 GB).  All constituent gates that can run
 within RAM/time constraints were executed individually and passed.
 
 This index reflects the **endogenous learning phase-1 closure +
-phase-2 persistence + phase-7 rooted learning** (WP1–WP5 +
-GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability in
-SystemState).  Fast-test count increased from 515 → 527 and
-full-test count from 642 → 654 due to KnowledgeTree lifecycle,
-CalibrationSignal boundedness, and Tool reliability coverage.
+phase-2 persistence + phase-7 rooted learning + phase-8 external
+learning loop** (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/
+ToolReliability + ExternalQuery/Parser/Validator/Sandbox/Loop in
+SystemState).  Fast-test count increased from 515 → 537 and
+full-test count from 642 → 664 due to KnowledgeTree lifecycle,
+CalibrationSignal boundedness, Tool reliability coverage, and the
+Phase 8 vertical slice tests.
 
 ---
 
@@ -26,9 +28,9 @@ CalibrationSignal boundedness, and Tool reliability coverage.
 
 | # | Gate | Command | Exit | Verdict | Evidence |
 |---|------|---------|------|---------|----------|
-| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 242 modules compiled, 0 errors |
-| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 527/527 cases, 0 errors, 0 failures |
-| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 654/654 cases, 0 errors, 0 failures |
+| 1 | `cabal build all` | `cabal build all` | 0 | **PASS** | 249 modules compiled, 0 errors |
+| 2 | `cabal test qxfx0-test-fast` | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 537/537 cases, 0 errors, 0 failures |
+| 3 | `cabal test qxfx0-test` (meta) | `cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 664/664 cases, 0 errors, 0 failures |
 | 4 | `check_architecture.sh` | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 | 5 | `gf_quality_gate.sh` | `bash scripts/gf_quality_gate.sh` | 0 | **PASS** | 0 errors, 0 warnings, PGF 312662 bytes, all core topics present |
 | 6 | `check_gf_render_path.sh` | `bash scripts/check_gf_render_path.sh` | — | **INFRA-DEFERRED** | timeout (>60 s) on low-RAM runner; individual constituent checks pass |
@@ -58,8 +60,6 @@ high-mem runner or CI environment:
 
 ## Proven Claims (Verified by Tests)
 
-The following claims are mechanically proven by the fast/full test suites:
-
 1. **Conatus-gradient recovery strategy selection** — when `tiConatusGateFired` is True, the recovery strategy is derived from the dominant gradient component (∂m, ∂c, ∂t) via `selectConatusRecoveryStrategy`. Tests: `testConatusGradientMorphologyDominant`, `testConatusGradientIdentityDominant`, `testConatusGradientTemporalDominant`, `testConatusGradientDegenerateTie`.
 
 2. **Bounded shadow-veto anti-loop** — `buildRouteTurnPlan` enforces `max_vetos_per_window=3` across `veto_window_turns=10`. Exhaustion bypasses the veto and emits `shadow_veto_exhausted` telemetry. Window expiry resets the counter. Tests: `testShadowVetoAllowedWithinWindow`, `testShadowVetoExhaustedAfterMax`, `testShadowVetoWindowResets`.
@@ -83,6 +83,20 @@ The following claims are mechanically proven by the fast/full test suites:
 11. **Bounded Calibration Signal (Phase 7)** — `computeCalibrationSignal` produces a non-zero, clamped signal in `[-1, 1]` from Conatus trend (30%), uncertainty trend (30%), loop risk (20%), and inverted branch health (20%). Extreme inputs are clamped. Tests: `testCalibrationSignalBoundedAndNonZero`, `testCalibrationSignalClampWorks`.
 
 12. **Tool Reliability Feedback (Phase 7)** — `updateToolReliability` adjusts per-tool scores (+0.05 accept, −0.10 reject, capped/floored at [0,1]). `selectToolWithReliability` overlays dynamic scores onto static profiles. Three consecutive rejections drop a perfect tool below 0.70. Tests: `testToolReliabilityRisesOnAccept`, `testToolReliabilityFallsOnReject`, `testToolReliabilityAffectsSelection`.
+
+13. **External LLM Transport (Phase 8)** — `buildTransportFromEnv` creates a `MockTransport` by default; `MistralTransport` is created only when `QXFX0_LLM_TRANSPORT=mistral` and a valid API key is present. Missing key falls back to mock with telemetry. Tests: `testMockTransportSuccess`, `testMockTransportFailure`.
+
+14. **Parser — strict JSON then text fallback (Phase 8)** — `parseLLMResponseToFruit` attempts constrained JSON decoding first; on failure it applies a constrained text heuristic. Malformed input produces `EqeParseError`. Tests: `testParserValidSchema`, `testParserRejectsMalformed`.
+
+15. **Validator — payload sanity and lexicon conflict (Phase 8)** — `validateFruitPayload` rejects empty words, short definitions (< 3 words), malformed morphology, and duplicates of existing lexicon entries. Tests: `testValidatorRejectsJunk`.
+
+16. **Sandbox — non-regression gate (Phase 8)** — `runSandboxGate` rejects candidates that increase latency by >20 %, raise error counts, or lower Conatus energy. Accepts candidates that improve metrics. Tests: `testSandboxRejectsDegrading`, `testSandboxAcceptsImproving`.
+
+17. **Graft integration — atomic SystemState update (Phase 8)** — `applyExternalLearning` grafts accepted fruit into `ssKnowledgeTree`, updates `ssToolReliability`, and merges `MorphologyPayload` in `Finalize.Precommit`. Rejected candidates leave state unchanged and populate telemetry. Tests: `testGraftUpdatesTreeAndMorph`.
+
+18. **Telemetry completeness — six new trace fields (Phase 8)** — Every external learning turn populates `trcLearningQueryType`, `trcExternalTool`, `trcLearningValidationStatus`, `trcLearningSandboxResult`, `trcLearningGraftTurn`, and `trcLearningRejectReason`. Tests: `testTelemetryFieldsPopulated`.
+
+19. **Fail-closed on external error (Phase 8)** — Any transport, parse, validation, or sandbox failure causes `applyExternalLearning` to skip grafting and record the exact reject reason. No partial state mutation occurs. Tests: `testFailClosedOnExternalError`.
 
 ---
 
@@ -109,11 +123,11 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 527  Tried: 527  Errors: 0  Failures: 0
+# Expected: Cases: 537  Tried: 537  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 654  Tried: 654  Errors: 0  Failures: 0
+# Expected: Cases: 664  Tried: 664  Errors: 0  Failures: 0
 
 # Individual gates:
 bash scripts/check_architecture.sh      # -> "Architecture check passed."
