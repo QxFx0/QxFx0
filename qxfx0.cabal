@@ -155,6 +155,7 @@ library
     QxFx0.Learning.Loop
     QxFx0.Learning.Sandbox
     QxFx0.Learning.TrainingCycle
+    QxFx0.Evaluation.ModelComparison
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.AtomAccretion

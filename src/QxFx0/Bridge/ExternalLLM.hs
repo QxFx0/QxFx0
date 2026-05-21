@@ -22,6 +22,7 @@ whether to retry, fallback, or reject.
 -}
 module QxFx0.Bridge.ExternalLLM
   ( LLMTransport(..)
+  , MockTable
   , buildTransportFromEnv
   , buildTransportFromConfig
   , queryExternalTool
@@ -77,12 +78,15 @@ data LLMTransport
   = MockTransport !MockTable !(Maybe ExternalQueryConfig)
     -- ^ Mock table plus optional config that led to fallback.
   | MistralTransport !Manager !MistralConfig
+  | FireworksTransport !Manager !FireworksConfig
 
 instance Show LLMTransport where
   show (MockTransport _ mcfg) =
     "MockTransport(" ++ maybe "no_config" show mcfg ++ ")"
   show (MistralTransport _ cfg) =
     "MistralTransport(apiKey=<REDACTED>,model=" ++ show (mcModel cfg) ++ ")"
+  show (FireworksTransport _ cfg) =
+    "FireworksTransport(apiKey=<REDACTED>,model=" ++ show (fcModel cfg) ++ ")"
 
 -- | Static lookup table for mock responses.
 -- Key: (toolName, needTag, queryPrefix) -> response body.
@@ -94,6 +98,19 @@ data MistralConfig = MistralConfig
   , mcModel     :: !Text
   , mcEndpoint  :: !Text
   , mcTimeoutMs :: !Int
+  }
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
+-- | Fireworks API configuration from env vars.
+-- Fireworks uses an OpenAI-compatible schema, so the HTTP body and
+-- response shape are identical to Mistral.  Only the endpoint and
+-- env-var prefix differ.
+data FireworksConfig = FireworksConfig
+  { fcApiKey    :: !Text
+  , fcModel     :: !Text
+  , fcEndpoint  :: !Text
+  , fcTimeoutMs :: !Int
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -112,10 +129,13 @@ defaultExternalQueryConfig = ExternalQueryConfig
 -- | Build transport from environment.
 --
 -- Env vars:
---   QXFX0_LLM_TRANSPORT=mock|mistral  (default: mock)
---   QXFX0_MISTRAL_API_KEY             (required for mistral)
---   QXFX0_MISTRAL_MODEL               (default: "mistral-small-latest")
---   QXFX0_MISTRAL_ENDPOINT            (default: "https://api.mistral.ai/v1/chat/completions")
+--   QXFX0_LLM_TRANSPORT=mock|mistral|fireworks  (default: mock)
+--   QXFX0_MISTRAL_API_KEY                       (required for mistral)
+--   QXFX0_MISTRAL_MODEL                         (default: "mistral-small-latest")
+--   QXFX0_MISTRAL_ENDPOINT                      (default: "https://api.mistral.ai/v1/chat/completions")
+--   QXFX0_FIREWORKS_API_KEY                     (required for fireworks)
+--   QXFX0_FIREWORKS_MODEL                       (default: "accounts/fireworks/models/glm-5p1")
+--   QXFX0_FIREWORKS_ENDPOINT                    (default: "https://api.fireworks.ai/inference/v1/chat/completions")
 --
 -- Fail-closed: any missing required config falls back to mock with an
 -- explicit 'TransportFallbackReason' in the returned 'ExternalQueryConfig'.
@@ -123,8 +143,8 @@ buildTransportFromEnv :: IO LLMTransport
 buildTransportFromEnv = do
   mTransport <- lookupEnv "QXFX0_LLM_TRANSPORT"
   let mode = fromMaybe "mock" mTransport
-  cfg0 <- if mode == "mistral"
-    then do
+  cfg0 <- case mode of
+    "mistral" -> do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
       case mKey of
         Nothing -> pure $ defaultExternalQueryConfig
@@ -151,7 +171,34 @@ buildTransportFromEnv = do
               , eqcTimeoutMs = 30000
               , eqcFallbackReason = Nothing
               }
-    else pure $ defaultExternalQueryConfig
+    "fireworks" -> do
+      mKey <- lookupEnv "QXFX0_FIREWORKS_API_KEY"
+      case mKey of
+        Nothing -> pure $ defaultExternalQueryConfig
+          { eqcTransportMode = "fireworks"
+          , eqcFallbackReason = Just TfrKeyMissing
+          }
+        Just key -> do
+          model    <- fmap (T.pack . fromMaybe "accounts/fireworks/models/glm-5p1") (lookupEnv "QXFX0_FIREWORKS_MODEL")
+          endpoint <- fmap (T.pack . fromMaybe "https://api.fireworks.ai/inference/v1/chat/completions") (lookupEnv "QXFX0_FIREWORKS_ENDPOINT")
+          let isHttps = T.isPrefixOf "https://" endpoint
+          if not isHttps
+            then pure $ defaultExternalQueryConfig
+              { eqcTransportMode = "fireworks"
+              , eqcApiKey = Just (T.pack key)
+              , eqcModel = model
+              , eqcEndpoint = endpoint
+              , eqcFallbackReason = Just TfrUnsafeEndpoint
+              }
+            else pure $ ExternalQueryConfig
+              { eqcTransportMode = "fireworks"
+              , eqcApiKey = Just (T.pack key)
+              , eqcModel = model
+              , eqcEndpoint = endpoint
+              , eqcTimeoutMs = 30000
+              , eqcFallbackReason = Nothing
+              }
+    _ -> pure $ defaultExternalQueryConfig
            { eqcTransportMode = T.pack mode
            , eqcFallbackReason = if mode == "mock" then Just TfrExplicitMock else Just TfrEnvNotSet
            }
@@ -167,12 +214,20 @@ buildTransportFromConfig cfg =
       mgr <- newTlsManager
       case eqcApiKey cfg of
         Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
-        Just key -> pure $ MistralTransport mgr MistralConfig
-          { mcApiKey = key
-          , mcModel = eqcModel cfg
-          , mcEndpoint = eqcEndpoint cfg
-          , mcTimeoutMs = eqcTimeoutMs cfg
-          }
+        Just key ->
+          if eqcTransportMode cfg == "fireworks"
+            then pure $ FireworksTransport mgr FireworksConfig
+              { fcApiKey = key
+              , fcModel = eqcModel cfg
+              , fcEndpoint = eqcEndpoint cfg
+              , fcTimeoutMs = eqcTimeoutMs cfg
+              }
+            else pure $ MistralTransport mgr MistralConfig
+              { mcApiKey = key
+              , mcModel = eqcModel cfg
+              , mcEndpoint = eqcEndpoint cfg
+              , mcTimeoutMs = eqcTimeoutMs cfg
+              }
 
 -- | Default mock table with a handful of deterministic responses.
 -- Extend this in tests by passing a custom table to 'MockTransport'.
@@ -222,8 +277,9 @@ queryExternalTool
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalTool transport tool need query =
   case transport of
-    MockTransport table _    -> mockQuery table tool need query
-    MistralTransport mgr cfg -> mistralQuery mgr cfg tool need query
+    MockTransport table _     -> mockQuery table tool need query
+    MistralTransport mgr cfg  -> mistralQuery mgr cfg tool need query
+    FireworksTransport mgr cfg -> fireworksQuery mgr cfg tool need query
 
 -- | Execute a query with explicit config (for tests and telemetry).
 queryExternalToolWithConfig
@@ -291,6 +347,45 @@ mistralQuery mgr cfg tool _need query =
                     , eqrStructured = extractStructured body
                     , eqrToolName   = etName tool
                     , eqrLatencyMs  = 0 -- TODO: measure via diffUTCTime
+                    }
+      else case code of
+        401 -> pure $ Left (EqeAuthFailure (T.concat ["401 ", statusMsg, ": ", body]))
+        403 -> pure $ Left (EqeAuthFailure (T.concat ["403 ", statusMsg, ": ", body]))
+        429 -> pure $ Left (EqeRateLimited (T.concat ["429 ", statusMsg, ": ", body]))
+        _ | code >= 500 && code < 600 -> pure $ Left (EqeServerError (T.concat ["5xx ", T.pack (show code), " ", statusMsg, ": ", body]))
+        _ | code >= 400 && code < 500 -> pure $ Left (EqeInvalidResponse (T.concat ["4xx ", T.pack (show code), " ", statusMsg, ": ", body]))
+        _ -> pure $ Left (EqeInvalidResponse (T.concat ["unexpected ", T.pack (show code), ": ", body]))
+  ) (\e -> pure $ Left (EqeNetworkUnavailable (T.pack (show e))))
+
+-- | Real Fireworks HTTP query.
+-- Fireworks uses the same OpenAI-compatible chat-completion schema as
+-- Mistral, so the request body and response unwrapping are identical.
+-- Only the endpoint and auth header differ.
+fireworksQuery :: Manager -> FireworksConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
+fireworksQuery mgr cfg tool _need query =
+  catchIO (do
+    req0 <- parseRequest (T.unpack (fcEndpoint cfg))
+    let req = req0
+          { method = "POST"
+          , requestHeaders =
+              [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", fcApiKey cfg]))
+              , ("Content-Type", "application/json")
+              ]
+          , requestBody = RequestBodyLBS $ LBS.fromStrict $ TE.encodeUtf8 $
+              T.concat ["{\"model\":\"", fcModel cfg, "\",\"messages\":[{\"role\":\"user\",\"content\":\"", escapeJson query, "\"}]}"]
+          }
+    resp <- httpLbs req mgr
+    let code = statusCode (responseStatus resp)
+        body = TE.decodeUtf8 (LBS.toStrict (responseBody resp))
+        statusMsg = T.pack (show (statusMessage (responseStatus resp)))
+    if code >= 200 && code < 300
+      then if T.null (T.strip body)
+             then pure $ Left EqeEmptyResponse
+             else pure $ Right ExternalQueryResponse
+                    { eqrRawBody    = body
+                    , eqrStructured = extractStructured body
+                    , eqrToolName   = etName tool
+                    , eqrLatencyMs  = 0
                     }
       else case code of
         401 -> pure $ Left (EqeAuthFailure (T.concat ["401 ", statusMsg, ": ", body]))
