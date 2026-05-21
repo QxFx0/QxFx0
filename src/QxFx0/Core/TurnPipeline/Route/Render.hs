@@ -80,6 +80,7 @@ import Data.Char (isAlpha, isSpace)
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import Data.Maybe (fromMaybe)
+import Text.Read (readMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
@@ -620,7 +621,7 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
             { lrpCause = cause
             , lrpStrategy = strategy
             , lrpEvidence = evidence
-            , lrpSurface = renderLocalRecoverySurface preferredLang cause strategy (tiBestTopic ti)
+             , lrpSurface = renderLocalRecoverySurface preferredLang cause strategy (tiBestTopic ti) evidence
             })
          candidate
 
@@ -662,11 +663,39 @@ selectLearningRecoveryStrategy NeedKeywordEnrichment   = StrategyRequestConcept
 selectLearningRecoveryStrategy NeedLexiconExtension    = StrategyRequestConcept
 selectLearningRecoveryStrategy NeedNone                = StrategySafeRecovery
 
-renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurface gfLang _cause strategy topic =
-  if gfLangTelemetryTag gfLang == "en"
-    then renderLocalRecoverySurfaceEn strategy topic
-    else renderLocalRecoverySurfaceRu strategy topic
+-- | Parse Conatus gradient components (m, c, t) from recovery evidence.
+-- Graceful fallback: returns Nothing for missing or unparsable markers.
+parseGradientFromEvidence :: [Text] -> Maybe (Double, Double, Double)
+parseGradientFromEvidence evidence =
+  let findMarker prefix =
+        case T.stripPrefix prefix =<< L.find (T.isPrefixOf prefix) evidence of
+          Nothing    -> Nothing
+          Just rest  -> readMaybe (T.unpack (T.takeWhile (/= ' ') rest))
+      m = findMarker "conatus_gradient_m="
+      c = findMarker "conatus_gradient_c="
+      t = findMarker "conatus_gradient_t="
+  in case (m, c, t) of
+       (Just m', Just c', Just t') -> Just (m', c', t')
+       _                           -> Nothing
+
+renderGradientFragment :: Maybe (Double, Double, Double) -> Text
+renderGradientFragment Nothing           = ""
+renderGradientFragment (Just (m, c, t)) =
+  T.concat [ "gradient(m=" , T.pack (show m)
+           , ", c=" , T.pack (show c)
+           , ", t=" , T.pack (show t) , ")"
+           ]
+
+renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> [Text] -> Text
+renderLocalRecoverySurface gfLang _cause strategy topic evidence =
+  let baseSurface =
+        if gfLangTelemetryTag gfLang == "en"
+          then renderLocalRecoverySurfaceEn strategy topic
+          else renderLocalRecoverySurfaceRu strategy topic
+      gradientFrag = renderGradientFragment (parseGradientFromEvidence evidence)
+  in if T.null gradientFrag
+       then baseSurface
+       else baseSurface <> "\n[" <> gradientFrag <> "]"
 
 renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceRu strategy topic =
