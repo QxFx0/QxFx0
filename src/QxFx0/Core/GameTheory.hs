@@ -17,6 +17,7 @@ module QxFx0.Core.GameTheory
   , mixedStrategyNash
   , gameRouteFamily
   , gameRouteFamilyWithMixed
+  , solveMixedStrategy
   ) where
 
 import qualified Data.Map.Strict as M

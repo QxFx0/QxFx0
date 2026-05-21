@@ -156,6 +156,8 @@ library
     QxFx0.Learning.Sandbox
     QxFx0.Learning.TrainingCycle
     QxFx0.Evaluation.ModelComparison
+    QxFx0.Core.GameTheory
+    QxFx0.Core.GameTheory.LP
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.AtomAccretion
@@ -185,8 +187,6 @@ library
       QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
-    QxFx0.Core.GameTheory
-    QxFx0.Core.GameTheory.LP
     QxFx0.Core.Bayesian
     QxFx0.Core.Spectral
     QxFx0.Types.Bayesian
@@ -393,6 +393,7 @@ common test-common
     Test.Suite.LearningLoop
     Test.Suite.TrainingCycle
     Test.Suite.ModelComparison
+    Test.Suite.ReliabilityHardening
 
 test-suite qxfx0-test-unit
   import:        test-common
