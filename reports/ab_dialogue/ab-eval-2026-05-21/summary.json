@@ -1,0 +1,57 @@
+{
+  "run_id": "ab-eval-2026-05-21",
+  "binary_a": "/tmp/qxfx0-main-baseline-a",
+  "binary_b": "dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main",
+  "corpus_tasks": 37,
+  "total_turns_a": 270,
+  "total_turns_b": 270,
+  "metrics_a": {
+    "total_turns": 270,
+    "avg_latency_ms": 4542.72962962963,
+    "p50_latency_ms": 4499,
+    "p95_latency_ms": 4776,
+    "error_count": 0,
+    "error_rate": 0.0,
+    "family_distribution": {
+      "CMDefine": 90,
+      "CMDistinguish": 58,
+      "CMReflect": 73,
+      "CMDeepen": 13,
+      "CMRepair": 13,
+      "CMGround": 4,
+      "CMDescribe": 4,
+      "CMContact": 13,
+      "CMAnchor": 1,
+      "CMPurpose": 1
+    },
+    "style_distribution": {
+      "poetic": 88,
+      "formal": 182
+    }
+  },
+  "metrics_b": {
+    "total_turns": 270,
+    "avg_latency_ms": 4538.540740740741,
+    "p50_latency_ms": 4507,
+    "p95_latency_ms": 4769,
+    "error_count": 0,
+    "error_rate": 0.0,
+    "family_distribution": {
+      "CMDefine": 90,
+      "CMDistinguish": 58,
+      "CMReflect": 73,
+      "CMDeepen": 13,
+      "CMRepair": 13,
+      "CMGround": 4,
+      "CMDescribe": 4,
+      "CMContact": 13,
+      "CMAnchor": 1,
+      "CMPurpose": 1
+    },
+    "style_distribution": {
+      "poetic": 88,
+      "formal": 182
+    }
+  },
+  "timestamp": "2026-05-21T11:55:49.788861+00:00"
+}
