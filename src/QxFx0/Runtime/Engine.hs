@@ -102,6 +102,11 @@ runTurnInSession session text = do
             ( s { sessReadinessMode = readiness }
             , "Turn blocked: strict runtime requires Agda verification [" <> detail <> "]"
             )
+        Left (EssenceRupture detail) ->
+          pure
+            ( s { sessReadinessMode = readiness }
+            , "Turn blocked: essence rupture [" <> detail <> "]"
+            )
         Left err ->
           throwQxFx0 err
         Right (nextSs, response) -> do
