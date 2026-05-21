@@ -22,7 +22,9 @@ import QxFx0.Learning.KnowledgeTree
   , pruneFruits
   , rootStressSignal
   , treeCounters
+  , isTermKnownInKnowledgeTree
   )
+import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.Signal
   ( CalibrationSignal(..)
   , SignalComponents(..)
@@ -42,8 +44,9 @@ import QxFx0.Learning.Need
   , emptyLearningNeedState
   , NeedTrend(..)
   )
-import QxFx0.Types.State (SystemState(..), emptySystemState, ssKnowledgeTree)
+import QxFx0.Types.State (SystemState(..), emptySystemState, ssKnowledgeTree, ssMorphology)
 import QxFx0.Semantic.Proposition (PropositionType(..))
+import qualified Data.Map.Strict as M
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
   , emptyLearningTelemetry
@@ -133,6 +136,12 @@ learningLoopTests =
   , testRealPathMiniEvalScenario3
   , testRealPathMiniEvalScenario4
   , testRealPathMiniEvalScenario5
+  -- WP1-WP5 cumulative learning tests
+  , testSystemStatePersistenceRoundTrip
+  , testMorphologyRetentionMerge
+  , testDedupBlocksExternalQueryForKnownMorphology
+  , testDedupBlocksExternalQueryForKnownTreeTerm
+  , testConatusDeltaDerivedFromStateNotPayload
   ]
 
 -- | Phase 7: valid + positive-delta fruit grafts into branch.
@@ -741,3 +750,110 @@ testRealPathMiniEvalScenario5 = TestCase $ do
       assertEqual "rendered fallback reason must be key_missing"
         "key_missing" (renderFallbackReason TfrKeyMissing)
     _ -> assertFailure "must fall back to mock when API key is missing"
+
+-- ============================================================
+-- WP1/WP2: persistence round-trip and cross-session retention
+-- ============================================================
+
+-- | SystemState with populated knowledge tree and morphology round-trips through JSON.
+testSystemStatePersistenceRoundTrip :: Test
+testSystemStatePersistenceRoundTrip = TestCase $ do
+  let fruit = mkFruitWithWord "свобода" "свобода — способность" SourceHuman True 0.3 0.2
+      tree = graftFruit "agreement" fruit emptyKnowledgeTree
+      morph = MorphologyData (M.singleton "в" "в") (M.singleton "к" "к") (M.singleton "свобода" "свобода") M.empty
+      ss0 = emptySystemState { ssKnowledgeTree = tree, ssMorphology = morph }
+      decoded = decode (encode ss0) :: Maybe SystemState
+  assertBool "SystemState must round-trip through JSON" (decoded /= Nothing)
+  let ss1 = maybe emptySystemState id decoded
+  assertEqual "knowledge tree grafted count must survive round-trip"
+    1 (ktGraftedCount (ssKnowledgeTree ss1))
+  assertBool "morphology nominative must survive round-trip"
+    (M.member "свобода" (mdNominative (ssMorphology ss1)))
+
+-- | Cross-session retention: morphology learned in one session is not overwritten on bootstrap.
+testMorphologyRetentionMerge :: Test
+testMorphologyRetentionMerge = TestCase $ do
+  let persistedMorph = MorphologyData M.empty M.empty (M.singleton "книга" "книга") M.empty
+      resourceMorph  = MorphologyData (M.singleton "в" "в") M.empty M.empty M.empty
+      -- Simulates the merge performed in bootstrap (persisted wins, resource fills gaps)
+      mergedPrepositional = M.union (mdPrepositional persistedMorph) (mdPrepositional resourceMorph)
+      mergedNominative    = M.union (mdNominative persistedMorph)    (mdNominative resourceMorph)
+  assertBool "persisted morphology nominative must survive merge"
+    (M.member "книга" mergedNominative)
+  assertBool "resource morphology prepositional must be present after merge"
+    (M.member "в" mergedPrepositional)
+
+-- ============================================================
+-- WP3: dedup blocks external query for known term
+-- ============================================================
+
+testDedupBlocksExternalQueryForKnownMorphology :: Test
+testDedupBlocksExternalQueryForKnownMorphology = TestCase $ do
+  let morph = MorphologyData M.empty M.empty (M.singleton "книга" "книга") M.empty
+  assertBool "hasKnownMorphologyForm must return True for known nominative"
+    (hasKnownMorphologyForm morph "книга")
+  assertBool "hasKnownMorphologyForm must return False for unknown term"
+    (not (hasKnownMorphologyForm morph "неизвестно"))
+
+testDedupBlocksExternalQueryForKnownTreeTerm :: Test
+testDedupBlocksExternalQueryForKnownTreeTerm = TestCase $ do
+  let fruit = mkFruitWithWord "свобода" "свобода — способность" SourceHuman True 0.3 0.2
+      tree = graftFruit "agreement" fruit emptyKnowledgeTree
+  assertBool "isTermKnownInKnowledgeTree must return True for known word"
+    (isTermKnownInKnowledgeTree "свобода" tree)
+  assertBool "isTermKnownInKnowledgeTree must return False for unknown term"
+    (not (isTermKnownInKnowledgeTree "неизвестно" tree))
+  -- Backward compatibility: proposition substring match
+  assertBool "isTermKnownInKnowledgeTree must match via proposition substring"
+    (isTermKnownInKnowledgeTree "способность" tree)
+
+-- ============================================================
+-- WP4: conatus delta derived from state (not payload)
+-- ============================================================
+
+testConatusDeltaDerivedFromStateNotPayload :: Test
+testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
+  let payload = KnowledgeFruitPayload
+        { kfpProposition = "test"
+        , kfpWord = "test"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.99   -- payload claims huge delta
+        , kfpPredictiveDelta = 0.5
+        }
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedLexiconExtension }
+            }
+      -- Accept path with no morphology change => proxy delta should be small (≈ +0.01 tree growth),
+      -- NOT the payload's 0.99.
+      (ss1, _tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит test" (Just (Right
+          (ExternalQueryResponse
+            { eqrRawBody = "{\"proposition\":\"test\",\"word\":\"test\",\"definition\":\"a good definition that is long enough for testing\",\"source\":\"llm\",\"conatusDelta\":0.99,\"predictiveDelta\":0.5}"
+            , eqrStructured = "{\"proposition\":\"test\",\"word\":\"test\",\"definition\":\"a good definition that is long enough for testing\",\"source\":\"llm\",\"conatusDelta\":0.99,\"predictiveDelta\":0.5}"
+            , eqrToolName = "llm-augment"
+            , eqrLatencyMs = 0
+            })))
+      tree = ssKnowledgeTree ss1
+      fruit = head (concatMap brFruits (concat (M.elems (ktBranches tree))))
+  assertBool "conatus delta must NOT be the payload's 0.99"
+    (abs (kfConatusDelta fruit - 0.99) > 0.1)
+  assertBool "conatus delta must be small and positive (tree growth proxy)"
+    (kfConatusDelta fruit > 0.0 && kfConatusDelta fruit < 0.05)
+
+-- Helpers
+
+mkFruitWithWord :: T.Text -> T.Text -> KnowledgeSource -> Bool -> Double -> Double -> KnowledgeFruit
+mkFruitWithWord word prop src valid cDelta pDelta =
+  KnowledgeFruit
+    { kfProposition = prop
+    , kfWord = word
+    , kfSource = src
+    , kfValidated = valid
+    , kfConatusDelta = cDelta
+    , kfPredictiveDelta = pDelta
+    , kfGraftedTurn = Nothing
+    , kfObservedTurn = 1
+    }

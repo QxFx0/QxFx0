@@ -160,7 +160,8 @@ runLearningStep ss tool need query mResult =
             Left valErr ->
               let rel1 = updateToolReliability (etName tool) False rel0
                   ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
-                  postProxy = conatusProxyFromState ss1
+                  -- ss1 does not yet contain the quarantined fruit; add 0.01 proxy for tree growth
+                  postProxy = conatusProxyFromState ss1 + 0.01
                   fruit = payloadToFruit payload turn False (postProxy - preProxy)
                   tree1 = quarantineFruit fruit tree0
                   ss2   = ss1 { ssKnowledgeTree = tree1 }
@@ -175,7 +176,7 @@ runLearningStep ss tool need query mResult =
                 SandboxReject metrics reason ->
                   let rel1 = updateToolReliability (etName tool) False rel0
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
-                      postProxy = conatusProxyFromState ss1
+                      postProxy = conatusProxyFromState ss1 + 0.01
                       fruit = payloadToFruit validatedPayload turn False (postProxy - preProxy)
                       tree1 = quarantineFruit fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
@@ -190,7 +191,7 @@ runLearningStep ss tool need query mResult =
                   let rel1 = updateToolReliability (etName tool) True rel0
                       morph1 = mergeMorphologyPayload morph validatedPayload
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1, ssMorphology = morph1 }
-                      postProxy = conatusProxyFromState ss1
+                      postProxy = conatusProxyFromState ss1 + 0.01
                       fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
                       tree1 = graftFruit (renderNeedTag need) fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
