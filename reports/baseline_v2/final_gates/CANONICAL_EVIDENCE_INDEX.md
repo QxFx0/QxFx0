@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `07476ab`  
+**Index SHA:** `39ccea6`  
 **Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -63,6 +63,9 @@ end-to-end 3-model comparison run).
 | 15 | `cabal build all` (Wave3 post-check) | `cabal build all` | 0 | **PASS** | 252 modules compiled, 0 errors |
 | 16 | `cabal test qxfx0-test-fast` (Wave3 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 586/586 cases, 0 errors, 0 failures |
 | 17 | `check_architecture.sh` (Wave3 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 18 | `cabal build all` (Wave4 post-check) | `cabal build all` | 0 | **PASS** | 252 modules compiled, 0 errors |
+| 19 | `cabal test qxfx0-test-fast` (Wave4 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 586/586 cases, 0 errors, 0 failures |
+| 20 | `check_architecture.sh` (Wave4 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -153,6 +156,8 @@ high-mem runner or CI environment:
 33. **Wave 2 fail-closed live+sim A/B evaluation (Phase 12)** — `scripts/wave2_soak.py` driver executes live pilot (1 session × 10 turns per model, 4 models, real Fireworks API) and full mock simulation (10 sessions × 60 turns per model, 2400 turns total). Real-time stop policy enforced: 3+ transport errors, 5+ validator rejects, 3+ sandbox rejects (same class), breaker lock > 20, reject loop > 15 all trigger session abort. All 4 live sessions aborted on validator streak at turn 5 (models return prose, not structured JSON, on raw prompts — documented as real finding). Mock simulation completed without incidents. JSONL schema validity 2420/2420, telemetry completeness 2420/2420, graft/validator/sandbox consistency 2420/2420, zero duplicates within mode. Data quality: **READY** for training-cycle ingestion. Simulated ranking: DeepSeek-v4-pro and GLM-5p1 tied at composite=0.950, Kimi variants at 0.935.
 
 34. **Wave 3 structured-output live A/B evaluation (Phase 13)** — `scripts/wave3_soak.py` driver uses `response_format: {"type": "json_object"}` with schema-constrained system/user prompts, retry policy (schema_v1 → schema_v1_retry), and exponential backoff on 429/5xx. Live soak: 3 sessions × 40 turns × 4 models = 480 turns planned, 362 executed. **kimi-k2p5** and **kimi-k2p6** completed all 120 turns with 100% JSON schema compliance, 100% validation pass, 100% sandbox pass, 100% graft accept rate. **deepseek-v4-pro** completed 107/120 turns with 50% schema compliance (session 3 degraded and aborted at turn 27). **glm-5p1** failed structured output entirely: 0% schema compliance across all 15 turns attempted (3 sessions aborted at turn 5 each). Data quality: 362/362 records schema-valid, telemetry-complete, consistent, zero duplicates. Live ranking: **kimi-k2p6** (primary, lowest latency), **kimi-k2p5** (fallback), **deepseek-v4-pro** (conditional fallback), **glm-5p1** (non-viable for structured output).
+
+35. **Wave 4 Kimi-only long-run structured learning (Phase 14)** — `scripts/wave4_soak.py` driver executes 10 sessions × 60 turns = **600 live turns** on **kimi-k2p6** (primary) with `response_format: {"type": "json_object"}`, schema-constrained prompts, retry policy, and exponential backoff. **Zero incidents** across all 600 turns. **100% schema validity**, **100% validation pass**, **100% sandbox pass**, **100% graft accept rate**, **0 silent accepts**. Per-session graft accumulation: 60/60 for all 10 sessions. Knowledge growth audit: **PASS** (schema >= 0.98, telemetry >= 0.98, grafts > 0, consistency >= 0.98, no silent accepts). Intelligence delta A/B vs Wave3 baseline: net conatus delta **+0.300** (IMPROVED), net predictive delta **+0.200** (IMPROVED), avg latency +891ms / P95 +2293ms (REGRESSED, non-safety), all safety metrics stable. **INTELLIGENCE_DELTA_STATUS: IMPROVED** (≥2 key metrics improved, no safety regression). Primary model status: **STABLE**. **READY_FOR_WAVE5: YES**. Post-wave gates: cabal build PASS, fast tests 586/586 PASS, architecture 12/12 PASS.
 
 ---
 
