@@ -9,7 +9,7 @@ Not wired into the production turn pipeline. Runtime family selection uses
 'Semantic.Logic' and the turn-routing cascade. Kept for extended scientific
 contour experiments only.
 -}
-module QxFx0.Core.GameTheory
+module QxFx0.Learning.GameTheory
   ( GameState(..)
   , utility
   , payoffMatrix
@@ -57,7 +57,7 @@ import QxFx0.Types.Thresholds.GameTheory ( depthCostDeepen, depthCostHypothesis,
                          , userBonusReflectRepair, userBonusContactContact, userBonusRepairConfront
                          , tensionCoefficient
                          )
-import QxFx0.Core.GameTheory.LP (solveMixedStrategy)
+import QxFx0.Learning.GameTheory.LP (solveMixedStrategy)
 
 data GameState = GameState
   { gsTension       :: !Double

@@ -17,7 +17,7 @@ The optimal mixed strategy is p_i = w_i / sum_i w_i.
 We solve the dual problem via the revised simplex tableau,
 then recover the primal variables from the objective-row reduced costs.
 -}
-module QxFx0.Core.GameTheory.LP
+module QxFx0.Learning.GameTheory.LP
   ( solveMixedStrategy
   ) where
 

@@ -155,9 +155,9 @@ library
     QxFx0.Learning.Loop
     QxFx0.Learning.Sandbox
     QxFx0.Learning.TrainingCycle
+    QxFx0.Learning.GameTheory
+    QxFx0.Learning.GameTheory.LP
     QxFx0.Evaluation.ModelComparison
-    QxFx0.Core.GameTheory
-    QxFx0.Core.GameTheory.LP
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.AtomAccretion

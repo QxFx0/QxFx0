@@ -22,7 +22,7 @@ import QxFx0.Learning.Calibration
   , CalibrationLog(..)
   , currentCalibrationVersion
   )
-import QxFx0.Core.GameTheory (solveMixedStrategy)
+import QxFx0.Learning.GameTheory (solveMixedStrategy)
 import QxFx0.Lexicon.GfMap
   ( topicToGfLexemeId
   , lookupGfLexemeForms
