@@ -85,7 +85,7 @@ import QxFx0.Core.TurnPipeline.Types
   )
 import QxFx0.Core.Observability (TurnMetrics)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 import QxFx0.Core.TurnPipeline.Prepare (PrepareEffectResults(..))
 import qualified QxFx0.Core.TurnPipeline.Prepare as Prepare
 import QxFx0.Core.TurnPipeline.Route
@@ -188,7 +188,11 @@ resolvePrepareCurrentTime pio = do
   result <- resolveTurnEffect pio TurnReqCurrentTime
   case result of
     TurnResCurrentTime t -> pure t
-    _ -> error "prepare time resolution returned unexpected result"
+    _ -> do
+      -- Fail-closed: unexpected effect result should not crash the runtime.
+      -- Fall back to system time and let telemetry record the anomaly.
+      t <- getCurrentTime
+      pure t
 
 planTurn :: PipelineIO -> SystemState -> PreparedTurn -> IO PlannedTurn
 planTurn pio ss (PreparedTurn ti ts) = do
