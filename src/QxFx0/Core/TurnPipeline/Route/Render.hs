@@ -51,6 +51,7 @@ import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
+import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
@@ -114,6 +115,9 @@ data RenderEffectPlan = RenderEffectPlan
     --   guardrails allow, no request-driven query already planned),
     --   this field carries the exploratory query.  'Nothing' means
     --   no autonomous exploration this turn.
+  , repExternalQuerySkipReason :: !(Maybe Text)
+    -- ^ WP3 dedup telemetry: reason why external query was skipped
+    --   (already_known_morphology / already_known_tree).
   } deriving stock (Eq, Show)
 
 data RenderTimeline = RenderTimeline
@@ -132,6 +136,8 @@ data RenderEffectResults = RenderEffectResults
   , rerExploratoryQueryResult :: !(Maybe (Either ExternalQueryError ExternalQueryResponse))
     -- ^ Phase 9: result of the autonomous exploratory external query.
     --   'Nothing' means no exploratory query was attempted this turn.
+  , rerExternalQuerySkipReason :: !(Maybe Text)
+    -- ^ WP3 dedup telemetry: mirrors repExternalQuerySkipReason.
   }
   deriving stock (Eq, Show)
 
@@ -214,16 +220,26 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           else Nothing
       localRecoveryPlan =
         buildLocalRecoveryPlan runtimeMode localRecoveryPolicy ss ti tp morphologyWarning
+      -- WP3 dedup: skip external query if term is already known.
+      mDedupSkipReason =
+        if hasKnownMorphologyForm (ssMorphology ss) bestTopic
+          then Just "already_known_morphology"
+          else if isTermKnownInKnowledgeTree bestTopic (ssKnowledgeTree ss)
+            then Just "already_known_tree"
+            else Nothing
       mExternalQueryRequest =
-        case localRecoveryPlan of
-          Just plan | isRequestStrategy (lrpStrategy plan) ->
-            let need = lnsCurrentNeed (ssLearningNeedState ss)
-                mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
-                queryText = buildExternalQueryText need (tiBestTopic ti)
-            in case mTool of
-                 Just tool -> Just (tool, need, queryText)
-                 Nothing   -> Nothing
-          _ -> Nothing
+        case mDedupSkipReason of
+          Just _ -> Nothing
+          Nothing ->
+            case localRecoveryPlan of
+              Just plan | isRequestStrategy (lrpStrategy plan) ->
+                let need = lnsCurrentNeed (ssLearningNeedState ss)
+                    mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
+                    queryText = buildExternalQueryText need (tiBestTopic ti)
+                in case mTool of
+                     Just tool -> Just (tool, need, queryText)
+                     Nothing   -> Nothing
+              _ -> Nothing
       -- Phase 9: autonomous exploratory learning query.
       -- Triggered when:
       --   1. No request-driven external query already planned
@@ -231,24 +247,27 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       --   3. Guardrails allow (rate limit, circuit breaker)
       --   4. A suitable tool is available
       mExploratoryQueryRequest =
-        case mExternalQueryRequest of
-          Just _ -> Nothing  -- request-driven query takes priority
+        case mDedupSkipReason of
+          Just _ -> Nothing
           Nothing ->
-            let need = lnsCurrentNeed (ssLearningNeedState ss)
-                lns = ssLearningNeedState ss
-                toolRel = ssToolReliability ss
-                guard = ssGuardrailState ss
-                currentTurn = ssTurnCount ss
-            in if need == NeedNone
-                  then Nothing
-                  else if not (canSubmitProposal guard currentTurn)
-                    then Nothing
-                    else
-                      let mTool = selectToolWithReliability need toolRel defaultAvailableTools
-                          queryText = buildExploratoryQueryText need (tiBestTopic ti)
-                      in case mTool of
-                           Just tool | etReliability tool >= 0.3 -> Just (tool, need, queryText)
-                           _ -> Nothing
+            case mExternalQueryRequest of
+              Just _ -> Nothing  -- request-driven query takes priority
+              Nothing ->
+                let need = lnsCurrentNeed (ssLearningNeedState ss)
+                    lns = ssLearningNeedState ss
+                    toolRel = ssToolReliability ss
+                    guard = ssGuardrailState ss
+                    currentTurn = ssTurnCount ss
+                in if need == NeedNone
+                      then Nothing
+                      else if not (canSubmitProposal guard currentTurn)
+                        then Nothing
+                        else
+                          let mTool = selectToolWithReliability need toolRel defaultAvailableTools
+                              queryText = buildExploratoryQueryText need (tiBestTopic ti)
+                          in case mTool of
+                               Just tool | etReliability tool >= 0.3 -> Just (tool, need, queryText)
+                               _ -> Nothing
    in RenderEffectPlan
        { repRenderStatic = RenderStatic
           { rsRenderWithBg = renderWithBg
@@ -280,6 +299,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repKnowledgeTopic = bestTopic
       , repExternalQueryRequest = mExternalQueryRequest
       , repExploratoryQueryRequest = mExploratoryQueryRequest
+      , repExternalQuerySkipReason = mDedupSkipReason
        }
   where
     isRequestStrategy StrategyRequestCalibration = True
@@ -350,6 +370,7 @@ resolveRenderEffects pio effectPlan = do
     , rerKnowledgeFactSource = mKnowledgeSource
     , rerExternalQueryResult = mExternalQueryResult
     , rerExploratoryQueryResult = mExploratoryQueryResult
+    , rerExternalQuerySkipReason = repExternalQuerySkipReason effectPlan
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -436,6 +457,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taKnowledgeSource = rerKnowledgeFactSource effectResults
        , taExternalQueryResult = rerExternalQueryResult effectResults
        , taExploratoryQueryResult = rerExploratoryQueryResult effectResults
+       , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
        }
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan

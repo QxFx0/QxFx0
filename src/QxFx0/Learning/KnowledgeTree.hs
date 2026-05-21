@@ -34,6 +34,7 @@ module QxFx0.Learning.KnowledgeTree
   , pruneFruits
   , branchHealthTrend
   , treeCounters
+  , isTermKnownInKnowledgeTree
   ) where
 
 import Control.DeepSeq (NFData)
@@ -58,6 +59,9 @@ data KnowledgeSource
 data KnowledgeFruit = KnowledgeFruit
   { kfProposition     :: !Text
     -- ^ The learned statement / rule / concept.
+  , kfWord            :: !Text
+    -- ^ The key surface word / concept this fruit answers.
+    --   Backward-compatible: old JSON without this field loads as "".
   , kfSource          :: !KnowledgeSource
     -- ^ Where it came from.
   , kfValidated       :: !Bool
@@ -78,6 +82,7 @@ data KnowledgeFruit = KnowledgeFruit
 instance ToJSON KnowledgeFruit where
   toJSON f = object
     [ "proposition"     .= kfProposition f
+    , "word"            .= kfWord f
     , "source"          .= kfSource f
     , "validated"       .= kfValidated f
     , "conatusDelta"    .= kfConatusDelta f
@@ -90,6 +95,7 @@ instance FromJSON KnowledgeFruit where
   parseJSON = withObject "KnowledgeFruit" $ \o ->
     KnowledgeFruit
       <$> o .:  "proposition"
+      <*> o .:? "word" .!= ""
       <*> o .:  "source"
       <*> o .:? "validated" .!= False
       <*> o .:? "conatusDelta" .!= 0.0
@@ -337,6 +343,17 @@ treeCounters t =
   , ktPrunedCount t
   , ktGraftedCount t
   )
+
+-- | Check whether a surface term is already represented by a validated,
+-- grafted fruit in any branch.  Searches by kfWord (if present) and falls
+-- back to substring match on kfProposition for backward compatibility.
+isTermKnownInKnowledgeTree :: Text -> KnowledgeTree -> Bool
+isTermKnownInKnowledgeTree term tree =
+  let lower = T.toLower term
+      allFruits = concatMap brFruits (concat (M.elems (ktBranches tree)))
+      matchesWord f = not (T.null (kfWord f)) && T.toLower (kfWord f) == lower
+      matchesProp f = T.isInfixOf lower (T.toLower (kfProposition f))
+  in any (\f -> kfValidated f && (matchesWord f || matchesProp f)) allFruits
 
 -- | Clamp to [0, 1].
 clampUnit :: Double -> Double

@@ -217,6 +217,10 @@ data TurnArtifacts = TurnArtifacts
     -- ^ Phase 9: result of the autonomous exploratory external query.
     --   Populated by the render phase and consumed by 'applyExternalLearning'
     --   in finalize alongside 'taExternalQueryResult'.
+  , taExternalQuerySkipReason :: !(Maybe Text)
+    -- ^ WP3 dedup telemetry: populated when an external query was
+    --   suppressed because the term was already known in morphology
+    --   or knowledge tree.
   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts

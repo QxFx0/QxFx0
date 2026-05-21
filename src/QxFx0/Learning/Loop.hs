@@ -196,6 +196,7 @@ payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> KnowledgeFruit
 payloadToFruit payload turn validated =
   KnowledgeFruit
     { kfProposition     = kfpProposition payload
+    , kfWord            = kfpWord payload
     , kfSource          = kfpSource payload
     , kfValidated       = validated
     , kfConatusDelta    = kfpConatusDelta payload

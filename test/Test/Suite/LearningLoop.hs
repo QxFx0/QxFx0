@@ -301,6 +301,7 @@ mkFruit :: T.Text -> KnowledgeSource -> Bool -> Double -> Double -> KnowledgeFru
 mkFruit prop src valid cDelta pDelta =
   KnowledgeFruit
     { kfProposition = prop
+    , kfWord = ""
     , kfSource = src
     , kfValidated = valid
     , kfConatusDelta = cDelta
