@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `39ccea6`  
+**Index SHA:** `cf3de87`  
 **Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -19,8 +19,11 @@ learning loop + phase-8 hardening + phase-9 calibration pipeline start +
 phase-8 external-query effect execution (request→render→finalize graft
 chain) + phase-8 telemetry source-of-truth hotfix +
 phase-9 autonomous exploratory learning MVP +
-phase-10 offline training cycle (trace extraction, bounded candidate
-generation, proxy evaluation, promotion/rollback)**
+  phase-10 offline training cycle (trace extraction, bounded candidate
+  generation, proxy evaluation, rollback) +
+  Wave 5 reliability hardening (partial error→total, unsafe indexing guard,
+  LP fail-closed dimension validation, unsafePerformIO invariant docs) +
+  Wave 5 staged long-run soak (canary/stage1/full, 1840 live turns)**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
@@ -39,6 +42,12 @@ multi-model A/B harness tests (deterministic corpus length, sequential
 and interleaved session runners, transport/parse/sandbox error
 injection, aggregate counters, 4 incident-detector classes,
 end-to-end 3-model comparison run).
+
+Fast-test count further increased from 586 → 595 due to Wave 5
+reliability hardening edge-case tests (empty tool pool, no matching
+domain, empty calibration log, no accepted calibration entries, LP
+valid uniform matrix, LP jagged rows, LP empty matrix, GfMap unknown
+topic fallback, GfMap lookup unknown fun).
 
 ---
 
@@ -66,6 +75,9 @@ end-to-end 3-model comparison run).
 | 18 | `cabal build all` (Wave4 post-check) | `cabal build all` | 0 | **PASS** | 252 modules compiled, 0 errors |
 | 19 | `cabal test qxfx0-test-fast` (Wave4 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 586/586 cases, 0 errors, 0 failures |
 | 20 | `check_architecture.sh` (Wave4 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 21 | `cabal build all` (Wave5 post-check) | `cabal build all` | 0 | **PASS** | 251 modules compiled, 0 errors |
+| 22 | `cabal test qxfx0-test-fast` (Wave5 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 595/595 cases, 0 errors, 0 failures |
+| 23 | `check_architecture.sh` (Wave5 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -159,6 +171,10 @@ high-mem runner or CI environment:
 
 35. **Wave 4 Kimi-only long-run structured learning (Phase 14)** — `scripts/wave4_soak.py` driver executes 10 sessions × 60 turns = **600 live turns** on **kimi-k2p6** (primary) with `response_format: {"type": "json_object"}`, schema-constrained prompts, retry policy, and exponential backoff. **Zero incidents** across all 600 turns. **100% schema validity**, **100% validation pass**, **100% sandbox pass**, **100% graft accept rate**, **0 silent accepts**. Per-session graft accumulation: 60/60 for all 10 sessions. Knowledge growth audit: **PASS** (schema >= 0.98, telemetry >= 0.98, grafts > 0, consistency >= 0.98, no silent accepts). Intelligence delta A/B vs Wave3 baseline: net conatus delta **+0.300** (IMPROVED), net predictive delta **+0.200** (IMPROVED), avg latency +891ms / P95 +2293ms (REGRESSED, non-safety), all safety metrics stable. **INTELLIGENCE_DELTA_STATUS: IMPROVED** (≥2 key metrics improved, no safety regression). Primary model status: **STABLE**. **READY_FOR_WAVE5: YES**. Post-wave gates: cabal build PASS, fast tests 586/586 PASS, architecture 12/12 PASS.
 
+36. **Wave 5 reliability hardening (Phase 15)** — Four partial/error paths made total without weakening business logic: (a) `resolvePrepareCurrentTime` in `Protocol.hs` replaced `error` with `getCurrentTime` fail-closed fallback; (b) `maximumByReliability` in `Tool.hs` changed from partial to `Maybe ExternalTool`; (c) `safeLast` in `Calibration.hs` replaced with total `lastElem :: [a] -> Maybe a`; (d) `solveMixedStrategy` in `GameTheory.LP.hs` gained pre-simplex dimension validation returning `Nothing` for jagged matrices. `unsafePerformIO` in `GfMap.hs` retained with explicit invariant documentation (read-only, exception-safe loader). Nine new fast tests cover all edge cases. Build PASS, fast tests 595/595 PASS, architecture 12/12 PASS.
+
+37. **Wave 5 staged long-run soak (Phase 16)** — `scripts/wave5_soak.py` executes three-stage rollout with fail-closed budget caps and incident caps. **Canary:** 2 sessions × 20 turns = 40 turns, 0 incidents, 100% schema/graft. **Stage 1:** 5 sessions × 40 turns = 200 turns, 0 incidents, 100% schema/graft. **Full:** 20 sessions × 80 turns = 1600 turns, 0 incidents, 100% schema/graft. **Total: 1840 live turns, 0 incidents.** Latency drift canary→full: avg +128ms, P50 −259ms, P95 −1599ms (non-safety). Token burn: ~22M prompt + ~6.6M completion (well under 40M/12M hard caps). All fail-closed stop policies untriggered. Stage reports: `reports/ab_runs/wave5-2026-05-21/canary/report.md`, `stage1/report.md`, `full/report.md`. Consolidated report: `reports/ab_runs/wave5-2026-05-21/wave5_consolidated_report.md`.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -184,7 +200,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 586  Tried: 586  Errors: 0  Failures: 0
+# Expected: Cases: 595  Tried: 595  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
