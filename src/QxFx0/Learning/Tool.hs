@@ -97,10 +97,12 @@ selectTool need tools = do
       | otherwise       =
           let validatable = filter etValidatable candidates
               pool = if null validatable then candidates else validatable
-          in Just (maximumByReliability pool)
+          in maximumByReliability pool
 
-    maximumByReliability [] = error "maximumByReliability: empty list"
-    maximumByReliability (x:xs) = go x xs
+    -- | Total: returns 'Nothing' only for an empty list.
+    maximumByReliability :: [ExternalTool] -> Maybe ExternalTool
+    maximumByReliability [] = Nothing
+    maximumByReliability (x:xs) = Just (go x xs)
       where
         go best [] = best
         go best (y:ys)
