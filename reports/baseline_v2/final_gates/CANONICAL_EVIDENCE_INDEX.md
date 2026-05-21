@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `5a3dd1b`  
+**Index SHA:** `814c1c1`  
 **Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -33,6 +33,12 @@ Fast-test count increased from 564 → 574 and full-test count from
 determinism, candidate boundedness, sandbox reject/accept,
 promotion versioning, rollback restoration, telemetry fields,
 end-to-end cycle, stats accuracy, typed reject reasons).
+
+Fast-test count further increased from 574 → 586 due to Fireworks
+multi-model A/B harness tests (deterministic corpus length, sequential
+and interleaved session runners, transport/parse/sandbox error
+injection, aggregate counters, 4 incident-detector classes,
+end-to-end 3-model comparison run).
 
 ---
 
@@ -136,6 +142,8 @@ high-mem runner or CI environment:
 
 - Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
 
+32. **Fireworks multi-model A/B harness (Phase 11)** — `QxFx0.Evaluation.ModelComparison` provides deterministic 40-prompt corpus, per-model state-fork session runners (sequential and interleaved), session/model aggregation (success rate, latency, validator accept rate, sandbox pass rate), and 4-class incident detection (consecutive transport errors, consecutive validator rejects, consecutive sandbox rejects with same degradation tag, request→reject loops without grafts). All wiring verified through 12 new fast tests. Live API baseline validated for GLM-5p1, DeepSeek-v4-pro, and Kimi-k2p5 (2 turns each, HTTP 200, valid JSON). Full 360-turn live A/B INFRA-DEFERRED. Tests: `testCorpusLength`, `testSequentialSessionPerfect`, `testSequentialSessionErrors`, `testSequentialSessionInvalid`, `testSequentialSessionDegrading`, `testAggregateSession`, `testDetectTransportIncidents`, `testDetectValidatorIncidents`, `testDetectSandboxIncidents`, `testDetectRequestRejectLoop`, `testComparisonRunThreeModels`, `testInterleavedCountsMatch`.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -161,7 +169,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 574  Tried: 574  Errors: 0  Failures: 0
+# Expected: Cases: 586  Tried: 586  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
