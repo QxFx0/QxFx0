@@ -46,6 +46,8 @@ import QxFx0.Learning.KnowledgeTree
   , emptyKnowledgeTree
   , graftFruit
   , quarantineFruit
+  , ktBranches
+  , ktQuarantine
   )
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), emptyLearningNeedState)
 import QxFx0.Learning.Parser (parseLLMResponseToFruit)
@@ -71,6 +73,10 @@ import QxFx0.Types.ExternalQuery
 import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
 import QxFx0.Types.Decision.Model (ipfRawText)
 import QxFx0.Types.State.System (SystemState(..), ssLearningNeedState, ssKnowledgeTree, ssToolReliability, ssMorphology, ssTurnCount)
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Conatus (computeConatusEnergy, ceScalar)
+import qualified Data.Map.Strict as M
 
 -- | Telemetry emitted by one learning-loop iteration.
 data LearningTelemetry = LearningTelemetry
@@ -139,7 +145,8 @@ runLearningStep ss tool need query mResult =
 
     Just (Right resp) ->
       -- Got a response: parse -> validate -> sandbox -> graft.
-      case parseLLMResponseToFruit resp of
+      let preProxy = conatusProxyFromState ss
+      in case parseLLMResponseToFruit resp of
         Nothing ->
           let rel1 = updateToolReliability (etName tool) False rel0
               tel  = baseTelemetry
@@ -152,54 +159,71 @@ runLearningStep ss tool need query mResult =
           case validateFruitPayload payload morph of
             Left valErr ->
               let rel1 = updateToolReliability (etName tool) False rel0
-                  fruit = payloadToFruit payload turn False
+                  ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
+                  postProxy = conatusProxyFromState ss1
+                  fruit = payloadToFruit payload turn False (postProxy - preProxy)
                   tree1 = quarantineFruit fruit tree0
+                  ss2   = ss1 { ssKnowledgeTree = tree1 }
                   tel   = baseTelemetry
                     { ltValidationStatus = "validation_reject"
                     , ltRejectReason     = Just (renderValidationError valErr)
                     }
-              in (ss { ssKnowledgeTree = tree1, ssToolReliability = rel1 }, tel)
+              in (ss2, tel)
 
             Right validatedPayload ->
               case runSandboxGate ss validatedPayload of
                 SandboxReject metrics reason ->
                   let rel1 = updateToolReliability (etName tool) False rel0
-                      fruit = payloadToFruit validatedPayload turn False
+                      ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
+                      postProxy = conatusProxyFromState ss1
+                      fruit = payloadToFruit validatedPayload turn False (postProxy - preProxy)
                       tree1 = quarantineFruit fruit tree0
+                      ss2   = ss1 { ssKnowledgeTree = tree1 }
                       tel   = baseTelemetry
                         { ltValidationStatus = "sandbox_reject"
                         , ltSandboxResult  = Just (renderSandboxMetrics metrics)
                         , ltRejectReason   = Just (renderSandboxRejectReason reason)
                         }
-                  in (ss { ssKnowledgeTree = tree1, ssToolReliability = rel1 }, tel)
+                  in (ss2, tel)
 
                 SandboxAccept metrics ->
                   let rel1 = updateToolReliability (etName tool) True rel0
-                      fruit = payloadToFruit validatedPayload turn True
-                      tree1 = graftFruit (renderNeedTag need) fruit tree0
-                      -- TODO: merge morphology into ssMorphology when payload has mpCases
                       morph1 = mergeMorphologyPayload morph validatedPayload
+                      ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1, ssMorphology = morph1 }
+                      postProxy = conatusProxyFromState ss1
+                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
+                      tree1 = graftFruit (renderNeedTag need) fruit tree0
+                      ss2   = ss1 { ssKnowledgeTree = tree1 }
                       tel   = baseTelemetry
                         { ltValidationStatus = "accept"
                         , ltSandboxResult    = Just (renderSandboxMetrics metrics)
                         , ltGraftTurn        = Just turn
                         }
-                  in ( ss { ssKnowledgeTree = tree1
-                          , ssToolReliability = rel1
-                          , ssMorphology      = morph1
-                          }
-                     , tel
-                     )
+                  in (ss2, tel)
+
+-- | Compute a proxy Conatus scalar from the current SystemState.
+-- Includes the actual ConatusEnergy from SelfBlanket plus a small
+-- knowledge-tree-size term so that graft/quarantine changes are visible.
+conatusProxyFromState :: SystemState -> Double
+conatusProxyFromState s =
+  let blanket = computeSelfBlanket s
+      violations = checkInitialBlanket blanket
+      energy = ceScalar (computeConatusEnergy blanket violations)
+      tree = ssKnowledgeTree s
+      treeSize = sum (map length (M.elems (ktBranches tree))) + length (ktQuarantine tree)
+  in energy + 0.01 * fromIntegral treeSize
 
 -- | Convert a validated payload into a 'KnowledgeFruit'.
-payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> KnowledgeFruit
-payloadToFruit payload turn validated =
+-- The conatus delta is derived from actual state change (pre vs post)
+-- rather than trusting the external payload.
+payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> Double -> KnowledgeFruit
+payloadToFruit payload turn validated conatusDelta =
   KnowledgeFruit
     { kfProposition     = kfpProposition payload
     , kfWord            = kfpWord payload
     , kfSource          = kfpSource payload
     , kfValidated       = validated
-    , kfConatusDelta    = kfpConatusDelta payload
+    , kfConatusDelta    = conatusDelta
     , kfPredictiveDelta = kfpPredictiveDelta payload
     , kfGraftedTurn     = if validated then Just turn else Nothing
     , kfObservedTurn    = turn
