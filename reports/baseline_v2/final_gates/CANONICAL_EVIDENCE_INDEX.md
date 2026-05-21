@@ -1,7 +1,7 @@
 # QxFx0 Canonical Evidence Index
 
 **Branch:** `main`  
-**Index SHA:** `cf3de87`  
+**Index SHA:** `edd008e`  
 **Last updated:** 2026-05-21  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
@@ -23,7 +23,9 @@ phase-9 autonomous exploratory learning MVP +
   generation, proxy evaluation, rollback) +
   Wave 5 reliability hardening (partial error→total, unsafe indexing guard,
   LP fail-closed dimension validation, unsafePerformIO invariant docs) +
-  Wave 5 staged long-run soak (canary/stage1/full, 1840 live turns)**
+  Wave 5 staged long-run soak (canary/stage1/full, 1840 live turns) +
+  Blind A/B dialogue quality evaluation (37-task holdout, 270 turns per
+  version, LLM-as-judge 40 pairs, verdict NO_CLEAR_GAIN)**
 (WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
@@ -78,6 +80,9 @@ topic fallback, GfMap lookup unknown fun).
 | 21 | `cabal build all` (Wave5 post-check) | `cabal build all` | 0 | **PASS** | 251 modules compiled, 0 errors |
 | 22 | `cabal test qxfx0-test-fast` (Wave5 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 595/595 cases, 0 errors, 0 failures |
 | 23 | `check_architecture.sh` (Wave5 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 24 | `cabal build all` (A/B eval + arch-fix post-check) | `cabal build all` | 0 | **PASS** | 251 modules compiled, 0 errors |
+| 25 | `cabal test qxfx0-test-fast` (A/B eval + arch-fix post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 595/595 cases, 0 errors, 0 failures |
+| 26 | `check_architecture.sh` (A/B eval + arch-fix post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -174,6 +179,8 @@ high-mem runner or CI environment:
 36. **Wave 5 reliability hardening (Phase 15)** — Four partial/error paths made total without weakening business logic: (a) `resolvePrepareCurrentTime` in `Protocol.hs` replaced `error` with `getCurrentTime` fail-closed fallback; (b) `maximumByReliability` in `Tool.hs` changed from partial to `Maybe ExternalTool`; (c) `safeLast` in `Calibration.hs` replaced with total `lastElem :: [a] -> Maybe a`; (d) `solveMixedStrategy` in `GameTheory.LP.hs` gained pre-simplex dimension validation returning `Nothing` for jagged matrices. `unsafePerformIO` in `GfMap.hs` retained with explicit invariant documentation (read-only, exception-safe loader). Nine new fast tests cover all edge cases. Build PASS, fast tests 595/595 PASS, architecture 12/12 PASS.
 
 37. **Wave 5 staged long-run soak (Phase 16)** — `scripts/wave5_soak.py` executes three-stage rollout with fail-closed budget caps and incident caps. **Canary:** 2 sessions × 20 turns = 40 turns, 0 incidents, 100% schema/graft. **Stage 1:** 5 sessions × 40 turns = 200 turns, 0 incidents, 100% schema/graft. **Full:** 20 sessions × 80 turns = 1600 turns, 0 incidents, 100% schema/graft. **Total: 1840 live turns, 0 incidents.** Latency drift canary→full: avg +128ms, P50 −259ms, P95 −1599ms (non-safety). Token burn: ~22M prompt + ~6.6M completion (well under 40M/12M hard caps). All fail-closed stop policies untriggered. Stage reports: `reports/ab_runs/wave5-2026-05-21/canary/report.md`, `stage1/report.md`, `full/report.md`. Consolidated report: `reports/ab_runs/wave5-2026-05-21/wave5_consolidated_report.md`.
+
+38. **Blind A/B dialogue quality evaluation (Phase 17)** — `scripts/run_blind_ab_eval.py` runs baseline A (SHA `39b4f26`, pre-Wave4) and current B (SHA `015d11d`, post-Wave5) on a 37-task holdout corpus in isolated `degraded` deterministic mode with per-task/session SQLite DBs. 270 turns per version (540 total), 0 errors both sides. LLM-as-judge (kimi-k2p6, 6 dimensions + overall preference) on 40 random blind pairs: **40/40 ties**, 0 A wins, 0 B wins. Objective metrics identical: latency delta ≈ 0ms, error rate 0.0000, empty response rate 0.0000, family distribution identical, legitimacy/ego metrics delta ≈ 0. Per-dimension scores: coherence 1.00, topical continuity 0.75, usefulness 0.23, clarity 0.68, non-repetitiveness 2.20, trustworthiness 1.60 (identical both versions). **Verdict: NO_CLEAR_GAIN** — Wave 4/5 changes did not alter TurnRender, TurnRouting, TurnPlanning, or semantic logic; in degraded mode both versions produce bit-for-bit identical outputs. Reliability improvements (fail-closed paths) are non-dialogue gains documented separately. Report: `reports/releases/dialogue_quality_ab_eval.md`. Raw data: `reports/ab_dialogue/ab-eval-2026-05-21/`.
 
 ---
 
