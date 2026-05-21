@@ -63,6 +63,15 @@ stripTopicMarker txt =
 normalizeText :: Text -> Text
 normalizeText = T.toLower . T.replace "ё" "е" . T.strip
 
+-- | Read-only immutable GF lexicon map loaded once at program start.
+--
+-- INVARIANT: The underlying 'loadGfMapData' is total: it catches all
+-- IO exceptions (file-not-found, permission-denied, parse errors) and
+-- returns 'emptyGfMapData' on any failure.  Therefore 'unsafePerformIO'
+-- is safe here: the result is deterministic, pure, and never throws.
+--
+-- If the TSV file changes, a process restart is required to pick up
+-- new data (acceptable for a static lexicon resource).
 {-# NOINLINE gfMapData #-}
 gfMapData :: GfMapData
 gfMapData = unsafePerformIO loadGfMapData
