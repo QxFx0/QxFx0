@@ -56,9 +56,11 @@ solveMixedStrategy a =
           conRHS = replicate n 1.0
           -- Initial basic variables are the slacks (indices m .. m+n-1)
           basic = [m .. m+n-1]
-          -- Run simplex
-          final = simplexLoop nVars conRows conRHS objRow objRHS basic 1000
-      in case final of
+          -- Run simplex (fail-closed: validate tableau dimensions first)
+          final = if all (\row -> length row == nVars) conRows
+                     then simplexLoop nVars conRows conRHS objRow objRHS basic 1000
+                     else Nothing
+       in case final of
            Nothing -> Nothing
            Just (_, objR, objR_, bas, rhs_) ->
              let -- Primal variables w_i = - (objective coefficient of slack s_i)
