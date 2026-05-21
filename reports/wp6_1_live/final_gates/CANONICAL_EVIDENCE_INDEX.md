@@ -19,6 +19,7 @@ API: Fireworks AI
 | Full consolidated | `reports/ab_runs/wave5-2026-05-22-wp61/full/all_turns.jsonl` | 1520 lines |
 | Consolidated report | `reports/ab_runs/wave5-2026-05-22-wp61/wave5_consolidated_report.md` | Cross-stage drift + budget summary |
 | Closure report | `reports/releases/wp6_1_live_validation_closure.md` | Executive verdict + acceptance gates |
+| Final summary | `reports/releases/wp6_final_summary.md` | WP6 final summary: PARTIAL PASS, go recommendation |
 
 ---
 
@@ -65,10 +66,13 @@ Tracked separately: GF resource sync + test fixture bootstrap.
 
 ## Code Changes Committed
 
-Commit `89be7a6` — WP6.1 implementation + fast tests:
-- `src/QxFx0/Learning/Need.hs` — `detectLearningNeedWithPressure`, `LearningPressureConfig`, window fields.
-- `src/QxFx0/Core/TurnPipeline/Route/Render.hs` — `isTopicNoisyOrAmbiguous`, dedup anti-overblocking.
-- `src/QxFx0/Core/TurnPipeline/Finalize/State.hs` — `finalizeMetrics` telemetry wiring.
-- `src/QxFx0/Core/Observability.hs` — new `TurnMetrics` fields.
-- `test/Test/Suite/LearningLoop.hs` — 10 new unit tests for pressure trigger, dedup, JSON compat.
-- `test/Test/Suite/TurnPipelineProtocol.hs` — 3 integration tests for dedup + telemetry.
+Commits:
+- `89be7a6` — WP6.1 implementation + fast tests:
+  - `src/QxFx0/Learning/Need.hs` — `detectLearningNeedWithPressure`, `LearningPressureConfig`, window fields.
+  - `src/QxFx0/Core/TurnPipeline/Route/Render.hs` — `isTopicNoisyOrAmbiguous`, dedup anti-overblocking.
+  - `src/QxFx0/Core/TurnPipeline/Finalize/State.hs` — `finalizeMetrics` telemetry wiring.
+  - `src/QxFx0/Core/Observability.hs` — new `TurnMetrics` fields.
+  - `test/Test/Suite/LearningLoop.hs` — 10 new unit tests for pressure trigger, dedup, JSON compat.
+  - `test/Test/Suite/TurnPipelineProtocol.hs` — 3 integration tests for dedup + telemetry.
+- `944e0e9` — Evidence reports: live closure, consolidated wave report, canonical index.
+- `bf644de` — WP6 final summary: PARTIAL PASS verdict with honest 19/20 timeout note.
