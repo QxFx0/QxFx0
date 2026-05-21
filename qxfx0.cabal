@@ -392,6 +392,7 @@ common test-common
     Test.Suite.PhaseM2d
     Test.Suite.LearningLoop
     Test.Suite.TrainingCycle
+    Test.Suite.ModelComparison
 
 test-suite qxfx0-test-unit
   import:        test-common

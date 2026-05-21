@@ -28,11 +28,12 @@ import Test.Suite.VecProperties (vecPropertiesTests)
 import Test.Suite.EgoRead (egoReadTests)
 import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
+import Test.Suite.ModelComparison (modelComparisonTests)
 
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests)
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
