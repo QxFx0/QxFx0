@@ -241,6 +241,28 @@ bash scripts/ci_gate_contract.sh
 
 ---
 
+## Validated Live Envelope (Wave 5)
+
+As of 2026-05-21, the following live-soak envelope has been validated on `main` (SHA `cf3de87`):
+
+| Parameter | Validated Value | Model |
+|-----------|----------------|-------|
+| Max sessions | 20 | `accounts/fireworks/models/kimi-k2p6` |
+| Max turns/session | 80 | (primary) |
+| Total turns validated | 1840 | `kimi-k2p5` fallback not exercised at scale |
+| Schema pass rate | 1.000 | |
+| Graft accept rate | 1.000 | |
+| Incidents | 0 | |
+| Avg latency | ~3458ms | |
+| P95 latency | ~9771ms | |
+
+**Notes:**
+- This validates the *production learning-loop envelope* (structured-output prompt → JSON parse → validate → sandbox → graft) at depth.
+- It does **not** constitute `FULL_SCIENTIFIC_GO` (extended contract gates remain INFRA-DEFERRED on low-RAM runner).
+- Production deployments should adhere to the staged rollout pattern (canary → stage1 → full) and respect the token/incident caps defined in `scripts/wave5_soak.py`.
+
+---
+
 ## Rollback Criteria
 
 If ANY of the following occurs in production CI:
