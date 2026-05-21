@@ -12,7 +12,7 @@ module QxFx0.Bridge.StatePersistence
   , renderPersistenceDiagnostics
   ) where
 
-import QxFx0.Types.State (SystemState(..))
+import QxFx0.Types.State (SystemState(..), ssTurnCount)
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
@@ -23,6 +23,10 @@ import QxFx0.Types.Persistence
   , LoadStateResult(..)
   , renderPersistenceDiagnostics
   )
+import QxFx0.Learning.KnowledgeTree (KnowledgeTree(..))
+import QxFx0.Learning.Calibration (CalibrationLog(..))
+import QxFx0.Learning.Guardrails (GuardrailState(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, bindIntOrFail, bindDoubleOrFail, stepOrFail)
 import Data.Text (Text)
@@ -33,17 +37,45 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.Map.Strict as M
 import QxFx0.ExceptionPolicy (tryQxFx0, throwQxFx0, QxFx0Exception(..))
 import Control.Exception (finally, mask, onException)
 import Control.Monad (when)
+import System.IO (hPutStrLn, stderr)
 
 type DbRunner = forall a. (NSQL.Database -> IO a) -> IO a
+
+-- | Emit a stderr trace line with counts of persisted learning artefacts.
+logPersistenceCounts :: String -> SystemState -> IO ()
+logPersistenceCounts label ss = do
+  let tree = ssKnowledgeTree ss
+      branchesFruits = sum (map length (M.elems (ktBranches tree)))
+      quarantineFruits = length (ktQuarantine tree)
+      morph = ssMorphology ss
+      calibCount = length (unCalibrationLog (ssCalibrationLog ss))
+      guardQuarantine = length (gsQuarantine (ssGuardrailState ss))
+  hPutStrLn stderr $ concat
+    [ "[persistence_trace] ", label
+    , " session_id=", T.unpack (ssSessionId ss)
+    , " turn_count=", show (ssTurnCount ss)
+    , " ktree_branches_fruits=", show branchesFruits
+    , " ktree_quarantine=", show quarantineFruits
+    , " ktree_grafted=", show (ktGraftedCount tree)
+    , " ktree_pruned=", show (ktPrunedCount tree)
+    , " morph_prep=", show (M.size (mdPrepositional morph))
+    , " morph_gen=", show (M.size (mdGenitive morph))
+    , " morph_nom=", show (M.size (mdNominative morph))
+    , " morph_surface=", show (M.size (mdFormsBySurface morph))
+    , " calib_log=", show calibCount
+    , " guard_quarantine=", show guardQuarantine
+    ]
 
 saveState :: DbRunner -> SystemState -> Text -> IO (Either PersistenceDiagnostic SystemState)
 saveState withDb ss sessionId = saveStateWithProjection withDb ss sessionId Nothing
 
 saveStateWithProjection :: DbRunner -> SystemState -> Text -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
 saveStateWithProjection withDb ss sessionId mProjection = do
+  logPersistenceCounts "pre_save" ss
   let persistedState = ss { ssSessionId = sessionId }
   result <- tryQxFx0 $ withDb $ \db -> do
     withImmediateTransaction db $ do
@@ -124,7 +156,9 @@ loadState withDb sessionId = withDb $ \db -> do
   case mBlob of
     Just blob ->
       case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of
-        Right ss -> pure (LoadStateRestored ss)
+        Right ss -> do
+          logPersistenceCounts "post_load" ss
+          pure (LoadStateRestored ss)
         Left _ -> pure (LoadStateCorrupt (PdCorruptDecode : stateBlobDiagnostics blob))
     Nothing -> pure LoadStateMissing
 

@@ -205,9 +205,10 @@ instance ToJSON SystemState where
     , "lastTurnDecision" .= semLastTurnDecision (ssSemantic ss)
     , "intuitConfidence" .= semIntuitConfidence (ssSemantic ss)
     , "sessionId" .= ssSessionId ss
-    , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
-    , "observability" .= ssObservability ss
-    , "essence" .= ssEssence ss
+     , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
+     , "morphology" .= ssMorphology ss
+     , "observability" .= ssObservability ss
+     , "essence" .= ssEssence ss
     , "salienceWeights" .= ssSalienceWeights ss
     , "fieldHeuristics" .= ssFieldHeuristics ss
      , "shadowVetoState" .= ssShadowVetoState ss

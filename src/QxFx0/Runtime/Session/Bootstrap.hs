@@ -13,6 +13,7 @@ import Control.Exception (bracket, try)
 import Control.Monad (unless)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Map.Strict as M
 import QxFx0.Bridge.SQLite
   ( ensureSchemaMigrations
   , loadClusters
@@ -60,6 +61,7 @@ import QxFx0.Types.State
   , ssIdentityClaims
   , ssTurnCount
   )
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (hPutStrLn, stderr)
@@ -142,7 +144,7 @@ bootstrapSession quiet sessionId = do
           then pure (FreshOrigin, freshState)
           else pure (RestoredOrigin, ss
             { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
-            , ssMorphology = morphology
+            , ssMorphology = mergeMorphology (ssMorphology ss) morphology
             , ssIdentity = (ssIdentity ss)
               { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
               }
@@ -169,6 +171,17 @@ bootstrapSession quiet sessionId = do
     , sessReadinessMode = readinessMode
     , sessRuntime = runtime
     }
+
+-- | Merge persisted morphology with resource-loaded morphology.
+-- Persisted forms take precedence (union-left) so that learned
+-- surface→lemma mappings survive across sessions.
+mergeMorphology :: MorphologyData -> MorphologyData -> MorphologyData
+mergeMorphology persisted resource = MorphologyData
+  { mdPrepositional = M.union (mdPrepositional persisted) (mdPrepositional resource)
+  , mdGenitive      = M.union (mdGenitive persisted)      (mdGenitive resource)
+  , mdNominative    = M.union (mdNominative persisted)    (mdNominative resource)
+  , mdFormsBySurface = M.union (mdFormsBySurface persisted) (mdFormsBySurface resource)
+  }
 
 withBootstrappedSession :: Bool -> Text -> (Session -> IO a) -> IO a
 withBootstrappedSession quiet sessionId =
