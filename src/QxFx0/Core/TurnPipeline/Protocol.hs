@@ -48,6 +48,7 @@ module QxFx0.Core.TurnPipeline.Protocol
   , resolveFinalizeCommit
   , buildFinalizeTurnResult
   , resolveFinalizePostCommit
+  , finalizeMetrics
   , prepareTurn
   , planTurn
   , renderTurn
@@ -107,6 +108,7 @@ import QxFx0.Core.TurnPipeline.Finalize
   , FinalizePrecommitBundle(..)
   , FinalizeCommitPlan(..)
   , FinalizeCommitResults(..)
+  , finalizeMetrics
   )
 import qualified QxFx0.Core.TurnPipeline.Finalize as Finalize
 

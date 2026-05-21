@@ -27,6 +27,9 @@ module QxFx0.Learning.Need
   , LearningNeedState(..)
   , emptyLearningNeedState
   , detectLearningNeed
+  , detectLearningNeedWithPressure
+  , defaultLearningPressureConfig
+  , LearningPressureConfig(..)
   , renderLearningNeed
   , learningNeedLevel
   , learningNeedTrend
@@ -93,6 +96,12 @@ data LearningNeedState = LearningNeedState
     -- ^ Turn count of the most recent observation.
   , lnsHistory :: ![(Int, Double)]
     -- ^ (turn, level) pairs for the last N turns (capped at 20).
+  , lnsUnknownWindowCount :: !Int
+    -- ^ WP6.1: count of unknown-topic mentions in the current window.
+  , lnsWindowStartTurn :: !Int
+    -- ^ WP6.1: turn when the current observation window started.
+  , lnsWindowGraftBaseline :: !Int
+    -- ^ WP6.1: grafted count at window start (for stagnation detection).
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
@@ -106,6 +115,9 @@ instance ToJSON LearningNeedState where
     , "persistence" .= lnsPersistence s
     , "lastSeenTurn" .= lnsLastSeenTurn s
     , "history" .= lnsHistory s
+    , "unknownWindowCount" .= lnsUnknownWindowCount s
+    , "windowStartTurn" .= lnsWindowStartTurn s
+    , "windowGraftBaseline" .= lnsWindowGraftBaseline s
     ]
 
 instance FromJSON LearningNeedState where
@@ -118,6 +130,9 @@ instance FromJSON LearningNeedState where
       <*> o .:? "persistence" .!= 0
       <*> o .:? "lastSeenTurn" .!= 0
       <*> o .:? "history" .!= []
+      <*> o .:? "unknownWindowCount" .!= 0
+      <*> o .:? "windowStartTurn" .!= 0
+      <*> o .:? "windowGraftBaseline" .!= 0
 
 emptyLearningNeedState :: LearningNeedState
 emptyLearningNeedState = LearningNeedState
@@ -128,6 +143,27 @@ emptyLearningNeedState = LearningNeedState
   , lnsPersistence = 0
   , lnsLastSeenTurn = 0
   , lnsHistory = []
+  , lnsUnknownWindowCount = 0
+  , lnsWindowStartTurn = 0
+  , lnsWindowGraftBaseline = 0
+  }
+
+-- | WP6.1: configuration for learning-pressure-driven triggers.
+data LearningPressureConfig = LearningPressureConfig
+  { lpcWindowSize :: !Int
+    -- ^ Turns in the observation window (default 10).
+  , lpcMinUnknownCount :: !Int
+    -- ^ Minimum unknown mentions to raise pressure (default 2).
+  , lpcStagnationTurns :: !Int
+    -- ^ Max turns without grafts before stagnation is flagged (default 5).
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultLearningPressureConfig :: LearningPressureConfig
+defaultLearningPressureConfig = LearningPressureConfig
+  { lpcWindowSize = 10
+  , lpcMinUnknownCount = 2
+  , lpcStagnationTurns = 5
   }
 
 -- | Thresholds for raising a learning need.
@@ -137,23 +173,8 @@ minPersistenceThreshold = 3
 maxHistoryLength :: Int
 maxHistoryLength = 20
 
--- | Detect a learning need from the current turn signals.
---
--- Rules (applied in priority order):
---
--- 1. 'NeedLexiconExtension' — if the Conatus scalar is below a
---    conservative floor AND the morphology component of the gradient
---    was dominant in recent recovery, we lack substrate.
--- 2. 'NeedSalienceCalibration' — if salience bias is stuck in a
---    narrow band (low confidence / high counterfactual) across the
---    window, empirical calibration is needed.
--- 3. 'NeedKeywordEnrichment' — if field counterfactual is high
---    (candidate entropy) but consolidation is low, meaning atoms are
---    not resolving into clusters.
--- 4. Otherwise 'NeedNone'.
---
--- The returned level is a composite of the underlying metric
--- normalised to [0, 1].
+-- | Backward-compatible wrapper: delegates to 'detectLearningNeedWithPressure'
+-- with empty pressure signals (keeps old conatus-based lexicon heuristic).
 detectLearningNeed
   :: ConatusEnergy
   -> Field
@@ -166,14 +187,68 @@ detectLearningNeed
   -> LearningNeedState
   -> LearningNeedState
 detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount oldState =
-  let -- Lexicon-extension heuristic: low conatus + high unknown-topic rate
+  detectLearningNeedWithPressure
+    defaultLearningPressureConfig
+    conatusEnergy
+    field
+    repairCount
+    unknownTopicCount
+    turnCount
+    oldState
+    False   -- isTopicUnknown
+    0       -- currentGraftedCount
+
+-- | WP6.1: Detect a learning need with separate learning-pressure signals.
+--
+-- 'NeedLexiconExtension' is now driven by learning-pressure signals
+-- (unknown-topic window count, graft stagnation) instead of the Conatus
+-- scalar floor.  This decouples substrate-learning from structural
+-- health so that a large, healthy morphology does not permanently
+-- suppress lexicon extension.
+--
+-- Rules (priority order):
+-- 1. 'NeedLexiconExtension' — learning-pressure signals indicate
+--    substrate gap (unknown mentions in window + graft stagnation).
+-- 2. 'NeedSalienceCalibration' — unchanged (Conatus + field signals).
+-- 3. 'NeedKeywordEnrichment' — unchanged (field signals).
+-- 4. Otherwise 'NeedNone'.
+detectLearningNeedWithPressure
+  :: LearningPressureConfig
+  -> ConatusEnergy
+  -> Field
+  -> Int
+  -> Int
+  -> Int
+  -> LearningNeedState
+  -> Bool        -- ^ Is the current topic unknown (not in morphology/tree)?
+  -> Int         -- ^ Current ktGraftedCount (for stagnation detection).
+  -> LearningNeedState
+detectLearningNeedWithPressure cfg conatusEnergy field _repairCount unknownTopicCount turnCount oldState isTopicUnknown currentGraftedCount =
+  let -- Window management
+      windowSize = lpcWindowSize cfg
+      windowExpired = turnCount - lnsWindowStartTurn oldState > windowSize
+      -- Reset window if expired or on first call (windowStartTurn == 0)
+      newWindowStart = if windowExpired || lnsWindowStartTurn oldState == 0
+                         then turnCount
+                         else lnsWindowStartTurn oldState
+      newUnknownCount = if windowExpired
+                          then (if isTopicUnknown then 1 else 0)
+                          else lnsUnknownWindowCount oldState + (if isTopicUnknown then 1 else 0)
+      newGraftBaseline = if windowExpired
+                           then currentGraftedCount
+                           else lnsWindowGraftBaseline oldState
+      graftsInWindow = max 0 (currentGraftedCount - newGraftBaseline)
+      stagnation = (turnCount - newWindowStart) >= lpcStagnationTurns cfg
+                     && graftsInWindow == 0
+                     && newUnknownCount >= lpcMinUnknownCount cfg
+
+      -- WP6.1: Lexicon-extension heuristic — learning pressure, NOT conatus floor
       lexiconLevel =
-        if ceScalar conatusEnergy < 0.5
-           && unknownTopicCount >= 2
-           then 0.7 + 0.1 * fromIntegral (min 3 unknownTopicCount)
+        if newUnknownCount >= lpcMinUnknownCount cfg && stagnation
+           then 0.7 + 0.05 * fromIntegral (min 5 newUnknownCount)
            else 0.0
 
-      -- Salience-calibration heuristic: low confidence + high counterfactual
+      -- Salience-calibration heuristic: unchanged (Conatus + field)
       salienceLevel =
         let conf = unFieldConfidence (fieldConfidence field)
             cf   = unCounterfactual (fieldCounterfactual field)
@@ -181,7 +256,7 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
               then 0.5 + 0.2 * (0.5 - conf) + 0.2 * cf
               else 0.0
 
-      -- Keyword-enrichment heuristic: high counterfactual + low consolidation
+      -- Keyword-enrichment heuristic: unchanged
       keywordLevel =
         let cons = unConsolidation (fieldConsolidation field)
             cf   = unCounterfactual (fieldCounterfactual field)
@@ -189,7 +264,6 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
               then 0.6 + 0.2 * cf - 0.2 * cons
               else 0.0
 
-      -- Select the dominant need by level (priority order as tie-breaker)
       (candidateNeed, candidateLevel) =
         if lexiconLevel > 0.0
            then (NeedLexiconExtension, min 1.0 lexiconLevel)
@@ -199,9 +273,6 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
                      then (NeedKeywordEnrichment, min 1.0 keywordLevel)
                      else (NeedNone, 0.0)
 
-      -- Update persistence: increment if same *candidate* class, else reset.
-      -- We compare against lnsCandidateNeed (raw, pre-threshold) so that
-      -- persistence accumulates even when the threshold has not yet been met.
       newPersistence =
         if candidateNeed == lnsCandidateNeed oldState && candidateNeed /= NeedNone
            then lnsPersistence oldState + 1
@@ -209,13 +280,9 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
                 then 0
                 else 1
 
-      -- Update history
       newHistory = take maxHistoryLength ((turnCount, candidateLevel) : lnsHistory oldState)
-
-      -- Compute trend from history (simple slope over last 3 points)
       newTrend = computeTrend newHistory
 
-      -- Final need: only return a non-None need if persistence is above threshold
       finalNeed =
         if candidateNeed /= NeedNone && newPersistence >= minPersistenceThreshold
            then candidateNeed
@@ -231,6 +298,9 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
        , lnsPersistence = newPersistence
        , lnsLastSeenTurn = turnCount
        , lnsHistory = newHistory
+       , lnsUnknownWindowCount = newUnknownCount
+       , lnsWindowStartTurn = newWindowStart
+       , lnsWindowGraftBaseline = newGraftBaseline
        }
 
 computeTrend :: [(Int, Double)] -> NeedTrend

@@ -43,7 +43,15 @@ import QxFx0.Learning.Need
   , LearningNeedState(..)
   , emptyLearningNeedState
   , NeedTrend(..)
+  , detectLearningNeed
+  , detectLearningNeedWithPressure
+  , defaultLearningPressureConfig
+  , LearningPressureConfig(..)
+  , renderLearningNeed
   )
+import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.Field (emptyField, Field(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
+import QxFx0.Core.TurnPipeline.Route.Render (isTopicNoisyOrAmbiguous)
 import QxFx0.Types.State (SystemState(..), emptySystemState, ssKnowledgeTree, ssMorphology)
 import QxFx0.Semantic.Proposition (PropositionType(..))
 import qualified Data.Map.Strict as M
@@ -142,6 +150,17 @@ learningLoopTests =
   , testDedupBlocksExternalQueryForKnownMorphology
   , testDedupBlocksExternalQueryForKnownTreeTerm
   , testConatusDeltaDerivedFromStateNotPayload
+  -- WP6.1 learning-pressure trigger + dedup + telemetry tests
+  , testLearningPressureRaisesLexiconExtension
+  , testLearningPressureIgnoresLowUnknownCount
+  , testLearningPressureIgnoresWhenGraftsGrowing
+  , testLearningPressureBackwardCompatWrapper
+  , testLearningNeedStateRoundTripsJson
+  , testOldLearningNeedStateJsonLoadsDefaults
+  , testTopicNoisyShort
+  , testTopicNoisyDigit
+  , testTopicNoisyPunctuation
+  , testTopicClean
   ]
 
 -- | Phase 7: valid + positive-delta fruit grafts into branch.
@@ -842,6 +861,107 @@ testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
     (abs (kfConatusDelta fruit - 0.99) > 0.1)
   assertBool "conatus delta must be small and positive (tree growth proxy)"
     (kfConatusDelta fruit > 0.0 && kfConatusDelta fruit < 0.05)
+
+-- | WP6.1 helper: single step of learning-pressure detection.
+runNeedStep :: LearningPressureConfig -> LearningNeedState -> Int -> Bool -> Int -> LearningNeedState
+runNeedStep cfg old turn isUnknown grafts =
+  detectLearningNeedWithPressure
+    cfg
+    (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0))
+    emptyField
+    0       -- repairCount
+    0       -- unknownTopicCount (legacy)
+    turn
+    old
+    isUnknown
+    grafts
+
+-- WP6.1: learning-pressure-driven NeedLexiconExtension
+
+testLearningPressureRaisesLexiconExtension :: Test
+testLearningPressureRaisesLexiconExtension = TestCase $ do
+  let cfg = defaultLearningPressureConfig { lpcStagnationTurns = 1, lpcMinUnknownCount = 1 }
+      s0 = emptyLearningNeedState { lnsWindowStartTurn = 1, lnsUnknownWindowCount = 2 }
+      s1 = runNeedStep cfg s0 2 True 0
+      s2 = runNeedStep cfg s1 3 True 0
+      s3 = runNeedStep cfg s2 4 True 0
+  assertEqual "lexicon extension must be raised after 3 persistence turns"
+    NeedLexiconExtension (lnsCurrentNeed s3)
+  assertBool "level must be positive"
+    (lnsLevel s3 > 0.0)
+
+testLearningPressureIgnoresLowUnknownCount :: Test
+testLearningPressureIgnoresLowUnknownCount = TestCase $ do
+  let cfg = defaultLearningPressureConfig
+      s0 = emptyLearningNeedState { lnsWindowStartTurn = 1, lnsUnknownWindowCount = 0 }
+      s1 = runNeedStep cfg s0 6 True 0
+  assertEqual "low unknown count must not raise need"
+    NeedNone (lnsCurrentNeed s1)
+
+testLearningPressureIgnoresWhenGraftsGrowing :: Test
+testLearningPressureIgnoresWhenGraftsGrowing = TestCase $ do
+  let cfg = defaultLearningPressureConfig { lpcStagnationTurns = 1, lpcMinUnknownCount = 1 }
+      s0 = emptyLearningNeedState { lnsWindowStartTurn = 1, lnsUnknownWindowCount = 2 }
+      s1 = runNeedStep cfg s0 2 True 1
+  assertEqual "growing grafts must suppress stagnation"
+    NeedNone (lnsCurrentNeed s1)
+
+testLearningPressureBackwardCompatWrapper :: Test
+testLearningPressureBackwardCompatWrapper = TestCase $ do
+  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)
+      old = emptyLearningNeedState
+      new = detectLearningNeed conatus emptyField 0 0 1 old
+      newWP = detectLearningNeedWithPressure defaultLearningPressureConfig conatus emptyField 0 0 1 old False 0
+  assertEqual "backward-compat wrapper must match pressure version with empty signals"
+    new newWP
+
+-- WP6.1: LearningNeedState JSON round-trip
+testLearningNeedStateRoundTripsJson :: Test
+testLearningNeedStateRoundTripsJson = TestCase $ do
+  let s = emptyLearningNeedState
+        { lnsUnknownWindowCount = 3
+        , lnsWindowStartTurn = 7
+        , lnsWindowGraftBaseline = 2
+        }
+      decoded = decode (encode s) :: Maybe LearningNeedState
+  assertEqual "learning need state must round-trip through JSON"
+    (Just s) decoded
+
+testOldLearningNeedStateJsonLoadsDefaults :: Test
+testOldLearningNeedStateJsonLoadsDefaults = TestCase $ do
+  let oldJson = "{\"currentNeed\":\"NeedLexiconExtension\",\"candidateNeed\":\"NeedLexiconExtension\",\"level\":0.7,\"trend\":\"TrendRising\",\"persistence\":2,\"lastSeenTurn\":5,\"history\":[[5,0.7],[4,0.6]]}"
+      decoded = decode oldJson :: Maybe LearningNeedState
+  assertBool "old JSON must decode" (decoded /= Nothing)
+  let s = maybe emptyLearningNeedState id decoded
+  assertEqual "unknownWindowCount default must be 0"
+    0 (lnsUnknownWindowCount s)
+  assertEqual "windowStartTurn default must be 0"
+    0 (lnsWindowStartTurn s)
+  assertEqual "windowGraftBaseline default must be 0"
+    0 (lnsWindowGraftBaseline s)
+
+-- WP6.1: dedup anti-overblocking helper
+testTopicNoisyShort :: Test
+testTopicNoisyShort = TestCase $
+  assertBool "short topic must be noisy"
+    (isTopicNoisyOrAmbiguous "ab")
+
+testTopicNoisyDigit :: Test
+testTopicNoisyDigit = TestCase $
+  assertBool "topic with digits must be noisy"
+    (isTopicNoisyOrAmbiguous "a1")
+
+testTopicNoisyPunctuation :: Test
+testTopicNoisyPunctuation = TestCase $
+  assertBool "topic with punctuation must be noisy"
+    (isTopicNoisyOrAmbiguous "a!")
+
+testTopicClean :: Test
+testTopicClean = TestCase $ do
+  assertBool "normal topic must not be noisy"
+    (not (isTopicNoisyOrAmbiguous "свобода"))
+  assertBool "three-letter topic must not be noisy"
+    (not (isTopicNoisyOrAmbiguous "abc"))
 
 -- Helpers
 

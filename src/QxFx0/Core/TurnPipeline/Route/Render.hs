@@ -13,6 +13,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , planRenderEffectsForRuntime
   , resolveRenderEffects
   , buildTurnArtifacts
+  , isTopicNoisyOrAmbiguous
   ) where
 
 import QxFx0.Types
@@ -148,6 +149,17 @@ planRenderEffects rp = planRenderEffectsForRuntimeImpl rp RuntimeStrict
 planRenderEffectsForRuntime :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
 planRenderEffectsForRuntime = planRenderEffectsForRuntimeImpl emptyRuntimeParadigms
 
+-- | WP6.1 anti-overblocking: do not dedup-block terms that are too
+-- short, contain digits, or look like noise / mis-parsed fragments.
+isTopicNoisyOrAmbiguous :: Text -> Bool
+isTopicNoisyOrAmbiguous t =
+  T.length t < 3
+    || T.any isDigit t
+    || T.any isPunctuation t
+  where
+    isDigit c = c >= '0' && c <= '9'
+    isPunctuation c = c `elem` (".,;:!?-–—…\"'()[]{}" :: String)
+
 planRenderEffectsForRuntimeImpl :: RuntimeParadigms -> PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
 planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
   let bestTopic = tiBestTopic ti
@@ -221,12 +233,18 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       localRecoveryPlan =
         buildLocalRecoveryPlan runtimeMode localRecoveryPolicy ss ti tp morphologyWarning
       -- WP3 dedup: skip external query if term is already known.
+      -- WP6.1 anti-overblocking: do NOT block noisy/ambiguous/low-confidence topics.
+      topicIsNoisy = isTopicNoisyOrAmbiguous bestTopic
+      parserConfidenceLow =
+        ipfConfidence (tiFrame ti) < parserLowConfidenceThreshold
       mDedupSkipReason =
-        if hasKnownMorphologyForm (ssMorphology ss) bestTopic
-          then Just "already_known_morphology"
-          else if isTermKnownInKnowledgeTree bestTopic (ssKnowledgeTree ss)
-            then Just "already_known_tree"
-            else Nothing
+        if topicIsNoisy || parserConfidenceLow
+          then Nothing
+          else if hasKnownMorphologyForm (ssMorphology ss) bestTopic
+            then Just "already_known_morphology"
+            else if isTermKnownInKnowledgeTree bestTopic (ssKnowledgeTree ss)
+              then Just "already_known_tree"
+              else Nothing
       mExternalQueryRequest =
         case mDedupSkipReason of
           Just _ -> Nothing

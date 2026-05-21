@@ -82,6 +82,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , resolvePrepareEffects
   , resolveRenderEffects
   , resolveRouteEffects
+  , finalizeMetrics
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
@@ -107,7 +108,8 @@ import QxFx0.Types.ShadowDivergence
   , emptyShadowDivergence
   )
 import QxFx0.Semantic.Proposition (parseProposition, PropositionType(..))
-import QxFx0.Types.Domain.Atoms (ProvisionalAtom(..))
+import QxFx0.Types.Domain.Atoms (ProvisionalAtom(..), MorphologyData(..))
+import QxFx0.Core.Guard (SafetyStatus(..))
 import QxFx0.Semantic.AtomAccretion
   ( observeNovelAtom
   , promoteProvisionalAtoms
@@ -120,9 +122,13 @@ import QxFx0.Learning.Need
   , LearningNeedState(..)
   , emptyLearningNeedState
   , detectLearningNeed
+  , detectLearningNeedWithPressure
+  , defaultLearningPressureConfig
+  , LearningPressureConfig(..)
   )
 import QxFx0.Learning.KnowledgeTree
   ( ktGraftedCount
+  , emptyKnowledgeTree
   )
 import QxFx0.Self.Field (Field(..), emptyField, FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Learning.Tool
@@ -290,6 +296,10 @@ turnPipelineProtocolTests =
       , testAutonomousExplorationGuardrailBlocks
       , testAutonomousExplorationTelemetry
       , testRequestDrivenPathNotRegressedByExploration
+      -- WP6.1: dedup anti-overblocking + telemetry wiring
+      , testDedupAntiOverblockingAllowsNoisyKnownTopic
+      , testDedupBlocksCleanKnownTopic
+      , testFinalizeMetricsPopulatesLearningTelemetry
       ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
@@ -815,17 +825,25 @@ testResolveCollisionsKeepsNovel = TestCase $ do
     [Searching "novel"]
     (map paTag result)
 
--- | WP1: persistent pattern (3 turns of low conatus + substrate gaps)
--- must raise NeedLexiconExtension once persistence threshold is met.
+-- | WP6.1: persistent learning-pressure pattern (3 turns of unknown
+-- topics + graft stagnation) must raise NeedLexiconExtension once
+-- persistence threshold is met.
 testLearningNeedRaisedOnPersistentPattern :: Test
 testLearningNeedRaisedOnPersistentPattern = TestCase $ do
-  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0)
+  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)
+        -- ^ High conatus: old logic would suppress lexicon need.
+        --   WP6.1 decouples learning from conatus health.
       field = emptyField
         { fieldConfidence = FieldConfidence 0.3
         , fieldCounterfactual = Counterfactual 0.6
         , fieldConsolidation = Consolidation 0.2
         }
-      step turn st = detectLearningNeed conatus field 0 3 turn st
+      cfg = defaultLearningPressureConfig
+        { lpcStagnationTurns = 1
+        , lpcMinUnknownCount = 1
+        }
+      step turn st = detectLearningNeedWithPressure cfg conatus field 0 3 turn st True 0
+        -- ^ isTopicUnknown=True, currentGraftedCount=0 (stagnation)
       st1 = step 1 emptyLearningNeedState
       st2 = step 2 st1
       st3 = step 3 st2
@@ -835,8 +853,8 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
     NeedNone (lnsCurrentNeed st2)
   assertEqual "third turn must raise lexicon extension need (persistence=3)"
     NeedLexiconExtension (lnsCurrentNeed st3)
-  assertEqual "level must be clamped to [0,1]"
-    1.0 (lnsLevel st3)
+  assertBool "level must be positive"
+    (lnsLevel st3 > 0.0)
   assertEqual "trend must be stable for identical levels"
     TrendStable (lnsTrend st3)
 
@@ -2693,3 +2711,82 @@ mkSystemStateWithNeed topic need =
         , lnsHistory = [(1, 0.7), (2, 0.75), (3, 0.8)]
         }
     }
+
+-- | WP6.1: anti-overblocking — a noisy/short known topic must NOT be
+-- dedup-skipped so that external queries can still proceed.
+testDedupAntiOverblockingAllowsNoisyKnownTopic :: Test
+testDedupAntiOverblockingAllowsNoisyKnownTopic = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "в"
+    let morph = MorphologyData Map.empty Map.empty (Map.singleton "в" "в") Map.empty
+        ss = ss0
+          { ssMorphology = morph
+          , ssLearningNeedState = emptyLearningNeedState
+              { lnsCurrentNeed = NeedLexiconExtension
+              , lnsLevel = 0.8
+              , lnsPersistence = 3
+              }
+          }
+        ti = ti0
+          { tiBestTopic = "в"
+          , tiConatusGateFired = False
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    assertEqual "noisy known topic must NOT be dedup-skipped"
+      Nothing (repExternalQuerySkipReason renderPlan)
+    assertBool "noisy known topic must still produce external query request"
+      (repExternalQueryRequest renderPlan /= Nothing)
+
+-- | WP6.1: dedup must still block clean known topics.
+testDedupBlocksCleanKnownTopic :: Test
+testDedupBlocksCleanKnownTopic = TestCase $
+  withDeterministicEmbedding $ do
+    (ss0, ti0, ts, tp) <- buildPlannedFixture "книга"
+    let morph = MorphologyData Map.empty Map.empty (Map.singleton "книга" "книга") Map.empty
+        ss = ss0
+          { ssMorphology = morph
+          , ssLearningNeedState = emptyLearningNeedState
+              { lnsCurrentNeed = NeedLexiconExtension
+              , lnsLevel = 0.8
+              , lnsPersistence = 3
+              }
+          }
+        ti = ti0
+          { tiBestTopic = "книга"
+          , tiConatusGateFired = False
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    assertEqual "clean known topic must be dedup-skipped"
+      (Just "already_known_morphology") (repExternalQuerySkipReason renderPlan)
+    assertBool "clean known topic must NOT produce external query request"
+      (repExternalQueryRequest renderPlan == Nothing)
+
+-- | WP6.1: finalizeMetrics must wire learning-pressure telemetry fields.
+testFinalizeMetricsPopulatesLearningTelemetry :: Test
+testFinalizeMetricsPopulatesLearningTelemetry = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = emptySystemState
+          { ssLearningNeedState = emptyLearningNeedState
+              { lnsCurrentNeed = NeedLexiconExtension
+              , lnsLevel = 0.75
+              , lnsUnknownWindowCount = 4
+              , lnsWindowGraftBaseline = 1
+              }
+          , ssKnowledgeTree = emptyKnowledgeTree { ktGraftedCount = 3 }
+          }
+    (ss, ti, _ts, _tp, ta, _bundle) <- buildFinalizeFixtureWithState ss0 "что такое свобода"
+    let t0 = tiStartTime ti
+        t1 = read "2026-05-20 00:00:01 UTC" :: UTCTime
+        metrics = finalizeMetrics ti ta CMGround (taDecision ta) ss True InvariantOK t0 t1
+    assertEqual "learning pressure score must match lnsLevel"
+      0.75 (tmLearningPressureScore metrics)
+    assertEqual "unknown count window must match"
+      4 (tmUnknownCountWindow metrics)
+    assertEqual "grafts window must be graftedCount - baseline"
+      2 (tmGraftsWindow metrics)
+    assertBool "lexicon trigger reason must mention pressure"
+      (T.isInfixOf "lexicon_pressure" (tmLexiconNeedTriggerReason metrics))
+    assertEqual "dedup skip reason must be preserved from artifacts"
+      (taExternalQuerySkipReason ta) (tmDedupSkipReason metrics)

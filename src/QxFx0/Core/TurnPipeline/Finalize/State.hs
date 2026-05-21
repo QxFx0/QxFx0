@@ -65,7 +65,13 @@ import QxFx0.Self.Essence
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
 import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), fieldCounterfactual, Counterfactual(..))
-import QxFx0.Learning.Need (detectLearningNeed)
+import QxFx0.Learning.Need
+  ( detectLearningNeedWithPressure
+  , defaultLearningPressureConfig
+  , LearningNeed(..)
+  , LearningNeedState(..)
+  , renderLearningNeed
+  )
 import QxFx0.Learning.Signal (CalibrationSignal(..), computeCalibrationSignal, emptySignalComponents)
 import QxFx0.Learning.KnowledgeTree
   ( KnowledgeTree(..)
@@ -76,7 +82,10 @@ import QxFx0.Learning.KnowledgeTree
   , pruneBranches
   , pruneFruits
   , rootStressSignal
+  , isTermKnownInKnowledgeTree
+  , ktGraftedCount
   )
+import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Self.Essence
   ( EssenceCommitment(..)
   , EssenceMode(..)
@@ -211,15 +220,23 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                , sigComps
                )
           _ -> (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, emptySignalComponents)
-      -- WP1: endogenous learning diagnostic drive.
+      -- WP6.1: endogenous learning diagnostic drive with separate learning pressure.
+      bestTopic = tiBestTopic ti
+      isTopicUnknown = not (T.null bestTopic)
+                         && not (hasKnownMorphologyForm (ssMorphology ss) bestTopic)
+                         && not (isTermKnownInKnowledgeTree bestTopic (ssKnowledgeTree ss))
+      currentGraftedCount = ktGraftedCount (ssKnowledgeTree ss)
       newLearningNeedState =
-         detectLearningNeed
+         detectLearningNeedWithPressure
+           defaultLearningPressureConfig
            (tiConatusEnergy ti)
            (tiField ti)
            0 -- repairCount: historical recovery tracking deferred to Phase 7
            (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
            (ssTurnCount ss + 1)
            (ssLearningNeedState ss)
+           isTopicUnknown
+           currentGraftedCount
      in ( ss
        { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
@@ -490,7 +507,15 @@ buildFinalOutput wantIntrospection ss baseSurface nextSs =
 
 finalizeMetrics :: TurnInput -> TurnArtifacts -> CanonicalMoveFamily -> TurnDecision -> SystemState -> Bool -> Guard.SafetyStatus -> UTCTime -> UTCTime -> TurnMetrics
 finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatus tSave0 tSave1 =
-  let !metrics5 =
+  let lns = ssLearningNeedState savedSs
+      tree = ssKnowledgeTree savedSs
+      graftsWindow = max 0 (ktGraftedCount tree - lnsWindowGraftBaseline lns)
+      needReason =
+        if lnsCurrentNeed lns == NeedLexiconExtension
+          then "lexicon_pressure:unknown=" <> textShow (lnsUnknownWindowCount lns)
+               <> ":grafts=" <> textShow graftsWindow
+          else renderLearningNeed (lnsCurrentNeed lns)
+      !metrics5 =
         addPhase (recordPhase "save_state" tSave0 tSave1)
           $ (taMetrics ta)
               { tmTurnCount = ssTurnCount savedSs
@@ -498,6 +523,11 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
               , tmNixStatus = textShow (tdGuardStatus decision)
               , tmSafetyStatus = textShow finalSafetyStatus
               , tmApiHealthy = apiHealthy
+              , tmLearningPressureScore = lnsLevel lns
+              , tmUnknownCountWindow = lnsUnknownWindowCount lns
+              , tmGraftsWindow = graftsWindow
+              , tmLexiconNeedTriggerReason = needReason
+              , tmDedupSkipReason = taExternalQuerySkipReason ta
               }
       !metricsFinal = addPhase (recordPhase "total" (tiStartTime ti) tSave1) metrics5
   in metricsFinal

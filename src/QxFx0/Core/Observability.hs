@@ -47,6 +47,16 @@ data TurnMetrics = TurnMetrics
   , tmSafetyStatus :: !Text
   , tmApiHealthy   :: !Bool
   , tmError        :: !(Maybe Text)
+  , tmLearningPressureScore :: !Double
+    -- ^ WP6.1: learning-pressure score that drove NeedLexiconExtension [0,1].
+  , tmUnknownCountWindow :: !Int
+    -- ^ WP6.1: count of unknown-topic mentions in the current window.
+  , tmGraftsWindow :: !Int
+    -- ^ WP6.1: grafts observed within the current window.
+  , tmLexiconNeedTriggerReason :: !Text
+    -- ^ WP6.1: telemetry tag explaining why lexicon need was raised or not.
+  , tmDedupSkipReason :: !(Maybe Text)
+    -- ^ WP3/WP6.1: reason external query was dedup-skipped, if any.
   }
 
 emptyTurnMetrics :: RequestId -> Text -> TurnMetrics
@@ -62,6 +72,11 @@ emptyTurnMetrics rid sid = TurnMetrics
   , tmSafetyStatus = ""
   , tmApiHealthy   = True
   , tmError        = Nothing
+  , tmLearningPressureScore = 0.0
+  , tmUnknownCountWindow = 0
+  , tmGraftsWindow = 0
+  , tmLexiconNeedTriggerReason = ""
+  , tmDedupSkipReason = Nothing
   }
 
 recordPhase :: Text -> UTCTime -> UTCTime -> PhaseTiming

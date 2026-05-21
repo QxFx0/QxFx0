@@ -15,6 +15,7 @@ module QxFx0.Core.TurnPipeline.Finalize
   , buildFinalizeTurnResult
   , resolveFinalizePostCommit
   , finalizeTurnState
+  , finalizeMetrics
   ) where
 
 import QxFx0.Core.TurnPipeline.Finalize.Commit
@@ -23,6 +24,7 @@ import QxFx0.Core.TurnPipeline.Finalize.Commit
   , resolveFinalizeCommit
   , resolveFinalizePostCommit
   )
+import QxFx0.Core.TurnPipeline.Finalize.State (finalizeMetrics)
 import QxFx0.Core.TurnPipeline.Finalize.Orchestrate
   ( finalizeTurnState
   )
