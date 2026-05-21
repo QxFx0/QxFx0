@@ -57,6 +57,9 @@ end-to-end 3-model comparison run).
 | 9 | `check_lexicon.sh` | `bash scripts/check_lexicon.sh` | — | **INFRA-DEFERRED** | timeout (>30 s) on low-RAM runner; prior quality metrics unchanged |
 | 10 | `nix run .#typecheck-agda` | `nix run .#typecheck-agda` | 0 | **PASS** | 6/6 modules: R5Core, Sovereignty, Legitimacy, LexiconData, LexiconProof, EssenceFormalization |
 | 11 | `nix flake check` | `nix flake check` | 1 | **INFRA** | Upstream `pgf2` marked broken in current nixpkgs; non-blocking for build or Agda |
+| 12 | `cabal build all` (Wave2 post-check) | `cabal build all` | 0 | **PASS** | 252 modules compiled, 0 errors |
+| 13 | `cabal test qxfx0-test-fast` (Wave2 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 586/586 cases, 0 errors, 0 failures |
+| 14 | `check_architecture.sh` (Wave2 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -143,6 +146,8 @@ high-mem runner or CI environment:
 - Mock topic normalization: the parser treats `"что"` as a focus stopword and normalizes `bestTopic` to `"тема"`; the mock table now carries a `"тема"` key so deterministic lookups succeed.
 
 32. **Fireworks multi-model A/B harness (Phase 11)** — `QxFx0.Evaluation.ModelComparison` provides deterministic 40-prompt corpus, per-model state-fork session runners (sequential and interleaved), session/model aggregation (success rate, latency, validator accept rate, sandbox pass rate), and 4-class incident detection (consecutive transport errors, consecutive validator rejects, consecutive sandbox rejects with same degradation tag, request→reject loops without grafts). All wiring verified through 12 new fast tests. Live API baseline validated for GLM-5p1, DeepSeek-v4-pro, and Kimi-k2p5 (2 turns each, HTTP 200, valid JSON). Full 360-turn live A/B INFRA-DEFERRED. Tests: `testCorpusLength`, `testSequentialSessionPerfect`, `testSequentialSessionErrors`, `testSequentialSessionInvalid`, `testSequentialSessionDegrading`, `testAggregateSession`, `testDetectTransportIncidents`, `testDetectValidatorIncidents`, `testDetectSandboxIncidents`, `testDetectRequestRejectLoop`, `testComparisonRunThreeModels`, `testInterleavedCountsMatch`.
+
+33. **Wave 2 fail-closed live+sim A/B evaluation (Phase 12)** — `scripts/wave2_soak.py` driver executes live pilot (1 session × 10 turns per model, 4 models, real Fireworks API) and full mock simulation (10 sessions × 60 turns per model, 2400 turns total). Real-time stop policy enforced: 3+ transport errors, 5+ validator rejects, 3+ sandbox rejects (same class), breaker lock > 20, reject loop > 15 all trigger session abort. All 4 live sessions aborted on validator streak at turn 5 (models return prose, not structured JSON, on raw prompts — documented as real finding). Mock simulation completed without incidents. JSONL schema validity 2420/2420, telemetry completeness 2420/2420, graft/validator/sandbox consistency 2420/2420, zero duplicates within mode. Data quality: **READY** for training-cycle ingestion. Simulated ranking: DeepSeek-v4-pro and GLM-5p1 tied at composite=0.950, Kimi variants at 0.935.
 
 ---
 
