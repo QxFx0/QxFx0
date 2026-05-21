@@ -19,13 +19,17 @@ import QxFx0.Types.Observability (KernelPulse(..))
 import QxFx0.Types.State
   ( EgoState(..)
   , ssEgo
+  , ssEssence
   , ssKernelPulse
   , ssLastFamily
   , ssLastTopic
   , ssMeaningGraph
+  , ssShadowVetoState
   , ssTrace
   , ssTurnCount
   )
+import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), renderEssenceMode)
+import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 
 printHelp :: IO ()
 printHelp = do
@@ -52,6 +56,13 @@ stateSummaryLines session =
   let ss = sessSystemState session
       renderValue :: Show a => a -> Text
       renderValue = T.pack . show
+      essenceModeTag =
+        case ssEssence ss of
+          EssenceUncommitted _ -> "uncommitted"
+          EssenceCommitted _ c -> "committed:" <> renderEssenceMode (ecMode c)
+      shadowSeverityTag =
+        let svs = ssShadowVetoState ss
+        in renderValue (svsCount svs) <> "/" <> renderValue (svsWindowStart svs)
    in [ "STATE_BEGIN"
       , "session_id: " <> sessSessionId session
       , "turns: " <> renderValue (ssTurnCount ss)
@@ -63,5 +74,10 @@ stateSummaryLines session =
       , "ego_tension: " <> renderValue (egoTension (ssEgo ss))
       , "meaning_graph: " <> graphStats (ssMeaningGraph ss)
       , "kernel_pulse: " <> renderValue (kpActive (ssKernelPulse ss))
+      , "essence_mode: " <> essenceModeTag
+      , "recovery_cause: n/a"
+      , "shadow_severity: " <> shadowSeverityTag
+      , "gradient: n/a"
+      , "strategy: n/a"
       , "STATE_END"
       ]
