@@ -223,6 +223,12 @@ The following gates are **INFRA-DEFERRED** on low-RAM runners (~10–11 GB):
 
 Core contour verdict: `CONTRACT_VERDICT: PROD_GO` (verified by individual gates).
 
+**Python test coverage**: No Python unit-test suite currently exists.  The CI
+runs three verified Python check scripts (`sync_embedded_sql.py`,
+`check_schema_consistency.py`, `check_schema_contract.py`) as part of the
+gate contract.  A dedicated Python test contour is a documented gap — see
+`docs/PYTHON_TEST_GAP.md`.
+
 ## Run a Dialogue Session
 
 ```bash
