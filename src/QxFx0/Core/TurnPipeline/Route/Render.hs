@@ -665,8 +665,8 @@ selectLearningRecoveryStrategy NeedNone                = StrategySafeRecovery
 
 -- | Parse Conatus gradient components (m, c, t) from recovery evidence.
 -- Graceful fallback: returns Nothing for missing or unparsable markers.
-parseGradientFromEvidence :: [Text] -> Maybe (Double, Double, Double)
-parseGradientFromEvidence evidence =
+parseGradient :: [Text] -> Maybe (Double, Double, Double)
+parseGradient evidence =
   let findMarker prefix =
         case T.stripPrefix prefix =<< L.find (T.isPrefixOf prefix) evidence of
           Nothing    -> Nothing
@@ -692,7 +692,7 @@ renderLocalRecoverySurface gfLang _cause strategy topic evidence =
         if gfLangTelemetryTag gfLang == "en"
           then renderLocalRecoverySurfaceEn strategy topic
           else renderLocalRecoverySurfaceRu strategy topic
-      gradientFrag = renderGradientFragment (parseGradientFromEvidence evidence)
+      gradientFrag = renderGradientFragment (parseGradient evidence)
   in if T.null gradientFrag
        then baseSurface
        else baseSurface <> "\n[" <> gradientFrag <> "]"
