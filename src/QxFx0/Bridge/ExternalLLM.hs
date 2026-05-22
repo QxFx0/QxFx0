@@ -38,6 +38,7 @@ module QxFx0.Bridge.ExternalLLM
   , decodeLlmBodyLimited
   , redactUpstreamError
   , classifyHttpException
+  , classifyBodyReadFailure
   ) where
 
 import Control.Applicative ((<|>))
@@ -74,6 +75,7 @@ import Network.HTTP.Client
   )
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (Status, statusCode)
+import Network.URI (URI(..), URIAuth(..), parseURI)
 import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
 
@@ -186,21 +188,30 @@ validateEndpointUrlWithContext endpoint mAllowOverride mDevOrTestMode mDoubleCon
   let stripped = T.strip endpoint
   in if T.null stripped
        then Left TfrUnsafeEndpoint
-       else if not (T.isPrefixOf "https://" stripped)
-               then Left TfrUnsafeEndpoint
-               else let host = endpointHost stripped
-                    in if host `elem` llmEndpointAllowlist
-                         then Right Nothing
-                         else if mAllowOverride == Just "1"
-                                then if isTruthy mDevOrTestMode || isTruthy mDoubleConfirm
-                                       then Right (Just llmUntrustedHostOverrideWarningTag)
-                                       else Left TfrUntrustedOverrideRejected
-                                else Left TfrBlockedHost
+       else case parseEndpointHost stripped of
+              Nothing -> Left TfrUnsafeEndpoint
+              Just host ->
+                if host `elem` llmEndpointAllowlist
+                  then Right Nothing
+                  else if mAllowOverride == Just "1"
+                         then if isTruthy mDevOrTestMode || isTruthy mDoubleConfirm
+                                then Right (Just llmUntrustedHostOverrideWarningTag)
+                                else Left TfrUntrustedOverrideRejected
+                         else Left TfrBlockedHost
+
+parseEndpointHost :: Text -> Maybe Text
+parseEndpointHost endpoint = do
+  uri <- parseURI (T.unpack endpoint)
+  auth <- uriAuthority uri
+  let scheme = T.toLower (T.pack (uriScheme uri))
+      rawHost = uriRegName auth
+  if scheme == "https:" && null (uriUserInfo auth) && not (null rawHost)
+    then Just (T.toLower (T.pack rawHost))
+    else Nothing
 
 endpointHost :: Text -> Text
-endpointHost strippedHttpsUrl =
-  let hostPart = T.takeWhile (/= '/') (T.drop 8 strippedHttpsUrl)
-  in T.takeWhile (/= ':') hostPart
+endpointHost rawEndpoint =
+  fromMaybe "invalid_endpoint" (parseEndpointHost (T.strip rawEndpoint))
 
 isTruthy :: Maybe Text -> Bool
 isTruthy raw =
@@ -211,8 +222,6 @@ isTruthy raw =
     Just "on" -> True
     Just "dev" -> True
     Just "test" -> True
-    Just "degraded" -> True
-    Just "test-degraded" -> True
     _ -> False
 
 -- | Default safe configuration when no env vars are present.
@@ -242,12 +251,12 @@ defaultExternalQueryConfig = ExternalQueryConfig
 buildTransportFromEnv :: IO LLMTransport
 buildTransportFromEnv = do
   cfg <- resolveTransportConfigFromEnv
-  buildTransportFromConfig cfg
+  buildTransportFromValidatedConfig cfg
 
 buildTransportFromEnvWithManager :: Manager -> IO LLMTransport
 buildTransportFromEnvWithManager mgr = do
   cfg <- resolveTransportConfigFromEnv
-  buildTransportFromConfigWithManager mgr cfg
+  buildTransportFromValidatedConfigWithManager mgr cfg
 
 resolveTransportConfigFromEnv :: IO ExternalQueryConfig
 resolveTransportConfigFromEnv = do
@@ -336,9 +345,8 @@ readOverrideContext = do
   mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
   mTestMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_TEST_MODE")
   mDevMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_DEV_MODE")
-  mRuntimeMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_RUNTIME_MODE")
   mDoubleConfirm <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM")
-  let mDevOrTest = firstTruthy [mTestMode, mDevMode, mRuntimeMode]
+  let mDevOrTest = firstTruthy [mTestMode, mDevMode]
   pure OverrideContext
     { ocAllowUntrusted = mAllowUntrusted
     , ocDevOrTestMode = mDevOrTest
@@ -365,6 +373,42 @@ emitOverrideWarning endpoint (Just tag) =
     , endpointHost (T.strip endpoint)
     ]
 
+buildTransportFromValidatedConfig :: ExternalQueryConfig -> IO LLMTransport
+buildTransportFromValidatedConfig cfg =
+  case eqcFallbackReason cfg of
+    Just reason -> pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+    Nothing ->
+      case eqcApiKey cfg of
+        Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
+        Just _ -> do
+          mgr <- newTlsManager
+          buildTransportFromValidatedConfigWithManager mgr cfg
+
+buildTransportFromValidatedConfigWithManager :: Manager -> ExternalQueryConfig -> IO LLMTransport
+buildTransportFromValidatedConfigWithManager mgr cfg =
+  case eqcFallbackReason cfg of
+    Just reason -> pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+    Nothing ->
+      case eqcApiKey cfg of
+        Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
+        Just key -> pure (realTransportForKey mgr cfg key)
+
+realTransportForKey :: Manager -> ExternalQueryConfig -> Text -> LLMTransport
+realTransportForKey mgr cfg key =
+  if eqcTransportMode cfg == "fireworks"
+    then FireworksTransport mgr FireworksConfig
+      { fcApiKey = key
+      , fcModel = eqcModel cfg
+      , fcEndpoint = eqcEndpoint cfg
+      , fcTimeoutMs = eqcTimeoutMs cfg
+      }
+    else MistralTransport mgr MistralConfig
+      { mcApiKey = key
+      , mcModel = eqcModel cfg
+      , mcEndpoint = eqcEndpoint cfg
+      , mcTimeoutMs = eqcTimeoutMs cfg
+      }
+
 -- | Build transport from an explicit configuration record.
 -- Useful for tests and for deterministic fallback paths.
 buildTransportFromConfig :: ExternalQueryConfig -> IO LLMTransport
@@ -380,7 +424,7 @@ buildTransportFromConfig cfg =
               pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
             Right () -> do
               mgr <- newTlsManager
-              buildTransportFromConfigWithManager mgr cfg
+              buildTransportFromValidatedConfigWithManager mgr cfg
 
 buildTransportFromConfigWithManager :: Manager -> ExternalQueryConfig -> IO LLMTransport
 buildTransportFromConfigWithManager mgr cfg =
@@ -393,20 +437,7 @@ buildTransportFromConfigWithManager mgr cfg =
           case validateEndpointUrl (eqcEndpoint cfg) Nothing of
             Left reason ->
               pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
-            Right () ->
-              if eqcTransportMode cfg == "fireworks"
-                then pure $ FireworksTransport mgr FireworksConfig
-                  { fcApiKey = key
-                  , fcModel = eqcModel cfg
-                  , fcEndpoint = eqcEndpoint cfg
-                  , fcTimeoutMs = eqcTimeoutMs cfg
-                  }
-                else pure $ MistralTransport mgr MistralConfig
-                  { mcApiKey = key
-                  , mcModel = eqcModel cfg
-                  , mcEndpoint = eqcEndpoint cfg
-                  , mcTimeoutMs = eqcTimeoutMs cfg
-                  }
+            Right () -> pure (realTransportForKey mgr cfg key)
 
 -- | Default mock table with a handful of deterministic responses.
 -- Extend this in tests by passing a custom table to 'MockTransport'.
@@ -569,7 +600,7 @@ handleChatHttpResult tool latencyMs httpResult =
     Left err -> Left (classifyHttpException err)
     Right (status, bodyResult) ->
       case bodyResult of
-        Left err -> Left err
+        Left err -> Left (classifyBodyReadFailure (statusCode status) err)
         Right rawBody ->
           case decodeLlmBodyLimited llmMaxResponseBytes rawBody of
             Left err -> Left err
@@ -588,12 +619,31 @@ handleChatHttpResult tool latencyMs httpResult =
                          , eqrLatencyMs = latencyMs
                          }
            else case code of
-             401 -> Left (EqeAuthFailure diag)
-             403 -> Left (EqeAuthFailure diag)
-             429 -> Left (EqeRateLimited diag)
-             _ | code >= 500 && code < 600 -> Left (EqeServerError diag)
-             _ | code >= 400 && code < 500 -> Left (EqeInvalidResponse diag)
-             _ -> Left (EqeInvalidResponse diag)
+             _ -> Left (classifyHttpStatusError code diag)
+
+classifyBodyReadFailure :: Int -> ExternalQueryError -> ExternalQueryError
+classifyBodyReadFailure code err =
+  classifyHttpStatusError code $ T.concat
+    [ "upstream_status="
+    , T.pack (show code)
+    , ":body_redacted:"
+    , bodyReadFailureTag err
+    ]
+
+classifyHttpStatusError :: Int -> Text -> ExternalQueryError
+classifyHttpStatusError code diag =
+  case code of
+    401 -> EqeAuthFailure diag
+    403 -> EqeAuthFailure diag
+    429 -> EqeRateLimited diag
+    _ | code >= 500 && code < 600 -> EqeServerError diag
+    _ | code >= 400 && code < 500 -> EqeInvalidResponse diag
+    _ -> EqeInvalidResponse diag
+
+bodyReadFailureTag :: ExternalQueryError -> Text
+bodyReadFailureTag (EqeInvalidResponse msg) = msg
+bodyReadFailureTag EqeEmptyResponse = "empty_response"
+bodyReadFailureTag other = T.pack (show other)
 
 readResponseBodyLimited :: Int -> BodyReader -> IO (Either ExternalQueryError BS.ByteString)
 readResponseBodyLimited maxBytes reader = go 0 []

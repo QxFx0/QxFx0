@@ -6,7 +6,7 @@ module Test.Suite.ReliabilityHardening
 
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
-import Network.HTTP.Client (HttpException(..), HttpExceptionContent(..), parseRequest)
+import Network.HTTP.Client (HttpException(..), HttpExceptionContent(..), defaultManagerSettings, newManager, parseRequest)
 import Test.HUnit
 
 import QxFx0.Learning.Tool
@@ -37,12 +37,16 @@ import QxFx0.Bridge.ExternalLLM
   , llmUntrustedHostOverrideWarningTag
   , validateEndpointUrl
   , validateEndpointUrlWithContext
+  , buildTransportFromEnvWithManager
+  , LLMTransport(..)
   , extractStructured
   , decodeLlmBodyLimited
   , redactUpstreamError
   , classifyHttpException
+  , classifyBodyReadFailure
   )
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), TransportFallbackReason(..))
+import Test.Support (withEnvVar)
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
 testSelectToolEmptyPool :: Test
@@ -192,14 +196,43 @@ testLlmNonHttpsEndpoint = TestCase $ do
   assertEqual "non-https endpoint must be rejected"
     (Left TfrUnsafeEndpoint) result
 
--- | 21. Empty endpoint -> fail-closed with TfrUnsafeEndpoint.
+-- | 21. Userinfo trick must not make an evil host look allowlisted.
+testLlmRejectsUserinfoHostSpoof :: Test
+testLlmRejectsUserinfoHostSpoof = TestCase $ do
+  let result = validateEndpointUrl "https://api.mistral.ai:443@evil.com/v1/chat/completions" Nothing
+  assertEqual "userinfo host spoofing must be rejected before bearer token use"
+    (Left TfrUnsafeEndpoint) result
+
+-- | 22. Degraded runtime labels are not dev/test override context.
+testLlmRejectsDegradedOverrideContext :: Test
+testLlmRejectsDegradedOverrideContext = TestCase $ do
+  let result = validateEndpointUrlWithContext "https://evil.com/api" (Just "1") (Just "degraded") Nothing
+  assertEqual "degraded runtime mode must not satisfy untrusted-host override"
+    (Left TfrUntrustedOverrideRejected) result
+
+-- | 23. Empty endpoint -> fail-closed with TfrUnsafeEndpoint.
 testLlmEmptyEndpoint :: Test
 testLlmEmptyEndpoint = TestCase $ do
   let result = validateEndpointUrl "" Nothing
   assertEqual "empty endpoint must be rejected"
     (Left TfrUnsafeEndpoint) result
 
--- | 22. Allowlist is non-empty and contains expected hosts.
+-- | 24. Env-based untrusted override must not revalidate into mock fallback.
+testLlmEnvOverrideBuildsRealTransport :: Test
+testLlmEnvOverrideBuildsRealTransport = TestCase $ do
+  manager <- newManager defaultManagerSettings
+  transport <-
+    withEnvVar "QXFX0_LLM_TRANSPORT" (Just "fireworks") $
+      withEnvVar "QXFX0_FIREWORKS_API_KEY" (Just "test-key") $
+        withEnvVar "QXFX0_FIREWORKS_ENDPOINT" (Just "https://example.test/inference/v1/chat/completions") $
+          withEnvVar "QXFX0_LLM_ALLOW_UNTRUSTED_HOST" (Just "1") $
+            withEnvVar "QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM" (Just "1") $
+              buildTransportFromEnvWithManager manager
+  case transport of
+    FireworksTransport _ _ -> pure ()
+    other -> assertFailure ("expected FireworksTransport for confirmed untrusted override, got: " ++ show other)
+
+-- | 25. Allowlist is non-empty and contains expected hosts.
 testLlmAllowlistContents :: Test
 testLlmAllowlistContents = TestCase $ do
   assertBool "allowlist must contain api.mistral.ai"
@@ -207,7 +240,7 @@ testLlmAllowlistContents = TestCase $ do
   assertBool "allowlist must contain api.fireworks.ai"
     ("api.fireworks.ai" `elem` llmEndpointAllowlist)
 
--- | 23. Oversized LLM response bodies are rejected before decoding.
+-- | 26. Oversized LLM response bodies are rejected before decoding.
 testLlmOversizeBodyRejected :: Test
 testLlmOversizeBodyRejected = TestCase $ do
   let result = decodeLlmBodyLimited 8 (BS.replicate 9 97)
@@ -217,7 +250,18 @@ testLlmOversizeBodyRejected = TestCase $ do
       assertBool "oversize response must report max_bytes" ("max_bytes=8" `T.isInfixOf` msg)
     other -> assertFailure ("expected EqeInvalidResponse for oversize body, got: " ++ show other)
 
--- | 24. Upstream error bodies are redacted from diagnostics.
+-- | 27. Oversized 429 responses preserve rate-limit classification.
+testLlmOversizeRateLimitClassified :: Test
+testLlmOversizeRateLimitClassified = TestCase $ do
+  let result = classifyBodyReadFailure 429 (EqeInvalidResponse "response_too_large:max_bytes=8:actual_bytes=9")
+  case result of
+    EqeRateLimited msg -> do
+      assertBool "oversize 429 must keep rate-limit status" ("upstream_status=429" `T.isInfixOf` msg)
+      assertBool "oversize 429 diagnostic must stay redacted" ("body_redacted" `T.isInfixOf` msg)
+      assertBool "oversize 429 diagnostic must include oversize tag" ("response_too_large" `T.isInfixOf` msg)
+    other -> assertFailure ("expected EqeRateLimited for oversized 429 body, got: " ++ show other)
+
+-- | 28. Upstream error bodies are redacted from diagnostics.
 testLlmUpstreamErrorRedacted :: Test
 testLlmUpstreamErrorRedacted = TestCase $ do
   let raw = "token=secret-password payload should not escape"
@@ -226,14 +270,14 @@ testLlmUpstreamErrorRedacted = TestCase $ do
   assertBool "redacted diagnostic must not include raw secret" (not ("secret-password" `T.isInfixOf` diag))
   assertBool "redacted diagnostic must report body length only" ("body_redacted" `T.isInfixOf` diag)
 
--- | 25. HTTP response timeout is typed as EqeTimeout.
+-- | 29. HTTP response timeout is typed as EqeTimeout.
 testLlmTimeoutClassified :: Test
 testLlmTimeoutClassified = TestCase $ do
   req <- parseRequest "https://api.mistral.ai/v1/chat/completions"
   let result = classifyHttpException (HttpExceptionRequest req ResponseTimeout)
   assertEqual "response timeout must be a typed timeout" (EqeTimeout "response_timeout") result
 
--- | 26. extractStructured unwraps chat-completion envelope.
+-- | 30. extractStructured unwraps chat-completion envelope.
 testExtractStructuredUnwrapsContent :: Test
 testExtractStructuredUnwrapsContent = TestCase $ do
   let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"word\\\":\\\"свобода\\\"}\"}}]}"
@@ -241,28 +285,28 @@ testExtractStructuredUnwrapsContent = TestCase $ do
   assertEqual "typed decoder must unwrap content from envelope"
     "{\"word\":\"свобода\"}" result
 
--- | 27. extractStructured returns raw body on empty choices.
+-- | 31. extractStructured returns raw body on empty choices.
 testExtractStructuredEmptyChoices :: Test
 testExtractStructuredEmptyChoices = TestCase $ do
   let envelope = "{\"choices\":[]}"
       result = extractStructured envelope
   assertEqual "empty choices must return raw body" envelope result
 
--- | 28. extractStructured returns raw body on invalid JSON.
+-- | 32. extractStructured returns raw body on invalid JSON.
 testExtractStructuredInvalidJson :: Test
 testExtractStructuredInvalidJson = TestCase $ do
   let garbage = "this is not json"
       result = extractStructured garbage
   assertEqual "invalid json must return raw body" garbage result
 
--- | 29. extractStructured returns raw body when content is missing.
+-- | 33. extractStructured returns raw body when content is missing.
 testExtractStructuredMissingContent :: Test
 testExtractStructuredMissingContent = TestCase $ do
   let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\"}}]}"
       result = extractStructured envelope
   assertEqual "missing content must return raw body" envelope result
 
--- | 30. extractStructured returns raw body for plain payload (backward compat).
+-- | 34. extractStructured returns raw body for plain payload (backward compat).
 testExtractStructuredPlainPayload :: Test
 testExtractStructuredPlainPayload = TestCase $ do
   let payload = "{\"word\":\"свобода\"}"
@@ -291,9 +335,13 @@ reliabilityHardeningTests =
   , TestLabel "llm-blocked-host-dev-override" testLlmBlockedHostWithDevOverride
   , TestLabel "llm-blocked-host-double-confirm" testLlmBlockedHostWithDoubleConfirm
   , TestLabel "llm-non-https-endpoint"          testLlmNonHttpsEndpoint
+  , TestLabel "llm-rejects-userinfo-host-spoof" testLlmRejectsUserinfoHostSpoof
+  , TestLabel "llm-rejects-degraded-override" testLlmRejectsDegradedOverrideContext
   , TestLabel "llm-empty-endpoint"             testLlmEmptyEndpoint
+  , TestLabel "llm-env-override-builds-real-transport" testLlmEnvOverrideBuildsRealTransport
   , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
   , TestLabel "llm-oversize-body-rejected"     testLlmOversizeBodyRejected
+  , TestLabel "llm-oversize-rate-limit-classified" testLlmOversizeRateLimitClassified
   , TestLabel "llm-upstream-error-redacted"    testLlmUpstreamErrorRedacted
   , TestLabel "llm-timeout-classified"         testLlmTimeoutClassified
   , TestLabel "extract-structured-unwraps"     testExtractStructuredUnwrapsContent
