@@ -5,7 +5,6 @@ module Test.Suite.ReliabilityHardening
   ) where
 
 import Test.HUnit
-import qualified Data.Map.Strict as M
 
 import QxFx0.Learning.Tool
   ( ExternalTool(..)
@@ -27,6 +26,9 @@ import QxFx0.Lexicon.GfMap
   ( topicToGfLexemeId
   , lookupGfLexemeForms
   , defaultGfLexemeId
+  , GfMapLoadStatus(..)
+  , gfMapLoadStatus
+  , loadGfMapFromContent
   )
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
@@ -99,6 +101,37 @@ testGfMapLookupUnknownFun = TestCase $ do
   let result = lookupGfLexemeForms "nonexistent_fun"
   assertEqual "lookup of unknown fun must yield Nothing" Nothing result
 
+-- | 10. GfMap missing resource -> explicit GfMapLoadFailed with structured reason.
+testGfMapMissingResource :: Test
+testGfMapMissingResource = TestCase $ do
+  let (_data', status) = loadGfMapFromContent Nothing
+  assertEqual "missing resource must yield explicit failed status"
+    (GfMapLoadFailed "resource_missing_or_unreadable") status
+
+-- | 11. GfMap empty/unparseable content -> explicit GfMapLoadFailed.
+testGfMapEmptyContent :: Test
+testGfMapEmptyContent = TestCase $ do
+  let (_data', status) = loadGfMapFromContent (Just "")
+  assertEqual "empty content must yield explicit failed status"
+    (GfMapLoadFailed "resource_empty_or_unparseable") status
+
+-- | 12. GfMap valid content -> GfMapLoaded with positive count.
+testGfMapValidContent :: Test
+testGfMapValidContent = TestCase $ do
+  let tsv = "fun\tlemma\tpos\tnom\tgen\tprep\nfun1\tlemma1\tn\tлемма1\tлеммы\tлемме\n"
+      (_data', status) = loadGfMapFromContent (Just tsv)
+  case status of
+    GfMapLoaded n -> assertBool "valid content must load >0 entries" (n > 0)
+    other -> assertFailure ("expected GfMapLoaded, got: " ++ show other)
+
+-- | 13. GfMap runtime load status must be healthy in test environment.
+testGfMapRuntimeLoadHealthy :: Test
+testGfMapRuntimeLoadHealthy = TestCase $ do
+  case gfMapLoadStatus of
+    GfMapLoaded n -> assertBool "runtime load must have >0 entries" (n > 0)
+    GfMapLoadFailed reason -> assertFailure
+      ("runtime GF map load failed in test env: " ++ show reason)
+
 reliabilityHardeningTests :: [Test]
 reliabilityHardeningTests =
   [ TestLabel "select-tool-empty-pool"             testSelectToolEmptyPool
@@ -110,4 +143,8 @@ reliabilityHardeningTests =
   , TestLabel "lp-empty-matrix"                   testLPEmptyMatrix
   , TestLabel "gfmap-unknown-topic-fallback"      testGfMapUnknownTopicFallback
   , TestLabel "gfmap-lookup-unknown-fun"           testGfMapLookupUnknownFun
+  , TestLabel "gfmap-missing-resource"           testGfMapMissingResource
+  , TestLabel "gfmap-empty-content"              testGfMapEmptyContent
+  , TestLabel "gfmap-valid-content"              testGfMapValidContent
+  , TestLabel "gfmap-runtime-load-healthy"       testGfMapRuntimeLoadHealthy
   ]

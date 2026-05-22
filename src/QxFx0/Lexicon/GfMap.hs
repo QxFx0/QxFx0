@@ -4,9 +4,12 @@
 
 module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
+  , GfMapLoadStatus(..)
   , defaultGfLexemeId
   , topicToGfLexemeId
   , lookupGfLexemeForms
+  , gfMapLoadStatus
+  , loadGfMapFromContent
   ) where
 
 import Control.Exception (SomeException, try)
@@ -33,6 +36,16 @@ data GfMapData = GfMapData
   { gmdFormToFun :: !(M.Map Text Text)
   , gmdFunToForms :: !(M.Map Text GfLexemeForms)
   }
+
+-- | Structured status of the GF lexicon map load at startup.
+-- Consumers must check this if they need to distinguish a healthy
+-- lexicon from a degraded/failed load.
+data GfMapLoadStatus
+  = GfMapLoaded !Int
+    -- ^ Successfully loaded with the given number of form→fun entries.
+  | GfMapLoadFailed !Text
+    -- ^ Failed to load; the 'Text' carries a machine-readable reason tag.
+  deriving stock (Eq, Show)
 
 defaultGfLexemeId :: Text
 defaultGfLexemeId = "smysl_N"
@@ -65,26 +78,45 @@ normalizeText = T.toLower . T.replace "ё" "е" . T.strip
 
 -- | Read-only immutable GF lexicon map loaded once at program start.
 --
--- INVARIANT: The underlying 'loadGfMapData' is total: it catches all
+-- INVARIANT: The underlying 'loadGfMapResult' is total: it catches all
 -- IO exceptions (file-not-found, permission-denied, parse errors) and
--- returns 'emptyGfMapData' on any failure.  Therefore 'unsafePerformIO'
--- is safe here: the result is deterministic, pure, and never throws.
+-- returns 'emptyGfMapData' on any failure, paired with an explicit
+-- 'GfMapLoadFailed' reason.  Therefore 'unsafePerformIO' is safe here:
+-- the result is deterministic, pure, and never throws.
 --
 -- If the TSV file changes, a process restart is required to pick up
 -- new data (acceptable for a static lexicon resource).
-{-# NOINLINE gfMapData #-}
-gfMapData :: GfMapData
-gfMapData = unsafePerformIO loadGfMapData
+{-# NOINLINE gfMapLoadResult #-}
+gfMapLoadResult :: (GfMapData, GfMapLoadStatus)
+gfMapLoadResult = unsafePerformIO loadGfMapResult
 
-loadGfMapData :: IO GfMapData
-loadGfMapData = do
+gfMapData :: GfMapData
+gfMapData = fst gfMapLoadResult
+
+gfMapLoadStatus :: GfMapLoadStatus
+gfMapLoadStatus = snd gfMapLoadResult
+
+loadGfMapResult :: IO (GfMapData, GfMapLoadStatus)
+loadGfMapResult = do
   dataPathResult <- try (getDataFileName "spec/gf/lexicon_funmap.tsv") :: IO (Either SomeException FilePath)
   let bundledPath = either (const "") id dataPathResult
       fallbackPath = "spec/gf/lexicon_funmap.tsv"
   mContent <- tryReadPath bundledPath >>= \case
     Just content -> pure (Just content)
     Nothing -> tryReadPath fallbackPath
-  pure (maybe emptyGfMapData parseGfMapData mContent)
+  pure (loadGfMapFromContent mContent)
+
+-- | Pure, total loader from optional file content.
+-- Separated from IO so the failure paths are unit-testable.
+loadGfMapFromContent :: Maybe Text -> (GfMapData, GfMapLoadStatus)
+loadGfMapFromContent Nothing =
+  (emptyGfMapData, GfMapLoadFailed "resource_missing_or_unreadable")
+loadGfMapFromContent (Just content) =
+  let parsed = parseGfMapData content
+      entryCount = M.size (gmdFormToFun parsed)
+  in if entryCount == 0
+       then (parsed, GfMapLoadFailed "resource_empty_or_unparseable")
+       else (parsed, GfMapLoaded entryCount)
 
 tryReadPath :: FilePath -> IO (Maybe Text)
 tryReadPath path
