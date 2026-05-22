@@ -39,7 +39,12 @@ import System.Exit (exitSuccess)
 runTurn :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
 runTurn ctx ss input sessionId
   | T.length input > maxInputLength = return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
-  | otherwise = withRuntimeSession ctx sessionId (runTurnBody ctx ss input sessionId)
+  | otherwise = withRuntimeSession ctx sessionId $ do
+      turnResult <- try (runTurnBody ctx ss input sessionId) :: IO (Either QxFx0Exception (SystemState, Text))
+      case turnResult of
+        Left (EssenceRupture detail) -> pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
+        Left err -> throwQxFx0 err
+        Right result -> pure result
 
 runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
 runTurnBody ctx ss input sessionId = do
