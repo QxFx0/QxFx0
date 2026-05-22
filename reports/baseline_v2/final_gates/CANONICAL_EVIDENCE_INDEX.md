@@ -2,7 +2,7 @@
 
 **Branch:** `main`  
 **Index SHA:** `edd008e`  
-**Last updated:** 2026-05-21  
+**Last updated:** 2026-05-22  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
 ---
@@ -25,8 +25,12 @@ phase-9 autonomous exploratory learning MVP +
   LP fail-closed dimension validation, unsafePerformIO invariant docs) +
   Wave 5 staged long-run soak (canary/stage1/full, 1840 live turns) +
   Blind A/B dialogue quality evaluation (37-task holdout, 270 turns per
-  version, LLM-as-judge 40 pairs, verdict NO_CLEAR_GAIN)**
-(WP1–WP5 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
+   version, LLM-as-judge 40 pairs, verdict NO_CLEAR_GAIN) +
+   WP6.1 decoupled learning-pressure detection from Conatus health +
+   Post-WP6 roadmap patch (EssenceRupture fail-soft, gradient parsing/recovery
+   surface, extended semantic state summary) +
+   Closure of last pre-existing fast-suite failure**
+(WP1–WP5 + WP6.1 + GuardrailState/CalibrationLog/KnowledgeTree/ToolReliability +
 ExternalQuery/Parser/Validator/Sandbox/Loop + TransportConfig/
 FallbackReason/Redaction + Snapshot/SignalPipelineConfig/
 applyCalibrationGated in SystemState + ExploratoryPrompt/
@@ -50,6 +54,11 @@ reliability hardening edge-case tests (empty tool pool, no matching
 domain, empty calibration log, no accepted calibration entries, LP
 valid uniform matrix, LP jagged rows, LP empty matrix, GfMap unknown
 topic fallback, GfMap lookup unknown fun).
+
+Fast-test count further increased from 595 → 613 due to WP6.1
+learning-pressure persistence tests and post-WP6 roadmap patch
+regression coverage (EssenceRupture fail-soft, gradient parsing,
+recovery surface rendering, extended semantic state summary).
 
 ---
 
@@ -83,6 +92,15 @@ topic fallback, GfMap lookup unknown fun).
 | 24 | `cabal build all` (A/B eval + arch-fix post-check) | `cabal build all` | 0 | **PASS** | 251 modules compiled, 0 errors |
 | 25 | `cabal test qxfx0-test-fast` (A/B eval + arch-fix post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 595/595 cases, 0 errors, 0 failures |
 | 26 | `check_architecture.sh` (A/B eval + arch-fix post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 27 | `cabal build all` (WP6.1 post-check) | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
+| 28 | `cabal test qxfx0-test-fast` (WP6.1 post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 613/613 cases, 0 errors, 1 pre-existing failure (`testLearningNeedRaisedOnPersistentPattern`) |
+| 29 | `check_architecture.sh` (WP6.1 post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 30 | `cabal build all` (Post-WP6 patch post-check) | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
+| 31 | `cabal test qxfx0-test-fast` (Post-WP6 patch post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 613/613 cases, 0 errors, 1 pre-existing failure (`testLearningNeedRaisedOnPersistentPattern`) |
+| 32 | `check_architecture.sh` (Post-WP6 patch post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 33 | `cabal build all` (Fast-failure closure post-check) | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
+| 34 | `cabal test qxfx0-test-fast` (Fast-failure closure post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 613/613 cases, 0 errors, 0 failures |
+| 35 | `check_architecture.sh` (Fast-failure closure post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -182,6 +200,8 @@ high-mem runner or CI environment:
 
 38. **Blind A/B dialogue quality evaluation (Phase 17)** — `scripts/run_blind_ab_eval.py` runs baseline A (SHA `39b4f26`, pre-Wave4) and current B (SHA `015d11d`, post-Wave5) on a 37-task holdout corpus in isolated `degraded` deterministic mode with per-task/session SQLite DBs. 270 turns per version (540 total), 0 errors both sides. LLM-as-judge (kimi-k2p6, 6 dimensions + overall preference) on 40 random blind pairs: **40/40 ties**, 0 A wins, 0 B wins. Objective metrics identical: latency delta ≈ 0ms, error rate 0.0000, empty response rate 0.0000, family distribution identical, legitimacy/ego metrics delta ≈ 0. Per-dimension scores: coherence 1.00, topical continuity 0.75, usefulness 0.23, clarity 0.68, non-repetitiveness 2.20, trustworthiness 1.60 (identical both versions). **Verdict: NO_CLEAR_GAIN** — Wave 4/5 changes did not alter TurnRender, TurnRouting, TurnPlanning, or semantic logic; in degraded mode both versions produce bit-for-bit identical outputs. Reliability improvements (fail-closed paths) are non-dialogue gains documented separately. Report: `reports/releases/dialogue_quality_ab_eval.md`. Raw data: `reports/ab_dialogue/ab-eval-2026-05-21/`.
 
+39. **WP6.1 decoupled learning-pressure persistence + post-WP6 roadmap patch + zero-failure closure (Phase 18)** — `detectLearningNeedWithPressure` raises `NeedLexiconExtension` after 3 turns of unknown topics + graft stagnation, independent of Conatus health. `EssenceRupture` in turn execution is caught and returned as soft text rather than re-thrown. Recovery surfaces include parsed gradient evidence when markers present. Semantic state summary exposes `essence_mode`, `shadow_severity`, `recovery_cause`, `gradient`, and `strategy`. The last pre-existing fast-suite failure (`testLearningNeedRaisedOnPersistentPattern`) was closed by aligning the test seed state with the validated `LearningLoop.hs` pattern (`lnsWindowStartTurn = 1`, `lnsUnknownWindowCount = 2`, turns 2→3→4). Fast suite now at **613 cases, 0 errors, 0 failures**. Tests: `testLearningNeedRaisedOnPersistentPattern`, `testLearningPressureRaisesLexiconExtension`, `testLearningPressureIgnoresLowUnknownCount`, `testLearningPressureIgnoresWhenGraftsGrowing`.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -207,7 +227,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 595  Tried: 595  Errors: 0  Failures: 0
+# Expected: Cases: 613  Tried: 613  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G

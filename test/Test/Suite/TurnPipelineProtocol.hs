@@ -844,9 +844,10 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
         }
       step turn st = detectLearningNeedWithPressure cfg conatus field 0 3 turn st True 0
         -- ^ isTopicUnknown=True, currentGraftedCount=0 (stagnation)
-      st1 = step 1 emptyLearningNeedState
-      st2 = step 2 st1
-      st3 = step 3 st2
+      st0 = emptyLearningNeedState { lnsWindowStartTurn = 1, lnsUnknownWindowCount = 2 }
+      st1 = step 2 st0
+      st2 = step 3 st1
+      st3 = step 4 st2
   assertEqual "first turn must not raise need (persistence=1)"
     NeedNone (lnsCurrentNeed st1)
   assertEqual "second turn must not raise need (persistence=2)"
@@ -855,8 +856,8 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
     NeedLexiconExtension (lnsCurrentNeed st3)
   assertBool "level must be positive"
     (lnsLevel st3 > 0.0)
-  assertEqual "trend must be stable for identical levels"
-    TrendStable (lnsTrend st3)
+  assertEqual "trend must be rising when need is raised after persistent pressure"
+    TrendRising (lnsTrend st3)
 
 -- | WP1: single-turn noise must not create a learning need.
 testLearningNeedNotRaisedOnNoise :: Test
