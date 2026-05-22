@@ -33,6 +33,7 @@ import QxFx0.Lexicon.GfMap
 import QxFx0.Bridge.ExternalLLM
   ( llmEndpointAllowlist
   , validateEndpointUrl
+  , extractStructured
   )
 import QxFx0.Types.ExternalQuery (TransportFallbackReason(..))
 
@@ -185,6 +186,42 @@ testLlmAllowlistContents = TestCase $ do
   assertBool "allowlist must contain api.fireworks.ai"
     ("api.fireworks.ai" `elem` llmEndpointAllowlist)
 
+-- | 21. extractStructured unwraps chat-completion envelope.
+testExtractStructuredUnwrapsContent :: Test
+testExtractStructuredUnwrapsContent = TestCase $ do
+  let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"word\\\":\\\"свобода\\\"}\"}}]}"
+      result = extractStructured envelope
+  assertEqual "typed decoder must unwrap content from envelope"
+    "{\"word\":\"свобода\"}" result
+
+-- | 22. extractStructured returns raw body on empty choices.
+testExtractStructuredEmptyChoices :: Test
+testExtractStructuredEmptyChoices = TestCase $ do
+  let envelope = "{\"choices\":[]}"
+      result = extractStructured envelope
+  assertEqual "empty choices must return raw body" envelope result
+
+-- | 23. extractStructured returns raw body on invalid JSON.
+testExtractStructuredInvalidJson :: Test
+testExtractStructuredInvalidJson = TestCase $ do
+  let garbage = "this is not json"
+      result = extractStructured garbage
+  assertEqual "invalid json must return raw body" garbage result
+
+-- | 24. extractStructured returns raw body when content is missing.
+testExtractStructuredMissingContent :: Test
+testExtractStructuredMissingContent = TestCase $ do
+  let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\"}}]}"
+      result = extractStructured envelope
+  assertEqual "missing content must return raw body" envelope result
+
+-- | 25. extractStructured returns raw body for plain payload (backward compat).
+testExtractStructuredPlainPayload :: Test
+testExtractStructuredPlainPayload = TestCase $ do
+  let payload = "{\"word\":\"свобода\"}"
+      result = extractStructured payload
+  assertEqual "plain payload must pass through" payload result
+
 reliabilityHardeningTests :: [Test]
 reliabilityHardeningTests =
   [ TestLabel "select-tool-empty-pool"             testSelectToolEmptyPool
@@ -207,4 +244,9 @@ reliabilityHardeningTests =
   , TestLabel "llm-non-https-endpoint"          testLlmNonHttpsEndpoint
   , TestLabel "llm-empty-endpoint"             testLlmEmptyEndpoint
   , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
+  , TestLabel "extract-structured-unwraps"     testExtractStructuredUnwrapsContent
+  , TestLabel "extract-structured-empty-choices" testExtractStructuredEmptyChoices
+  , TestLabel "extract-structured-invalid-json" testExtractStructuredInvalidJson
+  , TestLabel "extract-structured-missing-content" testExtractStructuredMissingContent
+  , TestLabel "extract-structured-plain-payload" testExtractStructuredPlainPayload
   ]

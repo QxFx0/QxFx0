@@ -30,12 +30,14 @@ module QxFx0.Bridge.ExternalLLM
   , defaultExternalQueryConfig
   , llmEndpointAllowlist
   , validateEndpointUrl
+  , extractStructured
   ) where
 
 import Control.Applicative ((<|>))
 import Control.Exception (try)
 import Control.Monad (when)
-import Data.Aeson (FromJSON, ToJSON, Value(..), decodeStrict, object, (.=))
+import Data.Aeson (FromJSON(..), ToJSON, Value(..), decodeStrict, object, (.=))
+import Data.Aeson.Types (parseEither, Parser, withObject, (.:), (.:?))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char (isSpace)
@@ -442,21 +444,54 @@ escapeJson = T.concatMap escapeChar
     escapeChar '\r' = "\\r"
     escapeChar c    = T.singleton c
 
--- | Extract structured payload from a Mistral chat-completion response.
--- If the response contains JSON in a @content@ field, unwrap it;
--- otherwise return the whole body for fallback parsing.
+-- | OpenAI-compatible chat-completion response envelope.
+-- Used to unwrap the assistant message content.
+data ChatCompletionResponse = ChatCompletionResponse
+  { ccrChoices :: ![ChatCompletionChoice]
+  }
+  deriving stock (Generic)
+
+instance FromJSON ChatCompletionResponse where
+  parseJSON = withObject "ChatCompletionResponse" $ \o ->
+    ChatCompletionResponse <$> o .: "choices"
+
+data ChatCompletionChoice = ChatCompletionChoice
+  { cccMessage :: !ChatCompletionMessage
+  }
+  deriving stock (Generic)
+
+instance FromJSON ChatCompletionChoice where
+  parseJSON = withObject "ChatCompletionChoice" $ \o ->
+    ChatCompletionChoice <$> o .: "message"
+
+data ChatCompletionMessage = ChatCompletionMessage
+  { ccmContent :: !(Maybe Text)
+  }
+  deriving stock (Generic)
+
+instance FromJSON ChatCompletionMessage where
+  parseJSON = withObject "ChatCompletionMessage" $ \o ->
+    ChatCompletionMessage <$> o .:? "content"
+
+-- | Extract structured payload from a Mistral / Fireworks chat-completion
+-- response using a typed JSON decoder.
+--
+-- 1. Decode the body as an OpenAI-compatible 'ChatCompletionResponse'.
+-- 2. If successful, return the first choice's message content.
+-- 3. If decoding fails OR the content is empty/Null, return the raw
+--    body so downstream parsers can attempt direct JSON or legacy text.
 extractStructured :: Text -> Text
 extractStructured body =
-  fromMaybe body $ do
-    -- Very lightweight unwrap: look for "content":"..."
-    let prefix = "\"content\":\""
-    case T.breakOn prefix body of
-      (_, rest) | T.null rest -> Nothing
-      (_, rest') -> do
-        let contentStart = T.drop (T.length prefix) rest'
-        case T.breakOn "\"" contentStart of
-          (content, _) | T.null content -> Nothing
-          (content, _) -> Just content
+  case decodeStrict (TE.encodeUtf8 body) :: Maybe ChatCompletionResponse of
+    Nothing -> body
+    Just ccr ->
+      case ccrChoices ccr of
+        [] -> body
+        (choice : _) ->
+          case ccmContent (cccMessage choice) of
+            Nothing  -> body
+            Just ""  -> body
+            Just txt -> txt
 
 -- Helpers
 
