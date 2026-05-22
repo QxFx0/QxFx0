@@ -30,6 +30,11 @@ import QxFx0.Lexicon.GfMap
   , gfMapLoadStatus
   , loadGfMapFromContent
   )
+import QxFx0.Bridge.ExternalLLM
+  ( llmEndpointAllowlist
+  , validateEndpointUrl
+  )
+import QxFx0.Types.ExternalQuery (TransportFallbackReason(..))
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
 testSelectToolEmptyPool :: Test
@@ -132,6 +137,54 @@ testGfMapRuntimeLoadHealthy = TestCase $ do
     GfMapLoadFailed reason -> assertFailure
       ("runtime GF map load failed in test env: " ++ show reason)
 
+-- | 14. Allowed LLM endpoint (Mistral official) -> pass.
+testLlmAllowlistMistral :: Test
+testLlmAllowlistMistral = TestCase $ do
+  let result = validateEndpointUrl "https://api.mistral.ai/v1/chat/completions" Nothing
+  assertEqual "official mistral endpoint must be allowed" (Right ()) result
+
+-- | 15. Allowed LLM endpoint (Fireworks official) -> pass.
+testLlmAllowlistFireworks :: Test
+testLlmAllowlistFireworks = TestCase $ do
+  let result = validateEndpointUrl "https://api.fireworks.ai/inference/v1/chat/completions" Nothing
+  assertEqual "official fireworks endpoint must be allowed" (Right ()) result
+
+-- | 16. Blocked host without override -> fail-closed with TfrBlockedHost.
+testLlmBlockedHostNoOverride :: Test
+testLlmBlockedHostNoOverride = TestCase $ do
+  let result = validateEndpointUrl "https://evil.com/api" Nothing
+  assertEqual "untrusted host without override must be blocked"
+    (Left TfrBlockedHost) result
+
+-- | 17. Blocked host WITH override -> pass (warning in trace via env).
+testLlmBlockedHostWithOverride :: Test
+testLlmBlockedHostWithOverride = TestCase $ do
+  let result = validateEndpointUrl "https://evil.com/api" (Just "1")
+  assertEqual "untrusted host with override must be allowed"
+    (Right ()) result
+
+-- | 18. Non-https endpoint -> fail-closed with TfrUnsafeEndpoint.
+testLlmNonHttpsEndpoint :: Test
+testLlmNonHttpsEndpoint = TestCase $ do
+  let result = validateEndpointUrl "http://api.mistral.ai/v1/chat/completions" Nothing
+  assertEqual "non-https endpoint must be rejected"
+    (Left TfrUnsafeEndpoint) result
+
+-- | 19. Empty endpoint -> fail-closed with TfrUnsafeEndpoint.
+testLlmEmptyEndpoint :: Test
+testLlmEmptyEndpoint = TestCase $ do
+  let result = validateEndpointUrl "" Nothing
+  assertEqual "empty endpoint must be rejected"
+    (Left TfrUnsafeEndpoint) result
+
+-- | 20. Allowlist is non-empty and contains expected hosts.
+testLlmAllowlistContents :: Test
+testLlmAllowlistContents = TestCase $ do
+  assertBool "allowlist must contain api.mistral.ai"
+    ("api.mistral.ai" `elem` llmEndpointAllowlist)
+  assertBool "allowlist must contain api.fireworks.ai"
+    ("api.fireworks.ai" `elem` llmEndpointAllowlist)
+
 reliabilityHardeningTests :: [Test]
 reliabilityHardeningTests =
   [ TestLabel "select-tool-empty-pool"             testSelectToolEmptyPool
@@ -147,4 +200,11 @@ reliabilityHardeningTests =
   , TestLabel "gfmap-empty-content"              testGfMapEmptyContent
   , TestLabel "gfmap-valid-content"              testGfMapValidContent
   , TestLabel "gfmap-runtime-load-healthy"       testGfMapRuntimeLoadHealthy
+  , TestLabel "llm-allowlist-mistral"            testLlmAllowlistMistral
+  , TestLabel "llm-allowlist-fireworks"          testLlmAllowlistFireworks
+  , TestLabel "llm-blocked-host-no-override"   testLlmBlockedHostNoOverride
+  , TestLabel "llm-blocked-host-with-override" testLlmBlockedHostWithOverride
+  , TestLabel "llm-non-https-endpoint"          testLlmNonHttpsEndpoint
+  , TestLabel "llm-empty-endpoint"             testLlmEmptyEndpoint
+  , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
   ]

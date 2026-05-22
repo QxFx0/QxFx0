@@ -28,6 +28,8 @@ module QxFx0.Bridge.ExternalLLM
   , queryExternalTool
   , queryExternalToolWithConfig
   , defaultExternalQueryConfig
+  , llmEndpointAllowlist
+  , validateEndpointUrl
   ) where
 
 import Control.Applicative ((<|>))
@@ -115,6 +117,39 @@ data FireworksConfig = FireworksConfig
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
+-- | Official LLM API endpoint allowlist.
+-- Any endpoint not on this list is rejected unless the operator sets
+-- @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@.
+llmEndpointAllowlist :: [Text]
+llmEndpointAllowlist =
+  [ "api.mistral.ai"
+  , "api.fireworks.ai"
+  ]
+
+-- | Validate an endpoint URL.
+--
+-- Rules (fail-closed):
+--   1. Scheme must be @https://@.
+--   2. Host must be in 'llmEndpointAllowlist' OR
+--      @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@ must be set.
+--   3. Empty or malformed URI is rejected.
+--
+-- Returns 'Right ()' when allowed, 'Left reason' when blocked.
+validateEndpointUrl :: Text -> Maybe Text -> Either TransportFallbackReason ()
+validateEndpointUrl endpoint mAllowOverride =
+  let stripped = T.strip endpoint
+  in if T.null stripped
+       then Left TfrUnsafeEndpoint
+       else if not (T.isPrefixOf "https://" stripped)
+              then Left TfrUnsafeEndpoint
+              else let hostPart = T.takeWhile (/= '/') (T.drop 8 stripped)
+                       host = T.takeWhile (/= ':') hostPart  -- strip port
+                   in if host `elem` llmEndpointAllowlist
+                        then Right ()
+                        else if mAllowOverride == Just "1"
+                               then Right ()
+                               else Left TfrBlockedHost
+
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig
 defaultExternalQueryConfig = ExternalQueryConfig
@@ -146,6 +181,7 @@ buildTransportFromEnv = do
   cfg0 <- case mode of
     "mistral" -> do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
+      mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
       case mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "mistral"
@@ -154,16 +190,15 @@ buildTransportFromEnv = do
         Just key -> do
           model    <- fmap (T.pack . fromMaybe "mistral-small-latest") (lookupEnv "QXFX0_MISTRAL_MODEL")
           endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
-          let isHttps = T.isPrefixOf "https://" endpoint
-          if not isHttps
-            then pure $ defaultExternalQueryConfig
+          case validateEndpointUrl endpoint mAllowUntrusted of
+            Left reason -> pure $ defaultExternalQueryConfig
               { eqcTransportMode = "mistral"
               , eqcApiKey = Just (T.pack key)
               , eqcModel = model
               , eqcEndpoint = endpoint
-              , eqcFallbackReason = Just TfrUnsafeEndpoint
+              , eqcFallbackReason = Just reason
               }
-            else pure $ ExternalQueryConfig
+            Right () -> pure $ ExternalQueryConfig
               { eqcTransportMode = "mistral"
               , eqcApiKey = Just (T.pack key)
               , eqcModel = model
@@ -173,6 +208,7 @@ buildTransportFromEnv = do
               }
     "fireworks" -> do
       mKey <- lookupEnv "QXFX0_FIREWORKS_API_KEY"
+      mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
       case mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "fireworks"
@@ -181,16 +217,15 @@ buildTransportFromEnv = do
         Just key -> do
           model    <- fmap (T.pack . fromMaybe "accounts/fireworks/models/glm-5p1") (lookupEnv "QXFX0_FIREWORKS_MODEL")
           endpoint <- fmap (T.pack . fromMaybe "https://api.fireworks.ai/inference/v1/chat/completions") (lookupEnv "QXFX0_FIREWORKS_ENDPOINT")
-          let isHttps = T.isPrefixOf "https://" endpoint
-          if not isHttps
-            then pure $ defaultExternalQueryConfig
+          case validateEndpointUrl endpoint mAllowUntrusted of
+            Left reason -> pure $ defaultExternalQueryConfig
               { eqcTransportMode = "fireworks"
               , eqcApiKey = Just (T.pack key)
               , eqcModel = model
               , eqcEndpoint = endpoint
-              , eqcFallbackReason = Just TfrUnsafeEndpoint
+              , eqcFallbackReason = Just reason
               }
-            else pure $ ExternalQueryConfig
+            Right () -> pure $ ExternalQueryConfig
               { eqcTransportMode = "fireworks"
               , eqcApiKey = Just (T.pack key)
               , eqcModel = model

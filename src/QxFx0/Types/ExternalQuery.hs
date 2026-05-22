@@ -105,6 +105,9 @@ data TransportFallbackReason
     -- ^ User explicitly requested mock mode.
   | TfrUnsafeEndpoint
     -- ^ Endpoint does not use HTTPS.
+  | TfrBlockedHost
+    -- ^ Endpoint host is not in the official allowlist and untrusted-host
+    -- override is not enabled.
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
@@ -113,6 +116,7 @@ renderFallbackReason TfrEnvNotSet    = "env_not_set"
 renderFallbackReason TfrKeyMissing = "key_missing"
 renderFallbackReason TfrExplicitMock = "explicit_mock"
 renderFallbackReason TfrUnsafeEndpoint = "unsafe_endpoint"
+renderFallbackReason TfrBlockedHost = "blocked_host"
 
 renderExternalQueryError :: ExternalQueryError -> Text
 renderExternalQueryError err =
