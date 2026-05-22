@@ -161,10 +161,14 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
       nixIssues =
         (if nixPolicyPresent then [] else ["nix_policy_missing"])
           ++ brNixIssues backend
+      gfReadinessNote = if gfOk then Nothing else Just ("gfmap:" <> maybe "failed" id (ghIssue gfHealth))
       readinessText = case readinessMode of
-        Ready -> "ready"
-        Degraded xs -> "degraded:" <> T.intercalate "," (map (T.pack . show) xs)
-        NotReady xs -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs)
+        Ready -> maybe "ready" (\note -> "not_ready:" <> note) gfReadinessNote
+        Degraded xs ->
+          case gfReadinessNote of
+            Nothing -> "degraded:" <> T.intercalate "," (map (T.pack . show) xs)
+            Just note -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ [note])
+        NotReady xs -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ maybe [] pure gfReadinessNote)
       strictDecisionPathOk = not strictBackendRequired || decisionPathLocalOnly
       ready = strictReadinessOk && dbReady && schemaOk && gfOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
       degraded = ready && (readinessMode /= Ready || not embedStrictReady || not agdaOk || not datalogOk || not nixOk)
