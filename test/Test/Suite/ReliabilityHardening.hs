@@ -4,13 +4,15 @@ module Test.Suite.ReliabilityHardening
   ( reliabilityHardeningTests
   ) where
 
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
+import Network.HTTP.Client (HttpException(..), HttpExceptionContent(..), parseRequest)
 import Test.HUnit
 
 import QxFx0.Learning.Tool
   ( ExternalTool(..)
   , ToolDomain(..)
   , selectTool
-  , selectToolWithReliability
   )
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Learning.Calibration
@@ -32,10 +34,15 @@ import QxFx0.Lexicon.GfMap
   )
 import QxFx0.Bridge.ExternalLLM
   ( llmEndpointAllowlist
+  , llmUntrustedHostOverrideWarningTag
   , validateEndpointUrl
+  , validateEndpointUrlWithContext
   , extractStructured
+  , decodeLlmBodyLimited
+  , redactUpstreamError
+  , classifyHttpException
   )
-import QxFx0.Types.ExternalQuery (TransportFallbackReason(..))
+import QxFx0.Types.ExternalQuery (ExternalQueryError(..), TransportFallbackReason(..))
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
 testSelectToolEmptyPool :: Test
@@ -57,18 +64,18 @@ testSelectToolNoMatchingDomain = TestCase $ do
 -- | 3. Calibration current version with empty accepted list -> total.
 testCalibrationVersionEmptyLog :: Test
 testCalibrationVersionEmptyLog = TestCase $ do
-  let log = CalibrationLog []
-      result = currentCalibrationVersion log
+  let calLog = CalibrationLog []
+      result = currentCalibrationVersion calLog
   assertEqual "empty calibration log must yield Nothing" Nothing result
 
 -- | 4. Calibration current version with no accepted entries -> total.
 testCalibrationVersionNoAccepted :: Test
 testCalibrationVersionNoAccepted = TestCase $ do
-  let log = CalibrationLog
+  let calLog = CalibrationLog
         [ CalibrationEntry (CalibrationId 1) (ProposalRule "rule") Pending 0 Nothing Nothing
         , CalibrationEntry (CalibrationId 2) (ProposalRule "rule") Rejected 0 Nothing Nothing
         ]
-      result = currentCalibrationVersion log
+      result = currentCalibrationVersion calLog
   assertEqual "log without accepted entries must yield Nothing" Nothing result
 
 -- | 5. LP with valid uniform matrix -> Just probabilities.
@@ -157,28 +164,42 @@ testLlmBlockedHostNoOverride = TestCase $ do
   assertEqual "untrusted host without override must be blocked"
     (Left TfrBlockedHost) result
 
--- | 17. Blocked host WITH override -> pass (warning in trace via env).
+-- | 17. Blocked host WITH single override -> fail-closed.
 testLlmBlockedHostWithOverride :: Test
 testLlmBlockedHostWithOverride = TestCase $ do
   let result = validateEndpointUrl "https://evil.com/api" (Just "1")
-  assertEqual "untrusted host with override must be allowed"
-    (Right ()) result
+  assertEqual "single untrusted-host override must not be sufficient"
+    (Left TfrUntrustedOverrideRejected) result
 
--- | 18. Non-https endpoint -> fail-closed with TfrUnsafeEndpoint.
+-- | 18. Blocked host with explicit test/dev context -> allowed with warning tag.
+testLlmBlockedHostWithDevOverride :: Test
+testLlmBlockedHostWithDevOverride = TestCase $ do
+  let result = validateEndpointUrlWithContext "https://evil.com/api" (Just "1") (Just "test") Nothing
+  assertEqual "untrusted host in explicit test context must return warning tag"
+    (Right (Just llmUntrustedHostOverrideWarningTag)) result
+
+-- | 19. Blocked host with double confirmation -> allowed with warning tag.
+testLlmBlockedHostWithDoubleConfirm :: Test
+testLlmBlockedHostWithDoubleConfirm = TestCase $ do
+  let result = validateEndpointUrlWithContext "https://evil.com/api" (Just "1") Nothing (Just "1")
+  assertEqual "untrusted host with double confirmation must return warning tag"
+    (Right (Just llmUntrustedHostOverrideWarningTag)) result
+
+-- | 20. Non-https endpoint -> fail-closed with TfrUnsafeEndpoint.
 testLlmNonHttpsEndpoint :: Test
 testLlmNonHttpsEndpoint = TestCase $ do
   let result = validateEndpointUrl "http://api.mistral.ai/v1/chat/completions" Nothing
   assertEqual "non-https endpoint must be rejected"
     (Left TfrUnsafeEndpoint) result
 
--- | 19. Empty endpoint -> fail-closed with TfrUnsafeEndpoint.
+-- | 21. Empty endpoint -> fail-closed with TfrUnsafeEndpoint.
 testLlmEmptyEndpoint :: Test
 testLlmEmptyEndpoint = TestCase $ do
   let result = validateEndpointUrl "" Nothing
   assertEqual "empty endpoint must be rejected"
     (Left TfrUnsafeEndpoint) result
 
--- | 20. Allowlist is non-empty and contains expected hosts.
+-- | 22. Allowlist is non-empty and contains expected hosts.
 testLlmAllowlistContents :: Test
 testLlmAllowlistContents = TestCase $ do
   assertBool "allowlist must contain api.mistral.ai"
@@ -186,7 +207,33 @@ testLlmAllowlistContents = TestCase $ do
   assertBool "allowlist must contain api.fireworks.ai"
     ("api.fireworks.ai" `elem` llmEndpointAllowlist)
 
--- | 21. extractStructured unwraps chat-completion envelope.
+-- | 23. Oversized LLM response bodies are rejected before decoding.
+testLlmOversizeBodyRejected :: Test
+testLlmOversizeBodyRejected = TestCase $ do
+  let result = decodeLlmBodyLimited 8 (BS.replicate 9 97)
+  case result of
+    Left (EqeInvalidResponse msg) -> do
+      assertBool "oversize response must use structured reason" ("response_too_large" `T.isInfixOf` msg)
+      assertBool "oversize response must report max_bytes" ("max_bytes=8" `T.isInfixOf` msg)
+    other -> assertFailure ("expected EqeInvalidResponse for oversize body, got: " ++ show other)
+
+-- | 24. Upstream error bodies are redacted from diagnostics.
+testLlmUpstreamErrorRedacted :: Test
+testLlmUpstreamErrorRedacted = TestCase $ do
+  let raw = "token=secret-password payload should not escape"
+      diag = redactUpstreamError 401 raw
+  assertBool "redacted diagnostic must include upstream status" ("upstream_status=401" `T.isInfixOf` diag)
+  assertBool "redacted diagnostic must not include raw secret" (not ("secret-password" `T.isInfixOf` diag))
+  assertBool "redacted diagnostic must report body length only" ("body_redacted" `T.isInfixOf` diag)
+
+-- | 25. HTTP response timeout is typed as EqeTimeout.
+testLlmTimeoutClassified :: Test
+testLlmTimeoutClassified = TestCase $ do
+  req <- parseRequest "https://api.mistral.ai/v1/chat/completions"
+  let result = classifyHttpException (HttpExceptionRequest req ResponseTimeout)
+  assertEqual "response timeout must be a typed timeout" (EqeTimeout "response_timeout") result
+
+-- | 26. extractStructured unwraps chat-completion envelope.
 testExtractStructuredUnwrapsContent :: Test
 testExtractStructuredUnwrapsContent = TestCase $ do
   let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"word\\\":\\\"свобода\\\"}\"}}]}"
@@ -194,28 +241,28 @@ testExtractStructuredUnwrapsContent = TestCase $ do
   assertEqual "typed decoder must unwrap content from envelope"
     "{\"word\":\"свобода\"}" result
 
--- | 22. extractStructured returns raw body on empty choices.
+-- | 27. extractStructured returns raw body on empty choices.
 testExtractStructuredEmptyChoices :: Test
 testExtractStructuredEmptyChoices = TestCase $ do
   let envelope = "{\"choices\":[]}"
       result = extractStructured envelope
   assertEqual "empty choices must return raw body" envelope result
 
--- | 23. extractStructured returns raw body on invalid JSON.
+-- | 28. extractStructured returns raw body on invalid JSON.
 testExtractStructuredInvalidJson :: Test
 testExtractStructuredInvalidJson = TestCase $ do
   let garbage = "this is not json"
       result = extractStructured garbage
   assertEqual "invalid json must return raw body" garbage result
 
--- | 24. extractStructured returns raw body when content is missing.
+-- | 29. extractStructured returns raw body when content is missing.
 testExtractStructuredMissingContent :: Test
 testExtractStructuredMissingContent = TestCase $ do
   let envelope = "{\"choices\":[{\"message\":{\"role\":\"assistant\"}}]}"
       result = extractStructured envelope
   assertEqual "missing content must return raw body" envelope result
 
--- | 25. extractStructured returns raw body for plain payload (backward compat).
+-- | 30. extractStructured returns raw body for plain payload (backward compat).
 testExtractStructuredPlainPayload :: Test
 testExtractStructuredPlainPayload = TestCase $ do
   let payload = "{\"word\":\"свобода\"}"
@@ -241,9 +288,14 @@ reliabilityHardeningTests =
   , TestLabel "llm-allowlist-fireworks"          testLlmAllowlistFireworks
   , TestLabel "llm-blocked-host-no-override"   testLlmBlockedHostNoOverride
   , TestLabel "llm-blocked-host-with-override" testLlmBlockedHostWithOverride
+  , TestLabel "llm-blocked-host-dev-override" testLlmBlockedHostWithDevOverride
+  , TestLabel "llm-blocked-host-double-confirm" testLlmBlockedHostWithDoubleConfirm
   , TestLabel "llm-non-https-endpoint"          testLlmNonHttpsEndpoint
   , TestLabel "llm-empty-endpoint"             testLlmEmptyEndpoint
   , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
+  , TestLabel "llm-oversize-body-rejected"     testLlmOversizeBodyRejected
+  , TestLabel "llm-upstream-error-redacted"    testLlmUpstreamErrorRedacted
+  , TestLabel "llm-timeout-classified"         testLlmTimeoutClassified
   , TestLabel "extract-structured-unwraps"     testExtractStructuredUnwrapsContent
   , TestLabel "extract-structured-empty-choices" testExtractStructuredEmptyChoices
   , TestLabel "extract-structured-invalid-json" testExtractStructuredInvalidJson

@@ -24,46 +24,58 @@ module QxFx0.Bridge.ExternalLLM
   ( LLMTransport(..)
   , MockTable
   , buildTransportFromEnv
+  , buildTransportFromEnvWithManager
   , buildTransportFromConfig
+  , buildTransportFromConfigWithManager
   , queryExternalTool
   , queryExternalToolWithConfig
   , defaultExternalQueryConfig
   , llmEndpointAllowlist
+  , llmUntrustedHostOverrideWarningTag
   , validateEndpointUrl
+  , validateEndpointUrlWithContext
   , extractStructured
+  , decodeLlmBodyLimited
+  , redactUpstreamError
+  , classifyHttpException
   ) where
 
 import Control.Applicative ((<|>))
 import Control.Exception (try)
-import Control.Monad (when)
-import Data.Aeson (FromJSON(..), ToJSON, Value(..), decodeStrict, object, (.=))
-import Data.Aeson.Types (parseEither, Parser, withObject, (.:), (.:?))
+import Data.Aeson (FromJSON(..), ToJSON, decodeStrict, encode, object, (.=))
+import Data.Aeson.Types (withObject, (.:), (.:?))
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.Char (isSpace)
-import qualified Data.List as L
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Text.Encoding.Error (lenientDecode)
+import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
 import GHC.Generics (Generic)
 import Network.HTTP.Client
-  ( Manager
+  ( BodyReader
+  , HttpException(..)
+  , HttpExceptionContent(..)
+  , Manager
   , Request
   , RequestBody(..)
-  , Response
-  , httpLbs
+  , brRead
+  , checkResponse
   , method
   , parseRequest
   , requestBody
   , requestHeaders
+  , responseTimeout
+  , responseTimeoutMicro
   , responseBody
   , responseStatus
-  , throwErrorStatusCodes
+  , withResponse
   )
 import Network.HTTP.Client.TLS (newTlsManager)
-import Network.HTTP.Types.Status (statusCode, statusMessage)
+import Network.HTTP.Types.Status (Status, statusCode)
 import System.Environment (lookupEnv)
+import System.IO (hPutStrLn, stderr)
 
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Learning.Tool (ExternalTool(..), etName)
@@ -72,9 +84,7 @@ import QxFx0.Types.ExternalQuery
   , ExternalQueryResponse(..)
   , ExternalQueryConfig(..)
   , TransportFallbackReason(..)
-  , renderFallbackReason
   )
-import QxFx0.ExceptionPolicy (catchIO)
 
 -- | Transport abstraction: carries a 'Manager' for real HTTP and a
 -- static map for mock.
@@ -121,36 +131,89 @@ data FireworksConfig = FireworksConfig
 
 -- | Official LLM API endpoint allowlist.
 -- Any endpoint not on this list is rejected unless the operator sets
--- @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@.
+-- @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@ and either enters an explicit
+-- dev/test mode or supplies the second confirmation flag documented in
+-- 'validateEndpointUrlWithContext'.
 llmEndpointAllowlist :: [Text]
 llmEndpointAllowlist =
   [ "api.mistral.ai"
   , "api.fireworks.ai"
   ]
 
--- | Validate an endpoint URL.
+llmUntrustedHostOverrideWarningTag :: Text
+llmUntrustedHostOverrideWarningTag = "llm_untrusted_host_override_allowed"
+
+llmMaxResponseBytes :: Int
+llmMaxResponseBytes = 65536
+
+llmRawBodyTelemetryChars :: Int
+llmRawBodyTelemetryChars = 4096
+
+-- | Validate an endpoint URL using the strict default policy.
 --
 -- Rules (fail-closed):
 --   1. Scheme must be @https://@.
---   2. Host must be in 'llmEndpointAllowlist' OR
---      @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@ must be set.
+--   2. Host must be in 'llmEndpointAllowlist'.
+--   3. A single untrusted-host override is not sufficient by itself.
+--      Use 'validateEndpointUrlWithContext' with dev/test or double opt-in
+--      context when this is intentional.
 --   3. Empty or malformed URI is rejected.
 --
 -- Returns 'Right ()' when allowed, 'Left reason' when blocked.
 validateEndpointUrl :: Text -> Maybe Text -> Either TransportFallbackReason ()
 validateEndpointUrl endpoint mAllowOverride =
+  () <$ validateEndpointUrlWithContext endpoint mAllowOverride Nothing Nothing
+
+-- | Validate an endpoint URL with explicit override context.
+--
+-- Parameters after the endpoint are:
+--
+-- * @QXFX0_LLM_ALLOW_UNTRUSTED_HOST@ value.
+-- * dev/test mode marker, for example @QXFX0_TEST_MODE=1@ or
+--   @QXFX0_LLM_DEV_MODE=1@.
+-- * double-confirmation marker, currently
+--   @QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM=1@.
+--
+-- A successful untrusted-host override returns the warning tag that must be
+-- emitted to logs/trace before a bearer token is sent to that host.
+validateEndpointUrlWithContext
+  :: Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Maybe Text
+  -> Either TransportFallbackReason (Maybe Text)
+validateEndpointUrlWithContext endpoint mAllowOverride mDevOrTestMode mDoubleConfirm =
   let stripped = T.strip endpoint
   in if T.null stripped
        then Left TfrUnsafeEndpoint
        else if not (T.isPrefixOf "https://" stripped)
-              then Left TfrUnsafeEndpoint
-              else let hostPart = T.takeWhile (/= '/') (T.drop 8 stripped)
-                       host = T.takeWhile (/= ':') hostPart  -- strip port
-                   in if host `elem` llmEndpointAllowlist
-                        then Right ()
-                        else if mAllowOverride == Just "1"
-                               then Right ()
-                               else Left TfrBlockedHost
+               then Left TfrUnsafeEndpoint
+               else let host = endpointHost stripped
+                    in if host `elem` llmEndpointAllowlist
+                         then Right Nothing
+                         else if mAllowOverride == Just "1"
+                                then if isTruthy mDevOrTestMode || isTruthy mDoubleConfirm
+                                       then Right (Just llmUntrustedHostOverrideWarningTag)
+                                       else Left TfrUntrustedOverrideRejected
+                                else Left TfrBlockedHost
+
+endpointHost :: Text -> Text
+endpointHost strippedHttpsUrl =
+  let hostPart = T.takeWhile (/= '/') (T.drop 8 strippedHttpsUrl)
+  in T.takeWhile (/= ':') hostPart
+
+isTruthy :: Maybe Text -> Bool
+isTruthy raw =
+  case T.toLower . T.strip <$> raw of
+    Just "1" -> True
+    Just "true" -> True
+    Just "yes" -> True
+    Just "on" -> True
+    Just "dev" -> True
+    Just "test" -> True
+    Just "degraded" -> True
+    Just "test-degraded" -> True
+    _ -> False
 
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig
@@ -178,68 +241,129 @@ defaultExternalQueryConfig = ExternalQueryConfig
 -- explicit 'TransportFallbackReason' in the returned 'ExternalQueryConfig'.
 buildTransportFromEnv :: IO LLMTransport
 buildTransportFromEnv = do
+  cfg <- resolveTransportConfigFromEnv
+  buildTransportFromConfig cfg
+
+buildTransportFromEnvWithManager :: Manager -> IO LLMTransport
+buildTransportFromEnvWithManager mgr = do
+  cfg <- resolveTransportConfigFromEnv
+  buildTransportFromConfigWithManager mgr cfg
+
+resolveTransportConfigFromEnv :: IO ExternalQueryConfig
+resolveTransportConfigFromEnv = do
   mTransport <- lookupEnv "QXFX0_LLM_TRANSPORT"
   let mode = fromMaybe "mock" mTransport
-  cfg0 <- case mode of
+  case mode of
     "mistral" -> do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
-      mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
-      case mKey of
+      overrideContext <- readOverrideContext
+      case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
+          { eqcTransportMode = "mistral"
+          , eqcFallbackReason = Just TfrKeyMissing
+          }
+        Just key | T.null key -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "mistral"
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key -> do
           model    <- fmap (T.pack . fromMaybe "mistral-small-latest") (lookupEnv "QXFX0_MISTRAL_MODEL")
           endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
-          case validateEndpointUrl endpoint mAllowUntrusted of
+          case validateEndpointWithOverrideContext endpoint overrideContext of
             Left reason -> pure $ defaultExternalQueryConfig
               { eqcTransportMode = "mistral"
-              , eqcApiKey = Just (T.pack key)
+              , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
               , eqcFallbackReason = Just reason
               }
-            Right () -> pure $ ExternalQueryConfig
-              { eqcTransportMode = "mistral"
-              , eqcApiKey = Just (T.pack key)
-              , eqcModel = model
-              , eqcEndpoint = endpoint
-              , eqcTimeoutMs = 30000
-              , eqcFallbackReason = Nothing
-              }
+            Right mWarningTag -> do
+              emitOverrideWarning endpoint mWarningTag
+              pure $ ExternalQueryConfig
+                { eqcTransportMode = "mistral"
+                , eqcApiKey = Just key
+                , eqcModel = model
+                , eqcEndpoint = endpoint
+                , eqcTimeoutMs = 30000
+                , eqcFallbackReason = Nothing
+                }
     "fireworks" -> do
       mKey <- lookupEnv "QXFX0_FIREWORKS_API_KEY"
-      mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
-      case mKey of
+      overrideContext <- readOverrideContext
+      case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
+          { eqcTransportMode = "fireworks"
+          , eqcFallbackReason = Just TfrKeyMissing
+          }
+        Just key | T.null key -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "fireworks"
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key -> do
           model    <- fmap (T.pack . fromMaybe "accounts/fireworks/models/glm-5p1") (lookupEnv "QXFX0_FIREWORKS_MODEL")
           endpoint <- fmap (T.pack . fromMaybe "https://api.fireworks.ai/inference/v1/chat/completions") (lookupEnv "QXFX0_FIREWORKS_ENDPOINT")
-          case validateEndpointUrl endpoint mAllowUntrusted of
+          case validateEndpointWithOverrideContext endpoint overrideContext of
             Left reason -> pure $ defaultExternalQueryConfig
               { eqcTransportMode = "fireworks"
-              , eqcApiKey = Just (T.pack key)
+              , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
               , eqcFallbackReason = Just reason
               }
-            Right () -> pure $ ExternalQueryConfig
-              { eqcTransportMode = "fireworks"
-              , eqcApiKey = Just (T.pack key)
-              , eqcModel = model
-              , eqcEndpoint = endpoint
-              , eqcTimeoutMs = 30000
-              , eqcFallbackReason = Nothing
-              }
+            Right mWarningTag -> do
+              emitOverrideWarning endpoint mWarningTag
+              pure $ ExternalQueryConfig
+                { eqcTransportMode = "fireworks"
+                , eqcApiKey = Just key
+                , eqcModel = model
+                , eqcEndpoint = endpoint
+                , eqcTimeoutMs = 30000
+                , eqcFallbackReason = Nothing
+                }
     _ -> pure $ defaultExternalQueryConfig
            { eqcTransportMode = T.pack mode
            , eqcFallbackReason = if mode == "mock" then Just TfrExplicitMock else Just TfrEnvNotSet
            }
-  buildTransportFromConfig cfg0
+
+data OverrideContext = OverrideContext
+  { ocAllowUntrusted :: !(Maybe Text)
+  , ocDevOrTestMode :: !(Maybe Text)
+  , ocDoubleConfirm :: !(Maybe Text)
+  }
+
+readOverrideContext :: IO OverrideContext
+readOverrideContext = do
+  mAllowUntrusted <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST")
+  mTestMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_TEST_MODE")
+  mDevMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_DEV_MODE")
+  mRuntimeMode <- fmap (fmap T.pack) (lookupEnv "QXFX0_RUNTIME_MODE")
+  mDoubleConfirm <- fmap (fmap T.pack) (lookupEnv "QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM")
+  let mDevOrTest = firstTruthy [mTestMode, mDevMode, mRuntimeMode]
+  pure OverrideContext
+    { ocAllowUntrusted = mAllowUntrusted
+    , ocDevOrTestMode = mDevOrTest
+    , ocDoubleConfirm = mDoubleConfirm
+    }
+
+validateEndpointWithOverrideContext :: Text -> OverrideContext -> Either TransportFallbackReason (Maybe Text)
+validateEndpointWithOverrideContext endpoint ctx =
+  validateEndpointUrlWithContext endpoint (ocAllowUntrusted ctx) (ocDevOrTestMode ctx) (ocDoubleConfirm ctx)
+
+firstTruthy :: [Maybe Text] -> Maybe Text
+firstTruthy [] = Nothing
+firstTruthy (x:xs)
+  | isTruthy x = x
+  | otherwise = firstTruthy xs
+
+emitOverrideWarning :: Text -> Maybe Text -> IO ()
+emitOverrideWarning _ Nothing = pure ()
+emitOverrideWarning endpoint (Just tag) =
+  hPutStrLn stderr $ T.unpack $ T.concat
+    [ "[security_warning] tag="
+    , tag
+    , " endpoint_host="
+    , endpointHost (T.strip endpoint)
+    ]
 
 -- | Build transport from an explicit configuration record.
 -- Useful for tests and for deterministic fallback paths.
@@ -247,24 +371,42 @@ buildTransportFromConfig :: ExternalQueryConfig -> IO LLMTransport
 buildTransportFromConfig cfg =
   case eqcFallbackReason cfg of
     Just reason -> pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
-    Nothing -> do
-      mgr <- newTlsManager
+    Nothing ->
+      case eqcApiKey cfg of
+        Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
+        Just _ ->
+          case validateEndpointUrl (eqcEndpoint cfg) Nothing of
+            Left reason ->
+              pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+            Right () -> do
+              mgr <- newTlsManager
+              buildTransportFromConfigWithManager mgr cfg
+
+buildTransportFromConfigWithManager :: Manager -> ExternalQueryConfig -> IO LLMTransport
+buildTransportFromConfigWithManager mgr cfg =
+  case eqcFallbackReason cfg of
+    Just reason -> pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+    Nothing ->
       case eqcApiKey cfg of
         Nothing -> pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))
         Just key ->
-          if eqcTransportMode cfg == "fireworks"
-            then pure $ FireworksTransport mgr FireworksConfig
-              { fcApiKey = key
-              , fcModel = eqcModel cfg
-              , fcEndpoint = eqcEndpoint cfg
-              , fcTimeoutMs = eqcTimeoutMs cfg
-              }
-            else pure $ MistralTransport mgr MistralConfig
-              { mcApiKey = key
-              , mcModel = eqcModel cfg
-              , mcEndpoint = eqcEndpoint cfg
-              , mcTimeoutMs = eqcTimeoutMs cfg
-              }
+          case validateEndpointUrl (eqcEndpoint cfg) Nothing of
+            Left reason ->
+              pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
+            Right () ->
+              if eqcTransportMode cfg == "fireworks"
+                then pure $ FireworksTransport mgr FireworksConfig
+                  { fcApiKey = key
+                  , fcModel = eqcModel cfg
+                  , fcEndpoint = eqcEndpoint cfg
+                  , fcTimeoutMs = eqcTimeoutMs cfg
+                  }
+                else pure $ MistralTransport mgr MistralConfig
+                  { mcApiKey = key
+                  , mcModel = eqcModel cfg
+                  , mcEndpoint = eqcEndpoint cfg
+                  , mcTimeoutMs = eqcTimeoutMs cfg
+                  }
 
 -- | Default mock table with a handful of deterministic responses.
 -- Extend this in tests by passing a custom table to 'MockTransport'.
@@ -361,38 +503,7 @@ renderNeedTag NeedNone                  = "NeedNone"
 -- 'ExternalQueryError'.  Never returns a silent accept.
 mistralQuery :: Manager -> MistralConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
 mistralQuery mgr cfg tool _need query =
-  catchIO (do
-    req0 <- parseRequest (T.unpack (mcEndpoint cfg))
-    let req = req0
-          { method = "POST"
-          , requestHeaders =
-              [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", mcApiKey cfg]))
-              , ("Content-Type", "application/json")
-              ]
-          , requestBody = RequestBodyLBS $ LBS.fromStrict $ TE.encodeUtf8 $
-              T.concat ["{\"model\":\"", mcModel cfg, "\",\"messages\":[{\"role\":\"user\",\"content\":\"", escapeJson query, "\"}]}"]
-          }
-    resp <- httpLbs req mgr
-    let code = statusCode (responseStatus resp)
-        body = TE.decodeUtf8 (LBS.toStrict (responseBody resp))
-        statusMsg = T.pack (show (statusMessage (responseStatus resp)))
-    if code >= 200 && code < 300
-      then if T.null (T.strip body)
-             then pure $ Left EqeEmptyResponse
-             else pure $ Right ExternalQueryResponse
-                    { eqrRawBody    = body
-                    , eqrStructured = extractStructured body
-                    , eqrToolName   = etName tool
-                    , eqrLatencyMs  = 0 -- TODO: measure via diffUTCTime
-                    }
-      else case code of
-        401 -> pure $ Left (EqeAuthFailure (T.concat ["401 ", statusMsg, ": ", body]))
-        403 -> pure $ Left (EqeAuthFailure (T.concat ["403 ", statusMsg, ": ", body]))
-        429 -> pure $ Left (EqeRateLimited (T.concat ["429 ", statusMsg, ": ", body]))
-        _ | code >= 500 && code < 600 -> pure $ Left (EqeServerError (T.concat ["5xx ", T.pack (show code), " ", statusMsg, ": ", body]))
-        _ | code >= 400 && code < 500 -> pure $ Left (EqeInvalidResponse (T.concat ["4xx ", T.pack (show code), " ", statusMsg, ": ", body]))
-        _ -> pure $ Left (EqeInvalidResponse (T.concat ["unexpected ", T.pack (show code), ": ", body]))
-  ) (\e -> pure $ Left (EqeNetworkUnavailable (T.pack (show e))))
+  chatCompletionQuery mgr "mistral" (mcEndpoint cfg) (mcModel cfg) (mcApiKey cfg) (mcTimeoutMs cfg) tool query
 
 -- | Real Fireworks HTTP query.
 -- Fireworks uses the same OpenAI-compatible chat-completion schema as
@@ -400,49 +511,143 @@ mistralQuery mgr cfg tool _need query =
 -- Only the endpoint and auth header differ.
 fireworksQuery :: Manager -> FireworksConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
 fireworksQuery mgr cfg tool _need query =
-  catchIO (do
-    req0 <- parseRequest (T.unpack (fcEndpoint cfg))
-    let req = req0
-          { method = "POST"
-          , requestHeaders =
-              [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", fcApiKey cfg]))
-              , ("Content-Type", "application/json")
-              ]
-          , requestBody = RequestBodyLBS $ LBS.fromStrict $ TE.encodeUtf8 $
-              T.concat ["{\"model\":\"", fcModel cfg, "\",\"messages\":[{\"role\":\"user\",\"content\":\"", escapeJson query, "\"}]}"]
-          }
-    resp <- httpLbs req mgr
-    let code = statusCode (responseStatus resp)
-        body = TE.decodeUtf8 (LBS.toStrict (responseBody resp))
-        statusMsg = T.pack (show (statusMessage (responseStatus resp)))
-    if code >= 200 && code < 300
-      then if T.null (T.strip body)
-             then pure $ Left EqeEmptyResponse
-             else pure $ Right ExternalQueryResponse
-                    { eqrRawBody    = body
-                    , eqrStructured = extractStructured body
-                    , eqrToolName   = etName tool
-                    , eqrLatencyMs  = 0
-                    }
-      else case code of
-        401 -> pure $ Left (EqeAuthFailure (T.concat ["401 ", statusMsg, ": ", body]))
-        403 -> pure $ Left (EqeAuthFailure (T.concat ["403 ", statusMsg, ": ", body]))
-        429 -> pure $ Left (EqeRateLimited (T.concat ["429 ", statusMsg, ": ", body]))
-        _ | code >= 500 && code < 600 -> pure $ Left (EqeServerError (T.concat ["5xx ", T.pack (show code), " ", statusMsg, ": ", body]))
-        _ | code >= 400 && code < 500 -> pure $ Left (EqeInvalidResponse (T.concat ["4xx ", T.pack (show code), " ", statusMsg, ": ", body]))
-        _ -> pure $ Left (EqeInvalidResponse (T.concat ["unexpected ", T.pack (show code), ": ", body]))
-  ) (\e -> pure $ Left (EqeNetworkUnavailable (T.pack (show e))))
+  chatCompletionQuery mgr "fireworks" (fcEndpoint cfg) (fcModel cfg) (fcApiKey cfg) (fcTimeoutMs cfg) tool query
 
--- | Naïve JSON escape for the prompt body (sufficient for our
--- constrained prompts).
-escapeJson :: Text -> Text
-escapeJson = T.concatMap escapeChar
+chatCompletionQuery
+  :: Manager
+  -> Text
+  -> Text
+  -> Text
+  -> Text
+  -> Int
+  -> ExternalTool
+  -> Text
+  -> IO (Either ExternalQueryError ExternalQueryResponse)
+chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs tool query = do
+  requestResult <- buildChatRequest endpoint model apiKey timeoutMs query
+  case requestResult of
+    Left err -> pure (Left err)
+    Right req -> do
+      start <- getCurrentTime
+      httpResult <- runChatHttp mgr req
+      end <- getCurrentTime
+      let latencyMs = elapsedMs start end
+      pure (handleChatHttpResult tool latencyMs httpResult)
+
+buildChatRequest :: Text -> Text -> Text -> Int -> Text -> IO (Either ExternalQueryError Request)
+buildChatRequest endpoint model apiKey timeoutMs query = do
+  parsed <- try (parseRequest (T.unpack endpoint)) :: IO (Either HttpException Request)
+  pure $ case parsed of
+    Left err -> Left (classifyHttpException err)
+    Right req0 -> Right req0
+      { method = "POST"
+      , requestHeaders =
+          [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", apiKey]))
+          , ("Content-Type", "application/json")
+          ]
+      , requestBody = RequestBodyLBS $ encode $ object
+          [ "model" .= model
+          , "messages" .= [object ["role" .= ("user" :: Text), "content" .= query]]
+          ]
+      , responseTimeout = responseTimeoutMicro (timeoutMicroseconds timeoutMs)
+      , checkResponse = \_ _ -> pure ()
+      }
+
+runChatHttp :: Manager -> Request -> IO (Either HttpException (Status, Either ExternalQueryError BS.ByteString))
+runChatHttp mgr req =
+  try (withResponse req mgr $ \resp -> do
+    bodyResult <- readResponseBodyLimited llmMaxResponseBytes (responseBody resp)
+    pure (responseStatus resp, bodyResult))
+
+handleChatHttpResult
+  :: ExternalTool
+  -> Int
+  -> Either HttpException (Status, Either ExternalQueryError BS.ByteString)
+  -> Either ExternalQueryError ExternalQueryResponse
+handleChatHttpResult tool latencyMs httpResult =
+  case httpResult of
+    Left err -> Left (classifyHttpException err)
+    Right (status, bodyResult) ->
+      case bodyResult of
+        Left err -> Left err
+        Right rawBody ->
+          case decodeLlmBodyLimited llmMaxResponseBytes rawBody of
+            Left err -> Left err
+            Right body -> responseFromStatus status body
   where
-    escapeChar '"' = "\\\""
-    escapeChar '\\' = "\\\\"
-    escapeChar '\n' = "\\n"
-    escapeChar '\r' = "\\r"
-    escapeChar c    = T.singleton c
+    responseFromStatus status body =
+      let code = statusCode status
+          diag = redactUpstreamError code body
+      in if code >= 200 && code < 300
+           then if T.null (T.strip body)
+                  then Left EqeEmptyResponse
+                  else Right ExternalQueryResponse
+                         { eqrRawBody = T.take llmRawBodyTelemetryChars body
+                         , eqrStructured = extractStructured body
+                         , eqrToolName = etName tool
+                         , eqrLatencyMs = latencyMs
+                         }
+           else case code of
+             401 -> Left (EqeAuthFailure diag)
+             403 -> Left (EqeAuthFailure diag)
+             429 -> Left (EqeRateLimited diag)
+             _ | code >= 500 && code < 600 -> Left (EqeServerError diag)
+             _ | code >= 400 && code < 500 -> Left (EqeInvalidResponse diag)
+             _ -> Left (EqeInvalidResponse diag)
+
+readResponseBodyLimited :: Int -> BodyReader -> IO (Either ExternalQueryError BS.ByteString)
+readResponseBodyLimited maxBytes reader = go 0 []
+  where
+    go total chunks = do
+      chunk <- brRead reader
+      if BS.null chunk
+        then pure (Right (BS.concat (reverse chunks)))
+        else do
+          let total' = total + BS.length chunk
+          if total' > maxBytes
+            then pure (Left (responseTooLarge total' maxBytes))
+            else go total' (chunk : chunks)
+
+decodeLlmBodyLimited :: Int -> BS.ByteString -> Either ExternalQueryError Text
+decodeLlmBodyLimited maxBytes raw
+  | BS.length raw > maxBytes = Left (responseTooLarge (BS.length raw) maxBytes)
+  | otherwise = Right (TE.decodeUtf8With lenientDecode raw)
+
+responseTooLarge :: Int -> Int -> ExternalQueryError
+responseTooLarge actual maxBytes =
+  EqeInvalidResponse $ T.concat
+    [ "response_too_large:max_bytes="
+    , T.pack (show maxBytes)
+    , ":actual_bytes="
+    , T.pack (show actual)
+    ]
+
+redactUpstreamError :: Int -> Text -> Text
+redactUpstreamError code body =
+  T.concat
+    [ "upstream_status="
+    , T.pack (show code)
+    , ":body_redacted:body_chars="
+    , T.pack (show (T.length body))
+    ]
+
+classifyHttpException :: HttpException -> ExternalQueryError
+classifyHttpException err =
+  case err of
+    InvalidUrlException _ _ -> EqeInvalidResponse "invalid_url"
+    HttpExceptionRequest _ ResponseTimeout -> EqeTimeout "response_timeout"
+    HttpExceptionRequest _ ConnectionTimeout -> EqeTimeout "connection_timeout"
+    HttpExceptionRequest _ content -> EqeNetworkUnavailable (httpExceptionContentTag content)
+
+httpExceptionContentTag :: HttpExceptionContent -> Text
+httpExceptionContentTag content =
+  "http_exception:" <> T.take 80 (T.takeWhile (\c -> c /= ' ' && c /= '\n') (T.pack (show content)))
+
+timeoutMicroseconds :: Int -> Int
+timeoutMicroseconds timeoutMs = max 1 timeoutMs * 1000
+
+elapsedMs :: UTCTime -> UTCTime -> Int
+elapsedMs start end = floor ((realToFrac (diffUTCTime end start) :: Double) * 1000.0)
 
 -- | OpenAI-compatible chat-completion response envelope.
 -- Used to unwrap the assistant message content.

@@ -108,6 +108,9 @@ data TransportFallbackReason
   | TfrBlockedHost
     -- ^ Endpoint host is not in the official allowlist and untrusted-host
     -- override is not enabled.
+  | TfrUntrustedOverrideRejected
+    -- ^ Untrusted-host override was requested but the runtime was not in an
+    -- explicit dev/test or double-confirmed mode.
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
@@ -117,6 +120,7 @@ renderFallbackReason TfrKeyMissing = "key_missing"
 renderFallbackReason TfrExplicitMock = "explicit_mock"
 renderFallbackReason TfrUnsafeEndpoint = "unsafe_endpoint"
 renderFallbackReason TfrBlockedHost = "blocked_host"
+renderFallbackReason TfrUntrustedOverrideRejected = "untrusted_override_rejected"
 
 renderExternalQueryError :: ExternalQueryError -> Text
 renderExternalQueryError err =

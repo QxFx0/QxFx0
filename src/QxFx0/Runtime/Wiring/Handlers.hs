@@ -36,6 +36,7 @@ import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
+  , RuntimeWorkers(..)
   , TimeSource
   , commitRuntimeTurnState
   , rcCaches
@@ -50,7 +51,7 @@ import QxFx0.Runtime.Wiring.Context
   )
 import QxFx0.Runtime.Wiring.Readiness (checkNixWithCache, wireVerifyAgda)
 import QxFx0.Semantic.Embedding (textToEmbeddingResult)
-import QxFx0.Bridge.ExternalLLM (buildTransportFromEnv, queryExternalTool)
+import QxFx0.Bridge.ExternalLLM (buildTransportFromEnvWithManager, queryExternalTool)
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (r5Family, r5Force)
 import QxFx0.Types.ShadowDivergence
@@ -142,7 +143,7 @@ handleTurnEffect ctx request =
     TurnReqLinearizeDialogAtoms mPgfPath lang da ->
       TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLang mPgfPath lang da
     TurnReqExternalQuery tool need query -> do
-      transport <- buildTransportFromEnv
+      transport <- buildTransportFromEnvWithManager (rtwHttpManager (rcWorkers ctx))
       result <- queryExternalTool transport tool need query
       pure (TurnResExternalQuery result)
 
@@ -234,4 +235,3 @@ allowedReadEnvKeys =
     , "QXFX0_GF_LANG"
     , "QXFX0_GF_PGF_PATH"
     ]
-

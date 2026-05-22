@@ -55,7 +55,8 @@ import QxFx0.Resources (getNixGuardPath)
 import QxFx0.Runtime.Mode (RuntimeMode, resolveRuntimeMode)
 import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealth, checkEmbeddingHealth)
 import QxFx0.Types (SystemState, ssIntuitionState, ssTurnCount)
-import Network.HTTP.Client (Manager, closeManager, defaultManagerSettings, newManager)
+import Network.HTTP.Client (Manager, closeManager, newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 data RuntimeCaches = RuntimeCaches
   { rtcHealth :: !APIHealthCache
@@ -101,7 +102,7 @@ initRuntimeContext path = mask $ \restore -> do
   healthCache <- newMVar Nothing
   nixCache <- newNixCache 300 1000
   dbPool <- newDBPool path 2
-  httpManager <- newManager defaultManagerSettings
+  httpManager <- newManager tlsManagerSettings
   timeSource <- resolveTimeSource
   restore (buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager timeSource)
     `onException` (closeManager httpManager `finally` closeDBPool dbPool)
