@@ -76,6 +76,8 @@ renderStrictHealthDetail health =
         , "network_optional_only=" <> T.pack (show (shNetworkOptionalOnly health))
         , "llm_decision_path=" <> T.pack (show (shLlmDecisionPath health))
         , "morpho=" <> T.pack (show (shMorphoReady health))
+        , "gfmap=" <> T.pack (show (shGfMapOk health))
+            <> "(" <> shGfMapStatus health <> ",entries=" <> T.pack (show (shGfMapEntries health)) <> ")"
         , "morph_backend=" <> shMorphBackend health
         , "nix=" <> T.pack (show (shNixReady health))
             <> "(policy=" <> T.pack (show (shNixPolicyPresent health)) <> ")"
@@ -84,6 +86,7 @@ renderStrictHealthDetail health =
         [ if null (shAgdaIssues health) then [] else ["agda_issues=" <> T.intercalate "," (shAgdaIssues health)]
         , if null (shDatalogIssues health) then [] else ["datalog_issues=" <> T.intercalate "," (shDatalogIssues health)]
         , if null (shNixIssues health) then [] else ["nix_issues=" <> T.intercalate "," (shNixIssues health)]
+        , maybe [] (\issue -> ["gfmap_issue=" <> issue]) (shGfMapIssue health)
         , if T.null (shSchemaReason health) then [] else ["schema_reason=" <> shSchemaReason health]
         ]
   in T.intercalate "; " (components ++ issues)

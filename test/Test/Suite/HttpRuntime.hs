@@ -128,12 +128,18 @@ testHttpRuntimeStrictHappyPath = TestCase $
         runtimeReady <- requireBoolField "strict runtime-ready signal" "ready" runtimeValue
         runtimeMode <- requireTextField "strict runtime-ready mode" "runtime_mode" runtimeValue
         agdaStatus <- requireTextField "strict runtime-ready agda status" "agda_status" runtimeValue
+        gfMapOk <- requireBoolField "strict runtime-ready GF map flag" "gfmap_ok" runtimeValue
+        gfMapStatus <- requireTextField "strict runtime-ready GF map status" "gfmap_status" runtimeValue
+        gfMapEntries <- requireIntField "strict runtime-ready GF map entries" "gfmap_entries" runtimeValue
         decisionLocal <- requireBoolField "strict runtime-ready local decision-path flag" "decision_path_local_only" runtimeValue
         networkOptional <- requireBoolField "strict runtime-ready optional network flag" "network_optional_only" runtimeValue
         llmDecisionPath <- requireBoolField "strict runtime-ready llm decision-path flag" "llm_decision_path" runtimeValue
         assertBool "strict runtime-ready should report ready=true" runtimeReady
         assertEqual "strict runtime-ready should expose strict mode" "strict" runtimeMode
         assertEqual "strict runtime-ready should expose verified agda status" "verified" agdaStatus
+        assertBool "strict runtime-ready should expose healthy GF map" gfMapOk
+        assertEqual "strict runtime-ready should expose loaded GF map status" "loaded" gfMapStatus
+        assertBool "strict runtime-ready should expose positive GF map entry count" (gfMapEntries > 0)
         assertBool "strict runtime-ready must keep decision-path local-only" decisionLocal
         assertBool "strict runtime-ready should expose optional-network mode for decision-path" networkOptional
         assertBool "strict runtime-ready should expose llm-decision disabled" (not llmDecisionPath)
@@ -275,9 +281,15 @@ testHealthContracts = TestCase $
         (runtimeStatus, runtimeValue) <- getJsonStatusAndBody port "/runtime-ready"
         assertEqual "/runtime-ready must be available" 200 runtimeStatus
         runtimeReady <- requireBoolField "runtime-ready signal" "ready" runtimeValue
+        gfMapOk <- requireBoolField "runtime-ready GF map flag" "gfmap_ok" runtimeValue
+        gfMapStatus <- requireTextField "runtime-ready GF map status" "gfmap_status" runtimeValue
+        gfMapEntries <- requireIntField "runtime-ready GF map entries" "gfmap_entries" runtimeValue
         decisionLocal <- requireBoolField "runtime-ready local decision-path flag" "decision_path_local_only" runtimeValue
         llmDecisionPath <- requireBoolField "runtime-ready llm decision-path flag" "llm_decision_path" runtimeValue
         assertBool "/runtime-ready must check backend readiness" runtimeReady
+        assertBool "/runtime-ready must expose healthy GF map" gfMapOk
+        assertEqual "/runtime-ready must expose loaded GF map status" "loaded" gfMapStatus
+        assertBool "/runtime-ready must expose positive GF map entry count" (gfMapEntries > 0)
         assertBool "/runtime-ready should expose local decision-path mode" decisionLocal
         assertBool "/runtime-ready should expose llm decision-path disabled" (not llmDecisionPath)
         deprecatedHeaders <- getDeprecatedHealthHeaderValues port "/health"

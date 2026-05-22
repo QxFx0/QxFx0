@@ -124,6 +124,7 @@ runtimeInfrastructureTests =
   , testAgdaR5ParseFamilyRejectsUnknownFamily
   , testAgdaR5MalformedSnapshotRowReportsMismatch
   , testHealthShLlmDecisionPathReflectsReality
+  , testProbeRuntimeReadinessExposesGfMapStatus
   , testWriteAgdaWitnessErrorGivesNonzeroExit
   ]
 
@@ -1718,6 +1719,14 @@ testHealthShLlmDecisionPathReflectsReality = TestCase $ do
   let localOnly = Runtime.shDecisionPathLocalOnly health
       llmPath = Runtime.shLlmDecisionPath health
   assertBool "llm_decision_path should be the negation of decision_path_local_only" (llmPath == not localOnly)
+
+testProbeRuntimeReadinessExposesGfMapStatus :: Test
+testProbeRuntimeReadinessExposesGfMapStatus = TestCase $ do
+  health <- Runtime.probeRuntimeReadiness
+  assertBool "runtime readiness must expose healthy GF map" (Runtime.shGfMapOk health)
+  assertEqual "runtime readiness must expose GF map load status" "loaded" (Runtime.shGfMapStatus health)
+  assertBool "runtime readiness must expose GF map entry count" (Runtime.shGfMapEntries health > 0)
+  assertEqual "healthy GF map must not report issue" Nothing (Runtime.shGfMapIssue health)
 
 testWriteAgdaWitnessErrorGivesNonzeroExit :: Test
 testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do

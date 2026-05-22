@@ -41,6 +41,7 @@ import QxFx0.Bridge.SQLite.SchemaContract
   , checkSchemaContract
   , renderSchemaContractResult
   )
+import QxFx0.Lexicon.GfMap (GfMapLoadStatus(..), gfMapLoadStatus)
 
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON)
@@ -52,6 +53,10 @@ data SystemHealth = SystemHealth
   , shDbAlive        :: !Bool
   , shDbBootstrapable :: !Bool
   , shMorphoReady    :: !Bool
+  , shGfMapOk        :: !Bool
+  , shGfMapStatus    :: !Text
+  , shGfMapEntries   :: !Int
+  , shGfMapIssue     :: !(Maybe Text)
   , shNixPolicyPresent :: !Bool
   , shNixReady       :: !Bool
   , shNixIssues      :: ![Text]
@@ -77,6 +82,13 @@ data SystemHealth = SystemHealth
   , shReadinessMode  :: !Text
   } deriving stock (Show, Eq, Generic)
    deriving anyclass (ToJSON)
+
+data GfMapHealth = GfMapHealth
+  { ghOk      :: !Bool
+  , ghStatus  :: !Text
+  , ghEntries :: !Int
+  , ghIssue   :: !(Maybe Text)
+  }
 
 checkHealth :: RuntimeContext -> IO SystemHealth
 checkHealth ctx = do
@@ -118,6 +130,8 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
   let readinessMode = computeReadinessMode readiness
       componentOk rc = maybe False (\(_, ok, _) -> ok) (find (\(c, _, _) -> c == rc) (rsComponents readiness))
       morpOk = componentOk RcMorphology
+      gfHealth = gfMapHealthFromStatus gfMapLoadStatus
+      gfOk = ghOk gfHealth
       nixPolicyPresent = componentOk RcNixPolicy
       nixOk = nixPolicyPresent && brNixOperational backend
       datalogOk = componentOk RcDatalogRules && brDatalogReady backend
@@ -152,7 +166,7 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
         Degraded xs -> "degraded:" <> T.intercalate "," (map (T.pack . show) xs)
         NotReady xs -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs)
       strictDecisionPathOk = not strictBackendRequired || decisionPathLocalOnly
-      ready = strictReadinessOk && dbReady && schemaOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
+      ready = strictReadinessOk && dbReady && schemaOk && gfOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
       degraded = ready && (readinessMode /= Ready || not embedStrictReady || not agdaOk || not datalogOk || not nixOk)
       status
         | not ready = "not_ready"
@@ -165,6 +179,10 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shDbAlive = dhAlive dbHealth
     , shDbBootstrapable = dhBootstrapable dbHealth
     , shMorphoReady = morpOk
+    , shGfMapOk = ghOk gfHealth
+    , shGfMapStatus = ghStatus gfHealth
+    , shGfMapEntries = ghEntries gfHealth
+    , shGfMapIssue = ghIssue gfHealth
     , shNixPolicyPresent = nixPolicyPresent
     , shNixReady = nixOk
     , shNixIssues = nixIssues
@@ -189,6 +207,22 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shSchemaReason = schemaReason
     , shReadinessMode = readinessText
     }
+
+gfMapHealthFromStatus :: GfMapLoadStatus -> GfMapHealth
+gfMapHealthFromStatus status =
+  case status of
+    GfMapLoaded n -> GfMapHealth
+      { ghOk = n > 0
+      , ghStatus = "loaded"
+      , ghEntries = n
+      , ghIssue = if n > 0 then Nothing else Just "resource_empty_or_unparseable"
+      }
+    GfMapLoadFailed reason -> GfMapHealth
+      { ghOk = False
+      , ghStatus = "failed"
+      , ghEntries = 0
+      , ghIssue = Just reason
+      }
 
 isSchemaContractOk :: SchemaContractResult -> Bool
 isSchemaContractOk (SchemaContractOk _) = True
