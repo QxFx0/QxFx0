@@ -2,7 +2,7 @@
 
 **Branch:** `main`  
 **Index SHA:** `edd008e`  
-**Last updated:** 2026-05-22  
+**Last updated:** 2026-05-22 (security audit WP1–WP3)  
 **Purpose:** Single source of truth for which evidence files are canonical vs. historical/superseded.
 
 ---
@@ -60,6 +60,10 @@ learning-pressure persistence tests and post-WP6 roadmap patch
 regression coverage (EssenceRupture fail-soft, gradient parsing,
 recovery surface rendering, extended semantic state summary).
 
+Fast-test count further increased from 613 → 629 due to security audit
+WP1–WP3 (GfMap load-status failure paths, LLM endpoint allowlist pass/fail,
+typed chat-completion envelope decoder edge cases).
+
 ---
 
 ## Individual Gate Evidence (Low-RAM Profile)
@@ -101,6 +105,9 @@ recovery surface rendering, extended semantic state summary).
 | 33 | `cabal build all` (Fast-failure closure post-check) | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
 | 34 | `cabal test qxfx0-test-fast` (Fast-failure closure post-check) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 613/613 cases, 0 errors, 0 failures |
 | 35 | `check_architecture.sh` (Fast-failure closure post-check) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
+| 36 | `cabal build all` (Security audit WP1–WP3) | `cabal build all` | 0 | **PASS** | 250 modules compiled, 0 errors |
+| 37 | `cabal test qxfx0-test-fast` (Security audit WP1–WP3) | `cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G` | 0 | **PASS** | 629/629 cases, 0 errors, 0 failures |
+| 38 | `check_architecture.sh` (Security audit WP1–WP3) | `bash scripts/check_architecture.sh` | 0 | **PASS** | 12 invariants OK |
 
 ---
 
@@ -202,6 +209,12 @@ high-mem runner or CI environment:
 
 39. **WP6.1 decoupled learning-pressure persistence + post-WP6 roadmap patch + zero-failure closure (Phase 18)** — `detectLearningNeedWithPressure` raises `NeedLexiconExtension` after 3 turns of unknown topics + graft stagnation, independent of Conatus health. `EssenceRupture` in turn execution is caught and returned as soft text rather than re-thrown. Recovery surfaces include parsed gradient evidence when markers present. Semantic state summary exposes `essence_mode`, `shadow_severity`, `recovery_cause`, `gradient`, and `strategy`. The last pre-existing fast-suite failure (`testLearningNeedRaisedOnPersistentPattern`) was closed by aligning the test seed state with the validated `LearningLoop.hs` pattern (`lnsWindowStartTurn = 1`, `lnsUnknownWindowCount = 2`, turns 2→3→4). Fast suite now at **613 cases, 0 errors, 0 failures**. Tests: `testLearningNeedRaisedOnPersistentPattern`, `testLearningPressureRaisesLexiconExtension`, `testLearningPressureIgnoresLowUnknownCount`, `testLearningPressureIgnoresWhenGraftsGrowing`.
 
+40. **GF Map load observability (WP1)** — `GfMapLoadStatus` is a structured status (`GfMapLoaded count` | `GfMapLoadFailed reason`) exported from `QxFx0.Lexicon.GfMap`. The `unsafePerformIO`-based startup load is now total, deterministic, and fail-closed: any IO exception or empty/corrupt TSV yields an explicit `GfMapLoadFailed` with a machine-readable tag (`resource_missing_or_unreadable`, `resource_empty_or_unparseable`). Runtime consumers can check `gfMapLoadStatus` instead of relying on a silently empty map. Pure IO separation (`loadGfMapFromContent`) makes all failure paths unit-testable. Tests: `testGfMapMissingResource`, `testGfMapEmptyContent`, `testGfMapValidContent`, `testGfMapRuntimeLoadHealthy`.
+
+41. **LLM endpoint allowlist + fail-closed validation (WP2)** — `buildTransportFromEnv` validates every endpoint URL through `validateEndpointUrl` before constructing a real HTTP transport. Rules: scheme must be `https://`; host must be in `llmEndpointAllowlist` (`api.mistral.ai`, `api.fireworks.ai`); untrusted custom hosts are blocked unless the operator sets `QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1`. Violations return `MockTransport` with typed `TransportFallbackReason` (`TfrUnsafeEndpoint`, `TfrBlockedHost`) — no request is sent and no `Authorization` header is emitted. Tests: `testLlmAllowlistMistral`, `testLlmAllowlistFireworks`, `testLlmBlockedHostNoOverride`, `testLlmBlockedHostWithOverride`, `testLlmNonHttpsEndpoint`, `testLlmEmptyEndpoint`, `testLlmAllowlistContents`.
+
+42. **Typed chat-completion JSON decoder (WP3)** — `extractStructured` no longer uses brittle `T.breakOn "\"content\":\""` string search. It now decodes the full response as `ChatCompletionResponse → [ChatCompletionChoice] → ChatCompletionMessage → Maybe content` using Aeson `withObject` parsers. Invalid JSON, empty `choices`, or missing/empty `content` all fall back to returning the raw body for downstream `parseLLMResponseToFruit` handling. This eliminates silent partial-match bugs on format shifts. Tests: `testExtractStructuredUnwrapsContent`, `testExtractStructuredEmptyChoices`, `testExtractStructuredInvalidJson`, `testExtractStructuredMissingContent`, `testExtractStructuredPlainPayload`.
+
 ---
 
 ## Extended Contract Evidence (FULL_SCIENTIFIC_GO)
@@ -227,7 +240,7 @@ See `docs/EXTENDED_CONTRACT_RUNBOOK.md` for execution checklist.
 ```bash
 # Fast suite (low-RAM safe):
 cabal test qxfx0-test-fast --ghc-options="-O0" +RTS -M8G
-# Expected: Cases: 613  Tried: 613  Errors: 0  Failures: 0
+# Expected: Cases: 629  Tried: 629  Errors: 0  Failures: 0
 
 # Meta suite (low-RAM safe, longer):
 cabal test qxfx0-test --ghc-options="-O0" +RTS -M8G
