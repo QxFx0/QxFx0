@@ -553,6 +553,8 @@ buildTurnProjection
   -> TurnProjection
 buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled nextSs ti ts tp ta =
   let decision = taDecision ta
+      executedFamily = etoFamily executedOutcome
+      executedForce = etoForce executedOutcome
       parserConfidence = ipfConfidence (tiFrame ti)
       parserErrors = if parserConfidence < parserLowConfidenceThreshold then ["low_confidence"] else []
       scenePressure
@@ -569,8 +571,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
         | tpShadowStatus tp == ShadowUnavailable = ReasonShadowUnavailable
         | parserConfidence < parserLowConfidenceThreshold = ReasonLowParserConfidence
         | otherwise = ReasonOk
-      ownerFamily = tdFamily decision
-      ownerForce = tdForce decision
+      ownerFamily = executedFamily
+      ownerForce = executedForce
       warrantedMode = warrantedForFamily ownerFamily
       legitimacyOutcome = classifyLegitimacyOutcome legitimacyStatus legitimacyReason warrantedMode (tpShadowStatus tp) (tpShadowDivergenceSeverity tp)
       requestId = tmRequestId (tiMetrics ti)
@@ -629,13 +631,15 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcShadowDivergenceKind = tpShadowDivergenceKind tp
           , trcShadowDivergenceSeverity = tpShadowDivergenceSeverity tp
           , trcShadowResolvedFamily = tpFamily tp
-          , trcFinalFamily = tdFamily decision
-          , trcFinalForce = tdForce decision
+          , trcFinalFamily = executedFamily
+          , trcFinalForce = executedForce
           , trcDecisionDisposition = loDisposition legitimacyOutcome
           , trcLegitimacyReason = legitimacyReason
           , trcParserConfidence = parserConfidence
           , trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)
           , trcClaimAst = taClaimAst ta
+          , trcPreSafetyRenderedRaw = taPreSafetyRendered ta
+          , trcRenderedAfterRebind = taRendered ta
           , trcLinearizationLang = taLinearizationLang ta
           , trcLinearizationOk = taLinearizationOk ta
           , trcFallbackReason = taLinearizationFallbackReason ta
@@ -708,7 +712,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpParserConfidence = parserConfidence
       , tqpParserErrors = parserErrors
       , tqpPlannerMode = case tpPrincipledModePair tp of Just _ -> PrincipledPlanner; Nothing -> DefaultPlanner
-      , tqpPlannerDecision = tdFamily decision
+      , tqpPlannerDecision = executedFamily
       , tqpAtomRegister = asRegister (tiAtomSet ti)
       , tqpAtomLoad = asLoad (tiAtomSet ti)
       , tqpScenePressure = scenePressure
@@ -777,16 +781,33 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
 advanceDialogueThreadAfterTurn :: DialogueThread -> ExecutedTurnOutcome -> DialogueThread
 advanceDialogueThreadAfterTurn thread outcome =
   let family = etoFamily outcome
+      currentFocus = dtCurrentFocus thread
+      chooseNonEmpty primary fallback = if T.null primary then fallback else primary
       clarified = case family of
-        CMClarify -> dtCurrentFocus thread : dtClarifiedItems thread
-        CMGround -> dtCurrentFocus thread : dtClarifiedItems thread
+        CMClarify -> currentFocus : dtClarifiedItems thread
+        CMGround -> currentFocus : dtClarifiedItems thread
         _ -> dtClarifiedItems thread
       unresolved = case family of
         CMRepair -> dtOpenLoops thread
         CMClarify -> dtOpenLoops thread
-        _ -> filter (/= dtCurrentFocus thread) (dtOpenLoops thread)
+        _ -> filter (/= currentFocus) (dtOpenLoops thread)
+      nextFocus =
+        case family of
+          CMClarify -> currentFocus
+          CMGround -> currentFocus
+          CMRepair -> currentFocus
+          _ -> if T.null currentFocus then dtPhaseScope thread else currentFocus
+      nextScope =
+        case family of
+          CMClarify -> nextFocus
+          CMGround -> nextFocus
+          CMRepair -> chooseNonEmpty (dtPhaseScope thread) nextFocus
+          CMConfront -> chooseNonEmpty (dtPhaseScope thread) nextFocus
+          _ -> chooseNonEmpty nextFocus (dtPhaseScope thread)
   in thread
-      { dtClarifiedItems = take 8 clarified
+      { dtCurrentFocus = nextFocus
+      , dtPhaseScope = nextScope
+      , dtClarifiedItems = take 8 clarified
       , dtOpenLoops = take 8 unresolved
       , dtResistance = case family of
           CMRepair -> min 1.0 (dtResistance thread + 0.15)

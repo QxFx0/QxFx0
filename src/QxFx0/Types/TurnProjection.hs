@@ -50,6 +50,8 @@ data TurnReplayTrace = TurnReplayTrace
   , trcParserConfidence :: !Double
   , trcEmbeddingQuality :: !Text
   , trcClaimAst :: !(Maybe ClaimAst)
+  , trcPreSafetyRenderedRaw :: !Text
+  , trcRenderedAfterRebind :: !Text
   , trcLinearizationLang :: !(Maybe Text)
   , trcLinearizationOk :: !Bool
   , trcFallbackReason :: !(Maybe Text)

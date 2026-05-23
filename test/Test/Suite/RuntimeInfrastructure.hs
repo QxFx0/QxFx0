@@ -71,6 +71,7 @@ runtimeInfrastructureTests =
   , testSpecSqlSeedsAreCompatible
   , testRuntimeBootstrapAndPersistence
   , testStrictRuntimeBootstrapAndPersistence
+  , testRuntimeModeAcceptsDegradedLocalAlias
   , testRuntimeBootstrapUsesCanonicalSpecSeeds
   , testSemanticModeTurn
   , testShadowSnapshotIdStable
@@ -526,6 +527,12 @@ testStrictRuntimeBootstrapAndPersistence = TestCase $ do
     session2 <- Runtime.bootstrapSession True "test_runtime_strict_persist"
     let ss2 = Runtime.sessSystemState session2
     assertBool "strict runtime should restore persisted turn counter" (ssTurnCount ss2 >= 1)
+
+testRuntimeModeAcceptsDegradedLocalAlias :: Test
+testRuntimeModeAcceptsDegradedLocalAlias = TestCase $
+  withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded-local") $ do
+    mode <- Runtime.resolveRuntimeMode
+    assertEqual "degraded-local alias should resolve to degraded runtime" Runtime.DegradedRuntime mode
 
 testRuntimeBootstrapUsesCanonicalSpecSeeds :: Test
 testRuntimeBootstrapUsesCanonicalSpecSeeds = TestCase $ do
@@ -1073,10 +1080,12 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcFinalForce = IFAssert
               , trcDecisionDisposition = DispositionRepair
               , trcLegitimacyReason = ReasonShadowDivergence
-              , trcParserConfidence = 0.31
-              , trcEmbeddingQuality = "heuristic"
-              , trcClaimAst = Nothing
-              , trcLinearizationLang = Nothing
+               , trcParserConfidence = 0.31
+               , trcEmbeddingQuality = "heuristic"
+               , trcClaimAst = Nothing
+               , trcPreSafetyRenderedRaw = "fixture_pre_safety"
+               , trcRenderedAfterRebind = "fixture_rendered"
+               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
               , trcContractProvenance = Just FallbackRoute
@@ -1234,6 +1243,10 @@ testRunTurnPersistsTurnQuality = TestCase $ do
       ("\"trcAssemblyPath\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include replay provenance status"
       ("\"trcReplayProvenanceStatus\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include raw pre-safety rendered text"
+      ("\"trcPreSafetyRenderedRaw\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include rendered text after rebind"
+      ("\"trcRenderedAfterRebind\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include derivation tags"
       ("\"trcDerivationTags\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include dialogue focus after-state"
@@ -1421,10 +1434,12 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcFinalForce = IFAssert
               , trcDecisionDisposition = DispositionRepair
               , trcLegitimacyReason = ReasonShadowDivergence
-              , trcParserConfidence = 0.3
-              , trcEmbeddingQuality = "heuristic"
-              , trcClaimAst = Nothing
-              , trcLinearizationLang = Nothing
+               , trcParserConfidence = 0.3
+               , trcEmbeddingQuality = "heuristic"
+               , trcClaimAst = Nothing
+               , trcPreSafetyRenderedRaw = "fixture_pre_safety"
+               , trcRenderedAfterRebind = "fixture_rendered"
+               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
               , trcContractProvenance = Just FallbackRoute

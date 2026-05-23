@@ -485,11 +485,15 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , tdSemanticAnchor = tpSemanticAnchor tp
         }
       executedOutcome = safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assemblyPath artifactManifest
-      finalPreSafetyRendered = truthContractRebindRenderedText (etoTruthContractStatus executedOutcome) authorityClass preSafetyRendered
+      executedDecision =
+        decision
+          { tdFamily = etoFamily executedOutcome
+          , tdForce = etoForce executedOutcome
+          }
       finalRendered = truthContractRebindRenderedText (etoTruthContractStatus executedOutcome) authorityClass rendered
       finalGuardSurface = renderedSurface { Guard.gsRenderedText = finalRendered }
   in TurnArtifacts
-       { taPreSafetyRendered = finalPreSafetyRendered
+       { taPreSafetyRendered = preSafetyRendered
        , taGuardSurface = finalGuardSurface
         , taRendered = finalRendered
        , taSurfaceProv = surfaceProv
@@ -505,7 +509,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       , taLinearizationLang = draLinearizationLang (rsTemplateArtifact renderStatic)
       , taLinearizationOk = draLinearizationOk (rsTemplateArtifact renderStatic)
       , taLinearizationFallbackReason = draFallbackReason (rsTemplateArtifact renderStatic)
-      , taDecision = decision
+       , taDecision = executedDecision
        , taLocalRecoveryCause = finalRecoveryCause
        , taLocalRecoveryStrategy = recoveryStrategy
        , taLocalRecoveryEvidence = recoveryEvidence

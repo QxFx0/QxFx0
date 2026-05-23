@@ -1842,6 +1842,9 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
     assertEqual "blocked render should persist safe-recovery strategy"
       (Just StrategySafeRecovery)
       (taLocalRecoveryStrategy turnArtifacts)
+    assertEqual "blocked render should rebind executed decision family to repair"
+      CMRepair
+      (tdFamily (taDecision turnArtifacts))
     assertBool "safe recovery output should be non-empty"
       (not (T.null (T.strip (taRendered turnArtifacts))))
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
@@ -1863,6 +1866,12 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
     assertEqual "render-blocked replay trace should keep safe-recovery strategy"
       (Just StrategySafeRecovery)
       (trcRecoveryStrategy replayTrace)
+    assertEqual "render-blocked replay trace should persist executed recovery family"
+      CMRepair
+      (trcFinalFamily replayTrace)
+    assertEqual "render-blocked projection should persist executed recovery decision"
+      CMRepair
+      (tqpPlannerDecision (fpbProjection bundle))
 
 testFinalizePrecommitResolveConcurrently :: Test
 testFinalizePrecommitResolveConcurrently = TestCase $

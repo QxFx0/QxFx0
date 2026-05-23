@@ -92,7 +92,7 @@ assessDialogueOutcome previousState postState ti tp ta =
       previousInputs = map normalizeDialogueText (F.toList (ssRawInputHistory previousState))
       repeatedInput = not (T.null raw) && raw `elem` take 3 (reverse previousInputs)
       localRecovery = taSurfaceProv ta == FromRecovery || isJust (taLocalRecoveryCause ta) || not (truthContractAllowsStrongMutation truthStatus)
-      postRenderRetightened = taRendered ta /= taPreSafetyRendered ta || taFinalRendered ta /= taPreSafetyRendered ta
+      postRenderRetightened = taRendered ta /= taPreSafetyRendered ta || taFinalRendered ta /= taRendered ta
       decisionRepair = tdFamily (taDecision ta) == CMRepair
       renderEmpty = T.null (T.strip (taFinalRendered ta))
       userRepair = propositionType `elem` ["RepairSignal", "MisunderstandingReport"]

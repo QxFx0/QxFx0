@@ -144,6 +144,8 @@ required_fields = [
     "trcTruthContractStatus",
     "trcAssemblyPath",
     "trcReplayProvenanceStatus",
+    "trcPreSafetyRenderedRaw",
+    "trcRenderedAfterRebind",
 ]
 missing = [name for name in required_fields if name not in trace]
 if missing:
