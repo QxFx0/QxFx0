@@ -16971,11 +16971,6 @@ generatedLexemeEntries =
     ("степени", "степень", "noun", "prepositional"),
     ("степень", "степень", "noun", "accusative"),
     ("степенью", "степень", "noun", "instrumental"),
-    ("степь", "степь", "noun", "nominative"),
-    ("степи", "степь", "noun", "genitive"),
-    ("степи", "степь", "noun", "prepositional"),
-    ("степь", "степь", "noun", "accusative"),
-    ("степью", "степь", "noun", "instrumental"),
     ("стервозность", "стервозность", "noun", "nominative"),
     ("стервозности", "стервозность", "noun", "genitive"),
     ("стервозности", "стервозность", "noun", "prepositional"),
@@ -18331,6 +18326,11 @@ generatedLexemeEntries =
     ("чулке", "чулок", "noun", "prepositional"),
     ("чулок", "чулок", "noun", "accusative"),
     ("чулком", "чулок", "noun", "instrumental"),
+    ("шаг", "шаг", "noun", "nominative"),
+    ("шага", "шаг", "noun", "genitive"),
+    ("шаге", "шаг", "noun", "prepositional"),
+    ("шаг", "шаг", "noun", "accusative"),
+    ("шагом", "шаг", "noun", "instrumental"),
     ("шалаш", "шалаш", "noun", "nominative"),
     ("шалаша", "шалаш", "noun", "genitive"),
     ("шалаше", "шалаш", "noun", "prepositional"),
@@ -77861,20 +77861,6 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "степенью" , lfLemma = "степень" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
-    ("степи",
-      [
-        LexemeForm { lfSurface = "степи" , lfLemma = "степь" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "степи" , lfLemma = "степь" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("степь",
-      [
-        LexemeForm { lfSurface = "степь" , lfLemma = "степь" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "степь" , lfLemma = "степь" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
-    ("степью",
-      [
-        LexemeForm { lfSurface = "степью" , lfLemma = "степь" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
-      ]),
     ("стервозности",
       [
         LexemeForm { lfSurface = "стервозности" , lfLemma = "стервозность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -83221,14 +83207,20 @@ generatedCandidateForms =
       ]),
     ("шаг",
       [
-        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "шаг" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("шага",
+      [
+        LexemeForm { lfSurface = "шага" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("шаге",
+      [
+        LexemeForm { lfSurface = "шаге" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("шагом",
       [
-        LexemeForm { lfSurface = "шагом" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "шагом" , lfLemma = "шаг" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("шалаш",
       [

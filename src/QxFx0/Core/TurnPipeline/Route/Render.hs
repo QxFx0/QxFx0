@@ -559,12 +559,10 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                       , "learning_strategy=" <> renderLocalRecoveryStrategy strategy
                       ]
                  in Just
-                      ( RecoveryConatusGate
-                        -- Reuse RecoveryConatusGate tag for telemetry
-                        -- compactness; the evidence distinguishes the driver.
-                      , strategy
-                      , evidence
-                      )
+                       ( RecoveryLearningNeed
+                       , strategy
+                       , evidence
+                       )
             | tpShadowStatus tp == ShadowDiverged
                 && tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory ->
                 Just

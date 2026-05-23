@@ -5,7 +5,7 @@
 > The theoretical underpinning is in `docs/THEORY.md`.
 
 This document describes the QxFx0 runtime architecture: its layered structure,
-inter-layer dependency rules, and the planned dual-mode extension. It is the
+inter-layer dependency rules, and the landed dual-mode/adaptive contours. It is the
 map a new contributor should read **first**, after `README.md`.
 
 ## 1. Layered architecture
@@ -13,8 +13,8 @@ map a new contributor should read **first**, after `README.md`.
 QxFx0 is organized into eight horizontal layers. Dependencies flow **downward
 only**, with one exception (`Runtime.GF.Morphology` is accessible from upper
 layers as a pure utility). Cross-layer rules are mechanically enforced by
-`scripts/check_architecture.sh` (eleven numbered rules; rule [12] reserved
-for the future Left/Right adjunction split, see §5).
+`scripts/check_architecture.sh` (twelve numbered invariants, including the
+Holistic/Formal adjunction access rule).
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -51,12 +51,10 @@ for the future Left/Right adjunction split, see §5).
 - **Bridge** — persistent and external boundaries: SQLite pool, Datalog
   shadow, Agda witnesses. Must not import Core (Rule [4]).
 - **Self** — types and pure functions that describe *what makes this system
-  this system*. Importable by Core, Bridge, Runtime. Imports only `base`
-  (the Self subtree is dependency-light by design). Currently provides:
-  `Self.Types`, `Self.Blanket`, `Self.Invariants`, `Self.Conatus`
-  (Phase 1–2, commits `62d0338` / `a5fad49`); `Self.Adjunction`
-  (Phase 3, ADR-0008, commit `20d5611`); `Self.Field` (Phase 4,
-  ADR-0009, commit `036f70f`).
+  this system*. Importable by Core, Bridge, Runtime. Imports only lightweight
+  dependencies by design. Landed modules include `Self.Blanket`,
+  `Self.Conatus`, `Self.Adjunction`, `Self.Field`, `Self.Salience`,
+  `Self.Deliberation`, and `Self.Essence`.
 - **Core** — consciousness loop, turn pipeline (Prepare → Route → Render →
   Finalize), guard/recovery, identity. Must not import Bridge or Runtime
   (Rule [4]); reaches IO only via `PipelineIO` abstraction.
@@ -79,8 +77,8 @@ test-suites for CI-budget reasons:
 | `qxfx0-test-slow`        | Stress, paradigm coverage, long-running       |
 | `qxfx0-test`             | Full battery (incl. HTTP, runtime infra)      |
 
-A seventh suite (`qxfx0-test-lifeness`) is planned in Phase 7 for adversarial
-and indicator-property tests.
+Lifeness, structural calibration, and adaptive-contour properties are integrated
+into the existing suites rather than split into a separate cabal suite.
 
 ## 2. Dependency invariants (enforced)
 
@@ -105,12 +103,7 @@ and are required for `PROD_GO` verdict.
 | [10b] | HTTP perimeter invariants remain closed (loopback, auth, sanitization)   |
 | [10c] | Acceptance gates and docs reflect local-recovery architecture            |
 | [11]  | Exposed Core modules reachable from Runtime/TurnPipeline                 |
-
-Future:
-
-| ID    | Rule (planned)                                                           |
-|-------|--------------------------------------------------------------------------|
-| [12]  | Pipeline call sites must access `Holistic` / `Formal` only through `QxFx0.Self.Adjunction` (Phase 5; Phase 3 has shipped the algebra under `Self.Adjunction`, but the rule cannot be enforced until Phase 5 introduces concrete consumers) |
+| [12]  | Pipeline call sites access `Holistic` / `Formal` only through `QxFx0.Self.Adjunction` |
 
 ## 3. Turn pipeline
 
@@ -160,11 +153,12 @@ comparable conatus deltas.
 
 ## 5. Dual-mode (`Holistic ⊣ Formal`)
 
-> **Status (2026-05-17)**: the algebra is shipped (Phase 3, ADR-0008,
-> commit `20d5611`); the right-hemispheric `Field` it is parameterised
-> over is shipped (Phase 4, ADR-0009, commit `036f70f`). The salience
-> controller and the actual Holistic-aware re-shaping of the pipeline
-> remain planned (Phase 5, ADR-0010 not yet drafted).
+> **Status (2026-05-22)**: the algebra, right-hemispheric `Field`, salience
+> controller, deliberation framework, essence commitment guard, and
+> observability wiring have landed. The default runtime remains conservative;
+> P4 perspective cognition is implemented as a governed `PerspectiveOperator`
+> over existing state, with canonical lineage in `PerspectiveRegistry` rather
+> than an ungoverned raw store.
 
 The modernization roadmap (`docs/adr/0007-dual-mode-conatus.md`,
 ADR-0008, ADR-0009) introduces a formal split of the processing surface
@@ -172,19 +166,19 @@ into two adjoint modes:
 
 ```
                     ┌────────────────────────┐
-                    │  Salience Controller   │  src/QxFx0/Salience/*
+                    │  Salience Controller   │  src/QxFx0/Self/Salience.hs
                     │  (mode arbitration)    │
                     └───────┬────────┬───────┘
                             │        │
                   ┌─────────▼───┐  ┌─▼────────────┐
-                  │  Left mode  │  │  Right mode  │
+                  │ Formal mode │  │Holistic mode │
                   │  formal,    │  │  holistic,   │
                   │  narrow,    │  │  resonant,   │
                   │  spec-based │  │  field-based │
                   └─────────┬───┘  └─┬────────────┘
                             │        │
                     ┌───────▼────────▼───────┐
-                    │  Adjunction (unit /    │  src/QxFx0/Adjunction.hs
+                    │  Adjunction (unit /    │  src/QxFx0/Self/Adjunction.hs
                     │  counit / triangle)    │
                     └───────────┬────────────┘
                                 │
@@ -196,10 +190,9 @@ into two adjoint modes:
 ```
 
 - **Formal mode** (right adjoint, left-hemispheric) inherits the majority
-  of current pipeline modules (`Semantic.Syntax.*`, `Core.TurnRender.*`,
-  `Lexicon.Resolver`, etc.). Phase 5 will retag the existing routing /
-  R5 / render commit surfaces as `Formal a` values; current code still
-  treats them as plain product types.
+  of current pipeline modules (`Semantic.*`, `Core.TurnPipeline.*`,
+  `Render.*`, `Lexicon.*`, etc.). Pipeline call sites access the dual-mode
+  surface through `QxFx0.Self.Adjunction`.
 - **Holistic mode** (left adjoint, right-hemispheric) is shipped
   algebraically. The right-hemispheric observation summary is the
   five-component `Field` record in `QxFx0.Self.Field`:
@@ -208,11 +201,10 @@ into two adjoint modes:
   `FieldConfidence` (derived internal-coherence score),
   `Consolidation` (narrative-integration scalar over a window),
   `Counterfactual` (diversity of plausible alternative parses). Source
-  wiring (which runtime signal feeds which component) is Phase-5 work.
-- **Salience controller** (Phase 5, planned) will decide which mode leads
-  per turn, based on ambiguity / novelty / formal-failure / time-pressure
-  signals reflected through `Field`. Anti-correlation will be enforced:
-  the non-leading mode listens but does not emit.
+  wiring is present in the prepare/trace path.
+- **Salience controller** (Phase 5, landed) decides which mode leads per turn,
+  based on ambiguity / novelty / formal-failure / time-pressure signals
+  reflected through `Field`. Trace fields expose the dispatch reason.
 - **Adjunction** typing (Phase 3, ADR-0008, **shipped**) makes the
   relationship between the modes formal:
   `unit  : a → Formal (Holistic a)`,
@@ -232,12 +224,14 @@ src/QxFx0/
 ├── Core/              consciousness, turn pipeline, guard, identity, intuition, …
 ├── Internal/          FilePath utilities
 ├── Legal/             narrow legal-fact adapter (bounded stub)
+├── Learning/          knowledge tree, external-loop gates, calibration, dialogue development
+├── Evaluation/        model comparison and offline evaluation helpers
 ├── Lexicon/           paradigms, surface forms, generated entries (canonical sync from spec/sql/)
 ├── Policy/            scoring, thresholds, contracts
 ├── Render/            Dialogue, Semantic, Text
 ├── Resources/         data file paths, readiness assessment, morphology loading
 ├── Runtime/           sessions, gates, health, wiring, GF/PGF, paths
-├── Self/              SelfBlanket, Conatus, Adjunction, Field (Phases 1–4)
+├── Self/              SelfBlanket, Conatus, Adjunction, Field, Salience, Deliberation, Essence, Perspective
 ├── Semantic/          parsing, meaning atoms/assembly/decomposition, embeddings
 └── Types/             pure data definitions (decision, domain, state, thresholds, …)
 ```
@@ -248,15 +242,15 @@ internal modules, Types as graph sink with fan-in 79).
 
 ## 7. Build and release contour
 
-- Library: `lib:qxfx0` — single library exposing ~100 modules.
-- Executables: `qxfx0` (interactive CLI), `qxfx0-http` (HTTP sidecar).
-- Test suites: six (see §1.2); seventh planned (Phase 7).
+- Library: `lib:qxfx0` — single library exposing the runtime modules.
+- Executable: `qxfx0-main` — interactive CLI, one-shot mode, and HTTP sidecar via `--serve-http`.
+- Test suites: six (see §1.2); lifeness/adaptive properties live inside them.
 - Release gates: two-tier contract via `scripts/ci_gate_contract.sh`:
   - **Core profile** (16 GB runner): build, tests, architecture, GF quality,
     artifacts, lexicon, degraded-local smoke. Required for `PROD_GO`.
-  - **Extended profile** (≥32 GB runner): full scientific contour including
-    `Core.GameTheory`, `Core.Spectral`, `Core.Bayesian` (these are in
-    `other-modules`, opt-in).
+  - **Extended profile** (≥32 GB runner): full scientific and learning contour
+    including spectral/Bayesian/game-theory modules, training cycle, and model
+    comparison helpers.
 - Reproducibility: `flake.nix`, `cabal.project.freeze`, GHC 9.6.6 pinned.
 - Documentation source-of-truth: `docs/CI_PRODUCTION_PROFILE.md`,
   `docs/release_readiness.md`, `docs/runtime_invariants.md`.

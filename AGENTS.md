@@ -3,6 +3,8 @@
 - Decision and response generation are local-first and deterministic.
 - Runtime recovery is represented via local recovery trace fields (`trcLocalRecoveryPolicy`, `trcRecoveryCause`, `trcRecoveryStrategy`, `trcRecoveryEvidence`).
 - Verification/release gates must keep replay envelope fields aligned with runtime contracts.
+- ADR-0032 dialogue-development contours are live but conservative: outcome learning, speech policy, and claim-stance memory are separate; finalize/precommit persists updates; route reads speech policy; weak acknowledgement phrases are observational and must not trigger strong mutation without a shared `AdaptiveMutationRecord` in the bounded `ssAdaptiveMutationLog`.
+- P4 perspective cognition is `OpinionCore / PerspectiveOperator`, not a raw store: `PerspectiveRegistry` is the canonical versioned lineage source, finalize/precommit emits `MutPerspective`, and replay/render may consume only `PerspectiveProjection`.
 - The `QxFx0.Self.*` subtree is the pure self-layer of the dual-mode runtime. Landed phases:
   - **Phases 1–2** — `SelfBlanket` invariants and the `Conatus` functional (commits `62d0338`, `a5fad49`).
   - **Phase 3** — `Holistic ⊣ Formal` adjunction (ADR-0008, commit `20d5611`).

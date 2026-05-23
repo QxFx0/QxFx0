@@ -37,6 +37,7 @@ import QxFx0.Types.Observability
   , emptyKernelPulse
   , emptyMeaningGraph
   )
+import QxFx0.Types.SemanticConfig (SemanticConfig, defaultSemanticConfig)
 import QxFx0.Types.Vec (zeroVec)
 
 data SemanticState = SemanticState
@@ -50,6 +51,7 @@ data SemanticState = SemanticState
   , semSemanticAnchor :: !(Maybe SemanticAnchor)
   , semLastTurnDecision :: !(Maybe TurnDecision)
   , semIntuitConfidence :: !Double
+  , semConfig :: !SemanticConfig
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -65,6 +67,7 @@ instance ToJSON SemanticState where
     , "semanticAnchor" .= semSemanticAnchor sem
     , "lastTurnDecision" .= semLastTurnDecision sem
     , "intuitConfidence" .= semIntuitConfidence sem
+    , "semanticConfig" .= semConfig sem
     ]
 
 instance FromJSON SemanticState where
@@ -79,6 +82,7 @@ instance FromJSON SemanticState where
     <*> o .:? "semanticAnchor" .!= Nothing
     <*> o .:? "lastTurnDecision" .!= Nothing
     <*> o .: "intuitConfidence"
+    <*> o .:? "semanticConfig" .!= defaultSemanticConfig
 
 emptySemanticState :: SemanticState
 emptySemanticState = SemanticState
@@ -92,4 +96,5 @@ emptySemanticState = SemanticState
   , semSemanticAnchor = Nothing
   , semLastTurnDecision = Nothing
   , semIntuitConfidence = 0.0
+  , semConfig = defaultSemanticConfig
   }

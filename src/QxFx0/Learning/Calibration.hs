@@ -38,8 +38,12 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Self.Salience (SalienceWeights)
-import QxFx0.Self.Field (FieldHeuristics)
+import QxFx0.Self.Salience
+  ( SalienceWeights(..)
+  )
+import QxFx0.Self.Field
+  ( FieldHeuristics(..)
+  )
 
 -- | Monotonically increasing calibration version number.
 newtype CalibrationId = CalibrationId { unCalibrationId :: Int }
@@ -148,7 +152,48 @@ verifyProposal blocked proposal =
 -- For rules / concepts: succeed trivially in this stub; real trace
 -- replay is Phase-7 infrastructure.
 simulateProposal :: CalibrationProposal -> Either Text ()
-simulateProposal _ = Right () -- WP4 stub: deterministic pass
+simulateProposal proposal =
+  case proposal of
+    ProposalSalienceWeights weights -> do
+      let coeffs =
+            [ weightResonance weights
+            , weightAtmosphere weights
+            , weightConsolidation weights
+            , weightCounterfactual weights
+            , weightFieldConfidence weights
+            ]
+      if any (< 0.0) coeffs || any (> 2.0) coeffs
+        then Left "salience_weights_out_of_range"
+        else if conatusGateThreshold weights < (-1.0) || conatusGateThreshold weights > 1.0
+          then Left "conatus_gate_threshold_out_of_range"
+          else if verdictThreshold weights < 0.0 || verdictThreshold weights > 0.5
+            then Left "verdict_threshold_out_of_range"
+            else if sigmoidTemperature weights <= 0.0
+              then Left "sigmoid_temperature_non_positive"
+              else Right ()
+    ProposalFieldHeuristics heuristics -> do
+      if fhNarrativeWindowSize heuristics <= 0
+        then Left "field_window_non_positive"
+        else if fhEntropyEpsilon heuristics <= 0.0
+          then Left "field_entropy_epsilon_non_positive"
+          else
+            let boundedCoeffs =
+                  [ fhDefaultNarrativeRate heuristics
+                  , fhTopicStabilityBoost heuristics
+                  , fhHolisticStreakBoostRate heuristics
+                  , fhHolisticStreakBoostCap heuristics
+                  , fhLegitimacyMidpoint heuristics
+                  , fhLegitimacyBonusScale heuristics
+                  ]
+            in if any (< 0.0) boundedCoeffs || any (> 1.0) boundedCoeffs
+                 then Left "field_heuristics_out_of_range"
+                 else Right ()
+    ProposalRule txt
+      | T.length (T.strip txt) < 8 -> Left "rule_too_short"
+      | otherwise -> Right ()
+    ProposalConcept txt
+      | T.length (T.strip txt) < 3 -> Left "concept_too_short"
+      | otherwise -> Right ()
 
 -- | Accept a verified & simulated proposal, producing the updated
 -- entry, next version ID, and the human-readable tag to persist.

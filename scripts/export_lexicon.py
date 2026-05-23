@@ -752,6 +752,11 @@ CYRILLIC_TO_LATIN = {
     "я": "ya",
 }
 
+GF_FUN_NAME_OVERRIDES = {
+    # Preserve the stable GF function while the SQL source carries the repaired Russian surface.
+    ("шаг", "noun"): "step",
+}
+
 
 def transliterate(text: str) -> str:
     out: List[str] = []
@@ -775,7 +780,7 @@ def make_fun_name(lemma: str, pos: str, used: Dict[str, int]) -> str:
         "adjective": "A",
         "adv": "Adv",
     }.get(pos, "X")
-    base = transliterate(lemma)
+    base = GF_FUN_NAME_OVERRIDES.get((lemma, pos), transliterate(lemma))
     base = re.sub(r"_+", "_", base).strip("_")
     if not base:
         base = "lexeme"
@@ -858,17 +863,18 @@ def render_gf_syntax_files() -> Tuple[str, str]:
         "    Move ;",
         "    NP ;",
         "    VP ;",
+        "    GfNumber ;",
         "    Modifier ;",
         "    Relation ;",
         "    Mechanism ;",
         "",
-        "  param",
-        "    Number = NumSg | NumPl ;",
-        "",
         "  fun",
+        "    NumSg : GfNumber ;",
+        "    NumPl : GfNumber ;",
+        "",
         "    MkNP : Lexeme -> NP ;",
         "",
-        "    ActMaintain : Number -> Lexeme -> VP ;",
+        "    ActMaintain : GfNumber -> Lexeme -> VP ;",
         "    ActDefine   : Lexeme -> VP ;",
         "",
         "    ModFirst    : Modifier ;",
@@ -914,15 +920,18 @@ def render_gf_syntax_files() -> Tuple[str, str]:
         "    Move = { s : Str } ;",
         "    NP   = { nom : Str ; gen : Str ; prep : Str ; acc : Str ; ins : Str } ;",
         "    VP   = { s : Str } ;",
+        "    GfNumber = { s : Str } ;",
         "    Modifier = { s : Str } ;",
         "    Relation = { s : Str } ;",
         "    Mechanism = { s : Str } ;",
         "",
         "  lin",
+        '    NumSg = { s = "удержу" } ;',
+        '    NumPl = { s = "удержим" } ;',
+        "",
         "    MkNP lex = { nom = lex.nom ; gen = lex.gen ; prep = lex.prep ; acc = lex.acc ; ins = lex.ins } ;",
         "",
-        '    ActMaintain NumSg obj = { s = "удержу " ++ obj.acc } ;',
-        '    ActMaintain NumPl obj = { s = "удержим " ++ obj.acc } ;',
+        '    ActMaintain num obj = { s = num.s ++ " " ++ obj.acc } ;',
         '    ActDefine obj   = { s = "определю " ++ obj.acc } ;',
         "",
         '    ModFirst    = { s = "сначала" } ;',

@@ -3399,7 +3399,6 @@ data Lemma : Set where
   stena_N : Lemma
   stend_N : Lemma
   stepen_N : Lemma
-  step_N : Lemma
   stervoznost_N : Lemma
   stiraemost_N : Lemma
   stihiya_N : Lemma
@@ -3671,6 +3670,7 @@ data Lemma : Set where
   chuvstvitelnost_N : Lemma
   chulan_N : Lemma
   chulok_N : Lemma
+  step_N : Lemma
   shalash_N : Lemma
   shapka_N : Lemma
   shar_N : Lemma
@@ -7157,7 +7157,6 @@ lemmaNominative steklovidnost_N = "стекловидность"
 lemmaNominative stena_N = "стена"
 lemmaNominative stend_N = "стенд"
 lemmaNominative stepen_N = "степень"
-lemmaNominative step_N = "степь"
 lemmaNominative stervoznost_N = "стервозность"
 lemmaNominative stiraemost_N = "стираемость"
 lemmaNominative stihiya_N = "стихия"
@@ -7429,6 +7428,7 @@ lemmaNominative chlen_N = "член"
 lemmaNominative chuvstvitelnost_N = "чувствительность"
 lemmaNominative chulan_N = "чулан"
 lemmaNominative chulok_N = "чулок"
+lemmaNominative step_N = "шаг"
 lemmaNominative shalash_N = "шалаш"
 lemmaNominative shapka_N = "шапка"
 lemmaNominative shar_N = "шар"
@@ -10915,7 +10915,6 @@ lemmaGenitive steklovidnost_N = "стекловидности"
 lemmaGenitive stena_N = "стены"
 lemmaGenitive stend_N = "стенда"
 lemmaGenitive stepen_N = "степени"
-lemmaGenitive step_N = "степи"
 lemmaGenitive stervoznost_N = "стервозности"
 lemmaGenitive stiraemost_N = "стираемости"
 lemmaGenitive stihiya_N = "стихии"
@@ -11187,6 +11186,7 @@ lemmaGenitive chlen_N = "члена"
 lemmaGenitive chuvstvitelnost_N = "чувствительности"
 lemmaGenitive chulan_N = "чулана"
 lemmaGenitive chulok_N = "чулка"
+lemmaGenitive step_N = "шага"
 lemmaGenitive shalash_N = "шалаша"
 lemmaGenitive shapka_N = "шапки"
 lemmaGenitive shar_N = "шара"
@@ -14673,7 +14673,6 @@ lemmaPrepositional steklovidnost_N = "стекловидности"
 lemmaPrepositional stena_N = "стене"
 lemmaPrepositional stend_N = "стенде"
 lemmaPrepositional stepen_N = "степени"
-lemmaPrepositional step_N = "степи"
 lemmaPrepositional stervoznost_N = "стервозности"
 lemmaPrepositional stiraemost_N = "стираемости"
 lemmaPrepositional stihiya_N = "стихии"
@@ -14945,6 +14944,7 @@ lemmaPrepositional chlen_N = "члене"
 lemmaPrepositional chuvstvitelnost_N = "чувствительности"
 lemmaPrepositional chulan_N = "чулане"
 lemmaPrepositional chulok_N = "чулке"
+lemmaPrepositional step_N = "шаге"
 lemmaPrepositional shalash_N = "шалаше"
 lemmaPrepositional shapka_N = "шапке"
 lemmaPrepositional shar_N = "шаре"

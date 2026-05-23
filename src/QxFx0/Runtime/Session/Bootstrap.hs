@@ -45,10 +45,11 @@ import QxFx0.Runtime.Gate
   , renderBootstrapGateFailure
   )
 import QxFx0.Runtime.Health (checkHealth)
-import QxFx0.Runtime.Mode (resolveRuntimeMode)
+import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
 import QxFx0.Runtime.Paths (resolveDbPath)
 import QxFx0.Runtime.Session.Types
 import QxFx0.Semantic.SemanticScene (defaultScenes)
+import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.State
   ( SystemState(..)
   , dsActiveScene
@@ -135,10 +136,18 @@ bootstrapSession quiet sessionId = do
       Right LoadStateMissing ->
         pure (FreshOrigin, freshState)
       Right (LoadStateCorrupt diagnostics) -> do
-        unless quiet $
-          hPutStrLn stderr $
-            "[warn] persisted state is corrupt, entering recovery bootstrap: " <> T.unpack (renderPersistenceDiagnostics diagnostics)
-        pure (RecoveredCorruptOrigin, freshState)
+        let rendered = renderPersistenceDiagnostics diagnostics
+        case runtimeMode of
+          StrictRuntime ->
+            throwQxFx0 (RuntimeInitError ("Persisted state is corrupt: " <> rendered))
+          DegradedRuntime -> do
+            unless quiet $
+              hPutStrLn stderr $
+                "[warn] persisted state is corrupt, entering non-authoritative recovery bootstrap: " <> T.unpack rendered
+            pure
+              ( RecoveredCorruptOrigin
+              , freshState { ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap rendered) }
+              )
       Right (LoadStateRestored ss) ->
         if ssTurnCount ss == 0 && null (ssHistory ss)
           then pure (FreshOrigin, freshState)

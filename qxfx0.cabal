@@ -5,10 +5,10 @@ synopsis:      QxFx0 Flagship Philosophical Dialogue Thinking System
 description:   Deterministic Russian philosophical dialogue runtime: typed
                CanonicalMoveFamily routing via Semantic.Logic and a guarded
                cascade (intuition thresholds, meaning graph, consciousness),
-               GF-constrained surface generation, and gate-driven release.
-               Experimental modules (game-theory LP, spectral clustering,
-               discrete belief update) compile as other-modules for the
-               extended scientific contour only.
+               GF-constrained surface generation, bounded adaptive learning
+               contours, and gate-driven release. Experimental modules
+               (game-theory LP, spectral clustering, discrete belief update)
+               compile as other-modules for the extended scientific contour.
 category:      AI
 author:        QxFx Research
 maintainer:    QxFx Research <qxfx@research.example>
@@ -66,7 +66,11 @@ library
     QxFx0.Types.Readiness
     QxFx0.Types.Recovery
     QxFx0.Types.State
+    QxFx0.Types.State.AdaptiveMutation
     QxFx0.Types.State.Discourse
+    QxFx0.Types.State.DialogueDevelopment
+    QxFx0.Types.State.Perspective
+    QxFx0.Types.State.Governance
     QxFx0.Types.Thresholds
     QxFx0.Types.Orbital
     QxFx0.Types.IdentityGuard
@@ -86,12 +90,14 @@ library
     QxFx0.Self.Salience
     QxFx0.Self.Deliberation
     QxFx0.Self.Essence
+    QxFx0.Self.Perspective
     QxFx0.Learning.Need
     QxFx0.Learning.Tool
     QxFx0.Learning.Calibration
     QxFx0.Learning.Guardrails
     QxFx0.Learning.KnowledgeTree
     QxFx0.Learning.Signal
+    QxFx0.Learning.DialogueDevelopment
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -112,6 +118,7 @@ library
     QxFx0.Core.MeaningGraph
     QxFx0.Core.DreamDynamics
     QxFx0.Core.TopicTransition
+    QxFx0.Governance.Replay
 
     QxFx0.Core.BackgroundProcess
     QxFx0.Runtime
@@ -174,12 +181,16 @@ library
     QxFx0.Semantic.DialogMeaning
     QxFx0.Semantic.Input.Parse
     QxFx0.Semantic.Lexicon.RuntimeParadigms
-    QxFx0.Semantic.Embedding
-    QxFx0.Semantic.Morphology
-    QxFx0.Semantic.Proposition
-    QxFx0.Semantic.SemanticScene
-    QxFx0.Semantic.SemanticInput
-     QxFx0.Render.Dialogue
+     QxFx0.Semantic.Embedding
+     QxFx0.Semantic.Morphology
+     QxFx0.Semantic.Proposition
+     QxFx0.Semantic.Sense
+     QxFx0.Semantic.Sense.Extract
+     QxFx0.Semantic.Sense.Adjacency
+     QxFx0.Semantic.SemanticScene
+     QxFx0.Semantic.SemanticInput
+     QxFx0.Core.SensePlan
+      QxFx0.Render.Dialogue
      QxFx0.Render.Semantic
      QxFx0.Render.Text
       QxFx0.Core.TurnPipeline.Route.Render
@@ -212,6 +223,7 @@ library
     QxFx0.Types.State.Dialogue
     QxFx0.Types.State.Semantic
     QxFx0.Types.State.System
+    QxFx0.Self.Perspective.Reduce
     QxFx0.Types.Text
     QxFx0.Types.Thresholds.Types
     QxFx0.Types.Thresholds.Common
@@ -390,6 +402,7 @@ common test-common
     Test.Suite.SelfDeliberation
     Test.Suite.SelfEssence
     Test.Suite.SelfEssenceCommit
+    Test.Suite.P5Governance
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d
     Test.Suite.LearningLoop

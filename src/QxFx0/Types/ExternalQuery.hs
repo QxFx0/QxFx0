@@ -45,6 +45,10 @@ data ExternalQueryError
     -- ^ In-application deadline exceeded.
   | EqeInvalidResponse !Text
     -- ^ Response body is not valid JSON / schema.
+  | EqeFallback !TransportFallbackReason
+    -- ^ The runtime intentionally fell back instead of attempting an
+    --   authoritative upstream query. This is non-authoritative and
+    --   must not be treated as learning success.
   | EqeEmptyResponse
     -- ^ Response body is empty after trimming.
   deriving stock (Eq, Show, Generic)
@@ -131,4 +135,5 @@ renderExternalQueryError err =
     EqeServerError t        -> T.concat ["server_error:", t]
     EqeTimeout t            -> T.concat ["timeout:", t]
     EqeInvalidResponse t      -> T.concat ["invalid_response:", t]
+    EqeFallback reason      -> T.concat ["fallback:", renderFallbackReason reason]
     EqeEmptyResponse        -> "empty_response"

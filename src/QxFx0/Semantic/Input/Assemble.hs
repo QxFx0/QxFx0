@@ -25,7 +25,7 @@ import QxFx0.Semantic.Input.Lexicon
   , isGenerativeRequestLemma
   , isIdentityLemma
   , isMentalNoun
-  , semanticClassesForToken
+  , semanticClassesForLemmaAndPos
   , isWorldNoun
   )
 import QxFx0.Semantic.Input.Model
@@ -116,7 +116,7 @@ classifyTokenMorph backend token = do
   let lemma = mtLemma morphToken
       pos = mapInputPos (mtPOS morphToken)
       morphFeatures = guessMorphFeatures token <> morphFeaturesFromToken morphToken
-      semanticClasses = semanticClassesForToken token
+      semanticClasses = semanticClassesForLemmaAndPos token lemma pos
       discourseFunctions = discourseFunctionsForToken token
       confidence
         | pos == PosUnknown = 0.35

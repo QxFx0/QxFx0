@@ -30,6 +30,7 @@ data LocalRecoveryCause
   | RecoveryRenderBlocked
   | RecoveryUnknownTopic
   | RecoveryRuntimeDegraded
+  | RecoveryLearningNeed
   | RecoveryConatusGate
     -- ^ Phase 2.5 (M2d): the runtime Conatus energy dropped
     --   below 'conatusGateThreshold' indicating structural risk.
@@ -91,6 +92,7 @@ renderLocalRecoveryCause RecoveryShadowDivergence = "shadow_divergence"
 renderLocalRecoveryCause RecoveryRenderBlocked = "render_blocked"
 renderLocalRecoveryCause RecoveryUnknownTopic = "unknown_topic"
 renderLocalRecoveryCause RecoveryRuntimeDegraded = "runtime_degraded"
+renderLocalRecoveryCause RecoveryLearningNeed = "learning_need"
 renderLocalRecoveryCause RecoveryConatusGate = "conatus_gate"
 
 renderLocalRecoveryStrategy :: LocalRecoveryStrategy -> Text

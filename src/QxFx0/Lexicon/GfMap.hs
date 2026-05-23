@@ -6,6 +6,7 @@ module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , lookupTopicGfLexemeId
   , topicToGfLexemeId
   , lookupGfLexemeForms
   , gfMapLoadStatus
@@ -48,17 +49,20 @@ data GfMapLoadStatus
   deriving stock (Eq, Show)
 
 defaultGfLexemeId :: Text
-defaultGfLexemeId = "smysl_N"
+defaultGfLexemeId = "ponyatie_N"
 
-topicToGfLexemeId :: Text -> Text
-topicToGfLexemeId rawTopic =
+lookupTopicGfLexemeId :: Text -> Maybe Text
+lookupTopicGfLexemeId rawTopic =
   let normalized = normalizeText rawTopic
       candidates = normalized : maybeToList (stripTopicMarker normalized)
       lookupFirst [] = Nothing
       lookupFirst (x:xs) = M.lookup x (gmdFormToFun gfMapData) <|> lookupFirst xs
-  in fromMaybe defaultGfLexemeId (lookupFirst candidates)
+  in lookupFirst candidates
   where
     maybeToList = maybe [] pure
+
+topicToGfLexemeId :: Text -> Text
+topicToGfLexemeId = fromMaybe defaultGfLexemeId . lookupTopicGfLexemeId
 
 lookupGfLexemeForms :: Text -> Maybe GfLexemeForms
 lookupGfLexemeForms funId = M.lookup funId (gmdFunToForms gfMapData)

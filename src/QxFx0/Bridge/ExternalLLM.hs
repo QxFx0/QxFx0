@@ -227,18 +227,18 @@ isTruthy raw =
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig
 defaultExternalQueryConfig = ExternalQueryConfig
-  { eqcTransportMode  = "mock"
+  { eqcTransportMode  = "disabled"
   , eqcApiKey         = Nothing
   , eqcModel          = "mistral-small-latest"
   , eqcEndpoint       = "https://api.mistral.ai/v1/chat/completions"
   , eqcTimeoutMs      = 30000
-  , eqcFallbackReason = Just TfrExplicitMock
+  , eqcFallbackReason = Just TfrEnvNotSet
   }
 
 -- | Build transport from environment.
 --
 -- Env vars:
---   QXFX0_LLM_TRANSPORT=mock|mistral|fireworks  (default: mock)
+--   QXFX0_LLM_TRANSPORT=mock|mistral|fireworks  (default: disabled/non-authoritative)
 --   QXFX0_MISTRAL_API_KEY                       (required for mistral)
 --   QXFX0_MISTRAL_MODEL                         (default: "mistral-small-latest")
 --   QXFX0_MISTRAL_ENDPOINT                      (default: "https://api.mistral.ai/v1/chat/completions")
@@ -261,8 +261,12 @@ buildTransportFromEnvWithManager mgr = do
 resolveTransportConfigFromEnv :: IO ExternalQueryConfig
 resolveTransportConfigFromEnv = do
   mTransport <- lookupEnv "QXFX0_LLM_TRANSPORT"
-  let mode = fromMaybe "mock" mTransport
+  let mode = fromMaybe "disabled" mTransport
   case mode of
+    "mock" -> pure $ defaultExternalQueryConfig
+      { eqcTransportMode = "mock"
+      , eqcFallbackReason = Just TfrExplicitMock
+      }
     "mistral" -> do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
       overrideContext <- readOverrideContext
@@ -331,7 +335,7 @@ resolveTransportConfigFromEnv = do
                 }
     _ -> pure $ defaultExternalQueryConfig
            { eqcTransportMode = T.pack mode
-           , eqcFallbackReason = if mode == "mock" then Just TfrExplicitMock else Just TfrEnvNotSet
+           , eqcFallbackReason = Just TfrEnvNotSet
            }
 
 data OverrideContext = OverrideContext
@@ -487,7 +491,10 @@ queryExternalTool
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalTool transport tool need query =
   case transport of
-    MockTransport table _     -> mockQuery table tool need query
+    MockTransport table mCfg  ->
+      case mCfg >>= eqcFallbackReason of
+        Just reason | reason /= TfrExplicitMock -> pure (Left (EqeFallback reason))
+        _ -> mockQuery table tool need query
     MistralTransport mgr cfg  -> mistralQuery mgr cfg tool need query
     FireworksTransport mgr cfg -> fireworksQuery mgr cfg tool need query
 

@@ -135,12 +135,18 @@ bayesianBeliefNudge :: SemanticConfig -> Text -> Double
 bayesianBeliefNudge cfg raw =
   clamp01 (maxBelief (bayesianUpdateFromText cfg initialBeliefs raw) * 0.08)
 
-checkIntuitionWithInput :: Text -> Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
-checkIntuitionWithInput raw resonance tension turnNumber state =
-  let nudge = bayesianBeliefNudge defaultSemanticConfig raw
+-- Contract status: bounded causal contour. The experimental Bayesian
+-- module remains narrow, but this nudge is a live capped input to
+-- intuition flash detection rather than a decorative trace field.
+checkIntuitionWithInputConfig :: SemanticConfig -> Text -> Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
+checkIntuitionWithInputConfig cfg raw resonance tension turnNumber state =
+  let nudge = bayesianBeliefNudge cfg raw
       adjustedResonance = clamp01 (resonance + nudge * 0.25)
       adjustedTension = clamp01 (tension + nudge * 0.15)
   in checkIntuition adjustedResonance adjustedTension turnNumber state
+
+checkIntuitionWithInput :: Text -> Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
+checkIntuitionWithInput = checkIntuitionWithInputConfig defaultSemanticConfig
 
 checkIntuition :: Double -> Double -> Int -> IntuitiveState -> (Maybe IntuitiveFlash, IntuitiveState)
 checkIntuition resonance tension turnNumber state =
@@ -270,8 +276,9 @@ checkIntuitionWithSalience salience resonance tension turnNumber state =
 -- | Salience-aware variant of 'checkIntuitionWithInput'.
 checkIntuitionWithInputAndSalience
   :: Salience
+  -> SemanticConfig
   -> Text -> Double -> Double -> Int -> IntuitiveState
   -> (Maybe IntuitiveFlash, IntuitiveState)
-checkIntuitionWithInputAndSalience salience raw resonance tension turnNumber state =
-  let (mFlash, state') = checkIntuitionWithInput raw resonance tension turnNumber state
+checkIntuitionWithInputAndSalience salience cfg raw resonance tension turnNumber state =
+  let (mFlash, state') = checkIntuitionWithInputConfig cfg raw resonance tension turnNumber state
   in (fmap (applySalienceToFlash salience) mFlash, state')

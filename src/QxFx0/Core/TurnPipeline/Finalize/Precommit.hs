@@ -43,6 +43,8 @@ import QxFx0.ExceptionPolicy
   ( QxFx0Exception(PersistenceError)
   , throwQxFx0
   )
+import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
+import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
@@ -128,7 +130,11 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
       -- when a request strategy triggered TurnReqExternalQuery).
       nextSystemState1 = applyExternalLearning nextSystemState0 (taExternalQueryResult turnArtifacts)
       -- Phase 9: apply autonomous exploratory learning-loop result.
-      nextSystemState = applyExternalLearning nextSystemState1 (taExploratoryQueryResult turnArtifacts)
+      nextSystemState2 = applyExternalLearning nextSystemState1 (taExploratoryQueryResult turnArtifacts)
+      -- ADR-0032: record dialogue outcome, speech-policy pressure, and
+      -- belief stance after base/external learning state has settled.
+      nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
+      nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
       projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)

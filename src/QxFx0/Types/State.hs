@@ -2,11 +2,17 @@
 module QxFx0.Types.State
   ( module QxFx0.Types.State.Identity
   , module QxFx0.Types.State.Dialogue
+  , module QxFx0.Types.State.AdaptiveMutation
+  , module QxFx0.Types.State.DialogueDevelopment
+  , module QxFx0.Types.State.Perspective
   , module QxFx0.Types.State.Semantic
   , module QxFx0.Types.State.System
   ) where
 
 import QxFx0.Types.State.Dialogue
+import QxFx0.Types.State.AdaptiveMutation
+import QxFx0.Types.State.DialogueDevelopment
 import QxFx0.Types.State.Identity
+import QxFx0.Types.State.Perspective
 import QxFx0.Types.State.Semantic
 import QxFx0.Types.State.System

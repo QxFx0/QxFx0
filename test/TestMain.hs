@@ -22,6 +22,7 @@ import Test.Suite.SelfSalience (selfSalienceTests)
 import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.SelfEssence (selfEssenceTests)
 import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
+import Test.Suite.P5Governance (p5GovernanceTests)
 import Test.Suite.LongSessionCorpus (longSessionCorpusTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.VecProperties (vecPropertiesTests)
@@ -34,7 +35,7 @@ import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

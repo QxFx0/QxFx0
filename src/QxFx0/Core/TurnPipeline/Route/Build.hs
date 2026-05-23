@@ -10,6 +10,7 @@ module QxFx0.Core.TurnPipeline.Route.Build
 import QxFx0.Core.Intuition (flashThreshold)
 import QxFx0.Core.Observability (recordThresholdProbe)
 import QxFx0.Core.Legitimacy (legitimacyRecoveryBonus)
+import QxFx0.Core.SensePlan (constrainFamilyBySense)
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , ShadowPolicy
@@ -45,6 +46,7 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnPlan(..)
   , TurnSignals(..)
   )
+import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily)
@@ -90,15 +92,16 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
                  then (shadowResolution0 { srGateTriggered = False }, True, vetoCount, windowStart)
                  else (shadowResolution0, False, vetoCount + 1, windowStart)
           else (shadowResolution0, False, vetoCount, windowStart)
-      family = srEffectiveFamily shadowResolution
+      family0 = srEffectiveFamily shadowResolution
+      family = constrainFamilyBySense family0 (tiSenseVector ti)
       recoveryBonus =
         legitimacyRecoveryBonus
           (scShadowStatus sc == ShadowMatch && not (scShadowHasDivergence sc))
           (rdStrategyFamily rd == Just family)
       newEgo = rdNewEgo rd
       renderStrategy = rdRenderStrategy rd
-      renderStyle = rdRenderStyle rd
-      rmpBase = buildRMP family (tiFrame ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
+      renderStyle = adjustRenderStyleForSpeechPolicy (ssSpeechPolicyState ss) (rdRenderStyle rd)
+      rmpBase = buildRMP family (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
       rmp0 = applyRenderStrategy family renderStrategy rmpBase
       rcp0 = (buildRCP family rmp0) {rcpStyle = renderStyle}
       rmp1 = modulateRMPWithNarrative (tsNarrativeFragment ts) rmp0

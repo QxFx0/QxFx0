@@ -4,7 +4,9 @@ module Test.Suite.LearningLoop
   ( learningLoopTests
   ) where
 
-import Data.Aeson (encode, decode)
+import Data.Aeson (Value(..), decode, encode, toJSON)
+import qualified Data.Aeson.KeyMap as KM
+import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.HUnit
@@ -51,10 +53,59 @@ import QxFx0.Learning.Need
   )
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Field (emptyField, Field(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
+import QxFx0.Self.Perspective
+  ( applyPerspectiveDecision
+  , assemblePerspectiveInput
+  , buildActivePerspectiveProjections
+  , buildPerspectiveProjection
+  , decidePerspectivePromotion
+  , evaluatePerspectiveAdmissibility
+  , opinionCore
+  )
 import QxFx0.Core.TurnPipeline.Route.Render (isTopicNoisyOrAmbiguous)
-import QxFx0.Types.State (SystemState(..), emptySystemState, ssKnowledgeTree, ssMorphology)
-import QxFx0.Semantic.Proposition (PropositionType(..))
-import qualified Data.Map.Strict as M
+import QxFx0.Types.State
+  ( AdaptiveDecision(..)
+  , EvidenceStrength(..)
+  , AdaptiveMutationKind(..)
+  , AdaptiveMutationRecord(..)
+  , BeliefPolarity(..)
+  , BeliefRecord(..)
+  , BeliefStore(..)
+  , AdaptiveDecisionRecord(..)
+  , DialogueOutcomeKind(..)
+  , DialogueOutcomeLearningState(..)
+  , DialogueOutcomeSample(..)
+  , SpeechPolicyState(..)
+  , SystemState(..)
+  , emptyBeliefStore
+  , emptyDialogueOutcomeLearningState
+  , emptySpeechPolicyState
+  , emptySystemState
+  , appendAdaptiveMutationRecords
+  , ssKnowledgeTree
+  , ssMorphology
+  , ConatusSlice(..)
+  , CounterargumentRef(..)
+  , EndorsedPerspective(..)
+  , EvidenceRef(..)
+  , IdentitySlice(..)
+  , NormativeProfile(..)
+  , NormativeProfileId(..)
+  , PerspectiveAdmissibility(..)
+  , PerspectiveCandidate(..)
+  , PerspectiveInputBundle(..)
+  , PerspectiveProjection(..)
+  , PerspectivePromotionDecision(..)
+  , PerspectiveRegistry(..)
+  , PerspectiveRevisionRecord(..)
+  , PerspectiveScope(..)
+  , PerspectiveStatus(..)
+  , PerspectiveThread(..)
+  , PerspectiveVersionId(..)
+  , ClaimStanceRef(..)
+  , defaultNormativeProfile
+  , defaultPerspectiveRegistry
+  )
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
   , emptyLearningTelemetry
@@ -100,8 +151,6 @@ import QxFx0.Learning.Signal
   , SignalPipelineConfig(..)
   , defaultSignalPipelineConfig
   , applyCalibrationGated
-  , computeCalibrationSignal
-  , emptySignalComponents
   )
 
 learningLoopTests :: [Test]
@@ -121,6 +170,7 @@ learningLoopTests =
   -- Phase 8 vertical slice tests
   , testMockTransportSuccess
   , testMockTransportFailure
+  , testConfigFallbackDoesNotMasqueradeAsSuccess
   , testValidatorRejectsJunk
   , testParserValidSchema
   , testParserRejectsMalformed
@@ -146,6 +196,18 @@ learningLoopTests =
   , testRealPathMiniEvalScenario5
   -- WP1-WP5 cumulative learning tests
   , testSystemStatePersistenceRoundTrip
+  , testOldSystemStateDialogueDevelopmentDefaults
+  , testAdaptiveMutationLogIsBounded
+  , testPerspectiveAdmissibilityRejectsInsufficientEvidence
+  , testPerspectivePromotionRequiresStabilityAndStrongEvidence
+  , testPerspectiveRegistryLineageIsCanonicalAndBounded
+  , testPerspectiveSuspendClearsActiveProjection
+  , testPerspectiveRegistryActiveCapKeepsLineageThreads
+  , testPerspectiveRollbackIsReachableAndRestoresPriorProjection
+  , testPerspectiveActivationScopeSelectsMatchingNormativeProfile
+  , testPerspectiveRegistryRejectsDuplicateThreads
+  , testPerspectiveNormativeProfileVersionAffectsCandidate
+  , testPerspectiveProjectionIsExplainableAndSafe
   , testMorphologyRetentionMerge
   , testDedupBlocksExternalQueryForKnownMorphology
   , testDedupBlocksExternalQueryForKnownTreeTerm
@@ -368,6 +430,20 @@ testMockTransportFailure = TestCase $ do
        Left (EqeServerError _) -> True
        _ -> False)
 
+testConfigFallbackDoesNotMasqueradeAsSuccess :: Test
+testConfigFallbackDoesNotMasqueradeAsSuccess = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mistral"
+        , eqcFallbackReason = Just TfrKeyMissing
+        }
+  result <- queryExternalToolWithConfig cfg
+    (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+    NeedLexiconExtension
+    "что значит свобода"
+  case result of
+    Left (EqeFallback TfrKeyMissing) -> pure ()
+    other -> assertFailure ("fallback must be typed non-authoritative failure, got: " ++ show other)
+
 -- | WP3: validator rejects empty definition and short text.
 testValidatorRejectsJunk :: Test
 testValidatorRejectsJunk = TestCase $ do
@@ -469,6 +545,10 @@ testGraftUpdatesTreeAndMorph = TestCase $ do
     "accept" (ltValidationStatus tel)
   assertEqual "grafted count must be 1"
     1 (ktGraftedCount (ssKnowledgeTree ss1))
+  assertBool "accepted external learning must record KnowledgeTree mutation"
+    (any (\r -> amrKind r == MutKnowledgeTree && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog ss1))
+  assertBool "accepted external learning must record tool reliability mutation"
+    (any (\r -> amrKind r == MutToolReliability && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog ss1))
 
 -- | WP8: telemetry fields are populated after a learning step.
 testTelemetryFieldsPopulated :: Test
@@ -506,6 +586,8 @@ testFailClosedOnExternalError = TestCase $ do
     "transport_error" (ltValidationStatus tel)
   assertEqual "tree must remain empty"
     0 (ktGraftedCount (ssKnowledgeTree ss1))
+  assertBool "transport error must record rejected tool reliability mutation"
+    (any (\r -> amrKind r == MutToolReliability && amrDecision r == AdaptiveRejected) (ssAdaptiveMutationLog ss1))
   assertBool "reject reason must be present"
     (ltRejectReason tel /= Nothing)
 
@@ -780,7 +862,52 @@ testSystemStatePersistenceRoundTrip = TestCase $ do
   let fruit = mkFruitWithWord "свобода" "свобода — способность" SourceHuman True 0.3 0.2
       tree = graftFruit "agreement" fruit emptyKnowledgeTree
       morph = MorphologyData (M.singleton "в" "в") (M.singleton "к" "к") (M.singleton "свобода" "свобода") M.empty
-      ss0 = emptySystemState { ssKnowledgeTree = tree, ssMorphology = morph }
+      outcome = emptyDialogueOutcomeLearningState
+        { dolRecentOutcomes =
+            [ DialogueOutcomeSample
+                { dosTurn = 1
+                , dosKind = DialogueOutcomeSuccess
+                , dosTopic = "свобода"
+                , dosSignals = ["strong_positive_confirmation"]
+                , dosEvidenceStrength = EvidenceStrong
+                , dosStrongUpdate = True
+                , dosDecisionRecord = AdaptiveDecisionRecord
+                    { adrTurn = 1
+                    , adrCause = "dialogue_outcome:success"
+                    , adrEvidence = ["strong_positive_confirmation"]
+                    , adrConfidence = 0.8
+                    , adrBoundedDelta = ["recent_outcomes<=12", "speech_patterns<=8", "claim_stance_entries<=64"]
+                    , adrDecision = AdaptiveAccepted
+                    , adrTargets = [MutDialogueOutcome, MutSpeechPolicy, MutClaimStance]
+                    , adrMutationRecords = []
+                    }
+                }
+            ]
+        , dolSuccessCount = 1
+        }
+      speechPolicy = emptySpeechPolicyState
+        { spsDirectness = 0.7
+        , spsCompression = 0.6
+        }
+      belief = emptyBeliefStore
+        { bsClaims = M.singleton "свобода"
+            BeliefRecord
+              { brClaim = "свобода"
+              , brPolarity = BeliefAffirmed
+              , brConfidence = 0.8
+              , brEvidence = ["turn=1:success"]
+              , brCounterEvidence = []
+              , brLastUpdatedTurn = 1
+              , brRevisionCount = 0
+              }
+        }
+      ss0 = emptySystemState
+        { ssKnowledgeTree = tree
+        , ssMorphology = morph
+        , ssDialogueOutcomeLearning = outcome
+        , ssSpeechPolicyState = speechPolicy
+        , ssBeliefStore = belief
+        }
       decoded = decode (encode ss0) :: Maybe SystemState
   assertBool "SystemState must round-trip through JSON" (decoded /= Nothing)
   let ss1 = maybe emptySystemState id decoded
@@ -788,6 +915,368 @@ testSystemStatePersistenceRoundTrip = TestCase $ do
     1 (ktGraftedCount (ssKnowledgeTree ss1))
   assertBool "morphology nominative must survive round-trip"
     (M.member "свобода" (mdNominative (ssMorphology ss1)))
+  assertEqual "dialogue outcome counter must survive round-trip"
+    1 (dolSuccessCount (ssDialogueOutcomeLearning ss1))
+  case dolRecentOutcomes (ssDialogueOutcomeLearning ss1) of
+    sample:_ -> do
+      assertEqual "typed evidence strength must survive round-trip"
+        EvidenceStrong (dosEvidenceStrength sample)
+      assertEqual "typed decision must survive round-trip"
+        AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+    [] -> assertFailure "dialogue outcome sample must survive round-trip"
+  assertEqual "speech policy directness must survive round-trip"
+    0.7 (spsDirectness (ssSpeechPolicyState ss1))
+  assertBool "belief store claim must survive round-trip"
+    (M.member "свобода" (bsClaims (ssBeliefStore ss1)))
+
+-- | ADR-0032: old SystemState JSON without dialogue-development fields
+-- loads with empty defaults.
+testOldSystemStateDialogueDevelopmentDefaults :: Test
+testOldSystemStateDialogueDevelopmentDefaults = TestCase $ do
+  let withoutDialogueDevelopment =
+        case toJSON emptySystemState of
+          Object obj -> Object
+            ( KM.delete "beliefStore"
+            . KM.delete "speechPolicyState"
+            . KM.delete "dialogueOutcomeLearning"
+            . KM.delete "adaptiveMutationLog"
+            $ obj
+            )
+          value -> value
+      decoded = decode (encode withoutDialogueDevelopment) :: Maybe SystemState
+  assertBool "old SystemState JSON must decode" (decoded /= Nothing)
+  let ss = maybe emptySystemState id decoded
+  assertEqual "dialogue outcome defaults must be empty"
+    emptyDialogueOutcomeLearningState (ssDialogueOutcomeLearning ss)
+  assertEqual "speech policy defaults must be empty"
+    emptySpeechPolicyState (ssSpeechPolicyState ss)
+  assertEqual "belief store defaults must be empty"
+    emptyBeliefStore (ssBeliefStore ss)
+  let legacySampleJson = "{\"dosTurn\":1,\"dosKind\":\"DialogueOutcomeSuccess\",\"dosTopic\":\"свобода\",\"dosSignals\":[\"positive_confirmation\"],\"dosStrongUpdate\":true}"
+      decodedSample = decode legacySampleJson :: Maybe DialogueOutcomeSample
+  assertBool "old DialogueOutcomeSample JSON must decode" (decodedSample /= Nothing)
+  case decodedSample of
+    Just sample -> do
+      assertEqual "legacy strong sample gets strong evidence default"
+        EvidenceStrong (dosEvidenceStrength sample)
+      assertEqual "legacy strong sample gets apply decision default"
+        AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+    Nothing -> assertFailure "legacy sample decode unexpectedly failed"
+  let legacyRecordJson = "{\"dosTurn\":2,\"dosKind\":\"DialogueOutcomeConflict\",\"dosTopic\":\"свобода\",\"dosSignals\":[\"user_conflict\"],\"dosEvidenceStrength\":\"AdaptiveEvidenceStrong\",\"dosStrongUpdate\":true,\"dosDecisionRecord\":{\"adrTurn\":2,\"adrCause\":\"dialogue_outcome:conflict\",\"adrEvidence\":[\"user_conflict\"],\"adrConfidence\":0.8,\"adrBoundedDelta\":[\"claim_stance_entries<=64\"],\"adrDecision\":\"AdaptiveApplyBoundedMutation\",\"adrTargets\":[\"AdaptiveTargetDialogueOutcome\",\"AdaptiveTargetSpeechPolicy\",\"AdaptiveTargetClaimStance\"]}}"
+      decodedLegacyRecord = decode legacyRecordJson :: Maybe DialogueOutcomeSample
+  assertBool "old typed dialogue JSON must decode into shared taxonomy" (decodedLegacyRecord /= Nothing)
+  case decodedLegacyRecord of
+    Just sample -> do
+      assertEqual "legacy typed evidence maps to shared strong evidence"
+        EvidenceStrong (dosEvidenceStrength sample)
+      assertEqual "legacy decision maps to shared accepted decision"
+        AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+      assertEqual "legacy targets map to shared mutation kinds"
+        [MutDialogueOutcome, MutSpeechPolicy, MutClaimStance] (adrTargets (dosDecisionRecord sample))
+      assertBool "missing legacy mutation records are synthesized"
+        (not (null (adrMutationRecords (dosDecisionRecord sample))))
+    Nothing -> assertFailure "legacy typed dialogue sample decode unexpectedly failed"
+
+-- | P0: top-level adaptive mutation history is capped and keeps newest records.
+testAdaptiveMutationLogIsBounded :: Test
+testAdaptiveMutationLogIsBounded = TestCase $ do
+  let mkRecord turn = AdaptiveMutationRecord
+        { amrTurnId = turn
+        , amrKind = MutKnowledgeTree
+        , amrCause = "test:bounded_log"
+        , amrEvidence = ["turn=" <> T.pack (show turn)]
+        , amrEvidenceStrength = EvidenceStrong
+        , amrConfidence = 1.0
+        , amrBoundedDelta = Just 1.0
+        , amrDecision = AdaptiveAccepted
+        }
+      records = map mkRecord [105,104 .. 1]
+      ss = appendAdaptiveMutationRecords records emptySystemState
+      logRecords = ssAdaptiveMutationLog ss
+  assertEqual "adaptive mutation log must retain at most 100 entries"
+    100 (length logRecords)
+  case logRecords of
+    newest:_ -> assertEqual "newest record must be retained first" 105 (amrTurnId newest)
+    [] -> assertFailure "bounded log unexpectedly empty"
+  assertEqual "oldest retained record should be the 100th newest"
+    6 (amrTurnId (last logRecords))
+
+-- | P4: candidate without evidence/stance is not admissible.
+testPerspectiveAdmissibilityRejectsInsufficientEvidence :: Test
+testPerspectiveAdmissibilityRejectsInsufficientEvidence = TestCase $ do
+  let bundle = mkPerspectiveBundle [] [] [] defaultNormativeProfile []
+      candidate = opinionCore bundle
+  assertEqual "candidate without evidence must be inadmissible"
+    (PerspectiveInadmissible "insufficient_evidence")
+    (evaluatePerspectiveAdmissibility bundle candidate)
+
+-- | P4: promotion is stricter than admissibility, and weak evidence alone does not promote.
+testPerspectivePromotionRequiresStabilityAndStrongEvidence :: Test
+testPerspectivePromotionRequiresStabilityAndStrongEvidence = TestCase $ do
+  let weakBundle = mkPerspectiveBundle [EvidenceRef "thanks_ack"] [] [] defaultNormativeProfile []
+      weakCandidate = opinionCore weakBundle
+      stableBundle = mkPerspectiveBundle
+        [ EvidenceRef "knowledge:freedom is bounded agency"
+        , EvidenceRef "dialogue:DialogueOutcomeSuccess:freedom"
+        ]
+        [ClaimStanceRef "stance:BeliefAffirmed:freedom requires responsibility"]
+        []
+        defaultNormativeProfile
+        []
+      stableCandidate = opinionCore stableBundle
+      registry = defaultPerspectiveRegistry
+  assertEqual "weak evidence can be admissible but must not promote"
+    PpdObserveOnly
+    (decidePerspectivePromotion registry weakBundle weakCandidate (PerspectiveAdmissibleAccepted))
+  assertEqual "stable corroborated candidate can be promoted"
+    PpdPromoteEndorsed
+    (decidePerspectivePromotion registry stableBundle stableCandidate (evaluatePerspectiveAdmissibility stableBundle stableCandidate))
+
+-- | P4: registry is the canonical bounded source of revision lineage.
+testPerspectiveRegistryLineageIsCanonicalAndBounded :: Test
+testPerspectiveRegistryLineageIsCanonicalAndBounded = TestCase $ do
+  let bundle = mkPerspectiveBundle
+        [ EvidenceRef "knowledge:freedom is bounded agency"
+        , EvidenceRef "dialogue:DialogueOutcomeSuccess:freedom"
+        ]
+        [ClaimStanceRef "stance:BeliefAffirmed:freedom requires responsibility"]
+        []
+        defaultNormativeProfile
+        []
+      candidate = opinionCore bundle
+      smallRegistry = defaultPerspectiveRegistry { prMaxRevisionsPerScope = 2 }
+      registry1 = applyPerspectiveDecision 1 smallRegistry bundle candidate PpdPromoteEndorsed
+      bundle2 = bundle { pibRevisionLineage = maybe [] ptRevisionHistory (M.lookup (pibScope bundle) (prThreads registry1)) }
+      candidate2 = (opinionCore bundle2) { pcThesis = "revision one" }
+      registry2 = applyPerspectiveDecision 2 registry1 bundle2 candidate2 PpdReviseActive
+      bundle3 = bundle { pibRevisionLineage = maybe [] ptRevisionHistory (M.lookup (pibScope bundle) (prThreads registry2)) }
+      candidate3 = (opinionCore bundle3) { pcThesis = "revision two" }
+      registry3 = applyPerspectiveDecision 3 registry2 bundle3 candidate3 PpdReviseActive
+  case M.lookup (pibScope bundle) (prThreads registry3) of
+    Nothing -> assertFailure "expected perspective thread"
+    Just thread -> do
+      assertEqual "lineage must be bounded by registry cap"
+        2 (length (ptRevisionHistory thread))
+      assertBool "active version must resolve to an existing version"
+        (maybe False (\v -> any ((== v) . epVersion) (ptVersions thread)) (ptActiveVersion thread))
+
+-- | P4: suspended active perspectives are not exposed as current projections.
+testPerspectiveSuspendClearsActiveProjection :: Test
+testPerspectiveSuspendClearsActiveProjection = TestCase $ do
+  let bundle = mkPerspectiveBundle
+        [EvidenceRef "knowledge:freedom is bounded agency", EvidenceRef "dialogue:DialogueOutcomeSuccess:freedom"]
+        [ClaimStanceRef "stance:BeliefAffirmed:freedom requires responsibility"]
+        []
+        defaultNormativeProfile
+        []
+      candidate = opinionCore bundle
+      registry1 = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed
+      suspended = applyPerspectiveDecision 2 registry1 bundle (candidate { pcCounterargumentPressure = 0.70 }) PpdSuspendActive
+  assertEqual "suspended thread must not project as active"
+    Nothing (buildPerspectiveProjection suspended (pibScope bundle))
+  assertEqual "active projection list must be empty after suspension"
+    [] (buildActivePerspectiveProjections suspended)
+
+-- | P4: active cap suspends surplus active scopes without deleting lineage threads.
+testPerspectiveRegistryActiveCapKeepsLineageThreads :: Test
+testPerspectiveRegistryActiveCapKeepsLineageThreads = TestCase $ do
+  let cappedRegistry = defaultPerspectiveRegistry { prMaxActivePerspectives = 1 }
+      bundleA = mkPerspectiveBundleForScope (ScopeTopic "freedom")
+      candidateA = opinionCore bundleA
+      registry1 = applyPerspectiveDecision 1 cappedRegistry bundleA candidateA PpdPromoteEndorsed
+      bundleB = mkPerspectiveBundleForScope (ScopeTopic "responsibility")
+      candidateB = opinionCore bundleB
+      registry2 = applyPerspectiveDecision 2 registry1 bundleB candidateB PpdPromoteEndorsed
+  assertBool "older thread lineage must remain present"
+    (M.member (pibScope bundleA) (prThreads registry2))
+  assertBool "newer thread lineage must remain present"
+    (M.member (pibScope bundleB) (prThreads registry2))
+  assertEqual "only one active projection is exposed under active cap"
+    1 (length (buildActivePerspectiveProjections registry2))
+
+-- | P4: rollback is reachable from promotion policy and restores a prior projection.
+testPerspectiveRollbackIsReachableAndRestoresPriorProjection :: Test
+testPerspectiveRollbackIsReachableAndRestoresPriorProjection = TestCase $ do
+  let bundle = mkPerspectiveBundle
+        [EvidenceRef "knowledge:freedom is bounded agency", EvidenceRef "dialogue:DialogueOutcomeSuccess:freedom"]
+        [ClaimStanceRef "stance:BeliefAffirmed:freedom requires responsibility"]
+        []
+        defaultNormativeProfile
+        []
+      candidate = opinionCore bundle
+      registry1 = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed
+      bundle2 = bundle { pibRevisionLineage = maybe [] ptRevisionHistory (M.lookup (pibScope bundle) (prThreads registry1)) }
+      candidate2 = (opinionCore bundle2) { pcThesis = "revision one" }
+      registry2 = applyPerspectiveDecision 2 registry1 bundle2 candidate2 PpdReviseActive
+      rollbackBundle = bundle2 { pibCounterarguments = [CounterargumentRef "counter:a", CounterargumentRef "counter:b"] }
+      rollbackCandidate = (opinionCore rollbackBundle) { pcCounterargumentPressure = 0.50 }
+      decision = decidePerspectivePromotion registry2 rollbackBundle rollbackCandidate (PerspectiveAdmissibleQuarantined)
+      registry3 = applyPerspectiveDecision 3 registry2 rollbackBundle rollbackCandidate decision
+  assertEqual "rollback must be reachable from promotion policy"
+    PpdRollbackPrior decision
+  case buildPerspectiveProjection registry3 (pibScope bundle) of
+    Nothing -> assertFailure "expected restored prior projection"
+    Just projection -> assertBool "rollback must not expose withdrawn active version"
+      (ppSummary projection /= "revision one")
+
+-- | P4: activation scope chooses the matching normative profile instead of dead config.
+testPerspectiveActivationScopeSelectsMatchingNormativeProfile :: Test
+testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
+  let defaultScoped = defaultNormativeProfile
+        { npVersionId = 1
+        , npActivationScope = Just (ScopeTopic "other")
+        }
+      freedomProfile = defaultNormativeProfile
+        { npId = NormativeProfileId "freedom-profile"
+        , npVersionId = 7
+        , npActivationScope = Just (ScopeTopic "freedom")
+        }
+      registry = defaultPerspectiveRegistry
+        { prNormativeProfiles = M.fromList [(npId defaultScoped, defaultScoped), (npId freedomProfile, freedomProfile)]
+        , prActiveNormativeProfileId = npId defaultScoped
+        }
+      outcome = emptyDialogueOutcomeLearningState
+        { dolRecentOutcomes = [mkDialogueOutcomeSample 1 DialogueOutcomeSuccess "freedom"]
+        }
+      ss = emptySystemState
+        { ssSessionId = "test-session"
+        , ssPerspectiveRegistry = registry
+        , ssDialogueOutcomeLearning = outcome
+        }
+      bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)) False emptyField
+      candidate = opinionCore bundle
+  assertEqual "matching activation scope must select the scoped profile"
+    7 (pcNormativeProfileVersion candidate)
+
+-- | P4: persisted duplicate scope threads fail decode instead of silently overwriting lineage.
+testPerspectiveRegistryRejectsDuplicateThreads :: Test
+testPerspectiveRegistryRejectsDuplicateThreads = TestCase $ do
+  let duplicateJson = BL8.pack
+        "{\"threads\":[{\"ptPerspectiveId\":\"p1\",\"ptScope\":{\"tag\":\"ScopeTopic\",\"contents\":\"freedom\"},\"ptActiveVersion\":null,\"ptVersions\":[],\"ptRevisionHistory\":[],\"ptStatus\":\"PerspectiveSuspended\",\"ptLastUpdatedTurn\":1},{\"ptPerspectiveId\":\"p2\",\"ptScope\":{\"tag\":\"ScopeTopic\",\"contents\":\"freedom\"},\"ptActiveVersion\":null,\"ptVersions\":[],\"ptRevisionHistory\":[],\"ptStatus\":\"PerspectiveSuspended\",\"ptLastUpdatedTurn\":2}],\"normativeProfiles\":[],\"activeNormativeProfileId\":\"default\"}"
+      decoded = decode duplicateJson :: Maybe PerspectiveRegistry
+  assertEqual "duplicate scope threads must not decode by overwriting"
+    Nothing decoded
+
+-- | P4: normative profile version is operator-visible and changes candidate geometry.
+testPerspectiveNormativeProfileVersionAffectsCandidate :: Test
+testPerspectiveNormativeProfileVersionAffectsCandidate = TestCase $ do
+  let strictProfile = defaultNormativeProfile
+        { npVersionId = 1
+        , npPriorities = M.fromList [("safety", 1.0), ("stability", 1.0), ("counterargument", 1.0)]
+        , npConflictPolicy = "conservative"
+        }
+      permissiveProfile = defaultNormativeProfile
+        { npVersionId = 2
+        , npPriorities = M.fromList [("safety", 0.7), ("stability", 0.7), ("counterargument", 0.2)]
+        , npConflictPolicy = "permissive"
+        }
+      strictCandidate = opinionCore (mkPerspectiveBundle [EvidenceRef "knowledge:x"] [ClaimStanceRef "stance:x"] [CounterargumentRef "counter:x"] strictProfile [])
+      permissiveCandidate = opinionCore (mkPerspectiveBundle [EvidenceRef "knowledge:x"] [ClaimStanceRef "stance:x"] [CounterargumentRef "counter:x"] permissiveProfile [])
+  assertEqual "candidate records normative profile version"
+    1 (pcNormativeProfileVersion strictCandidate)
+  assertEqual "candidate records changed normative profile version"
+    2 (pcNormativeProfileVersion permissiveCandidate)
+  assertBool "profile version/content can alter confidence geometry"
+    (pcConfidence strictCandidate /= pcConfidence permissiveCandidate)
+
+-- | P4: active perspectives expose explanation via safe projection, not raw lineage.
+testPerspectiveProjectionIsExplainableAndSafe :: Test
+testPerspectiveProjectionIsExplainableAndSafe = TestCase $ do
+  let bundle = mkPerspectiveBundle
+        [ EvidenceRef "knowledge:freedom is bounded agency"
+        , EvidenceRef "dialogue:DialogueOutcomeSuccess:freedom"
+        ]
+        [ClaimStanceRef "stance:BeliefAffirmed:freedom requires responsibility"]
+        [CounterargumentRef "counter:freedom can conflict with safety"]
+        defaultNormativeProfile
+        []
+      candidate = opinionCore bundle
+      registry = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed
+  case buildPerspectiveProjection registry (pibScope bundle) of
+    Nothing -> assertFailure "expected safe perspective projection"
+    Just projection -> do
+      assertEqual "projection exposes profile provenance"
+        1 (ppNormativeProfileVersion projection)
+      assertBool "projection exposes explanation handle"
+        (not (T.null (ppExplanationHandle projection)))
+      assertEqual "projection keeps counterarguments as counts only"
+        1 (ppCounterargumentCount projection)
+
+mkPerspectiveBundle
+  :: [EvidenceRef]
+  -> [ClaimStanceRef]
+  -> [CounterargumentRef]
+  -> NormativeProfile
+  -> [PerspectiveRevisionRecord]
+  -> PerspectiveInputBundle
+mkPerspectiveBundle evidence stance counterarguments profile lineage =
+  mkPerspectiveBundleForScopeWith (ScopeTopic "freedom") evidence stance counterarguments profile lineage
+
+mkPerspectiveBundleForScope :: PerspectiveScope -> PerspectiveInputBundle
+mkPerspectiveBundleForScope scope =
+  mkPerspectiveBundleForScopeWith
+    scope
+    [EvidenceRef ("knowledge:" <> scopeLabel scope <> " is bounded agency"), EvidenceRef ("dialogue:DialogueOutcomeSuccess:" <> scopeLabel scope)]
+    [ClaimStanceRef ("stance:BeliefAffirmed:" <> scopeLabel scope <> " requires responsibility")]
+    []
+    defaultNormativeProfile
+    []
+
+mkPerspectiveBundleForScopeWith
+  :: PerspectiveScope
+  -> [EvidenceRef]
+  -> [ClaimStanceRef]
+  -> [CounterargumentRef]
+  -> NormativeProfile
+  -> [PerspectiveRevisionRecord]
+  -> PerspectiveInputBundle
+mkPerspectiveBundleForScopeWith scope evidence stance counterarguments profile lineage = PerspectiveInputBundle
+  { pibScope = scope
+  , pibEvidence = evidence
+  , pibStanceSlice = stance
+  , pibIdentitySlice = IdentitySlice
+      { isSessionId = "test-session"
+      , isIdentityClaims = []
+      , isIdentityClaimCount = 0
+      , isTurnCount = 1
+      }
+  , pibConatusSlice = ConatusSlice
+      { csEnergy = 10.0
+      , csGateFired = False
+      , csFieldConfidence = 1.0
+      , csStability = 1.0
+      }
+  , pibNormativeProfile = profile
+  , pibCounterarguments = counterarguments
+  , pibRevisionLineage = lineage
+  }
+
+scopeLabel :: PerspectiveScope -> T.Text
+scopeLabel scope =
+  case scope of
+    ScopeTopic value -> value
+    ScopeTheme value -> value
+    ScopeCluster value -> value
+
+mkDialogueOutcomeSample :: Int -> DialogueOutcomeKind -> T.Text -> DialogueOutcomeSample
+mkDialogueOutcomeSample turn kind topic = DialogueOutcomeSample
+  { dosTurn = turn
+  , dosKind = kind
+  , dosTopic = topic
+  , dosSignals = ["test"]
+  , dosEvidenceStrength = EvidenceStrong
+  , dosStrongUpdate = True
+  , dosDecisionRecord = AdaptiveDecisionRecord
+      { adrTurn = turn
+      , adrCause = "test"
+      , adrEvidence = ["test"]
+      , adrConfidence = 0.8
+      , adrBoundedDelta = ["recent_outcomes<=12"]
+      , adrDecision = AdaptiveAccepted
+      , adrTargets = [MutDialogueOutcome]
+      , adrMutationRecords = []
+      }
+  }
 
 -- | Cross-session retention: morphology learned in one session is not overwritten on bootstrap.
 testMorphologyRetentionMerge :: Test

@@ -25,6 +25,7 @@ import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Types.Intuition (IntuitiveFlash)
+import QxFx0.Types.SemanticConfig (SemanticConfig)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
@@ -40,11 +41,14 @@ import QxFx0.Self.Field
   , computeAtmosphere
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
-import QxFx0.Self.Salience (conatusGateFires)
+import QxFx0.Self.Salience (SalienceWeights, conatusGateFires)
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Learning.Tool (ExternalTool)
 import QxFx0.Learning.Need (LearningNeed)
 import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
+import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame)
+import QxFx0.Semantic.Sense (SenseVector)
+import QxFx0.Semantic.Sense.Extract (extractSenseVector)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -55,8 +59,8 @@ import Data.Time.Clock (UTCTime)
 data TurnEffectRequest
   = TurnReqEmbedding !Text
   | TurnReqNixGuard !Text !Double !Double
-  | TurnReqConsciousness !SemanticInput !Double !Double !ConatusEnergy
-  | TurnReqIntuition !Text !Double !Double !Int !ConatusEnergy
+  | TurnReqConsciousness !SemanticInput !Double !Double !ConatusEnergy !SalienceWeights
+  | TurnReqIntuition !Text !Double !Double !Int !ConatusEnergy !SalienceWeights !SemanticConfig
   | TurnReqApiHealth
   | TurnReqShadow !CanonicalMoveFamily !IllocutionaryForce ![AtomTag]
   | TurnReqAgdaVerify
@@ -156,6 +160,9 @@ data PrepareStatic = PrepareStatic
     --   Captured at prepare-stage entry so 'buildTurnInput' can
     --   set 'tiStartTime' without relying on the resolved timeline.
     --   Enables deterministic unit tests with a fixed time source.
+  , psSenseVector :: !SenseVector
+    -- ^ Canonical sense bridge extracted from the same utterance-level
+    --   semantic interpretation used to derive 'psFrame'.
   , psEssence :: !Essence
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
@@ -165,8 +172,8 @@ data PrepareStatic = PrepareStatic
 data PrepareEffectRequest
   = PrepareReqEmbedding !Text
   | PrepareReqNixGuard !Text !Double !Double
-  | PrepareReqConsciousness !SemanticInput !Double !Double !ConatusEnergy
-  | PrepareReqIntuition !Text !Double !Double !Int !ConatusEnergy
+  | PrepareReqConsciousness !SemanticInput !Double !Double !ConatusEnergy !SalienceWeights
+  | PrepareReqIntuition !Text !Double !Double !Int !ConatusEnergy !SalienceWeights !SemanticConfig
   | PrepareReqApiHealth
   deriving stock (Eq, Show)
 
@@ -189,7 +196,9 @@ buildPrepareEffectPlan ss input currentTime =
       recommendedFamily = case sortedLogic of
         ((fam, _):_) -> fam
         [] -> CMGround
+      semanticFrame = buildUtteranceSemanticFrame input
       frame = parseProposition input
+      senseVector = extractSenseVector semanticFrame
       atomFocus = case asAtoms atomSet of
         (a:_) -> extractObjectFromAtom a
         [] -> ""
@@ -220,9 +229,7 @@ buildPrepareEffectPlan ss input currentTime =
       -- Phase 7: populate four of five Field components via
       -- the calibrated 'FieldHeuristics' compute functions.
       -- 'fieldConfidence' is derived below.
-      -- Phase 6.7: heuristics are now threaded through PrepareStatic
-      -- so they can be overridden (env-var or config) in the future.
-      fieldHeuristics = defaultFieldHeuristics
+      fieldHeuristics = ssFieldHeuristics ss
       preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
         , fieldAtmosphere     = computeAtmosphere fieldHeuristics
@@ -259,6 +266,7 @@ buildPrepareEffectPlan ss input currentTime =
         --   Threaded through 'TurnInput' so downstream stages
         --   (e.g. salience computation) can read the same record.
       , psCurrentTime = currentTime
+      , psSenseVector = senseVector
       , psEssence = ssEssence ss
       }
   in PrepareEffectPlan
@@ -266,9 +274,9 @@ buildPrepareEffectPlan ss input currentTime =
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
       , pepConsciousnessRequest =
-          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy
+          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy (ssSalienceWeights ss)
       , pepIntuitionRequest =
-          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy
+          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy (ssSalienceWeights ss) (ssSemanticConfig ss)
       , pepApiHealthRequest = PrepareReqApiHealth
       }
   where

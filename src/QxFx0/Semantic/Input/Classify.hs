@@ -14,7 +14,7 @@ import QxFx0.Semantic.Input.Lexicon
   , guessPartOfSpeech
   , isFunctionWord
   , lemmaForToken
-  , semanticClassesForToken
+  , semanticClassesForLemmaAndPos
   )
 import QxFx0.Semantic.Input.Model
 import QxFx0.Semantic.Input.Normalize (NormalizedInput(..))
@@ -25,9 +25,10 @@ classifyWordUnits normalizedInput =
 
 classifyToken :: Text -> WordMeaningUnit
 classifyToken token =
-  let pos = guessPartOfSpeech token
+  let lemma = lemmaForToken token
+      pos = guessPartOfSpeech token
       morphFeatures = guessMorphFeatures token
-      semanticClasses = semanticClassesForToken token
+      semanticClasses = semanticClassesForLemmaAndPos token lemma pos
       discourseFunctions = discourseFunctionsForToken token
       confidence
         | pos == PosUnknown = 0.35
@@ -36,12 +37,12 @@ classifyToken token =
       ambiguityCandidates =
         case pos of
           PosUnknown -> [token]
-          PosAdverb -> [token, lemmaForToken token]
-          PosAdjective -> [token, lemmaForToken token]
-          _ -> [lemmaForToken token]
+          PosAdverb -> [token, lemma]
+          PosAdjective -> [token, lemma]
+          _ -> [lemma]
   in WordMeaningUnit
       { wmuSurfaceForm = token
-      , wmuLemma = lemmaForToken token
+      , wmuLemma = lemma
       , wmuPartOfSpeech = pos
       , wmuMorphFeatures = morphFeatures
       , wmuSyntacticRole = SynUnknown

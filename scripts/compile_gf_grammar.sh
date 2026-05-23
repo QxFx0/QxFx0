@@ -16,12 +16,12 @@ fi
 
 compile_with_gf() {
   cd "$ROOT"
-  "$GF_BIN" -make -f pgf "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
+  "$GF_BIN" --make "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
 }
 
 compile_with_nix_shell() {
   nix --option warn-dirty false --extra-experimental-features "nix-command flakes" \
-    develop "$ROOT" --command gf -make -f pgf "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
+    develop "$ROOT" --command gf --make "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
 }
 
 # Fast path: if PGF is already present and newer than all source .gf files, skip compile.
@@ -59,8 +59,8 @@ if [ -n "$GF_BIN" ]; then
 else
   if [ "$REQUIRE_GF" != "1" ]; then
     if [ -f "$OUT_PGF" ]; then
-      echo "SKIP: gf compiler is not installed; using existing $OUT_PGF."
-      exit 0
+      echo "GF_INFRA_UNAVAILABLE: gf compiler is not installed; existing $OUT_PGF cannot be treated as current truth." >&2
+      exit 1
     fi
     echo "SKIP: gf compiler is not installed and no $OUT_PGF present."
     exit 0

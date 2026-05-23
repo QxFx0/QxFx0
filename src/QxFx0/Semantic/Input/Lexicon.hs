@@ -4,6 +4,7 @@ module QxFx0.Semantic.Input.Lexicon
   ( guessPartOfSpeech
   , guessMorphFeatures
   , semanticClassesForToken
+  , semanticClassesForLemmaAndPos
   , discourseFunctionsForToken
   , lemmaForToken
   , isFunctionWord
@@ -54,26 +55,41 @@ guessMorphFeatures token =
 
 semanticClassesForToken :: Text -> [InputSemanticClass]
 semanticClassesForToken token =
-  let lemma = lemmaForToken token
-      genSem = generatedLemmaToSem lemma
+  semanticClassesForLemmaAndPos token (lemmaForToken token) (guessPartOfSpeech token)
+
+semanticClassesForLemmaAndPos :: Text -> Text -> InputPartOfSpeech -> [InputSemanticClass]
+semanticClassesForLemmaAndPos token lemma pos =
+  let genSem = generatedLemmaToSem lemma
   in case semanticOverride lemma of
-      Just forcedSem -> forcedSem
-      Nothing ->
-        if not (null genSem) then genSem else
-          if token `elem` selfReferenceTokens then [SemSelfReference]
-          else if token `elem` userReferenceTokens then [SemUserReference]
-          else if isIdentityLemma lemma then [SemIdentity]
-          else if isWorldNoun token then [SemWorldObject]
-          else if isMentalNoun token then [SemMentalObject]
-          else if token `elem` knowledgeTokens then [SemKnowledge]
-          else if token `elem` comparisonTokens then [SemComparison]
-          else if token `elem` causeTokens then [SemCause]
-          else if token `elem` invitationTokens then [SemDialogueInvitation]
-          else if token `elem` repairTokens then [SemDialogueRepair]
-          else if token `elem` contemplativeTokens then [SemContemplative]
-          else if isVerbLike token then [SemAction]
-          else if isAdjectiveLike token || isAdverbLike token then [SemState]
-          else [SemUnknown]
+       Just forcedSem -> forcedSem
+       Nothing ->
+         if not (null genSem) then genSem else
+           if token `elem` selfReferenceTokens then [SemSelfReference]
+           else if token `elem` userReferenceTokens then [SemUserReference]
+           else if isIdentityLemma lemma then [SemIdentity]
+           else if isWorldNoun lemma || isWorldNoun token then [SemWorldObject]
+           else if isMentalNoun lemma || isMentalNoun token then [SemMentalObject]
+           else if lemma `elem` knowledgeTokens || token `elem` knowledgeTokens then [SemKnowledge]
+           else if lemma `elem` comparisonTokens || token `elem` comparisonTokens then [SemComparison]
+           else if lemma `elem` causeTokens || token `elem` causeTokens then [SemCause]
+           else if lemma `elem` invitationTokens || token `elem` invitationTokens then [SemDialogueInvitation]
+           else if lemma `elem` repairTokens || token `elem` repairTokens then [SemDialogueRepair]
+           else if lemma `elem` contemplativeTokens || token `elem` contemplativeTokens then [SemContemplative]
+           else case pos of
+             PosVerb -> [SemAction]
+             PosAdjective -> [SemState, SemQualityProperty]
+             PosAdverb -> [SemState]
+             PosNoun
+               | isAbstractNounLike lemma -> [SemAbstractConcept]
+               | isPhysicalNounLike lemma -> [SemPhysicalObject, SemWorldObject]
+               | otherwise -> [SemUnknown]
+             PosPronoun -> [SemUnknown]
+             PosNumeral -> [SemUnknown]
+             PosPreposition -> [SemRelation]
+             PosConjunction -> [SemUnknown]
+             PosParticle -> [SemUnknown]
+             PosInterjection -> [SemDialogueInvitation]
+             PosUnknown -> [SemUnknown]
 
 posOverride :: Text -> Maybe InputPartOfSpeech
 posOverride lemma =
@@ -243,6 +259,17 @@ isNounLike token =
     || token `elem` mentalNouns
     || any (`T.isSuffixOf` token)
       [ "а", "я", "о", "е", "и", "ы", "ь", "ие", "ия", "ость", "ение", "изм" ]
+
+isAbstractNounLike :: Text -> Bool
+isAbstractNounLike lemma =
+  any (`T.isSuffixOf` lemma)
+    [ "ость", "есть", "ение", "ание", "изм", "ция", "ность", "ство", "смысл", "логика" ]
+
+isPhysicalNounLike :: Text -> Bool
+isPhysicalNounLike lemma =
+  isWorldNoun lemma
+    || any (`T.isSuffixOf` lemma)
+      [ "дом", "город", "лес", "камень", "река", "море", "стол", "свет", "ветер" ]
 
 prepositions, conjunctions, particles, interjections, pronouns, numerals :: [Text]
 prepositions =

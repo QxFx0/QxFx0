@@ -18,6 +18,7 @@ import Test.Suite.SelfSalience (selfSalienceTests)
 import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.SelfEssence (selfEssenceTests)
 import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
+import Test.Suite.P5Governance (p5GovernanceTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
@@ -39,9 +40,10 @@ main = do
          ++ selfFieldTests
          ++ selfSalienceTests
           ++ selfDeliberationTests
-           ++ selfEssenceTests
-           ++ selfEssenceCommitTests
-           ++ phaseM2dTests
+            ++ selfEssenceTests
+            ++ selfEssenceCommitTests
+            ++ p5GovernanceTests
+            ++ phaseM2dTests
            ++ learningLoopTests
            ++ trainingCycleTests
            ++ modelComparisonTests

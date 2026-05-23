@@ -24,17 +24,17 @@
     "noun_ins_eq_nom_ratio": 0.0,
     "soft_sign_ins_eq_nom_count": 0,
     "soft_sign_ins_eq_nom_ratio": 0.0,
-    "soft_sign_noun_count": 1145
+    "soft_sign_noun_count": 1144
   },
   "collision_count": 2,
   "complete_rows": 3756,
   "dangerous_collision_count": 0,
-  "dataset_sha256": "038c8a2a77c6460420aadfd7806a8bc2d074c55f3f3d9af130467e20caa7e769",
+  "dataset_sha256": "bb751b43081f85cde6cd243065f4cae7278f974126869370555e8675d029df29",
   "drift_check": {
     "auto_manifest_present": true,
     "schema_sha256": "f5899715476dc6af",
     "seed_brain_kb_reviewed_sha256": "0396a6aa2b2027bc",
-    "seed_sha256": "6b91519333d93d05"
+    "seed_sha256": "55d2d0a0d648fed0"
   },
   "forms_by_surface": {
     "dangerous_collision_count": 0,
@@ -44,7 +44,7 @@
     "p1_lemma_count": 3991,
     "p2_form_count": 667902,
     "p2_lemma_count": 17496,
-    "surface_count": 440422
+    "surface_count": 440419
   },
   "generated_artifacts": [
     "resources/morphology/nominative.json",

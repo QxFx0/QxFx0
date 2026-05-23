@@ -7,17 +7,18 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     Move ;
     NP ;
     VP ;
+    GfNumber ;
     Modifier ;
     Relation ;
     Mechanism ;
 
-  param
-    Number = NumSg | NumPl ;
-
   fun
+    NumSg : GfNumber ;
+    NumPl : GfNumber ;
+
     MkNP : Lexeme -> NP ;
 
-    ActMaintain : Number -> Lexeme -> VP ;
+    ActMaintain : GfNumber -> Lexeme -> VP ;
     ActDefine   : Lexeme -> VP ;
 
     ModFirst    : Modifier ;

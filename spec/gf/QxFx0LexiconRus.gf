@@ -3392,7 +3392,6 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     stena_N = { nom = "стена" ; gen = "стены" ; prep = "стене" ; acc = "стену" ; ins = "стеной" } ;
     stend_N = { nom = "стенд" ; gen = "стенда" ; prep = "стенде" ; acc = "стенд" ; ins = "стендом" } ;
     stepen_N = { nom = "степень" ; gen = "степени" ; prep = "степени" ; acc = "степень" ; ins = "степенью" } ;
-    step_N = { nom = "степь" ; gen = "степи" ; prep = "степи" ; acc = "степь" ; ins = "степью" } ;
     stervoznost_N = { nom = "стервозность" ; gen = "стервозности" ; prep = "стервозности" ; acc = "стервозность" ; ins = "стервозностью" } ;
     stiraemost_N = { nom = "стираемость" ; gen = "стираемости" ; prep = "стираемости" ; acc = "стираемость" ; ins = "стираемостью" } ;
     stihiya_N = { nom = "стихия" ; gen = "стихии" ; prep = "стихии" ; acc = "стихию" ; ins = "стихией" } ;
@@ -3664,6 +3663,7 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     chuvstvitelnost_N = { nom = "чувствительность" ; gen = "чувствительности" ; prep = "чувствительности" ; acc = "чувствительность" ; ins = "чувствительностью" } ;
     chulan_N = { nom = "чулан" ; gen = "чулана" ; prep = "чулане" ; acc = "чулан" ; ins = "чуланом" } ;
     chulok_N = { nom = "чулок" ; gen = "чулка" ; prep = "чулке" ; acc = "чулок" ; ins = "чулком" } ;
+    step_N = { nom = "шаг" ; gen = "шага" ; prep = "шаге" ; acc = "шаг" ; ins = "шагом" } ;
     shalash_N = { nom = "шалаш" ; gen = "шалаша" ; prep = "шалаше" ; acc = "шалаш" ; ins = "шалашом" } ;
     shapka_N = { nom = "шапка" ; gen = "шапки" ; prep = "шапке" ; acc = "шапку" ; ins = "шапкой" } ;
     shar_N = { nom = "шар" ; gen = "шара" ; prep = "шаре" ; acc = "шар" ; ins = "шаром" } ;

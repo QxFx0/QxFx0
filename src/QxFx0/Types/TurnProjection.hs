@@ -15,6 +15,8 @@ import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
 import QxFx0.Self.Essence (Essence (..), EssenceTrajectory (..), EssenceCommitment (..), renderEssenceMode, renderCommitmentTrigger)
+import QxFx0.Types.State.Perspective (PerspectiveProjection)
+import QxFx0.Semantic.Sense (SenseAxis, SenseOperator)
 import Data.Aeson (ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -96,6 +98,15 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ Phase 8: turn number when the fruit was grafted (if accepted).
   , trcLearningRejectReason :: !(Maybe Text)
     -- ^ Phase 8: human-readable reject reason for audit.
+  , trcSenseAnchor :: !Text
+  , trcSenseOperator :: !(Maybe SenseOperator)
+  , trcSensePreservedAxes :: ![SenseAxis]
+  , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)
+    -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate
+    --   internals and registry lineage are not exposed to render/replay.
+  , trcPerspectiveProjections :: ![PerspectiveProjection]
+    -- ^ P4: bounded list of active safe projections, preserving the fact
+    --   that the canonical registry may contain multiple active scopes.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

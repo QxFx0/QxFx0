@@ -5,6 +5,7 @@
 module QxFx0.Runtime.GF.Map
   ( GfLexemeMap
   , buildGfLexemeMap
+  , lookupTopicGfLexemeId
   , topicToGfLexemeId
   ) where
 
@@ -15,6 +16,9 @@ data GfLexemeMap = GfLexemeMap
 
 buildGfLexemeMap :: GfLexemeMap
 buildGfLexemeMap = GfLexemeMap
+
+lookupTopicGfLexemeId :: GfLexemeMap -> Text -> Maybe Text
+lookupTopicGfLexemeId _ = Legacy.lookupTopicGfLexemeId
 
 topicToGfLexemeId :: GfLexemeMap -> Text -> Text
 topicToGfLexemeId _ = Legacy.topicToGfLexemeId

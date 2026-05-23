@@ -23,10 +23,10 @@ import QxFx0.Self.Adjunction (Holistic(..), Formal(..), Adjunction(..))
 import QxFx0.Self.Field (Field)
 import QxFx0.Self.Salience
   ( Salience
+  , SalienceWeights
   , SalienceDriver(..)
   , SalienceVerdict(..)
   , chooseBranch
-  , defaultSalienceWeights
   , salienceDriver
   , salienceVerdict
   )
@@ -73,7 +73,8 @@ renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInpu
 -- driver) is identity, so any call site that does not yet supply
 -- rich Field signals observes no behaviour change.
 renderStyleFromDecisionWithSalience
-  :: Salience
+  :: SalienceWeights
+  -> Salience
   -> Field
   -> ResponseStrategy
   -> Maybe PrincipledMode
@@ -81,8 +82,9 @@ renderStyleFromDecisionWithSalience
   -> Maybe SemanticAnchor
   -> SemanticInput
   -> RenderStyle
-renderStyleFromDecisionWithSalience salience field strategy mode identitySignal semanticAnchor semanticInput =
+renderStyleFromDecisionWithSalience salienceWeights salience field strategy mode identitySignal semanticAnchor semanticInput =
   applySalienceToStyle
+    salienceWeights
     salience
     field
     (renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput)
@@ -108,13 +110,13 @@ renderStyleFromDecisionWithSalience salience field strategy mode identitySignal 
 -- styles already aligned with the verdict) are preserved on every
 -- branch so the controller does not /override/ a more informative
 -- pick from the strategy chain.
-applySalienceToStyle :: Salience -> Field -> RenderStyle -> RenderStyle
-applySalienceToStyle salience field baseStyle =
+applySalienceToStyle :: SalienceWeights -> Salience -> Field -> RenderStyle -> RenderStyle
+applySalienceToStyle salienceWeights salience field baseStyle =
   case salienceDriver salience of
     DrivenByConatusGate -> StyleRecovery
     _ ->
       chooseBranch
-        (salienceVerdict defaultSalienceWeights salience)
+        (salienceVerdict salienceWeights salience)
         (\(Holistic (base, _field)) -> holisticLean base)
         (\base -> Formal (\_field -> formalLean base))
         (Holistic (baseStyle, field))

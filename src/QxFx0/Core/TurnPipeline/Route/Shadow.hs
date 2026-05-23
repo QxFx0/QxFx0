@@ -119,7 +119,7 @@ resolveShadowFamily policy requestedFamily sc =
         ShadowSeverityUnavailable -> ShadowResolution CMRepair True
         ShadowSeveritySafety -> ShadowResolution (maybe CMRepair id (scShadowFamily sc)) True
         ShadowSeverityContract -> ShadowResolution (maybe CMRepair id (scShadowFamily sc)) True
-        ShadowSeverityAdvisory -> ShadowResolution (maybe requestedFamily id (scShadowFamily sc)) False
+        ShadowSeverityAdvisory -> ShadowResolution (maybe CMClarify id (scShadowFamily sc)) True
         ShadowSeverityClean -> ShadowResolution requestedFamily False
 
 legitimacyScoreWithPenalty :: Double -> Double -> Double -> Bool -> Double

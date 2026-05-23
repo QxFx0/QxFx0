@@ -17,8 +17,7 @@ module QxFx0.Runtime.PGF
   ) where
 
 import Control.Exception (try, SomeException)
-import Data.Char (isSpace)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
@@ -26,7 +25,7 @@ import System.Directory (doesFileExist)
 import qualified PGF2 as PGF
 
 import QxFx0.Types (ClaimAst(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..))
-import QxFx0.Runtime.GF.Map (topicToGfLexemeId, buildGfLexemeMap)
+import QxFx0.Runtime.GF.Map (lookupTopicGfLexemeId, buildGfLexemeMap)
 import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
 import QxFx0.Semantic.DialogAtom (DialogAtoms, daTopicNominative, hasTag, headAtomValue, AtomTag(..))
 
@@ -167,13 +166,15 @@ gfActionExpr action =
 dialogAtomsToGfExpr :: DialogAtoms -> Either Text Text
 dialogAtomsToGfExpr da =
   let topicStr = daTopicNominative da
-      gfTopic = topicToGfLexemeId buildGfLexemeMap topicStr
       intent = if hasTag TUserIntent da then headAtomValue TUserIntent da else ""
-  in if intent == "define"
-     then Right ("MoveDefine (MkNP " <> gfTopic <> ") (MkNP " <> gfTopic <> ")")
-     else if intent == "ground"
-     then Right ("MoveGround (MkNP " <> gfTopic <> ")")
-     else Right ("MoveGround (MkNP " <> gfTopic <> ")")
+  in case lookupTopicGfLexemeId buildGfLexemeMap topicStr of
+       Nothing -> Left ("unresolved_topic_lexeme:" <> topicStr)
+       Just gfTopic ->
+         if intent == "define"
+           then Right ("MoveDefine (MkNP " <> gfTopic <> ") (MkNP " <> gfTopic <> ")")
+           else if intent == "ground"
+             then Right ("MoveGround (MkNP " <> gfTopic <> ")")
+             else Right ("MoveGround (MkNP " <> gfTopic <> ")")
 
 sanitizeLegacyLexemeId :: Text -> Text
 sanitizeLegacyLexemeId = LegacyGfMap.topicToGfLexemeId

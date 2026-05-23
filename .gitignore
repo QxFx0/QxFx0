@@ -20,6 +20,7 @@ semantic_rules.dl
 R5Verdict.csv
 ShadowAlert.csv
 spec/gf/*.pgf
+spec/gf/*.gfo
 
 # Local scratch files
 run_repl.hs
@@ -37,6 +38,10 @@ reports/input_unknown_candidates.json
 reports/baseline_v2/final_gates/*.log
 reports/baseline_v2/final_gates/*.tsv
 reports/baseline_v2/final_gates/_gate_results*.md
+reports/hardening_closure_20260522_after/
+reports/hardening_closure_20260522_baseline/
+reports/wp6_live/
+reports/releases/wp6_live_validation_closure.md
 
 # Oversized generated morphology index (>100MB); regenerate via scripts/export_lexicon.py
 resources/morphology/forms_by_surface.json

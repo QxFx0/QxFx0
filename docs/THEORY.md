@@ -111,11 +111,13 @@ are not aspirational; they are checkable.
 
 ### 4.1 Self layer
 
-> **Status (2026-05-17)**: shipped as a pure subtree under `QxFx0.Self.*`.
-> Phase 1 (`SelfBlanket` + `IdentityRupture`, commit `62d0338`) and
-> Phase 2 (`Conatus` functional, commit `a5fad49`) are landed; Phase 2.5
-> (Conatus-gradient as the primary recovery driver in the turn pipeline)
-> is the next integration step.
+> **Status (2026-05-22)**: shipped as a pure subtree under `QxFx0.Self.*`.
+> Phases 1–2 (`SelfBlanket` + `Conatus`) are landed, along with Phase 2.5,
+> Phase 3 (`Holistic ⊣ Formal`), Phase 4 (`Field`), Phase 5 (`Salience`),
+> Phase 6 (`PrepareStatic` single-source conatus threading), Phase 7
+> (structural calibration infrastructure), and Phase 8–10 (`Deliberation`,
+> `Essence`) integration. P4 `OpinionCore / PerspectiveOperator` is shipped
+> as a governed projection layer with versioned lineage in `PerspectiveRegistry`.
 
 There must exist a dedicated `QxFx0.Self.*` layer whose types describe
 *what makes this system this system*, independent of any particular turn,
@@ -135,14 +137,18 @@ session, or interaction. Specifically:
   `FieldConfidence`, `Consolidation`, `Counterfactual`) — the
   right-hemispheric observation summary (Phase 4, see §4.2).
   Implementation: `QxFx0.Self.Field`.
+- `PerspectiveOperator` — a governed opinion core over knowledge, dialogue
+  outcomes, claim stances, identity, conatus, counterarguments, and a versioned
+  normative profile. It persists only endorsed lineage in `PerspectiveRegistry`
+  and exposes render/runtime state through safe `PerspectiveProjection` values,
+  never raw `PerspectiveCandidate` internals.
+  Implementation: `QxFx0.Self.Perspective`, `QxFx0.Types.State.Perspective`.
 
 ### 4.2 Adjunction discipline
 
-> **Status (2026-05-17)**: the algebra is shipped (Phase 3, ADR-0008,
-> commit `20d5611`) and the right-hemispheric `Field` it is parameterised
-> over is shipped (Phase 4, ADR-0009, commit `036f70f`). Re-shaping the
-> existing call sites to actually consume `Holistic` / `Formal` is
-> Phase 5 work (salience controller, ADR-0010, planned).
+> **Status (2026-05-22)**: the algebra is shipped (Phase 3, ADR-0008), the
+> right-hemispheric `Field` is shipped (Phase 4, ADR-0009), and the salience
+> controller plus routing/trace integration are shipped (Phase 5).
 
 The processing surface is split into two formally adjoint modes —
 `Holistic` (left adjoint, right-hemispheric: value perceived together with
@@ -165,20 +171,16 @@ natural transformations satisfying the triangle identities. These are
   weighted-average for Atmosphere, additive-clipped for Consolidation).
 
 Formal-mode characteristics: narrow, fixated, formally-spec-driven,
-type-checked, deterministic. Inherits the majority of the current
-pipeline; Phase 5 will retag the existing routing / R5 / render commit
-surfaces as `Formal a` values.
+type-checked, deterministic. The existing routing / render surfaces consume
+the adjunction discipline through the self-layer.
 
 Holistic-mode characteristics: holistic, resonance-based, embedding-driven,
-distribution-shaped, off-line-consolidated. Phase 4 ships the algebraic
-shape; Phase 5 wires the actual signals (cosine over the embedding
-window → `Resonance`, consciousness-loop tone → `Atmosphere`,
-posterior diversity → `Counterfactual`, claim-graph trajectory →
-`Consolidation`, derived → `FieldConfidence`).
+distribution-shaped, off-line-consolidated. The runtime wiring uses the
+field snapshot directly.
 
 ### 4.3 Effects carry conatus prior
 
-The effect-interpreter layer (`Core.PipelineIO`, post-Phase 6) wraps every
+The effect-interpreter layer (`Core.PipelineIO`, Phase 6 and later) wraps every
 effect with a conatus-aware prior. Effects do not directly mutate runtime
 state; they are interpreted under a wrapper that checks whether the proposed
 operation maintains `SelfBlanket` and prefers operations with higher
@@ -190,11 +192,10 @@ Tests are organized in two tiers:
 
 1. **Correctness gates** (existing): the system computes what its formal
    specifications say it computes. These remain green.
-2. **Lifeness gates** (new, Phase 7): under adversarial conditions, the
-   system maintains `SelfBlanket`; conatus remains bounded; both modes
-   activate; switching occurs in response to ambiguity/novelty rather
-   than at random. Selected indicator properties from Butlin et al. (2023,
-   *Consciousness in AI*) are implemented as testable assertions.
+2. **Lifeness/adaptive gates** (landed inside existing suites): under
+   adversarial conditions, the system maintains `SelfBlanket`; conatus
+   remains bounded; both modes activate; switching occurs in response to
+   ambiguity/novelty rather than at random.
 
 ## 5. What this is not
 

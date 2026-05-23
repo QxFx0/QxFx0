@@ -15,6 +15,7 @@ module QxFx0.Runtime.Session
   , StateOrigin(..)
   , printHelp
   , printStateSummary
+  , governanceSummaryLines
   ) where
 
 import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)

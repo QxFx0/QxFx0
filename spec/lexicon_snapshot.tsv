@@ -3388,7 +3388,6 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 стена	noun	стена	стены	стене	стену	стеной	curated	curated	0.99
 стенд	noun	стенд	стенда	стенде	стенд	стендом	curated	curated	0.99
 степень	noun	степень	степени	степени	степень	степенью	curated	curated	0.99
-степь	noun	степь	степи	степи	степь	степью	curated	curated	0.99
 стервозность	noun	стервозность	стервозности	стервозности	стервозность	стервозностью	curated	curated	0.99
 стираемость	noun	стираемость	стираемости	стираемости	стираемость	стираемостью	curated	curated	0.99
 стихия	noun	стихия	стихии	стихии	стихию	стихией	curated	curated	0.99
@@ -3660,6 +3659,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 чувствительность	noun	чувствительность	чувствительности	чувствительности	чувствительность	чувствительностью	curated	curated	0.99
 чулан	noun	чулан	чулана	чулане	чулан	чуланом	curated	curated	0.99
 чулок	noun	чулок	чулка	чулке	чулок	чулком	curated	curated	0.99
+шаг	noun	шаг	шага	шаге	шаг	шагом	curated	curated	0.99
 шалаш	noun	шалаш	шалаша	шалаше	шалаш	шалашом	curated	curated	0.99
 шапка	noun	шапка	шапки	шапке	шапку	шапкой	curated	curated	0.99
 шар	noun	шар	шара	шаре	шар	шаром	curated	curated	0.99

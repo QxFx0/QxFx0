@@ -446,6 +446,10 @@ data EssenceViolation
   = ViolationFamilyMismatch !EssenceMode !CanonicalMoveFamily
   | ViolationToneMismatch   !EssenceMode !NarrativeTone
   | ViolationStyleMismatch  !EssenceMode !RenderStyle
+  | ViolationMissingDeliberation !EssenceMode
+    -- ^ A committed essence cannot be validated without a reconciled
+    --   plan. Missing deliberation is therefore a fail-closed state,
+    --   not an implicit validation pass.
   | ViolationRefusedCommitment !CommitmentTrigger
     -- ^ WP1 (contour closure): 'shouldCommit' fired with this trigger,
     --   but the resulting state remained 'EssenceUncommitted'.
@@ -462,6 +466,8 @@ renderEssenceViolation = \case
     "tone_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show t)
   ViolationStyleMismatch m s ->
     "style_mismatch:" <> renderEssenceMode m <> ":" <> T.pack (show s)
+  ViolationMissingDeliberation m ->
+    "missing_deliberation:" <> renderEssenceMode m
   ViolationRefusedCommitment trigger ->
     "refused_commitment:" <> renderCommitmentTrigger trigger
 

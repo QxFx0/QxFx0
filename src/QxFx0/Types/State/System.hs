@@ -41,6 +41,11 @@ module QxFx0.Types.State.System
   , ssSalienceWeights
   , ssFieldHeuristics
   , ssLearningNeedState
+  , ssGovernanceRuntimeFault
+  , appendAdaptiveMutationRecord
+  , appendAdaptiveMutationRecords
+  , commitGovernedPerspectiveProjection
+  , appendGovernanceEventRecord
   , emptySystemState
   ) where
 
@@ -57,7 +62,9 @@ import Data.Aeson
   )
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import QxFx0.Types.Decision (DialogueOutputMode(..), dialogueOutputModeText, parseDialogueOutputMode, SemanticAnchor, TurnDecision)
@@ -73,7 +80,7 @@ import QxFx0.Types.Domain
   , SemanticScene
   , UserState
   )
-import QxFx0.Types.Dream (DreamState)
+import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
 import QxFx0.Types.Intuition (IntuitiveState, defaultIntuitiveState)
 import QxFx0.Types.Observability
@@ -87,9 +94,31 @@ import QxFx0.Types.State.Dialogue
   ( DialogueState(..)
   , emptyDialogueState
   )
+import QxFx0.Types.State.AdaptiveMutation
+  ( AdaptiveMutationRecord
+  )
+import QxFx0.Types.State.DialogueDevelopment
+  ( BeliefStore
+  , DialogueOutcomeLearningState
+  , SpeechPolicyState
+  , emptyBeliefStore
+  , emptyDialogueOutcomeLearningState
+  , emptySpeechPolicyState
+  )
+import QxFx0.Types.State.Perspective
+  ( PerspectiveRegistry
+  , emptyPerspectiveRegistry
+  )
+import QxFx0.Types.State.Governance
+  ( GovernanceEvent
+  , GovernanceRuntimeFault
+  , appendGovernanceEventToHistory
+  )
 import QxFx0.Types.State.Discourse
-  ( DiscourseState
+  ( DiscourseState(..)
   , emptyDiscourseState
+  , TurnMemory(..)
+  , recomputeDiscourse
   )
 import QxFx0.Types.SemanticConfig
   ( SemanticConfig
@@ -170,6 +199,32 @@ data SystemState = SystemState
     --   timestamp, run-id, components, and decision.  Bounded to
     --   the most recent 100 entries to prevent unbounded growth.
     --   Initialised to '[]'.
+  , ssAdaptiveMutationLog :: ![AdaptiveMutationRecord]
+    -- ^ P0: unified bounded log of meaningful adaptive mutations across
+    --   knowledge, calibration, tool reliability, speech policy, and
+    --   claim-stance contours. Initialised to '[]'.
+  , ssDialogueOutcomeLearning :: !DialogueOutcomeLearningState
+    -- ^ Phase 11/ADR-0032: bounded outcome counters and recent
+    --   dialogue-outcome samples. Initialised to
+    --   'emptyDialogueOutcomeLearningState'.
+  , ssSpeechPolicyState :: !SpeechPolicyState
+    -- ^ Phase 11/ADR-0032: bounded style-pressure state derived from
+    --   strong dialogue outcomes. Initialised to 'emptySpeechPolicyState'.
+  , ssBeliefStore :: !BeliefStore
+    -- ^ Phase 11/ADR-0032: revisable dialogue claim-stance memory,
+    --   separate from the validated 'KnowledgeTree'. The legacy field name
+    --   is kept for persisted JSON compatibility; conceptually this is the
+    --   ClaimStanceStore contour. Initialised to 'emptyBeliefStore'.
+  , ssPerspectiveRegistry :: !PerspectiveRegistry
+    -- ^ P4/P5 derived versioned perspective lineage projection.
+    --   P5 canonical truth is 'ssGovernanceHistory'; this registry is kept
+    --   as a rebuildable runtime view. Initialised to 'emptyPerspectiveRegistry'.
+  , ssGovernanceHistory :: ![GovernanceEvent]
+    -- ^ P5: append-only canonical governance history for high-impact
+    --   governed mutations. Initialised to '[]'.
+  , ssGovernanceRuntimeFault :: !(Maybe GovernanceRuntimeFault)
+    -- ^ Surfaced fail-closed governance fault marker. A populated value
+    --   means the last governed mutation attempt was non-authoritative.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -216,10 +271,17 @@ instance ToJSON SystemState where
      , "learningNeedState" .= ssLearningNeedState ss
      , "guardrailState" .= ssGuardrailState ss
      , "calibrationLog" .= ssCalibrationLog ss
-     , "knowledgeTree" .= ssKnowledgeTree ss
-     , "toolReliability" .= ssToolReliability ss
-     , "calibrationSnapshots" .= ssCalibrationSnapshots ss
-     ]
+      , "knowledgeTree" .= ssKnowledgeTree ss
+      , "toolReliability" .= ssToolReliability ss
+      , "calibrationSnapshots" .= ssCalibrationSnapshots ss
+      , "adaptiveMutationLog" .= ssAdaptiveMutationLog ss
+       , "dialogueOutcomeLearning" .= ssDialogueOutcomeLearning ss
+       , "speechPolicyState" .= ssSpeechPolicyState ss
+       , "beliefStore" .= ssBeliefStore ss
+        , "perspectiveRegistry" .= ssPerspectiveRegistry ss
+        , "governanceHistory" .= ssGovernanceHistory ss
+        , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
+        ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -255,6 +317,7 @@ instance FromJSON SystemState where
       <*> o .:? "semanticAnchor" .!= Nothing
       <*> o .:? "lastTurnDecision" .!= Nothing
       <*> o .: "intuitConfidence"
+      <*> o .:? "semanticConfig" .!= defaultSemanticConfig
     SystemState ds ids sem
       <$> o .: "sessionId"
       <*> (parseDialogueOutputMode <$> o .: "outputMode")
@@ -268,9 +331,16 @@ instance FromJSON SystemState where
        <*> o .:? "learningNeedState" .!= emptyLearningNeedState
        <*> o .:? "guardrailState" .!= emptyGuardrailState
        <*> o .:? "calibrationLog" .!= emptyCalibrationLog
-       <*> o .:? "knowledgeTree" .!= emptyKnowledgeTree
-       <*> o .:? "toolReliability" .!= M.empty
-       <*> o .:? "calibrationSnapshots" .!= []
+         <*> o .:? "knowledgeTree" .!= emptyKnowledgeTree
+         <*> o .:? "toolReliability" .!= M.empty
+         <*> o .:? "calibrationSnapshots" .!= []
+         <*> o .:? "adaptiveMutationLog" .!= []
+         <*> o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState
+        <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
+        <*> o .:? "beliefStore" .!= emptyBeliefStore
+        <*> o .:? "perspectiveRegistry" .!= emptyPerspectiveRegistry
+        <*> o .:? "governanceHistory" .!= []
+        <*> o .:? "governanceRuntimeFault" .!= Nothing
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -327,10 +397,25 @@ ssMeaningGraph :: SystemState -> MeaningGraph
 ssMeaningGraph = semMeaningGraph . ssSemantic
 
 ssDiscourse :: SystemState -> DiscourseState
-ssDiscourse _ = emptyDiscourseState
+ssDiscourse ss =
+  let history = dsHistory (ssDialogue ss)
+      turnCount = dsTurnCount (ssDialogue ss)
+      lastTopic = dsLastTopic (ssDialogue ss)
+      turnMemory = if turnCount <= 0
+        then Seq.empty
+        else Seq.singleton TurnMemory
+          { tmrTurnIndex = max 0 (turnCount - 1)
+          , tmrTopic = lastTopic
+          , tmrFamily = dsLastFamily (ssDialogue ss)
+          , tmrRendered = maybe "" id (Seq.lookup (max 0 (Seq.length history - 1)) history)
+          }
+  in recomputeDiscourse emptyDiscourseState
+       { dscTurnMemory = turnMemory
+       , dscTopicChain = filter (not . T.null) [lastTopic]
+       }
 
 ssSemanticConfig :: SystemState -> SemanticConfig
-ssSemanticConfig _ = defaultSemanticConfig
+ssSemanticConfig = semConfig . ssSemantic
 
 ssKernelPulse :: SystemState -> KernelPulse
 ssKernelPulse = semKernelPulse . ssSemantic
@@ -351,9 +436,12 @@ ssIntuitConfidence :: SystemState -> Double
 ssIntuitConfidence = semIntuitConfidence . ssSemantic
 
 ssDreamAxiom :: SystemState -> Text
--- COMPAT GLUE: Source v2 had ssDreamAxiom field; target does not.
--- Returning empty text preserves old callers without adding persistent state.
-ssDreamAxiom _ = ""
+ssDreamAxiom ss =
+  let dreamState = semDreamState (ssSemantic ss)
+      cycles = dsDreamCycleCount dreamState
+  in if cycles <= 0
+       then ""
+       else T.concat ["dream_cycle_count=", T.pack (show cycles)]
 
 ssDreamState :: SystemState -> DreamState
 ssDreamState = semDreamState . ssSemantic
@@ -369,6 +457,26 @@ ssHolisticStreak = dsHolisticStreak . ssDialogue
 
 ssRecentNarrativeSuccess :: SystemState -> [Bool]
 ssRecentNarrativeSuccess = dsRecentNarrativeSuccess . ssDialogue
+
+adaptiveMutationLogLimit :: Int
+adaptiveMutationLogLimit = 100
+
+appendAdaptiveMutationRecord :: AdaptiveMutationRecord -> SystemState -> SystemState
+appendAdaptiveMutationRecord record ss =
+  ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (record : ssAdaptiveMutationLog ss) }
+
+appendAdaptiveMutationRecords :: [AdaptiveMutationRecord] -> SystemState -> SystemState
+appendAdaptiveMutationRecords records ss =
+  ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (records ++ ssAdaptiveMutationLog ss) }
+
+commitGovernedPerspectiveProjection :: PerspectiveRegistry -> AdaptiveMutationRecord -> SystemState -> SystemState
+commitGovernedPerspectiveProjection registry record ss =
+  appendAdaptiveMutationRecord record ss { ssPerspectiveRegistry = registry }
+
+appendGovernanceEventRecord :: GovernanceEvent -> SystemState -> Either Text SystemState
+appendGovernanceEventRecord event ss = do
+  history <- appendGovernanceEventToHistory event (ssGovernanceHistory ss)
+  pure ss { ssGovernanceHistory = history }
 
 emptySystemState :: SystemState
 emptySystemState = SystemState
@@ -390,4 +498,11 @@ emptySystemState = SystemState
   , ssKnowledgeTree = emptyKnowledgeTree
   , ssToolReliability = M.empty
   , ssCalibrationSnapshots = []
+  , ssAdaptiveMutationLog = []
+  , ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState
+  , ssSpeechPolicyState = emptySpeechPolicyState
+  , ssBeliefStore = emptyBeliefStore
+  , ssPerspectiveRegistry = emptyPerspectiveRegistry
+  , ssGovernanceHistory = []
+  , ssGovernanceRuntimeFault = Nothing
   }

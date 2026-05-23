@@ -12,6 +12,7 @@ module QxFx0.Core.TurnPipeline.Finalize.State
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.Thresholds
   ( legitimacyPassThreshold
@@ -33,8 +34,10 @@ import QxFx0.Core.Observability
 import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
+import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
 import QxFx0.Self.Salience
   ( Salience (..)
+  , SalienceWeights(..)
   , renderSalienceDriver
   , salienceFromConatusEnergy
   , isHolisticFamily
@@ -64,7 +67,8 @@ import QxFx0.Self.Essence
   , witness
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
-import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), fieldCounterfactual, Counterfactual(..))
+import QxFx0.Self.Perspective (buildActivePerspectiveProjections)
+import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..))
 import QxFx0.Learning.Need
   ( detectLearningNeedWithPressure
   , defaultLearningPressureConfig
@@ -72,7 +76,24 @@ import QxFx0.Learning.Need
   , LearningNeedState(..)
   , renderLearningNeed
   )
-import QxFx0.Learning.Signal (CalibrationSignal(..), computeCalibrationSignal, emptySignalComponents)
+import QxFx0.Learning.Calibration
+  ( CalibrationId(..)
+  , CalibrationEntry(..)
+  , CalibrationLog(..)
+  , CalibrationProposal(..)
+  , acceptProposal
+  , currentCalibrationVersion
+  )
+import QxFx0.Learning.Signal
+  ( CalibrationDecision(..)
+  , CalibrationSignal(..)
+  , CalibrationSnapshot(..)
+  , SignalComponents(..)
+  , applyCalibrationGated
+  , computeCalibrationSignal
+  , defaultSignalPipelineConfig
+  , emptySignalComponents
+  )
 import QxFx0.Learning.KnowledgeTree
   ( KnowledgeTree(..)
   , emptyKnowledgeTree
@@ -101,6 +122,7 @@ import QxFx0.Semantic.AtomAccretion
 import QxFx0.Types.Text (textShow)
 
 import Data.Maybe (fromMaybe)
+import Control.Applicative ((<|>))
 import Data.Sequence (Seq)
 import qualified Data.Foldable as F
 import qualified Data.Set as Set
@@ -137,6 +159,167 @@ computeEssenceValidation ti tp nextEssence mTrigger =
            Right _ -> Right ()
            Left v  -> Left v
     _ -> Right ()
+
+selfTuningMutationRecords
+  :: Int
+  -> Double
+  -> SignalComponents
+  -> SalienceWeights
+  -> FieldHeuristics
+  -> SalienceWeights
+  -> FieldHeuristics
+  -> [AdaptiveMutationRecord]
+selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights oldHeuristics =
+  salienceRecord <> fieldRecord
+  where
+    signalEvidence =
+      [ "signal=" <> textShow signal
+      , "conatus=" <> textShow (scConatusTrend comps)
+      , "uncertainty=" <> textShow (scUncertaintyTrend comps)
+      , "loop=" <> textShow (scLoopRisk comps)
+      , "branch=" <> textShow (scBranchHealthTrend comps)
+      ]
+    strength = if abs signal >= 0.15 then EvidenceStrong else EvidenceWeak
+    decision = if abs signal >= 0.15 then AdaptiveAccepted else AdaptiveObserved
+    salienceDelta = salienceWeightsMaxDelta oldWeights newWeights
+    fieldDelta = fieldHeuristicsMaxDelta oldHeuristics newHeuristics
+    salienceRecord =
+      if oldWeights == newWeights
+        then []
+        else
+          [ AdaptiveMutationRecord
+              { amrTurnId = turn
+              , amrKind = MutSalienceWeights
+              , amrCause = "finalize:bounded_salience_adaptation"
+              , amrEvidence = signalEvidence
+              , amrEvidenceStrength = strength
+              , amrConfidence = min 1.0 (abs signal)
+              , amrBoundedDelta = Just salienceDelta
+              , amrDecision = decision
+              }
+          ]
+    fieldRecord =
+      if oldHeuristics == newHeuristics
+        then []
+        else
+          [ AdaptiveMutationRecord
+              { amrTurnId = turn
+              , amrKind = MutFieldHeuristics
+              , amrCause = "finalize:bounded_field_heuristics_adaptation"
+              , amrEvidence = signalEvidence
+              , amrEvidenceStrength = strength
+              , amrConfidence = min 1.0 (abs signal)
+              , amrBoundedDelta = Just fieldDelta
+              , amrDecision = decision
+              }
+          ]
+
+knowledgeMaintenanceMutationRecords :: Int -> Int -> Int -> [AdaptiveMutationRecord]
+knowledgeMaintenanceMutationRecords turn prunedBranches prunedFruits =
+  if prunedBranches <= 0 && prunedFruits <= 0
+    then []
+    else
+      [ AdaptiveMutationRecord
+          { amrTurnId = turn
+          , amrKind = MutKnowledgeTree
+          , amrCause = "finalize:knowledge_tree_maintenance"
+          , amrEvidence =
+              [ "pruned_branches=" <> textShow prunedBranches
+              , "pruned_fruits=" <> textShow prunedFruits
+              ]
+          , amrEvidenceStrength = EvidenceStrong
+          , amrConfidence = 1.0
+          , amrBoundedDelta = Just (fromIntegral (prunedBranches + prunedFruits))
+          , amrDecision = AdaptiveRejected
+          }
+      ]
+
+quarantinePromotionMutationRecords :: Int -> Int -> [AdaptiveMutationRecord]
+quarantinePromotionMutationRecords turn promotedCount
+  | promotedCount <= 0 = []
+  | otherwise =
+      [ AdaptiveMutationRecord
+          { amrTurnId = turn
+          , amrKind = MutKnowledgeTree
+          , amrCause = "finalize:knowledge_tree_quarantine_promotion"
+          , amrEvidence = ["promoted_from_quarantine=" <> textShow promotedCount]
+          , amrEvidenceStrength = EvidenceModerate
+          , amrConfidence = 0.75
+          , amrBoundedDelta = Just (fromIntegral promotedCount)
+          , amrDecision = AdaptivePromoted
+          }
+      ]
+
+appendCalibrationEntries :: Int -> CalibrationLog -> [Maybe CalibrationProposal] -> CalibrationLog
+appendCalibrationEntries turn (CalibrationLog existing) proposals =
+  let concrete = [ proposal | Just proposal <- proposals ]
+      nextBase = maybe 1 ((+ 1) . unCalibrationId . ceId) (safeLast existing)
+      prevId = currentCalibrationVersion (CalibrationLog existing)
+      step (entries, nextId, previous) proposal =
+        let (entry, CalibrationId nextRaw) = acceptProposal (CalibrationId nextId) proposal turn previous
+        in (entries ++ [entry], nextRaw, Just (ceId entry))
+      (newEntries, _, _) = foldl step ([], nextBase, prevId) concrete
+  in CalibrationLog (existing ++ newEntries)
+  where
+    safeLast [] = Nothing
+    safeLast xs = Just (last xs)
+
+calibrationMutationRecord :: Int -> CalibrationDecision -> Double -> SignalComponents -> AdaptiveMutationRecord
+calibrationMutationRecord turn decision signal comps = AdaptiveMutationRecord
+  { amrTurnId = turn
+  , amrKind = MutCalibration
+  , amrCause = "finalize:calibration_signal"
+  , amrEvidence =
+      [ "decision=" <> renderCalibrationDecision decision
+      , "signal=" <> textShow signal
+      , "conatus=" <> textShow (scConatusTrend comps)
+      , "uncertainty=" <> textShow (scUncertaintyTrend comps)
+      , "loop=" <> textShow (scLoopRisk comps)
+      , "branch=" <> textShow (scBranchHealthTrend comps)
+      ]
+  , amrEvidenceStrength = if abs signal >= 0.15 then EvidenceStrong else EvidenceWeak
+  , amrConfidence = min 1.0 (abs signal)
+  , amrBoundedDelta = Just 1.0
+  , amrDecision = adaptiveDecisionForCalibration decision
+  }
+
+adaptiveDecisionForCalibration :: CalibrationDecision -> AdaptiveDecision
+adaptiveDecisionForCalibration decision =
+  case decision of
+    CdApplySignal -> AdaptiveAccepted
+    CdHoldLowConfidence -> AdaptiveObserved
+    CdHoldGuardrails -> AdaptiveRejected
+    CdHoldNoNeed -> AdaptiveObserved
+
+renderCalibrationDecision :: CalibrationDecision -> Text
+renderCalibrationDecision decision =
+  case decision of
+    CdApplySignal -> "apply_signal"
+    CdHoldLowConfidence -> "hold_low_confidence"
+    CdHoldGuardrails -> "hold_guardrails"
+    CdHoldNoNeed -> "hold_no_need"
+
+salienceWeightsMaxDelta :: SalienceWeights -> SalienceWeights -> Double
+salienceWeightsMaxDelta old new = maximumOrZero
+  [ abs (weightResonance new - weightResonance old)
+  , abs (weightAtmosphere new - weightAtmosphere old)
+  , abs (weightConsolidation new - weightConsolidation old)
+  , abs (weightCounterfactual new - weightCounterfactual old)
+  , abs (weightFieldConfidence new - weightFieldConfidence old)
+  ]
+
+fieldHeuristicsMaxDelta :: FieldHeuristics -> FieldHeuristics -> Double
+fieldHeuristicsMaxDelta old new = maximumOrZero
+  [ abs (fhDefaultNarrativeRate new - fhDefaultNarrativeRate old)
+  , abs (fhTopicStabilityBoost new - fhTopicStabilityBoost old)
+  , abs (fhHolisticStreakBoostRate new - fhHolisticStreakBoostRate old)
+  , abs (fhHolisticStreakBoostCap new - fhHolisticStreakBoostCap old)
+  , abs (fhLegitimacyMidpoint new - fhLegitimacyMidpoint old)
+  , abs (fhLegitimacyBonusScale new - fhLegitimacyBonusScale old)
+  ]
+
+maximumOrZero :: [Double] -> Double
+maximumOrZero = foldr max 0.0
 
 buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger)
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
@@ -184,7 +367,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       -- Phase 7: bounded calibration signal + rooted tree maintenance.
       -- Compute signal from conatus trend, uncertainty, loop risk,
       -- and branch health.  Only adapt when committed.
-      (adaptedWeights, adaptedHeuristics, nextTree, _signalComponents) =
+      (adaptedWeights, adaptedHeuristics, nextTree, calibrationSnapshots, nextCalibrationLog, adaptiveRecords) =
         case nextEssence of
           EssenceCommitted _ commitment ->
             let -- Extract counterfactual from the pre-turn Field
@@ -202,6 +385,15 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                     windowSize
                     (ssKnowledgeTree ss)
                 signal = unCalibrationSignal calSignal
+                (shouldApplySignal, calibrationDecision) =
+                  applyCalibrationGated defaultSignalPipelineConfig calSignal (ssCalibrationSnapshots ss)
+                calibrationSnapshot = CalibrationSnapshot
+                  { csTimestamp = tiStartTime ti
+                  , csRunId = tmSessionId (tiMetrics ti) <> ":" <> tmRequestId (tiMetrics ti)
+                  , csComponents = sigComps
+                  , csSignal = signal
+                  , csDecision = calibrationDecision
+                  }
                 -- Update knowledge tree root from commitment
                 treeWithRoot =
                   (ssKnowledgeTree ss)
@@ -214,31 +406,49 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                   pruneBranches currentTurn (-0.5) 3 treeWithRoot
                 (treeClean, _prunedFruits) =
                   pruneFruits currentTurn treePruned
-            in ( adaptSalienceWeights signal (ssSalienceWeights ss)
-               , adaptFieldHeuristics signal (ssFieldHeuristics ss)
-               , treeClean
-               , sigComps
+                promotionRule = textShow outcomeFamily
+                (treePromoted, promotedFromQuarantine, _rejectedFromQuarantine) =
+                  promoteFromQuarantine currentTurn 2 promotionRule treeClean
+                weights1 = if shouldApplySignal then adaptSalienceWeights signal (ssSalienceWeights ss) else ssSalienceWeights ss
+                heuristics1 = if shouldApplySignal then adaptFieldHeuristics signal (ssFieldHeuristics ss) else ssFieldHeuristics ss
+                calibrationLog1 =
+                  if shouldApplySignal
+                    then appendCalibrationEntries currentTurn (ssCalibrationLog ss)
+                      [ if weights1 /= ssSalienceWeights ss then Just (ProposalSalienceWeights weights1) else Nothing
+                      , if heuristics1 /= ssFieldHeuristics ss then Just (ProposalFieldHeuristics heuristics1) else Nothing
+                      ]
+                    else ssCalibrationLog ss
+                tuningRecords = calibrationMutationRecord currentTurn calibrationDecision signal sigComps :
+                  selfTuningMutationRecords currentTurn signal sigComps weights1 heuristics1 (ssSalienceWeights ss) (ssFieldHeuristics ss)
+                treeRecords = knowledgeMaintenanceMutationRecords currentTurn _prunedBranches _prunedFruits
+                  <> quarantinePromotionMutationRecords currentTurn promotedFromQuarantine
+            in ( weights1
+               , heuristics1
+               , treePromoted
+               , take 100 (calibrationSnapshot : ssCalibrationSnapshots ss)
+               , calibrationLog1
+               , tuningRecords <> treeRecords
                )
-          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, emptySignalComponents)
+          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, ssCalibrationSnapshots ss, ssCalibrationLog ss, [])
       -- WP6.1: endogenous learning diagnostic drive with separate learning pressure.
       bestTopic = tiBestTopic ti
       isTopicUnknown = not (T.null bestTopic)
                          && not (hasKnownMorphologyForm (ssMorphology ss) bestTopic)
-                         && not (isTermKnownInKnowledgeTree bestTopic (ssKnowledgeTree ss))
-      currentGraftedCount = ktGraftedCount (ssKnowledgeTree ss)
+                         && not (isTermKnownInKnowledgeTree bestTopic nextTree)
+      currentGraftedCount = ktGraftedCount nextTree
       newLearningNeedState =
-         detectLearningNeedWithPressure
+          detectLearningNeedWithPressure
            defaultLearningPressureConfig
            (tiConatusEnergy ti)
            (tiField ti)
            0 -- repairCount: historical recovery tracking deferred to Phase 7
            (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
            (ssTurnCount ss + 1)
-           (ssLearningNeedState ss)
-           isTopicUnknown
-           currentGraftedCount
-     in ( ss
-       { ssDialogue = (ssDialogue ss)
+            (ssLearningNeedState ss)
+            isTopicUnknown
+            currentGraftedCount
+      baseNext = ss
+        { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
           , dsActiveScene = tpActiveScene tp
           , dsLastFamily = outcomeFamily
@@ -305,14 +515,14 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
         -- ^ WP5: guardrails currently pass through unchanged;
         --   proposal-submission tracking will be wired when the
         --   external-tool bridge is integrated.
-      , ssCalibrationLog = ssCalibrationLog ss
-        -- ^ WP4: calibration ledger currently pass through unchanged;
-        --   accept/rollback mutations will be wired when the
-        --   verify/simulate/accept loop is integrated end-to-end.
+      , ssCalibrationLog = nextCalibrationLog
       , ssKnowledgeTree = nextTree
         -- ^ Phase 7: rooted knowledge tree.  Root updated from
         --   committed essence; structural pruning applied each turn.
+      , ssCalibrationSnapshots = calibrationSnapshots
       }
+      nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext
+      in ( nextWithLog
     , commitmentTrigger
     )
 
@@ -359,7 +569,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             (Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)
           Nothing
             | runtimeMode == "degraded" ->
-                (Just RecoveryRuntimeDegraded, Just StrategyNarrowScope, ["runtime_mode=degraded"])
+                (Nothing, Nothing, ["runtime_mode=degraded"])
           Nothing ->
             (Nothing, Nothing, [])
       -- Canonical trace Salience.  The Conatus and Field values
@@ -368,6 +578,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       -- that drove the routing decision.
       traceSalience   = turnInputSalience ti
       postEssence = ssEssence nextSs
+      perspectiveProjections = buildActivePerspectiveProjections (ssPerspectiveRegistry nextSs)
+      learningVerdict = deriveLearningReplayVerdict nextSs ta
       (modeTag, committedFlag, angst, triggerTag) = case postEssence of
         EssenceUncommitted t ->
           ( Just (renderEssenceMode EssenceWitnessing)
@@ -444,21 +656,18 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                   _ -> case taExploratoryQueryResult ta of
                          Just (Right resp) -> Just (eqrToolName resp)
                          _ -> Nothing
-            , trcLearningValidationStatus =
-                case (taExternalQueryResult ta, taExploratoryQueryResult ta) of
-                  (Nothing, Nothing)       -> Just "not_attempted"
-                  (Just (Left _), _)       -> Just "transport_error"
-                  (Just (Right _), _)      -> Just "pending_validation"
-                  (Nothing, Just (Left _)) -> Just "exploratory_transport_error"
-                  (Nothing, Just (Right _)) -> Just "exploratory_pending_validation"
-            , trcLearningSandboxResult = Nothing
-            , trcLearningGraftTurn = Nothing
-            , trcLearningRejectReason =
-                case taExternalQueryResult ta of
-                  Just (Left err) -> Just (renderExternalQueryError err)
-                  _ -> case taExploratoryQueryResult ta of
-                         Just (Left err) -> Just (T.concat ["exploratory:", renderExternalQueryError err])
-                         _ -> Nothing
+            , trcLearningValidationStatus = Just (lrvStatus learningVerdict)
+            , trcLearningSandboxResult = lrvSandboxResult learningVerdict
+            , trcLearningGraftTurn = lrvGraftTurn learningVerdict
+            , trcLearningRejectReason = lrvRejectReason learningVerdict
+            , trcSenseAnchor = unSemanticNodeId (svAnchor (rspInputVector (rmpSensePlan (tpRmpAfterLegit tp))))
+            , trcSenseOperator = Just (rspChosenOperator (rmpSensePlan (tpRmpAfterLegit tp)))
+             , trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))
+             , trcPerspectiveProjection =
+                 case perspectiveProjections of
+                   projection:_ -> Just projection
+                   [] -> Nothing
+            , trcPerspectiveProjections = perspectiveProjections
             }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -466,13 +675,13 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpParserConfidence = parserConfidence
       , tqpParserErrors = parserErrors
       , tqpPlannerMode = case tpPrincipledModePair tp of Just _ -> PrincipledPlanner; Nothing -> DefaultPlanner
-      , tqpPlannerDecision = tpFamily tp
+      , tqpPlannerDecision = tdFamily decision
       , tqpAtomRegister = asRegister (tiAtomSet ti)
       , tqpAtomLoad = asLoad (tiAtomSet ti)
       , tqpScenePressure = scenePressure
       , tqpSceneRequest = tiBestTopic ti
       , tqpSceneStance = usNeedLayer (tiNextUserState ti)
-      , tqpRenderLane = rsMove (tpRenderStrategy tp)
+      , tqpRenderLane = rsMove (tdRenderStrategy decision)
       , tqpRenderStyle = tdRenderStyle decision
       , tqpLegitimacyStatus = legitimacyStatus
       , tqpLegitimacyReason = legitimacyReason
@@ -531,6 +740,50 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
               }
       !metricsFinal = addPhase (recordPhase "total" (tiStartTime ti) tSave1) metrics5
   in metricsFinal
+
+data LearningReplayVerdict = LearningReplayVerdict
+  { lrvStatus :: !Text
+  , lrvSandboxResult :: !(Maybe Text)
+  , lrvGraftTurn :: !(Maybe Int)
+  , lrvRejectReason :: !(Maybe Text)
+  }
+
+deriveLearningReplayVerdict :: SystemState -> TurnArtifacts -> LearningReplayVerdict
+deriveLearningReplayVerdict nextSs ta =
+  case firstAttempt of
+    Nothing -> LearningReplayVerdict "not_attempted" Nothing Nothing Nothing
+    Just (Left err) ->
+      LearningReplayVerdict
+        { lrvStatus = case err of
+            EqeFallback _ -> "fallback_non_authoritative"
+            _ -> "transport_error"
+        , lrvSandboxResult = Nothing
+        , lrvGraftTurn = Nothing
+        , lrvRejectReason = Just (renderExternalQueryError err)
+        }
+    Just (Right _) ->
+      case () of
+        _ | any isGraft currentTurnRecords -> LearningReplayVerdict "accept" (firstCauseEvidence "sandbox_accept") (Just currentTurn) Nothing
+          | any isSandboxReject currentTurnRecords -> LearningReplayVerdict "sandbox_reject" (firstMutationEvidence "external_learning:sandbox_reject") Nothing (firstMutationEvidence "external_learning:sandbox_reject")
+          | any isValidationReject currentTurnRecords -> LearningReplayVerdict "validation_reject" Nothing Nothing (firstMutationEvidence "external_learning:validation_reject")
+          | any isParserReject currentTurnRecords -> LearningReplayVerdict "invalid_response" Nothing Nothing (Just "parser_rejected_schema_or_text")
+          | otherwise -> LearningReplayVerdict "observed_non_authoritative" Nothing Nothing (Just "learning_outcome_unresolved")
+  where
+    currentTurn = ssTurnCount nextSs
+    currentTurnRecords = filter ((== currentTurn) . amrTurnId) (ssAdaptiveMutationLog nextSs)
+    firstAttempt = taExternalQueryResult ta <|> taExploratoryQueryResult ta
+    isGraft record = amrCause record == "external_learning:graft" && amrDecision record == AdaptiveAccepted
+    isSandboxReject record = amrCause record == "external_learning:sandbox_reject"
+    isValidationReject record = amrCause record == "external_learning:validation_reject"
+    isParserReject record = amrCause record == "tool_reliability:rejected" && any (== "reason=parser_rejected_schema_or_text") (amrEvidence record)
+    firstMutationEvidence cause =
+      case [ evidence | record <- currentTurnRecords, amrCause record == cause, evidence:_ <- [amrEvidence record] ] of
+        value:_ -> Just value
+        [] -> Nothing
+    firstCauseEvidence reason =
+      case [ evidence | record <- currentTurnRecords, any (== ("reason=" <> reason)) (amrEvidence record), evidence:_ <- [amrEvidence record] ] of
+        value:_ -> Just value
+        [] -> Nothing
 
 retainBlockedConcepts :: Text -> [Text] -> [Text]
 retainBlockedConcepts latestReason existing =

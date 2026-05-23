@@ -1096,6 +1096,8 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcLearningSandboxResult = Nothing
               , trcLearningGraftTurn = Nothing
               , trcLearningRejectReason = Nothing
+              , trcPerspectiveProjection = Nothing
+              , trcPerspectiveProjections = []
               }
           , tqpDivergence = True
           }
@@ -1400,6 +1402,8 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcLearningSandboxResult = Nothing
               , trcLearningGraftTurn = Nothing
               , trcLearningRejectReason = Nothing
+              , trcPerspectiveProjection = Nothing
+              , trcPerspectiveProjections = []
               }
           , tqpDivergence = True
           }

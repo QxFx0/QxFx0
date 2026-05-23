@@ -80,8 +80,6 @@ data SandboxRejectReason
   | SbrHighRepairLoopRisk
   | SbrNegativeNetScore
   | SbrMorphologyConflict
-  | SbrTimeoutBudgetExceeded
-    -- ^ Sandbox computation exceeded its time-budget; fail-closed.
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
@@ -94,10 +92,9 @@ data SandboxConfig = SandboxConfig
     -- ^ Minimum acceptable projected conatus trend (default -0.3).
   , scMinNetScore       :: !Double
     -- ^ Minimum weighted composite for non-regression (default -0.05).
-  , scMaxLatencyIncrease :: !Double
-    -- ^ Maximum allowed relative latency increase (default 0.20 = 20%).
-  , scTimeoutBudgetUs   :: !Int
-    -- ^ Microseconds budget for sandbox computation (default 50ms).
+  , scMaxUncertaintyIncrease :: !Double
+    -- ^ Maximum allowed projected uncertainty increase over the current
+    --   baseline (default 0.20).
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
@@ -107,8 +104,7 @@ defaultSandboxConfig = SandboxConfig
   { scWindowSize        = 5
   , scSafetyFloor       = -0.3
   , scMinNetScore       = -0.05
-  , scMaxLatencyIncrease = 0.20
-  , scTimeoutBudgetUs   = 50000   -- 50 ms
+  , scMaxUncertaintyIncrease = 0.20
   }
 
 -- | Safety floor for projected conatus trend.
@@ -133,20 +129,20 @@ runSandboxGate = runSandboxGateWithConfig defaultSandboxConfig
 -- 1. Strict non-regression: projected conatus >= safetyFloor AND netScore >= minNetScore.
 -- 2. Improvement bonus: if both conatusDelta and predictiveDelta are > 0,
 --    the netScore threshold is relaxed slightly.
--- 3. Timeout budget: if computation exceeds the microsecond budget,
---    reject with 'SbrTimeoutBudgetExceeded'.
+-- 3. Bounded uncertainty increase: if the projected uncertainty rises too far
+--    above the current baseline, reject with 'SbrRisingUncertainty'.
 runSandboxGateWithConfig :: SandboxConfig -> SystemState -> KnowledgeFruitPayload -> SandboxResult
 runSandboxGateWithConfig cfg ss payload =
   let needState = ssLearningNeedState ss
       -- Current conatus trend from the last 3 history points (or 0 if insufficient)
       currentConatusTrend = conatusTrendFromHistory (lnsHistory needState)
       -- Current uncertainty proxy: amplitude of history oscillation
-      currentUncertainty  = historyOscillation (lnsHistory needState)
+      currentUncertainty  = historyOscillationWithWindow (scWindowSize cfg) (lnsHistory needState)
       -- Projected values after applying the fruit deltas
       projectedConatus  = currentConatusTrend + kfpConatusDelta payload
       projectedUncertainty = max 0 (currentUncertainty - kfpPredictiveDelta payload)
       -- Repair-loop frequency proxy: how often history levels exceed a soft threshold
-      loopFreq            = repairLoopProxy (lnsHistory needState)
+      loopFreq            = repairLoopProxyWithWindow (scWindowSize cfg) (lnsHistory needState)
       -- Net score: weighted composite with improvement bonus
       rawNetScore         = 0.5 * kfpConatusDelta payload + 0.5 * kfpPredictiveDelta payload
       -- Improvement bonus: both deltas positive -> relax threshold by 0.05
@@ -165,10 +161,12 @@ runSandboxGateWithConfig cfg ss payload =
 
   in if projectedConatus < scSafetyFloor cfg
        then SandboxReject metrics SbrDegradingConatus
-     else if netScore < effectiveMinScore
-       then SandboxReject metrics SbrNegativeNetScore
-     else if loopFreq > 0.8
-       then SandboxReject metrics SbrHighRepairLoopRisk
+      else if projectedUncertainty > currentUncertainty + scMaxUncertaintyIncrease cfg
+        then SandboxReject metrics SbrRisingUncertainty
+      else if netScore < effectiveMinScore
+        then SandboxReject metrics SbrNegativeNetScore
+      else if loopFreq > 0.8
+        then SandboxReject metrics SbrHighRepairLoopRisk
      else
        -- Non-regression or improvement: accept
        SandboxAccept metrics
@@ -181,15 +179,15 @@ conatusTrendFromHistory hist =
     _ -> 0.0
 
 -- | Simple oscillation amplitude (max - min) over last windowSize points.
-historyOscillation :: [(Int, Double)] -> Double
-historyOscillation hist =
-  let recent = take windowSize (map snd (reverse hist))
+historyOscillationWithWindow :: Int -> [(Int, Double)] -> Double
+historyOscillationWithWindow configuredWindow hist =
+  let recent = take (max 1 configuredWindow) (map snd (reverse hist))
   in if null recent then 0.0 else maximum recent - minimum recent
 
 -- | Proxy for repair-loop frequency: fraction of recent points above 0.6.
-repairLoopProxy :: [(Int, Double)] -> Double
-repairLoopProxy hist =
-  let recent = take windowSize (map snd (reverse hist))
+repairLoopProxyWithWindow :: Int -> [(Int, Double)] -> Double
+repairLoopProxyWithWindow configuredWindow hist =
+  let recent = take (max 1 configuredWindow) (map snd (reverse hist))
       count  = fromIntegral (length (filter (> 0.6) recent))
       total  = fromIntegral (max 1 (length recent))
   in count / total
@@ -200,4 +198,3 @@ renderSandboxRejectReason SbrRisingUncertainty    = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk   = "high_repair_loop_risk"
 renderSandboxRejectReason SbrNegativeNetScore     = "negative_net_score"
 renderSandboxRejectReason SbrMorphologyConflict   = "morphology_conflict"
-renderSandboxRejectReason SbrTimeoutBudgetExceeded = "timeout_budget_exceeded"

@@ -13,6 +13,7 @@ import Data.List (sort)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (Day(ModifiedJulianDay))
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Test.HUnit hiding (Testable)
@@ -129,6 +130,11 @@ import QxFx0.Learning.Need
 import QxFx0.Learning.KnowledgeTree
   ( ktGraftedCount
   , emptyKnowledgeTree
+  )
+import QxFx0.Learning.DialogueDevelopment
+  ( adjustRenderStyleForSpeechPolicy
+  , updateBeliefStore
+  , updateSpeechPolicy
   )
 import QxFx0.Self.Field (Field(..), emptyField, FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Learning.Tool
@@ -295,12 +301,24 @@ turnPipelineProtocolTests =
       , testAutonomousExplorationFailClosed
       , testAutonomousExplorationGuardrailBlocks
       , testAutonomousExplorationTelemetry
-      , testRequestDrivenPathNotRegressedByExploration
-      -- WP6.1: dedup anti-overblocking + telemetry wiring
-      , testDedupAntiOverblockingAllowsNoisyKnownTopic
-      , testDedupBlocksCleanKnownTopic
-      , testFinalizeMetricsPopulatesLearningTelemetry
-      ]
+       , testRequestDrivenPathNotRegressedByExploration
+       -- WP6.1: dedup anti-overblocking + telemetry wiring
+       , testDedupAntiOverblockingAllowsNoisyKnownTopic
+       , testDedupBlocksCleanKnownTopic
+       , testDialogueDevelopmentPersistsOutcomeAndBelief
+       , testDialogueDevelopmentConflictUsesPriorTopic
+        , testDialogueDevelopmentWeakSignalsDoNotMutate
+        , testDialogueDevelopmentWeakAcknowledgementDoesNotMutate
+        , testDialogueDevelopmentWeakConfirmationPhrasesStayWeak
+        , testDialogueDevelopmentRepeatedQuestionRecordsMutation
+         , testDialogueDevelopmentDecisionRecordsStrongMutation
+         , testPerspectiveFinalizeRecordsGovernedMutation
+         , testPerspectiveFinalizeReplayUsesSafeProjectionOnly
+        , testDialogueDevelopmentBoundsAdaptiveMaps
+       , testSpeechPolicyBiasesRouteStyle
+       , testSpeechPolicyDoesNotDowngradeRecoveryStyle
+       , testFinalizeMetricsPopulatesLearningTelemetry
+       ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
@@ -2667,8 +2685,8 @@ testAutonomousExplorationTelemetry = TestCase $ do
   let trace = tqpReplayTrace (fpbProjection bundle)
   assertEqual "telemetry must show exploratory query type"
     (Just "exploratory") (trcLearningQueryType trace)
-  assertEqual "telemetry must not show not_attempted when exploratory succeeded"
-    (Just "exploratory_pending_validation") (trcLearningValidationStatus trace)
+  assertEqual "telemetry must expose final exploratory learning verdict"
+    (Just "accept") (trcLearningValidationStatus trace)
 
 -- | Phase 9 MVP: request-driven external query path is not regressed
 -- when exploratory path is also active.
@@ -2763,6 +2781,389 @@ testDedupBlocksCleanKnownTopic = TestCase $
       (Just "already_known_morphology") (repExternalQuerySkipReason renderPlan)
     assertBool "clean known topic must NOT produce external query request"
       (repExternalQueryRequest renderPlan == Nothing)
+
+-- | ADR-0032: finalize precommit records strong dialogue outcome state
+-- separately from external knowledge learning.
+testDialogueDevelopmentPersistsOutcomeAndBelief :: Test
+testDialogueDevelopmentPersistsOutcomeAndBelief = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    let nextSs = fpbNextSs bundle
+        outcome = ssDialogueOutcomeLearning nextSs
+        belief = ssBeliefStore nextSs
+    assertEqual "success outcome must be counted"
+      1 (dolSuccessCount outcome)
+    assertBool "strong outcome sample must be recorded"
+      (not (null (dolRecentOutcomes outcome)))
+    case dolRecentOutcomes outcome of
+      sample:_ -> do
+        assertEqual "strong success must carry strong evidence"
+          EvidenceStrong (dosEvidenceStrength sample)
+        assertEqual "strong success must have an apply decision"
+          AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+      [] -> assertFailure "strong outcome sample must be present"
+    assertBool "confirmed claim stance must be stored under the prior topic"
+      (Map.member "свобода" (bsClaims belief))
+
+-- | ADR-0032: conflict feedback revises the prior topic instead of
+-- storing the conflict utterance as the claim.
+testDialogueDevelopmentConflictUsesPriorTopic :: Test
+testDialogueDevelopmentConflictUsesPriorTopic = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "неверно"
+    let belief = ssBeliefStore (fpbNextSs bundle)
+    case Map.lookup "свобода" (bsClaims belief) of
+      Nothing -> assertFailure "conflict must be stored under the prior topic"
+      Just record -> do
+        assertEqual "conflict must contest the prior topic"
+          BeliefContested (brPolarity record)
+        assertBool "conflict must record a revision"
+          (brRevisionCount record >= 1)
+
+-- | ADR-0032: weak turns do not mutate speech policy or belief store.
+testDialogueDevelopmentWeakSignalsDoNotMutate :: Test
+testDialogueDevelopmentWeakSignalsDoNotMutate = TestCase $
+  withDeterministicEmbedding $ do
+    let speechPolicy = emptySpeechPolicyState
+          { spsDirectness = 0.20
+          , spsCompression = 0.25
+          , spsAmbiguityTolerance = 0.80
+          , spsRepairBias = 0.15
+          , spsSuccessfulPatterns = Map.singleton "formal" 1
+          , spsFailedPatterns = Map.singleton "clinical" 2
+          , spsLastUpdatedTurn = 4
+          }
+        belief = emptyBeliefStore
+          { bsClaims = Map.singleton "свобода"
+              BeliefRecord
+                { brClaim = "свобода"
+                , brPolarity = BeliefTentative
+                , brConfidence = 0.6
+                , brEvidence = ["turn=1:success"]
+                , brCounterEvidence = []
+                , brLastUpdatedTurn = 1
+                , brRevisionCount = 0
+                }
+          , bsRecentRevisions = ["свобода"]
+          }
+        startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          , ssSpeechPolicyState = speechPolicy
+          , ssBeliefStore = belief
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "что такое свобода"
+    let nextSs = fpbNextSs bundle
+    assertEqual "weak turn must not mutate speech policy"
+      speechPolicy (ssSpeechPolicyState nextSs)
+    assertEqual "weak turn must not mutate belief store"
+      belief (ssBeliefStore nextSs)
+
+-- | Weak acknowledgements are observable, but cannot trigger strong adaptive mutation.
+testDialogueDevelopmentWeakAcknowledgementDoesNotMutate :: Test
+testDialogueDevelopmentWeakAcknowledgementDoesNotMutate = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "спасибо"
+    let nextSs = fpbNextSs bundle
+        outcome = ssDialogueOutcomeLearning nextSs
+    assertEqual "weak acknowledgement is partial, not success"
+      1 (dolPartialSuccessCount outcome)
+    case dolRecentOutcomes outcome of
+      sample:_ -> do
+        assertEqual "weak acknowledgement must remain weak evidence"
+          EvidenceWeak (dosEvidenceStrength sample)
+        assertEqual "weak acknowledgement must only record"
+          AdaptiveObserved (adrDecision (dosDecisionRecord sample))
+        assertBool "weak acknowledgement signal must be preserved for audit"
+          ("weak_acknowledgement" `elem` dosSignals sample)
+      [] -> assertFailure "weak acknowledgement sample must be recorded"
+    assertEqual "weak acknowledgement must not mutate speech policy"
+      emptySpeechPolicyState (ssSpeechPolicyState nextSs)
+    assertEqual "weak acknowledgement must not mutate claim stance memory"
+      emptyBeliefStore (ssBeliefStore nextSs)
+
+-- | Confirmation-like weak acknowledgements remain observational only.
+testDialogueDevelopmentWeakConfirmationPhrasesStayWeak :: Test
+testDialogueDevelopmentWeakConfirmationPhrasesStayWeak = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          }
+        phrases = ["ясно", "понял", "makes sense"]
+    mapM_ (assertWeakConfirmation startSs) phrases
+  where
+    assertWeakConfirmation startSs phrase = do
+      (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs phrase
+      let nextSs = fpbNextSs bundle
+      case dolRecentOutcomes (ssDialogueOutcomeLearning nextSs) of
+        sample:_ -> do
+          assertEqual "confirmation-like acknowledgement must stay weak"
+            EvidenceWeak (dosEvidenceStrength sample)
+          assertEqual "confirmation-like acknowledgement must only observe"
+            AdaptiveObserved (adrDecision (dosDecisionRecord sample))
+          assertBool "top-level log must not accept speech-policy mutation"
+            (not (any acceptedSpeechOrClaim (ssAdaptiveMutationLog nextSs)))
+        [] -> assertFailure "weak confirmation sample must be recorded"
+    acceptedSpeechOrClaim record =
+      amrDecision record == AdaptiveAccepted
+        && amrKind record `elem` [MutSpeechPolicy, MutClaimStance]
+
+-- | A repeated question is a strong dialogue signal with bounded speech-policy mutation.
+testDialogueDevelopmentRepeatedQuestionRecordsMutation :: Test
+testDialogueDevelopmentRepeatedQuestionRecordsMutation = TestCase $
+  withDeterministicEmbedding $ do
+    let utterance = "что такое свобода"
+        startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState)
+              { dsLastTopic = "свобода"
+              , dsRawInputHistory = Seq.fromList [utterance]
+              }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs utterance
+    let nextSs = fpbNextSs bundle
+        outcome = ssDialogueOutcomeLearning nextSs
+    assertEqual "repeated question must be counted"
+      1 (dolRepeatedQuestionCount outcome)
+    case dolRecentOutcomes outcome of
+      sample:_ -> do
+        assertEqual "sample kind must identify repeated question"
+          DialogueOutcomeRepeatedQuestion (dosKind sample)
+        assertEqual "repeated question must be strong evidence"
+          EvidenceStrong (dosEvidenceStrength sample)
+        assertEqual "repeated question must apply bounded mutation"
+          AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+        assertBool "repeated question must target speech policy"
+          (MutSpeechPolicy `elem` adrTargets (dosDecisionRecord sample))
+      [] -> assertFailure "repeated question sample must be recorded"
+    assertBool "top-level log must contain accepted speech-policy mutation"
+      (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
+
+-- | Every strong mutation is backed by a typed decision record.
+testDialogueDevelopmentDecisionRecordsStrongMutation :: Test
+testDialogueDevelopmentDecisionRecordsStrongMutation = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "неверно"
+    let nextSs = fpbNextSs bundle
+    case dolRecentOutcomes (ssDialogueOutcomeLearning nextSs) of
+      sample:_ -> do
+        let decision = dosDecisionRecord sample
+        assertEqual "conflict must use strong evidence"
+          EvidenceStrong (dosEvidenceStrength sample)
+        assertEqual "conflict mutation must be explicit"
+          AdaptiveAccepted (adrDecision decision)
+        assertBool "decision must target speech policy"
+          (MutSpeechPolicy `elem` adrTargets decision)
+        assertBool "decision must target claim stance"
+          (MutClaimStance `elem` adrTargets decision)
+        assertBool "decision must disclose bounded claim stance cap"
+          ("claim_stance_entries<=64" `elem` adrBoundedDelta decision)
+      [] -> assertFailure "strong conflict sample must be recorded"
+    assertBool "top-level log must contain accepted speech-policy mutation"
+      (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
+    assertBool "top-level log must contain accepted claim-stance mutation"
+      (any (\r -> amrKind r == MutClaimStance && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
+
+-- | P4: finalize runs PerspectiveOperator through the governed adaptive contour.
+testPerspectiveFinalizeRecordsGovernedMutation :: Test
+testPerspectiveFinalizeRecordsGovernedMutation = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          , ssBeliefStore = emptyBeliefStore
+              { bsClaims = Map.singleton "свобода"
+                  BeliefRecord
+                    { brClaim = "свобода требует ответственности"
+                    , brPolarity = BeliefAffirmed
+                    , brConfidence = 0.8
+                    , brEvidence = ["user_confirmed"]
+                    , brCounterEvidence = []
+                    , brLastUpdatedTurn = 1
+                    , brRevisionCount = 1
+                    }
+              }
+          , ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState
+              { dolRecentOutcomes =
+                  [ mkPerspectiveOutcome 2 DialogueOutcomeSuccess "свобода"
+                  , mkPerspectiveOutcome 1 DialogueOutcomeSuccess "свобода"
+                  ]
+              }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    let nextSs = fpbNextSs bundle
+        registry = ssPerspectiveRegistry nextSs
+    assertBool "perspective registry must have canonical thread"
+      (not (Map.null (prThreads registry)))
+    assertBool "top-level mutation log must include P4 mutation"
+      (any (\r -> amrKind r == MutPerspective && amrDecision r `elem` [AdaptiveAccepted, AdaptivePromoted, AdaptiveObserved]) (ssAdaptiveMutationLog nextSs))
+
+-- | P4: replay exposes only safe perspective projection, not raw candidate internals.
+testPerspectiveFinalizeReplayUsesSafeProjectionOnly :: Test
+testPerspectiveFinalizeReplayUsesSafeProjectionOnly = TestCase $
+  withDeterministicEmbedding $ do
+    let startSs = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
+          , ssBeliefStore = emptyBeliefStore
+              { bsClaims = Map.singleton "свобода"
+                  BeliefRecord
+                    { brClaim = "свобода требует ответственности"
+                    , brPolarity = BeliefAffirmed
+                    , brConfidence = 0.8
+                    , brEvidence = ["user_confirmed"]
+                    , brCounterEvidence = []
+                    , brLastUpdatedTurn = 1
+                    , brRevisionCount = 1
+                    }
+              }
+          , ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState
+              { dolRecentOutcomes =
+                  [ mkPerspectiveOutcome 2 DialogueOutcomeSuccess "свобода"
+                  , mkPerspectiveOutcome 1 DialogueOutcomeSuccess "свобода"
+                  ]
+              }
+          }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    let replay = tqpReplayTrace (fpbProjection bundle)
+        encodedReplay = encode replay
+    case trcPerspectiveProjection replay of
+      Nothing -> assertFailure "expected safe perspective projection in replay"
+      Just projection -> do
+        assertBool "projection must expose summary"
+          (not (T.null (ppSummary projection)))
+        assertBool "projection must expose explanation handle"
+          (not (T.null (ppExplanationHandle projection)))
+    assertBool "replay must include bounded active projection list"
+      (not (null (trcPerspectiveProjections replay)))
+    assertBool "replay JSON must include safe projection field"
+      ("trcPerspectiveProjection" `T.isInfixOf` T.pack (show encodedReplay))
+    assertBool "replay JSON must include safe projection list field"
+      ("trcPerspectiveProjections" `T.isInfixOf` T.pack (show encodedReplay))
+    assertBool "replay JSON must not expose raw candidate thesis field"
+      (not ("pcThesis" `T.isInfixOf` T.pack (show encodedReplay)))
+
+mkPerspectiveOutcome :: Int -> DialogueOutcomeKind -> T.Text -> DialogueOutcomeSample
+mkPerspectiveOutcome turn kind topic = DialogueOutcomeSample
+  { dosTurn = turn
+  , dosKind = kind
+  , dosTopic = topic
+  , dosSignals = ["perspective_fixture"]
+  , dosEvidenceStrength = EvidenceStrong
+  , dosStrongUpdate = True
+  , dosDecisionRecord = AdaptiveDecisionRecord
+      { adrTurn = turn
+      , adrCause = "perspective_fixture"
+      , adrEvidence = ["perspective_fixture"]
+      , adrConfidence = 0.8
+      , adrBoundedDelta = ["recent_outcomes<=12"]
+      , adrDecision = AdaptiveAccepted
+      , adrTargets = [MutDialogueOutcome]
+      , adrMutationRecords = []
+      }
+  }
+
+-- | Adaptive persistent maps keep hard caps instead of growing without bound.
+testDialogueDevelopmentBoundsAdaptiveMaps :: Test
+testDialogueDevelopmentBoundsAdaptiveMaps = TestCase $
+  withDeterministicEmbedding $ do
+    let mkStrongSample turn kind topic = DialogueOutcomeSample
+          { dosTurn = turn
+          , dosKind = kind
+          , dosTopic = topic
+          , dosSignals = ["test_strong"]
+          , dosEvidenceStrength = EvidenceStrong
+          , dosStrongUpdate = True
+          , dosDecisionRecord = AdaptiveDecisionRecord
+              { adrTurn = turn
+              , adrCause = "test"
+              , adrEvidence = ["test_strong"]
+              , adrConfidence = 0.9
+              , adrBoundedDelta = ["speech_patterns<=8", "claim_stance_entries<=64"]
+              , adrDecision = AdaptiveAccepted
+              , adrTargets = [MutSpeechPolicy, MutClaimStance]
+              , adrMutationRecords = []
+              }
+          }
+        existingPatterns = Map.fromList [("style-" <> T.pack (show n), n) | n <- [1 :: Int .. 12]]
+        speech = emptySpeechPolicyState { spsFailedPatterns = existingPatterns }
+        updatedSpeech = updateSpeechPolicy (mkStrongSample 20 DialogueOutcomeConflict "свобода") StyleClinical speech
+        existingClaims = Map.fromList
+          [ ("claim-" <> T.pack (show n), BeliefRecord
+              { brClaim = "claim-" <> T.pack (show n)
+              , brPolarity = BeliefTentative
+              , brConfidence = 0.5
+              , brEvidence = []
+              , brCounterEvidence = []
+              , brLastUpdatedTurn = n
+              , brRevisionCount = 0
+              })
+          | n <- [1 :: Int .. 70]
+          ]
+        store = emptyBeliefStore { bsClaims = existingClaims }
+        state = emptySystemState { ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "новый claim" } }
+    (_ss, ti, _ts, tp) <- buildPlannedFixtureWithState state "неверно"
+    let updatedStore = updateBeliefStore state (mkStrongSample 100 DialogueOutcomeConflict "новый claim") ti tp store
+    assertBool "failed speech patterns must be capped"
+      (Map.size (spsFailedPatterns updatedSpeech) <= 8)
+    assertBool "claim stance entries must be capped"
+      (Map.size (bsClaims updatedStore) <= 64)
+    assertBool "newly updated claim must be preserved under cap"
+      (Map.member "новый claim" (bsClaims updatedStore))
+
+-- | ADR-0032: speech policy can bias future route style when evidence is strong.
+testSpeechPolicyBiasesRouteStyle :: Test
+testSpeechPolicyBiasesRouteStyle = TestCase $
+  withDeterministicEmbedding $ do
+    let policy = emptySpeechPolicyState
+          { spsDirectness = 0.70
+          , spsCompression = 0.70
+          }
+        ss0 = emptySystemState
+          { ssSessionId = "fixture-session"
+          , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssSpeechPolicyState = policy
+          }
+    (_ss, _ti, _ts, tp) <- buildPlannedFixtureWithState ss0 "что такое свобода"
+    assertEqual "speech policy must bias route style to direct"
+      "direct" (tpRenderStyle tp)
+
+-- | ADR-0032: speech policy cannot downgrade an existing recovery style.
+testSpeechPolicyDoesNotDowngradeRecoveryStyle :: Test
+testSpeechPolicyDoesNotDowngradeRecoveryStyle = TestCase $ do
+  let policy = emptySpeechPolicyState
+        { spsDirectness = 0.90
+        , spsCompression = 0.90
+        , spsRepairBias = 0.0
+        }
+  assertEqual "forced recovery style must remain recovery"
+    StyleRecovery (adjustRenderStyleForSpeechPolicy policy StyleRecovery)
 
 -- | WP6.1: finalizeMetrics must wire learning-pressure telemetry fields.
 testFinalizeMetricsPopulatesLearningTelemetry :: Test

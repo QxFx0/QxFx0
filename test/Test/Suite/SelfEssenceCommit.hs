@@ -122,6 +122,9 @@ selfEssenceCommitTests =
     -- §4 — Conatus floor unit-mismatch correction
   , TestLabel "corrected Conatus floor triggers on realistic post-violation scalar" $
       TestCase testConatusErosionFiresUnderCorrectedFloor
+
+  , TestLabel "missing deliberation violation is explicit" $
+      TestCase testMissingDeliberationViolationIsExplicit
   ]
 
 -- ---------------------------------------------------------------------------
@@ -516,3 +519,10 @@ testConatusErosionFiresUnderCorrectedFloor = do
     other -> assertFailure
       ("Phase 9 buggy floor should NOT trigger on scalar 5.0, got "
        ++ show other)
+
+testMissingDeliberationViolationIsExplicit :: IO ()
+testMissingDeliberationViolationIsExplicit =
+  assertEqual
+    "missing deliberation violation renders explicitly"
+    "missing_deliberation:contemplative"
+    (renderEssenceViolation (ViolationMissingDeliberation EssenceContemplative))

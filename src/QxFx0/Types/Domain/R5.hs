@@ -12,6 +12,11 @@ module QxFx0.Types.Domain.R5
   , SemanticLayer(..)
   , WarrantedMoveMode(..)
   , R5Verdict(..)
+  , R5CoreProfile(..)
+  , R5PolicyProfile(..)
+  , R5EvaluationContext(..)
+  , defaultR5CoreProfile
+  , defaultR5PolicyProfile
   , mkVerdict
   , forceForFamily
   , clauseFormForIF
@@ -32,6 +37,7 @@ import Data.Aeson
   , (.=)
   )
 import GHC.Generics (Generic)
+import Data.Text (Text)
 
 data CanonicalMoveFamily
   = CMGround | CMDefine | CMDistinguish | CMReflect | CMDescribe
@@ -117,6 +123,60 @@ instance FromJSON R5Verdict where
       <*> o .: "clause"
       <*> o .: "layer"
       <*> o .: "warranted"
+
+data R5CoreProfile = R5CoreProfile
+  { r5cVersionId :: !Int
+  } deriving stock (Eq, Ord, Show, Read, Generic)
+    deriving anyclass (NFData)
+
+instance ToJSON R5CoreProfile where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON R5CoreProfile where
+  parseJSON = genericParseJSON defaultOptions
+
+data R5PolicyProfile = R5PolicyProfile
+  { r5pVersionId :: !Int
+  , r5pStrictnessMode :: !Text
+  , r5pShadowBindingMode :: !Text
+  , r5pAdvisoryThresholds :: ![(Text, Double)]
+  , r5pRecoveryPolicyLink :: !Text
+  } deriving stock (Eq, Ord, Show, Read, Generic)
+    deriving anyclass (NFData)
+
+instance ToJSON R5PolicyProfile where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON R5PolicyProfile where
+  parseJSON = genericParseJSON defaultOptions
+
+data R5EvaluationContext = R5EvaluationContext
+  { r5eCoreVersion :: !Int
+  , r5ePolicyVersion :: !Int
+  , r5eRuntimeMode :: !Text
+  , r5eScope :: !(Maybe Text)
+  } deriving stock (Eq, Ord, Show, Read, Generic)
+    deriving anyclass (NFData)
+
+instance ToJSON R5EvaluationContext where
+  toJSON = genericToJSON defaultOptions
+
+instance FromJSON R5EvaluationContext where
+  parseJSON = genericParseJSON defaultOptions
+
+defaultR5CoreProfile :: R5CoreProfile
+defaultR5CoreProfile = R5CoreProfile
+  { r5cVersionId = 1
+  }
+
+defaultR5PolicyProfile :: R5PolicyProfile
+defaultR5PolicyProfile = R5PolicyProfile
+  { r5pVersionId = 1
+  , r5pStrictnessMode = "binding_in_strict_only"
+  , r5pShadowBindingMode = "binding_in_strict_only"
+  , r5pAdvisoryThresholds = [("shadow_advisory", 1.0)]
+  , r5pRecoveryPolicyLink = "local_recovery_policy"
+  }
 
 forceForFamily :: CanonicalMoveFamily -> IllocutionaryForce
 forceForFamily CMGround = IFAssert

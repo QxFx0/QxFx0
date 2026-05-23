@@ -85,8 +85,12 @@ import QxFx0.Core.TurnPipeline.Types
   , turnResultOutput
   )
 import QxFx0.Core.Observability (TurnMetrics)
+import QxFx0.ExceptionPolicy
+  ( QxFx0Exception(PersistenceError)
+  , throwQxFx0
+  )
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
-import Data.Time.Clock (UTCTime, getCurrentTime)
+import Data.Time.Clock (UTCTime)
 import QxFx0.Core.TurnPipeline.Prepare (PrepareEffectResults(..))
 import qualified QxFx0.Core.TurnPipeline.Prepare as Prepare
 import QxFx0.Core.TurnPipeline.Route
@@ -113,6 +117,7 @@ import QxFx0.Core.TurnPipeline.Finalize
 import qualified QxFx0.Core.TurnPipeline.Finalize as Finalize
 
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Sequence (Seq)
 
 data PreparedTurn = PreparedTurn !TurnInput !TurnSignals
@@ -190,11 +195,7 @@ resolvePrepareCurrentTime pio = do
   result <- resolveTurnEffect pio TurnReqCurrentTime
   case result of
     TurnResCurrentTime t -> pure t
-    _ -> do
-      -- Fail-closed: unexpected effect result should not crash the runtime.
-      -- Fall back to system time and let telemetry record the anomaly.
-      t <- getCurrentTime
-      pure t
+    _ -> throwQxFx0 (PersistenceError (T.pack "prepare current time effect returned unexpected result"))
 
 planTurn :: PipelineIO -> SystemState -> PreparedTurn -> IO PlannedTurn
 planTurn pio ss (PreparedTurn ti ts) = do

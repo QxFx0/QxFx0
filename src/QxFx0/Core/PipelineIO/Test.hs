@@ -13,7 +13,8 @@ import QxFx0.Core.ConsciousnessLoop
   , initialLoop
   , runConsciousnessLoopWithSalience
   )
-import QxFx0.Self.Salience (salienceFromConatusResonance)
+import QxFx0.Self.Field (emptyField, fieldResonance, mkResonance)
+import QxFx0.Self.Salience (computeSalience)
 import QxFx0.Core.Intuition
   ( checkIntuition
   , defaultIntuitiveState
@@ -82,14 +83,14 @@ defaultTestInterpreter request =
       TurnResEmbedding <$> textToEmbeddingResult (T.unpack inputText)
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard (Unavailable "nix_unavailable_default_test_pipeline"))
-    TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy -> do
-      let salience = salienceFromConatusResonance conatusEnergy resonance
+    TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do
+      let salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance })
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience initialLoop semanticInput humanTheta resonance
           nextNarrative = clLastNarrative nextLoop
           nextFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop nextNarrative nextFragment)
-    TurnReqIntuition _inputText resonance tension turnNumber _conatusEnergy -> do
+    TurnReqIntuition _inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
       let (mFlash, intuitive') = checkIntuition resonance tension turnNumber defaultIntuitiveState
       pure (TurnResIntuition mFlash (effectivePosterior intuitive') intuitive')
     TurnReqApiHealth ->

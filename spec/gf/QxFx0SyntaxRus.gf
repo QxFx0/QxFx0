@@ -5,15 +5,18 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     Move = { s : Str } ;
     NP   = { nom : Str ; gen : Str ; prep : Str ; acc : Str ; ins : Str } ;
     VP   = { s : Str } ;
+    GfNumber = { s : Str } ;
     Modifier = { s : Str } ;
     Relation = { s : Str } ;
     Mechanism = { s : Str } ;
 
   lin
+    NumSg = { s = "удержу" } ;
+    NumPl = { s = "удержим" } ;
+
     MkNP lex = { nom = lex.nom ; gen = lex.gen ; prep = lex.prep ; acc = lex.acc ; ins = lex.ins } ;
 
-    ActMaintain NumSg obj = { s = "удержу " ++ obj.acc } ;
-    ActMaintain NumPl obj = { s = "удержим " ++ obj.acc } ;
+    ActMaintain num obj = { s = num.s ++ " " ++ obj.acc } ;
     ActDefine obj   = { s = "определю " ++ obj.acc } ;
 
     ModFirst    = { s = "сначала" } ;

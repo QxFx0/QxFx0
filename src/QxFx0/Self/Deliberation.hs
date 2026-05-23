@@ -362,6 +362,7 @@ recoveryCauseSeverity (Just RecoveryShadowUnavailable)   = 50
 recoveryCauseSeverity (Just RecoveryShadowDivergence)    = 60
 recoveryCauseSeverity (Just RecoveryRuntimeDegraded)     = 70
 recoveryCauseSeverity (Just RecoveryRenderBlocked)       = 80
+recoveryCauseSeverity (Just RecoveryLearningNeed)        = 85
 recoveryCauseSeverity (Just RecoveryConatusGate)         = 100
 
 -- | Pick the higher-severity recovery proposal per

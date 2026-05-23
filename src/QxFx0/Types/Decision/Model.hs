@@ -35,6 +35,7 @@ import Data.Aeson
   , withObject
   , (.:)
   , (.:?)
+  , (.!=)
   , (.=)
   )
 import Data.Text (Text)
@@ -69,6 +70,7 @@ import QxFx0.Types.Orbital
   )
 import QxFx0.Types.Thresholds (DepthMode, LegitimacyStatus(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
+import QxFx0.Semantic.Sense (ResponseSensePlan, emptyResponseSensePlan)
 
 data ResponseMeaningPlan = ResponseMeaningPlan
   { rmpFamily :: !CanonicalMoveFamily
@@ -86,6 +88,7 @@ data ResponseMeaningPlan = ResponseMeaningPlan
   , rmpProvenance :: !ContractProvenance
   , rmpCommitmentStrength :: !Double
   , rmpDepthMode :: !DepthMode
+  , rmpSensePlan :: !ResponseSensePlan
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -106,6 +109,7 @@ instance ToJSON ResponseMeaningPlan where
     , "rmpProvenance" .= rmpProvenance rmp
     , "rmpCommitmentStrength" .= rmpCommitmentStrength rmp
     , "rmpDepthMode" .= rmpDepthMode rmp
+    , "rmpSensePlan" .= rmpSensePlan rmp
     ]
 
 instance FromJSON ResponseMeaningPlan where
@@ -126,6 +130,7 @@ instance FromJSON ResponseMeaningPlan where
       <*> o .: "rmpProvenance"
       <*> o .: "rmpCommitmentStrength"
       <*> o .: "rmpDepthMode"
+      <*> o .:? "rmpSensePlan" .!= emptyResponseSensePlan
 
 data ResponseContentPlan = ResponseContentPlan
   { rcpFamily :: !CanonicalMoveFamily

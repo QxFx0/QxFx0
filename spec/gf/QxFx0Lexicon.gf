@@ -3393,7 +3393,6 @@ abstract QxFx0Lexicon = {
     stena_N : Lexeme ;
     stend_N : Lexeme ;
     stepen_N : Lexeme ;
-    step_N : Lexeme ;
     stervoznost_N : Lexeme ;
     stiraemost_N : Lexeme ;
     stihiya_N : Lexeme ;
@@ -3665,6 +3664,7 @@ abstract QxFx0Lexicon = {
     chuvstvitelnost_N : Lexeme ;
     chulan_N : Lexeme ;
     chulok_N : Lexeme ;
+    step_N : Lexeme ;
     shalash_N : Lexeme ;
     shapka_N : Lexeme ;
     shar_N : Lexeme ;

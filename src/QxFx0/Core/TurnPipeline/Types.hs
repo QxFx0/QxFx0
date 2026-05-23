@@ -38,6 +38,7 @@ import QxFx0.Self.Field (Field, FieldHeuristics)
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
+import QxFx0.Semantic.Sense (SenseVector)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 
@@ -113,6 +114,10 @@ data TurnInput = TurnInput
     --   'tiField'.  Mirrors 'psFieldHeuristics' from
     --   'PrepareStatic' so downstream stages can read the
     --   same record without reconstructing defaults.
+  , tiSenseVector :: !SenseVector
+    -- ^ Canonical sense-layer bridge extracted from the same semantic
+    --   interpretation that produced 'tiFrame'. Used to constrain
+    --   response planning toward bounded adjacent meaning-continuation.
   , tiEssence :: !Essence
     -- ^ Phase 9: the pre-turn essence carrier, populated by
     --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source

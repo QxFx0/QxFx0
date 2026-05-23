@@ -37,8 +37,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Learning.Calibration (CalibrationLog)
-import QxFx0.Learning.Guardrails (GuardrailState)
+import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationLog)
+import QxFx0.Learning.Guardrails (GuardrailState, recordAcceptance, recordProposalSubmission, recordRejection)
 import QxFx0.Learning.KnowledgeTree
   ( KnowledgeFruit(..)
   , KnowledgeSource(..)
@@ -69,14 +69,21 @@ import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
+  , renderFallbackReason
   )
 import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
 import QxFx0.Types.Decision.Model (ipfRawText)
-import QxFx0.Types.State.System (SystemState(..), ssLearningNeedState, ssKnowledgeTree, ssToolReliability, ssMorphology, ssTurnCount)
+import QxFx0.Types.State.System (SystemState(..), ssGuardrailState, ssLearningNeedState, ssKnowledgeTree, ssToolReliability, ssMorphology, ssTurnCount)
+import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
+import QxFx0.Types.State.AdaptiveMutation
+  ( AdaptiveDecision(..)
+  , AdaptiveMutationKind(..)
+  , AdaptiveMutationRecord(..)
+  , EvidenceStrength(..)
+  )
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Conatus (computeConatusEnergy, ceScalar)
-import qualified Data.Map.Strict as M
 
 -- | Telemetry emitted by one learning-loop iteration.
 data LearningTelemetry = LearningTelemetry
@@ -137,11 +144,16 @@ runLearningStep ss tool need query mResult =
     Just (Left err) ->
       -- Transport / API failure: fail-closed, penalise tool.
       let rel1 = updateToolReliability (etName tool) False rel0
+          records =
+            [ toolReliabilityMutation turn (etName tool) False (renderQueryError err)
+            ]
           tel  = baseTelemetry
-            { ltValidationStatus = "transport_error"
+            { ltValidationStatus = case err of
+                EqeFallback _ -> "fallback_non_authoritative"
+                _ -> "transport_error"
             , ltRejectReason     = Just (renderQueryError err)
             }
-      in (ss { ssToolReliability = rel1 }, tel)
+      in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)
 
     Just (Right resp) ->
       -- Got a response: parse -> validate -> sandbox -> graft.
@@ -149,11 +161,14 @@ runLearningStep ss tool need query mResult =
       in case parseLLMResponseToFruit resp of
         Nothing ->
           let rel1 = updateToolReliability (etName tool) False rel0
+              records =
+                [ toolReliabilityMutation turn (etName tool) False "parser_rejected_schema_or_text"
+                ]
               tel  = baseTelemetry
                 { ltValidationStatus = "invalid_response"
                 , ltRejectReason     = Just "parser_rejected_schema_or_text"
                 }
-          in (ss { ssToolReliability = rel1 }, tel)
+          in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)
 
         Just payload ->
           case validateFruitPayload payload morph of
@@ -165,27 +180,37 @@ runLearningStep ss tool need query mResult =
                   fruit = payloadToFruit payload turn False (postProxy - preProxy)
                   tree1 = quarantineFruit fruit tree0
                   ss2   = ss1 { ssKnowledgeTree = tree1 }
+                  reason = renderValidationError valErr
+                  records =
+                    [ toolReliabilityMutation turn (etName tool) False reason
+                    , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong "external_learning:validation_reject" reason
+                    ]
                   tel   = baseTelemetry
                     { ltValidationStatus = "validation_reject"
-                    , ltRejectReason     = Just (renderValidationError valErr)
+                    , ltRejectReason     = Just reason
                     }
-              in (ss2, tel)
+              in (appendAdaptiveMutationRecords records ss2, tel)
 
             Right validatedPayload ->
               case runSandboxGate ss validatedPayload of
                 SandboxReject metrics reason ->
                   let rel1 = updateToolReliability (etName tool) False rel0
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
-                      postProxy = conatusProxyFromState ss1 + 0.01
-                      fruit = payloadToFruit validatedPayload turn False (postProxy - preProxy)
+                      postProxy = conatusProxyFromState ss1
+                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
                       tree1 = quarantineFruit fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
+                      reasonText = renderSandboxRejectReason reason
+                      records =
+                        [ toolReliabilityMutation turn (etName tool) False reasonText
+                        , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong "external_learning:sandbox_reject" reasonText
+                        ]
                       tel   = baseTelemetry
                         { ltValidationStatus = "sandbox_reject"
                         , ltSandboxResult  = Just (renderSandboxMetrics metrics)
-                        , ltRejectReason   = Just (renderSandboxRejectReason reason)
+                        , ltRejectReason   = Just reasonText
                         }
-                  in (ss2, tel)
+                  in (appendAdaptiveMutationRecords records ss2, tel)
 
                 SandboxAccept metrics ->
                   let rel1 = updateToolReliability (etName tool) True rel0
@@ -195,12 +220,16 @@ runLearningStep ss tool need query mResult =
                       fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
                       tree1 = graftFruit (renderNeedTag need) fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
+                      records =
+                        [ toolReliabilityMutation turn (etName tool) True "sandbox_accept"
+                        , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveAccepted EvidenceStrong "external_learning:graft" (renderNeedTag need)
+                        ]
                       tel   = baseTelemetry
                         { ltValidationStatus = "accept"
                         , ltSandboxResult    = Just (renderSandboxMetrics metrics)
                         , ltGraftTurn        = Just turn
                         }
-                  in (ss2, tel)
+                  in (appendAdaptiveMutationRecords records ss2, tel)
 
 -- | Compute a proxy Conatus scalar from the current SystemState.
 -- Includes the actual ConatusEnergy from SelfBlanket plus a small
@@ -264,6 +293,7 @@ renderQueryError (EqeRateLimited t)        = T.concat ["rate_limit:", t]
 renderQueryError (EqeServerError t)        = T.concat ["server:", t]
 renderQueryError (EqeTimeout t)            = T.concat ["timeout:", t]
 renderQueryError (EqeInvalidResponse t)    = T.concat ["invalid:", t]
+renderQueryError (EqeFallback reason)      = T.concat ["fallback:", renderFallbackReason reason]
 renderQueryError EqeEmptyResponse          = "empty"
 
 renderValidationError :: ValidationError -> Text
@@ -271,8 +301,10 @@ renderValidationError VeEmptyWord = "empty_word"
 renderValidationError VeEmptyDefinition = "empty_definition"
 renderValidationError (VeDefinitionTooShort a r) =
   T.concat ["too_short:", T.pack (show a), "/", T.pack (show r)]
+renderValidationError VeSemanticallyEmpty = "semantically_empty"
 renderValidationError (VeMorphologyParseFailure t) = T.concat ["morph_parse:", t]
 renderValidationError (VeLexiconConflict t) = T.concat ["conflict:", t]
+renderValidationError (VeInvalidSchema t) = T.concat ["schema:", t]
 renderValidationError (VeInvalidField f r) = T.concat ["field:", f, "=", r]
 
 renderSandboxMetrics :: SandboxMetrics -> Text
@@ -291,6 +323,37 @@ renderSandboxRejectReason SbrHighRepairLoopRisk = "repair_loop"
 renderSandboxRejectReason SbrNegativeNetScore   = "negative_net"
 renderSandboxRejectReason SbrMorphologyConflict = "morph_conflict"
 
+toolReliabilityMutation :: Int -> Text -> Bool -> Text -> AdaptiveMutationRecord
+toolReliabilityMutation turn toolName accepted reason = AdaptiveMutationRecord
+  { amrTurnId = turn
+  , amrKind = MutToolReliability
+  , amrCause = if accepted then "tool_reliability:accepted" else "tool_reliability:rejected"
+  , amrEvidence = ["tool=" <> toolName, "reason=" <> reason]
+  , amrEvidenceStrength = EvidenceStrong
+  , amrConfidence = 0.80
+  , amrBoundedDelta = Just (if accepted then 0.05 else 0.10)
+  , amrDecision = if accepted then AdaptiveAccepted else AdaptiveRejected
+  }
+
+knowledgeTreeMutation
+  :: Int
+  -> AdaptiveMutationKind
+  -> AdaptiveDecision
+  -> EvidenceStrength
+  -> Text
+  -> Text
+  -> AdaptiveMutationRecord
+knowledgeTreeMutation turn kind decision strength cause evidence = AdaptiveMutationRecord
+  { amrTurnId = turn
+  , amrKind = kind
+  , amrCause = cause
+  , amrEvidence = [evidence]
+  , amrEvidenceStrength = strength
+  , amrConfidence = 0.80
+  , amrBoundedDelta = Just 1.0
+  , amrDecision = decision
+  }
+
 -- | Convenience wrapper: apply the learning loop to a system state
 -- when an external query result is present.
 -- If no result was carried, returns the state unchanged.
@@ -303,8 +366,17 @@ applyExternalLearning ss mResult =
           need = lnsCurrentNeed needState
           mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
           tool = fromMaybe (ExternalTool "unknown" DomainGeneral 0.5 False) mTool
+          turn = ssTurnCount ss
+          proposalId = CalibrationId turn
+          submittedGuard = recordProposalSubmission (ssGuardrailState ss) turn proposalId
+          ssSubmitted = ss { ssGuardrailState = submittedGuard }
           queryText = case result of
             Right resp -> eqrToolName resp <> " " <> T.pack (show (eqrLatencyMs resp))
             Left _     -> ""
-          (updated, _) = runLearningStep ss tool need queryText (Just result)
-      in updated
+          (updated, telemetry) = runLearningStep ssSubmitted tool need queryText (Just result)
+          finalizedGuard =
+            case ltValidationStatus telemetry of
+              "accept" -> recordAcceptance (ssGuardrailState updated)
+              "not_attempted" -> ssGuardrailState updated
+              _ -> recordRejection (ssGuardrailState updated) turn
+      in updated { ssGuardrailState = finalizedGuard }

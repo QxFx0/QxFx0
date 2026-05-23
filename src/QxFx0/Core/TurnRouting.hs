@@ -41,7 +41,7 @@ import QxFx0.Self.Deliberation
 import QxFx0.Self.Field (Field, emptyField, fieldAtmosphere, Atmosphere(..))
 import QxFx0.Self.Salience
   ( Salience(..)
-  , salienceFromConatusEnergy
+  , computeSalience
   )
 import QxFx0.Core.TurnRouting.Cascade
   ( applyGuardGating
@@ -89,7 +89,7 @@ routeFamily :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserSt
             -> RoutingDecision
 routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField mCourtesy =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
-      routingSalience = salienceFromConatusEnergy conatusEnergy preparedField
+      routingSalience = computeSalience (ssSalienceWeights ss) conatusEnergy preparedField
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience
       FamilyCascade{..} = cascade
 
@@ -108,15 +108,17 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
             styleSemanticInput  = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)
             styleSemanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) styleSemanticInput currentTopic (ssTurnCount ss + 1)
          in renderStyleFromDecision renderStrategy rpPrincipledModeResult styleIdentitySignal styleSemanticAnchor styleSemanticInput
-      salienceStyle = applySalienceToStyle routingSalience preparedField baseStyle
+      salienceStyle = applySalienceToStyle (ssSalienceWeights ss) routingSalience preparedField baseStyle
 
+      -- Contract status: bounded causal contour. Narrative tone is not
+      -- rendered directly, but committed essence validation reads the
+      -- reconciled tone and may fail closed on mismatch.
       -- Phase 8 Package C: observability-grade divergence.
       -- Both proposals share the same reconciled family and style
       -- (behaviour-preserving baseline), but the holistic proposal
       -- carries a narrative tone derived from field atmosphere.
-      -- This produces trace-visible 'DivergeOnTone' without changing
-      -- runtime output, because 'planNarrativeTone' is not yet read
-      -- downstream for rendering (§1 ADR-0011 Package C note).
+      -- This produces trace-visible 'DivergeOnTone' without directly
+      -- changing rendered output (§1 ADR-0011 Package C note).
       formalPlan = defaultPlan
         { planFamily      = formalFamily
         , planRenderStyle = salienceStyle

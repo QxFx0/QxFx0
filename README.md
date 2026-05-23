@@ -4,6 +4,8 @@ Deterministic, spec-first dialogue runtime for Russian reasoning workflows.
 
 QxFx0 is an open-source alternative to purely probabilistic chat stacks: routing is typed and explicit, output is grammar-constrained, and release decisions are gate-driven with auditable evidence.
 
+Current shape: the runtime now includes a canonical P5 governance spine, explicit epistemic-status classification (`authoritative` / `advisory` / `degraded` / `fallback` / `observational-only` / `non-driving`), a sense-continuation bridge inside the planning path, and hardened SQL→GF→datalog truth seams.
+
 ## Why This Project Exists
 
 Most conversational systems optimize for plausibility. QxFx0 optimizes for:
@@ -27,6 +29,11 @@ If you need deterministic dialogue infrastructure with strict operational semant
 - CLI runtime and HTTP sidecar with live-session continuity contract
 - Gate contract for release decisions (`scripts/ci_gate_contract.sh`)
 - Lexicon pipeline with collision/quality controls and generated artifacts sync
+- Dialogue development emits bounded shared adaptive mutation records via `SystemState.ssAdaptiveMutationLog`; legacy dialogue JSON field names are still decoded for compatibility.
+- P4 `PerspectiveOperator` builds governed, versioned perspective lineage in `SystemState.ssPerspectiveRegistry` and exposes only safe `PerspectiveProjection` in replay traces.
+- P5 governance spine provides canonical append-only history, typed governed payloads, rebuildable projections, policy/version surface, and machine-readable epistemic status classification.
+- Sense bridge (`QxFx0.Semantic.Sense`) converts utterance-level meaning into bounded adjacent response planning, feeding `ResponseMeaningPlan` and `ResponseContentPlan` without creating a parallel semantic stack.
+- SQL/GF/datalog truth chain is checked by generation and drift gates, with explicit fallback semantics for unresolved lexemes and advisory shadow contours.
 
 ## Current Maturity
 
@@ -35,6 +42,8 @@ If you need deterministic dialogue infrastructure with strict operational semant
 - Extended/high-memory contour: deferred to high-memory runners
 - Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
 - CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
+- Current operational rule: fallback/degraded/advisory states are now surfaced explicitly rather than silently masquerading as success
+- Current architectural rule: R5 core remains static; dynamicity is policy-envelope-only and governed through P5
 
 ## Status Snapshot (2026-05-22)
 
@@ -51,7 +60,11 @@ Security/reliability hardening (WP1–WP3) landed and verified:
   `extractStructured` string search with Aeson-typed
   `ChatCompletionResponse/Choice/Message` parser. Invalid envelopes pass through
   raw body for downstream handling.
-- Fast suite: **629 cases, 0 errors, 0 failures**.
+- Fast suite: green in the local gate; the exact case count is reported by
+  `cabal test qxfx0-test-fast`.
+- P4 OpinionCore/PerspectiveOperator: implemented as a pure self-layer operator
+  plus canonical `PerspectiveRegistry`; finalize/precommit emits typed
+  `MutPerspective` records, and replay exposes only `PerspectiveProjection`.
 
 ## Status Snapshot (2026-05-20)
 
@@ -72,12 +85,9 @@ tracked as deferred, not treated as PASS.
 
 ## Status Snapshot (2026-05-17)
 
-Post-M2d landing (Phase 2.5 dual-mode Conatus + Phase 5.5d/e Field
-broadening + Phase 6 effect-system refactor). The chain is
-committed in source form but **end-to-end verification (full lib
-build + 5 test variants + `verify.sh` + `release-smoke.sh`) is
-pending on an adequate-RAM runner** — see Roadmap "Near term"
-item 1.
+Historical post-M2d landing snapshot (Phase 2.5 dual-mode Conatus +
+Phase 5.5d/e Field broadening + Phase 6 effect-system refactor). This
+snapshot is superseded by the 2026-05-20/2026-05-22 gate records above.
 
 What landed:
 
@@ -175,8 +185,8 @@ changes are expected to honor it.
   duality, intensive specification, conatus as primary algorithm) and their
   unified synthesis as the implementation contract.
 - `docs/ARCHITECTURE.md` — layered architecture (8 horizontal layers),
-  enforced dependency invariants, turn pipeline structure, and the planned
-  dual-mode (Left ⊣ Right) extension.
+  enforced dependency invariants, turn pipeline structure, and the landed
+  dual-mode (`Holistic ⊣ Formal`) runtime contour.
 - `docs/adr/0007-dual-mode-conatus.md` — the architecture decision record
   operationalizing THEORY.md as a phased modernization (P0–P8) toward a
   self-preserving dual-mode runtime with formal `SelfBlanket` invariants
@@ -210,7 +220,7 @@ contract that subsequent code answers to.
 ```bash
 python3 -m pip install -r requirements.txt
 cabal build all                 # PASS (library + executable)
-cabal test qxfx0-test-fast      # PASS — 629 cases, 0 failures, <30 s
+cabal test qxfx0-test-fast      # PASS — exact case count reported by Cabal
 bash scripts/check_architecture.sh  # PASS — 12 invariants OK
 bash scripts/gf_quality_gate.sh     # PASS — 0 errors, 0 warnings
 ```
@@ -351,13 +361,10 @@ This is useful for domains where explainability, control, and reproducibility ma
 
 ## 2026 Focus
 
-1. Reduce template fallback paths and expand GF-native Russian generation quality.
-2. Improve practical RU/EN dual-language conversational parity.
-3. Add traceable domain adapters (for example legal/structured knowledge corpora) without breaking deterministic core contracts.
-4. **Phase 2.5 (M2d, landed 2026-05-17)** — runtime Conatus as the
-   primary recovery driver, with audit observability of the
-   Salience controller verdict in the replay trace. End-to-end
-   verification on adequate-RAM infrastructure is pending.
+1. Reduce remaining fallback-heavy surface paths and keep degraded states explicit.
+2. Expand GF-native Russian/English parity without reintroducing silent lexical drift.
+3. Keep the sense-continuation bridge bounded and observable while it grows into richer adjacency rules.
+4. Keep all self-modification contours bounded, decision-recorded, replay-visible, and fail-closed.
 
 ## Repository References
 

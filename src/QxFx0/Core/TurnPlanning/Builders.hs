@@ -10,7 +10,8 @@ module QxFx0.Core.TurnPlanning.Builders
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Lexicon.GfMap (topicToGfLexemeId)
+import QxFx0.Lexicon.GfMap (lookupTopicGfLexemeId)
+import QxFx0.Core.SensePlan (buildResponseSensePlan)
 import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
   , threeStageModulation
@@ -18,18 +19,24 @@ import QxFx0.Core.TurnPlanning.Modulation
 import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
 import QxFx0.Types
 
-buildRMP :: CanonicalMoveFamily -> InputPropositionFrame -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
-buildRMP family frame topic ego trace nixAvailable =
+buildRMP :: CanonicalMoveFamily -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
+buildRMP family frame senseVector topic ego trace nixAvailable =
   let baseStance = familyToStance family
       baseEpistemic = familyToEpistemic family
       (feralStance, feralEpistemic) = feralDegradation nixAvailable baseStance baseEpistemic
       (finalStance, finalEpistemic) = threeStageModulation ego trace feralStance feralEpistemic
-      plannedTopic = topicFromFrame frame topic
+      plannedTopic =
+        let topic0 = topicFromFrame frame topic
+            anchorTxt = unSemanticNodeId (svAnchor senseVector)
+        in if T.null (T.strip topic0) then anchorTxt else topic0
       primaryClaim = primaryClaimFromFrame frame plannedTopic
       baseAst = claimAstFromFrame frame plannedTopic ego
       primaryClaimAst = fmap (applyStanceToAst feralStance) baseAst
-      contrastAxis = contrastAxisFromFrame frame
-   in ResponseMeaningPlan
+      contrastAxis =
+        let axis0 = contrastAxisFromFrame frame
+        in if T.null axis0 then senseAxisSummary (rspPreservedAxes sensePlan) else axis0
+      sensePlan = buildResponseSensePlan family senseVector
+    in ResponseMeaningPlan
         { rmpFamily = family
         , rmpForce = forceForFamily family
         , rmpSpeechAct = familyToSpeechAct family
@@ -45,6 +52,7 @@ buildRMP family frame topic ego trace nixAvailable =
         , rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = epistemicConfidence finalEpistemic
         , rmpDepthMode = familyDefaultDepthMode family
+        , rmpSensePlan = sensePlan
         }
 
 topicFromFrame :: InputPropositionFrame -> Text -> Text
@@ -163,6 +171,8 @@ claimAstFromFrame frame fallback ego =
         Just (MoveContemplative topicNP)
       Just ContactSignal ->
         Just (MoveContact topicNP)
+      Just ExploratoryPrompt ->
+        Just familyFallback
       Just AffectiveQ ->
         Just (MoveContact topicNP)
       Just ReflectiveQ ->
@@ -207,7 +217,10 @@ claimAstFromFrame frame fallback ego =
         Just familyFallback
 
 mkTopicNP :: Text -> GfNP
-mkTopicNP = MkNP . topicToGfLexemeId
+mkTopicNP topic =
+  MkNP $ case lookupTopicGfLexemeId topic of
+    Just funId -> funId
+    Nothing -> "ponyatie_N"
 
 buildComparisonAst :: InputPropositionFrame -> GfNP -> ClaimAst
 buildComparisonAst frame fallbackTopic =
@@ -215,7 +228,7 @@ buildComparisonAst frame fallbackTopic =
     left : right : _ ->
       MoveDistinguish (mkTopicNP left) (mkTopicNP right)
     _ ->
-      MoveCompare fallbackTopic (MkNP "smysl_N")
+      MoveCompare fallbackTopic (MkNP "ponyatie_N")
 
 fallbackAstForFamily :: CanonicalMoveFamily -> GfNP -> ClaimAst
 fallbackAstForFamily family topicNP =
@@ -233,7 +246,7 @@ fallbackAstForFamily family topicNP =
     CMDeepen -> MoveDeepen topicNP
     CMConfront -> MoveConfront topicNP
     CMNextStep -> MoveNextStepLocal topicNP
-    CMDistinguish -> MoveDistinguish topicNP (MkNP "smysl_N")
+    CMDistinguish -> MoveDistinguish topicNP (MkNP "ponyatie_N")
 
 applyStanceToAst :: StanceMarker -> ClaimAst -> ClaimAst
 applyStanceToAst Tentative ast = StanceWrapped "ApplyStanceTentative" ast
@@ -280,9 +293,19 @@ buildRCP family meaningPlan =
         if family == CMRepair
           then MoveAcknowledgeRupture
           else familyToCoreMove family
-    , rcpContinuation = MoveNextStep
+    , rcpContinuation = senseContinuationMove (rspChosenOperator (rmpSensePlan meaningPlan))
     , rcpStyle = styleForStance (rmpStance meaningPlan)
     }
+
+senseContinuationMove :: SenseOperator -> ContentMove
+senseContinuationMove op = case op of
+  OpDefine -> MoveDefineFrame
+  OpGround -> MoveGroundBasis
+  OpDistinguish -> MoveShowContrast
+  OpExplainCause -> MoveStateBoundary
+  OpConstrain -> MoveClarifyDisambiguate
+  OpRepair -> MoveRepairBridge
+  OpNextStep -> MoveNextStep
 
 styleForStance :: StanceMarker -> RenderStyle
 styleForStance stance
@@ -294,3 +317,9 @@ familyDefaultDepthMode :: CanonicalMoveFamily -> DepthMode
 familyDefaultDepthMode family
   | family `elem` [CMDeepen, CMHypothesis, CMPurpose] = DeepDepth
   | otherwise = SurfaceDepth
+
+senseAxisSummary :: [SenseAxis] -> Text
+senseAxisSummary axes =
+  case axes of
+    [] -> ""
+    xs -> T.intercalate "+" (map renderSenseAxis xs)

@@ -10,7 +10,7 @@ module QxFx0.Types.SemanticConfig
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), genericParseJSON, defaultOptions, fieldLabelModifier)
+import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, defaultOptions, fieldLabelModifier)
 import Data.Char (toLower)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -36,6 +36,13 @@ data SemanticConfig = SemanticConfig
   , scColloquialMode           :: !Bool
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
+
+instance ToJSON SemanticConfig where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = \lbl -> case lbl of
+        ('s':'c':rest) -> drop 1 (camelToSnake rest)
+        _              -> map toLower lbl
+    }
 
 instance FromJSON SemanticConfig where
   parseJSON = genericParseJSON defaultOptions
