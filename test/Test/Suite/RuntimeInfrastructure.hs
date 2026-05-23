@@ -1079,6 +1079,10 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
+              , trcContractProvenance = Just FallbackRoute
+              , trcSurfaceProvenance = Just FromFallback
+              , trcTruthContractStatus = "explicit_fallback_surface"
+              , trcDerivationTags = []
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
               , trcSalienceConfidence = 1.0
@@ -1208,6 +1212,14 @@ testRunTurnPersistsTurnQuality = TestCase $ do
       ("\"trcLinearizationOk\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include fallback reason"
       ("\"trcFallbackReason\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include contract provenance"
+      ("\"trcContractProvenance\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include surface provenance"
+      ("\"trcSurfaceProvenance\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include truth contract status"
+      ("\"trcTruthContractStatus\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include derivation tags"
+      ("\"trcDerivationTags\"" `T.isInfixOf` replayTraceJson)
 
 testRunTurnRefreshesRuntimeSessionLastActive :: Test
 testRunTurnRefreshesRuntimeSessionLastActive = TestCase $ do
@@ -1393,6 +1405,10 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcLinearizationLang = Nothing
               , trcLinearizationOk = False
               , trcFallbackReason = Nothing
+              , trcContractProvenance = Just FallbackRoute
+              , trcSurfaceProvenance = Just FromFallback
+              , trcTruthContractStatus = "explicit_fallback_surface"
+              , trcDerivationTags = []
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
               , trcSalienceConfidence = 1.0

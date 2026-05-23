@@ -6,6 +6,7 @@ module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , topicToGfLexemeDecision
   , lookupTopicGfLexemeId
   , topicToGfLexemeId
   , lookupGfLexemeForms
@@ -62,7 +63,13 @@ lookupTopicGfLexemeId rawTopic =
     maybeToList = maybe [] pure
 
 topicToGfLexemeId :: Text -> Text
-topicToGfLexemeId = fromMaybe defaultGfLexemeId . lookupTopicGfLexemeId
+topicToGfLexemeId = fst . topicToGfLexemeDecision
+
+topicToGfLexemeDecision :: Text -> (Text, Maybe Text)
+topicToGfLexemeDecision topic =
+  case lookupTopicGfLexemeId topic of
+    Just lexemeId -> (lexemeId, Nothing)
+    Nothing -> (defaultGfLexemeId, Just "gf_default_lexeme")
 
 lookupGfLexemeForms :: Text -> Maybe GfLexemeForms
 lookupGfLexemeForms funId = M.lookup funId (gmdFunToForms gfMapData)

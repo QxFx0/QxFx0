@@ -207,6 +207,8 @@ data TurnArtifacts = TurnArtifacts
   , taGuardSurface :: !Guard.GuardSurface
   , taRendered :: !Text
   , taSurfaceProv :: !SurfaceProvenance
+  , taContractProv :: !ContractProvenance
+  , taDerivationTags :: ![Text]
   , taFinalRendered :: !Text
   , taClaimAst :: !(Maybe ClaimAst)
   , taLinearizationLang :: !(Maybe Text)

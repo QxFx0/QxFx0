@@ -422,7 +422,20 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       timeline = rerRenderTimeline effectResults
       !metrics4 = addPhase (recordPhase "render" (rtlRenderStart timeline) (rtlRenderEnd timeline)) (tpMetrics tp)
       guardSafety = Guard.postRenderSafetyCheckSurface preSafetySurface (F.toList (ssHistory ss))
-      (renderedSurface, surfaceProv) = finalizeOutput preSafetySurface (F.toList (ssHistory ss))
+      templateArtifact = rsTemplateArtifact renderStatic
+      (renderedSurface, finalizeSurfaceProv) = finalizeOutput preSafetySurface (F.toList (ssHistory ss))
+      surfaceProv = case finalizeSurfaceProv of
+        FromRecovery -> FromRecovery
+        _ -> draSurfaceProvenance templateArtifact
+      contractProv = case surfaceProv of
+        FromRecovery -> RecoveryRoute
+        _ -> draContractProvenance templateArtifact
+      derivationTags =
+        draDerivationTags templateArtifact
+          <> [ "surface_provenance=" <> T.pack (show surfaceProv)
+             , "contract_provenance=" <> T.pack (show contractProv)
+             ]
+          <> if finalizeSurfaceProv == FromRecovery then ["finalize=guard_blocked_non_expansive"] else ["finalize=preserve_upstream_surface"]
       rendered = Guard.gsRenderedText renderedSurface
       finalRendered = rendered
       (recoveryCause, recoveryStrategy, recoveryEvidence) =
@@ -459,12 +472,14 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , tdSemanticAnchor = tpSemanticAnchor tp
         }
   in TurnArtifacts
-      { taPreSafetyRendered = preSafetyRendered
-      , taGuardSurface = renderedSurface
-      , taRendered = rendered
-      , taSurfaceProv = surfaceProv
-      , taFinalRendered = finalRendered
-      , taClaimAst = draClaimAst (rsTemplateArtifact renderStatic)
+       { taPreSafetyRendered = preSafetyRendered
+       , taGuardSurface = renderedSurface
+       , taRendered = rendered
+       , taSurfaceProv = surfaceProv
+       , taContractProv = contractProv
+       , taDerivationTags = derivationTags
+       , taFinalRendered = finalRendered
+       , taClaimAst = draClaimAst (rsTemplateArtifact renderStatic)
       , taLinearizationLang = draLinearizationLang (rsTemplateArtifact renderStatic)
       , taLinearizationOk = draLinearizationOk (rsTemplateArtifact renderStatic)
       , taLinearizationFallbackReason = draFallbackReason (rsTemplateArtifact renderStatic)

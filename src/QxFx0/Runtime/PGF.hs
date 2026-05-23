@@ -81,7 +81,7 @@ linearizeExpr mPgfPath lang expr = do
 
 fallbackSurface :: ClaimAst -> Either Text Text
 fallbackSurface ast =
-  maybe (Left "pgf_russian_fallback_failed") Right (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
+  maybe (Left "pgf_russian_fallback_failed:shim_route") Right (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
 
 emptyMorphologyData :: MorphologyData
 emptyMorphologyData = MorphologyData mempty mempty mempty mempty
@@ -144,15 +144,17 @@ astToGfExpr ast =
     StanceWrapped _ inner ->
       astToGfExpr inner
     ClaimPurpose subject ->
-      Right ("MovePurpose (MkNP " <> sanitizeLegacyLexemeId subject <> ")")
+      Right ("MovePurpose (MkNP " <> fst (sanitizeLegacyLexemeDecision subject) <> ")")
     ClaimSelfState ->
       Right "MoveSelfState"
     ClaimComparison left right ->
       Right
         ( "MoveCompare (MkNP "
             <> sanitizeLegacyLexemeId left
+            <> legacyShimSuffix left
             <> ") (MkNP "
             <> sanitizeLegacyLexemeId right
+            <> legacyShimSuffix right
             <> ")"
         )
 
@@ -191,3 +193,12 @@ dialogAtomsToGfExpr da =
 
 sanitizeLegacyLexemeId :: Text -> Text
 sanitizeLegacyLexemeId = LegacyGfMap.topicToGfLexemeId
+
+sanitizeLegacyLexemeDecision :: Text -> (Text, Maybe Text)
+sanitizeLegacyLexemeDecision = LegacyGfMap.topicToGfLexemeDecision
+
+legacyShimSuffix :: Text -> Text
+legacyShimSuffix raw =
+  case sanitizeLegacyLexemeDecision raw of
+    (_, Just _) -> ""
+    _ -> ""

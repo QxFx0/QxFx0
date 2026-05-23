@@ -9,7 +9,7 @@ module QxFx0.Types.TurnProjection
 
 import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
-import QxFx0.Types.Observability (ConvMove(..))
+import QxFx0.Types.Observability (ContractProvenance, ConvMove(..), SurfaceProvenance)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -53,6 +53,10 @@ data TurnReplayTrace = TurnReplayTrace
   , trcLinearizationLang :: !(Maybe Text)
   , trcLinearizationOk :: !Bool
   , trcFallbackReason :: !(Maybe Text)
+  , trcContractProvenance :: !(Maybe ContractProvenance)
+  , trcSurfaceProvenance :: !(Maybe SurfaceProvenance)
+  , trcTruthContractStatus :: !Text
+  , trcDerivationTags :: ![Text]
   , trcSalienceDriver :: !Text
     -- ^ Phase 5.5e: rendered snake_case tag for the dominant
     --   'QxFx0.Self.Salience.SalienceDriver' on this turn.

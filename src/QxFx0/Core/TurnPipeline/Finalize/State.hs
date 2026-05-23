@@ -635,6 +635,10 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcLinearizationLang = taLinearizationLang ta
           , trcLinearizationOk = taLinearizationOk ta
           , trcFallbackReason = taLinearizationFallbackReason ta
+          , trcContractProvenance = Just (taContractProv ta)
+          , trcSurfaceProvenance = Just (taSurfaceProv ta)
+          , trcTruthContractStatus = deriveTruthContractStatus ta
+          , trcDerivationTags = taDerivationTags ta
            , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
            , trcSalienceHolisticBias = salienceHolisticBias traceSalience
            , trcSalienceConfidence = salienceConfidence traceSalience
@@ -713,6 +717,12 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpReplayTrace = replayTrace
       , tqpDivergence = tpShadowDivergence tp
       }
+
+deriveTruthContractStatus :: TurnArtifacts -> Text
+deriveTruthContractStatus ta
+  | taSurfaceProv ta == FromRecovery = "non_expansive_recovery_surface"
+  | taLinearizationOk ta = "canonical_surface_preserved"
+  | otherwise = "explicit_fallback_surface"
 
 buildFinalOutput :: Bool -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
 buildFinalOutput wantIntrospection ss baseSurface nextSs =

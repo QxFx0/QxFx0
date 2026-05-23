@@ -73,6 +73,10 @@ data ReplayTraceSummary = ReplayTraceSummary
   , rtsShadowSeverity :: !(Maybe Text)
   , rtsLearningValidationStatus :: !(Maybe Text)
   , rtsFallbackReason :: !(Maybe Text)
+  , rtsTruthContractStatus :: !(Maybe Text)
+  , rtsSurfaceProvenance :: !(Maybe Text)
+  , rtsContractProvenance :: !(Maybe Text)
+  , rtsDerivationTags :: ![Text]
   }
 
 printHelp :: IO ()
@@ -236,13 +240,17 @@ learningAuthorityStatus latestTrace =
 
 gfLexicalAuthorityStatus :: Maybe ReplayTraceSummary -> EpistemicStatus
 gfLexicalAuthorityStatus latestTrace =
-  case latestTrace >>= rtsFallbackReason of
-    Nothing -> EpstAuthoritative
-    Just reason
-      | "gf_" `T.isPrefixOf` reason -> EpstFallback
-      | "en_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
-      | "ru_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
-      | otherwise -> EpstAdvisory
+  case latestTrace >>= rtsTruthContractStatus of
+    Just "canonical_surface_preserved" -> EpstAuthoritative
+    Just "explicit_fallback_surface" -> EpstFallback
+    Just "non_expansive_recovery_surface" -> EpstDegraded
+    _ -> case latestTrace >>= rtsFallbackReason of
+      Nothing -> EpstAuthoritative
+      Just reason
+        | "gf_" `T.isPrefixOf` reason -> EpstFallback
+        | "en_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
+        | "ru_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
+        | otherwise -> EpstAdvisory
 
 formalContourStatus :: Maybe ReplayTraceSummary -> EpistemicStatus
 formalContourStatus latestTrace =
@@ -301,6 +309,10 @@ loadLatestReplayTrace session = do
               evidence = decodeStringArrayField "trcRecoveryEvidence" obj
               learningValidationStatus = decodeScalarField "trcLearningValidationStatus" obj
               fallbackReason = decodeScalarField "trcFallbackReason" obj
+              truthContractStatus = decodeScalarField "trcTruthContractStatus" obj
+              surfaceProvenance = decodeScalarField "trcSurfaceProvenance" obj
+              contractProvenance = decodeScalarField "trcContractProvenance" obj
+              derivationTags = decodeStringArrayField "trcDerivationTags" obj
            in Just ReplayTraceSummary
                 { rtsRecoveryCause = recoveryCause
                 , rtsRecoveryStrategy = recoveryStrategy
@@ -308,6 +320,10 @@ loadLatestReplayTrace session = do
                 , rtsShadowSeverity = shadowSeverity
                 , rtsLearningValidationStatus = learningValidationStatus
                 , rtsFallbackReason = fallbackReason
+                , rtsTruthContractStatus = truthContractStatus
+                , rtsSurfaceProvenance = surfaceProvenance
+                , rtsContractProvenance = contractProvenance
+                , rtsDerivationTags = derivationTags
                 }
         _ -> Nothing
 

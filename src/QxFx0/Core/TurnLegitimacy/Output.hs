@@ -28,6 +28,7 @@ finalizeOutput preSafetySurface history =
           _ -> FromDB
    in (renderedSurface, surfaceProvenance)
 
+
 safeOutputText :: GuardSurface -> GuardSurface -> SafetyStatus -> Text
 safeOutputText okSurface blockedSurface safetyStatus =
   gsRenderedText (fallbackSurfaceOnBlock okSurface blockedSurface safetyStatus)

@@ -24,7 +24,9 @@ import Data.Char (isAlpha)
 import QxFx0.Types
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
+  , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , gfMapLoadStatus
   , lookupTopicGfLexemeId
   , lookupGfLexemeForms
   )
@@ -73,6 +75,9 @@ data DialogueRenderArtifact = DialogueRenderArtifact
   , draLinearizationLang :: !(Maybe Text)
   , draLinearizationOk :: !Bool
   , draFallbackReason :: !(Maybe Text)
+  , draContractProvenance :: !ContractProvenance
+  , draSurfaceProvenance :: !SurfaceProvenance
+  , draDerivationTags :: ![Text]
   , draDialogAtoms :: !DialogAtoms
   } deriving stock (Eq, Show)
 
@@ -211,6 +216,9 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             , draLinearizationLang = Just "en_fallback"
             , draLinearizationOk = False
             , draFallbackReason = Just ("en_unstructured_fallback:" <> fallbackReason)
+            , draContractProvenance = FallbackRoute
+            , draSurfaceProvenance = FromFallback
+            , draDerivationTags = ["surface=en_unstructured", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
             }
       else
@@ -244,6 +252,9 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             , draLinearizationLang = Nothing
             , draLinearizationOk = False
             , draFallbackReason = Just ("ru_unstructured_fallback:" <> fallbackReason)
+            , draContractProvenance = FallbackRoute
+            , draSurfaceProvenance = FromFallback
+            , draDerivationTags = ["surface=ru_unstructured", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
             }
 
@@ -272,6 +283,9 @@ renderStructuredDialogueArtifact frame rmp renderStyle morph = do
              , draLinearizationLang = mLang
              , draLinearizationOk = linearizationOk
              , draFallbackReason = fallbackReason
+             , draContractProvenance = contractProvenanceForArtifact linearizationOk fallbackReason
+             , draSurfaceProvenance = surfaceProvenanceForArtifact linearizationOk fallbackReason
+              , draDerivationTags = artifactDerivationTags propositionType linearizationOk fallbackReason claimAst
              , draDialogAtoms = emptyDialogAtoms
              }
 
@@ -1442,9 +1456,80 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
          finalRendered
            | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
            | otherwise       = draRenderedText templateArtifact
-     in templateArtifact
-            { draRenderedText = finalRendered
-            , draTemplateBodyText = rendered
-            , draDialogAtoms = da
-            , draFallbackReason = fallbackReason
-            }
+      in templateArtifact
+             { draRenderedText = finalRendered
+             , draTemplateBodyText = rendered
+             , draDialogAtoms = da
+             , draFallbackReason = fallbackReason
+             , draContractProvenance =
+                 case fallbackReason of
+                   Nothing -> AssembledClaim
+                   Just _ -> FallbackRoute
+             , draSurfaceProvenance =
+                 case fallbackReason of
+                   Nothing -> FromDB
+                   Just _ -> FromFallback
+             , draDerivationTags = draDerivationTags templateArtifact <> maybe ["assembly=primary"] (\reason -> ["assembly=fallback", "fallback=" <> reason]) fallbackReason
+             }
+
+contractProvenanceForArtifact :: Bool -> Maybe Text -> ContractProvenance
+contractProvenanceForArtifact linearizationOk fallbackReason
+  | linearizationOk = BuiltClaim
+  | maybe False (T.isPrefixOf "gf_") fallbackReason = FallbackRoute
+  | otherwise = AssembledClaim
+
+surfaceProvenanceForArtifact :: Bool -> Maybe Text -> SurfaceProvenance
+surfaceProvenanceForArtifact linearizationOk fallbackReason
+  | linearizationOk = FromDB
+  | maybe False (T.isPrefixOf "gf_") fallbackReason = FromFallback
+  | otherwise = FromDB
+
+artifactDerivationTags :: PropositionType -> Bool -> Maybe Text -> Maybe ClaimAst -> [Text]
+artifactDerivationTags propositionType linearizationOk fallbackReason mClaimAst =
+  [ "structured=" <> T.pack (show propositionType)
+  , "linearization_ok=" <> T.pack (show linearizationOk)
+  ]
+    <> maybe [] (pure . ("fallback=" <>)) fallbackReason
+    <> maybe [] claimAstDerivationTags mClaimAst
+    <> gfMapAuthorityTags
+
+claimAstDerivationTags :: ClaimAst -> [Text]
+claimAstDerivationTags ast =
+  [ "gf_default_lexeme"
+  | any (== defaultGfLexemeId) (claimAstLexemes ast)
+  ]
+
+claimAstLexemes :: ClaimAst -> [Text]
+claimAstLexemes ast =
+  case ast of
+    MoveInvite (MkNP topic) _ action -> topic : gfActionLexemes action
+    MoveDefine (MkNP subj) _ (MkNP obj) -> [subj, obj]
+    MoveCause (MkNP subj) _ -> [subj]
+    MovePurpose (MkNP topic) -> [topic]
+    MoveCompare (MkNP left) (MkNP right) -> [left, right]
+    MoveContemplative (MkNP topic) -> [topic]
+    MoveGround (MkNP topic) -> [topic]
+    MoveContact (MkNP topic) -> [topic]
+    MoveReflect (MkNP topic) -> [topic]
+    MoveDescribe (MkNP topic) -> [topic]
+    MoveDeepen (MkNP topic) -> [topic]
+    MoveConfront (MkNP topic) -> [topic]
+    MoveAnchor (MkNP topic) -> [topic]
+    MoveClarify (MkNP topic) -> [topic]
+    MoveNextStepLocal (MkNP topic) -> [topic]
+    MoveHypothesis (MkNP topic) -> [topic]
+    MoveDistinguish (MkNP left) (MkNP right) -> [left, right]
+    StanceWrapped _ inner -> claimAstLexemes inner
+    _ -> []
+
+gfActionLexemes :: GfVP -> [Text]
+gfActionLexemes action =
+  case action of
+    ActMaintain _ obj -> [obj]
+    ActDefine obj -> [obj]
+
+gfMapAuthorityTags :: [Text]
+gfMapAuthorityTags =
+  case gfMapLoadStatus of
+    GfMapLoaded _ -> []
+    GfMapLoadFailed reason -> ["gf_map_non_authoritative:" <> reason]

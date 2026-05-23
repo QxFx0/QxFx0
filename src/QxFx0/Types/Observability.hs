@@ -77,6 +77,7 @@ instance FromJSON LogicalBond where parseJSON = genericParseJSON defaultOptions
 data ContractProvenance
   = BuiltClaim | FallbackRoute | RecoveryRoute
   | NixGuarded | OperatorMapping | AssembledClaim
+  | ShimRoute | DefaultRoute | GeneratedArtifactRoute
   deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
   deriving anyclass (NFData)
 instance ToJSON ContractProvenance where toJSON = genericToJSON defaultOptions
@@ -85,6 +86,7 @@ instance FromJSON ContractProvenance where parseJSON = genericParseJSON defaultO
 data SurfaceProvenance
   = FromDB | FromFallback | FromRecovery
   | FromNixGuard | FromOperator | FromHardFallback
+  | FromShim | FromDefault | FromGeneratedArtifact
   deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
   deriving anyclass (NFData)
 instance ToJSON SurfaceProvenance where toJSON = genericToJSON defaultOptions
