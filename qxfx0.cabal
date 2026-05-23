@@ -189,6 +189,7 @@ library
      QxFx0.Semantic.Sense.Adjacency
      QxFx0.Semantic.SemanticScene
      QxFx0.Semantic.SemanticInput
+     QxFx0.Core.DialogueThread
      QxFx0.Core.SensePlan
       QxFx0.Render.Dialogue
      QxFx0.Render.Semantic

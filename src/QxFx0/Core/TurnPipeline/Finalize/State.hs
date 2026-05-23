@@ -120,6 +120,13 @@ import QxFx0.Semantic.AtomAccretion
   , resolveCollisions
   )
 import QxFx0.Types.Text (textShow)
+import QxFx0.Types.State.DialogueDevelopment
+  ( CommitmentStatus(..)
+  , DialogueCommitment(..)
+  , DialogueCommitmentLedger(..)
+  , DialoguePhase(..)
+  , DialogueThread(..)
+  )
 
 import Data.Maybe (fromMaybe)
 import Control.Applicative ((<|>))
@@ -511,6 +518,9 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
               (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
           in resolveCollisions canonicalSet remaining
       , ssLearningNeedState = newLearningNeedState
+      , ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) tp ta
+      , ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) tp
+      , ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) tp
       , ssGuardrailState = ssGuardrailState ss
         -- ^ WP5: guardrails currently pass through unchanged;
         --   proposal-submission tracking will be wired when the
@@ -662,11 +672,16 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcLearningRejectReason = lrvRejectReason learningVerdict
             , trcSenseAnchor = unSemanticNodeId (svAnchor (rspInputVector (rmpSensePlan (tpRmpAfterLegit tp))))
             , trcSenseOperator = Just (rspChosenOperator (rmpSensePlan (tpRmpAfterLegit tp)))
-             , trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))
-             , trcPerspectiveProjection =
-                 case perspectiveProjections of
-                   projection:_ -> Just projection
-                   [] -> Nothing
+            , trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))
+            , trcDialogueFocus = dtCurrentFocus (tiDialogueThread ti)
+            , trcDialoguePhase = tiDialoguePhase ti
+            , trcDialogueCommitmentCount = length (dclItems (tiDialogueCommitmentLedger ti))
+            , trcMicroPlanMoves = mpRhetoricalMoves (rmpMicroPlan (tpRmpAfterLegit tp))
+            , trcMicroPlanExplicitness = mpExplicitness (rmpMicroPlan (tpRmpAfterLegit tp))
+            , trcPerspectiveProjection =
+                case perspectiveProjections of
+                  projection:_ -> Just projection
+                  [] -> Nothing
             , trcPerspectiveProjections = perspectiveProjections
             }
   in TurnProjection
@@ -740,6 +755,50 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
               }
       !metricsFinal = addPhase (recordPhase "total" (tiStartTime ti) tSave1) metrics5
   in metricsFinal
+
+advanceDialogueThreadAfterTurn :: DialogueThread -> TurnPlan -> TurnArtifacts -> DialogueThread
+advanceDialogueThreadAfterTurn thread tp ta =
+  let family = tdFamily (taDecision ta)
+      clarified = case family of
+        CMClarify -> dtCurrentFocus thread : dtClarifiedItems thread
+        CMGround -> dtCurrentFocus thread : dtClarifiedItems thread
+        _ -> dtClarifiedItems thread
+      unresolved = case family of
+        CMRepair -> dtOpenLoops thread
+        CMClarify -> dtOpenLoops thread
+        _ -> filter (/= dtCurrentFocus thread) (dtOpenLoops thread)
+  in thread
+      { dtClarifiedItems = take 8 clarified
+      , dtOpenLoops = take 8 unresolved
+      , dtResistance = case family of
+          CMRepair -> min 1.0 (dtResistance thread + 0.15)
+          CMGround -> max 0.0 (dtResistance thread - 0.10)
+          _ -> dtResistance thread
+      }
+
+advanceDialogueLedgerAfterTurn :: DialogueCommitmentLedger -> TurnPlan -> DialogueCommitmentLedger
+advanceDialogueLedgerAfterTurn (DialogueCommitmentLedger items) tp =
+  let family = tpFinalFamily tp
+      rewrite item =
+        if T.null (dcClaim item)
+          then item
+          else case family of
+            CMClarify -> item { dcStatus = CsUnresolved }
+            CMRepair -> item { dcStatus = CsSuspended }
+            CMGround -> item { dcStatus = CsAccepted }
+            CMConfront -> item { dcStatus = CsContested }
+            _ -> item
+  in DialogueCommitmentLedger (map rewrite items)
+
+advanceDialoguePhaseAfterTurn :: DialoguePhase -> TurnPlan -> DialoguePhase
+advanceDialoguePhaseAfterTurn prior tp =
+  case tpFinalFamily tp of
+    CMRepair -> Repairing
+    CMClarify -> Clarifying
+    CMGround -> Grounding
+    CMNextStep -> Advancing
+    CMConfront -> Contesting
+    _ -> prior
 
 data LearningReplayVerdict = LearningReplayVerdict
   { lrvStatus :: !Text

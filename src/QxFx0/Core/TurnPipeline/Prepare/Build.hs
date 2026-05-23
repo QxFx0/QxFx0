@@ -92,6 +92,9 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
        , tiField = psField prepareStatic
        , tiFieldHeuristics = psFieldHeuristics prepareStatic
        , tiSenseVector = psSenseVector prepareStatic
+       , tiDialogueThread = psDialogueThread prepareStatic
+       , tiDialogueCommitmentLedger = psDialogueCommitmentLedger prepareStatic
+       , tiDialoguePhase = psDialoguePhase prepareStatic
        , tiEssence = psEssence prepareStatic
        }
 

@@ -11,7 +11,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Lexicon.GfMap (lookupTopicGfLexemeId)
-import QxFx0.Core.SensePlan (buildResponseSensePlan)
+import QxFx0.Core.SensePlan (familySenseBundle)
 import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
   , threeStageModulation
@@ -19,10 +19,11 @@ import QxFx0.Core.TurnPlanning.Modulation
 import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
 import QxFx0.Types
 
-buildRMP :: CanonicalMoveFamily -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
-buildRMP family frame senseVector topic ego trace nixAvailable =
-  let baseStance = familyToStance family
-      baseEpistemic = familyToEpistemic family
+buildRMP :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
+buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailable =
+  let (family', sensePlan, microPlan) = familySenseBundle family ledger phase thread senseVector
+      baseStance = familyToStance family'
+      baseEpistemic = familyToEpistemic family'
       (feralStance, feralEpistemic) = feralDegradation nixAvailable baseStance baseEpistemic
       (finalStance, finalEpistemic) = threeStageModulation ego trace feralStance feralEpistemic
       plannedTopic =
@@ -35,13 +36,12 @@ buildRMP family frame senseVector topic ego trace nixAvailable =
       contrastAxis =
         let axis0 = contrastAxisFromFrame frame
         in if T.null axis0 then senseAxisSummary (rspPreservedAxes sensePlan) else axis0
-      sensePlan = buildResponseSensePlan family senseVector
     in ResponseMeaningPlan
-        { rmpFamily = family
-        , rmpForce = forceForFamily family
-        , rmpSpeechAct = familyToSpeechAct family
-        , rmpRelation = familyToRelation family
-        , rmpStrategy = familyToStrategy family
+        { rmpFamily = family'
+        , rmpForce = forceForFamily family'
+        , rmpSpeechAct = familyToSpeechAct family'
+        , rmpRelation = familyToRelation family'
+        , rmpStrategy = familyToStrategy family'
         , rmpStance = finalStance
         , rmpEpistemic = finalEpistemic
         , rmpTopic = plannedTopic
@@ -51,8 +51,9 @@ buildRMP family frame senseVector topic ego trace nixAvailable =
         , rmpImplicationDirection = "forward"
         , rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = epistemicConfidence finalEpistemic
-        , rmpDepthMode = familyDefaultDepthMode family
+        , rmpDepthMode = familyDefaultDepthMode family'
         , rmpSensePlan = sensePlan
+        , rmpMicroPlan = microPlan
         }
 
 topicFromFrame :: InputPropositionFrame -> Text -> Text
@@ -303,8 +304,12 @@ senseContinuationMove op = case op of
   OpGround -> MoveGroundBasis
   OpDistinguish -> MoveShowContrast
   OpExplainCause -> MoveStateBoundary
+  OpExplainPurpose -> MovePurposeTeleology
+  OpReflect -> MoveReflectMirror
   OpConstrain -> MoveClarifyDisambiguate
   OpRepair -> MoveRepairBridge
+  OpClarify -> MoveClarifyDisambiguate
+  OpDeepen -> MoveDeepenProbe
   OpNextStep -> MoveNextStep
 
 styleForStance :: StanceMarker -> RenderStyle

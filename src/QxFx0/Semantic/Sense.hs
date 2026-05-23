@@ -11,8 +11,10 @@ module QxFx0.Semantic.Sense
   , SenseOperator(..)
   , SenseVector(..)
   , ResponseSensePlan(..)
+  , MicroPlan(..)
   , emptySenseVector
   , emptyResponseSensePlan
+  , emptyMicroPlan
   , renderSenseAxis
   , renderSenseOperator
   ) where
@@ -35,14 +37,18 @@ newtype FamilyId = FamilyId { unFamilyId :: Text }
 data SenseAxis
   = AxIdentity
   | AxCause
+  | AxPurpose
+  | AxContrast
   | AxBoundary
   | AxAction
   | AxState
   | AxKnowledge
+  | AxNorm
+  | AxTime
+  | AxPossibility
   | AxSelf
   | AxOther
   | AxRepair
-  | AxComparison
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON, FromJSONKey, ToJSONKey)
 
@@ -58,8 +64,12 @@ data SenseOperator
   | OpGround
   | OpDistinguish
   | OpExplainCause
+  | OpExplainPurpose
+  | OpReflect
   | OpConstrain
   | OpRepair
+  | OpClarify
+  | OpDeepen
   | OpNextStep
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
@@ -86,6 +96,14 @@ data ResponseSensePlan = ResponseSensePlan
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
+data MicroPlan = MicroPlan
+  { mpRhetoricalMoves :: ![Text]
+  , mpExplicitness :: !Double
+  , mpStructureBudget :: !Int
+  , mpFallbackPolicy :: !Text
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
 emptySenseVector :: SenseVector
 emptySenseVector = SenseVector
   { svAnchor = SemanticNodeId "unknown"
@@ -108,18 +126,30 @@ emptyResponseSensePlan = ResponseSensePlan
   , rspDistance = 0
   }
 
+emptyMicroPlan :: MicroPlan
+emptyMicroPlan = MicroPlan
+  { mpRhetoricalMoves = []
+  , mpExplicitness = 0.5
+  , mpStructureBudget = 1
+  , mpFallbackPolicy = "safe_degrade"
+  }
+
 renderSenseAxis :: SenseAxis -> Text
 renderSenseAxis axis = case axis of
   AxIdentity -> "identity"
   AxCause -> "cause"
+  AxPurpose -> "purpose"
+  AxContrast -> "contrast"
   AxBoundary -> "boundary"
   AxAction -> "action"
   AxState -> "state"
   AxKnowledge -> "knowledge"
+  AxNorm -> "norm"
+  AxTime -> "time"
+  AxPossibility -> "possibility"
   AxSelf -> "self"
   AxOther -> "other"
   AxRepair -> "repair"
-  AxComparison -> "comparison"
 
 renderSenseOperator :: SenseOperator -> Text
 renderSenseOperator op = case op of
@@ -127,6 +157,10 @@ renderSenseOperator op = case op of
   OpGround -> "ground"
   OpDistinguish -> "distinguish"
   OpExplainCause -> "explain_cause"
+  OpExplainPurpose -> "explain_purpose"
+  OpReflect -> "reflect"
   OpConstrain -> "constrain"
   OpRepair -> "repair"
+  OpClarify -> "clarify"
+  OpDeepen -> "deepen"
   OpNextStep -> "next_step"

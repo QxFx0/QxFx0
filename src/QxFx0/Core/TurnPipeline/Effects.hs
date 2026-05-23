@@ -49,6 +49,8 @@ import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
 import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame)
 import QxFx0.Semantic.Sense (SenseVector)
 import QxFx0.Semantic.Sense.Extract (extractSenseVector)
+import QxFx0.Core.DialogueThread (deriveDialogueCommitmentLedger, deriveDialoguePhase, deriveDialogueThread)
+import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread, emptyDialogueCommitmentLedger, emptyDialogueThread)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -163,6 +165,9 @@ data PrepareStatic = PrepareStatic
   , psSenseVector :: !SenseVector
     -- ^ Canonical sense bridge extracted from the same utterance-level
     --   semantic interpretation used to derive 'psFrame'.
+  , psDialogueThread :: !DialogueThread
+  , psDialogueCommitmentLedger :: !DialogueCommitmentLedger
+  , psDialoguePhase :: !DialoguePhase
   , psEssence :: !Essence
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
@@ -199,6 +204,9 @@ buildPrepareEffectPlan ss input currentTime =
       semanticFrame = buildUtteranceSemanticFrame input
       frame = parseProposition input
       senseVector = extractSenseVector semanticFrame
+      dialogueLedger = deriveDialogueCommitmentLedger (ssDialogueCommitmentLedger ss) semanticFrame
+      dialogueThread = deriveDialogueThread (ssDialogueThread ss) dialogueLedger (ssDialogue ss) semanticFrame
+      dialoguePhase = deriveDialoguePhase dialogueThread dialogueLedger semanticFrame
       atomFocus = case asAtoms atomSet of
         (a:_) -> extractObjectFromAtom a
         [] -> ""
@@ -267,6 +275,9 @@ buildPrepareEffectPlan ss input currentTime =
         --   (e.g. salience computation) can read the same record.
       , psCurrentTime = currentTime
       , psSenseVector = senseVector
+      , psDialogueThread = dialogueThread
+      , psDialogueCommitmentLedger = dialogueLedger
+      , psDialoguePhase = dialoguePhase
       , psEssence = ssEssence ss
       }
   in PrepareEffectPlan

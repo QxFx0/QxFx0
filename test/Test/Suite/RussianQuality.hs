@@ -79,7 +79,7 @@ testTaggedFallbackReason = TestCase $ do
         , ipfSemanticSubject = "система"
         , ipfCanonicalFamily = CMGround
         }
-      rmp0 = TurnPlanning.buildRMP CMGround frame "система" emptyEgoState emptyAtomTrace True
+      rmp0 = TurnPlanning.buildRMP CMGround emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "система" emptyEgoState emptyAtomTrace True
       rcp = TurnPlanning.buildRCP CMGround rmp0
       rmpBroken = rmp0 { rmpPrimaryClaimAst = Just (ClaimPurpose "") }
       artifact = renderDialogueArtifact frame rmpBroken rcp "система" [] md
@@ -94,7 +94,7 @@ assertPromptRenders md prompt = do
   let frame = Proposition.parseProposition prompt
       family = ipfCanonicalFamily frame
       topic = nonEmpty (ipfFocusEntity frame) "тема"
-      rmp = TurnPlanning.buildRMP family frame topic emptyEgoState emptyAtomTrace True
+      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True
       rcp = TurnPlanning.buildRCP family rmp
       artifact = renderDialogueArtifact frame rmp rcp topic [] md
       rendered = draRenderedText artifact
@@ -108,7 +108,7 @@ assertAssemblyNotEmpty md prompt = do
   let frame = Proposition.parseProposition prompt
       family = ipfCanonicalFamily frame
       topic = nonEmpty (ipfFocusEntity frame) "тема"
-      rmp = TurnPlanning.buildRMP family frame topic emptyEgoState emptyAtomTrace True
+      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True
       rcp = TurnPlanning.buildRCP family rmp
       artifact =
         renderArtifactViaAssembly
@@ -134,7 +134,7 @@ renderForPrompt md prompt =
   let frame = Proposition.parseProposition prompt
       family = ipfCanonicalFamily frame
       topic = nonEmpty (ipfFocusEntity frame) "тема"
-      rmp = TurnPlanning.buildRMP family frame topic emptyEgoState emptyAtomTrace True
+      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True
       rcp = TurnPlanning.buildRCP family rmp
       artifact = renderDialogueArtifact frame rmp rcp topic [] md
   in T.strip (draRenderedText artifact)

@@ -10,7 +10,7 @@ module QxFx0.Core.TurnPipeline.Route.Build
 import QxFx0.Core.Intuition (flashThreshold)
 import QxFx0.Core.Observability (recordThresholdProbe)
 import QxFx0.Core.Legitimacy (legitimacyRecoveryBonus)
-import QxFx0.Core.SensePlan (constrainFamilyBySense)
+import QxFx0.Core.SensePlan (familySenseBundle)
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , ShadowPolicy
@@ -93,7 +93,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
                  else (shadowResolution0, False, vetoCount + 1, windowStart)
           else (shadowResolution0, False, vetoCount, windowStart)
       family0 = srEffectiveFamily shadowResolution
-      family = constrainFamilyBySense family0 (tiSenseVector ti)
+      (family, _, _) = familySenseBundle family0 (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti)
       recoveryBonus =
         legitimacyRecoveryBonus
           (scShadowStatus sc == ShadowMatch && not (scShadowHasDivergence sc))
@@ -101,7 +101,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
       newEgo = rdNewEgo rd
       renderStrategy = rdRenderStrategy rd
       renderStyle = adjustRenderStyleForSpeechPolicy (ssSpeechPolicyState ss) (rdRenderStyle rd)
-      rmpBase = buildRMP family (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
+      rmpBase = buildRMP family (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
       rmp0 = applyRenderStrategy family renderStrategy rmpBase
       rcp0 = (buildRCP family rmp0) {rcpStyle = renderStyle}
       rmp1 = modulateRMPWithNarrative (tsNarrativeFragment ts) rmp0
@@ -127,16 +127,21 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
           _ ->
             Nothing
       finalFamily = maybe finalFamily0 id lockedDiagnosticFamily
-      finalForce = forceForFamily finalFamily
+      (finalFamily', finalSensePlan, finalMicroPlan) = familySenseBundle finalFamily (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti)
+      finalForce' = forceForFamily finalFamily'
       rmpAfterLegit =
         rmpAfterLegit0
-          { rmpFamily = finalFamily
-          , rmpForce = finalForce
+          { rmpFamily = finalFamily'
+          , rmpForce = finalForce'
+          , rmpSpeechAct = familyToSpeechAct finalFamily'
+          , rmpRelation = familyToRelation finalFamily'
+          , rmpSensePlan = finalSensePlan
+          , rmpMicroPlan = finalMicroPlan
           }
       rcpFinal =
-        if finalFamily == finalFamily0
+        if finalFamily' == finalFamily0
           then rcpFinal0
-          else (buildRCP finalFamily rmpAfterLegit) {rcpStyle = rcpStyle rcpFinal0}
+          else (buildRCP finalFamily' rmpAfterLegit) {rcpStyle = rcpStyle rcpFinal0}
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
@@ -153,8 +158,8 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
          , tpRenderStyle = renderStyleText renderStyle
          , tpRmpAfterLegit = rmpAfterLegit
          , tpRcpFinal = rcpFinal
-         , tpFinalFamily = finalFamily
-         , tpFinalForce = finalForce
+         , tpFinalFamily = finalFamily'
+         , tpFinalForce = finalForce'
          , tpLegitScore = legitScore
          , tpActiveScene = activeScene
          , tpShadowStatus = scShadowStatus sc

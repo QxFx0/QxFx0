@@ -769,7 +769,7 @@ testClaimAstCoverageForOperationalAndMetaPrompts = TestCase $ do
   forM_ probes $ \(inputText, expectedType) -> do
     let frame = parseProposition inputText
         family = ipfCanonicalFamily frame
-        rmp = TurnPlanning.buildRMP family frame (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
+        rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
     assertEqual ("proposition type mismatch for " <> T.unpack inputText) expectedType (ipfPropositionType frame)
     assertBool ("expected ClaimAst coverage for " <> T.unpack inputText) (rmpPrimaryClaimAst rmp /= Nothing)
 
@@ -896,6 +896,7 @@ testLegitimacyPenaltyDemotesLowConfidencePlan = TestCase $ do
         , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = 0.9, rmpDepthMode = DeepDepth
+        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
         }
       (score1, rmp1) = Legitimacy.applyLegitimacyPenalty 0.4 rmp0
   assertEqual "low legitimacy should preserve returned score" 0.4 score1
@@ -1390,6 +1391,7 @@ testModulateRMPWithNarrativeDeepMode = TestCase $ do
         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
         }
       longNarrative = Just (T.replicate 20 "abc ")
       result = modulateRMPWithNarrative longNarrative rmp
@@ -1405,6 +1407,7 @@ testModulateRMPWithNarrativeTopicFill = TestCase $ do
         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
         }
       result = modulateRMPWithNarrative (Just "some narrative text") rmp
   assertEqual "Empty topic should be filled from narrative" "some narrative text" (rmpTopic result)
@@ -1419,6 +1422,7 @@ testModulateRMPWithNarrativeNoOp = TestCase $ do
         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
         }
       result = modulateRMPWithNarrative Nothing rmp
   assertEqual "No narrative should not change depthMode" SurfaceDepth (rmpDepthMode result)
@@ -1751,8 +1755,8 @@ testClaimAstStableForSameIntent :: Test
 testClaimAstStableForSameIntent = TestCase $ do
   let frame1 = parseProposition "поговорим о логике?"
       frame2 = parseProposition "давай поговорим о логике?"
-      rmp1 = TurnPlanning.buildRMP (ipfCanonicalFamily frame1) frame1 (ipfFocusEntity frame1) emptyEgoState emptyAtomTrace True
-      rmp2 = TurnPlanning.buildRMP (ipfCanonicalFamily frame2) frame2 (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True
+      rmp1 = TurnPlanning.buildRMP (ipfCanonicalFamily frame1) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame1 emptySenseVector (ipfFocusEntity frame1) emptyEgoState emptyAtomTrace True
+      rmp2 = TurnPlanning.buildRMP (ipfCanonicalFamily frame2) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame2 emptySenseVector (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True
   case (rmpPrimaryClaimAst rmp1, rmpPrimaryClaimAst rmp2) of
     (Just (MoveInvite _ _ _), Just (MoveInvite _ _ _)) -> pure ()
     other -> assertFailure ("same intent should map to stable invitation AST, got: " <> show other)
@@ -1761,7 +1765,7 @@ testClaimAstSameTreeVariedSurface :: Test
 testClaimAstSameTreeVariedSurface = TestCase $ do
   let frame = parseProposition "что такое осень?"
       family = ipfCanonicalFamily frame
-      rmp = TurnPlanning.buildRMP family frame (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
+      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
       rcpFormal = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleFormal }
       rcpWarm = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleWarm }
       md = ssMorphology emptySystemState
@@ -2268,7 +2272,7 @@ testBuildRmpForceProperty = quickCheckTest "buildRMP force matches family contra
   forAll
     (elements [CMGround, CMDefine, CMDistinguish, CMReflect, CMDescribe, CMPurpose, CMHypothesis, CMRepair, CMContact, CMAnchor, CMClarify, CMDeepen, CMConfront, CMNextStep])
     (\fam ->
-      let rmp = TurnPlanning.buildRMP fam emptyInputPropositionFrame "topic" emptyEgoState emptyAtomTrace True
+      let rmp = TurnPlanning.buildRMP fam emptyDialogueCommitmentLedger Exploring emptyDialogueThread emptyInputPropositionFrame emptySenseVector "topic" emptyEgoState emptyAtomTrace True
       in rmpForce rmp == forceForFamily fam
     )
 

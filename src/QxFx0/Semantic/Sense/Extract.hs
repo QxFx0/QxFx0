@@ -52,20 +52,22 @@ semanticClassAxis :: InputSemanticClass -> Maybe SenseAxis
 semanticClassAxis cls = case cls of
   SemIdentity -> Just AxIdentity
   SemCause -> Just AxCause
+  SemPurposeFunction -> Just AxPurpose
+  SemRelation -> Just AxContrast
   SemAction -> Just AxAction
   SemState -> Just AxState
   SemKnowledge -> Just AxKnowledge
   SemSelfReference -> Just AxSelf
   SemUserReference -> Just AxOther
   SemDialogueRepair -> Just AxRepair
-  SemComparison -> Just AxComparison
+  SemComparison -> Just AxContrast
   _ -> Nothing
 
 discourseAxis :: InputDiscourseFunction -> [SenseAxis]
 discourseAxis fn = case fn of
   DiscNegation -> [AxBoundary]
   DiscQuestion -> [AxKnowledge]
-  DiscContrast -> [AxComparison, AxBoundary]
+  DiscContrast -> [AxContrast, AxBoundary]
   DiscCause -> [AxCause]
   DiscClarification -> [AxRepair]
   _ -> []
@@ -80,5 +82,5 @@ inferOperator frame =
     "misunderstanding" -> OpRepair
     "boundary_command" -> OpRepair
     "next_step" -> OpNextStep
-    _ | usfSpeechAct frame == ActAsk -> OpConstrain
+    _ | usfSpeechAct frame == ActAsk -> OpClarify
       | otherwise -> OpGround

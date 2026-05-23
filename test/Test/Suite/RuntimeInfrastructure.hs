@@ -1092,13 +1092,21 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcEssenceTrigger = Nothing
               , trcLearningQueryType = Nothing
               , trcExternalTool = Nothing
-              , trcLearningValidationStatus = Nothing
-              , trcLearningSandboxResult = Nothing
-              , trcLearningGraftTurn = Nothing
-              , trcLearningRejectReason = Nothing
-              , trcPerspectiveProjection = Nothing
-              , trcPerspectiveProjections = []
-              }
+               , trcLearningValidationStatus = Nothing
+               , trcLearningSandboxResult = Nothing
+               , trcLearningGraftTurn = Nothing
+               , trcLearningRejectReason = Nothing
+               , trcSenseAnchor = "fixture_anchor"
+               , trcSenseOperator = Nothing
+               , trcSensePreservedAxes = []
+               , trcDialogueFocus = "fixture_focus"
+               , trcDialoguePhase = Exploring
+               , trcDialogueCommitmentCount = 0
+               , trcMicroPlanMoves = []
+               , trcMicroPlanExplicitness = 0.5
+               , trcPerspectiveProjection = Nothing
+               , trcPerspectiveProjections = []
+               }
           , tqpDivergence = True
           }
     beforeCount <- Runtime.withRuntimeDb rt $ \db ->
@@ -1398,13 +1406,21 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcEssenceTrigger = Nothing
               , trcLearningQueryType = Nothing
               , trcExternalTool = Nothing
-              , trcLearningValidationStatus = Nothing
-              , trcLearningSandboxResult = Nothing
-              , trcLearningGraftTurn = Nothing
-              , trcLearningRejectReason = Nothing
-              , trcPerspectiveProjection = Nothing
-              , trcPerspectiveProjections = []
-              }
+               , trcLearningValidationStatus = Nothing
+               , trcLearningSandboxResult = Nothing
+               , trcLearningGraftTurn = Nothing
+               , trcLearningRejectReason = Nothing
+               , trcSenseAnchor = "fixture_anchor"
+               , trcSenseOperator = Nothing
+               , trcSensePreservedAxes = []
+               , trcDialogueFocus = "fixture_focus"
+               , trcDialoguePhase = Exploring
+               , trcDialogueCommitmentCount = 0
+               , trcMicroPlanMoves = []
+               , trcMicroPlanExplicitness = 0.5
+               , trcPerspectiveProjection = Nothing
+               , trcPerspectiveProjections = []
+               }
           , tqpDivergence = True
           }
     result <- StatePersistence.saveStateWithProjection

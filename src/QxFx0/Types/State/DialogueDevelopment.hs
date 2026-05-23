@@ -10,6 +10,13 @@ speech adaptation, and belief/stance revision are not interchangeable signals.
 -}
 module QxFx0.Types.State.DialogueDevelopment
   ( AdaptiveDecisionRecord(..)
+  , DialoguePhase(..)
+  , DialogueThread(..)
+  , emptyDialogueThread
+  , CommitmentStatus(..)
+  , DialogueCommitment(..)
+  , DialogueCommitmentLedger(..)
+  , emptyDialogueCommitmentLedger
   , DialogueOutcomeKind(..)
   , DialogueOutcomeSample(..)
   , DialogueOutcomeLearningState(..)
@@ -47,6 +54,70 @@ import QxFx0.Types.State.AdaptiveMutation
   , AdaptiveMutationRecord(..)
   , EvidenceStrength(..)
   )
+
+data DialoguePhase
+  = Exploring
+  | Clarifying
+  | Grounding
+  | Repairing
+  | Advancing
+  | Contesting
+  | Closing
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData, FromJSON, ToJSON)
+
+data DialogueThread = DialogueThread
+  { dtCurrentFocus :: !Text
+  , dtActiveQuestion :: !(Maybe Text)
+  , dtUserGoal :: !(Maybe Text)
+  , dtIntentHypothesis :: !(Maybe Text)
+  , dtOpenLoops :: ![Text]
+  , dtAcceptedTerms :: ![Text]
+  , dtTopicConfidence :: !Double
+  , dtResistance :: !Double
+  , dtClarifiedItems :: ![Text]
+  , dtUnclarifiedItems :: ![Text]
+  , dtPhaseScope :: !Text
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+emptyDialogueThread :: DialogueThread
+emptyDialogueThread = DialogueThread
+  { dtCurrentFocus = ""
+  , dtActiveQuestion = Nothing
+  , dtUserGoal = Nothing
+  , dtIntentHypothesis = Nothing
+  , dtOpenLoops = []
+  , dtAcceptedTerms = []
+  , dtTopicConfidence = 0.0
+  , dtResistance = 0.0
+  , dtClarifiedItems = []
+  , dtUnclarifiedItems = []
+  , dtPhaseScope = ""
+  }
+
+data CommitmentStatus
+  = CsAccepted
+  | CsContested
+  | CsSuspended
+  | CsUnresolved
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData, FromJSON, ToJSON)
+
+data DialogueCommitment = DialogueCommitment
+  { dcClaim :: !Text
+  , dcStatus :: !CommitmentStatus
+  , dcTurn :: !Int
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+newtype DialogueCommitmentLedger = DialogueCommitmentLedger
+  { dclItems :: [DialogueCommitment]
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+emptyDialogueCommitmentLedger :: DialogueCommitmentLedger
+emptyDialogueCommitmentLedger = DialogueCommitmentLedger []
 
 data AdaptiveDecisionRecord = AdaptiveDecisionRecord
   { adrTurn :: !Int

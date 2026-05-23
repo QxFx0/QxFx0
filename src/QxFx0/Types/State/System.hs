@@ -99,8 +99,13 @@ import QxFx0.Types.State.AdaptiveMutation
   )
 import QxFx0.Types.State.DialogueDevelopment
   ( BeliefStore
+  , DialogueCommitmentLedger
+  , DialoguePhase(..)
+  , DialogueThread
   , DialogueOutcomeLearningState
   , SpeechPolicyState
+  , emptyDialogueCommitmentLedger
+  , emptyDialogueThread
   , emptyBeliefStore
   , emptyDialogueOutcomeLearningState
   , emptySpeechPolicyState
@@ -204,6 +209,15 @@ data SystemState = SystemState
     --   knowledge, calibration, tool reliability, speech policy, and
     --   claim-stance contours. Initialised to '[]'.
   , ssDialogueOutcomeLearning :: !DialogueOutcomeLearningState
+  , ssDialogueThread :: !DialogueThread
+    -- ^ Canonical shared-thinking thread derived from event history and
+    --   updated per turn. Single authoritative carrier of current
+    --   conversational focus and active unresolved object.
+  , ssDialogueCommitmentLedger :: !DialogueCommitmentLedger
+    -- ^ Canonical dialogue commitment state. Constrains future moves and
+    --   prevents planning from ignoring accepted/contested/suspended claims.
+  , ssDialoguePhase :: !DialoguePhase
+    -- ^ Machine-enforced current phase of the dialogue.
     -- ^ Phase 11/ADR-0032: bounded outcome counters and recent
     --   dialogue-outcome samples. Initialised to
     --   'emptyDialogueOutcomeLearningState'.
@@ -276,8 +290,11 @@ instance ToJSON SystemState where
       , "calibrationSnapshots" .= ssCalibrationSnapshots ss
       , "adaptiveMutationLog" .= ssAdaptiveMutationLog ss
        , "dialogueOutcomeLearning" .= ssDialogueOutcomeLearning ss
-       , "speechPolicyState" .= ssSpeechPolicyState ss
-       , "beliefStore" .= ssBeliefStore ss
+       , "dialogueThread" .= ssDialogueThread ss
+       , "dialogueCommitmentLedger" .= ssDialogueCommitmentLedger ss
+       , "dialoguePhase" .= ssDialoguePhase ss
+        , "speechPolicyState" .= ssSpeechPolicyState ss
+        , "beliefStore" .= ssBeliefStore ss
         , "perspectiveRegistry" .= ssPerspectiveRegistry ss
         , "governanceHistory" .= ssGovernanceHistory ss
         , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
@@ -336,8 +353,11 @@ instance FromJSON SystemState where
          <*> o .:? "calibrationSnapshots" .!= []
          <*> o .:? "adaptiveMutationLog" .!= []
          <*> o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState
-        <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
-        <*> o .:? "beliefStore" .!= emptyBeliefStore
+         <*> o .:? "dialogueThread" .!= emptyDialogueThread
+         <*> o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger
+         <*> o .:? "dialoguePhase" .!= Exploring
+         <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
+         <*> o .:? "beliefStore" .!= emptyBeliefStore
         <*> o .:? "perspectiveRegistry" .!= emptyPerspectiveRegistry
         <*> o .:? "governanceHistory" .!= []
         <*> o .:? "governanceRuntimeFault" .!= Nothing
@@ -500,6 +520,9 @@ emptySystemState = SystemState
   , ssCalibrationSnapshots = []
   , ssAdaptiveMutationLog = []
   , ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState
+  , ssDialogueThread = emptyDialogueThread
+  , ssDialogueCommitmentLedger = emptyDialogueCommitmentLedger
+  , ssDialoguePhase = Exploring
   , ssSpeechPolicyState = emptySpeechPolicyState
   , ssBeliefStore = emptyBeliefStore
   , ssPerspectiveRegistry = emptyPerspectiveRegistry

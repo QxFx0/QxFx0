@@ -17,6 +17,7 @@ import QxFx0.Types.Decision (ClaimAst)
 import QxFx0.Self.Essence (Essence (..), EssenceTrajectory (..), EssenceCommitment (..), renderEssenceMode, renderCommitmentTrigger)
 import QxFx0.Types.State.Perspective (PerspectiveProjection)
 import QxFx0.Semantic.Sense (SenseAxis, SenseOperator)
+import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import Data.Aeson (ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -101,6 +102,11 @@ data TurnReplayTrace = TurnReplayTrace
   , trcSenseAnchor :: !Text
   , trcSenseOperator :: !(Maybe SenseOperator)
   , trcSensePreservedAxes :: ![SenseAxis]
+  , trcDialogueFocus :: !Text
+  , trcDialoguePhase :: !DialoguePhase
+  , trcDialogueCommitmentCount :: !Int
+  , trcMicroPlanMoves :: ![Text]
+  , trcMicroPlanExplicitness :: !Double
   , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)
     -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate
     --   internals and registry lineage are not exposed to render/replay.

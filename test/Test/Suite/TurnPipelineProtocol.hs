@@ -1901,10 +1901,10 @@ testProtocolInterpreter request =
       TurnResEmbedding <$> Emb.textToEmbeddingResult (T.unpack inputText)
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard Allowed)
-    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy -> do
+    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy _salienceWeights -> do
       let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
       pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
-    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy -> do
+    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
       let (mFlash, intuitionState) =
             Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
       pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)
@@ -1951,9 +1951,9 @@ trackedPrepareInterpreter activeRef maxRef request =
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
     TurnReqNixGuard _ _ _ ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
-    TurnReqConsciousness _ _ _ _ ->
+    TurnReqConsciousness _ _ _ _ _ ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
-    TurnReqIntuition _ _ _ _ _ ->
+    TurnReqIntuition _ _ _ _ _ _ _ ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)
     TurnReqApiHealth ->
       trackConcurrentEffect activeRef maxRef (testProtocolInterpreter request)

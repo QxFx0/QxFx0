@@ -220,15 +220,17 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             limitText = moveToText (rcpLimit rcp) cleanedTopic morph
             contText = moveToText (rcpContinuation rcp) cleanedTopic morph
             stylePrefixText = stylePrefix (rcpStyle rcp)
+            microPlan = rmpMicroPlan rmp
+            microPrefaceText = microPlanPrefix rmp cleanedTopic
             claimText = case claims of
               (c:_) ->
                 case sanitizeIdentityClaimText (icrText c) of
                   Just txt -> " " <> txt
                   Nothing -> ""
               []    -> ""
-            parts = dedupeText (filter (not . T.null) [openingText, coreText, limitText])
-            body = T.intercalate (styleDelimiter (rcpStyle rcp)) (take 3 parts)
-            fullBody = if T.null contText then body else body <> arrowSeparator <> contText
+            parts = take (max 1 (mpStructureBudget microPlan + 1)) . dedupeText $ filter (not . T.null) [microPrefaceText, openingText, coreText, limitText]
+            body = T.intercalate (microPlanDelimiter (rcpStyle rcp) microPlan) parts
+            fullBody = appendContinuation microPlan body contText
             withClaims = if T.null claimText then fullBody else fullBody <> claimText
             withStyle = if T.null stylePrefixText then withClaims else stylePrefixText <> " " <> withClaims
             rendered = finalizeForce (rmpForce rmp) (T.strip withStyle)
@@ -255,8 +257,9 @@ renderStructuredDialogueArtifact frame rmp renderStyle morph = do
   if not (structuredDialogueType propositionType)
     then Nothing
     else
-      let (body, claimAst, mLang, linearizationOk, fallbackReason) =
+      let (body0, claimAst, mLang, linearizationOk, fallbackReason) =
             structuredBody propositionType frame rmp renderStyle morph
+          body = applyMicroPlanToStructuredBody rmp renderStyle body0
           rendered = finalizeForce IFAssert (T.strip body)
       in Just
            DialogueRenderArtifact
@@ -821,6 +824,50 @@ styleDelimiter StyleDirect   = ". "
 styleDelimiter StylePoetic   = " \8226 "
 styleDelimiter StyleRecovery = " "
 styleDelimiter _             = " \8212 "
+
+microPlanDelimiter :: RenderStyle -> MicroPlan -> Text
+microPlanDelimiter style microPlan
+  | mpExplicitness microPlan >= 0.75 = ". "
+  | mpExplicitness microPlan <= 0.35 = " "
+  | otherwise = styleDelimiter style
+
+appendContinuation :: MicroPlan -> Text -> Text -> Text
+appendContinuation microPlan body contText
+  | T.null contText = body
+  | mpFallbackPolicy microPlan `elem` ["repair_first", "clarify_first", "close_bound"] = body
+  | T.null body = contText
+  | otherwise = body <> arrowSeparator <> contText
+
+microPlanPrefix :: ResponseMeaningPlan -> Text -> Text
+microPlanPrefix rmp topic =
+  case mpRhetoricalMoves (rmpMicroPlan rmp) of
+    move:_ -> case move of
+      "repair" -> "Сначала восстановлю опору"
+      "clarify" -> "Сначала уточню рамку"
+      "ground" -> if T.null topic then "Зафиксирую опору" else "Зафиксирую опору в теме"
+      "define" -> "Сначала задам определение"
+      "distinguish" -> "Сначала разведу близкие смыслы"
+      "deepen" -> "Удержу один фокус и углублю его"
+      "reflect" -> "Сначала отражу текущий ход"
+      "explain_cause" -> "Сначала удержу причинную связку"
+      "explain_purpose" -> "Сначала удержу назначение"
+      "next_step" -> "Сначала соберу ближайший шаг"
+      "constrain" -> "Сначала сузим рамку"
+      _ -> ""
+    [] -> ""
+
+applyMicroPlanToStructuredBody :: ResponseMeaningPlan -> RenderStyle -> Text -> Text
+applyMicroPlanToStructuredBody rmp _renderStyle body0 =
+  let pref = structuredMicroPrefix rmp
+  in if T.null pref then body0 else pref <> " " <> body0
+
+structuredMicroPrefix :: ResponseMeaningPlan -> Text
+structuredMicroPrefix rmp =
+  case mpFallbackPolicy (rmpMicroPlan rmp) of
+    "repair_first" -> "Коротко: сначала восстановлю опору."
+    "clarify_first" -> "Коротко: сначала уточню рамку."
+    "contest_bound" -> "Коротко: сначала зафиксирую границу возражения."
+    _ -> ""
 
 moveToText :: ContentMove -> Text -> MorphologyData -> Text
 moveToText MoveGroundKnown topic md      = moveGroundKnownPrefix <> withPrep md topic <> "."

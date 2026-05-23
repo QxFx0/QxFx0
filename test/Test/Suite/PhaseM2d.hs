@@ -125,7 +125,7 @@ phaseM2dTests =
         let plan     = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
             expected = psConatusEnergy (pepStatic plan)
         case pepConsciousnessRequest plan of
-          PrepareReqConsciousness _ _ _ ce ->
+          PrepareReqConsciousness _ _ _ ce _ ->
             ce @?= expected
           _ ->
             assertFailure "pepConsciousnessRequest must be PrepareReqConsciousness"
@@ -135,7 +135,7 @@ phaseM2dTests =
         let plan     = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
             expected = psConatusEnergy (pepStatic plan)
         case pepIntuitionRequest plan of
-          PrepareReqIntuition _ _ _ _ ce ->
+          PrepareReqIntuition _ _ _ _ ce _ _ ->
             ce @?= expected
           _ ->
             assertFailure "pepIntuitionRequest must be PrepareReqIntuition"
