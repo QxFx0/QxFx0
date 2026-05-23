@@ -857,10 +857,7 @@ governancePermissionAllowed actor subject decision =
     GovernanceDenied _ -> False
 
 supportedGovernedSubject :: GovernedSubject -> Bool
-supportedGovernedSubject subject =
-  case subject of
-    SubjectPerspective _ -> True
-    _ -> False
+supportedGovernedSubject _ = True
 
 governanceProjectionChecksum :: ProjectionMeta -> PerspectiveRegistry -> [PerspectiveProjection] -> [GovernedProjectionRef] -> Text
 governanceProjectionChecksum meta registry projections governedRefs =

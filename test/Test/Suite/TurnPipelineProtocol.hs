@@ -144,9 +144,11 @@ import QxFx0.Learning.Tool
   , defaultAvailableTools
   )
 import QxFx0.Bridge.ExternalLLM
-  ( buildTransportFromEnv
+  ( buildTransportFromConfig
   , queryExternalTool
+  , defaultExternalQueryConfig
   )
+import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportFallbackReason(..))
 import QxFx0.Learning.Calibration
   ( CalibrationId(..)
   , CalibrationProposal(..)
@@ -1937,9 +1939,16 @@ testProtocolInterpreter request =
     TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
     TurnReqExternalQuery tool need queryText -> do
-      transport <- buildTransportFromEnv
+      transport <- buildTransportFromConfig explicitMockExternalQueryConfig
       result <- queryExternalTool transport tool need queryText
       pure (TurnResExternalQuery result)
+
+explicitMockExternalQueryConfig :: ExternalQueryConfig
+explicitMockExternalQueryConfig =
+  defaultExternalQueryConfig
+    { eqcTransportMode = "mock"
+    , eqcFallbackReason = Just TfrExplicitMock
+    }
 
 protocolFixedTime :: UTCTime
 protocolFixedTime = UTCTime (ModifiedJulianDay 0) 0

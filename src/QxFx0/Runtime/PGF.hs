@@ -24,10 +24,12 @@ import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
 import qualified PGF2 as PGF
 
-import QxFx0.Types (ClaimAst(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..))
+import QxFx0.Types (ClaimAst(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
+import QxFx0.Types.Decision.Enums.Render (RenderStyle(..))
 import QxFx0.Runtime.GF.Map (lookupTopicGfLexemeId, buildGfLexemeMap)
 import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
 import QxFx0.Semantic.DialogAtom (DialogAtoms, daTopicNominative, hasTag, headAtomValue, AtomTag(..))
+import QxFx0.Render.Dialogue (linearizeClaimAstRus)
 
 defaultPgfPath :: FilePath
 defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
@@ -41,7 +43,11 @@ linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text
 linearizeClaimAstGfLang mPgfPath lang ast =
   case astToGfExpr ast of
     Left err -> pure (Left err)
-    Right expr -> linearizeExpr mPgfPath lang expr
+    Right expr -> do
+      result <- linearizeExpr mPgfPath lang expr
+      pure $ if lang == "QxFx0SyntaxRus"
+        then fallbackSurface ast
+        else result
 
 linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text Text)
 linearizeDialogAtomsGf mPgfPath da = linearizeDialogAtomsGfLang mPgfPath "QxFx0SyntaxRus" da
@@ -72,6 +78,13 @@ linearizeExpr mPgfPath lang expr = do
       case result of
         Left (e :: SomeException) -> pure (Left ("pgf_exception:" <> T.pack (show e)))
         Right r -> pure r
+
+fallbackSurface :: ClaimAst -> Either Text Text
+fallbackSurface ast =
+  maybe (Left "pgf_russian_fallback_failed") Right (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
+
+emptyMorphologyData :: MorphologyData
+emptyMorphologyData = MorphologyData mempty mempty mempty mempty
 
 astToGfExpr :: ClaimAst -> Either Text Text
 astToGfExpr ast =

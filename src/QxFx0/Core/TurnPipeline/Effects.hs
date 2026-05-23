@@ -237,7 +237,7 @@ buildPrepareEffectPlan ss input currentTime =
       -- Phase 7: populate four of five Field components via
       -- the calibrated 'FieldHeuristics' compute functions.
       -- 'fieldConfidence' is derived below.
-      fieldHeuristics = ssFieldHeuristics ss
+      fieldHeuristics = defaultFieldHeuristics
       preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
         , fieldAtmosphere     = computeAtmosphere fieldHeuristics

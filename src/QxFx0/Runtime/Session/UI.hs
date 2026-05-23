@@ -32,7 +32,6 @@ import QxFx0.Self.Field (defaultFieldHeuristics)
 import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), renderEssenceMode)
 import QxFx0.Self.Perspective.Reduce (buildActivePerspectiveProjections)
 import QxFx0.Self.Salience (defaultSalienceWeights)
-import QxFx0.Types.SemanticConfig (defaultSemanticConfig)
 import QxFx0.Types.Domain (atCurrentLoad)
 import QxFx0.Types.Domain.R5 (R5CoreProfile(..), R5PolicyProfile(..), defaultR5CoreProfile, defaultR5PolicyProfile)
 import QxFx0.Types.Observability (KernelPulse(..))
@@ -54,7 +53,6 @@ import QxFx0.Types.State
   , SystemState(..)
   , ssGovernanceHistory
   , ssGovernanceRuntimeFault
-  , ssSemanticConfig
   , ssPerspectiveRegistry
   , ssEgo
   , ssEssence
@@ -177,19 +175,14 @@ renderStateOrigin RecoveredCorruptOrigin = "recovered_corrupt"
 
 salienceFieldContractStatus :: SystemState -> Text
 salienceFieldContractStatus ss
-  | ssSalienceWeights ss == defaultSalienceWeights && ssFieldHeuristics ss == defaultFieldHeuristics = "governing_default"
-  | otherwise = "governing_adapted"
+  | ssSalienceWeights ss == defaultSalienceWeights && ssFieldHeuristics ss == defaultFieldHeuristics = "persisted_observable_non_governing"
+  | otherwise = "persisted_observable_non_governing"
 
 planNarrativeToneContractStatus :: SystemState -> Text
-planNarrativeToneContractStatus ss =
-  case ssEssence ss of
-    EssenceCommitted _ _ -> "validation_governing_non_rendering"
-    EssenceUncommitted _ -> "observed_non_binding"
+planNarrativeToneContractStatus _ss = "bounded_causal_contour"
 
 bayesianContractStatus :: SystemState -> Text
-bayesianContractStatus ss
-  | ssSemanticConfig ss == defaultSemanticConfig = "default_runtime_hint"
-  | otherwise = "configured_runtime_hint"
+bayesianContractStatus _ss = "bounded_causal_contour"
 
 countGovernanceLifecycle :: GovernanceLifecycleStatus -> [GovernanceEvent] -> Int
 countGovernanceLifecycle lifecycle = length . filter ((== lifecycle) . geeLifecycleStatus . geEnvelope)

@@ -131,7 +131,6 @@ import QxFx0.Learning.Sandbox
 import QxFx0.Bridge.ExternalLLM
   ( LLMTransport(..)
   , queryExternalTool
-  , buildTransportFromEnv
   , buildTransportFromConfig
   , queryExternalToolWithConfig
   , defaultExternalQueryConfig
@@ -407,7 +406,7 @@ mkFruit prop src valid cDelta pDelta =
 -- | WP2: mock transport returns a deterministic success.
 testMockTransportSuccess :: Test
 testMockTransportSuccess = TestCase $ do
-  transport <- buildTransportFromEnv
+  transport <- buildTransportFromConfig explicitMockConfig
   result <- queryExternalTool transport
     (ExternalTool "llm-augment" DomainLexicon 0.70 True)
     NeedLexiconExtension
@@ -420,7 +419,7 @@ testMockTransportSuccess = TestCase $ do
 -- | WP2: mock transport returns typed error for injected failure.
 testMockTransportFailure :: Test
 testMockTransportFailure = TestCase $ do
-  transport <- buildTransportFromEnv
+  transport <- buildTransportFromConfig explicitMockConfig
   result <- queryExternalTool transport
     (ExternalTool "llm-augment" DomainLexicon 0.70 True)
     NeedLexiconExtension
@@ -429,6 +428,13 @@ testMockTransportFailure = TestCase $ do
     (case result of
        Left (EqeServerError _) -> True
        _ -> False)
+
+explicitMockConfig :: ExternalQueryConfig
+explicitMockConfig =
+  defaultExternalQueryConfig
+    { eqcTransportMode = "mock"
+    , eqcFallbackReason = Just TfrExplicitMock
+    }
 
 testConfigFallbackDoesNotMasqueradeAsSuccess :: Test
 testConfigFallbackDoesNotMasqueradeAsSuccess = TestCase $ do

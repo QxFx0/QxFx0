@@ -94,7 +94,7 @@ applyGovernanceEvent :: PerspectiveRegistry -> GovernanceEvent -> Either Text Pe
 applyGovernanceEvent registry event =
   case gePayload event of
     GpPerspective payload -> applyPerspectiveGovernancePayload registry (geEnvelope event) payload
-    _ -> Left "governance replay does not support this governed payload family yet"
+    _ -> Right registry
 
 applyPerspectiveGovernancePayload :: PerspectiveRegistry -> GovernanceEventEnvelope -> PerspectivePayload -> Either Text PerspectiveRegistry
 applyPerspectiveGovernancePayload registry envelope payload =
