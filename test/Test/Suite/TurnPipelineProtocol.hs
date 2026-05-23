@@ -2695,7 +2695,7 @@ testAutonomousExplorationTelemetry = TestCase $ do
   assertEqual "telemetry must show exploratory query type"
     (Just "exploratory") (trcLearningQueryType trace)
   assertEqual "telemetry must expose final exploratory learning verdict"
-    (Just "accept") (trcLearningValidationStatus trace)
+    (Just "observed_non_authoritative") (trcLearningValidationStatus trace)
 
 -- | Phase 9 MVP: request-driven external query path is not regressed
 -- when exploratory path is also active.
@@ -2805,19 +2805,19 @@ testDialogueDevelopmentPersistsOutcomeAndBelief = TestCase $
     let nextSs = fpbNextSs bundle
         outcome = ssDialogueOutcomeLearning nextSs
         belief = ssBeliefStore nextSs
-    assertEqual "success outcome must be counted"
-      1 (dolSuccessCount outcome)
-    assertBool "strong outcome sample must be recorded"
+    assertEqual "non-authoritative success-like turn must be downgraded"
+      1 (dolDegradedCount outcome)
+    assertBool "degraded outcome sample must still be recorded"
       (not (null (dolRecentOutcomes outcome)))
     case dolRecentOutcomes outcome of
       sample:_ -> do
-        assertEqual "strong success must carry strong evidence"
+        assertEqual "downgraded success-like sample must preserve evidence strength"
           EvidenceStrong (dosEvidenceStrength sample)
-        assertEqual "strong success must have an apply decision"
-          AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
+        assertEqual "downgraded success-like sample must only observe"
+          AdaptiveObserved (adrDecision (dosDecisionRecord sample))
       [] -> assertFailure "strong outcome sample must be present"
-    assertBool "confirmed claim stance must be stored under the prior topic"
-      (Map.member "свобода" (bsClaims belief))
+    assertBool "non-authoritative success-like turn must not mutate claim stance memory"
+      (not (Map.member "свобода" (bsClaims belief)))
 
 -- | ADR-0032: conflict feedback revises the prior topic instead of
 -- storing the conflict utterance as the claim.
@@ -2832,12 +2832,8 @@ testDialogueDevelopmentConflictUsesPriorTopic = TestCase $
     (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "неверно"
     let belief = ssBeliefStore (fpbNextSs bundle)
     case Map.lookup "свобода" (bsClaims belief) of
-      Nothing -> assertFailure "conflict must be stored under the prior topic"
-      Just record -> do
-        assertEqual "conflict must contest the prior topic"
-          BeliefContested (brPolarity record)
-        assertBool "conflict must record a revision"
-          (brRevisionCount record >= 1)
+      Nothing -> pure ()
+      Just _ -> assertFailure "non-authoritative conflict must not mutate belief store"
 
 -- | ADR-0032: weak turns do not mutate speech policy or belief store.
 testDialogueDevelopmentWeakSignalsDoNotMutate :: Test
@@ -2891,13 +2887,13 @@ testDialogueDevelopmentWeakAcknowledgementDoesNotMutate = TestCase $
     (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "спасибо"
     let nextSs = fpbNextSs bundle
         outcome = ssDialogueOutcomeLearning nextSs
-    assertEqual "weak acknowledgement is partial, not success"
-      1 (dolPartialSuccessCount outcome)
+    assertEqual "weak acknowledgement on non-authoritative turn must be downgraded"
+      1 (dolDegradedCount outcome)
     case dolRecentOutcomes outcome of
       sample:_ -> do
-        assertEqual "weak acknowledgement must remain weak evidence"
-          EvidenceWeak (dosEvidenceStrength sample)
-        assertEqual "weak acknowledgement must only record"
+        assertEqual "weak acknowledgement must be capped by truth contract"
+          EvidenceModerate (dosEvidenceStrength sample)
+        assertEqual "weak acknowledgement must only observe"
           AdaptiveObserved (adrDecision (dosDecisionRecord sample))
         assertBool "weak acknowledgement signal must be preserved for audit"
           ("weak_acknowledgement" `elem` dosSignals sample)
@@ -2924,8 +2920,8 @@ testDialogueDevelopmentWeakConfirmationPhrasesStayWeak = TestCase $
       let nextSs = fpbNextSs bundle
       case dolRecentOutcomes (ssDialogueOutcomeLearning nextSs) of
         sample:_ -> do
-          assertEqual "confirmation-like acknowledgement must stay weak"
-            EvidenceWeak (dosEvidenceStrength sample)
+          assertEqual "confirmation-like acknowledgement must be capped by truth contract"
+            EvidenceModerate (dosEvidenceStrength sample)
           assertEqual "confirmation-like acknowledgement must only observe"
             AdaptiveObserved (adrDecision (dosDecisionRecord sample))
           assertBool "top-level log must not accept speech-policy mutation"
@@ -2951,21 +2947,19 @@ testDialogueDevelopmentRepeatedQuestionRecordsMutation = TestCase $
     (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs utterance
     let nextSs = fpbNextSs bundle
         outcome = ssDialogueOutcomeLearning nextSs
-    assertEqual "repeated question must be counted"
-      1 (dolRepeatedQuestionCount outcome)
+    assertEqual "repeated question on non-authoritative turn must be downgraded"
+      1 (dolDegradedCount outcome)
     case dolRecentOutcomes outcome of
       sample:_ -> do
-        assertEqual "sample kind must identify repeated question"
-          DialogueOutcomeRepeatedQuestion (dosKind sample)
-        assertEqual "repeated question must be strong evidence"
+        assertEqual "sample kind must be capped to degraded"
+          DialogueOutcomeDegraded (dosKind sample)
+        assertEqual "repeated question evidence is preserved but not upgraded"
           EvidenceStrong (dosEvidenceStrength sample)
-        assertEqual "repeated question must apply bounded mutation"
-          AdaptiveAccepted (adrDecision (dosDecisionRecord sample))
-        assertBool "repeated question must target speech policy"
-          (MutSpeechPolicy `elem` adrTargets (dosDecisionRecord sample))
+        assertEqual "repeated question must only observe under ceiling"
+          AdaptiveObserved (adrDecision (dosDecisionRecord sample))
       [] -> assertFailure "repeated question sample must be recorded"
-    assertBool "top-level log must contain accepted speech-policy mutation"
-      (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
+    assertBool "top-level log must not contain accepted speech-policy mutation"
+      (not (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs)))
 
 -- | Every strong mutation is backed by a typed decision record.
 testDialogueDevelopmentDecisionRecordsStrongMutation :: Test
@@ -2981,21 +2975,15 @@ testDialogueDevelopmentDecisionRecordsStrongMutation = TestCase $
     case dolRecentOutcomes (ssDialogueOutcomeLearning nextSs) of
       sample:_ -> do
         let decision = dosDecisionRecord sample
-        assertEqual "conflict must use strong evidence"
+        assertEqual "conflict evidence remains strong under ceiling"
           EvidenceStrong (dosEvidenceStrength sample)
-        assertEqual "conflict mutation must be explicit"
-          AdaptiveAccepted (adrDecision decision)
-        assertBool "decision must target speech policy"
-          (MutSpeechPolicy `elem` adrTargets decision)
-        assertBool "decision must target claim stance"
-          (MutClaimStance `elem` adrTargets decision)
-        assertBool "decision must disclose bounded claim stance cap"
-          ("claim_stance_entries<=64" `elem` adrBoundedDelta decision)
+        assertEqual "conflict mutation must be observed under non-authoritative ceiling"
+          AdaptiveObserved (adrDecision decision)
       [] -> assertFailure "strong conflict sample must be recorded"
-    assertBool "top-level log must contain accepted speech-policy mutation"
-      (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
-    assertBool "top-level log must contain accepted claim-stance mutation"
-      (any (\r -> amrKind r == MutClaimStance && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs))
+    assertBool "top-level log must not contain accepted speech-policy mutation"
+      (not (any (\r -> amrKind r == MutSpeechPolicy && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs)))
+    assertBool "top-level log must not contain accepted claim-stance mutation"
+      (not (any (\r -> amrKind r == MutClaimStance && amrDecision r == AdaptiveAccepted) (ssAdaptiveMutationLog nextSs)))
 
 -- | P4: finalize runs PerspectiveOperator through the governed adaptive contour.
 testPerspectiveFinalizeRecordsGovernedMutation :: Test

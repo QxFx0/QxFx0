@@ -33,6 +33,7 @@ import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.BackgroundProcess (surfacingToFragment)
 import QxFx0.Core.Observability
+import QxFx0.Core.TruthContract (truthContractRebindRenderedText)
 import QxFx0.Core.TurnLegitimacy (finalizeOutput)
 import QxFx0.Core.TurnPlanning (integrateIdentityClaims)
 import QxFx0.Core.TurnRender
@@ -61,6 +62,8 @@ import QxFx0.Render.Dialogue
   )
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
+import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
+import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
 import QxFx0.Legal.Adapter
   ( retrieveLegalFact
   , legalFactToKnowledgeFragment
@@ -89,6 +92,9 @@ data RenderStatic = RenderStatic
   { rsRenderWithBg :: !Text
   , rsTemplateArtifact :: !DialogueRenderArtifact
   , rsPreferredGfLang :: !Text
+  , rsResolvedAssemblyPath :: !(Maybe AssemblyPath)
+  , rsResolvedAuthorityClass :: !(Maybe AuthorityClass)
+  , rsArtifactManifest :: !(Maybe ArtifactManifest)
   , rsModePrefixText :: !Text
   , rsAnchorPrefixText :: !Text
   , rsNarrativeFragmentText :: !Text
@@ -289,12 +295,15 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                                _ -> Nothing
    in RenderEffectPlan
        { repRenderStatic = RenderStatic
-          { rsRenderWithBg = renderWithBg
-          , rsTemplateArtifact = dialogueArtifact
-          , rsPreferredGfLang = detectInputGfLang input
-          , rsModePrefixText =
-              if structuredSurface
-                then ""
+           { rsRenderWithBg = renderWithBg
+           , rsTemplateArtifact = dialogueArtifact
+           , rsPreferredGfLang = detectInputGfLang input
+           , rsResolvedAssemblyPath = Nothing
+           , rsResolvedAuthorityClass = Nothing
+           , rsArtifactManifest = Nothing
+           , rsModePrefixText =
+               if structuredSurface
+                 then ""
                 else
                   T.intercalate
                     "\n"
@@ -430,14 +439,18 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       contractProv = case surfaceProv of
         FromRecovery -> RecoveryRoute
         _ -> draContractProvenance templateArtifact
+      assemblyPath = deriveAssemblyPath renderStatic templateArtifact finalizeSurfaceProv
+      authorityClass = deriveAuthorityClass renderStatic contractProv surfaceProv assemblyPath
+      artifactManifest = deriveArtifactManifest renderStatic templateArtifact assemblyPath authorityClass
       derivationTags =
         draDerivationTags templateArtifact
           <> [ "surface_provenance=" <> T.pack (show surfaceProv)
              , "contract_provenance=" <> T.pack (show contractProv)
+             , "assembly_path=" <> T.pack (show assemblyPath)
+             , "authority_class=" <> T.pack (show authorityClass)
              ]
           <> if finalizeSurfaceProv == FromRecovery then ["finalize=guard_blocked_non_expansive"] else ["finalize=preserve_upstream_surface"]
       rendered = Guard.gsRenderedText renderedSurface
-      finalRendered = rendered
       (recoveryCause, recoveryStrategy, recoveryEvidence) =
         case surfaceProv of
           FromRecovery ->
@@ -471,14 +484,23 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , tdIdentity = snapshotIdentitySignal (tpIdentitySignal tp)
         , tdSemanticAnchor = tpSemanticAnchor tp
         }
+      executedOutcome = safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assemblyPath artifactManifest
+      finalPreSafetyRendered = truthContractRebindRenderedText (etoTruthContractStatus executedOutcome) authorityClass preSafetyRendered
+      finalRendered = truthContractRebindRenderedText (etoTruthContractStatus executedOutcome) authorityClass rendered
+      finalGuardSurface = renderedSurface { Guard.gsRenderedText = finalRendered }
   in TurnArtifacts
-       { taPreSafetyRendered = preSafetyRendered
-       , taGuardSurface = renderedSurface
-       , taRendered = rendered
+       { taPreSafetyRendered = finalPreSafetyRendered
+       , taGuardSurface = finalGuardSurface
+        , taRendered = finalRendered
        , taSurfaceProv = surfaceProv
        , taContractProv = contractProv
+       , taAuthorityClass = authorityClass
+       , taTruthContractStatus = etoTruthContractStatus executedOutcome
+       , taAssemblyPath = assemblyPath
+       , taArtifactManifest = artifactManifest
+       , taExecutedOutcome = executedOutcome
        , taDerivationTags = derivationTags
-       , taFinalRendered = finalRendered
+        , taFinalRendered = finalRendered
        , taClaimAst = draClaimAst (rsTemplateArtifact renderStatic)
       , taLinearizationLang = draLinearizationLang (rsTemplateArtifact renderStatic)
       , taLinearizationOk = draLinearizationOk (rsTemplateArtifact renderStatic)
@@ -489,10 +511,73 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taLocalRecoveryEvidence = recoveryEvidence
        , taMetrics = metrics4
        , taKnowledgeSource = rerKnowledgeFactSource effectResults
-       , taExternalQueryResult = rerExternalQueryResult effectResults
+        , taExternalQueryResult = rerExternalQueryResult effectResults
        , taExploratoryQueryResult = rerExploratoryQueryResult effectResults
        , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
        }
+
+deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath
+deriveAssemblyPath renderStatic artifact finalizeSurfaceProv
+  | finalizeSurfaceProv == FromRecovery = GuardRecoveryRoute
+  | Just route <- rsResolvedAssemblyPath renderStatic = route
+  | maybe False (T.isSuffixOf "_GF_ATOMS") (draLinearizationLang artifact) = PgfAtomsRoute
+  | maybe False (T.isSuffixOf "_GF_PGF") (draLinearizationLang artifact)
+      && maybe False (T.isPrefixOf "ru") (draLinearizationLang artifact) = RussianCompatShimRoute
+  | maybe False (T.isSuffixOf "_GF_PGF") (draLinearizationLang artifact) = PgfClaimRoute
+  | "assembly=primary" `elem` draDerivationTags artifact = DialogueAssemblyRoute
+  | any (`elem` draDerivationTags artifact) ["fallback=gf_template_fallback", "fallback=en_unstructured_fallback:input_detected_english", "fallback=ru_unstructured_fallback:template_empty"] = TemplateFallbackRoute
+  | any (`elem` draDerivationTags artifact) ["fallback=gf_structured_fallback", "fallback=structured_surface_render_failed"] = StructuredFallbackRoute
+  | otherwise = DialogueAssemblyRoute
+
+deriveAuthorityClass :: RenderStatic -> ContractProvenance -> SurfaceProvenance -> AssemblyPath -> AuthorityClass
+deriveAuthorityClass renderStatic contractProv surfaceProv assemblyPath =
+  case rsResolvedAuthorityClass renderStatic of
+    Just authority -> authority
+    Nothing ->
+      case assemblyPath of
+        GuardRecoveryRoute -> AuthorityRecovery
+        RussianCompatShimRoute -> AuthorityShim
+        _ -> case (contractProv, surfaceProv) of
+          (RecoveryRoute, _) -> AuthorityRecovery
+          (FallbackRoute, _) -> AuthorityFallback
+          (ShimRoute, _) -> AuthorityShim
+          (DefaultRoute, _) -> AuthorityDefault
+          (GeneratedArtifactRoute, _) -> AuthorityGeneratedArtifact
+          (_, FromRecovery) -> AuthorityRecovery
+          (_, FromFallback) -> AuthorityFallback
+          (_, FromShim) -> AuthorityShim
+          (_, FromDefault) -> AuthorityDefault
+          (_, FromGeneratedArtifact) -> AuthorityGeneratedArtifact
+          (AssembledClaim, _) -> AuthorityAssembled
+          (BuiltClaim, _) -> AuthorityCanonical
+          (NixGuarded, _) -> AuthorityRecovery
+          (OperatorMapping, _) -> AuthorityAssembled
+
+deriveArtifactManifest :: RenderStatic -> DialogueRenderArtifact -> AssemblyPath -> AuthorityClass -> ArtifactManifest
+deriveArtifactManifest renderStatic artifact assemblyPath authorityClass =
+  fromMaybe
+    ArtifactManifest
+      { amPgfPath = Nothing
+      , amPgfHash = Just ("route_manifest:" <> T.pack (show assemblyPath) <> "|" <> T.pack (show authorityClass) <> "|" <> fromMaybe "" (draLinearizationLang artifact) <> "|" <> T.intercalate "," (draDerivationTags artifact))
+      , amGeneratedInputLexiconHash = Just (inputGeneratedLexiconProvenanceTag <> ":required")
+      , amGfMapHash = Just (gfMapProvenanceTag <> ":required")
+      , amToolchainMarker =
+          "route=" <> T.pack (show assemblyPath)
+            <> maybe "" (";lang=" <>) (draLinearizationLang artifact)
+            <> ";authority=" <> T.pack (show authorityClass)
+            <> ";contract=" <> T.pack (show (draContractProvenance artifact))
+            <> ";surface=" <> T.pack (show (draSurfaceProvenance artifact))
+      }
+    (rsArtifactManifest renderStatic)
+
+safeExecutedTurnOutcome :: TurnDecision -> AuthorityClass -> ContractProvenance -> SurfaceProvenance -> AssemblyPath -> ArtifactManifest -> ExecutedTurnOutcome
+safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assemblyPath manifest =
+  case mkExecutedTurnOutcome (tdFamily decision) (tdForce decision) authorityClass contractProv surfaceProv assemblyPath manifest of
+    Right outcome -> outcome
+    Left _ ->
+      case mkExecutedTurnOutcome CMRepair IFOffer AuthorityRecovery RecoveryRoute FromRecovery GuardRecoveryRoute manifest of
+        Right recoveryOutcome -> recoveryOutcome
+        Left err -> error (T.unpack err)
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
 buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = Nothing
@@ -828,7 +913,7 @@ resolveRuntimeGfLinearization pio renderStatic = do
       let da = draDialogAtoms (rsTemplateArtifact renderStatic)
       resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath gfLang da)
       case resultDa of
-        TurnResLinearizeDialogAtoms (Right txt) | not (T.null (T.strip txt)) ->
+        TurnResLinearizeDialogAtoms (Right gfResult) | not (T.null (T.strip (glrText gfResult))) ->
           pure (Just (applyRuntimeGfResult gfLang renderStatic resultDa))
         _ ->
           case draClaimAst (rsTemplateArtifact renderStatic) of
@@ -874,36 +959,86 @@ applyRuntimeGfResult gfLang renderStatic result =
   let langTag = gfLangTelemetryTag gfLang
   in
   case result of
-    TurnResLinearizeDialogAtoms (Right gfText)
-      | not (T.null (T.strip gfText)) ->
+    TurnResLinearizeDialogAtoms (Right gfResult)
+      | not (T.null (T.strip (glrText gfResult))) ->
           let baseArtifact = rsTemplateArtifact renderStatic
               updatedArtifact =
                 baseArtifact
-                  { draRenderedText = gfText
-                  , draTemplateBodyText = gfText
-                  , draLinearizationLang = Just (langTag <> "_GF_ATOMS")
+                  { draRenderedText = glrText gfResult
+                  , draTemplateBodyText = glrText gfResult
+                  , draLinearizationLang = Just (glrLanguage gfResult)
                   , draLinearizationOk = True
-                  , draFallbackReason = Nothing
+                  , draFallbackReason = glrFallbackReason gfResult
+                  , draContractProvenance = case glrAuthorityClass gfResult of
+                      AuthorityShim -> ShimRoute
+                      AuthorityDefault -> DefaultRoute
+                      AuthorityGeneratedArtifact -> GeneratedArtifactRoute
+                      AuthorityFallback -> FallbackRoute
+                      AuthorityRecovery -> RecoveryRoute
+                      AuthorityAssembled -> AssembledClaim
+                      AuthorityCanonical -> BuiltClaim
+                      AuthorityLegacyIncomplete -> AssembledClaim
+                  , draSurfaceProvenance = case glrAuthorityClass gfResult of
+                      AuthorityShim -> FromShim
+                      AuthorityDefault -> FromDefault
+                      AuthorityGeneratedArtifact -> FromGeneratedArtifact
+                      AuthorityFallback -> FromFallback
+                      AuthorityRecovery -> FromRecovery
+                      AuthorityAssembled -> FromOperator
+                      AuthorityCanonical -> FromDB
+                      AuthorityLegacyIncomplete -> FromHardFallback
+                  , draDerivationTags = draDerivationTags baseArtifact
+                      <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
+                         , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
+                         ]
                   }
           in renderStatic
-               { rsTemplateArtifact = updatedArtifact
-               , rsRenderWithBg = gfText
-               }
-    TurnResLinearizeClaimAst (Right gfText)
-      | not (T.null (T.strip gfText)) ->
+                { rsTemplateArtifact = updatedArtifact
+                , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
+                , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
+                , rsArtifactManifest = Just (glrArtifactManifest gfResult)
+                , rsRenderWithBg = glrText gfResult
+                }
+    TurnResLinearizeClaimAst (Right gfResult)
+      | not (T.null (T.strip (glrText gfResult))) ->
           let baseArtifact = rsTemplateArtifact renderStatic
               updatedArtifact =
                 baseArtifact
-                  { draRenderedText = gfText
-                  , draTemplateBodyText = gfText
-                  , draLinearizationLang = Just (langTag <> "_GF_PGF")
+                  { draRenderedText = glrText gfResult
+                  , draTemplateBodyText = glrText gfResult
+                  , draLinearizationLang = Just (glrLanguage gfResult)
                   , draLinearizationOk = True
-                  , draFallbackReason = Nothing
+                  , draFallbackReason = glrFallbackReason gfResult
+                  , draContractProvenance = case glrAuthorityClass gfResult of
+                      AuthorityShim -> ShimRoute
+                      AuthorityDefault -> DefaultRoute
+                      AuthorityGeneratedArtifact -> GeneratedArtifactRoute
+                      AuthorityFallback -> FallbackRoute
+                      AuthorityRecovery -> RecoveryRoute
+                      AuthorityAssembled -> AssembledClaim
+                      AuthorityCanonical -> BuiltClaim
+                      AuthorityLegacyIncomplete -> AssembledClaim
+                  , draSurfaceProvenance = case glrAuthorityClass gfResult of
+                      AuthorityShim -> FromShim
+                      AuthorityDefault -> FromDefault
+                      AuthorityGeneratedArtifact -> FromGeneratedArtifact
+                      AuthorityFallback -> FromFallback
+                      AuthorityRecovery -> FromRecovery
+                      AuthorityAssembled -> FromOperator
+                      AuthorityCanonical -> FromDB
+                      AuthorityLegacyIncomplete -> FromHardFallback
+                  , draDerivationTags = draDerivationTags baseArtifact
+                      <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
+                         , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
+                         ]
                   }
           in renderStatic
-               { rsTemplateArtifact = updatedArtifact
-               , rsRenderWithBg = rebuildRenderWithBg renderStatic gfText
-               }
+                { rsTemplateArtifact = updatedArtifact
+                , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
+                , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
+                , rsArtifactManifest = Just (glrArtifactManifest gfResult)
+                , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
+                }
     TurnResLinearizeClaimAst (Left err) ->
       let baseArtifact = rsTemplateArtifact renderStatic
       in renderStatic

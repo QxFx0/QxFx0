@@ -4,6 +4,7 @@
 {-| Render-strategy adaptation from routing decisions and identity signal cues. -}
 module QxFx0.Core.TurnRender.Strategy
   ( applyRenderStrategy
+  , applyRenderStrategyWithTruthContract
   , renderStyleFromDecision
   , renderStyleFromDecisionWithSalience
   , applySalienceToStyle
@@ -16,6 +17,7 @@ module QxFx0.Core.TurnRender.Strategy
 
 import Data.Text (Text)
 
+import QxFx0.Core.TruthContract (capByTruthContract)
 import QxFx0.Core.IdentitySignal (IdentitySignal(..))
 import QxFx0.Core.PrincipledCore (PrincipledMode(..))
 import QxFx0.Core.R5Dynamics (EncounterMode(..))
@@ -53,6 +55,15 @@ applyRenderStrategy family strategy meaningPlan =
     { rmpStrategy = strategyToAnswerStrategy family strategy
     , rmpStance = responseStanceToMarker (rsStance strategy)
     , rmpEpistemic = strategyEpistemicFromDepth (rsDepth strategy) (rmpEpistemic meaningPlan)
+    , rmpDepthMode = strategyDepthMode (rsDepth strategy)
+    }
+
+applyRenderStrategyWithTruthContract :: TruthContractStatus -> CanonicalMoveFamily -> ResponseStrategy -> ResponseMeaningPlan -> ResponseMeaningPlan
+applyRenderStrategyWithTruthContract truthStatus family strategy meaningPlan =
+  meaningPlan
+    { rmpStrategy = strategyToAnswerStrategy family strategy
+    , rmpStance = responseStanceToMarker (rsStance strategy)
+    , rmpEpistemic = strategyEpistemicFromDepthWithTruthContract truthStatus (rsDepth strategy) (rmpEpistemic meaningPlan)
     , rmpDepthMode = strategyDepthMode (rsDepth strategy)
     }
 
@@ -153,34 +164,40 @@ responseStanceToMarker AcknowledgeStance = Honest
 
 strategyEpistemicFromDepth :: ResponseDepth -> EpistemicStatus -> EpistemicStatus
 strategyEpistemicFromDepth depth current =
-  case depth of
-    DeepResp ->
-      case current of
-        Known confidence ->
-          Known
-            (min strategyDeepKnownConfidenceCap (confidence + strategyDeepKnownConfidenceBoost))
-        Probable confidence ->
-          Known
-            (min strategyDeepProbableToKnownCap (confidence + strategyDeepProbableToKnownBoost))
-        Uncertain confidence ->
-          Probable
-            (min strategyDeepUncertainToProbableCap (confidence + strategyDeepUncertainToProbableBoost))
-        Unknown confidence ->
-          Uncertain
-            (min strategyDeepUnknownToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))
-        Speculative confidence ->
-          Uncertain
-            (min strategyDeepSpeculativeToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))
-    ModerateResp -> current
-    ShallowResp ->
-      case current of
-        Known confidence ->
-          Probable
-            (max strategyShallowKnownToProbableFloor (confidence - strategyShallowKnownPenalty))
-        Probable confidence ->
-          Uncertain
-            (max strategyShallowProbableToUncertainFloor (confidence - strategyShallowProbablePenalty))
-        other -> other
+  let modulated =
+        case depth of
+          DeepResp ->
+            case current of
+              Known confidence ->
+                Known
+                  (min strategyDeepKnownConfidenceCap (confidence + strategyDeepKnownConfidenceBoost))
+              Probable confidence ->
+                Known
+                  (min strategyDeepProbableToKnownCap (confidence + strategyDeepProbableToKnownBoost))
+              Uncertain confidence ->
+                Probable
+                  (min strategyDeepUncertainToProbableCap (confidence + strategyDeepUncertainToProbableBoost))
+              Unknown confidence ->
+                Uncertain
+                  (min strategyDeepUnknownToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))
+              Speculative confidence ->
+                Uncertain
+                  (min strategyDeepSpeculativeToUncertainCap (confidence + strategyDeepUncertainToProbableBoost))
+          ModerateResp -> current
+          ShallowResp ->
+            case current of
+              Known confidence ->
+                Probable
+                  (max strategyShallowKnownToProbableFloor (confidence - strategyShallowKnownPenalty))
+              Probable confidence ->
+                Uncertain
+                  (max strategyShallowProbableToUncertainFloor (confidence - strategyShallowProbablePenalty))
+              other -> other
+  in modulated
+
+strategyEpistemicFromDepthWithTruthContract :: TruthContractStatus -> ResponseDepth -> EpistemicStatus -> EpistemicStatus
+strategyEpistemicFromDepthWithTruthContract truthStatus depth current =
+  capByTruthContract truthStatus (strategyEpistemicFromDepth depth current)
 
 strategyDepthLabel :: ResponseDepth -> Text
 strategyDepthLabel = depthModeText . strategyDepthMode

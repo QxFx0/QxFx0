@@ -1,3 +1,4 @@
+-- AUTO-GENERATED: scripts/build_input_lexicon.py
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Input.GeneratedLexicon

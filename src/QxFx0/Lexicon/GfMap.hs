@@ -6,6 +6,7 @@ module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , gfMapProvenanceTag
   , topicToGfLexemeDecision
   , lookupTopicGfLexemeId
   , topicToGfLexemeId
@@ -106,6 +107,12 @@ gfMapData = fst gfMapLoadResult
 
 gfMapLoadStatus :: GfMapLoadStatus
 gfMapLoadStatus = snd gfMapLoadResult
+
+gfMapProvenanceTag :: Text
+gfMapProvenanceTag =
+  case gfMapLoadStatus of
+    GfMapLoaded count -> "gf_map_loaded:" <> T.pack (show count)
+    GfMapLoadFailed reason -> "gf_map_failed:" <> reason
 
 loadGfMapResult :: IO (GfMapData, GfMapLoadStatus)
 loadGfMapResult = do

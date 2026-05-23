@@ -8,6 +8,7 @@ module QxFx0.Core.TurnPipeline.Route.Build
   ) where
 
 import QxFx0.Core.Intuition (flashThreshold)
+import QxFx0.Core.TruthContract (capByTruthContract, capCommitmentStrengthByTruthContract)
 import QxFx0.Core.Observability (recordThresholdProbe)
 import QxFx0.Core.Legitimacy (legitimacyRecoveryBonus)
 import QxFx0.Core.SensePlan (familySenseBundle)
@@ -18,7 +19,8 @@ import QxFx0.Core.PipelineIO
   , pipelineRuntimeMode
   , pipelineShadowPolicy
   )
-import QxFx0.Core.TurnPlanning (buildRCP, buildRMP)
+import QxFx0.Core.TurnPlanning (buildRCP, buildRMPWithTruthContract)
+import QxFx0.Core.TurnRender (applyRenderStrategyWithTruthContract)
 import QxFx0.Core.TurnPipeline.Route.Effects
   ( planRouteEffects
   , resolveRouteEffects
@@ -54,6 +56,7 @@ import QxFx0.Types
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.Thresholds
   ( agdaVerificationPenalty
+  , legitimacyRecoveryThreshold
   , legitimacyPassThreshold
   , parserLowConfidenceThreshold
   )
@@ -101,8 +104,9 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
       newEgo = rdNewEgo rd
       renderStrategy = rdRenderStrategy rd
       renderStyle = adjustRenderStyleForSpeechPolicy (ssSpeechPolicyState ss) (rdRenderStyle rd)
-      rmpBase = buildRMP family (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
-      rmp0 = applyRenderStrategy family renderStrategy rmpBase
+      preRenderTruthStatus = derivePreRenderTruthContractStatus ti sc shadowResolution family
+      rmpBase = buildRMPWithTruthContract preRenderTruthStatus family (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
+      rmp0 = applyRenderStrategyWithTruthContract preRenderTruthStatus family renderStrategy rmpBase
       rcp0 = (buildRCP family rmp0) {rcpStyle = renderStyle}
       rmp1 = modulateRMPWithNarrative (tsNarrativeFragment ts) rmp0
       rcp1 =
@@ -129,12 +133,16 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
       finalFamily = maybe finalFamily0 id lockedDiagnosticFamily
       (finalFamily', finalSensePlan, finalMicroPlan) = familySenseBundle finalFamily (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti)
       finalForce' = forceForFamily finalFamily'
+      postLegitTruthStatus = derivePostLegitTruthContractStatus preRenderTruthStatus ti sc shadowResolution legitScore finalFamily'
       rmpAfterLegit =
         rmpAfterLegit0
           { rmpFamily = finalFamily'
           , rmpForce = finalForce'
           , rmpSpeechAct = familyToSpeechAct finalFamily'
           , rmpRelation = familyToRelation finalFamily'
+          , rmpEpistemic = capByTruthContract postLegitTruthStatus (rmpEpistemic rmpAfterLegit0)
+          , rmpTruthContractStatus = postLegitTruthStatus
+          , rmpCommitmentStrength = capCommitmentStrengthByTruthContract postLegitTruthStatus (rmpCommitmentStrength rmpAfterLegit0)
           , rmpSensePlan = finalSensePlan
           , rmpMicroPlan = finalMicroPlan
           }
@@ -176,8 +184,30 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
                 else scShadowMessage sc
           , tpShadowVetoState = ShadowVetoState newVetoCount newWindowStart
           , tpMetrics = metricsWithThresholds
-          , tpDeliberation = rdDeliberation rd
-          }
+           , tpDeliberation = rdDeliberation rd
+           }
+
+derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
+derivePreRenderTruthContractStatus ti sc shadowResolution family
+  | tiConatusGateFired ti = NonExpansiveRecoverySurface
+  | srGateTriggered shadowResolution = NonExpansiveRecoverySurface
+  | family == CMRepair = NonExpansiveRecoverySurface
+  | scShadowStatus sc `elem` [ShadowDiverged, ShadowUnavailable] = ExplicitFallbackSurface
+  | scShadowHasDivergence sc = ExplicitFallbackSurface
+  | ipfConfidence (tiFrame ti) < parserLowConfidenceThreshold = ExplicitFallbackSurface
+  | not (tiNixAvailable ti) = ExplicitFallbackSurface
+  | otherwise = AssembledSurfacePreserved
+
+derivePostLegitTruthContractStatus :: TruthContractStatus -> TurnInput -> ShadowContext -> ShadowResolution -> Double -> CanonicalMoveFamily -> TruthContractStatus
+derivePostLegitTruthContractStatus preTruthStatus ti sc shadowResolution legitScore family
+  | family == CMRepair = NonExpansiveRecoverySurface
+  | srGateTriggered shadowResolution = NonExpansiveRecoverySurface
+  | scShadowStatus sc `elem` [ShadowDiverged, ShadowUnavailable] = ExplicitFallbackSurface
+  | scShadowHasDivergence sc = ExplicitFallbackSurface
+  | ipfConfidence (tiFrame ti) < parserLowConfidenceThreshold = ExplicitFallbackSurface
+  | legitScore < legitimacyRecoveryThreshold = NonExpansiveRecoverySurface
+  | legitScore < legitimacyPassThreshold = ExplicitFallbackSurface
+  | otherwise = preTruthStatus
 
 routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO TurnPlan
 routeTurnPlan pio ss ti ts = do

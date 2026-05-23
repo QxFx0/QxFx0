@@ -140,6 +140,10 @@ required_fields = [
     "trcRecoveryEvidence",
     "trcSemanticIntrospectionEnabled",
     "trcWarnMorphologyFallbackEnabled",
+    "trcAuthorityClass",
+    "trcTruthContractStatus",
+    "trcAssemblyPath",
+    "trcReplayProvenanceStatus",
 ]
 missing = [name for name in required_fields if name not in trace]
 if missing:

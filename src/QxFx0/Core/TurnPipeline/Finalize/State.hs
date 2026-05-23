@@ -31,6 +31,7 @@ import QxFx0.Core.TurnRender (updateStateNixCache)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.TurnLegitimacy (safeOutputText)
 import QxFx0.Core.Observability
+import QxFx0.Core.TruthContract (truthContractIsAuthoritative, replayProvenanceStatusForOutcome, normalizedReplayProvenanceStatus)
 import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
@@ -454,6 +455,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
             (ssLearningNeedState ss)
             isTopicUnknown
             currentGraftedCount
+      executedOutcome = taExecutedOutcome ta
       baseNext = ss
         { ssDialogue = (ssDialogue ss)
           { dsHistory = newHumanHistory
@@ -518,9 +520,10 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
               (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
           in resolveCollisions canonicalSet remaining
       , ssLearningNeedState = newLearningNeedState
-      , ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) tp ta
-      , ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) tp
-      , ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) tp
+      , ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) executedOutcome
+      , ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) executedOutcome
+      , ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) executedOutcome
+      , ssTruthContractStatus = etoTruthContractStatus executedOutcome
       , ssGuardrailState = ssGuardrailState ss
         -- ^ WP5: guardrails currently pass through unchanged;
         --   proposal-submission tracking will be wired when the
@@ -603,6 +606,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , Just (etAngstLevel t)
           , Just (renderCommitmentTrigger (ecTrigger c))
           )
+      executedOutcome = taExecutedOutcome ta
       replayTrace =
         TurnReplayTrace
           { trcRequestId = requestId
@@ -635,9 +639,13 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcLinearizationLang = taLinearizationLang ta
           , trcLinearizationOk = taLinearizationOk ta
           , trcFallbackReason = taLinearizationFallbackReason ta
-          , trcContractProvenance = Just (taContractProv ta)
-          , trcSurfaceProvenance = Just (taSurfaceProv ta)
-          , trcTruthContractStatus = deriveTruthContractStatus ta
+          , trcContractProvenance = Just (etoContractProvenance executedOutcome)
+          , trcSurfaceProvenance = Just (etoSurfaceProvenance executedOutcome)
+          , trcAuthorityClass = Just (etoAuthorityClass executedOutcome)
+          , trcTruthContractStatus = etoTruthContractStatus executedOutcome
+          , trcAssemblyPath = Just (etoAssemblyPath executedOutcome)
+          , trcArtifactManifest = Just (etoArtifactManifest executedOutcome)
+           , trcReplayProvenanceStatus = normalizedReplayProvenanceStatus (replayProvenanceStatusForOutcome executedOutcome) (etoAuthorityClass executedOutcome)
           , trcDerivationTags = taDerivationTags ta
            , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
            , trcSalienceHolisticBias = salienceHolisticBias traceSalience
@@ -678,8 +686,14 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcSenseOperator = Just (rspChosenOperator (rmpSensePlan (tpRmpAfterLegit tp)))
             , trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))
             , trcDialogueFocus = dtCurrentFocus (tiDialogueThread ti)
+            , trcDialogueFocusBefore = dtCurrentFocus (tiDialogueThread ti)
+            , trcDialogueFocusAfter = dtCurrentFocus (ssDialogueThread nextSs)
             , trcDialoguePhase = tiDialoguePhase ti
+            , trcDialoguePhaseBefore = tiDialoguePhase ti
+            , trcDialoguePhaseAfter = ssDialoguePhase nextSs
             , trcDialogueCommitmentCount = length (dclItems (tiDialogueCommitmentLedger ti))
+            , trcDialogueCommitmentCountBefore = length (dclItems (tiDialogueCommitmentLedger ti))
+            , trcDialogueCommitmentCountAfter = length (dclItems (ssDialogueCommitmentLedger nextSs))
             , trcMicroPlanMoves = mpRhetoricalMoves (rmpMicroPlan (tpRmpAfterLegit tp))
             , trcMicroPlanExplicitness = mpExplicitness (rmpMicroPlan (tpRmpAfterLegit tp))
             , trcPerspectiveProjection =
@@ -717,12 +731,6 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpReplayTrace = replayTrace
       , tqpDivergence = tpShadowDivergence tp
       }
-
-deriveTruthContractStatus :: TurnArtifacts -> Text
-deriveTruthContractStatus ta
-  | taSurfaceProv ta == FromRecovery = "non_expansive_recovery_surface"
-  | taLinearizationOk ta = "canonical_surface_preserved"
-  | otherwise = "explicit_fallback_surface"
 
 buildFinalOutput :: Bool -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
 buildFinalOutput wantIntrospection ss baseSurface nextSs =
@@ -766,9 +774,9 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
       !metricsFinal = addPhase (recordPhase "total" (tiStartTime ti) tSave1) metrics5
   in metricsFinal
 
-advanceDialogueThreadAfterTurn :: DialogueThread -> TurnPlan -> TurnArtifacts -> DialogueThread
-advanceDialogueThreadAfterTurn thread tp ta =
-  let family = tdFamily (taDecision ta)
+advanceDialogueThreadAfterTurn :: DialogueThread -> ExecutedTurnOutcome -> DialogueThread
+advanceDialogueThreadAfterTurn thread outcome =
+  let family = etoFamily outcome
       clarified = case family of
         CMClarify -> dtCurrentFocus thread : dtClarifiedItems thread
         CMGround -> dtCurrentFocus thread : dtClarifiedItems thread
@@ -786,29 +794,46 @@ advanceDialogueThreadAfterTurn thread tp ta =
           _ -> dtResistance thread
       }
 
-advanceDialogueLedgerAfterTurn :: DialogueCommitmentLedger -> TurnPlan -> DialogueCommitmentLedger
-advanceDialogueLedgerAfterTurn (DialogueCommitmentLedger items) tp =
-  let family = tpFinalFamily tp
+advanceDialogueLedgerAfterTurn :: DialogueCommitmentLedger -> ExecutedTurnOutcome -> DialogueCommitmentLedger
+advanceDialogueLedgerAfterTurn (DialogueCommitmentLedger items) outcome =
+  let family = etoFamily outcome
+      nonAuthoritative = etoAuthorityClass outcome `notElem` [AuthorityCanonical, AuthorityAssembled]
       rewrite item =
         if T.null (dcClaim item)
           then item
-          else case family of
-            CMClarify -> item { dcStatus = CsUnresolved }
-            CMRepair -> item { dcStatus = CsSuspended }
-            CMGround -> item { dcStatus = CsAccepted }
-            CMConfront -> item { dcStatus = CsContested }
-            _ -> item
+          else if nonAuthoritative
+            then case family of
+              CMRepair -> item { dcStatus = CsSuspended }
+              _ -> item { dcStatus = downgradeCommitmentStatus (dcStatus item) }
+            else case family of
+              CMClarify -> item { dcStatus = CsUnresolved }
+              CMRepair -> item { dcStatus = CsSuspended }
+              CMGround -> item { dcStatus = CsAccepted }
+              CMConfront -> item { dcStatus = CsContested }
+              _ -> item
   in DialogueCommitmentLedger (map rewrite items)
 
-advanceDialoguePhaseAfterTurn :: DialoguePhase -> TurnPlan -> DialoguePhase
-advanceDialoguePhaseAfterTurn prior tp =
-  case tpFinalFamily tp of
-    CMRepair -> Repairing
-    CMClarify -> Clarifying
-    CMGround -> Grounding
-    CMNextStep -> Advancing
-    CMConfront -> Contesting
-    _ -> prior
+advanceDialoguePhaseAfterTurn :: DialoguePhase -> ExecutedTurnOutcome -> DialoguePhase
+advanceDialoguePhaseAfterTurn prior outcome
+  | etoAuthorityClass outcome `notElem` [AuthorityCanonical, AuthorityAssembled] =
+      case etoFamily outcome of
+        CMRepair -> Repairing
+        _ -> prior
+  | otherwise =
+      case etoFamily outcome of
+        CMRepair -> Repairing
+        CMClarify -> Clarifying
+        CMGround -> Grounding
+        CMNextStep -> Advancing
+        CMConfront -> Contesting
+        _ -> prior
+
+downgradeCommitmentStatus :: CommitmentStatus -> CommitmentStatus
+downgradeCommitmentStatus status =
+  case status of
+    CsAccepted -> CsUnresolved
+    CsContested -> CsSuspended
+    other -> other
 
 data LearningReplayVerdict = LearningReplayVerdict
   { lrvStatus :: !Text
@@ -832,12 +857,14 @@ deriveLearningReplayVerdict nextSs ta =
         }
     Just (Right _) ->
       case () of
-        _ | any isGraft currentTurnRecords -> LearningReplayVerdict "accept" (firstCauseEvidence "sandbox_accept") (Just currentTurn) Nothing
+        _ | not authoritativeTurn -> LearningReplayVerdict "observed_non_authoritative" (firstCauseEvidence "sandbox_accept") Nothing (Just "truth_contract_ceiling_non_authoritative")
+          | any isGraft currentTurnRecords -> LearningReplayVerdict "accept" (firstCauseEvidence "sandbox_accept") (Just currentTurn) Nothing
           | any isSandboxReject currentTurnRecords -> LearningReplayVerdict "sandbox_reject" (firstMutationEvidence "external_learning:sandbox_reject") Nothing (firstMutationEvidence "external_learning:sandbox_reject")
           | any isValidationReject currentTurnRecords -> LearningReplayVerdict "validation_reject" Nothing Nothing (firstMutationEvidence "external_learning:validation_reject")
           | any isParserReject currentTurnRecords -> LearningReplayVerdict "invalid_response" Nothing Nothing (Just "parser_rejected_schema_or_text")
           | otherwise -> LearningReplayVerdict "observed_non_authoritative" Nothing Nothing (Just "learning_outcome_unresolved")
   where
+    authoritativeTurn = truthContractIsAuthoritative (taTruthContractStatus ta)
     currentTurn = ssTurnCount nextSs
     currentTurnRecords = filter ((== currentTurn) . amrTurnId) (ssAdaptiveMutationLog nextSs)
     firstAttempt = taExternalQueryResult ta <|> taExploratoryQueryResult ta

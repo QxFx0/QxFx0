@@ -12,6 +12,7 @@ module QxFx0.Governance.Replay
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 
+import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Self.Perspective.Reduce
   ( applyPerspectiveDecision
   , buildActivePerspectiveProjections
@@ -76,6 +77,9 @@ rebuildGovernanceProjection events = do
 
 rebuildGovernedSystemState :: SystemState -> Either Text SystemState
 rebuildGovernedSystemState ss = do
+  if not (truthContractIsAuthoritative (ssTruthContractStatus ss))
+    then Left "governance_replay_non_authoritative_truth_contract"
+    else pure ()
   registry <- rebuildGovernedPerspectiveState (ssGovernanceHistory ss)
   pure ss { ssPerspectiveRegistry = registry }
 

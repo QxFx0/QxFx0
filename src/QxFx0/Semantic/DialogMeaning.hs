@@ -15,6 +15,7 @@ import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import QxFx0.Core.TruthContract (capByTruthContract)
 import QxFx0.Types.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Runtime.GF.Morphology (genitiveForm, prepositionalForm, accusativeForm)
 import QxFx0.Semantic.DialogAtom
@@ -23,24 +24,25 @@ import QxFx0.Types hiding (AtomTag)
 import QxFx0.Types.SemanticConfig (SemanticConfig(..))
 
 buildDialogAtoms :: InputPropositionFrame -> ResponseMeaningPlan -> SystemState
-                 -> MorphologyData -> ParsedInput -> Maybe ConsciousnessNarrative
-                 -> DialogAtoms
+                  -> MorphologyData -> ParsedInput -> Maybe ConsciousnessNarrative
+                  -> DialogAtoms
 buildDialogAtoms frame rmp ss morph parsed mnarr =
   let raw = ipfRawText frame
       topic = nonEmptyOr (rmpTopic rmp) (nonEmptyOr (ipfFocusEntity frame) "тема")
       turn = ssTurnCount ss + 1
+      cappedEpistemic = capByTruthContract (rmpTruthContractStatus rmp) (rmpEpistemic rmp)
       slots = [ userIntentSlot frame
               , topicSlot topic morph
               , stanceSlot (rmpStance rmp)
               , emotionSlot frame
-              , knowledgeSlot (rmpEpistemic rmp)
+              , knowledgeSlot cappedEpistemic
               , phaseSlot ss
               , turnGoalSlot (rmpFamily rmp)
-              , identitySlot
-              , constraintSlot frame
+                , identitySlot
+                , constraintSlot (rmpTruthContractStatus rmp) frame
               , greetingSlot frame
               , farewellSlot frame
-              , hedgeSlot (rmpEpistemic rmp)
+              , hedgeSlot cappedEpistemic
               , connectorSlot
               , softenerSlot frame
                , parseSubjectSlot parsed
@@ -155,10 +157,13 @@ identitySlot =
   , (TCapability,[plainSlot TCapability "могу анализировать, определять, различать и собирать ответы"])]
 
 -- | Constraint: what limits apply
-constraintSlot :: InputPropositionFrame -> [(AtomTag, [AtomSlot])]
-constraintSlot frame = case ipfSemanticTarget frame of
-  "user" -> [(TConstraint, [plainSlot TConstraint "я знаю только то, что проявлено в этой сессии"])]
-  _ -> [(TConstraint, [plainSlot TConstraint "я работаю в рамках текущего диалога"])]
+constraintSlot :: TruthContractStatus -> InputPropositionFrame -> [(AtomTag, [AtomSlot])]
+constraintSlot truthStatus frame =
+  case (truthStatus, ipfSemanticTarget frame) of
+    (CanonicalSurfacePreserved, "user") -> [(TConstraint, [plainSlot TConstraint "я знаю только то, что проявлено в этой сессии"])]
+    (_, "user") -> [(TConstraint, [plainSlot TConstraint "я удерживаю только локально проявленный контекст этой сессии"])]
+    (CanonicalSurfacePreserved, _) -> [(TConstraint, [plainSlot TConstraint "я работаю в рамках текущего диалога"])]
+    _ -> [(TConstraint, [plainSlot TConstraint "я держусь локальной рамки текущего диалога и не усиливаю её сверх фактической опоры"])]
 
 -- | Hedge: triggered by uncertain / speculative epistemic status
 hedgeSlot :: EpistemicStatus -> [(AtomTag, [AtomSlot])]

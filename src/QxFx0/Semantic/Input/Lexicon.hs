@@ -14,14 +14,23 @@ module QxFx0.Semantic.Input.Lexicon
   , isAssistanceLemma
   , isIdentityLemma
   , isGenerativeRequestLemma
+  , inputGeneratedLexiconAuthorityClass
+  , inputGeneratedLexiconProvenanceTag
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Maybe (fromMaybe)
 
+import QxFx0.Types.Observability (AuthorityClass(..))
 import QxFx0.Semantic.Input.Model
 import QxFx0.Semantic.Input.GeneratedLexicon (generatedFormToLemma, generatedLemmaToPos, generatedLemmaToSem)
+
+inputGeneratedLexiconAuthorityClass :: AuthorityClass
+inputGeneratedLexiconAuthorityClass = AuthorityGeneratedArtifact
+
+inputGeneratedLexiconProvenanceTag :: Text
+inputGeneratedLexiconProvenanceTag = "generated_input_lexicon_compat"
 
 guessPartOfSpeech :: Text -> InputPartOfSpeech
 guessPartOfSpeech token =

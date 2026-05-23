@@ -87,6 +87,7 @@ import QxFx0.Types.Observability
   ( KernelPulse
   , MeaningGraph
   , ObservabilityState
+  , TruthContractStatus(..)
   , emptyObservabilityState
   )
 import QxFx0.Types.Orbital (OrbitalMemory)
@@ -221,6 +222,8 @@ data SystemState = SystemState
     -- ^ Phase 11/ADR-0032: bounded outcome counters and recent
     --   dialogue-outcome samples. Initialised to
     --   'emptyDialogueOutcomeLearningState'.
+  , ssTruthContractStatus :: !TruthContractStatus
+    -- ^ Persisted post-turn truth contract used to cap downstream channels.
   , ssSpeechPolicyState :: !SpeechPolicyState
     -- ^ Phase 11/ADR-0032: bounded style-pressure state derived from
     --   strong dialogue outcomes. Initialised to 'emptySpeechPolicyState'.
@@ -289,12 +292,13 @@ instance ToJSON SystemState where
       , "toolReliability" .= ssToolReliability ss
       , "calibrationSnapshots" .= ssCalibrationSnapshots ss
       , "adaptiveMutationLog" .= ssAdaptiveMutationLog ss
-       , "dialogueOutcomeLearning" .= ssDialogueOutcomeLearning ss
-       , "dialogueThread" .= ssDialogueThread ss
-       , "dialogueCommitmentLedger" .= ssDialogueCommitmentLedger ss
-       , "dialoguePhase" .= ssDialoguePhase ss
-        , "speechPolicyState" .= ssSpeechPolicyState ss
-        , "beliefStore" .= ssBeliefStore ss
+        , "dialogueOutcomeLearning" .= ssDialogueOutcomeLearning ss
+        , "dialogueThread" .= ssDialogueThread ss
+        , "dialogueCommitmentLedger" .= ssDialogueCommitmentLedger ss
+        , "dialoguePhase" .= ssDialoguePhase ss
+        , "truthContractStatus" .= ssTruthContractStatus ss
+         , "speechPolicyState" .= ssSpeechPolicyState ss
+         , "beliefStore" .= ssBeliefStore ss
         , "perspectiveRegistry" .= ssPerspectiveRegistry ss
         , "governanceHistory" .= ssGovernanceHistory ss
         , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
@@ -352,12 +356,13 @@ instance FromJSON SystemState where
          <*> o .:? "toolReliability" .!= M.empty
          <*> o .:? "calibrationSnapshots" .!= []
          <*> o .:? "adaptiveMutationLog" .!= []
-         <*> o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState
-         <*> o .:? "dialogueThread" .!= emptyDialogueThread
-         <*> o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger
-         <*> o .:? "dialoguePhase" .!= Exploring
-         <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
-         <*> o .:? "beliefStore" .!= emptyBeliefStore
+          <*> o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState
+          <*> o .:? "dialogueThread" .!= emptyDialogueThread
+          <*> o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger
+          <*> o .:? "dialoguePhase" .!= Exploring
+          <*> o .:? "truthContractStatus" .!= LegacyIncompleteSurface
+          <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
+          <*> o .:? "beliefStore" .!= emptyBeliefStore
         <*> o .:? "perspectiveRegistry" .!= emptyPerspectiveRegistry
         <*> o .:? "governanceHistory" .!= []
         <*> o .:? "governanceRuntimeFault" .!= Nothing
@@ -523,6 +528,7 @@ emptySystemState = SystemState
   , ssDialogueThread = emptyDialogueThread
   , ssDialogueCommitmentLedger = emptyDialogueCommitmentLedger
   , ssDialoguePhase = Exploring
+  , ssTruthContractStatus = LegacyIncompleteSurface
   , ssSpeechPolicyState = emptySpeechPolicyState
   , ssBeliefStore = emptyBeliefStore
   , ssPerspectiveRegistry = emptyPerspectiveRegistry

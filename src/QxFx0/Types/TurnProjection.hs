@@ -9,7 +9,7 @@ module QxFx0.Types.TurnProjection
 
 import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
-import QxFx0.Types.Observability (ContractProvenance, ConvMove(..), SurfaceProvenance)
+import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -55,7 +55,11 @@ data TurnReplayTrace = TurnReplayTrace
   , trcFallbackReason :: !(Maybe Text)
   , trcContractProvenance :: !(Maybe ContractProvenance)
   , trcSurfaceProvenance :: !(Maybe SurfaceProvenance)
-  , trcTruthContractStatus :: !Text
+  , trcAuthorityClass :: !(Maybe AuthorityClass)
+  , trcTruthContractStatus :: !TruthContractStatus
+  , trcAssemblyPath :: !(Maybe AssemblyPath)
+  , trcArtifactManifest :: !(Maybe ArtifactManifest)
+  , trcReplayProvenanceStatus :: !ReplayProvenanceStatus
   , trcDerivationTags :: ![Text]
   , trcSalienceDriver :: !Text
     -- ^ Phase 5.5e: rendered snake_case tag for the dominant
@@ -107,8 +111,14 @@ data TurnReplayTrace = TurnReplayTrace
   , trcSenseOperator :: !(Maybe SenseOperator)
   , trcSensePreservedAxes :: ![SenseAxis]
   , trcDialogueFocus :: !Text
+  , trcDialogueFocusBefore :: !Text
+  , trcDialogueFocusAfter :: !Text
   , trcDialoguePhase :: !DialoguePhase
+  , trcDialoguePhaseBefore :: !DialoguePhase
+  , trcDialoguePhaseAfter :: !DialoguePhase
   , trcDialogueCommitmentCount :: !Int
+  , trcDialogueCommitmentCountBefore :: !Int
+  , trcDialogueCommitmentCountAfter :: !Int
   , trcMicroPlanMoves :: ![Text]
   , trcMicroPlanExplicitness :: !Double
   , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)

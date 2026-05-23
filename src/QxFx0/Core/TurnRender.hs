@@ -1,6 +1,7 @@
 {-| Facade for render strategy, semantic anchor, prefixes, and cache utilities. -}
 module QxFx0.Core.TurnRender
   ( applyRenderStrategy
+  , applyRenderStrategyWithTruthContract
   , renderStyleFromDecision
   , renderStyleFromDecisionWithSalience
   , applySalienceToStyle
@@ -31,6 +32,7 @@ import QxFx0.Core.TurnRender.Prefix
   )
 import QxFx0.Core.TurnRender.Strategy
   ( applyRenderStrategy
+  , applyRenderStrategyWithTruthContract
   , applySalienceToStyle
   , renderStyleFromDecision
   , renderStyleFromDecisionWithSalience

@@ -24,6 +24,7 @@ import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import QxFx0.Core.TruthContract (truthContractAllowsStrongMutation)
 import QxFx0.Core.TurnPipeline.Types
   ( TurnArtifacts(..)
   , TurnInput(..)
@@ -87,9 +88,11 @@ assessDialogueOutcome previousState postState ti tp ta =
   let frame = tiFrame ti
       raw = normalizeDialogueText (ipfRawText frame)
       propositionType = ipfPropositionType frame
+      truthStatus = taTruthContractStatus ta
       previousInputs = map normalizeDialogueText (F.toList (ssRawInputHistory previousState))
       repeatedInput = not (T.null raw) && raw `elem` take 3 (reverse previousInputs)
-      localRecovery = taSurfaceProv ta == FromRecovery || isJust (taLocalRecoveryCause ta)
+      localRecovery = taSurfaceProv ta == FromRecovery || isJust (taLocalRecoveryCause ta) || not (truthContractAllowsStrongMutation truthStatus)
+      postRenderRetightened = taRendered ta /= taPreSafetyRendered ta || taFinalRendered ta /= taPreSafetyRendered ta
       decisionRepair = tdFamily (taDecision ta) == CMRepair
       renderEmpty = T.null (T.strip (taFinalRendered ta))
       userRepair = propositionType `elem` ["RepairSignal", "MisunderstandingReport"]
@@ -98,7 +101,7 @@ assessDialogueOutcome previousState postState ti tp ta =
       userConflict = propositionType == "ConfrontQ" || containsAny raw conflictPhrases
       strongPositiveConfirmation = containsAny raw strongPositiveConfirmationPhrases
       weakAcknowledgement = isWeakAcknowledgementText raw
-      (kind, strong, strength) =
+      (kind0, strong0, strength0) =
         if userConflict
           then (DialogueOutcomeConflict, True, EvidenceStrong)
         else if userRepair
@@ -114,6 +117,10 @@ assessDialogueOutcome previousState postState ti tp ta =
         else if successfulContinuation || userClarification
           then (DialogueOutcomePartialSuccess, False, EvidenceModerate)
         else (DialogueOutcomeUncertain, False, EvidenceWeak)
+      (kind, strong, strength) =
+        if truthContractAllowsStrongMutation truthStatus
+          then (kind0, strong0, strength0)
+          else (DialogueOutcomeDegraded, False, max strength0 EvidenceModerate)
       topic = firstNonEmpty
         [ if strongPositiveConfirmation || weakAcknowledgement then ssLastTopic previousState else ""
         , tiBestTopic ti
@@ -121,6 +128,7 @@ assessDialogueOutcome previousState postState ti tp ta =
         , rmpTopic (tpRmpAfterLegit tp)
         ]
       signals = outcomeSignals propositionType repeatedInput localRecovery decisionRepair renderEmpty userConflict strongPositiveConfirmation weakAcknowledgement successfulContinuation userClarification
+        <> flag "post_render_truth_retightened" postRenderRetightened
       decision = adaptiveDecisionRecord (ssTurnCount postState) kind signals strong strength
   in DialogueOutcomeSample
        { dosTurn = ssTurnCount postState

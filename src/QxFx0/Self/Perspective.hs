@@ -59,9 +59,11 @@ import QxFx0.Types.State.DialogueDevelopment
   ( BeliefPolarity(..)
   , BeliefRecord(..)
   , BeliefStore(..)
+  , DialoguePhase(..)
   , DialogueOutcomeKind(..)
   , DialogueOutcomeLearningState(..)
   , DialogueOutcomeSample(..)
+  , DialogueThread(..)
   )
 import QxFx0.Types.State.Perspective
 import QxFx0.Types.State.System
@@ -69,6 +71,8 @@ import QxFx0.Types.State.System
   , commitGovernedPerspectiveProjection
   , appendGovernanceEventRecord
   , ssBeliefStore
+  , ssDialoguePhase
+  , ssDialogueThread
   , ssDialogueOutcomeLearning
   , ssIdentity
   , ssKnowledgeTree
@@ -227,7 +231,27 @@ selectPerspectiveScope ss =
         , strongestClaimTopic (ssBeliefStore ss)
         , strongestKnowledgeTopic (ssKnowledgeTree ss)
         ]
-  in ScopeTopic (fromMaybe "general" topic)
+      scopedTopic = clampPerspectiveScopeTopic (ssDialoguePhase ss) (ssDialogueThread ss) (fromMaybe "general" topic)
+  in ScopeTopic scopedTopic
+
+clampPerspectiveScopeTopic :: DialoguePhase -> DialogueThread -> Text -> Text
+clampPerspectiveScopeTopic phase thread proposedTopic =
+  let proposed = normalizeDialogueText proposedTopic
+      currentFocus = normalizeDialogueText (dtCurrentFocus thread)
+      phaseScope = normalizeDialogueText (dtPhaseScope thread)
+      activeScope = firstNonEmpty [nonEmptyMaybe phaseScope, nonEmptyMaybe currentFocus]
+      lockedPhase = phase `elem` [Clarifying, Grounding, Repairing, Contesting, Closing]
+  in case activeScope of
+       Nothing -> if T.null proposed then "general" else proposed
+       Just scope
+         | T.null proposed -> scope
+         | lockedPhase && scope /= proposed && not (scope `T.isInfixOf` proposed) && not (proposed `T.isInfixOf` scope) -> scope
+         | otherwise -> proposed
+
+nonEmptyMaybe :: Text -> Maybe Text
+nonEmptyMaybe txt
+  | T.null txt = Nothing
+  | otherwise = Just txt
 
 activeNormativeProfile :: PerspectiveScope -> PerspectiveRegistry -> NormativeProfile
 activeNormativeProfile scope registry =

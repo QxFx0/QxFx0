@@ -5,6 +5,15 @@
 
 module QxFx0.Types.Observability
   ( LogicalBond
+  , AuthorityClass(..)
+  , TruthContractStatus(..)
+  , AssemblyPath(..)
+  , ReplayProvenanceStatus(..)
+  , ArtifactManifest(..)
+  , GfLinearizationResult(..)
+  , ExecutedTurnOutcome(..)
+  , truthContractStatusForAuthority
+  , mkExecutedTurnOutcome
   , ContractProvenance(..)
   , SurfaceProvenance(..)
   , LiveRenderTelemetry(..)
@@ -51,7 +60,7 @@ import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
-import QxFx0.Types.Domain (CanonicalMoveFamily(..), NixGuardStatus(..))
+import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), NixGuardStatus(..))
 import QxFx0.Types.Thresholds
   ( DepthMode(..)
   , constitutionalAgencyMinDefault
@@ -73,6 +82,137 @@ data LogicalBond = LogicalBond
     deriving anyclass (NFData)
 instance ToJSON LogicalBond where toJSON = genericToJSON defaultOptions
 instance FromJSON LogicalBond where parseJSON = genericParseJSON defaultOptions
+
+data AuthorityClass
+  = AuthorityCanonical
+  | AuthorityAssembled
+  | AuthorityRecovery
+  | AuthorityFallback
+  | AuthorityShim
+  | AuthorityDefault
+  | AuthorityGeneratedArtifact
+  | AuthorityLegacyIncomplete
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData)
+instance ToJSON AuthorityClass where toJSON = genericToJSON defaultOptions
+instance FromJSON AuthorityClass where parseJSON = genericParseJSON defaultOptions
+
+data TruthContractStatus
+  = CanonicalSurfacePreserved
+  | AssembledSurfacePreserved
+  | ExplicitFallbackSurface
+  | NonExpansiveRecoverySurface
+  | CompatibilityShimSurface
+  | DefaultedSurface
+  | GeneratedArtifactSurface
+  | LegacyIncompleteSurface
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData)
+instance ToJSON TruthContractStatus where toJSON = genericToJSON defaultOptions
+instance FromJSON TruthContractStatus where parseJSON = genericParseJSON defaultOptions
+
+data AssemblyPath
+  = DialogueAssemblyRoute
+  | FactualAssemblyRoute
+  | TemplateFallbackRoute
+  | StructuredFallbackRoute
+  | PgfClaimRoute
+  | PgfAtomsRoute
+  | RussianCompatShimRoute
+  | GuardRecoveryRoute
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData)
+instance ToJSON AssemblyPath where toJSON = genericToJSON defaultOptions
+instance FromJSON AssemblyPath where parseJSON = genericParseJSON defaultOptions
+
+data ReplayProvenanceStatus
+  = ReplayProvenanceComplete
+  | ReplayProvenanceLegacyIncomplete
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData)
+instance ToJSON ReplayProvenanceStatus where toJSON = genericToJSON defaultOptions
+instance FromJSON ReplayProvenanceStatus where parseJSON = genericParseJSON defaultOptions
+
+data ArtifactManifest = ArtifactManifest
+  { amPgfPath :: !(Maybe FilePath)
+  , amPgfHash :: !(Maybe Text)
+  , amGeneratedInputLexiconHash :: !(Maybe Text)
+  , amGfMapHash :: !(Maybe Text)
+  , amToolchainMarker :: !Text
+  } deriving stock (Eq, Show, Read, Generic)
+    deriving anyclass (NFData)
+instance ToJSON ArtifactManifest where toJSON = genericToJSON defaultOptions
+instance FromJSON ArtifactManifest where parseJSON = genericParseJSON defaultOptions
+
+data GfLinearizationResult = GfLinearizationResult
+  { glrText :: !Text
+  , glrLanguage :: !Text
+  , glrAuthorityClass :: !AuthorityClass
+  , glrAssemblyPath :: !AssemblyPath
+  , glrArtifactManifest :: !ArtifactManifest
+  , glrFallbackReason :: !(Maybe Text)
+  } deriving stock (Eq, Show, Read, Generic)
+    deriving anyclass (NFData)
+instance ToJSON GfLinearizationResult where toJSON = genericToJSON defaultOptions
+instance FromJSON GfLinearizationResult where parseJSON = genericParseJSON defaultOptions
+
+data ExecutedTurnOutcome = ExecutedTurnOutcome
+  { etoFamily :: !CanonicalMoveFamily
+  , etoForce :: !IllocutionaryForce
+  , etoAuthorityClass :: !AuthorityClass
+  , etoTruthContractStatus :: !TruthContractStatus
+  , etoContractProvenance :: !ContractProvenance
+  , etoSurfaceProvenance :: !SurfaceProvenance
+  , etoAssemblyPath :: !AssemblyPath
+  , etoArtifactManifest :: !ArtifactManifest
+  , etoTransitionWon :: !Bool
+  } deriving stock (Eq, Show, Read, Generic)
+    deriving anyclass (NFData)
+instance ToJSON ExecutedTurnOutcome where toJSON = genericToJSON defaultOptions
+instance FromJSON ExecutedTurnOutcome where parseJSON = genericParseJSON defaultOptions
+
+mkExecutedTurnOutcome
+  :: CanonicalMoveFamily
+  -> IllocutionaryForce
+  -> AuthorityClass
+  -> ContractProvenance
+  -> SurfaceProvenance
+  -> AssemblyPath
+  -> ArtifactManifest
+  -> Either Text ExecutedTurnOutcome
+mkExecutedTurnOutcome family force authority contractProv surfaceProv assemblyPath manifest = do
+  let bad condition msg = if condition then Left msg else Right ()
+      transitionWon = authority `elem` [AuthorityCanonical, AuthorityAssembled]
+      truthStatus = truthContractStatusForAuthority authority assemblyPath
+  bad (assemblyPath == RussianCompatShimRoute && authority /= AuthorityShim)
+      "executed_outcome_invalid:russian_compat_must_be_shim"
+  bad (assemblyPath == GuardRecoveryRoute && transitionWon)
+      "executed_outcome_invalid:recovery_route_cannot_win"
+  bad (authority `elem` [AuthorityFallback, AuthorityShim, AuthorityDefault, AuthorityGeneratedArtifact, AuthorityLegacyIncomplete, AuthorityRecovery] && transitionWon)
+      "executed_outcome_invalid:non_authoritative_route_cannot_win"
+  pure ExecutedTurnOutcome
+    { etoFamily = family
+    , etoForce = force
+    , etoAuthorityClass = authority
+    , etoTruthContractStatus = truthStatus
+    , etoContractProvenance = contractProv
+    , etoSurfaceProvenance = surfaceProv
+    , etoAssemblyPath = assemblyPath
+    , etoArtifactManifest = manifest
+    , etoTransitionWon = transitionWon
+    }
+
+truthContractStatusForAuthority :: AuthorityClass -> AssemblyPath -> TruthContractStatus
+truthContractStatusForAuthority authority assemblyPath =
+  case (authority, assemblyPath) of
+    (AuthorityCanonical, _) -> CanonicalSurfacePreserved
+    (AuthorityAssembled, _) -> AssembledSurfacePreserved
+    (AuthorityRecovery, _) -> NonExpansiveRecoverySurface
+    (AuthorityFallback, _) -> ExplicitFallbackSurface
+    (AuthorityShim, _) -> CompatibilityShimSurface
+    (AuthorityDefault, _) -> DefaultedSurface
+    (AuthorityGeneratedArtifact, _) -> GeneratedArtifactSurface
+    (AuthorityLegacyIncomplete, _) -> LegacyIncompleteSurface
 
 data ContractProvenance
   = BuiltClaim | FallbackRoute | RecoveryRoute

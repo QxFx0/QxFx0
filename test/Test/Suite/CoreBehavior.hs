@@ -805,10 +805,16 @@ testGfRoundTripAstLinearizeParse = TestCase $ do
           case linearized of
             Left err ->
               assertFailure ("GF runtime linearization failed: " <> T.unpack err)
-            Right rendered ->
-              assertEqual "runtime PGF linearization should stay aligned with current Russian surface"
+            Right rendered -> do
+              assertEqual "runtime PGF compat shim should stay aligned with current Russian surface"
                 "Да, поговорим о логике. Я сначала удержу рамку, чтобы не потерять фокус."
-                rendered
+                (glrText rendered)
+              assertEqual "runtime PGF russian claim path must be explicit shim"
+                AuthorityShim
+                (glrAuthorityClass rendered)
+              assertEqual "runtime PGF russian claim path must expose shim route"
+                RussianCompatShimRoute
+                (glrAssemblyPath rendered)
 
 testGfFallbackSurfaceParity :: Test
 testGfFallbackSurfaceParity = TestCase $ do
@@ -837,8 +843,11 @@ testGfFallbackSurfaceParity = TestCase $ do
                 assertFailure ("fallback linearization returned Nothing for AST: " <> show ast)
               (_, Left err) ->
                 assertFailure ("GF runtime linearization failed: " <> T.unpack err)
-              (Just fb, Right pgf) ->
-                assertEqual ("GF/fallback mismatch for AST: " <> show ast) fb pgf
+              (Just fb, Right pgf) -> do
+                assertEqual ("GF/fallback mismatch for AST: " <> show ast) fb (glrText pgf)
+                assertEqual ("runtime PGF russian route must be explicit shim for AST: " <> show ast)
+                  AuthorityShim
+                  (glrAuthorityClass pgf)
 
 testAstToGfExprLegacyCompatibility :: Test
 testAstToGfExprLegacyCompatibility = TestCase $ do
@@ -876,12 +885,13 @@ testLegitimacyPenaltyDemotesLowConfidencePlan = TestCase $ do
         { rmpFamily = CMGround, rmpForce = IFAssert
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
-        , rmpEpistemic = Known 0.9, rmpTopic = "тема"
-        , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
-        , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
-        , rmpCommitmentStrength = 0.9, rmpDepthMode = DeepDepth
-        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
-        }
+         , rmpEpistemic = Known 0.9, rmpTopic = "тема"
+         , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpTruthContractStatus = CanonicalSurfacePreserved
+         , rmpCommitmentStrength = 0.9, rmpDepthMode = DeepDepth
+         , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
+         }
       (score1, rmp1) = Legitimacy.applyLegitimacyPenalty 0.4 rmp0
   assertEqual "low legitimacy should preserve returned score" 0.4 score1
   assertEqual "low legitimacy should demote family to repair" CMRepair (rmpFamily rmp1)
@@ -1371,12 +1381,13 @@ testModulateRMPWithNarrativeDeepMode = TestCase $ do
         { rmpFamily = CMGround, rmpForce = IFAssert
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
-        , rmpEpistemic = Known 0.9, rmpTopic = "topic"
-        , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
-        , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
-        , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
-        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
-        }
+         , rmpEpistemic = Known 0.9, rmpTopic = "topic"
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpTruthContractStatus = CanonicalSurfacePreserved
+         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+         , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
+         }
       longNarrative = Just (T.replicate 20 "abc ")
       result = modulateRMPWithNarrative longNarrative rmp
   assertEqual "Long narrative should set depthMode to deep" DeepDepth (rmpDepthMode result)
@@ -1387,12 +1398,13 @@ testModulateRMPWithNarrativeTopicFill = TestCase $ do
         { rmpFamily = CMGround, rmpForce = IFAssert
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
-        , rmpEpistemic = Known 0.9, rmpTopic = ""
-        , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
-        , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
-        , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
-        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
-        }
+         , rmpEpistemic = Known 0.9, rmpTopic = ""
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpTruthContractStatus = CanonicalSurfacePreserved
+         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+         , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
+         }
       result = modulateRMPWithNarrative (Just "some narrative text") rmp
   assertEqual "Empty topic should be filled from narrative" "some narrative text" (rmpTopic result)
 
@@ -1402,12 +1414,13 @@ testModulateRMPWithNarrativeNoOp = TestCase $ do
         { rmpFamily = CMGround, rmpForce = IFAssert
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
-        , rmpEpistemic = Known 0.9, rmpTopic = "topic"
-        , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
-        , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
-        , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
-        , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
-        }
+         , rmpEpistemic = Known 0.9, rmpTopic = "topic"
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpTruthContractStatus = CanonicalSurfacePreserved
+         , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
+         , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
+         }
       result = modulateRMPWithNarrative Nothing rmp
   assertEqual "No narrative should not change depthMode" SurfaceDepth (rmpDepthMode result)
   assertEqual "No narrative should not change topic" "topic" (rmpTopic result)

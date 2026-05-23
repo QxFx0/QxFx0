@@ -16,7 +16,8 @@ import QxFx0.Types.State (SystemState(..), ssTurnCount)
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
-import QxFx0.Types.TurnProjection (TurnProjection(..))
+import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
+import QxFx0.Types.Observability (AuthorityClass(..))
 import QxFx0.Types.Persistence
   ( PersistenceDiagnostic(..)
   , PersistenceStage(..)
@@ -38,6 +39,8 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
+import Data.Maybe (fromMaybe)
+import QxFx0.Core.TruthContract (normalizedReplayProvenanceStatus)
 import QxFx0.ExceptionPolicy (tryQxFx0, throwQxFx0, QxFx0Exception(..))
 import Control.Exception (finally, mask, onException)
 import Control.Monad (when)
@@ -193,7 +196,14 @@ loadKV db sessionId k = do
 persistTurnQuality :: NSQL.Database -> Text -> TurnProjection -> IO ()
 persistTurnQuality db sessionId p = do
   let sql = "INSERT OR REPLACE INTO turn_quality(session_id, turn, parser_mode, parser_confidence, parser_errors, planner_mode, planner_decision, atom_register, atom_load, scene_pressure, scene_request, scene_stance, render_lane, render_style, legitimacy_status, legitimacy_reason, warranted_mode, decision_disposition, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message, replay_trace_json, divergence) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-      replayTraceJson = TE.decodeUtf8With lenientDecode . BL.toStrict . Aeson.encode $ tqpReplayTrace p
+      replayTrace0 = tqpReplayTrace p
+      replayAuthority = fromMaybe AuthorityLegacyIncomplete (trcAuthorityClass replayTrace0)
+      replayTrace =
+        replayTrace0
+          { trcReplayProvenanceStatus =
+              normalizedReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority
+          }
+      replayTraceJson = TE.decodeUtf8With lenientDecode . BL.toStrict . Aeson.encode $ replayTrace
   ts <- prepareTx db "turn_quality" sql
   bindTextOrFail ts 1 sessionId
   bindIntOrFail ts 2 (tqpTurn p)

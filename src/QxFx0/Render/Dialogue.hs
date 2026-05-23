@@ -21,6 +21,7 @@ import qualified Data.Char as Char
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Control.Applicative ((<|>))
 import Data.Char (isAlpha)
+import QxFx0.Core.TruthContract (truthContractAllowsHardKnowledgeTone)
 import QxFx0.Types
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
@@ -272,6 +273,8 @@ renderStructuredDialogueArtifact frame rmp renderStyle morph = do
             structuredBody propositionType frame rmp renderStyle morph
           body = applyMicroPlanToStructuredBody rmp renderStyle body0
           rendered = finalizeForce IFAssert (T.strip body)
+          contractProv = contractProvenanceForArtifact fallbackReason claimAst
+          surfaceProv = surfaceProvenanceForArtifact fallbackReason claimAst
       in Just
            DialogueRenderArtifact
              { draRenderedText = rendered
@@ -279,15 +282,15 @@ renderStructuredDialogueArtifact frame rmp renderStyle morph = do
              , draStylePrefixText = ""
              , draTemplateBodyText = body
              , draClaimText = ""
-             , draClaimAst = claimAst
-             , draLinearizationLang = mLang
-             , draLinearizationOk = linearizationOk
-             , draFallbackReason = fallbackReason
-             , draContractProvenance = contractProvenanceForArtifact linearizationOk fallbackReason
-             , draSurfaceProvenance = surfaceProvenanceForArtifact linearizationOk fallbackReason
-              , draDerivationTags = artifactDerivationTags propositionType linearizationOk fallbackReason claimAst
-             , draDialogAtoms = emptyDialogAtoms
-             }
+              , draClaimAst = claimAst
+              , draLinearizationLang = mLang
+              , draLinearizationOk = linearizationOk
+              , draFallbackReason = fallbackReason
+              , draContractProvenance = contractProv
+              , draSurfaceProvenance = surfaceProv
+               , draDerivationTags = artifactDerivationTags propositionType linearizationOk fallbackReason claimAst
+              , draDialogAtoms = emptyDialogAtoms
+              }
 
 structuredDialogueType :: PropositionType -> Bool
 structuredDialogueType propositionType =
@@ -317,6 +320,7 @@ structuredDialogueType propositionType =
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
 structuredBody propositionType frame rmp renderStyle morph =
   let isEn = isEnglishInput (ipfRawText frame)
+      hardKnowledgeTone = truthContractAllowsHardKnowledgeTone (rmpTruthContractStatus rmp)
   in case propositionType of
     RepairSignal ->
       let ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
@@ -395,8 +399,10 @@ structuredBody propositionType frame rmp renderStyle morph =
                    else "Нет, не одна. Я могу формулировать разные мысли, но если запросы слишком близки, мой генеративный слой пока склонен повторять удачную формулировку вместо того, чтобы сразу разворачивать новую.")
       | ipfSemanticTarget frame == "user" ->
           plain (if isEn
-                   then "About you I know only what is manifested in this session. I have no external biography, hidden profiles, or separate memory of you outside the current conversation; I can rely only on your replies, chosen topics, and already established dialogue frames."
-                   else "О тебе я знаю только то, что проявлено в этой сессии. У меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я могу опираться лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки.")
+                    then "About you I know only what is manifested in this session. I have no external biography, hidden profiles, or separate memory of you outside the current conversation; I can rely only on your replies, chosen topics, and already established dialogue frames."
+                    else if hardKnowledgeTone
+                      then "О тебе я знаю только то, что проявлено в этой сессии. У меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я могу опираться лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки."
+                      else "О тебе я знаю только то, что проявлено в этой сессии: у меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я опираюсь лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки.")
       | ipfSemanticTarget frame == "user_help" ->
           plain (if isEn
                    then "Yes, I can help. I work best when the task is stated explicitly and a local frame can be held: what exactly needs to be clarified, distinguished, defined, or gathered."
@@ -415,8 +421,10 @@ structuredBody propositionType frame rmp renderStyle morph =
                   then selfKnowledgeFallbackAst frame
                   else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
               fallback = if isEn
-                           then "I am a local dialogue system. About myself I know my role, current state, and the way I proceed through the conversation: I work through typed parsing, family routing, and current session constraints."
-                           else "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
+                            then "I am a local dialogue system. About myself I know my role, current state, and the way I proceed through the conversation: I work through typed parsing, family routing, and current session constraints."
+                            else if hardKnowledgeTone
+                              then "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
+                              else "Я — локальная система диалога. О себе я могу удерживать лишь рабочую локальную модель: роль, текущее состояние и способ, которым иду по ходу разговора через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
               claim = linFn "self_knowledge" ast renderStyle morph fallback
           in withClaimLang (if isEn then selfKnowledgeSurfaceByTargetEn target (clText claim) else selfKnowledgeSurfaceByTarget target (clText claim)) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
@@ -433,7 +441,9 @@ structuredBody propositionType frame rmp renderStyle morph =
       in withClaimLang rendered ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConceptKnowledgeQ
       | T.toLower (T.strip (ipfSemanticSubject frame)) == "солнце" ->
-          plain "Да, я знаю, что солнце — это звезда и источник света и тепла для Земли. Для меня это базовое понятийное знание о явлениях внешнего мира, а не результат текущего наблюдения."
+          plain (if hardKnowledgeTone
+                   then "Да, я знаю, что солнце — это звезда и источник света и тепла для Земли. Для меня это базовое понятийное знание о явлениях внешнего мира, а не результат текущего наблюдения."
+                   else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
       | isEn ->
           let ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")))) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
               claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph (rmpPrimaryClaim rmp)
@@ -484,10 +494,13 @@ structuredBody propositionType frame rmp renderStyle morph =
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           claim = linFn "world_cause" ast renderStyle morph (rmpPrimaryClaim rmp)
           bodyText = if isEn
-                       then "If we speak of the cause of " <> safeTopicGen <> ", then " <> clText claim
-                         <> " Therefore I distinguish local reasoning about mechanism from full knowledge of the external world."
-                       else "Если говорить о причине " <> safeTopicGen <> ", то " <> clText claim
-                         <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+                        then "If we speak of the cause of " <> safeTopicGen <> ", then " <> clText claim
+                          <> " Therefore I distinguish local reasoning about mechanism from full knowledge of the external world."
+                        else if hardKnowledgeTone
+                          then "Если говорить о причине " <> safeTopicGen <> ", то " <> clText claim
+                            <> " Поэтому я различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+                          else "Если удерживать локальную схему причины " <> safeTopicGen <> ", то " <> clText claim
+                            <> " Здесь я даю рабочую модель механизма, а не утверждаю полное знание о внешнем мире."
       in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     LocationFormationQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "thought" else "мысль")
@@ -499,12 +512,12 @@ structuredBody propositionType frame rmp renderStyle morph =
       in plain bodyText
     SelfStateQ ->
       case selfStateDirectSurface frame of
-        Just direct -> plain (if isEn then "I maintain local self-state through typed parsing and move routing." else direct)
+        Just direct -> plain (if isEn then "I maintain local self-state through typed parsing and move routing." else if hardKnowledgeTone then direct else "Мой внутренний ход можно описать через типизированный разбор, маршрутизацию ответа и удержание текущего состояния диалога.")
         Nothing ->
           let ast = claimAstOrFallback MoveSelfState (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
               claim = linFn "self_state" ast renderStyle morph (rmpPrimaryClaim rmp)
-          in withClaimLang ((if isEn then "My current move is built from parsing the reply, choosing the response family, and session constraints. " else selfStateSurface frame <> " ") <> clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
+          in withClaimLang ((if isEn then "My current move is built from parsing the reply, choosing the response family, and session constraints. " else if hardKnowledgeTone then selfStateSurface frame <> " " else "Мой внутренний ход можно описать через локальный разбор реплики, выбор семейства ответа, ограничения сессии и удержание текущего состояния диалога. ") <> clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ComparisonPlausibilityQ ->
       case ipfSemanticCandidates frame of
         left:right:_ ->
@@ -1428,34 +1441,34 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
    then
      let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
      in templateArtifact { draFallbackReason = Just "en_skip_assembly" }
-   else
-     let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
-         da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
-         dialogText = case assembleTurn rp da style (ssDiscourse ss) of
-                         Right txt | not (T.null (T.strip txt)) -> Just txt
-                         _ -> Nothing
-         factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
-         -- WP2: GF-first with telemetry. Fallback chain records exact reason.
-         templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
-         templateText = let txt = draTemplateBodyText templateArtifact
-                         in if T.null (T.strip txt) then Nothing else Just txt
-         structuredFallback
-           | hasStructuredDialogueSurface frame = fallbackStructuredText frame
-           | otherwise                          = Nothing
-         fallbackReason
-           | isJust dialogText   = Nothing
-           | isJust factualText  = Nothing
-           | isJust templateText = Just "gf_template_fallback"
-           | isJust structuredFallback = Just "gf_structured_fallback"
-           | otherwise           = Just "gf_no_output"
-         rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
-         -- COMPAT GLUE: preserve old template path finalization when falling back.
-         -- Assembly-generated text is finalized with rmpForce; fallback text is
-         -- already finalized inside templateArtifact (e.g. IFAssert for structured).
-         isFreshAssembly = isJust dialogText || isJust factualText
-         finalRendered
-           | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
-           | otherwise       = draRenderedText templateArtifact
+    else
+      let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
+          da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
+          dialogText = case assembleTurn rp da style (ssDiscourse ss) of
+            Right txt | not (T.null (T.strip txt)) -> Just txt
+            _ -> Nothing
+          factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
+          -- WP2: GF-first with telemetry. Fallback chain records exact reason.
+          templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
+          templateText = let txt = draTemplateBodyText templateArtifact
+            in if T.null (T.strip txt) then Nothing else Just txt
+          structuredFallback
+            | hasStructuredDialogueSurface frame = fallbackStructuredText frame
+            | otherwise = Nothing
+          fallbackReason
+            | isJust dialogText = Nothing
+            | isJust factualText = Nothing
+            | isJust templateText = Just "gf_template_fallback"
+            | isJust structuredFallback = Just "gf_structured_fallback"
+            | otherwise = Just "gf_no_output"
+          rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
+          -- COMPAT GLUE: preserve old template path finalization when falling back.
+          -- Assembly-generated text is finalized with rmpForce; fallback text is
+          -- already finalized inside templateArtifact (e.g. IFAssert for structured).
+          isFreshAssembly = isJust dialogText || isJust factualText
+          finalRendered
+            | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
+            | otherwise = draRenderedText templateArtifact
       in templateArtifact
              { draRenderedText = finalRendered
              , draTemplateBodyText = rendered
@@ -1472,17 +1485,19 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
              , draDerivationTags = draDerivationTags templateArtifact <> maybe ["assembly=primary"] (\reason -> ["assembly=fallback", "fallback=" <> reason]) fallbackReason
              }
 
-contractProvenanceForArtifact :: Bool -> Maybe Text -> ContractProvenance
-contractProvenanceForArtifact linearizationOk fallbackReason
-  | linearizationOk = BuiltClaim
+contractProvenanceForArtifact :: Maybe Text -> Maybe ClaimAst -> ContractProvenance
+contractProvenanceForArtifact fallbackReason mClaimAst
   | maybe False (T.isPrefixOf "gf_") fallbackReason = FallbackRoute
-  | otherwise = AssembledClaim
+  | maybe False (T.isPrefixOf "gf_en_") fallbackReason = FallbackRoute
+  | maybe False (const True) mClaimAst = AssembledClaim
+  | otherwise = FallbackRoute
 
-surfaceProvenanceForArtifact :: Bool -> Maybe Text -> SurfaceProvenance
-surfaceProvenanceForArtifact linearizationOk fallbackReason
-  | linearizationOk = FromDB
+surfaceProvenanceForArtifact :: Maybe Text -> Maybe ClaimAst -> SurfaceProvenance
+surfaceProvenanceForArtifact fallbackReason mClaimAst
   | maybe False (T.isPrefixOf "gf_") fallbackReason = FromFallback
-  | otherwise = FromDB
+  | maybe False (T.isPrefixOf "gf_en_") fallbackReason = FromFallback
+  | maybe False (const True) mClaimAst = FromOperator
+  | otherwise = FromFallback
 
 artifactDerivationTags :: PropositionType -> Bool -> Maybe Text -> Maybe ClaimAst -> [Text]
 artifactDerivationTags propositionType linearizationOk fallbackReason mClaimAst =

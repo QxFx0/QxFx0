@@ -9,7 +9,9 @@ import Test.HUnit
 
 import QxFx0.Runtime.Session
   ( governanceSummaryLines
+  , governanceAuthorityStatus
   )
+import QxFx0.Types.Observability (TruthContractStatus(..))
 import QxFx0.Self.Conatus
   ( ConatusComponents(..)
   , ConatusEnergy(..)
@@ -104,7 +106,9 @@ import QxFx0.Types.State
   , ssGovernanceRuntimeFault
   , ssPerspectiveRegistry
   , ssFieldHeuristics
+  , ssTruthContractStatus
   )
+import QxFx0.Types.State.Governance (EpistemicStatus(..))
 import QxFx0.Core.TurnPipeline
   ( PrepareEffectPlan(..)
   , PrepareStatic(..)
@@ -123,6 +127,8 @@ p5GovernanceTests =
   , TestLabel "P5 rebuild verification rejects derived registry mismatches" testRebuildVerificationGuard
   , TestLabel "P5 replay is independent of input order but ordered by sequence/partition/id" testCanonicalOrdering
   , TestLabel "P5 system-state rebuild derives registry from canonical history" testSystemStateRebuildsDerivedRegistry
+  , TestLabel "P5 system-state rebuild fails closed under non-authoritative truth" testSystemStateReplayFailsClosedWhenTruthNonAuthoritative
+  , TestLabel "P5 governance authority status fails closed on non-authoritative truth" testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth
   , TestLabel "P5 lifecycle-sensitive ref validation follows deny/promote/rollback contracts" testLifecycleSensitiveRefValidation
   , TestLabel "P5 denied perspective event is replay-visible without endorsing state" testDeniedPathReplay
   , TestLabel "P5 rollback path is replay-visible and restores prior projection" testRollbackPathReplay
@@ -306,11 +312,23 @@ testSystemStateRebuildsDerivedRegistry = TestCase $ do
       staleState = emptySystemState
         { ssPerspectiveRegistry = defaultPerspectiveRegistry
         , ssGovernanceHistory = [event]
+        , ssTruthContractStatus = CanonicalSurfacePreserved
         }
   assertBool "fixture has stale derived registry" (ssPerspectiveRegistry staleState /= expectedRegistry)
   rebuilt <- assertRight (rebuildGovernedSystemState staleState)
   assertEqual "canonical history is preserved" [event] (ssGovernanceHistory rebuilt)
   assertEqual "derived registry is rebuilt from canonical history" expectedRegistry (ssPerspectiveRegistry rebuilt)
+
+testSystemStateReplayFailsClosedWhenTruthNonAuthoritative :: Test
+testSystemStateReplayFailsClosedWhenTruthNonAuthoritative = TestCase $ do
+  case rebuildGovernedSystemState emptySystemState { ssTruthContractStatus = LegacyIncompleteSurface } of
+    Left err -> assertBool "non-authoritative truth should fail closed" ("non_authoritative" `T.isInfixOf` err)
+    Right _ -> assertFailure "rebuild should fail closed for non-authoritative truth"
+
+testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth :: Test
+testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth = TestCase $ do
+  let status = governanceAuthorityStatus (emptySystemState { ssTruthContractStatus = LegacyIncompleteSurface }) "ok"
+  assertEqual "non-authoritative truth must fail closed in operator summary" EpstNonAuthoritative status
 
 testLifecycleSensitiveRefValidation :: Test
 testLifecycleSensitiveRefValidation = TestCase $ do
@@ -464,6 +482,7 @@ testGovernanceSummaryVisibility = TestCase $ do
   let ss = emptySystemState
         { ssGovernanceHistory = [event1, freeze]
         , ssPerspectiveRegistry = registry1
+        , ssTruthContractStatus = CanonicalSurfacePreserved
         }
       summary = governanceSummaryLines ss
   assertLinePresent "summary exposes event count" "governance_events_count: 2" summary

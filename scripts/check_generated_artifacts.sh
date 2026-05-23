@@ -42,6 +42,22 @@ if [ -x "$ROOT/scripts/compile_gf_grammar.sh" ]; then
   fi
 fi
 
+# 4b) Generated input lexicon must carry an explicit provenance marker.
+if ! rg -n "AUTO-GENERATED: scripts/build_input_lexicon.py" "$ROOT/src/QxFx0/Semantic/Input/GeneratedLexicon.hs" >/dev/null 2>&1; then
+  echo "generated-artifact gate failed: generated input lexicon missing provenance marker" >&2
+  exit 1
+fi
+
+# 4c) Generated input lexicon contract must remain explicitly non-authoritative.
+if ! rg -n 'inputGeneratedLexiconAuthorityClass\s*=\s*AuthorityGeneratedArtifact' "$ROOT/src/QxFx0/Semantic/Input/Lexicon.hs" >/dev/null 2>&1; then
+  echo "generated-artifact gate failed: generated input lexicon authority class drifted" >&2
+  exit 1
+fi
+if ! rg -n 'inputGeneratedLexiconProvenanceTag\s*=\s*"generated_input_lexicon_compat"' "$ROOT/src/QxFx0/Semantic/Input/Lexicon.hs" >/dev/null 2>&1; then
+  echo "generated-artifact gate failed: generated input lexicon provenance tag drifted" >&2
+  exit 1
+fi
+
 # 5) Alternate concrete syntaxes must stay structurally aligned with the abstract.
 python3 scripts/check_gf_concrete_consistency.py >/dev/null
 

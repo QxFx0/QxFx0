@@ -52,14 +52,12 @@ planFinalizePrecommit systemState _turnInput _turnSignals turnPlan turnArtifacts
   let decision = taDecision turnArtifacts
       outcomeFamily = tdFamily decision
       outcomeVerdict = mkVerdict outcomeFamily
+      executedOutcome = taExecutedOutcome turnArtifacts
       consecutiveReflect =
         if outcomeFamily == CMReflect
           then ssConsecutiveReflect systemState + 1
           else 0
-      transitionWon =
-        case taSurfaceProv turnArtifacts of
-          FromRecovery -> False
-          _ -> tpStrategyFamily turnPlan == Just (rmpFamily (tpRmpAfterLegit turnPlan))
+      transitionWon = etoTransitionWon executedOutcome
       meaningGraphBase =
         recordTransition
           (tpFromMs turnPlan)

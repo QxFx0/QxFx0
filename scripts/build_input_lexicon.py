@@ -10,7 +10,7 @@ from collections import Counter, defaultdict
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 DEFAULT_INPUT_TXT = os.path.join(REPO_ROOT, "research_packs", "input.txt")
-DEFAULT_CSV = "/home/liskil/Downloads/russian_school_parser_corpus_400.csv"
+DEFAULT_CSV = None
 
 OUTPUT_LEXICON_JSON = os.path.join(REPO_ROOT, "resources", "input_lexicon", "lexicon.json")
 OUTPUT_GENERATED_HS = os.path.join(REPO_ROOT, "src", "QxFx0", "Semantic", "Input", "GeneratedLexicon.hs")
@@ -302,6 +302,7 @@ def escape_hs_string(value: str) -> str:
 
 def render_generated_haskell(form_to_lemma: dict[str, str], lemma_to_pos: dict[str, str], lemma_to_sem: dict[str, list[str]]) -> str:
     lines = [
+        "-- AUTO-GENERATED: scripts/build_input_lexicon.py",
         "{-# LANGUAGE OverloadedStrings #-}",
         "",
         "module QxFx0.Semantic.Input.GeneratedLexicon",
@@ -344,6 +345,11 @@ def render_generated_haskell(form_to_lemma: dict[str, str], lemma_to_pos: dict[s
 def main() -> int:
     input_txt = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_INPUT_TXT
     corpus_csv = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_CSV
+    if corpus_csv is None:
+        corpus_csv = os.environ.get("QXFX0_INPUT_LEXICON_CSV", "")
+    if not corpus_csv:
+        print("input lexicon build requires explicit CSV path via argv[2] or QXFX0_INPUT_LEXICON_CSV", file=sys.stderr)
+        return 2
 
     ensure_dirs()
 

@@ -1081,7 +1081,11 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcFallbackReason = Nothing
               , trcContractProvenance = Just FallbackRoute
               , trcSurfaceProvenance = Just FromFallback
-              , trcTruthContractStatus = "explicit_fallback_surface"
+              , trcAuthorityClass = Just AuthorityFallback
+              , trcTruthContractStatus = ExplicitFallbackSurface
+              , trcAssemblyPath = Just TemplateFallbackRoute
+              , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing "fixture_manifest")
+              , trcReplayProvenanceStatus = ReplayProvenanceComplete
               , trcDerivationTags = []
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
@@ -1100,14 +1104,20 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                , trcLearningSandboxResult = Nothing
                , trcLearningGraftTurn = Nothing
                , trcLearningRejectReason = Nothing
-               , trcSenseAnchor = "fixture_anchor"
-               , trcSenseOperator = Nothing
-               , trcSensePreservedAxes = []
-               , trcDialogueFocus = "fixture_focus"
-               , trcDialoguePhase = Exploring
-               , trcDialogueCommitmentCount = 0
-               , trcMicroPlanMoves = []
-               , trcMicroPlanExplicitness = 0.5
+                , trcSenseAnchor = "fixture_anchor"
+                , trcSenseOperator = Nothing
+                , trcSensePreservedAxes = []
+                , trcDialogueFocus = "fixture_focus"
+                , trcDialogueFocusBefore = "fixture_focus"
+                , trcDialogueFocusAfter = "fixture_focus"
+                , trcDialoguePhase = Exploring
+                , trcDialoguePhaseBefore = Exploring
+                , trcDialoguePhaseAfter = Exploring
+                , trcDialogueCommitmentCount = 0
+                , trcDialogueCommitmentCountBefore = 0
+                , trcDialogueCommitmentCountAfter = 0
+                , trcMicroPlanMoves = []
+                , trcMicroPlanExplicitness = 0.5
                , trcPerspectiveProjection = Nothing
                , trcPerspectiveProjections = []
                }
@@ -1216,10 +1226,22 @@ testRunTurnPersistsTurnQuality = TestCase $ do
       ("\"trcContractProvenance\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include surface provenance"
       ("\"trcSurfaceProvenance\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include authority class"
+      ("\"trcAuthorityClass\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include truth contract status"
       ("\"trcTruthContractStatus\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include assembly path"
+      ("\"trcAssemblyPath\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include replay provenance status"
+      ("\"trcReplayProvenanceStatus\"" `T.isInfixOf` replayTraceJson)
     assertBool "replay trace json should include derivation tags"
       ("\"trcDerivationTags\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include dialogue focus after-state"
+      ("\"trcDialogueFocusAfter\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include dialogue phase after-state"
+      ("\"trcDialoguePhaseAfter\"" `T.isInfixOf` replayTraceJson)
+    assertBool "replay trace json should include dialogue commitment count after-state"
+      ("\"trcDialogueCommitmentCountAfter\"" `T.isInfixOf` replayTraceJson)
 
 testRunTurnRefreshesRuntimeSessionLastActive :: Test
 testRunTurnRefreshesRuntimeSessionLastActive = TestCase $ do
@@ -1407,7 +1429,11 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcFallbackReason = Nothing
               , trcContractProvenance = Just FallbackRoute
               , trcSurfaceProvenance = Just FromFallback
-              , trcTruthContractStatus = "explicit_fallback_surface"
+              , trcAuthorityClass = Just AuthorityFallback
+              , trcTruthContractStatus = ExplicitFallbackSurface
+              , trcAssemblyPath = Just TemplateFallbackRoute
+              , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing "fixture_manifest")
+              , trcReplayProvenanceStatus = ReplayProvenanceComplete
               , trcDerivationTags = []
               , trcSalienceDriver = "default"
               , trcSalienceHolisticBias = 0.5
@@ -1426,14 +1452,20 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                , trcLearningSandboxResult = Nothing
                , trcLearningGraftTurn = Nothing
                , trcLearningRejectReason = Nothing
-               , trcSenseAnchor = "fixture_anchor"
-               , trcSenseOperator = Nothing
-               , trcSensePreservedAxes = []
-               , trcDialogueFocus = "fixture_focus"
-               , trcDialoguePhase = Exploring
-               , trcDialogueCommitmentCount = 0
-               , trcMicroPlanMoves = []
-               , trcMicroPlanExplicitness = 0.5
+                , trcSenseAnchor = "fixture_anchor"
+                , trcSenseOperator = Nothing
+                , trcSensePreservedAxes = []
+                , trcDialogueFocus = "fixture_focus"
+                , trcDialogueFocusBefore = "fixture_focus"
+                , trcDialogueFocusAfter = "fixture_focus"
+                , trcDialoguePhase = Exploring
+                , trcDialoguePhaseBefore = Exploring
+                , trcDialoguePhaseAfter = Exploring
+                , trcDialogueCommitmentCount = 0
+                , trcDialogueCommitmentCountBefore = 0
+                , trcDialogueCommitmentCountAfter = 0
+                , trcMicroPlanMoves = []
+                , trcMicroPlanExplicitness = 0.5
                , trcPerspectiveProjection = Nothing
                , trcPerspectiveProjections = []
                }

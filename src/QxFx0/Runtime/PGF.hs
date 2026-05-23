@@ -23,12 +23,17 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
 import qualified PGF2 as PGF
+import Data.Bits (xor)
+import Data.Word (Word64)
+import Numeric (showHex)
 
-import QxFx0.Types (ClaimAst(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
+import QxFx0.Types (ArtifactManifest(..), AssemblyPath(..), AuthorityClass(..), ClaimAst(..), GfLinearizationResult(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
 import QxFx0.Types.Decision.Enums.Render (RenderStyle(..))
 import QxFx0.Runtime.GF.Map (lookupTopicGfLexemeId, buildGfLexemeMap)
 import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
+import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
 import QxFx0.Semantic.DialogAtom (DialogAtoms, daTopicNominative, hasTag, headAtomValue, AtomTag(..))
+import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
 import QxFx0.Render.Dialogue (linearizeClaimAstRus)
 
 defaultPgfPath :: FilePath
@@ -36,27 +41,39 @@ defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
 
 -- COMPAT GLUE: Old target wiring expects 2-arg interface (no explicit language).
 -- We default to the Russian concrete syntax shipped in the repo.
-linearizeClaimAstGf :: Maybe FilePath -> ClaimAst -> IO (Either Text Text)
+linearizeClaimAstGf :: Maybe FilePath -> ClaimAst -> IO (Either Text GfLinearizationResult)
 linearizeClaimAstGf mPgfPath ast = linearizeClaimAstGfLang mPgfPath "QxFx0SyntaxRus" ast
 
-linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text Text)
+linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text GfLinearizationResult)
 linearizeClaimAstGfLang mPgfPath lang ast =
   case astToGfExpr ast of
     Left err -> pure (Left err)
     Right expr -> do
       result <- linearizeExpr mPgfPath lang expr
-      pure $ if lang == "QxFx0SyntaxRus"
-        then fallbackSurface ast
-        else result
+      pure $ case result of
+        Left err -> Left err
+        Right raw
+          | lang == "QxFx0SyntaxRus" ->
+              Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_compatibility_shim") (fallbackSurfaceText ast raw) (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim (fallbackSurfaceText ast raw)))
+          | otherwise ->
+              Right (mkGfLinearizationResult mPgfPath lang PgfClaimRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfClaimRoute AuthorityCanonical raw))
 
-linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text Text)
+linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text GfLinearizationResult)
 linearizeDialogAtomsGf mPgfPath da = linearizeDialogAtomsGfLang mPgfPath "QxFx0SyntaxRus" da
 
-linearizeDialogAtomsGfLang :: Maybe FilePath -> Text -> DialogAtoms -> IO (Either Text Text)
+linearizeDialogAtomsGfLang :: Maybe FilePath -> Text -> DialogAtoms -> IO (Either Text GfLinearizationResult)
 linearizeDialogAtomsGfLang mPgfPath lang da =
   case dialogAtomsToGfExpr da of
     Left err -> pure (Left err)
-    Right expr -> linearizeExpr mPgfPath lang expr
+    Right expr -> do
+      result <- linearizeExpr mPgfPath lang expr
+      pure $ case result of
+        Left err -> Left err
+        Right raw
+          | lang == "QxFx0SyntaxRus" ->
+              Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_compatibility_shim") raw (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim raw))
+          | otherwise ->
+              Right (mkGfLinearizationResult mPgfPath lang PgfAtomsRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfAtomsRoute AuthorityCanonical raw))
 
 linearizeExpr :: Maybe FilePath -> Text -> Text -> IO (Either Text Text)
 linearizeExpr mPgfPath lang expr = do
@@ -82,6 +99,37 @@ linearizeExpr mPgfPath lang expr = do
 fallbackSurface :: ClaimAst -> Either Text Text
 fallbackSurface ast =
   maybe (Left "pgf_russian_fallback_failed:shim_route") Right (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
+
+fallbackSurfaceText :: ClaimAst -> Text -> Text
+fallbackSurfaceText ast fallbackText =
+  maybe fallbackText id (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
+
+mkGfLinearizationResult :: Maybe FilePath -> Text -> AssemblyPath -> AuthorityClass -> Maybe Text -> Text -> ArtifactManifest -> GfLinearizationResult
+mkGfLinearizationResult mPgfPath lang assemblyPath authorityClass fallbackReason text manifest =
+  GfLinearizationResult
+    { glrText = text
+    , glrLanguage = lang
+    , glrAuthorityClass = authorityClass
+    , glrAssemblyPath = assemblyPath
+    , glrArtifactManifest = manifest { amPgfPath = mPgfPath }
+    , glrFallbackReason = fallbackReason
+    }
+
+artifactManifestFor :: Maybe FilePath -> Text -> AssemblyPath -> AuthorityClass -> Text -> ArtifactManifest
+artifactManifestFor mPgfPath lang assemblyPath authorityClass text =
+  ArtifactManifest
+    { amPgfPath = mPgfPath
+    , amPgfHash = Just (fingerprintText (T.pack (show mPgfPath) <> "|" <> lang <> "|" <> T.pack (show assemblyPath) <> "|" <> T.pack (show authorityClass) <> "|" <> text <> "|toolchain=pgf2"))
+    , amGeneratedInputLexiconHash = Just (inputGeneratedLexiconProvenanceTag <> ":required")
+    , amGfMapHash = Just (gfMapProvenanceTag <> ":required")
+    , amToolchainMarker = "runtime_pgf;lang=" <> lang <> ";route=" <> T.pack (show assemblyPath) <> ";authority=" <> T.pack (show authorityClass) <> ";compiler=pgf2"
+    }
+
+fingerprintText :: Text -> Text
+fingerprintText = T.pack . ("fnv1a64:" ++) . (`showHex` "") . T.foldl' fnv1a64 14695981039346656037
+  where
+    fnv1a64 :: Word64 -> Char -> Word64
+    fnv1a64 h ch = (h `xor` fromIntegral (fromEnum ch)) * 1099511628211
 
 emptyMorphologyData :: MorphologyData
 emptyMorphologyData = MorphologyData mempty mempty mempty mempty

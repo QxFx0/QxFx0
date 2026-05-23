@@ -4,12 +4,15 @@
 module QxFx0.Core.TurnPlanning.Modulation
   ( egoModulateStance
   , egoModulateEpistemic
+  , egoModulateEpistemicWithTruthContract
   , traceModulateStance
   , threeStageModulation
+  , threeStageModulationWithTruthContract
   , feralDegradation
   , antiStuck
   ) where
 
+import QxFx0.Core.TruthContract (capByTruthContract)
 import QxFx0.Types
 import QxFx0.Types.Thresholds
   ( criticalTensionThreshold
@@ -52,6 +55,10 @@ egoModulateEpistemic ego base =
           then strengthenEpistemic base
           else base
 
+egoModulateEpistemicWithTruthContract :: TruthContractStatus -> EgoState -> EpistemicStatus -> EpistemicStatus
+egoModulateEpistemicWithTruthContract truthStatus ego base =
+  capByTruthContract truthStatus (egoModulateEpistemic ego base)
+
 traceModulateStance :: AtomTrace -> StanceMarker -> StanceMarker
 traceModulateStance trace base =
   let load = atCurrentLoad trace
@@ -67,6 +74,12 @@ threeStageModulation :: EgoState -> AtomTrace -> StanceMarker -> EpistemicStatus
 threeStageModulation ego trace baseStance baseEpistemic =
   let stage2Stance = egoModulateStance ego baseStance
       stage2Epistemic = egoModulateEpistemic ego baseEpistemic
+   in (traceModulateStance trace stage2Stance, stage2Epistemic)
+
+threeStageModulationWithTruthContract :: TruthContractStatus -> EgoState -> AtomTrace -> StanceMarker -> EpistemicStatus -> (StanceMarker, EpistemicStatus)
+threeStageModulationWithTruthContract truthStatus ego trace baseStance baseEpistemic =
+  let stage2Stance = egoModulateStance ego baseStance
+      stage2Epistemic = egoModulateEpistemicWithTruthContract truthStatus ego baseEpistemic
    in (traceModulateStance trace stage2Stance, stage2Epistemic)
 
 feralDegradation :: Bool -> StanceMarker -> EpistemicStatus -> (StanceMarker, EpistemicStatus)

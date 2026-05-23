@@ -16,6 +16,7 @@ module QxFx0.Runtime.Session
   , printHelp
   , printStateSummary
   , governanceSummaryLines
+  , governanceAuthorityStatus
   ) where
 
 import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
@@ -23,3 +24,8 @@ import QxFx0.Runtime.Paths (resolveDbPath, resolveSessionId)
 import QxFx0.Runtime.Session.Bootstrap
 import QxFx0.Runtime.Session.Types
 import QxFx0.Runtime.Session.UI
+  ( printHelp
+  , printStateSummary
+  , governanceSummaryLines
+  , governanceAuthorityStatus
+  )

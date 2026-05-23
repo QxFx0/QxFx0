@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REQUIRE_GF="${QXFX0_REQUIRE_GF:-1}"
 SYNTAX_CONCRETE="$ROOT/spec/gf/QxFx0SyntaxRus.gf"
 OUT_PGF="$ROOT/spec/gf/QxFx0Syntax.pgf"
+MANIFEST_FILE="$ROOT/spec/gf/QxFx0Syntax.pgf.manifest"
 
 # Add ~/.cabal/bin to PATH to find gf binary (avoid shell alias 'gf=git fetch')
 export PATH="$HOME/.cabal/bin:$PATH"
@@ -24,20 +25,18 @@ compile_with_nix_shell() {
     develop "$ROOT" --command gf --make "spec/gf/QxFx0SyntaxRus.gf" >/dev/null
 }
 
-# Fast path: if PGF is already present and newer than all source .gf files, skip compile.
+# Fast path: if PGF manifest matches current GF sources and toolchain marker, skip compile.
 needs_compile() {
   local pgf="$OUT_PGF"
-  if [ ! -f "$pgf" ]; then
+  local manifest="$MANIFEST_FILE"
+  if [ ! -f "$pgf" ] || [ ! -f "$manifest" ]; then
     return 0
   fi
-  local src
-  for src in "$ROOT/spec/gf/"*.gf; do
-    [ -f "$src" ] || continue
-    if [ "$src" -nt "$pgf" ]; then
-      return 0
-    fi
-  done
-  return 1
+  local expected
+  expected="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):gf2"
+  local recorded
+  recorded="$(cut -d' ' -f1 "$manifest" 2>/dev/null || true)"
+  [ "$expected" != "$recorded" ]
 }
 
 if ! needs_compile; then
@@ -80,5 +79,8 @@ if [ ! -f "$OUT_PGF" ]; then
   echo "GF_GRAMMAR_COMPILE_FAILED: GF compile finished but PGF output was not created: $OUT_PGF" >&2
   exit 1
 fi
+
+manifest_hash="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):gf2"
+printf '%s  %s\n' "$manifest_hash" "$OUT_PGF" > "$MANIFEST_FILE"
 
 echo "OK: compiled $OUT_PGF"

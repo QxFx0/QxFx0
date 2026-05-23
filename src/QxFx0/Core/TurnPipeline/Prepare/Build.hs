@@ -95,8 +95,9 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
        , tiDialogueThread = psDialogueThread prepareStatic
        , tiDialogueCommitmentLedger = psDialogueCommitmentLedger prepareStatic
        , tiDialoguePhase = psDialoguePhase prepareStatic
-       , tiEssence = psEssence prepareStatic
-       }
+       , tiTruthContractStatus = psTruthContractStatus prepareStatic
+        , tiEssence = psEssence prepareStatic
+        }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals
 buildTurnSignals effectResults =

@@ -98,8 +98,8 @@ data TurnEffectResult
   | TurnResSaveState !(Either PersistenceDiagnostic SystemState)
   | TurnResRollbackTurnProjections !(Either PersistenceDiagnostic ())
   | TurnResCheckpointCompleted
-  | TurnResLinearizeClaimAst !(Either Text Text)
-  | TurnResLinearizeDialogAtoms !(Either Text Text)
+  | TurnResLinearizeClaimAst !(Either Text GfLinearizationResult)
+  | TurnResLinearizeDialogAtoms !(Either Text GfLinearizationResult)
   | TurnResExternalQuery !(Either ExternalQueryError ExternalQueryResponse)
     -- ^ Phase 8: response envelope from external tool query.
 
@@ -168,6 +168,7 @@ data PrepareStatic = PrepareStatic
   , psDialogueThread :: !DialogueThread
   , psDialogueCommitmentLedger :: !DialogueCommitmentLedger
   , psDialoguePhase :: !DialoguePhase
+  , psTruthContractStatus :: !TruthContractStatus
   , psEssence :: !Essence
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
@@ -278,6 +279,7 @@ buildPrepareEffectPlan ss input currentTime =
       , psDialogueThread = dialogueThread
       , psDialogueCommitmentLedger = dialogueLedger
       , psDialoguePhase = dialoguePhase
+      , psTruthContractStatus = ssTruthContractStatus ss
       , psEssence = ssEssence ss
       }
   in PrepareEffectPlan

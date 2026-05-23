@@ -4,16 +4,19 @@
 {-| Builders for response meaning/control plans from routing context. -}
 module QxFx0.Core.TurnPlanning.Builders
   ( buildRMP
+  , buildRMPWithTruthContract
   , buildRCP
   ) where
 
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import QxFx0.Core.TruthContract (capCommitmentStrengthByTruthContract)
 import QxFx0.Lexicon.GfMap (lookupTopicGfLexemeId)
 import QxFx0.Core.SensePlan (familySenseBundle)
 import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
+  , threeStageModulationWithTruthContract
   , threeStageModulation
   )
 import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
@@ -21,17 +24,22 @@ import QxFx0.Types
 
 buildRMP :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
 buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailable =
+  buildRMPWithTruthContract LegacyIncompleteSurface family ledger phase thread frame senseVector topic ego trace nixAvailable
+
+buildRMPWithTruthContract :: TruthContractStatus -> CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
+buildRMPWithTruthContract truthStatus family ledger phase thread frame senseVector topic ego trace nixAvailable =
   let (family', sensePlan, microPlan) = familySenseBundle family ledger phase thread senseVector
       baseStance = familyToStance family'
       baseEpistemic = familyToEpistemic family'
       (feralStance, feralEpistemic) = feralDegradation nixAvailable baseStance baseEpistemic
-      (finalStance, finalEpistemic) = threeStageModulation ego trace feralStance feralEpistemic
+      plannedTruthStatus = provisionalTruthContractStatus truthStatus family' phase thread ledger nixAvailable
+      (finalStance, finalEpistemic) = threeStageModulationWithTruthContract plannedTruthStatus ego trace feralStance feralEpistemic
       plannedTopic =
-        let topic0 = topicFromFrame frame topic
+        let topic0 = topicFromFrame thread ledger phase frame topic
             anchorTxt = unSemanticNodeId (svAnchor senseVector)
         in if T.null (T.strip topic0) then anchorTxt else topic0
-      primaryClaim = primaryClaimFromFrame frame plannedTopic
-      baseAst = claimAstFromFrame frame plannedTopic ego
+      primaryClaim = primaryClaimFromFrame plannedTruthStatus frame plannedTopic
+      baseAst = claimAstFromFrame plannedTruthStatus frame plannedTopic ego
       primaryClaimAst = fmap (applyStanceToAst feralStance) baseAst
       contrastAxis =
         let axis0 = contrastAxisFromFrame frame
@@ -50,63 +58,109 @@ buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailab
         , rmpContrastAxis = contrastAxis
         , rmpImplicationDirection = "forward"
         , rmpProvenance = BuiltClaim
-        , rmpCommitmentStrength = epistemicConfidence finalEpistemic
+        , rmpTruthContractStatus = plannedTruthStatus
+        , rmpCommitmentStrength = capCommitmentStrengthByTruthContract plannedTruthStatus (epistemicConfidence finalEpistemic)
         , rmpDepthMode = familyDefaultDepthMode family'
         , rmpSensePlan = sensePlan
         , rmpMicroPlan = microPlan
         }
 
-topicFromFrame :: InputPropositionFrame -> Text -> Text
-topicFromFrame frame fallback =
-  case propositionTypeFromText (ipfPropositionType frame) of
-    Just SelfKnowledgeQ
-      | ipfSemanticTarget frame == "user" -> "твой контекст"
-      | ipfSemanticTarget frame == "user_help" -> nonEmptyOr (ipfSemanticSubject frame) "помощь"
-      | ipfSemanticTarget frame == "self_capability" -> nonEmptyOr (ipfSemanticSubject frame) "способность"
-      | otherwise -> "моя роль"
-    Just DialogueInvitationQ ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just ConceptKnowledgeQ ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just WorldCauseQ ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just PurposeQ ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just LocationFormationQ ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just SelfStateQ ->
-      "мой текущий ход"
-    Just ComparisonPlausibilityQ ->
-      case ipfSemanticCandidates frame of
-        [] -> nonEmptyOr (ipfFocusEntity frame) fallback
-        xs -> T.intercalate " / " xs
-    Just MisunderstandingReport ->
-      "взаимопонимание"
-    Just GenerativePrompt ->
-      "мысль"
-    Just ContemplativeTopic ->
-      nonEmptyOr (ipfSemanticSubject frame) fallback
-    Just OperationalStatusQ ->
-      "работа"
-    Just OperationalCauseQ ->
-      "разбор смысла"
-    Just SystemLogicQ ->
-      "логика"
-    _ ->
-      nonEmptyOr (ipfFocusEntity frame) fallback
+provisionalTruthContractStatus :: TruthContractStatus -> CanonicalMoveFamily -> DialoguePhase -> DialogueThread -> DialogueCommitmentLedger -> Bool -> TruthContractStatus
+provisionalTruthContractStatus incoming family phase thread ledger nixAvailable
+  | family == CMRepair = NonExpansiveRecoverySurface
+  | not nixAvailable = ExplicitFallbackSurface
+  | scopeConstrained = AssembledSurfacePreserved
+  | otherwise =
+      case incoming of
+        CanonicalSurfacePreserved -> AssembledSurfacePreserved
+        LegacyIncompleteSurface -> AssembledSurfacePreserved
+        other -> other
+  where
+    scopeConstrained =
+      phase `elem` [Clarifying, Repairing, Grounding, Contesting]
+        || any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) (dclItems ledger)
+        || not (T.null (T.strip (dtPhaseScope thread)))
 
-primaryClaimFromFrame :: InputPropositionFrame -> Text -> Text
-primaryClaimFromFrame frame fallback =
+topicFromFrame :: DialogueThread -> DialogueCommitmentLedger -> DialoguePhase -> InputPropositionFrame -> Text -> Text
+topicFromFrame thread ledger phase frame fallback =
+  clampTopicToDialogueScope phase thread ledger rawTopic
+  where
+    rawTopic =
+      case propositionTypeFromText (ipfPropositionType frame) of
+        Just SelfKnowledgeQ
+          | ipfSemanticTarget frame == "user" -> "твой контекст"
+          | ipfSemanticTarget frame == "user_help" -> nonEmptyOr (ipfSemanticSubject frame) "помощь"
+          | ipfSemanticTarget frame == "self_capability" -> nonEmptyOr (ipfSemanticSubject frame) "способность"
+          | otherwise -> "моя роль"
+        Just DialogueInvitationQ ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just ConceptKnowledgeQ ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just WorldCauseQ ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just PurposeQ ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just LocationFormationQ ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just SelfStateQ ->
+          "мой текущий ход"
+        Just ComparisonPlausibilityQ ->
+          case ipfSemanticCandidates frame of
+            [] -> nonEmptyOr (ipfFocusEntity frame) fallback
+            xs -> T.intercalate " / " xs
+        Just MisunderstandingReport ->
+          "взаимопонимание"
+        Just GenerativePrompt ->
+          "мысль"
+        Just ContemplativeTopic ->
+          nonEmptyOr (ipfSemanticSubject frame) fallback
+        Just OperationalStatusQ ->
+          "работа"
+        Just OperationalCauseQ ->
+          "разбор смысла"
+        Just SystemLogicQ ->
+          "логика"
+        _ ->
+          nonEmptyOr (ipfFocusEntity frame) fallback
+
+clampTopicToDialogueScope :: DialoguePhase -> DialogueThread -> DialogueCommitmentLedger -> Text -> Text
+clampTopicToDialogueScope phase thread ledger proposedTopic =
+  let threadFocus = T.strip (dtCurrentFocus thread)
+      scopeFocus = T.strip (dtPhaseScope thread)
+      canonicalFocus = nonEmptyOr scopeFocus threadFocus
+      normalizedProposed = T.strip proposedTopic
+      inLockedPhase = phase `elem` [Clarifying, Repairing, Grounding, Contesting]
+      hasOpenLedger = any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) (dclItems ledger)
+      topicEscapesScope =
+        not (T.null canonicalFocus)
+          && not (T.null normalizedProposed)
+          && canonicalFocus /= normalizedProposed
+          && not (canonicalFocus `T.isInfixOf` normalizedProposed)
+          && not (normalizedProposed `T.isInfixOf` canonicalFocus)
+  in if T.null canonicalFocus
+       then normalizedProposed
+       else if T.null normalizedProposed
+         then canonicalFocus
+         else if (inLockedPhase || hasOpenLedger) && topicEscapesScope
+           then canonicalFocus
+           else normalizedProposed
+
+primaryClaimFromFrame :: TruthContractStatus -> InputPropositionFrame -> Text -> Text
+primaryClaimFromFrame truthStatus frame fallback =
   case propositionTypeFromText (ipfPropositionType frame) of
     Just SelfKnowledgeQ
       | ipfSemanticTarget frame == "user" ->
-          "Я знаю о тебе только то, что проявлено в текущей сессии."
+          if truthStatus == CanonicalSurfacePreserved
+            then "Я знаю о тебе только то, что проявлено в текущей сессии."
+            else "О тебе я удерживаю только то, что локально проявлено в текущей сессии."
       | ipfSemanticTarget frame == "user_help" ->
           "Я могу помочь, если удерживается локальная рамка задачи и не теряется предмет запроса."
       | ipfSemanticTarget frame == "self_capability" ->
           "Я могу работать с таким действием в пределах текущей сессии, если запрос остаётся локально определимым."
       | otherwise ->
-          "Я знаю о себе свою роль, состояние и ход текущего диалога."
+          if truthStatus == CanonicalSurfacePreserved
+            then "Я знаю о себе свою роль, состояние и ход текущего диалога."
+            else "О себе я удерживаю только локальную рабочую модель роли, состояния и хода текущего диалога."
     Just DialogueInvitationQ ->
       "Можно войти в тему через устойчивую рамку и затем углубить разговор."
     Just ConceptKnowledgeQ ->
@@ -136,9 +190,11 @@ primaryClaimFromFrame frame fallback =
     _ ->
       fallback
 
-claimAstFromFrame :: InputPropositionFrame -> Text -> EgoState -> Maybe ClaimAst
-claimAstFromFrame frame fallback ego =
-  let topicNP = mkTopicNP (nonEmptyOr (ipfSemanticSubject frame) fallback)
+claimAstFromFrame :: TruthContractStatus -> InputPropositionFrame -> Text -> EgoState -> Maybe ClaimAst
+claimAstFromFrame truthStatus frame fallback ego =
+  let subject0 = nonEmptyOr (ipfSemanticSubject frame) fallback
+      scopedSubject = if truthStatus `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] then subject0 else fallback
+      topicNP = mkTopicNP scopedSubject
       familyFallback = fallbackAstForFamily (ipfCanonicalFamily frame) topicNP
   in case propositionTypeFromText (ipfPropositionType frame) of
       Just DialogueInvitationQ ->

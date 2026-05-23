@@ -5,6 +5,7 @@ module QxFx0.Runtime.Session.UI
   ( printHelp
   , printStateSummary
   , governanceSummaryLines
+  , governanceAuthorityStatus
   ) where
 
 import Control.Exception (SomeException, finally, try)
@@ -28,6 +29,7 @@ import QxFx0.Runtime.Session.Types
   , renderRuntimeOutputMode
   )
 import QxFx0.Runtime.Wiring (withRuntimeDb)
+import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Self.Field (defaultFieldHeuristics)
 import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), renderEssenceMode)
 import QxFx0.Self.Perspective.Reduce (buildActivePerspectiveProjections)
@@ -73,7 +75,10 @@ data ReplayTraceSummary = ReplayTraceSummary
   , rtsShadowSeverity :: !(Maybe Text)
   , rtsLearningValidationStatus :: !(Maybe Text)
   , rtsFallbackReason :: !(Maybe Text)
+  , rtsAuthorityClass :: !(Maybe Text)
   , rtsTruthContractStatus :: !(Maybe Text)
+  , rtsAssemblyPath :: !(Maybe Text)
+  , rtsReplayProvenanceStatus :: !(Maybe Text)
   , rtsSurfaceProvenance :: !(Maybe Text)
   , rtsContractProvenance :: !(Maybe Text)
   , rtsDerivationTags :: ![Text]
@@ -146,6 +151,12 @@ stateSummaryLines session = do
           Just raw -> raw
           Nothing -> "n/a"
       gradientTag = maybe "n/a" renderGradientTag (latestTrace >>= (parseGradientFromEvidence . rtsRecoveryEvidence))
+      truthContractTag = maybe "n/a" id (latestTrace >>= rtsTruthContractStatus)
+      authorityClassTag = maybe "n/a" id (latestTrace >>= rtsAuthorityClass)
+      assemblyPathTag = maybe "n/a" id (latestTrace >>= rtsAssemblyPath)
+      replayProvenanceTag = maybe "n/a" id (latestTrace >>= rtsReplayProvenanceStatus)
+      surfaceProvenanceTag = maybe "n/a" id (latestTrace >>= rtsSurfaceProvenance)
+      contractProvenanceTag = maybe "n/a" id (latestTrace >>= rtsContractProvenance)
   pure
     $ [ "STATE_BEGIN"
       , "session_id: " <> sessSessionId session
@@ -167,6 +178,12 @@ stateSummaryLines session = do
       , "learning_authority_status: " <> renderEpistemicStatus (learningAuthorityStatus latestTrace)
       , "gf_lexical_authority_status: " <> renderEpistemicStatus (gfLexicalAuthorityStatus latestTrace)
       , "formal_contour_status: " <> renderEpistemicStatus (formalContourStatus latestTrace)
+      , "truth_contract: " <> truthContractTag
+      , "authority_class: " <> authorityClassTag
+      , "assembly_path: " <> assemblyPathTag
+      , "replay_provenance_status: " <> replayProvenanceTag
+      , "surface_provenance: " <> surfaceProvenanceTag
+      , "contract_provenance: " <> contractProvenanceTag
       , "r5_core_version: " <> renderValue (r5cVersionId defaultR5CoreProfile)
       , "r5_policy_version: " <> renderValue (r5pVersionId defaultR5PolicyProfile)
       , "r5_policy_authority_status: " <> renderEpistemicStatus r5PolicyAuthorityStatus
@@ -224,11 +241,12 @@ renderGovernedSubject = T.pack . show
 
 governanceAuthorityStatus :: SystemState -> Text -> EpistemicStatus
 governanceAuthorityStatus ss rebuildStatus =
-  case (ssGovernanceRuntimeFault ss, rebuildStatus) of
-    (Just _, _) -> EpstNonAuthoritative
-    (Nothing, "ok") -> EpstAuthoritative
-    (Nothing, "mismatch") -> EpstDegraded
-    (Nothing, _) -> EpstAdvisory
+  case (truthContractIsAuthoritative (ssTruthContractStatus ss), ssGovernanceRuntimeFault ss, rebuildStatus) of
+    (False, _, _) -> EpstNonAuthoritative
+    (True, Just _, _) -> EpstNonAuthoritative
+    (True, Nothing, "ok") -> EpstAuthoritative
+    (True, Nothing, "mismatch") -> EpstDegraded
+    (True, Nothing, _) -> EpstAdvisory
 
 learningAuthorityStatus :: Maybe ReplayTraceSummary -> EpistemicStatus
 learningAuthorityStatus latestTrace =
@@ -240,17 +258,24 @@ learningAuthorityStatus latestTrace =
 
 gfLexicalAuthorityStatus :: Maybe ReplayTraceSummary -> EpistemicStatus
 gfLexicalAuthorityStatus latestTrace =
-  case latestTrace >>= rtsTruthContractStatus of
-    Just "canonical_surface_preserved" -> EpstAuthoritative
-    Just "explicit_fallback_surface" -> EpstFallback
-    Just "non_expansive_recovery_surface" -> EpstDegraded
-    _ -> case latestTrace >>= rtsFallbackReason of
-      Nothing -> EpstAuthoritative
-      Just reason
-        | "gf_" `T.isPrefixOf` reason -> EpstFallback
-        | "en_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
-        | "ru_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
-        | otherwise -> EpstAdvisory
+  case latestTrace >>= rtsReplayProvenanceStatus of
+    Just "ReplayProvenanceLegacyIncomplete" -> EpstNonAuthoritative
+    _ -> case latestTrace >>= rtsTruthContractStatus of
+      Just "CanonicalSurfacePreserved" -> EpstAuthoritative
+      Just "AssembledSurfacePreserved" -> EpstAdvisory
+      Just "CompatibilityShimSurface" -> EpstNonAuthoritative
+      Just "DefaultedSurface" -> EpstNonAuthoritative
+      Just "GeneratedArtifactSurface" -> EpstNonAuthoritative
+      Just "LegacyIncompleteSurface" -> EpstNonAuthoritative
+      Just "ExplicitFallbackSurface" -> EpstFallback
+      Just "NonExpansiveRecoverySurface" -> EpstDegraded
+      _ -> case latestTrace >>= rtsFallbackReason of
+        Nothing -> EpstAdvisory
+        Just reason
+          | "gf_" `T.isPrefixOf` reason -> EpstFallback
+          | "en_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
+          | "ru_unstructured_fallback" `T.isPrefixOf` reason -> EpstFallback
+          | otherwise -> EpstAdvisory
 
 formalContourStatus :: Maybe ReplayTraceSummary -> EpistemicStatus
 formalContourStatus latestTrace =
@@ -309,7 +334,13 @@ loadLatestReplayTrace session = do
               evidence = decodeStringArrayField "trcRecoveryEvidence" obj
               learningValidationStatus = decodeScalarField "trcLearningValidationStatus" obj
               fallbackReason = decodeScalarField "trcFallbackReason" obj
+              authorityClass = decodeScalarField "trcAuthorityClass" obj
               truthContractStatus = decodeScalarField "trcTruthContractStatus" obj
+              assemblyPath = decodeScalarField "trcAssemblyPath" obj
+              replayProvenanceStatus =
+                case decodeScalarField "trcReplayProvenanceStatus" obj of
+                  Just value -> Just value
+                  Nothing -> Just "ReplayProvenanceLegacyIncomplete"
               surfaceProvenance = decodeScalarField "trcSurfaceProvenance" obj
               contractProvenance = decodeScalarField "trcContractProvenance" obj
               derivationTags = decodeStringArrayField "trcDerivationTags" obj
@@ -317,13 +348,16 @@ loadLatestReplayTrace session = do
                 { rtsRecoveryCause = recoveryCause
                 , rtsRecoveryStrategy = recoveryStrategy
                 , rtsRecoveryEvidence = evidence
-                , rtsShadowSeverity = shadowSeverity
-                , rtsLearningValidationStatus = learningValidationStatus
-                , rtsFallbackReason = fallbackReason
-                , rtsTruthContractStatus = truthContractStatus
-                , rtsSurfaceProvenance = surfaceProvenance
-                , rtsContractProvenance = contractProvenance
-                , rtsDerivationTags = derivationTags
+                 , rtsShadowSeverity = shadowSeverity
+                 , rtsLearningValidationStatus = learningValidationStatus
+                 , rtsFallbackReason = fallbackReason
+                 , rtsAuthorityClass = authorityClass
+                 , rtsTruthContractStatus = truthContractStatus
+                 , rtsAssemblyPath = assemblyPath
+                 , rtsReplayProvenanceStatus = replayProvenanceStatus
+                 , rtsSurfaceProvenance = surfaceProvenance
+                 , rtsContractProvenance = contractProvenance
+                 , rtsDerivationTags = derivationTags
                 }
         _ -> Nothing
 

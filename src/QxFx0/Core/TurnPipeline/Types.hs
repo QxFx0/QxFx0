@@ -23,6 +23,7 @@ module QxFx0.Core.TurnPipeline.Types
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ExecutedTurnOutcome, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Orbital (OrbitalMemory)
 import QxFx0.Core.PrincipledCore (PrincipledMode, PressureSignal)
 import QxFx0.Core.IdentitySignal (IdentitySignal)
@@ -122,6 +123,7 @@ data TurnInput = TurnInput
   , tiDialogueThread :: !DialogueThread
   , tiDialogueCommitmentLedger :: !DialogueCommitmentLedger
   , tiDialoguePhase :: !DialoguePhase
+  , tiTruthContractStatus :: !TruthContractStatus
   , tiEssence :: !Essence
     -- ^ Phase 9: the pre-turn essence carrier, populated by
     --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source
@@ -208,6 +210,11 @@ data TurnArtifacts = TurnArtifacts
   , taRendered :: !Text
   , taSurfaceProv :: !SurfaceProvenance
   , taContractProv :: !ContractProvenance
+  , taAuthorityClass :: !AuthorityClass
+  , taTruthContractStatus :: !TruthContractStatus
+  , taAssemblyPath :: !AssemblyPath
+  , taArtifactManifest :: !ArtifactManifest
+  , taExecutedOutcome :: !ExecutedTurnOutcome
   , taDerivationTags :: ![Text]
   , taFinalRendered :: !Text
   , taClaimAst :: !(Maybe ClaimAst)

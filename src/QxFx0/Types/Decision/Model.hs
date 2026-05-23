@@ -62,7 +62,7 @@ import QxFx0.Types.Domain
   , WarrantedMoveMode(..)
   )
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
-import QxFx0.Types.Observability (ContractProvenance, ResponseStrategy)
+import QxFx0.Types.Observability (ContractProvenance, ResponseStrategy, TruthContractStatus(..))
 import QxFx0.Types.Orbital
   ( DirectiveMoveBias
   , EncounterMode
@@ -86,6 +86,7 @@ data ResponseMeaningPlan = ResponseMeaningPlan
   , rmpContrastAxis :: !Text
   , rmpImplicationDirection :: !Text
   , rmpProvenance :: !ContractProvenance
+  , rmpTruthContractStatus :: !TruthContractStatus
   , rmpCommitmentStrength :: !Double
   , rmpDepthMode :: !DepthMode
   , rmpSensePlan :: !ResponseSensePlan
@@ -108,6 +109,7 @@ instance ToJSON ResponseMeaningPlan where
     , "rmpContrastAxis" .= rmpContrastAxis rmp
     , "rmpImplicationDirection" .= rmpImplicationDirection rmp
     , "rmpProvenance" .= rmpProvenance rmp
+    , "rmpTruthContractStatus" .= rmpTruthContractStatus rmp
     , "rmpCommitmentStrength" .= rmpCommitmentStrength rmp
     , "rmpDepthMode" .= rmpDepthMode rmp
     , "rmpSensePlan" .= rmpSensePlan rmp
@@ -130,6 +132,7 @@ instance FromJSON ResponseMeaningPlan where
       <*> o .: "rmpContrastAxis"
       <*> o .: "rmpImplicationDirection"
       <*> o .: "rmpProvenance"
+      <*> o .:? "rmpTruthContractStatus" .!= LegacyIncompleteSurface
       <*> o .: "rmpCommitmentStrength"
       <*> o .: "rmpDepthMode"
       <*> o .:? "rmpSensePlan" .!= emptyResponseSensePlan
