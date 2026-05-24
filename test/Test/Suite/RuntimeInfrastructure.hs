@@ -31,6 +31,7 @@ import Data.Text.Encoding (encodeUtf8)
 
 import QxFx0.Types
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
+import QxFx0.Types.Persistence (LoadStateResult(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
   , ShadowDivergenceKind(..)
@@ -72,6 +73,7 @@ runtimeInfrastructureTests =
   , testRuntimeBootstrapAndPersistence
   , testStrictRuntimeBootstrapAndPersistence
   , testRuntimeModeAcceptsDegradedLocalAlias
+  , testBootstrapRejectsNonAuthoritativePersistedState
   , testRuntimeBootstrapUsesCanonicalSpecSeeds
   , testSemanticModeTurn
   , testShadowSnapshotIdStable
@@ -533,6 +535,21 @@ testRuntimeModeAcceptsDegradedLocalAlias = TestCase $
   withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded-local") $ do
     mode <- Runtime.resolveRuntimeMode
     assertEqual "degraded-local alias should resolve to degraded runtime" Runtime.DegradedRuntime mode
+
+testBootstrapRejectsNonAuthoritativePersistedState :: Test
+testBootstrapRejectsNonAuthoritativePersistedState = TestCase $ do
+  withRuntimeEnv "qxfx0_test_bootstrap_non_authoritative.db" $ do
+    session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative"
+    let rt = Runtime.sessRuntime session0
+        ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
+    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative"
+    case saveResult of
+      Left err -> assertFailure ("failed to persist non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    result <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "bootstrap_non_authoritative"
+    case result of
+      LoadStateCorrupt _ -> pure ()
+      other -> assertFailure ("expected non-authoritative persisted state to be rejected, got: " <> show other)
 
 testRuntimeBootstrapUsesCanonicalSpecSeeds :: Test
 testRuntimeBootstrapUsesCanonicalSpecSeeds = TestCase $ do
@@ -1093,7 +1110,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
               , trcAuthorityClass = Just AuthorityFallback
               , trcTruthContractStatus = ExplicitFallbackSurface
               , trcAssemblyPath = Just TemplateFallbackRoute
-              , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing "fixture_manifest")
+               , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing "fixture_manifest")
               , trcReplayProvenanceStatus = ReplayProvenanceComplete
               , trcDerivationTags = []
               , trcSalienceDriver = "default"
@@ -1447,7 +1464,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
               , trcAuthorityClass = Just AuthorityFallback
               , trcTruthContractStatus = ExplicitFallbackSurface
               , trcAssemblyPath = Just TemplateFallbackRoute
-              , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing "fixture_manifest")
+               , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing "fixture_manifest")
               , trcReplayProvenanceStatus = ReplayProvenanceComplete
               , trcDerivationTags = []
               , trcSalienceDriver = "default"

@@ -563,8 +563,10 @@ deriveArtifactManifest renderStatic artifact assemblyPath authorityClass =
     ArtifactManifest
       { amPgfPath = Nothing
       , amPgfHash = Just ("route_manifest:" <> T.pack (show assemblyPath) <> "|" <> T.pack (show authorityClass) <> "|" <> fromMaybe "" (draLinearizationLang artifact) <> "|" <> T.intercalate "," (draDerivationTags artifact))
+      , amPgfSourceManifestHash = Just "route_source_manifest:local"
       , amGeneratedInputLexiconHash = Just (inputGeneratedLexiconProvenanceTag <> ":required")
       , amGfMapHash = Just (gfMapProvenanceTag <> ":required")
+      , amToolchainIdentity = Just "render-route:local"
       , amToolchainMarker =
           "route=" <> T.pack (show assemblyPath)
             <> maybe "" (";lang=" <>) (draLinearizationLang artifact)

@@ -27,6 +27,7 @@ PASS=0
 FAIL=0
 SKIP=0
 REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
+VERIFY_STRICT_RUNTIME="${QXFX0_VERIFY_STRICT_RUNTIME:-1}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
 ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 RUN_SLOW_TESTS="${QXFX0_RUN_SLOW_TESTS:-auto}"
@@ -84,6 +85,10 @@ seed_release_cabal_home
 
 if [ "$REQUIRE_STRICT_RUNTIME" != "1" ] && [ -n "${QXFX0_RUNTIME_MODE:-}" ]; then
     SMOKE_RUNTIME_MODE="${QXFX0_RUNTIME_MODE}"
+fi
+
+if [ "$VERIFY_STRICT_RUNTIME" = "1" ] && [ "$REQUIRE_STRICT_RUNTIME" != "1" ]; then
+    REQUIRE_STRICT_RUNTIME=1
 fi
 
 step_pass() {
@@ -551,6 +556,18 @@ if [ -x "$GEN_CHECK" ]; then
     fi
 else
     step_skip "generated artifact checker not found"
+fi
+
+INPUT_LEXICON_CHECK="$ROOT/scripts/check_input_lexicon.py"
+if [ -x "$INPUT_LEXICON_CHECK" ]; then
+    step_info "Running input lexicon deep check..."
+    if python3 "$INPUT_LEXICON_CHECK" >/dev/null; then
+        step_info "Input lexicon deep check: OK"
+    else
+        step_fail "input lexicon deep check failed"
+    fi
+else
+    step_skip "input lexicon deep checker not found"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════

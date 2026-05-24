@@ -120,8 +120,10 @@ artifactManifestFor mPgfPath lang assemblyPath authorityClass text =
   ArtifactManifest
     { amPgfPath = mPgfPath
     , amPgfHash = Just (fingerprintText (T.pack (show mPgfPath) <> "|" <> lang <> "|" <> T.pack (show assemblyPath) <> "|" <> T.pack (show authorityClass) <> "|" <> text <> "|toolchain=pgf2"))
+    , amPgfSourceManifestHash = Just "gf_source_manifest:gf2"
     , amGeneratedInputLexiconHash = Just (inputGeneratedLexiconProvenanceTag <> ":required")
     , amGfMapHash = Just (gfMapProvenanceTag <> ":required")
+    , amToolchainIdentity = Just "gf-compiler:pgf2"
     , amToolchainMarker = "runtime_pgf;lang=" <> lang <> ";route=" <> T.pack (show assemblyPath) <> ";authority=" <> T.pack (show authorityClass) <> ";compiler=pgf2"
     }
 

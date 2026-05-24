@@ -153,7 +153,7 @@ bootstrapSession quiet sessionId = do
           then pure (FreshOrigin, freshState)
           else pure (RestoredOrigin, ss
             { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
-            , ssMorphology = mergeMorphology (ssMorphology ss) morphology
+            , ssMorphology = mergeMorphology morphology (ssMorphology ss)
             , ssIdentity = (ssIdentity ss)
               { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
               }
@@ -182,14 +182,14 @@ bootstrapSession quiet sessionId = do
     }
 
 -- | Merge persisted morphology with resource-loaded morphology.
--- Persisted forms take precedence (union-left) so that learned
--- surface→lemma mappings survive across sessions.
+-- Resource morphology takes precedence; persisted morphology may fill
+-- only gaps and must not outrun the current provenance boundary.
 mergeMorphology :: MorphologyData -> MorphologyData -> MorphologyData
-mergeMorphology persisted resource = MorphologyData
-  { mdPrepositional = M.union (mdPrepositional persisted) (mdPrepositional resource)
-  , mdGenitive      = M.union (mdGenitive persisted)      (mdGenitive resource)
-  , mdNominative    = M.union (mdNominative persisted)    (mdNominative resource)
-  , mdFormsBySurface = M.union (mdFormsBySurface persisted) (mdFormsBySurface resource)
+mergeMorphology resource persisted = MorphologyData
+  { mdPrepositional = M.union (mdPrepositional resource) (mdPrepositional persisted)
+  , mdGenitive      = M.union (mdGenitive resource)      (mdGenitive persisted)
+  , mdNominative    = M.union (mdNominative resource)    (mdNominative persisted)
+  , mdFormsBySurface = M.union (mdFormsBySurface resource) (mdFormsBySurface persisted)
   }
 
 withBootstrappedSession :: Bool -> Text -> (Session -> IO a) -> IO a

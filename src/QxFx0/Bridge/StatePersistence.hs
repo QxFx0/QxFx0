@@ -17,7 +17,7 @@ import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
 import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
-import QxFx0.Types.Observability (AuthorityClass(..))
+import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
 import QxFx0.Types.Persistence
   ( PersistenceDiagnostic(..)
   , PersistenceStage(..)
@@ -40,7 +40,6 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
-import QxFx0.Core.TruthContract (normalizedReplayProvenanceStatus)
 import QxFx0.ExceptionPolicy (tryQxFx0, throwQxFx0, QxFx0Exception(..))
 import Control.Exception (finally, mask, onException)
 import Control.Monad (when)
@@ -159,9 +158,12 @@ loadState withDb sessionId = withDb $ \db -> do
   case mBlob of
     Just blob ->
       case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of
-        Right ss -> do
-          logPersistenceCounts "post_load" ss
-          pure (LoadStateRestored ss)
+        Right ss ->
+          if persistedTruthIsAuthoritative (ssTruthContractStatus ss)
+            then do
+              logPersistenceCounts "post_load" ss
+              pure (LoadStateRestored ss)
+            else pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["non_authoritative_persisted_state"]])
         Left _ -> pure (LoadStateCorrupt (PdCorruptDecode : stateBlobDiagnostics blob))
     Nothing -> pure LoadStateMissing
 
@@ -201,7 +203,7 @@ persistTurnQuality db sessionId p = do
       replayTrace =
         replayTrace0
           { trcReplayProvenanceStatus =
-              normalizedReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority
+              normalizeReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority
           }
       replayTraceJson = TE.decodeUtf8With lenientDecode . BL.toStrict . Aeson.encode $ replayTrace
   ts <- prepareTx db "turn_quality" sql
@@ -292,3 +294,13 @@ diagnoseRollback StageTxBegin _ = PdTransactionBeginFailed
 diagnoseRollback StageTxCommit _ = PdTransactionCommitFailed
 diagnoseRollback StageTxRollback _ = PdTransactionRollbackFailed
 diagnoseRollback stage mMsg = PdRollbackFailed stage Nothing mMsg
+
+persistedTruthIsAuthoritative :: TruthContractStatus -> Bool
+persistedTruthIsAuthoritative CanonicalSurfacePreserved = True
+persistedTruthIsAuthoritative AssembledSurfacePreserved = True
+persistedTruthIsAuthoritative _ = False
+
+normalizeReplayProvenanceStatus :: ReplayProvenanceStatus -> AuthorityClass -> ReplayProvenanceStatus
+normalizeReplayProvenanceStatus replayStatus authority
+  | authority `elem` [AuthorityGeneratedArtifact, AuthorityLegacyIncomplete] = ReplayProvenanceLegacyIncomplete
+  | otherwise = replayStatus

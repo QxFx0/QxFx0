@@ -53,6 +53,9 @@ if ! rg -n 'inputGeneratedLexiconAuthorityClass\s*=\s*AuthorityGeneratedArtifact
   echo "generated-artifact gate failed: generated input lexicon authority class drifted" >&2
   exit 1
 fi
+
+# 4d) Deep input-lexicon artifact consistency must pass in the main gate.
+python3 "$ROOT/scripts/check_input_lexicon.py" >/dev/null
 if ! rg -n 'inputGeneratedLexiconProvenanceTag\s*=\s*"generated_input_lexicon_compat"' "$ROOT/src/QxFx0/Semantic/Input/Lexicon.hs" >/dev/null 2>&1; then
   echo "generated-artifact gate failed: generated input lexicon provenance tag drifted" >&2
   exit 1

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REQUIRE_GF="${QXFX0_REQUIRE_GF:-1}"
+GF_TOOLCHAIN_ID="${QXFX0_GF_TOOLCHAIN_ID:-gf2}"
 SYNTAX_CONCRETE="$ROOT/spec/gf/QxFx0SyntaxRus.gf"
 OUT_PGF="$ROOT/spec/gf/QxFx0Syntax.pgf"
 MANIFEST_FILE="$ROOT/spec/gf/QxFx0Syntax.pgf.manifest"
@@ -33,7 +34,7 @@ needs_compile() {
     return 0
   fi
   local expected
-  expected="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):gf2"
+  expected="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):$GF_TOOLCHAIN_ID"
   local recorded
   recorded="$(cut -d' ' -f1 "$manifest" 2>/dev/null || true)"
   [ "$expected" != "$recorded" ]
@@ -80,7 +81,7 @@ if [ ! -f "$OUT_PGF" ]; then
   exit 1
 fi
 
-manifest_hash="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):gf2"
+manifest_hash="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):$GF_TOOLCHAIN_ID"
 printf '%s  %s\n' "$manifest_hash" "$OUT_PGF" > "$MANIFEST_FILE"
 
 echo "OK: compiled $OUT_PGF"

@@ -136,8 +136,10 @@ instance FromJSON ReplayProvenanceStatus where parseJSON = genericParseJSON defa
 data ArtifactManifest = ArtifactManifest
   { amPgfPath :: !(Maybe FilePath)
   , amPgfHash :: !(Maybe Text)
+  , amPgfSourceManifestHash :: !(Maybe Text)
   , amGeneratedInputLexiconHash :: !(Maybe Text)
   , amGfMapHash :: !(Maybe Text)
+  , amToolchainIdentity :: !(Maybe Text)
   , amToolchainMarker :: !Text
   } deriving stock (Eq, Show, Read, Generic)
     deriving anyclass (NFData)

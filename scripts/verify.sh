@@ -20,6 +20,7 @@ if command -v python3 >/dev/null 2>&1; then
   HOST_PYTHON_SITE_PACKAGES="$(python3 -c "import site; print(site.getusersitepackages())" 2>/dev/null || true)"
 fi
 REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
+VERIFY_STRICT_RUNTIME="${QXFX0_VERIFY_STRICT_RUNTIME:-1}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
 ENFORCE_STRICT_GF_GATE="${QXFX0_ENFORCE_STRICT_GF_GATE:-0}"
 ENFORCE_HADDOCK_GATE="${QXFX0_ENFORCE_HADDOCK_GATE:-1}"
@@ -374,7 +375,7 @@ else
 fi
 
 echo "[5/10] Strict runtime readiness ..."
-if [ "$REQUIRE_STRICT_RUNTIME" = "1" ]; then
+if [ "$REQUIRE_STRICT_RUNTIME" = "1" ] || [ "$VERIFY_STRICT_RUNTIME" = "1" ]; then
   if STRICT_READY_OUT="$(QXFX0_DB="$VERIFY_HOME/strict-runtime.db" QXFX0_RUNTIME_MODE=strict QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" run_cabal_check "cabal run -v0 qxfx0-main -- --runtime-ready 2>&1")"; then
     if READY_CHECK_OUT="$(validate_runtime_ready_json "$STRICT_READY_OUT" 2>&1)"; then
       echo "  OK"
@@ -390,7 +391,7 @@ if [ "$REQUIRE_STRICT_RUNTIME" = "1" ]; then
     exit 1
   fi
 else
-  echo "  SKIP (QXFX0_REQUIRE_STRICT_RUNTIME=0)"
+  echo "  SKIP (strict runtime verification explicitly disabled)"
 fi
 
 echo "[6/10] Compiler warnings ..."
@@ -545,6 +546,7 @@ required_fields = [
     "trcReplayProvenanceStatus",
     "trcPreSafetyRenderedRaw",
     "trcRenderedAfterRebind",
+    "trcArtifactManifest",
 ]
 missing = [name for name in required_fields if name not in trace]
 if missing:
