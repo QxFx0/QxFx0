@@ -22,9 +22,11 @@ import QxFx0.Bridge.SQLite
   , withDB
   )
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
+import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, stepOrFail)
 import QxFx0.Types.Persistence (LoadStateResult(..), renderPersistenceDiagnostics)
 import QxFx0.Bridge.StatePersistence (loadState)
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0, tryIO, tryQxFx0)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), renderQxFx0ExceptionForLog, throwQxFx0, tryIO, tryQxFx0)
+import QxFx0.Governance.Replay (rebuildGovernedSystemState)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkInitialBlanket, renderBlanketViolations)
 import QxFx0.Resources
@@ -85,23 +87,25 @@ bootstrapSession quiet sessionId = do
           pure ()
   schemaInitResult <- try (withDB dbPath $ \db -> do
     ensureSchemaMigrations db
-    mStmt <- NSQL.prepare db "INSERT OR IGNORE INTO runtime_sessions(id, agency, tension, status) VALUES(?, 0.5, 0.3, 'active')"
-    case mStmt of
-      Left err -> throwQxFx0 (SQLiteError err)
-      Right stmt -> do
-        _ <- NSQL.bindText stmt 1 sessionId
-        _ <- NSQL.step stmt
-        NSQL.finalize stmt
-        pure ()
+    ts <- prepareTx db "bootstrap_runtime_session" "INSERT OR IGNORE INTO runtime_sessions(id, agency, tension, status) VALUES(?, 0.5, 0.3, 'active')"
+    bindTextOrFail ts 1 sessionId
+    stepOrFail ts
+    pure ()
     ) :: IO (Either QxFx0Exception (Either Text ()))
   case schemaInitResult of
-    Left err -> throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> T.pack (show err))
-    Right (Left err) -> throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> err)
+    Left err -> do
+      hPutStrLn stderr $ "[runtime_init_debug] schema_init_qxfx0_exception db=" <> dbPath <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog err)
+      throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> renderQxFx0ExceptionForLog err)
+    Right (Left err) -> do
+      hPutStrLn stderr $ "[runtime_init_debug] schema_init_sql_error db=" <> dbPath <> " detail=" <> T.unpack err
+      throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> err)
     Right (Right _) -> pure ()
 
   morphologyResult <- tryQxFx0 loadMorphologyData
   morphology <- case morphologyResult of
-    Left err -> throwQxFx0 (RuntimeInitError $ "Cannot load morphology data: " <> T.pack (show err))
+    Left err -> do
+      hPutStrLn stderr $ "[runtime_init_debug] morphology_load_failed detail=" <> T.unpack (renderQxFx0ExceptionForLog err)
+      throwQxFx0 (RuntimeInitError $ "Cannot load morphology data: " <> renderQxFx0ExceptionForLog err)
     Right md -> pure md
   runtime <- initRuntimeContext dbPath
   health <- checkHealth runtime
@@ -137,6 +141,9 @@ bootstrapSession quiet sessionId = do
         pure (FreshOrigin, freshState)
       Right (LoadStateCorrupt diagnostics) -> do
         let rendered = renderPersistenceDiagnostics diagnostics
+        unless quiet $
+          hPutStrLn stderr $
+            "[runtime_init_debug] persisted_state_corrupt session=" <> T.unpack sessionId <> " detail=" <> T.unpack rendered
         case runtimeMode of
           StrictRuntime ->
             throwQxFx0 (RuntimeInitError ("Persisted state is corrupt: " <> rendered))
@@ -151,17 +158,28 @@ bootstrapSession quiet sessionId = do
       Right (LoadStateRestored ss) ->
         if ssTurnCount ss == 0 && null (ssHistory ss)
           then pure (FreshOrigin, freshState)
-          else pure (RestoredOrigin, ss
-            { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
-            , ssMorphology = mergeMorphology morphology (ssMorphology ss)
-            , ssIdentity = (ssIdentity ss)
-              { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
-              }
-            , ssSemantic = (ssSemantic ss)
-              { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
-              }
-            , ssSessionId = sessionId
-            })
+          else
+            let restored0 = ss
+                  { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
+                  , ssMorphology = mergeMorphology morphology (ssMorphology ss)
+                  , ssIdentity = (ssIdentity ss)
+                    { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
+                    }
+                  , ssSemantic = (ssSemantic ss)
+                    { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
+                    }
+                  , ssSessionId = sessionId
+                  }
+            in case rebuildGovernedSystemState restored0 of
+                 Right restored1 ->
+                   pure
+                     ( RestoredOrigin
+                     , restored1
+                     )
+                 Left err -> pure
+                    ( RecoveredCorruptOrigin
+                    , freshState { ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap err) }
+                    )
   -- Phase 1: verify that the freshly bootstrapped state forms a
   -- structurally coherent self (see docs/THEORY.md §4.1 and
   -- docs/adr/0007-dual-mode-conatus.md). Failure here is categorical:

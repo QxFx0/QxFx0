@@ -12,7 +12,13 @@ module QxFx0.Bridge.StatePersistence
   , renderPersistenceDiagnostics
   ) where
 
-import QxFx0.Types.State (SystemState(..), ssTurnCount)
+import QxFx0.Types.State
+  ( StatePersistenceSnapshot(..)
+  , SystemState(..)
+  , preparePersistenceSnapshot
+  , runtimeContinuationState
+  , ssTurnCount
+  )
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
@@ -29,19 +35,21 @@ import QxFx0.Learning.Calibration (CalibrationLog(..))
 import QxFx0.Learning.Guardrails (GuardrailState(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
-import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, bindIntOrFail, bindDoubleOrFail, stepOrFail)
+import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, bindIntOrFail, bindInt64OrFail, bindDoubleOrFail, stepOrFail)
+import QxFx0.Governance.Replay (rebuildGovernedSystemState)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
-import QxFx0.ExceptionPolicy (tryQxFx0, throwQxFx0, QxFx0Exception(..))
+import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
 import Control.Exception (finally, mask, onException)
+import Control.Exception (try)
+import Data.Text.Encoding.Error (UnicodeException)
 import Control.Monad (when)
 import System.IO (hPutStrLn, stderr)
 
@@ -78,24 +86,23 @@ saveState withDb ss sessionId = saveStateWithProjection withDb ss sessionId Noth
 saveStateWithProjection :: DbRunner -> SystemState -> Text -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
 saveStateWithProjection withDb ss sessionId mProjection = do
   logPersistenceCounts "pre_save" ss
-  let persistedState = ss { ssSessionId = sessionId }
+  let persistenceSnapshot = preparePersistenceSnapshot sessionId ss
+      persistedState = spsCanonicalState persistenceSnapshot
+      runtimeState = spsRuntimeContinuation persistenceSnapshot
   result <- tryQxFx0 $ withDb $ \db -> do
     withImmediateTransaction db $ do
-      let jsonBlob = TE.decodeUtf8With lenientDecode . BL.toStrict . Aeson.encode $ persistedState
       touchRuntimeSessionActivity db sessionId
-      saveKV db sessionId "__system_state__" jsonBlob
+      persistSystemBlob db sessionId persistedState
+      persistTurnArtifacts db sessionId mProjection
 
-      case mProjection of
-        Nothing -> pure ()
-        Just projection -> do
-          persistTurnQuality db sessionId projection
-          when (tqpDivergence projection) $
-            persistShadowDivergence db sessionId projection
-
-      pure persistedState
+      pure runtimeState
   case result of
-    Left (PersistenceTxError stage msg) -> pure (Left (diagnoseSave stage (Just msg)))
-    Left other -> pure (Left (PdSaveFailed StageUnknown Nothing (Just (T.pack (show other)))))
+    Left (PersistenceTxError stage msg) -> do
+      hPutStrLn stderr $ "[persistence_debug] save_tx_error session=" <> T.unpack sessionId <> " stage=" <> show stage <> " detail=" <> T.unpack msg
+      pure (Left (diagnoseSave stage (Just msg)))
+    Left other -> do
+      hPutStrLn stderr $ "[persistence_debug] save_unknown_qxfx0_exception session=" <> T.unpack sessionId <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog other)
+      pure (Left (PdSaveFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))
     Right savedSs -> pure $ Right savedSs
 
 rollbackTurnProjections :: DbRunner -> Text -> Int -> IO (Either PersistenceDiagnostic ())
@@ -106,7 +113,7 @@ rollbackTurnProjections withDb sessionId stableTurn = do
       deleteShadowDivergenceAbove db sessionId stableTurn
   case result of
     Left (PersistenceTxError stage msg) -> pure (Left (diagnoseRollback stage (Just msg)))
-    Left other -> pure (Left (PdRollbackFailed StageUnknown Nothing (Just (T.pack (show other)))))
+    Left other -> pure (Left (PdRollbackFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))
     Right () -> pure (Right ())
 
 withImmediateTransaction :: NSQL.Database -> IO a -> IO a
@@ -154,18 +161,33 @@ touchRuntimeSessionActivity db sessionId = do
 
 loadState :: DbRunner -> Text -> IO LoadStateResult
 loadState withDb sessionId = withDb $ \db -> do
-  mBlob <- loadKV db sessionId "__system_state__"
-  case mBlob of
-    Just blob ->
-      case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of
-        Right ss ->
-          if persistedTruthIsAuthoritative (ssTruthContractStatus ss)
-            then do
-              logPersistenceCounts "post_load" ss
-              pure (LoadStateRestored ss)
-            else pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["non_authoritative_persisted_state"]])
-        Left _ -> pure (LoadStateCorrupt (PdCorruptDecode : stateBlobDiagnostics blob))
-    Nothing -> pure LoadStateMissing
+  mBlobResult <- try (loadKV db sessionId "__system_state__") :: IO (Either UnicodeException (Maybe Text))
+  case mBlobResult of
+    Left err -> do
+      hPutStrLn stderr $ "[persistence_debug] load_unicode_exception session=" <> T.unpack sessionId <> " detail=" <> show err
+      pure (LoadStateCorrupt [PdCorruptDecode])
+    Right mBlob ->
+      case mBlob of
+        Just blob ->
+          case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of
+            Right ss ->
+              if persistedTruthIsAuthoritative (ssTruthContractStatus ss)
+                then do
+                  case rebuildGovernedSystemState ss of
+                    Right rebuilt -> do
+                      let restored = runtimeContinuationState sessionId rebuilt
+                      logPersistenceCounts "post_load" restored
+                      pure (LoadStateRestored restored)
+                    Left err -> do
+                      hPutStrLn stderr $ "[persistence_debug] governance_rebuild_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack err
+                      pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["governance_rebuild_failed:" <> err]])
+                else do
+                  hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
+                  pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["non_authoritative_persisted_state"]])
+            Left decodeErr -> do
+              hPutStrLn stderr $ "[persistence_debug] decode_failed session=" <> T.unpack sessionId <> " detail=" <> decodeErr
+              pure (LoadStateCorrupt (PdCorruptDecode : stateBlobDiagnostics blob))
+        Nothing -> pure LoadStateMissing
 
 stateBlobDiagnostics :: Text -> [PersistenceDiagnostic]
 stateBlobDiagnostics blob =
@@ -205,10 +227,10 @@ persistTurnQuality db sessionId p = do
           { trcReplayProvenanceStatus =
               normalizeReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority
           }
-      replayTraceJson = TE.decodeUtf8With lenientDecode . BL.toStrict . Aeson.encode $ replayTrace
+      replayTraceJson = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ replayTrace
   ts <- prepareTx db "turn_quality" sql
   bindTextOrFail ts 1 sessionId
-  bindIntOrFail ts 2 (tqpTurn p)
+  bindInt64OrFail ts 2 (fromIntegral (tqpTurn p))
   bindTextOrFail ts 3 (parserModeText (tqpParserMode p))
   bindDoubleOrFail ts 4 (tqpParserConfidence p)
   bindTextOrFail ts 5 (T.intercalate "," (tqpParserErrors p))
@@ -237,12 +259,24 @@ persistTurnQuality db sessionId p = do
   bindIntOrFail ts 28 (if tqpDivergence p then 1 else 0)
   stepOrFail ts
 
+persistSystemBlob :: NSQL.Database -> Text -> SystemState -> IO ()
+persistSystemBlob db sessionId persistedState = do
+  let jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState
+  saveKV db sessionId "__system_state__" jsonBlob
+
+persistTurnArtifacts :: NSQL.Database -> Text -> Maybe TurnProjection -> IO ()
+persistTurnArtifacts _ _ Nothing = pure ()
+persistTurnArtifacts db sessionId (Just projection) = do
+  persistTurnQuality db sessionId projection
+  when (tqpDivergence projection) $
+    persistShadowDivergence db sessionId projection
+
 persistShadowDivergence :: NSQL.Database -> Text -> TurnProjection -> IO ()
 persistShadowDivergence db sessionId p = do
   let sql = "INSERT INTO shadow_divergence_log(session_id, turn, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ts <- prepareTx db "shadow_divergence_log" sql
   bindTextOrFail ts 1 sessionId
-  bindIntOrFail ts 2 (tqpTurn p)
+  bindInt64OrFail ts 2 (fromIntegral (tqpTurn p))
   bindTextOrFail ts 3 (T.pack (show (tqpOwnerFamily p)))
   bindTextOrFail ts 4 (T.pack (show (tqpOwnerForce p)))
   bindTextOrFail ts 5 (shadowStatusText (tqpShadowStatus p))
@@ -258,7 +292,7 @@ deleteTurnQualityAbove db sessionId stableTurn = do
   let sql = "DELETE FROM turn_quality WHERE session_id = ? AND turn > ?"
   ts <- prepareTx db "delete_turn_quality_above" sql
   bindTextOrFail ts 1 sessionId
-  bindIntOrFail ts 2 stableTurn
+  bindInt64OrFail ts 2 (fromIntegral stableTurn)
   stepOrFail ts
 
 deleteShadowDivergenceAbove :: NSQL.Database -> Text -> Int -> IO ()
@@ -266,7 +300,7 @@ deleteShadowDivergenceAbove db sessionId stableTurn = do
   let sql = "DELETE FROM shadow_divergence_log WHERE session_id = ? AND turn > ?"
   ts <- prepareTx db "delete_shadow_divergence_above" sql
   bindTextOrFail ts 1 sessionId
-  bindIntOrFail ts 2 stableTurn
+  bindInt64OrFail ts 2 (fromIntegral stableTurn)
   stepOrFail ts
 
 withPreparedStatement :: NSQL.Database -> Text -> Text -> (NSQL.Statement -> IO a) -> IO a

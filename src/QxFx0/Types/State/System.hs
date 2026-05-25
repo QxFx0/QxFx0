@@ -6,6 +6,17 @@
 {-| Canonical top-level persisted system state plus compatibility accessors. -}
 module QxFx0.Types.State.System
   ( SystemState(..)
+  , PersistenceDomain(..)
+  , PersistenceDomainClass(..)
+  , StatePersistenceSnapshot(..)
+  , persistenceDomainClass
+  , persistenceDomainCanonicalFields
+  , persistenceDomainProjectionFields
+  , persistenceDomainTransientFields
+  , preparePersistenceSnapshot
+  , persistedCanonicalState
+  , runtimeContinuationState
+  , sanitizeForPersistence
   , ssHistory
   , ssRawInputHistory
   , ssTurnCount
@@ -60,9 +71,12 @@ import Data.Aeson
   , (.!=)
   , (.=)
   )
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import Control.Monad (when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -117,8 +131,12 @@ import QxFx0.Types.State.Perspective
   )
 import QxFx0.Types.State.Governance
   ( GovernanceEvent
+  , GovernanceProjection(..)
   , GovernanceRuntimeFault
+  , ProjectionMeta(..)
   , appendGovernanceEventToHistory
+  , currentProjectionVersion
+  , currentReducerVersion
   )
 import QxFx0.Types.State.Discourse
   ( DiscourseState(..)
@@ -151,6 +169,21 @@ import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
 import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
+
+data PersistenceDomain
+  = PdCoreConversation
+  | PdAdaptiveLearning
+  | PdDialogueDevelopment
+  | PdGovernanceCanonical
+  | PdGovernanceDerived
+  | PdSessionTransient
+  deriving stock (Eq, Show)
+
+data PersistenceDomainClass
+  = PdcCanonicalTruth
+  | PdcRebuildableProjection
+  | PdcRuntimeTransient
+  deriving stock (Eq, Show)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -236,6 +269,9 @@ data SystemState = SystemState
     -- ^ P4/P5 derived versioned perspective lineage projection.
     --   P5 canonical truth is 'ssGovernanceHistory'; this registry is kept
     --   as a rebuildable runtime view. Initialised to 'emptyPerspectiveRegistry'.
+  , ssGovernanceProjection :: !GovernanceProjection
+    -- ^ Rebuildable governance-wide runtime projection derived from
+    --   canonical governance history.
   , ssGovernanceHistory :: ![GovernanceEvent]
     -- ^ P5: append-only canonical governance history for high-impact
     --   governed mutations. Initialised to '[]'.
@@ -245,9 +281,16 @@ data SystemState = SystemState
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
+data StatePersistenceSnapshot = StatePersistenceSnapshot
+  { spsCanonicalState :: !SystemState
+  , spsRuntimeContinuation :: !SystemState
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
+
 instance ToJSON SystemState where
   toJSON ss = object
-    [ "history" .= dsHistory (ssDialogue ss)
+    [ "schemaVersion" .= currentSystemStateSchemaVersion
+    , "history" .= dsHistory (ssDialogue ss)
     , "rawInputHistory" .= dsRawInputHistory (ssDialogue ss)
     , "turnCount" .= dsTurnCount (ssDialogue ss)
     , "lastFamily" .= dsLastFamily (ssDialogue ss)
@@ -299,13 +342,40 @@ instance ToJSON SystemState where
         , "truthContractStatus" .= ssTruthContractStatus ss
          , "speechPolicyState" .= ssSpeechPolicyState ss
          , "beliefStore" .= ssBeliefStore ss
-        , "perspectiveRegistry" .= ssPerspectiveRegistry ss
-        , "governanceHistory" .= ssGovernanceHistory ss
-        , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
-        ]
+         , "governanceHistory" .= ssGovernanceHistory ss
+         , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
+         ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
+    schemaVersion <- o .:? "schemaVersion" .!= 1
+    let requiredTopLevelFields
+          | schemaVersion >= currentSystemStateSchemaVersion =
+              [ "morphology"
+              , "salienceWeights"
+              , "fieldHeuristics"
+              , "learningNeedState"
+              , "knowledgeTree"
+              , "truthContractStatus"
+              , "dialogueOutcomeLearning"
+              , "dialogueThread"
+              , "dialogueCommitmentLedger"
+              , "dialoguePhase"
+              , "speechPolicyState"
+              , "beliefStore"
+              , "governanceHistory"
+              ]
+          | otherwise =
+              [ "morphology"
+              , "salienceWeights"
+              , "fieldHeuristics"
+              , "learningNeedState"
+              , "knowledgeTree"
+              , "truthContractStatus"
+              ]
+        missingTopLevel = filter (\k -> not (KM.member (AK.fromText k) o)) requiredTopLevelFields
+    when (not (null missingTopLevel)) $
+      fail ("missing required top-level fields: " <> show missingTopLevel)
     ds <- DialogueState
       <$> o .: "history"
       <*> o .: "rawInputHistory"
@@ -342,30 +412,31 @@ instance FromJSON SystemState where
     SystemState ds ids sem
       <$> o .: "sessionId"
       <*> (parseDialogueOutputMode <$> o .: "outputMode")
-      <*> o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty
+      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "morphology" else o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty)
       <*> o .: "observability"
       <*> o .:? "essence" .!= emptyEssence
-      <*> o .:? "salienceWeights" .!= defaultSalienceWeights
-      <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
+      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "salienceWeights" else o .:? "salienceWeights" .!= defaultSalienceWeights)
+      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "fieldHeuristics" else o .:? "fieldHeuristics" .!= defaultFieldHeuristics)
        <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
        <*> o .:? "provisionalAtoms" .!= []
-       <*> o .:? "learningNeedState" .!= emptyLearningNeedState
+       <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "learningNeedState" else o .:? "learningNeedState" .!= emptyLearningNeedState)
        <*> o .:? "guardrailState" .!= emptyGuardrailState
        <*> o .:? "calibrationLog" .!= emptyCalibrationLog
-         <*> o .:? "knowledgeTree" .!= emptyKnowledgeTree
-         <*> o .:? "toolReliability" .!= M.empty
-         <*> o .:? "calibrationSnapshots" .!= []
-         <*> o .:? "adaptiveMutationLog" .!= []
-          <*> o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState
-          <*> o .:? "dialogueThread" .!= emptyDialogueThread
-          <*> o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger
-          <*> o .:? "dialoguePhase" .!= Exploring
-          <*> o .:? "truthContractStatus" .!= LegacyIncompleteSurface
-          <*> o .:? "speechPolicyState" .!= emptySpeechPolicyState
-          <*> o .:? "beliefStore" .!= emptyBeliefStore
-        <*> o .:? "perspectiveRegistry" .!= emptyPerspectiveRegistry
-        <*> o .:? "governanceHistory" .!= []
-        <*> o .:? "governanceRuntimeFault" .!= Nothing
+          <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "knowledgeTree" else o .:? "knowledgeTree" .!= emptyKnowledgeTree)
+          <*> o .:? "toolReliability" .!= M.empty
+          <*> o .:? "calibrationSnapshots" .!= []
+          <*> o .:? "adaptiveMutationLog" .!= []
+           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueOutcomeLearning" else o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState)
+           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueThread" else o .:? "dialogueThread" .!= emptyDialogueThread)
+           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueCommitmentLedger" else o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger)
+           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialoguePhase" else o .:? "dialoguePhase" .!= Exploring)
+            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "truthContractStatus" else o .:? "truthContractStatus" .!= LegacyIncompleteSurface)
+            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "speechPolicyState" else o .:? "speechPolicyState" .!= emptySpeechPolicyState)
+            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "beliefStore" else o .:? "beliefStore" .!= emptyBeliefStore)
+            <*> pure emptyPerspectiveRegistry
+            <*> pure emptyGovernanceProjection
+            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "governanceHistory" else o .:? "governanceHistory" .!= [])
+            <*> o .:? "governanceRuntimeFault" .!= Nothing
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -486,6 +557,9 @@ ssRecentNarrativeSuccess = dsRecentNarrativeSuccess . ssDialogue
 adaptiveMutationLogLimit :: Int
 adaptiveMutationLogLimit = 100
 
+currentSystemStateSchemaVersion :: Int
+currentSystemStateSchemaVersion = 2
+
 appendAdaptiveMutationRecord :: AdaptiveMutationRecord -> SystemState -> SystemState
 appendAdaptiveMutationRecord record ss =
   ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (record : ssAdaptiveMutationLog ss) }
@@ -494,14 +568,101 @@ appendAdaptiveMutationRecords :: [AdaptiveMutationRecord] -> SystemState -> Syst
 appendAdaptiveMutationRecords records ss =
   ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (records ++ ssAdaptiveMutationLog ss) }
 
-commitGovernedPerspectiveProjection :: PerspectiveRegistry -> AdaptiveMutationRecord -> SystemState -> SystemState
-commitGovernedPerspectiveProjection registry record ss =
-  appendAdaptiveMutationRecord record ss { ssPerspectiveRegistry = registry }
+commitGovernedPerspectiveProjection :: GovernanceProjection -> AdaptiveMutationRecord -> SystemState -> SystemState
+commitGovernedPerspectiveProjection projection record ss =
+  appendAdaptiveMutationRecord record ss
+    { ssPerspectiveRegistry = gpPerspectiveRegistry projection
+    , ssGovernanceProjection = projection
+    }
 
 appendGovernanceEventRecord :: GovernanceEvent -> SystemState -> Either Text SystemState
 appendGovernanceEventRecord event ss = do
   history <- appendGovernanceEventToHistory event (ssGovernanceHistory ss)
   pure ss { ssGovernanceHistory = history }
+
+persistenceDomainClass :: PersistenceDomain -> PersistenceDomainClass
+persistenceDomainClass domain =
+  case domain of
+    PdGovernanceDerived -> PdcRebuildableProjection
+    PdSessionTransient -> PdcRuntimeTransient
+    _ -> PdcCanonicalTruth
+
+persistenceDomainCanonicalFields :: PersistenceDomain -> [Text]
+persistenceDomainCanonicalFields domain = case domain of
+  PdCoreConversation ->
+    [ "ssDialogue"
+    , "ssIdentity"
+    , "ssSemantic"
+    , "ssSessionId"
+    , "ssMorphology"
+    , "ssObservability"
+    , "ssEssence"
+    , "ssTruthContractStatus"
+    ]
+  PdAdaptiveLearning ->
+    [ "ssSalienceWeights"
+    , "ssFieldHeuristics"
+    , "ssShadowVetoState"
+    , "ssProvisionalAtoms"
+    , "ssLearningNeedState"
+    , "ssGuardrailState"
+    , "ssCalibrationLog"
+    , "ssKnowledgeTree"
+    , "ssToolReliability"
+    , "ssCalibrationSnapshots"
+    , "ssAdaptiveMutationLog"
+    ]
+  PdDialogueDevelopment ->
+    [ "ssDialogueOutcomeLearning"
+    , "ssDialogueThread"
+    , "ssDialogueCommitmentLedger"
+    , "ssDialoguePhase"
+    , "ssSpeechPolicyState"
+    , "ssBeliefStore"
+    ]
+  PdGovernanceCanonical ->
+    [ "ssGovernanceHistory" ]
+  _ -> []
+
+persistenceDomainProjectionFields :: PersistenceDomain -> [Text]
+persistenceDomainProjectionFields domain = case domain of
+  PdGovernanceDerived ->
+    [ "ssPerspectiveRegistry"
+    , "ssGovernanceProjection"
+    ]
+  _ -> []
+
+persistenceDomainTransientFields :: PersistenceDomain -> [Text]
+persistenceDomainTransientFields domain = case domain of
+  PdSessionTransient ->
+    [ "ssGovernanceRuntimeFault"
+    , "ssOutputMode"
+    ]
+  _ -> []
+
+persistedCanonicalState :: Text -> SystemState -> SystemState
+persistedCanonicalState sessionId ss =
+  ss
+    { ssSessionId = sessionId
+    , ssOutputMode = DialogueOutput
+    , ssPerspectiveRegistry = emptyPerspectiveRegistry
+    , ssGovernanceProjection = emptyGovernanceProjection
+    , ssGovernanceRuntimeFault = Nothing
+    }
+
+runtimeContinuationState :: Text -> SystemState -> SystemState
+runtimeContinuationState sessionId ss =
+  ss { ssSessionId = sessionId }
+
+preparePersistenceSnapshot :: Text -> SystemState -> StatePersistenceSnapshot
+preparePersistenceSnapshot sessionId ss =
+  StatePersistenceSnapshot
+    { spsCanonicalState = persistedCanonicalState sessionId ss
+    , spsRuntimeContinuation = runtimeContinuationState sessionId ss
+    }
+
+sanitizeForPersistence :: Text -> SystemState -> SystemState
+sanitizeForPersistence = persistedCanonicalState
 
 emptySystemState :: SystemState
 emptySystemState = SystemState
@@ -532,6 +693,20 @@ emptySystemState = SystemState
   , ssSpeechPolicyState = emptySpeechPolicyState
   , ssBeliefStore = emptyBeliefStore
   , ssPerspectiveRegistry = emptyPerspectiveRegistry
+  , ssGovernanceProjection = emptyGovernanceProjection
   , ssGovernanceHistory = []
   , ssGovernanceRuntimeFault = Nothing
+  }
+
+emptyGovernanceProjection :: GovernanceProjection
+emptyGovernanceProjection = GovernanceProjection
+  { gpMeta = ProjectionMeta
+      { pmProjectionVersion = currentProjectionVersion
+      , pmReducerVersion = currentReducerVersion
+      , pmSnapshotTurn = Just 0
+      }
+  , gpPerspectiveRegistry = emptyPerspectiveRegistry
+  , gpActivePerspectiveProjections = []
+  , gpGovernedRefs = []
+  , gpProjectionChecksum = "governance_projection_empty"
   }
