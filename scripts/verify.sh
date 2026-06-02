@@ -5,6 +5,7 @@ set -euo pipefail
 # Exit codes: 0 = PASS, 1 = FAIL, 2 = PASS_WITH_WARNINGS
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib/cabal_env.sh"
 HOST_HOME="${HOME:-}"
 HOST_CABAL_DIR="${CABAL_DIR:-${HOST_HOME}/.cabal}"
 HOST_CABAL_CONFIG="${HOST_CABAL_DIR}/config"
@@ -16,9 +17,7 @@ SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
 EXIT_CODE=0
 HOST_PYTHON_SITE_PACKAGES=""
-if command -v python3 >/dev/null 2>&1; then
-  HOST_PYTHON_SITE_PACKAGES="$(python3 -c "import site; print(site.getusersitepackages())" 2>/dev/null || true)"
-fi
+setup_shared_python_site_packages HOST_PYTHON_SITE_PACKAGES
 REQUIRE_STRICT_RUNTIME="${QXFX0_REQUIRE_STRICT_RUNTIME:-0}"
 VERIFY_STRICT_RUNTIME="${QXFX0_VERIFY_STRICT_RUNTIME:-1}"
 STRICT_EMBEDDING_BACKEND="${QXFX0_STRICT_EMBEDDING_BACKEND:-local-deterministic}"
@@ -34,34 +33,7 @@ VERIFY_CABAL_DIR="$VERIFY_HOME/.cabal"
 
 mkdir -p "$VERIFY_CACHE" "$VERIFY_CONFIG" "$VERIFY_STATE" "$VERIFY_CABAL_DIR" "$SHARED_CABAL_STORE" "$SHARED_CABAL_LOGS" "$(dirname "$CABAL_LOCK_FILE")"
 
-seed_verify_cabal_home() {
-  local host_config="$HOST_CABAL_CONFIG"
-  local host_packages="$HOST_CABAL_DIR/packages"
-
-  if [ ! -f "$host_config" ]; then
-    host_config="$HOST_XDG_CONFIG_HOME/cabal/config"
-  fi
-
-  if [ -f "$host_config" ] && [ ! -f "$VERIFY_CABAL_DIR/config" ]; then
-    cp "$host_config" "$VERIFY_CABAL_DIR/config"
-  fi
-  if [ ! -f "$VERIFY_CABAL_DIR/config" ]; then
-    : >"$VERIFY_CABAL_DIR/config"
-  fi
-  {
-    printf '\nstore-dir: %s\n' "$SHARED_CABAL_STORE"
-    printf 'logs-dir: %s\n' "$SHARED_CABAL_LOGS"
-    printf 'build-summary: %s/build.log\n' "$SHARED_CABAL_LOGS"
-    if [ -d "$host_packages" ]; then
-      printf 'remote-repo-cache: %s\n' "$host_packages"
-    fi
-  } >>"$VERIFY_CABAL_DIR/config"
-  if [ -d "$host_packages" ] && [ ! -e "$VERIFY_CABAL_DIR/packages" ]; then
-    ln -s "$host_packages" "$VERIFY_CABAL_DIR/packages"
-  fi
-}
-
-seed_verify_cabal_home
+seed_shared_cabal_home "$VERIFY_CABAL_DIR" "$SHARED_CABAL_STORE" "$SHARED_CABAL_LOGS" "$HOST_CABAL_DIR" "$HOST_XDG_CONFIG_HOME"
 
 cleanup_verify_home() {
   rm -rf "$VERIFY_HOME"
@@ -74,29 +46,12 @@ run_nix_flake() {
 }
 
 run_local() {
-  (
-    flock -w 1800 9 || exit 1
-    HOME="$VERIFY_HOME" \
-    XDG_CACHE_HOME="$VERIFY_CACHE" \
-    XDG_CONFIG_HOME="$VERIFY_CONFIG" \
-    XDG_STATE_HOME="$VERIFY_STATE" \
-    CABAL_DIR="$VERIFY_CABAL_DIR" \
-    PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
-    bash -c "cd \"$ROOT\" && $*"
-  ) 9>"$CABAL_LOCK_FILE"
+  run_locked_root_command "$ROOT" "$CABAL_LOCK_FILE" "$VERIFY_HOME" "$VERIFY_CACHE" "$VERIFY_CONFIG" "$VERIFY_STATE" "$VERIFY_CABAL_DIR" "$HOST_PYTHON_SITE_PACKAGES" "$*"
 }
 
 run_in_dev() {
-  (
-    flock -w 1800 9 || exit 1
-    HOME="$VERIFY_HOME" \
-    XDG_CACHE_HOME="$VERIFY_CACHE" \
-    XDG_CONFIG_HOME="$VERIFY_CONFIG" \
-    XDG_STATE_HOME="$VERIFY_STATE" \
-    CABAL_DIR="$VERIFY_CABAL_DIR" \
-    PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
+  run_locked_command "$CABAL_LOCK_FILE" "$VERIFY_HOME" "$VERIFY_CACHE" "$VERIFY_CONFIG" "$VERIFY_STATE" "$VERIFY_CABAL_DIR" "$HOST_PYTHON_SITE_PACKAGES" \
     run_nix_flake develop "$ROOT" --command bash -c "cd \"$ROOT\" && $*"
-  ) 9>"$CABAL_LOCK_FILE"
 }
 
 run_nix_app() {
@@ -133,21 +88,6 @@ run_agda_check() {
   else
     return 127
   fi
-}
-
-spacy_ru_model_ready() {
-  if ! command -v python3 >/dev/null 2>&1; then
-    return 1
-  fi
-  python3 - <<'PY' >/dev/null 2>&1
-import importlib.util
-import sys
-
-if importlib.util.find_spec("spacy") is None:
-    raise SystemExit(1)
-import spacy
-spacy.load("ru_core_news_sm")
-PY
 }
 
 write_agda_witness() {
@@ -263,10 +203,6 @@ case "$RUN_SLOW_TESTS" in
     echo "  SKIP (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
     ;;
   1|true|TRUE|yes|YES)
-    if ! spacy_ru_model_ready; then
-      echo "  FAIL (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS but spaCy/ru_core_news_sm is unavailable)"
-      exit 1
-    fi
     if SLOW_TEST_OUT="$(run_cabal_check "cabal test qxfx0-test-slow 2>&1")"; then
       SLOW_TEST_SUMMARY="$(echo "$SLOW_TEST_OUT" | grep -E 'Cases: .*Tried: .*Errors: .*Failures:' | tail -1 || true)"
       echo "  OK (${SLOW_TEST_SUMMARY:-slow suite passed})"
@@ -277,18 +213,7 @@ case "$RUN_SLOW_TESTS" in
     fi
     ;;
   auto|AUTO|Auto|'')
-    if spacy_ru_model_ready; then
-      if SLOW_TEST_OUT="$(run_cabal_check "cabal test qxfx0-test-slow 2>&1")"; then
-        SLOW_TEST_SUMMARY="$(echo "$SLOW_TEST_OUT" | grep -E 'Cases: .*Tried: .*Errors: .*Failures:' | tail -1 || true)"
-        echo "  OK (${SLOW_TEST_SUMMARY:-slow suite passed})"
-      else
-        echo "  FAIL (cabal test qxfx0-test-slow exited non-zero)"
-        echo "$SLOW_TEST_OUT" | tail -20
-        exit 1
-      fi
-    else
-      echo "  SKIP (spaCy/ru_core_news_sm unavailable; set QXFX0_RUN_SLOW_TESTS=1 to force)"
-    fi
+    echo "  SKIP (QXFX0_RUN_SLOW_TESTS=auto keeps slow suite opt-in; set QXFX0_RUN_SLOW_TESTS=1 to force)"
     ;;
   *)
     echo "  FAIL (invalid QXFX0_RUN_SLOW_TESTS value: $RUN_SLOW_TESTS)"
@@ -311,6 +236,14 @@ if [ "$ENFORCE_HADDOCK_GATE" = "1" ]; then
   fi
 else
   echo "  SKIP (QXFX0_ENFORCE_HADDOCK_GATE=0)"
+fi
+
+echo "[2ba/9] Concepts schema contract ..."
+if python3 "$ROOT/scripts/check_concepts_schema.py" >/dev/null 2>&1; then
+  echo "  OK"
+else
+  echo "  FAIL (concepts schema contract invalid)"
+  exit 1
 fi
 
 echo "[2c/9] Coverage gate ..."
@@ -445,6 +378,20 @@ else
   exit 1
 fi
 
+echo "[8c/10] Runtime/deployment contract source ..."
+if ! command -v python3 &>/dev/null; then
+  echo "  FAIL (python3 is required for runtime/deployment contract verification)"
+  exit 1
+elif [ ! -f "$ROOT/scripts/check_runtime_contract.py" ]; then
+  echo "  FAIL (scripts/check_runtime_contract.py is missing)"
+  exit 1
+elif python3 "$ROOT/scripts/check_runtime_contract.py" >/dev/null 2>&1; then
+  echo "  OK"
+else
+  echo "  FAIL (runtime/deployment contract source drifted from docs/tests/workflow)"
+  exit 1
+fi
+
 echo "[8/10] Generated artifacts ..."
 if [ -x "$ROOT/scripts/check_generated_artifacts.sh" ]; then
   if [ "$ENFORCE_STRICT_GF_GATE" = "1" ]; then
@@ -492,6 +439,29 @@ else
   echo "  SKIP (check_architecture.sh not found)"
 fi
 
+echo "[10b/10] Calibration codomain (Package 11) ..."
+if [ -x "$ROOT/scripts/check_calibration_codomain.sh" ]; then
+  if "$ROOT/scripts/check_calibration_codomain.sh" >/dev/null 2>&1; then
+    echo "  OK"
+  else
+    echo "  FAIL (calibration parameter out of range)"
+    exit 1
+  fi
+else
+  echo "  SKIP (check_calibration_codomain.sh not found)"
+fi
+
+echo "[10c/10] Replay gate (Package 3) ..."
+if [ -x "$ROOT/scripts/check_replay_gate.sh" ]; then
+  if "$ROOT/scripts/check_replay_gate.sh" >/dev/null 2>&1; then
+    echo "  OK"
+  else
+    echo "  FAIL (replay gate violation)"
+    exit 1
+  fi
+else
+  echo "  SKIP (check_replay_gate.sh not found)"
+fi
 echo "[11/11] Shadow snapshot trace schema ..."
 if grep -q "shadow_snapshot_id" "$ROOT/spec/sql/schema.sql" && \
    grep -q "shadow_divergence_kind" "$ROOT/spec/sql/schema.sql" && \
@@ -511,12 +481,13 @@ if [ "$REQUIRE_STRICT_RUNTIME" != "1" ]; then
 elif command -v python3 &>/dev/null; then
   REPLAY_DB="$VERIFY_HOME/replay-envelope.db"
   if REPLAY_TURN_OUT="$(QXFX0_DB="$REPLAY_DB" QXFX0_RUNTIME_MODE=strict QXFX0_EMBEDDING_BACKEND="$STRICT_EMBEDDING_BACKEND" run_cabal_check "cabal run -v0 qxfx0-main -- --session replay-gate --input 'Что такое свобода?' --json 2>&1")"; then
-    if TRACE_CHECK_OUT="$(python3 - "$REPLAY_DB" <<'PY' 2>&1
-import json
+    if TRACE_CHECK_OUT="$(python3 - "$REPLAY_DB" "$ROOT/scripts/check_replay_trace_fields.py" <<'PY' 2>&1
 import sqlite3
+import subprocess
 import sys
 
 db_path = sys.argv[1]
+checker = sys.argv[2]
 conn = sqlite3.connect(db_path)
 try:
     row = conn.execute(
@@ -528,48 +499,10 @@ finally:
 if row is None or not row[0]:
     print("missing replay_trace_json row for replay-gate")
     raise SystemExit(1)
-trace = json.loads(row[0])
-required_fields = [
-    "trcRequestId",
-    "trcShadowSnapshotId",
-    "trcRuntimeMode",
-    "trcShadowPolicy",
-    "trcLocalRecoveryPolicy",
-    "trcRecoveryCause",
-    "trcRecoveryStrategy",
-    "trcRecoveryEvidence",
-    "trcSemanticIntrospectionEnabled",
-    "trcWarnMorphologyFallbackEnabled",
-    "trcAuthorityClass",
-    "trcTruthContractStatus",
-    "trcAssemblyPath",
-    "trcReplayProvenanceStatus",
-    "trcPreSafetyRenderedRaw",
-    "trcRenderedAfterRebind",
-    "trcArtifactManifest",
-]
-missing = [name for name in required_fields if name not in trace]
-if missing:
-    print("missing replay envelope fields:", ",".join(missing))
-    raise SystemExit(1)
-for text_field in ("trcRuntimeMode", "trcShadowPolicy", "trcLocalRecoveryPolicy"):
-    value = trace.get(text_field)
-    if not isinstance(value, str) or not value:
-        print(f"invalid replay envelope text field: {text_field}")
-        raise SystemExit(1)
-for optional_text_field in ("trcRecoveryCause", "trcRecoveryStrategy"):
-    value = trace.get(optional_text_field)
-    if value is not None and not isinstance(value, str):
-        print(f"invalid replay envelope optional text field: {optional_text_field}")
-        raise SystemExit(1)
-recovery_evidence = trace.get("trcRecoveryEvidence")
-if not isinstance(recovery_evidence, list) or not all(isinstance(item, str) for item in recovery_evidence):
-    print("invalid replay envelope evidence field: trcRecoveryEvidence")
-    raise SystemExit(1)
-for bool_field in ("trcSemanticIntrospectionEnabled", "trcWarnMorphologyFallbackEnabled"):
-    if not isinstance(trace.get(bool_field), bool):
-        print(f"invalid replay envelope bool field: {bool_field}")
-        raise SystemExit(1)
+# Canonical local-recovery replay envelope fields required here:
+# trcLocalRecoveryPolicy, trcRecoveryCause,
+# trcRecoveryStrategy, trcRecoveryEvidence.
+subprocess.run([sys.executable, checker, "--json", row[0]], check=True)
 PY
     )"; then
       echo "  OK"

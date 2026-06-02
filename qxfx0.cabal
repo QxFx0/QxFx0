@@ -227,6 +227,8 @@ library
     QxFx0.Types.State.System
     QxFx0.Self.Perspective.Reduce
     QxFx0.Types.Text
+    QxFx0.Types.Sense
+    QxFx0.Types.TruthContract
     QxFx0.Types.Thresholds.Types
     QxFx0.Types.Thresholds.Common
     QxFx0.Types.Thresholds.Legitimacy
@@ -325,6 +327,7 @@ library
     QxFx0.Core.TurnPipeline.Finalize.Dream
     QxFx0.Core.TurnPipeline.Finalize.State
   hs-source-dirs:   src
+  c-sources:        cbits/qxfx0_sqlite_ffi.c
   extra-libraries:  sqlite3
   build-depends:
     , process        >=1.6 && <1.7
@@ -385,14 +388,28 @@ common test-common
     , http-client   >=0.7 && <0.8
   other-modules:
     Test.Support
+    Test.Support.TurnPipelineFixtures
+    Test.Suite.ArchitectureInvariants
     Test.Suite.CoreBehavior
+    Test.Suite.SelfPerspective
+    Test.Suite.PerspectiveRegistry
+    Test.Suite.Guardrails
+    Test.Suite.KnowledgeTree
+    Test.Suite.DialogueDevelopment
     Test.Suite.TurnPipelineProtocol
     Test.Suite.RuntimeInfrastructure
+    Test.Suite.StatePersistence
     Test.Suite.HttpRuntime
     Test.Suite.SemanticCorpus
     Test.Suite.LexiconTests
     Test.Suite.LegalAdapter
     Test.Suite.RenderDialogueCoverage
+    Test.Suite.RenderAuthorityStub
+    Test.Suite.ObserverDiscipline
+    Test.Suite.TraceSchema
+    Test.Suite.RegenerableDerived
+    Test.Suite.PromotionFlagDiscipline
+    Test.Suite.ReplayGate
     Test.Suite.RussianQuality
     Test.Suite.VecProperties
     Test.Suite.EgoRead

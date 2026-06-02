@@ -1,4 +1,4 @@
-# ADR-0017 (proposed): Domain-Specific Reasoning Packs
+# ADR-0035 (proposed): Domain-Specific Reasoning Packs
 
 - **Status**: Proposed (triage stub, not yet a full ADR)
 - **Date**: 2026-05-19
@@ -128,4 +128,4 @@ commitment and conatus dynamics are production-validated would
 multiply the calibration surface beyond what the current telemetry
 and regression suite can track.
 
-— end of proposed ADR-0017 —
+— end of proposed ADR-0035 —

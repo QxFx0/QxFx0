@@ -1,0 +1,137 @@
+{
+  "$schema_note": "Codomain ranges for QxFx0_v3 calibration parameters. Each entry pins a (parameter, source file, field, default value) tuple with a closed range [lo, hi]. The check_calibration_codomain.sh script reads this file and verifies the default value is in the range. The list is the initial seed; expand per CALIBRATION_BACKLOG.md as Packages 7-11 land.",
+  "$version": 1,
+  "$date": "2026-06-02",
+  "parameters": [
+    {
+      "name": "SalienceWeights.weightResonance",
+      "module": "QxFx0.Self.Salience",
+      "field": "weightResonance",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 1.0,
+      "rationale": "Field.fieldResonance is in [0, 1] (per CALIBRATION_BACKLOG.md §2.1). The weight itself is unconstrained; the codomain of the gated signal is the constraint."
+    },
+    {
+      "name": "SalienceWeights.weightAtmosphere",
+      "module": "QxFx0.Self.Salience",
+      "field": "weightAtmosphere",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.5,
+      "rationale": "Field.fieldAtmosphere is in [0, 1]."
+    },
+    {
+      "name": "SalienceWeights.weightConsolidation",
+      "module": "QxFx0.Self.Salience",
+      "field": "weightConsolidation",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.75,
+      "rationale": "Field.fieldConsolidation is in [0, 1]."
+    },
+    {
+      "name": "SalienceWeights.weightCounterfactual",
+      "module": "QxFx0.Self.Salience",
+      "field": "weightCounterfactual",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.75,
+      "rationale": "Field.fieldCounterfactual is in [0, 1]."
+    },
+    {
+      "name": "SalienceWeights.weightFieldConfidence",
+      "module": "QxFx0.Self.Salience",
+      "field": "weightFieldConfidence",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.5,
+      "rationale": "Field.fieldConfidence is in [0, 1]."
+    },
+    {
+      "name": "SalienceWeights.conatusGateThreshold",
+      "module": "QxFx0.Self.Salience",
+      "field": "conatusGateThreshold",
+      "lo": -50.0,
+      "hi": 50.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.0,
+      "rationale": "ConatusEnergy.ceScalar is in [~5, ~20+] in production, but can be negative under heavy violation (per ADR-0012 §15.1, the codomain is the production range, not [0, 1]). The gate threshold itself is on the same scale; we pin a wider range to allow for calibration. The actual codomain check is in CALIBRATION_REPORT.md (F-10)."
+    },
+    {
+      "name": "SalienceWeights.verdictThreshold",
+      "module": "QxFx0.Self.Salience",
+      "field": "verdictThreshold",
+      "lo": 0.0,
+      "hi": 0.5,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 0.05,
+      "rationale": "Per CALIBRATION_BACKLOG.md §2.1, the dead-band is a fraction of [0, 0.5]; the threshold is the half-width."
+    },
+    {
+      "name": "SalienceWeights.sigmoidTemperature",
+      "module": "QxFx0.Self.Salience",
+      "field": "sigmoidTemperature",
+      "lo": 0.01,
+      "hi": 10.0,
+      "source": "src/QxFx0/Self/Salience.hs",
+      "default_value": 1.0,
+      "rationale": "Sigmoid temperature; positive by construction. Range chosen to keep the sigmoid numerically well-conditioned."
+    },
+    {
+      "name": "ConatusWeights.cwMorphology",
+      "module": "QxFx0.Self.Conatus",
+      "field": "cwMorphology",
+      "lo": 0.0,
+      "hi": 100.0,
+      "source": "src/QxFx0/Self/Conatus.hs",
+      "default_value": 1.0,
+      "rationale": "Conatus weight; positive by construction. Range chosen to allow for calibration without breaking the energy codomain."
+    },
+    {
+      "name": "ConatusWeights.cwIdentity",
+      "module": "QxFx0.Self.Conatus",
+      "field": "cwIdentity",
+      "lo": 0.0,
+      "hi": 100.0,
+      "source": "src/QxFx0/Self/Conatus.hs",
+      "default_value": 0.5,
+      "rationale": "Conatus weight; same scale as cwMorphology."
+    },
+    {
+      "name": "ConatusWeights.cwTurns",
+      "module": "QxFx0.Self.Conatus",
+      "field": "cwTurns",
+      "lo": 0.0,
+      "hi": 100.0,
+      "source": "src/QxFx0/Self/Conatus.hs",
+      "default_value": 0.25,
+      "rationale": "Conatus weight; same scale as cwMorphology."
+    },
+    {
+      "name": "ConatusWeights.cwViolation",
+      "module": "QxFx0.Self.Conatus",
+      "field": "cwViolation",
+      "lo": 0.0,
+      "hi": 100.0,
+      "source": "src/QxFx0/Self/Conatus.hs",
+      "default_value": 10.0,
+      "rationale": "Conatus weight; same scale as cwMorphology. Higher value reflects the importance of violation in the energy functional."
+    },
+    {
+      "name": "emConatusStructuralFloor",
+      "module": "QxFx0.Self.Essence",
+      "field": "emConatusStructuralFloor",
+      "lo": 0.0,
+      "hi": 30.0,
+      "source": "src/QxFx0/Self/Essence.hs",
+      "default_value": 7.0,
+      "rationale": "Already calibrated in ADR-0012 §15.1 (corrected from 0.5 to 7.0). The codomain is the ConatusEnergy range, not [0, 1]."
+    }
+  ]
+}

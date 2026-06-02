@@ -6,12 +6,24 @@ import System.Exit (exitFailure, exitSuccess)
 import Test.HUnit
 
 import Test.Suite.CoreBehavior (coreBehaviorTests)
+import Test.Suite.ArchitectureInvariants (architectureInvariantTests)
+import Test.Suite.SelfPerspective (selfPerspectiveTests)
+import Test.Suite.PerspectiveRegistry (perspectiveRegistryTests)
+import Test.Suite.Guardrails (guardrailsTests)
+import Test.Suite.KnowledgeTree (knowledgeTreeTests)
+import Test.Suite.DialogueDevelopment (dialogueDevelopmentTests)
 import Test.Suite.TurnPipelineProtocol (turnPipelineProtocolTests)
 import Test.Suite.RuntimeInfrastructure (runtimeInfrastructureTests)
+import Test.Suite.StatePersistence (statePersistenceTests)
 import Test.Suite.HttpRuntime (httpRuntimeTests)
 import Test.Suite.SemanticCorpus (semanticCorpusTests)
 import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.LegalAdapter (legalAdapterTests)
+import Test.Suite.ObserverDiscipline (observerDisciplineTests)
+import Test.Suite.TraceSchema (traceSchemaTests)
+import Test.Suite.RegenerableDerived (regenerableDerivedTests)
+import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
+import Test.Suite.ReplayGate (replayGateTests)
 import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.RussianQuality (russianQualityTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
@@ -34,8 +46,8 @@ import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ statePersistenceTests ++ httpRuntimeTests
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

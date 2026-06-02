@@ -166,12 +166,24 @@ if '|| h == "0.0.0.0"' in http_hs:
     raise SystemExit(1)
 if 'Just (normalise "scripts/http_runtime.py")' in http_hs:
     raise SystemExit(1)
+for required in (
+    'QXFX0_EMBEDDING_BACKEND',
+    'EMBEDDING_API_URL',
+    'EmbeddingBackendLocalDeterministic',
+    'EmbeddingBackendRemoteHTTP',
+    'ehStrictReady = True',
+    'remote_embedding_url_missing',
+    'invalid_remote_embedding_url',
+):
+    if required not in embedding_hs:
+        raise SystemExit(1)
 if 'Just url -> EmbeddingSelection EmbeddingBackendRemoteHTTP False' in embedding_hs:
     raise SystemExit(1)
-local_start = embedding_hs.index('EmbeddingSelection EmbeddingBackendLocalDeterministic explicit _ ->')
-remote_start = embedding_hs.index('EmbeddingSelection EmbeddingBackendRemoteHTTP explicit mUrl ->')
-local_block = embedding_hs[local_start:remote_start]
-if 'ehStrictReady = True' not in local_block:
+if 'Just "remote" -> remoteSelection mUrl' not in embedding_hs:
+    raise SystemExit(1)
+if 'Just "remote-http" -> remoteSelection mUrl' not in embedding_hs:
+    raise SystemExit(1)
+if 'esExplicit = False' not in embedding_hs:
     raise SystemExit(1)
 for required in (
     'QXFX0_HTTP_HOST',
@@ -310,6 +322,348 @@ while IFS= read -r file; do
     fail_violation "$file imports QxFx0.Self.Holistic or QxFx0.Self.Formal directly (use QxFx0.Self.Adjunction)"
   fi
 done < <(find "$SRC/QxFx0/Core/TurnPipeline" -name "*.hs" 2>/dev/null || true)
+# ---------------------------------------------------------------------------
+# Boundary rules from ADR-0013 §3 (Self/Core role split). Each rule
+# below has an explicit "enforce" and a "review" section; the
+# enforcement is the mechanical part, the review is the human part.
+# Reference: docs/adr/proposed/0013-self-core-role-split.md
+# ---------------------------------------------------------------------------
+
+echo "  [13] ADR-0013 §3 Rule 1: Self/* must be canonical-only; no downward writes to Core.TurnPipeline.* or Bridge.*..."
+while IFS= read -r file; do
+  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core\.TurnPipeline|Bridge)' "$file" >/dev/null 2>&1; then
+    fail_violation "$file (Self/*) imports Core.TurnPipeline.* or Bridge.* (ADR-0013 Rule 1)"
+  fi
+done < <(find "$SRC/QxFx0/Self" -name "*.hs" 2>/dev/null || true)
+
+echo "  [14] ADR-0013 §3 Rule 2: Core/* supplier modules must not import canonical-orchestrator writers..."
+# Canonical-orchestrator writers are the modules that write to
+# SystemState. The closure plan's role split puts these in
+# Core.TurnPipeline.Finalize.* and Core.TurnPipeline.Effects.
+# Supplier modules are those that import nothing under
+# Core.TurnPipeline.* and are tagged "supplier" in their Haddock.
+# Mechanical enforcement: any module under Core/* that does NOT
+# declare "observer" or "supplier" in its module Haddock header
+# (the line beginning "Description :") must not import
+# Core.TurnPipeline.Finalize.* or Core.TurnPipeline.Effects.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+core_root = root / "src/QxFx0/Core"
+if not core_root.is_dir():
+    raise SystemExit(0)
+
+forbidden = (
+    "QxFx0.Core.TurnPipeline.Finalize",
+    "QxFx0.Core.TurnPipeline.Effects",
+    "QxFx0.Core.TurnPipeline.Route.Render",
+)
+finalize_mods = re.compile(r"^\s*import\s+(?:qualified\s+)?(QxFx0\.Core\.TurnPipeline\.Finalize(?:\.[A-Za-z0-9]+)*)\b", re.MULTILINE)
+effects_mods  = re.compile(r"^\s*import\s+(?:qualified\s+)?(QxFx0\.Core\.TurnPipeline\.Effects(?:\.[A-Za-z0-9]+)*)\b", re.MULTILINE)
+route_render  = re.compile(r"^\s*import\s+(?:qualified\s+)?(QxFx0\.Core\.TurnPipeline\.Route\.Render)\b", re.MULTILINE)
+
+violations: list[str] = []
+for path in core_root.rglob("*.hs"):
+    text = path.read_text(encoding="utf-8")
+    # Skip the orchestrator modules themselves; they are the writers.
+    rel = str(path.relative_to(root))
+    if rel.startswith("src/QxFx0/Core/TurnPipeline/") or rel == "src/QxFx0/Core/TurnPipeline.hs":
+        continue
+    # Skip observer modules; observers emit into trace only and are
+    # allowed to import Core.Observability (but not the writers).
+    # The role is declared in the module Haddock; we look for a
+    # "Description" line that names "observer" or "supplier".
+    haddock = re.search(r"Description\s*:\s*([^\n]*)", text)
+    role = (haddock.group(1) if haddock else "").lower()
+    if "observer" in role or "supplier" in role:
+        continue
+    for pat in (finalize_mods, effects_mods, route_render):
+        m = pat.search(text)
+        if m:
+            violations.append(f"{rel} imports {m.group(1)} (must declare role in Haddock or move to TurnPipeline)")
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "Core/* module imports canonical-orchestrator writer without declaring supplier/observer role (ADR-0013 Rule 2)"
+fi
+
+echo "  [15] ADR-0013 §3 Rule 5: only Bridge.ExternalLLM may be opt-in by feature flag..."
+# A new Bridge/* module that uses a feature flag (QXFX0_*_ENABLED)
+# is rejected unless it is Bridge/ExternalLLM.hs. The check
+# enumerates Bridge/*.hs and looks for QXFX0_*_ENABLED lookups.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+bridge_root = root / "src/QxFx0/Bridge"
+if not bridge_root.is_dir():
+    raise SystemExit(0)
+
+flag_re = re.compile(r"\bQXFX0_[A-Z][A-Z0-9_]*ENABLED\b")
+
+violations: list[str] = []
+for path in bridge_root.rglob("*.hs"):
+    rel = str(path.relative_to(root))
+    if rel == "src/QxFx0/Bridge/ExternalLLM.hs":
+        continue
+    text = path.read_text(encoding="utf-8")
+    if flag_re.search(text):
+        violations.append(f"{rel} uses a QXFX0_*_ENABLED feature flag (only Bridge.ExternalLLM may; ADR-0013 Rule 5)")
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "Bridge/* module uses a feature flag without explicit ADR (ADR-0013 Rule 5)"
+fi
+
+echo "  [16] ADR-0013 §3 Rule 7: derived modules must have a regenerator referenced from scripts/..."
+# Lexicon.Generated.hs and any other derived module under
+# Resources/ or top-level *Generated.hs must be producible by
+# a script under scripts/. The script must be referenced in
+# scripts/verify.sh or scripts/ci_gate_contract.sh (the canonical
+# CI entry point). This is a heuristic: we check that the
+# generator script exists.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+scripts = root / "scripts"
+if not scripts.is_dir():
+    raise SystemExit(0)
+
+derived = list((root / "src").rglob("*Generated.hs")) + list((root / "src").rglob("*/Resources/*Generated*"))
+violations: list[str] = []
+for path in derived:
+    stem = path.stem
+    candidates = [
+        scripts / f"build_{stem.lower()}.sh",
+        scripts / f"generate_{stem.lower()}.sh",
+        scripts / f"build_{stem.lower()}.py",
+    ]
+    if not any(c.is_file() for c in candidates):
+        violations.append(f"{path.relative_to(root)} has no obvious generator script under scripts/ (ADR-0013 Rule 7)")
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "derived module has no generator script (ADR-0013 Rule 7)"
+fi
+
+echo "  [17] ADR-0013 §3 Rule 1 (declarative): Self/* modules must declare role in module Haddock..."
+# A new Self/* module is canonical by construction. We require
+# every Self/*.hs to have a Description line that names the role
+# (canonical, canonical-flag-off, or supplier — supplier is
+# permitted only for Self/* adapters; not for the self-layer
+# proper).
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+self_root = root / "src/QxFx0/Self"
+if not self_root.is_dir():
+    raise SystemExit(0)
+
+allowed = ("canonical", "canonical-flag-off", "supplier")
+violations: list[str] = []
+for path in self_root.rglob("*.hs"):
+    text = path.read_text(encoding="utf-8")
+    haddock = re.search(r"Description\s*:\s*([^\n]*)", text)
+    if not haddock:
+        violations.append(f"{path.relative_to(root)}: missing 'Description :' line in module Haddock")
+        continue
+    role = haddock.group(1).lower()
+    if not any(a in role for a in allowed):
+        violations.append(
+            f"{path.relative_to(root)}: Haddock does not declare one of {allowed} (got: {haddock.group(1).strip()!r})"
+        )
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "Self/* module missing canonical/canonical-flag-off/supplier role in Haddock (ADR-0013 Rule 1)"
+fi
+
+echo "  [18] ADR-0013 §3 Rule 4 (review): Render/* must route through Route/Render.buildTurnArtifacts..."
+# Static check: every Render/*.hs that defines a top-level
+# function whose name starts with "render" should import
+# QxFx0.Core.TurnPipeline.Route.Render (or be a renderer
+# orchestrator itself). This is a heuristic: it flags modules
+# that look like they bypass the orchestrator.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+render_root = root / "src/QxFx0/Render"
+if not render_root.is_dir():
+    raise SystemExit(0)
+
+orchestrator = re.compile(r"QxFx0\.Core\.TurnPipeline\.Route\.Render")
+def_render = re.compile(r"^(?:render|build)\w*\s*::", re.MULTILINE)
+import_re  = re.compile(r"^\s*import\s+(?:qualified\s+)?QxFx0\.([A-Za-z0-9.]+)\b", re.MULTILINE)
+
+violations: list[str] = []
+for path in render_root.rglob("*.hs"):
+    text = path.read_text(encoding="utf-8")
+    # The orchestrator module itself is allowed to skip the import.
+    rel = str(path.relative_to(root))
+    if "Route/Render.hs" in rel or "Route.Render" in rel:
+        continue
+    if not def_render.search(text):
+        continue
+    # Does the module import the orchestrator or one of its
+    # focused submodules (e.g. Route.Render.BuildArtifacts)?
+    imports = set(import_re.findall(text))
+    if not any(i.startswith("Core.TurnPipeline.Route.Render") for i in imports):
+        violations.append(
+            f"{rel}: defines a render*/build* function but does not import QxFx0.Core.TurnPipeline.Route.Render (ADR-0013 Rule 4)"
+        )
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "Render/* module defines a render*/build* function without importing the orchestrator (ADR-0013 Rule 4)"
+fi
+
+echo "  [19] ADR-0013 §3 Rule 3 (review): Core/* observer modules declare role and emit trace-only..."
+# Observers are modules that import QxFx0.Core.Observability. They
+# must declare "observer" in their Haddock and must not define
+# any function that returns a SystemState or writes to ss*.
+# Heuristic: any module that imports Core.Observability but does
+# not have "observer" in its Haddock Description is a violation.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+core_root = root / "src/QxFx0/Core"
+if not core_root.is_dir():
+    raise SystemExit(0)
+
+obs_import = re.compile(r"^\s*import\s+(?:qualified\s+)?QxFx0\.Core\.Observability\b", re.MULTILINE)
+haddock_re = re.compile(r"Description\s*:\s*([^\n]*)")
+
+violations: list[str] = []
+for path in core_root.rglob("*.hs"):
+    text = path.read_text(encoding="utf-8")
+    if not obs_import.search(text):
+        continue
+    h = haddock_re.search(text)
+    role = (h.group(1) if h else "").lower()
+    if "observer" not in role:
+        violations.append(
+            f"{path.relative_to(root)}: imports QxFx0.Core.Observability but Haddock does not declare 'observer' role (ADR-0013 Rule 3)"
+        )
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "Core/* module imports Observability without declaring observer role (ADR-0013 Rule 3)"
+fi
+
+echo "  [20] ADR-0013 §3 Rule 6: canonical-flag-off modules are not in the authority path..."
+# Per docs/closure/PROMOTION_PLAYBOOK.md, the 5
+# promotion candidates must not have a '= True'
+# literal in production code. A flag flips to True
+# only via the playbook's G3 release event. The rule
+# is the static companion of
+# 'Test.Suite.PromotionFlagDiscipline' (the dynamic
+# lock).
+#
+# The 5 candidates and their flag identifiers:
+#
+#   1. Essence               (essenceCommitmentEnabled)
+#   2. Family Divergence     (familyDivergenceEnabled)
+#   3. Perspective Operator  (QXFX0_PERSPECTIVE_OPERATOR_ENABLED)
+#   4. External LLM          (QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED)
+#   5. Adaptive Mutation     (QXFX0_ADAPTIVE_MUTATION_ENABLED)
+#
+# The check has two parts:
+#   (a) None of the 5 flags may have a '= True'
+#       literal in 'src/'.
+#   (b) Family Divergence is the only flag currently
+#       a Haskell literal; it MUST be at the
+#       documented '= False' state.
+#       (Essence's flag is at the integration level
+#       per AGENTS.md, not in Haskell code; the
+#       other 3 are env-vars, not yet wired.)
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+import pathlib
+import re
+import sys
+
+root = pathlib.Path(sys.argv[1])
+src_root = root / "src"
+if not src_root.is_dir():
+    raise SystemExit(0)
+
+# The 5 promotion flags, ordered to match the
+# playbook. The 'in_code' field distinguishes
+# "Haskell literal" from "env-var only".
+PROMOTION_FLAGS = [
+    ("Essence",              "essenceCommitmentEnabled",                False),
+    ("Family Divergence",    "familyDivergenceEnabled",                  True),
+    ("Perspective Operator", "QXFX0_PERSPECTIVE_OPERATOR_ENABLED",       False),
+    ("External LLM",         "QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED",        False),
+    ("Adaptive Mutation",    "QXFX0_ADAPTIVE_MUTATION_ENABLED",          False),
+]
+
+true_lit_re = re.compile(r"\b\w+\s*=\s*True\b")
+false_lit_re = re.compile(r"\b\w+\s*=\s*False\b")
+
+violations: list[str] = []
+for (contour, flag, in_code) in PROMOTION_FLAGS:
+    true_files: list[str] = []
+    false_files: list[str] = []
+    for path in src_root.rglob("*.hs"):
+        text = path.read_text(encoding="utf-8")
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if flag not in line:
+                continue
+            if true_lit_re.search(line):
+                true_files.append(f"{path.relative_to(root)}:{line_no}")
+            if in_code and false_lit_re.search(line):
+                false_files.append(f"{path.relative_to(root)}:{line_no}")
+    if true_files:
+        violations.append(
+            f"{contour} ({flag}): '= True' literal found in production code: "
+            + ", ".join(true_files)
+        )
+    if in_code and not false_files:
+        violations.append(
+            f"{contour} ({flag}): in-code flag is missing '= False' literal in src/"
+        )
+
+if violations:
+    for v in violations:
+        print(v, file=sys.stderr)
+    raise SystemExit(1)
+PY
+  fail_violation "canonical-flag-off discipline violated (ADR-0013 Rule 6)"
+fi
 
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"

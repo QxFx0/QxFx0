@@ -1,4 +1,4 @@
-# ADR-0013 (proposed): Cross-Session Essence Persistence
+# ADR-0041 (proposed): Cross-Session Essence Persistence
 
 - **Status**: Proposed (triage stub, not yet a full ADR)
 - **Date**: 2026-05-19
@@ -81,4 +81,4 @@ flag.  The current session-scoped design is a deliberate safety boundary.
 Only after production traces show stable, desirable commitment dynamics
 should persistence be considered.
 
-— end of proposed ADR-0013 —
+— end of proposed ADR-0041 —

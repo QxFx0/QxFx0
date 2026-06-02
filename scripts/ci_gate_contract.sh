@@ -158,6 +158,24 @@ else
   fail_contract "Gate 3 (architecture)"
 fi
 
+# ── Gate 3b: Calibration Codomain (Package 11 enforcement) ─────────────
+CODOMAIN_LOG="$GATES_DIR/03b_check_calibration_codomain_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && bash scripts/check_calibration_codomain.sh 2>&1) > "$CODOMAIN_LOG" 2>&1; then
+  log_gate "check_calibration_codomain.sh" "0" "PASS" "all calibration parameters in closed range"
+else
+  log_gate "check_calibration_codomain.sh" "$?" "FAIL" "calibration parameter out of range"
+  fail_contract "Gate 3b (calibration codomain)"
+fi
+
+# ── Gate 3c: Replay Gate (Package 3 enforcement) ───────────────────────
+REPLAY_LOG="$GATES_DIR/03c_check_replay_gate_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && bash scripts/check_replay_gate.sh 2>&1) > "$REPLAY_LOG" 2>&1; then
+  log_gate "check_replay_gate.sh" "0" "PASS" "all canonical contours pass static replay checks"
+else
+  log_gate "check_replay_gate.sh" "$?" "FAIL" "canonical contour failed static replay check"
+  fail_contract "Gate 3c (replay gate)"
+fi
+
 # ── Gate 4: GF Quality ──────────────────────────────────────────────────
 GF_LOG="$GATES_DIR/04_gf_quality_${RUN_ID}_${PROFILE}.log"
 if (cd "$ROOT" && bash scripts/gf_quality_gate.sh 2>&1) > "$GF_LOG" 2>&1; then
@@ -235,6 +253,14 @@ else
   fail_contract "Gate 8 (schema contract)"
 fi
 
+# ── Gate 8b: Runtime/deployment contract ─────────────────────────────────
+if (cd "$ROOT" && python3 scripts/check_runtime_contract.py >/dev/null 2>&1); then
+  log_gate "check_runtime_contract.py" "0" "PASS" "runtime/deployment contract source in sync"
+else
+  log_gate "check_runtime_contract.py" "$?" "FAIL" "runtime/deployment contract drift"
+  fail_contract "Gate 8b (runtime contract)"
+fi
+
 # ── Gate 9: Generated artifacts ─────────────────────────────────────────
 GEN_LOG="$GATES_DIR/09_generated_artifacts_${RUN_ID}_${PROFILE}.log"
 if (cd "$ROOT" && bash scripts/check_generated_artifacts.sh 2>&1) > "$GEN_LOG" 2>&1; then
@@ -251,6 +277,15 @@ if (cd "$ROOT" && bash scripts/check_lexicon.sh 2>&1) > "$LEX_LOG" 2>&1; then
 else
   log_gate "check_lexicon.sh" "$?" "FAIL" "lexicon contour failed"
   fail_contract "Gate 10 (lexicon)"
+fi
+
+# ── Gate 10a: Concepts schema contract ─────────────────────────────────
+CONCEPTS_LOG="$GATES_DIR/10a_check_concepts_schema_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && python3 scripts/check_concepts_schema.py 2>&1) > "$CONCEPTS_LOG" 2>&1; then
+  log_gate "check_concepts_schema.py" "0" "PASS" "concept catalog schema valid"
+else
+  log_gate "check_concepts_schema.py" "$?" "FAIL" "concept catalog invalid"
+  fail_contract "Gate 10a (concepts schema)"
 fi
 
 # ════════════════════════════════════════════════════════════════════════
