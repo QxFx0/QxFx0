@@ -926,7 +926,7 @@ contributor's job is to move items from
 | `test/Test/Suite/ArchitectureInvariants.hs` (+r2) | wired | not run |
 | `src/QxFx0/Render/Authority.hs` (F-11) | wired (stub) | stub only; the real parser is **not landed** (per Package 4) |
 | `docs/adr/proposed/0034-self-core-role-split.md` | drafted | the central closure ADR; **not accepted** |
-| `docs/adr/proposed/0018-0022` (5 promotion ADRs) | drafted | none accepted |
+| `docs/adr/proposed/0018-0022` (5 promotion ADRs) | drafted | none accepted; ADR-0019 prep = gate-pending (2026-06-02; see `ADR_0019_PREP_LOG.md`) |
 | `docs/adr/proposed/0023-demotion-procedure.md` | drafted | not activated |
 | `docs/closure/PROMOTION_PLAYBOOK.md` | drafted | first candidate = ADR-0019, not yet promoted |
 | `docs/closure/RELEASE_CHECKLIST.md` | drafted | not yet used (no release cut) |
@@ -992,6 +992,15 @@ The Tier 1 items (per the session's earlier
    flipping it is a 1-line change. S-sized
    but requires `cabal build` + integration
    test pass per G1-G4 gates.
+   **Status (2026-06-02)**: prep done (matrix
+   updated, ADR-0019 status field added,
+   PROMOTION_PLAYBOOK §10 release log entry),
+   but **gate-pending**: G1 partial (rule
+   [12] mechanical pass, human audit deferred);
+   G2 not verifiable without cabal; G3 not
+   verifiable without corpus (F-09 deferred).
+   Next-contributor: run gates, then flip +
+   commit. See `docs/closure/ADR_0019_PREP_LOG.md`.
 
 ### 15.5 The 3 Tier 2 M/L follow-ups
 

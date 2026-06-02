@@ -129,3 +129,15 @@ This ADR is **closed** when:
       flipped default.
 
 The ADR is **deferred** until all five criteria are met.
+
+## 6. Gate status (2026-06-02)
+
+The release event is **deferred** until all three gates pass. As of 2026-06-02:
+
+- **G1 — adjunction caller mapping audit**: **partial**. The mechanical part (rule [12] in `check_architecture.sh` enforces no direct `QxFx0.Self.Holistic` / `QxFx0.Self.Formal` imports in the pipeline) is verifiable; the human audit is **deferred** to next-contributor.
+- **G2 — replay parity**: **not verifiable in this session**. Requires `cabal run` of a fixed-fixture replay comparing `familyDivergenceEnabled = True` trace JSON against the `False` baseline on cases where the modulation does not fire. The no-cabal session cannot run this.
+- **G3 — divergence observability**: **not verifiable in this session**. Requires the production-trace corpus (per F-09), which is not harvested yet. The `trcDeliberationDivergence` field is **wired** (per `REPLAY_GATE_TRIAGE.md §2.4`) but no corpus case has been verified to produce a non-`Neutral` value.
+
+**Release event (the literal flip at `Cascade.hs:74`)** is **deferred** until G1/G2/G3 pass. The flag remains at `= False` literal. The R6 row in `ENFORCEMENT_MATRIX.md` stays **green** (the discipline is still in place for the 4 other promotion flags; Family Divergence is in the "gate-pending" sub-state, not released).
+
+See `docs/closure/ADR_0019_PREP_LOG.md` for the next-contributor handoff.

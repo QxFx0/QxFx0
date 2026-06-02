@@ -222,3 +222,58 @@ The playbook is **deferred** until the first
 promotion is done. Until then, the playbook is
 **documented but unused**; the promotion path is a
 **plan**, not a **practice**.
+
+## 10. Release log
+
+The playbook's first use was attempted on
+**2026-06-02** for **ADR-0019 (Family Divergence)**
+in a no-cabal session. The pre-flight passed, the
+gate was **partial / deferred**, and the release
+event was **not** executed. Per the discipline
+(§2: "the gate is the contract"), the flag flip
+at `src/QxFx0/Core/TurnRouting/Cascade.hs:74`
+remains **deferred** until G1/G2/G3 pass.
+
+| Date | ADR | Pre-flight | Gate | Release event | Post-flight |
+|------|-----|------------|------|---------------|-------------|
+| 2026-06-02 | 0019 (Family Divergence) | passed (flag at `= False`, ADR proposed, etc.) | **partial** (G1 mechanical pass; G2/G3 deferred) | **deferred** (no flip) | n/a |
+
+The matrix row R6 stays **green** because the
+discipline is still in place for the 4 other
+promotion flags. Family Divergence is in the
+"gate-pending" sub-state.
+
+**Next-contributor procedure**:
+
+1. **G1 (caller audit)**: run
+   `bash scripts/check_architecture.sh` and
+   verify rule [12] passes. Then read
+   `src/QxFx0/Core/TurnRouting.hs` and
+   `src/QxFx0/Core/TurnRouting/Cascade.hs`
+   to confirm `holisticFamily` / `formalFamily`
+   callers go through `Self.Adjunction.reconcile`.
+   Mark G1 as `met` in this ADR's §2.1.
+2. **G2 (replay parity)**: with cabal permission,
+   run a fixed-fixture replay
+   (`cabal run qxfx0-main -- --replay-flag-on familyDivergenceEnabled`)
+   and compare trace JSON against the `False`
+   baseline on cases where the modulation does not
+   fire. Mark G2 as `met` if byte-identical.
+3. **G3 (corpus observability)**: this is
+   **gated on F-09** (corpus harvest). Once the
+   corpus exists, run a corpus case and verify
+   `trcDeliberationDivergence` is non-`Neutral` on
+   at least one case.
+4. **Release event (only after all 3 gates met)**:
+   flip `familyDivergenceEnabled = False` to
+   `= True` at `Cascade.hs:74`, update
+   `SELF_LAYER_STATUS.md` (`production-flag-on`),
+   `AUTHORITY_MAP.md §6` (`promoted` or remove the
+   row), `qxfx0.cabal` test-common (move the
+   relevant test to canonical if applicable), and
+   add a changelog entry under "Flag flips".
+5. **Post-flight**: monitor 1k production turns
+   for any misfire; revert if observed (per §4).
+
+The full prep handoff is in
+`docs/closure/ADR_0019_PREP_LOG.md`.

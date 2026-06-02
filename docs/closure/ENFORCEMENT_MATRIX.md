@@ -1,7 +1,7 @@
 # Enforcement Matrix (QxFx0_v3) — boundary rule → check rule → test → doc
 
 - **Status**: Active (closure-phase work product)
-- **Date**: 2026-06-02 (rev. 4 — R6 CI yellow closed via `check_architecture.sh` rule [20])
+- **Date**: 2026-06-02 (rev. 4 — R6 CI yellow closed via `check_architecture.sh` rule [20]; rev. 5 — ADR-0019 prep, gate-pending)
 - **Status counts**: 7 green + 0 yellow + 0 red rows
 - **Refines**:
   - `docs/adr/proposed/0034-self-core-role-split.md` §3
@@ -40,7 +40,7 @@ is in place but the test is a placeholder. A row is
 | **R3** — `Core/*` observer modules emit into trace only | `check_architecture.sh` [19] (Observability + Haddock `observer`) | `Test.Suite.ObserverDiscipline` (textual check, closed 2026-06-02) | `AUTHORITY_MAP.md §3.3` | green |
 | **R4** — `Render/*` is the only outbound text producer | `check_architecture.sh` [18] (heuristic: `render*` / `build*` functions import the orchestrator) | `Test.Suite.RenderDialogueCoverage` (per `TEST_AUTHORITY_AUDIT.md`) | `GF_AUTHORITY_SUBSET.md §2` | green (heuristic); green (test) |
 | **R5** — `Bridge.ExternalLLM` is the only authority-bearing supplier that is opt-in by feature flag | `check_architecture.sh` [15] (Bridge `QXFX0_*_ENABLED` allowlist) | `Test.Suite.RenderAuthorityStub` (per F-11) | `ADR-0021` (LLM promotion), `AUTHORITY_MAP.md §6` | green |
-| **R6** — `canonical-flag-off` modules are not in the authority path until the flag is flipped | `check_architecture.sh` [20] (5 promotion flags must not have `= True` literal in `src/`; Family Divergence must be at `= False`) | `Test.Suite.SelfEssenceCommit`, `Test.Suite.SelfEssence`, `Test.Suite.PromotionFlagDiscipline` (closed 2026-06-02) | `SELF_LAYER_STATUS.md §2`, `PROMOTION_PLAYBOOK.md §3` | green |
+| **R6** — `canonical-flag-off` modules are not in the authority path until the flag is flipped | `check_architecture.sh` [20] (5 promotion flags must not have `= True` literal in `src/`; Family Divergence must be at `= False`); **ADR-0019 prep 2026-06-02**: gate-pending, release event deferred until G1/G2/G3 pass | `Test.Suite.SelfEssenceCommit`, `Test.Suite.SelfEssence`, `Test.Suite.PromotionFlagDiscipline` (closed 2026-06-02) | `SELF_LAYER_STATUS.md §2`, `PROMOTION_PLAYBOOK.md §3, §10`, `ADR_0019_PREP_LOG.md` | green |
 | **R7** — Derived modules must remain regenerable | `check_architecture.sh` [16] (heuristic: `*Generated.hs` has a generator in `scripts/`) + `check_generated_artifacts.sh` (full script) | `Test.Suite.RegenerableDerived` (closed 2026-06-02) | `AUTHORITY_MAP.md §3.5` | green |
 
 The matrix is a **discipline map**, not a **test
@@ -102,6 +102,12 @@ not to add more rules.
 | R7 (test) | `Test.Suite.RegenerableDerived` | §13 (2026-06-02) |
 | R2 (test) | `Test.Suite.ArchitectureInvariants.r2SupplierDoesNotImportOrchestrator` | §14 (2026-06-02) |
 | R6 (CI) | `check_architecture.sh` rule [20] | §15 (2026-06-02) |
+
+### Rev. 5 prep log
+
+| Item | Status | Reason |
+|------|--------|--------|
+| ADR-0019 (Family Divergence) prep | gate-pending | G1 (caller audit, partial verifiable via rule [12]) + G2 (replay parity, requires cabal) + G3 (corpus observability, requires F-09 corpus); none met in this session; release event (flag flip) deferred to next-contributor. R6 row stays **green** (discipline still in place for the 4 other flags; Family Divergence remains `= False`). |
 
 ## 5. The discipline
 
