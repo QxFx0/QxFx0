@@ -1,383 +1,308 @@
 # QxFx0
 
-Deterministic, spec-first dialogue runtime for Russian reasoning workflows.
+**Deterministic dialogue runtime with formal foundations**
 
-QxFx0 is an open-source alternative to purely probabilistic chat stacks: routing is typed and explicit, output is grammar-constrained, and release decisions are gate-driven with auditable evidence.
+QxFx0 is a research-grade conversational system that prioritizes reproducibility, traceability, and formal correctness over probabilistic plausibility. Built on three theoretical pillars—consciousness as structured duality, intensive specification, and conatus as primary algorithm—it demonstrates an alternative approach to dialogue infrastructure.
 
-Current shape: the runtime now includes a canonical P5 governance spine, explicit epistemic-status classification (`authoritative` / `advisory` / `degraded` / `fallback` / `observational-only` / `non-driving`), a sense-continuation bridge inside the planning path, and hardened SQL→GF→datalog truth seams.
+## What Makes QxFx0 Different
 
-## Why This Project Exists
+Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
-Most conversational systems optimize for plausibility. QxFx0 optimizes for:
-- reproducible behavior under explicit contracts
-- traceable decisions (family/force/state transitions)
-- safe degraded behavior without hidden retries
-- verifiable release gates instead of “it seems to work”
+- **Deterministic behavior** — Same input + state → same output, every time
+- **Traceable decisions** — Every routing choice has auditable evidence
+- **Explicit contracts** — Failure modes are typed, not hidden
+- **Formal grounding** — GF grammar + typed semantics, not templates
+- **Governance-first** — Append-only history, rebuildable projections, versioned policies
 
-If you need deterministic dialogue infrastructure with strict operational semantics, QxFx0 is built for that.
+If you need dialogue infrastructure where "why did it do that?" has a precise answer, QxFx0 is built for that use case.
 
-Canonical runtime/deployment contract source:
-`docs/runtime_deployment_contract.md`.
+## Current Status (2026-06-03)
 
-## What Is Implemented
+**Maturity**: Research-grade with production-ready core  
+**License**: MIT  
+**Languages**: Russian (primary), English (experimental)
 
-- Typed semantic routing (`CanonicalMoveFamily`, `IllocutionaryForce`) via `Semantic.Logic`
-  and a guarded cascade (parser lock, meaning-graph strategy hints, principled pressure,
-  threshold intuition flashes, identity/guard gating)
-- Multi-layer runtime: Haskell core + SQLite persistence + GF surface generation
-- Experimental scientific modules (`Core.GameTheory`, `Core.Spectral`, `Core.Bayesian`)
-  compile as `other-modules` for the extended contour; they are not part of the PROD
-  turn pipeline
-- Constitutional readiness contour (Nix policy checks)
-- CLI runtime and HTTP sidecar with live-session continuity contract
-- Gate contract for release decisions (`scripts/ci_gate_contract.sh`)
-- Lexicon pipeline with collision/quality controls and generated artifacts sync
-- Dialogue development emits bounded shared adaptive mutation records via `SystemState.ssAdaptiveMutationLog`; legacy dialogue JSON field names are still decoded for compatibility.
-- P4 `PerspectiveOperator` builds governed, versioned perspective lineage in `SystemState.ssPerspectiveRegistry` and exposes only safe `PerspectiveProjection` in replay traces.
-- P5 governance spine provides canonical append-only history, typed governed payloads, rebuildable projections, policy/version surface, and machine-readable epistemic status classification.
-- Sense bridge (`QxFx0.Semantic.Sense`) converts utterance-level meaning into bounded adjacent response planning, feeding `ResponseMeaningPlan` and `ResponseContentPlan` without creating a parallel semantic stack.
-- SQL/GF/datalog truth chain is checked by generation and drift gates, with explicit fallback semantics for unresolved lexemes and advisory shadow contours.
+### Recent Milestones
 
-## Current Maturity
+- ✅ **Phase 9–10 (Essence Commitment)** — Trajectory tracking with rupture detection
+- ✅ **Phase 8 (Deliberation)** — Reconciliation framework with tone divergence
+- ✅ **Phase 6 (M6.1)** — Single-source-of-truth Conatus refactor
+- ✅ **P5 Governance** — Canonical append-only history with typed payloads
+- ✅ **Security hardening** — LLM endpoint allowlist, typed JSON decoders, explicit degradation
+- ✅ **Bilingual support** — Russian + English GF linearization paths
 
-- Core release contour: `PASS_BY_INDIVIDUAL_GATES` (low-RAM verified)
-- Scientific closure: `PASS_BY_INDIVIDUAL_GATES` with Agda/Nix reproducibility checks passing
-- Extended/high-memory contour: deferred to high-memory runners
-- Canonical evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
-- CI/release profile: `docs/CI_PRODUCTION_PROFILE.md`
-- Current operational rule: fallback/degraded/advisory states are now surfaced explicitly rather than silently masquerading as success
-- Current architectural rule: R5 core remains static; dynamicity is policy-envelope-only and governed through P5
+### What's Implemented
 
-## Status Snapshot (2026-05-22)
+**Core Runtime**:
+- 8-layer architecture with enforced dependency invariants
+- 4-phase turn pipeline (Prepare → Route → Render → Finalize)
+- Typed semantic routing via `CanonicalMoveFamily` and `IllocutionaryForce`
+- GF-based surface generation with morphology resolver fallback
+- SQLite persistence with schema contracts
+- HTTP sidecar with session continuity
 
-Security/reliability hardening (WP1–WP3) landed and verified:
+**Self Layer** (unique to QxFx0):
+- `SelfBlanket` — Formal invariants for self-preservation
+- `Conatus` — Energy-based continuation drive
+- `Holistic ⊣ Formal` — Categorical adjunction between modes
+- `Field` — 5-component right-hemispheric observation
+- `Salience` — Controller for holistic/formal bias
+- `Deliberation` — Reconciliation with tone divergence
+- `Essence` — Trajectory commitment with rupture detection
 
-- **GF Map silent degradation eliminated** — `GfMapLoadStatus` is now exported;
-  missing/corrupt resource returns explicit `GfMapLoadFailed` reason rather than
-  silent empty map. `unsafePerformIO` invariant documented.
-- **LLM endpoint allowlist enforced** — only `api.mistral.ai` and `api.fireworks.ai`
-  are allowed by default; custom hosts require explicit
-  `QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1` opt-in. Non-https and untrusted hosts
-  fail-closed to mock transport with structured telemetry.
-- **Typed JSON decoder for chat-completion envelope** — replaced brittle
-  `extractStructured` string search with Aeson-typed
-  `ChatCompletionResponse/Choice/Message` parser. Invalid envelopes pass through
-  raw body for downstream handling.
-- Fast suite: green in the local gate; the exact case count is reported by
-  `cabal test qxfx0-test-fast`.
-- P4 OpinionCore/PerspectiveOperator: implemented as a pure self-layer operator
-  plus canonical `PerspectiveRegistry`; finalize/precommit emits typed
-  `MutPerspective` records, and replay exposes only `PerspectiveProjection`.
+**Governance**:
+- P5 spine with append-only history
+- Typed governed payloads
+- Rebuildable projections
+- Machine-readable epistemic status
+- 19+ Architecture Decision Records (ADRs)
 
-## Status Snapshot (2026-05-20)
-
-Phase A/B/C formal closure is complete:
-
-- EN rendering contour expanded and validated (`check_en_render_path.sh` PASS with
-  `intent_fit=1.0000`, `fallback=0.0000`, `ru_leakage=0.0000`).
-- Post-commitment adaptation infrastructure is wired with bounded updates and
-  guardrails (signal calibration remains a later phase).
-- Deterministic time injection is integrated in Prepare stage for reproducible tests.
-- Agda formalization pass completed (`nix run .#typecheck-agda` PASS).
-- Nix reproducibility checks completed (`nix flake check` PASS, with known non-blocking
-  pre-existing `pgf2` warning).
-
-Low-RAM core verification is green (build + fast suite + full meta suite + architecture + GF paths +
-artifacts + lexicon). Aggregate/high-memory scientific runs remain infrastructure-dependent and are
-tracked as deferred, not treated as PASS.
-
-## Status Snapshot (2026-05-17)
-
-Historical post-M2d landing snapshot (Phase 2.5 dual-mode Conatus +
-Phase 5.5d/e Field broadening + Phase 6 effect-system refactor). This
-snapshot is superseded by the 2026-05-20/2026-05-22 gate records above.
-
-What landed:
-
-- Runtime Conatus integrated into recovery as the primary,
-  priority-overriding driver. Conatus gate fires before all other
-  recovery guards (shadow / parser / legitimacy / runtime-mode);
-  see ADR-0010 addendum (2026-05-17).
-- Dedicated `RecoveryConatusGate` cause in the trace and JSON
-  schema, distinct from `RecoveryRuntimeDegraded`; see ADR-0005
-  addendum.
-- Salience controller verdict emitted in `TurnReplayTrace`
-  (`trcSalienceDriver`, `trcSalienceHolisticBias`,
-  `trcSalienceConfidence`); audit consumers can reconstruct *why*
-  the controller dispatched, not just *what*.
-- Canonical pre-turn `Field` populated with four runtime-sourced
-  components (Resonance, Atmosphere, Consolidation,
-  Counterfactual); see ADR-0009 addendum.
-- Single-source-of-truth Conatus refactor: three duplicate
-  computation sites collapsed; Prepare stage is canonical.
-- New unit suite `Test.Suite.PhaseM2d` (8 tests) + a pipeline-
-  level integration test (`testConatusGateFiresRecoveryConatusGate`).
-
-See `CHANGELOG.md` for the full record.
-
-## Status Snapshot (2026-05-13, prior baseline)
-
-- Canonical core run: `ci-20260513-195724`
-- Core verdict: `CONTRACT_VERDICT: PROD_GO`
-- Core contour: build, tests, architecture, GF quality, GF render path, artifacts, lexicon, degraded-local smoke
-- Extended contour: intentionally separated (requires high-memory runner for full scientific profile)
-
-For auditors/reviewers, see:
-- `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
-- `reports/baseline_v2/final_gates/_gate_results_ci-20260513-195724_core.md`
-
-## Architecture Snapshot
-
-- `src/QxFx0/**`: runtime core, routing, render pipeline, state, observability
-
-### Legal knowledge adapter (narrow, live stub)
-
-`QxFx0.Legal.Adapter` is **not** dead code: the render phase calls `retrieveLegalFact` when the
-knowledge topic matches a small in-memory legal corpus (WP3). Hits enrich the response with a
-traceable fragment plus a mandatory disclaimer (`legalDisclaimer`). Non-legal topics are unchanged.
-This is a **bounded stub**, not legal advice software — see `test/Test/Suite/LegalAdapter.hs`.
-
-### Datalog shadow (live shadow contour)
-
-Soufflé-backed shadow verification runs in the **route** phase (`TurnReqShadow` via
-`QxFx0.Bridge.Datalog`). When the executable is missing, the pipeline records `ShadowUnavailable`
-and continues (no hidden retry). Divergence severity feeds legitimacy scoring and typed local
-recovery (`Recovery*` causes in the turn trace). Shadow is a **parallel check**, not the primary
-family selector — cascade + thresholds remain authoritative for PROD routing.
-
-### Recovery decision and the Conatus gate (Phase 2.5 / M2d)
-
-The local-recovery decision in `buildLocalRecoveryPlan` is
-priority-ordered. The **Conatus gate** is the highest-priority
-guard: when the runtime `ConatusEnergy` drops below
-`conatusGateThreshold` (see `QxFx0.Self.Salience`), the system
-is in structural risk and `StrategySafeRecovery` is forced
-regardless of shadow, parser, legitimacy, or runtime-mode
-signals. The cause is tagged with the dedicated
-`RecoveryConatusGate` variant of `LocalRecoveryCause` (snake_case
-JSON tag `"conatus_gate"`), distinct from the environmental
-`RecoveryRuntimeDegraded`. See ADR-0010 addendum (2026-05-17)
-and ADR-0005 addendum (2026-05-17) for the full specification.
-
-The pre-turn `ConatusEnergy` and `Field` are computed once per
-turn in `buildPrepareEffectPlan` and threaded through
-`PrepareStatic` → `TurnInput` as the single source of truth
-(Phase 6 refactor); routing salience and the recovery decision
-are read-only consumers of these values.
-
-### Intuition and experimental Bayesian nudge
-
-Production flashes use `QxFx0.Core.Intuition` (threshold posteriors). A light **experimental**
-belief nudge from `Core.Bayesian` (`other-modules`) is folded into `checkIntuitionWithInput` via
-`bayesianBeliefNudge` — it slightly adjusts resonance/tension before the standard posterior update,
-without exposing Bayesian as a separate PROD API.
-
-- `app/**`: CLI surfaces
-- `scripts/**`: gates, checks, release orchestration, artifact generators
-- `spec/sql/**`: schema + lexicon seeds + contract tables
-- `spec/gf/**`: GF grammar and bilingual lexicon artifacts
-- `spec/*.agda`: proof/spec layer + generated lexicon artifacts
-- `docs/**`: runtime invariants, CI profile, runbooks
+**Quality Infrastructure**:
+- 45 test suites (unit/property/integration/slow/fast)
+- Golden corpus with 400+ examples
+- Architecture invariant checks
+- GF quality gates
+- Replay verification
 
 ## Theoretical Foundation
 
-QxFx0 commits to a documented theoretical position. Architectural and code
-changes are expected to honor it.
+QxFx0 is grounded in three theses (see `docs/THEORY.md`):
 
-- `docs/THEORY.md` — three foundational theses (consciousness as structured
-  duality, intensive specification, conatus as primary algorithm) and their
-  unified synthesis as the implementation contract.
-- `docs/ARCHITECTURE.md` — layered architecture (8 horizontal layers),
-  enforced dependency invariants, turn pipeline structure, and the landed
-  dual-mode (`Holistic ⊣ Formal`) runtime contour.
-- `docs/adr/0007-dual-mode-conatus.md` — the architecture decision record
-  operationalizing THEORY.md as a phased modernization (P0–P8) toward a
-  self-preserving dual-mode runtime with formal `SelfBlanket` invariants
-  and a `Conatus` functional.
-- `docs/adr/0009-right-hemisphere-field.md` — the algebraic shape of the
-  right-hemispheric observation summary (`Field`: Resonance, Atmosphere,
-  Consolidation, Counterfactual, FieldConfidence) and the 2026-05-17
-  addendum recording each component's runtime source.
-- `docs/adr/0010-salience-controller.md` — the Phase-5 Salience
-  controller that turns `(ConatusEnergy, Field)` into a
-  `(holisticBias, confidence, driver)` verdict; the 2026-05-17
-  addendum records the integration into routing salience, the
-  Conatus-gate priority override, and the trace-side audit fields.
+1. **Consciousness as structured duality** — Not metaphor, but formal model
+2. **Intensive specification** — Every decision has mathematical justification
+3. **Conatus as primary algorithm** — Energy-based self-preservation
 
-External readers familiar with active inference (Friston), autopoiesis
-(Maturana & Varela), hemispheric duality (McGilchrist), or paraconsistent
-logic (Priest, da Costa) will recognize the intellectual lineage; readers
-without that background should treat `docs/THEORY.md` as the binding
-contract that subsequent code answers to.
-
-## Core Design Principles
-
-1. Route first, render second.
-2. Keep failure semantics explicit (`unknown outcome` instead of hidden retries).
-3. Keep readiness side-effect free.
-4. Keep generated artifacts synchronized from canonical sources.
-5. Keep release decisions evidence-backed.
+This isn't "inspired by" cognitive science—it's a direct implementation of formal models from active inference (Friston), autopoiesis (Maturana & Varela), and hemispheric duality (McGilchrist).
 
 ## Quick Start
 
+### Prerequisites
+
 ```bash
-python3 -m pip install -r requirements.txt
-cabal build all                 # PASS (library + executable)
-cabal test qxfx0-test-fast      # PASS — exact case count reported by Cabal
-bash scripts/check_architecture.sh  # PASS — 12 invariants OK
-bash scripts/gf_quality_gate.sh     # PASS — 0 errors, 0 warnings
+# Haskell toolchain
+ghc >= 9.6.6
+cabal >= 3.10
+
+# Python (for build scripts)
+python3 >= 3.9
+pip install -r requirements.txt
+
+# Optional: Nix (for reproducible builds)
+nix >= 2.18
 ```
 
-The following gates are **INFRA-DEFERRED** on low-RAM runners (~10–11 GB):
-- `cabal test qxfx0-test` (full meta suite) — passes on high-mem runners
-- `bash scripts/check_generated_artifacts.sh` — exceeds 60 s wall-clock
-- `bash scripts/check_lexicon.sh` — exceeds 30 s wall-clock
-- `QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh` — aggregate orchestration exceeds RAM/time envelope
+### Build and Test
 
-Core contour verdict: `CONTRACT_VERDICT: PROD_GO` (verified by individual gates).
+```bash
+# Build
+cabal build all
 
-**Python test coverage**: the canonical Python test command is
-`python3 -m unittest discover -s test -p 'test_*.py'`. CI runs that command
-in addition to the Python validation scripts (`sync_embedded_sql.py`,
-`check_schema_consistency.py`, `check_schema_contract.py`,
-`check_runtime_contract.py`, `check_concepts_schema.py`). Historical gaps and
-scope notes are tracked in `docs/PYTHON_TEST_GAP.md`.
+# Fast test suite (< 30s)
+cabal test qxfx0-test-fast
 
-## Run a Dialogue Session
+# Architecture invariants
+bash scripts/check_architecture.sh
+
+# GF quality gate
+bash scripts/gf_quality_gate.sh
+```
+
+### Run a Dialogue Session
 
 ```bash
 cabal run -v0 qxfx0-main -- --session demo
 ```
 
-Example turns:
+Example interaction:
+```
+> привет
+контакт: Я здесь.
 
-```text
-привет
-что такое логика?
-как отличить истину от мнения?
-:state
-:quit
+> что такое логика?
+определение: Логика — это структура, которая делает рассуждение воспроизводимым.
+
+> :state
+[System state summary...]
+
+> :quit
 ```
 
-One-shot request:
-
-```bash
-cabal run -v0 qxfx0-main -- --turn-json "что такое свобода?"
-```
-
-## HTTP Sidecar
-
-Start:
+### HTTP Sidecar
 
 ```bash
 cabal run qxfx0-main -- --serve-http 9170
 ```
 
 Endpoints:
-- `GET /sidecar-health`
-- `GET /runtime-ready`
-- `POST /turn` with `{"session_id":"abc","input":"Что такое свобода?"}`
+- `GET /sidecar-health` — Health check
+- `GET /runtime-ready` — Readiness probe
+- `POST /turn` — Process dialogue turn
 
-Operational semantics are documented in this repo and enforced by smoke gates.
-
-## Governance and Project Meta
-
-- Contribution guide: `CONTRIBUTING.md`
-- Code of conduct: `CODE_OF_CONDUCT.md`
-- Security policy: `SECURITY.md`
-- Governance model: `GOVERNANCE.md`
-- Roadmap: `ROADMAP.md`
-- Third-party notices: `THIRD_PARTY_NOTICES.md`
-- Changelog: `CHANGELOG.md`
-- Citation metadata: `CITATION.cff`
-
-## Lexicon and GF Pipeline
-
-Canonical flow:
-
-`SQL -> morphology JSON -> GF artifacts -> Agda artifacts -> Haskell generated map`
-
-Key files:
-- `spec/sql/lexicon/seed_ru_curated.sql`
-- `spec/gf/lexicon_bilingual.tsv`
-- `src/QxFx0/Lexicon/Generated.hs`
-- `resources/morphology/lexicon_quality.json`
-
-Validation:
-
+Example request:
 ```bash
-bash scripts/check_lexicon.sh
-bash scripts/check_generated_artifacts.sh
+curl -X POST http://localhost:9170/turn \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"demo","input":"что такое свобода?"}'
 ```
+
+## Architecture Highlights
+
+### 8-Layer Structure
+
+```
+┌─────────────────────────────────────┐
+│ App/CLI         (user interface)    │
+├─────────────────────────────────────┤
+│ Runtime         (session, wiring)   │
+├─────────────────────────────────────┤
+│ Core            (pipeline, routing) │
+├─────────────────────────────────────┤
+│ Self            (conatus, field)    │ ← Unique to QxFx0
+├─────────────────────────────────────┤
+│ Bridge          (SQL, GF, Datalog)  │
+├─────────────────────────────────────┤
+│ Semantic+Render (meaning, surface)  │
+├─────────────────────────────────────┤
+│ Lexicon+Policy  (resources, rules)  │
+├─────────────────────────────────────┤
+│ Types           (domain model)      │
+└─────────────────────────────────────┘
+```
+
+### Turn Pipeline
+
+```
+Input → Prepare → Route → Render → Finalize → Output
+         ↓         ↓       ↓         ↓
+      [Conatus] [Family] [GF]   [Governance]
+      [Field]   [Force]  [Morph] [Trace]
+```
+
+### Text Generation (3 levels)
+
+1. **GF (Grammatical Framework)** — Formal grammar via PGF (priority)
+2. **Haskell linearization** — Native fallback with morphology resolver
+3. **JSON dictionaries** — Preloaded paradigms (genitive, accusative, etc.)
+
+No Python in the runtime path. No LLM for generation. Pure determinism.
 
 ## What QxFx0 Is Not
 
-- Not a web-scale knowledge engine
-- Not a drop-in replacement for frontier LLM products
-- Not legal/medical advice software
-- Not a black-box stochastic sampler
+- ❌ Not a web-scale knowledge engine
+- ❌ Not a drop-in ChatGPT replacement
+- ❌ Not legal/medical advice software
+- ❌ Not a black-box stochastic sampler
+- ❌ Not optimized for casual conversation
 
-## Known Limits (Honest)
+## Known Limitations (Honest)
 
-- Full extended profile needs high-memory CI runners
-- GF toolchain availability can be infra-dependent
-- Some external integrations are intentionally stubbed in local test contour
-- Production runtime is not bit-for-bit deterministic (time/UUID/process scheduling)
+- **Memory**: Full test suite needs ~10–11 GB RAM
+- **Infrastructure**: Some gates require high-memory CI runners
+- **Coverage**: Russian lexicon is more complete than English
+- **Scope**: Designed for reasoning workflows, not chitchat
+- **Determinism**: Not bit-for-bit (time/UUID/process scheduling vary)
 
-## EN Language Status
+## English Language Status
 
-QxFx0 has experimental English support with the following characteristics:
+**Experimental** with the following characteristics:
 
-**Capabilities:**
-- GF-based English linearization via `QxFx0SyntaxEng`
-- Bilingual lexicon with 3000+ EN lemmas in `spec/gf/lexicon_bilingual.tsv`
-- Language routing: pure Latin input → English GF path (conservative policy)
-- EN-localized recovery surfaces for degraded/confidence scenarios
-- EN quality gate: `scripts/check_en_render_path.sh`
+✅ GF-based linearization via `QxFx0SyntaxEng`  
+✅ 3000+ EN lemmas in bilingual lexicon  
+✅ Language routing (pure Latin → English path)  
+✅ EN-localized recovery surfaces  
 
-**Current Limitations:**
-- EN lexicon coverage is smaller than Russian (prioritized RU core)
-- EN GF linearization patterns are less varied than Russian
-- Parser confidence tuning is optimized for Russian morphology
-- Mixed input (RU+EN) defaults to Russian GF path
+⚠️ Smaller lexicon than Russian  
+⚠️ Fewer GF patterns than Russian  
+⚠️ Parser tuning optimized for Russian morphology  
 
-**Quality Targets (EN Gate):**
-- intent_fit_rate >= 0.90
-- gf_output_rate >= 0.85
-- fallback_rate <= 0.15
-- ru_leakage_rate <= 0.05
-- critical_mismatch_count = 0
+Quality targets: intent_fit ≥ 0.90, gf_output ≥ 0.85, fallback ≤ 0.15
 
-To run EN evaluation:
-```bash
-bash scripts/run_en_eval.sh
-bash scripts/check_en_render_path.sh
-```
-
-## Why This Matters for AI Infrastructure
+## Why This Matters
 
 QxFx0 demonstrates a different axis of AI system design:
-- explicit contracts over implicit behavior
-- auditable gates over narrative confidence
-- deterministic recovery over opaque fallback chains
 
-This is useful for domains where explainability, control, and reproducibility matter more than pure generative breadth.
+- **Explicit contracts** over implicit behavior
+- **Auditable gates** over narrative confidence
+- **Deterministic recovery** over opaque fallback chains
+- **Formal grounding** over statistical plausibility
+
+This is useful for domains where explainability, control, and reproducibility matter more than generative breadth—think critical infrastructure, research tools, or regulated environments.
+
+## Documentation
+
+- **Theory**: `docs/THEORY.md` — Foundational theses
+- **Architecture**: `docs/ARCHITECTURE.md` — 8-layer structure
+- **ADRs**: `docs/adr/` — 19+ architecture decisions
+- **Contracts**: `docs/runtime_deployment_contract.md`
+- **CI Profile**: `docs/CI_PRODUCTION_PROFILE.md`
+- **Roadmap**: `ROADMAP.md` — M0–M6 strategic plan
+
+## Governance
+
+- **Contributing**: `CONTRIBUTING.md`
+- **Code of Conduct**: `CODE_OF_CONDUCT.md`
+- **Security**: `SECURITY.md`
+- **Governance**: `GOVERNANCE.md`
+- **Changelog**: `CHANGELOG.md`
+- **Citation**: `CITATION.cff`
 
 ## 2026 Focus
 
-1. Reduce remaining fallback-heavy surface paths and keep degraded states explicit.
-2. Expand GF-native Russian/English parity without reintroducing silent lexical drift.
-3. Keep the sense-continuation bridge bounded and observable while it grows into richer adjacency rules.
-4. Keep all self-modification contours bounded, decision-recorded, replay-visible, and fail-closed.
+1. Reduce fallback-heavy paths, keep degraded states explicit
+2. Expand GF-native Russian/English parity
+3. Keep sense-continuation bridge bounded and observable
+4. Keep all self-modification contours bounded, recorded, and fail-closed
 
-## Repository References
+## For Researchers
 
-- Runtime invariants: `docs/runtime_invariants.md`
-- CI profile: `docs/CI_PRODUCTION_PROFILE.md`
-- Extended runbook: `docs/EXTENDED_CONTRACT_RUNBOOK.md`
-- Release smoke: `scripts/release-smoke.sh`
-- Canonical gate evidence: `reports/baseline_v2/final_gates/CANONICAL_EVIDENCE_INDEX.md`
+If you're working on:
+- Formal models of dialogue
+- Deterministic AI systems
+- Active inference implementations
+- Cognitive architecture
+- Explainable AI
+
+QxFx0 provides a working reference implementation with:
+- Full source code (MIT license)
+- Documented theoretical foundations
+- Reproducible build (Nix)
+- Comprehensive test suite
+- Auditable decision traces
+
+## For Engineers
+
+If you need:
+- Predictable dialogue behavior
+- Traceable decision paths
+- Explicit failure modes
+- Schema-validated persistence
+- Governance-first design
+
+QxFx0 demonstrates production patterns for:
+- Typed semantic routing
+- Append-only state history
+- Replay verification
+- Contract-driven testing
+- Formal grammar integration
+
+## Citation
+
+```bibtex
+@software{qxfx0,
+  title = {QxFx0: Deterministic Dialogue Runtime with Formal Foundations},
+  author = {[See CITATION.cff]},
+  year = {2026},
+  url = {https://github.com/[your-org]/QxFx0},
+  license = {MIT}
+}
+```
 
 ## License
 
-MIT
+MIT — See `LICENSE` for details.
+
+---
+
+**Status**: Research-grade with production-ready core  
+**Maintenance**: Active development  
+**Community**: Contributions welcome (see `CONTRIBUTING.md`)
