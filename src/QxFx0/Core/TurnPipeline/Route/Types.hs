@@ -10,7 +10,7 @@ module QxFx0.Core.TurnPipeline.Route.Types
   ) where
 
 import QxFx0.Core.PipelineIO (ShadowResult)
-import QxFx0.Core.TurnPipeline.Types (RoutingDecision)
+import QxFx0.Core.TurnPipeline.Types (RoutingDecision, TurnInput)
 import QxFx0.Types
   ( AgdaVerificationStatus
   , AtomTag
@@ -29,6 +29,7 @@ data RouteEffectRequest
 
 data RouteEffectPlan = RouteEffectPlan
   { repStatic :: !RouteStatic
+  , repRouteTurnInput :: !TurnInput
   , repShadowRequest :: !RouteEffectRequest
   , repAgdaRequest :: !RouteEffectRequest
   }

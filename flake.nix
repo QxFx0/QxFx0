@@ -26,14 +26,8 @@
         agdaStdlib = pkgs.agdaPackages.standard-library;
 
         checkConceptsValid = pkgs.runCommandLocal "concepts-valid" {} ''
-          result="$(${pkgs.nix}/bin/nix-instantiate --eval \
-            -E 'let c = import ${./semantics/concepts.nix};
-                a = c.constitutionalThresholds.agencyFloor;
-                t = c.constitutionalThresholds.tensionCeiling;
-                svoboda = builtins.head (builtins.filter (x: x.name == "Свобода") c.concepts);
-                ok = svoboda.minAgency <= 0.7 && (svoboda.minTension == null || svoboda.minTension <= 0.7);
-                in if ok then "PASS" else abort "freedom invalid at agency=0.7"')"
-          echo "$result" | grep -q PASS
+          cd ${./.}
+          ${pkgs.python3}/bin/python3 scripts/check_concepts_schema.py >/dev/null
           echo "concepts-valid: PASS" > $out
         '';
 
@@ -59,18 +53,19 @@
           tag = "latest";
             contents = [
               qxfx0Pkg
+              pkgs.python3
               pkgs.bashInteractive
+              pkgs.cacert
               pkgs.coreutils
               pkgs.gf
               pkgs.sqlite.out
             ];
           config = {
-            Cmd = [ "${qxfx0Pkg}/bin/qxfx0-main" ];
+            Cmd = [ "${qxfx0Pkg}/bin/qxfx0-main" "--serve-http" ];
             ExposedPorts = { "9170/tcp" = {}; };
             Volumes = { "/data" = {}; };
             Env = [
-              "QXFX0_ROOT=/data"
-              "QXFX0_DB_PATH=/data/qxfx0.db"
+              "QXFX0_DB=/data/qxfx0.db"
               "QXFX0_CONCEPTS_PATH=/data/concepts.nix"
             ];
           };
@@ -81,7 +76,7 @@
             type = "app";
             program = "${pkgs.writeShellScript "init-db" ''
               set -euo pipefail
-              DB="''${QXFX0_DB_PATH:-qxfx0.db}"
+              DB="''${QXFX0_DB:-''${QXFX0_DB_PATH:-qxfx0.db}}"
               echo "Initializing database at $DB ..."
               ${pkgs.sqlite}/bin/sqlite3 "$DB" < ${./spec/sql/schema.sql}
               ${pkgs.sqlite}/bin/sqlite3 "$DB" < ${./spec/sql/seed_clusters.sql}
@@ -153,8 +148,7 @@
                 --name qxfx0 \
                 -p 9170:9170 \
                 -v qxfx0-data:/data \
-                -e QXFX0_ROOT=/data \
-                -e QXFX0_DB_PATH=/data/qxfx0.db \
+                -e QXFX0_DB=/data/qxfx0.db \
                 -e QXFX0_CONCEPTS_PATH=/data/concepts.nix \
                 qxfx0:latest
               echo "Container deployed on port 9170."
@@ -165,7 +159,7 @@
             type = "app";
             program = "${pkgs.writeShellScript "migrate" ''
               set -euo pipefail
-              DB="''${QXFX0_DB_PATH:-qxfx0.db}"
+              DB="''${QXFX0_DB:-''${QXFX0_DB_PATH:-qxfx0.db}}"
               for f in ${./migrations}/*.sql; do
                 echo "Applying $f ..."
                 ${pkgs.sqlite}/bin/sqlite3 "$DB" < "$f"

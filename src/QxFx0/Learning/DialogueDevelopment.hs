@@ -18,6 +18,7 @@ module QxFx0.Learning.DialogueDevelopment
   ) where
 
 import qualified Data.Foldable as F
+import Data.Char (isAlphaNum, isSpace)
 import Data.List (sortBy)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe, isJust)
@@ -98,8 +99,8 @@ assessDialogueOutcome previousState postState ti tp ta =
       userRepair = propositionType `elem` ["RepairSignal", "MisunderstandingReport"]
       userClarification = propositionType `elem` ["ClarifyQ", "EpistemicQ", "RequestQ"]
       successfulContinuation = propositionType == "NextStepQ"
-      userConflict = propositionType == "ConfrontQ" || containsAny raw conflictPhrases
-      strongPositiveConfirmation = containsAny raw strongPositiveConfirmationPhrases
+      userConflict = propositionType == "ConfrontQ" || matchesAnyCue raw conflictPhrases
+      strongPositiveConfirmation = matchesAnyCue raw strongPositiveConfirmationPhrases
       weakAcknowledgement = isWeakAcknowledgementText raw
       (kind0, strong0, strength0) =
         if userConflict
@@ -378,8 +379,14 @@ outcomeSignals propositionType repeatedInput localRecovery decisionRepair render
 flag :: Text -> Bool -> [Text]
 flag label ok = if ok then [label] else []
 
-containsAny :: Text -> [Text] -> Bool
-containsAny text = any (`T.isInfixOf` text)
+matchesAnyCue :: Text -> [Text] -> Bool
+matchesAnyCue text = any (matchesCue text)
+
+matchesCue :: Text -> Text -> Bool
+matchesCue text cue
+  | T.any isSpace cue = cue `T.isInfixOf` text
+  | T.length cue < 5 = cue `elem` tokenizeDialogueText text
+  | otherwise = cue `T.isInfixOf` text
 
 strongPositiveConfirmationPhrases :: [Text]
 strongPositiveConfirmationPhrases =
@@ -406,7 +413,7 @@ weakAcknowledgementPhrases =
 
 isWeakAcknowledgementText :: Text -> Bool
 isWeakAcknowledgementText text =
-  containsAny (normalizeDialogueText text) weakAcknowledgementPhrases
+  matchesAnyCue (normalizeDialogueText text) weakAcknowledgementPhrases
 
 conflictPhrases :: [Text]
 conflictPhrases =
@@ -487,6 +494,13 @@ firstNonEmpty = fromMaybe "" . safeHead . filter (not . T.null . T.strip)
 
 normalizeDialogueText :: Text -> Text
 normalizeDialogueText = T.unwords . T.words . T.toLower . T.replace "ё" "е" . T.strip
+
+tokenizeDialogueText :: Text -> [Text]
+tokenizeDialogueText = filter (not . T.null) . T.words . T.map replaceNonToken
+  where
+    replaceNonToken c
+      | isAlphaNum c || c == '-' = c
+      | otherwise = ' '
 
 clamp01 :: Double -> Double
 clamp01 = max 0.0 . min 1.0

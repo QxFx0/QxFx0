@@ -1,0 +1,221 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Sandbox
+<span class="lineno">    9 </span>Description : WP5 — Sandbox simulation gate before graft.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Before a 'KnowledgeFruitPayload' is promoted to the live
+<span class="lineno">   12 </span>'KnowledgeTree', the sandbox projects its impact onto a *copy* of the
+<span class="lineno">   13 </span>relevant state slice and computes delta metrics:
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>- Conatus trend (improvement vs. degradation)
+<span class="lineno">   16 </span>- Uncertainty / counterfactual trend
+<span class="lineno">   17 </span>- Repair-loop frequency over a simulated window
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>Acceptance rule (fail-closed):
+<span class="lineno">   20 </span>- 'SandboxAccept' if net score &gt;= 0  (non-regression)
+<span class="lineno">   21 </span>- 'SandboxAccept' with improvement bonus if both deltas positive
+<span class="lineno">   22 </span>- 'SandboxReject' if projected conatus drops below safety floor
+<span class="lineno">   23 </span>  or net score is clearly negative.
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>The sandbox is intentionally lightweight: it does NOT run a full
+<span class="lineno">   26 </span>N-turn replay (that would require the whole pipeline).  Instead it
+<span class="lineno">   27 </span>projects deltas onto the existing 'LearningNeedState' history curve
+<span class="lineno">   28 </span>and checks monotonicity constraints.
+<span class="lineno">   29 </span>-}
+<span class="lineno">   30 </span>module QxFx0.Learning.Sandbox
+<span class="lineno">   31 </span>  ( SandboxResult(..)
+<span class="lineno">   32 </span>  , SandboxMetrics(..)
+<span class="lineno">   33 </span>  , SandboxRejectReason(..)
+<span class="lineno">   34 </span>  , SandboxConfig(..)
+<span class="lineno">   35 </span>  , defaultSandboxConfig
+<span class="lineno">   36 </span>  , runSandboxGate
+<span class="lineno">   37 </span>  , runSandboxGateWithConfig
+<span class="lineno">   38 </span>  , renderSandboxRejectReason
+<span class="lineno">   39 </span>  ) where
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   42 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   43 </span>import Data.Text (Text)
+<span class="lineno">   44 </span>import qualified Data.Text as T
+<span class="lineno">   45 </span>import GHC.Generics (Generic)
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>import QxFx0.Learning.Need (LearningNeedState(..), lnsHistory)
+<span class="lineno">   48 </span>import QxFx0.Learning.Validator (KnowledgeFruitPayload(..))
+<span class="lineno">   49 </span>import QxFx0.Types.State.System (SystemState, ssLearningNeedState)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>-- | Outcome of the sandbox simulation.
+<span class="lineno">   52 </span>data SandboxResult
+<span class="lineno">   53 </span>  = SandboxAccept !SandboxMetrics
+<span class="lineno">   54 </span>    -- ^ Fruit passes non-regression / improvement test.
+<span class="lineno">   55 </span>  | SandboxReject !SandboxMetrics !SandboxRejectReason
+<span class="lineno">   56 </span>    -- ^ Fruit would degrade system state; reject with telemetry reason.
+<span class="lineno">   57 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   58 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>-- | Metrics captured during sandbox projection.
+<span class="lineno">   61 </span>data SandboxMetrics = SandboxMetrics
+<span class="lineno">   62 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sbConatusTrend</span></span></span>      :: !Double
+<span class="lineno">   63 </span>    -- ^ Projected conatus trend after applying fruit delta.
+<span class="lineno">   64 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sbUncertaintyTrend</span></span></span>  :: !Double
+<span class="lineno">   65 </span>    -- ^ Projected uncertainty (counterfactual) trend.
+<span class="lineno">   66 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sbRepairLoopFreq</span></span></span>    :: !Double
+<span class="lineno">   67 </span>    -- ^ Estimated repair-loop frequency over simulated window.
+<span class="lineno">   68 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sbNetScore</span></span></span>          :: !Double
+<span class="lineno">   69 </span>    -- ^ Weighted composite: 0.5*conatusDelta + 0.5*predictiveDelta.
+<span class="lineno">   70 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sbWindowSize</span></span></span>        :: !Int
+<span class="lineno">   71 </span>    -- ^ Simulated window turns (N).
+<span class="lineno">   72 </span>  }
+<span class="lineno">   73 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   74 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>-- | Human-readable reject reason for telemetry and audit.
+<span class="lineno">   77 </span>data SandboxRejectReason
+<span class="lineno">   78 </span>  = SbrDegradingConatus
+<span class="lineno">   79 </span>  | SbrRisingUncertainty
+<span class="lineno">   80 </span>  | SbrHighRepairLoopRisk
+<span class="lineno">   81 </span>  | SbrNegativeNetScore
+<span class="lineno">   82 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   83 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>-- | Configurable sandbox parameters.
+<span class="lineno">   86 </span>-- Low-RAM safe: small window, tight timeout budget, strict floor.
+<span class="lineno">   87 </span>data SandboxConfig = SandboxConfig
+<span class="lineno">   88 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">scWindowSize</span></span></span>        :: !Int
+<span class="lineno">   89 </span>    -- ^ History window for trend projection (default 5).
+<span class="lineno">   90 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scSafetyFloor</span></span></span>       :: !Double
+<span class="lineno">   91 </span>    -- ^ Minimum acceptable projected conatus trend (default -0.3).
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scMinNetScore</span></span></span>       :: !Double
+<span class="lineno">   93 </span>    -- ^ Minimum weighted composite for non-regression (default -0.05).
+<span class="lineno">   94 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scMaxUncertaintyIncrease</span></span></span> :: !Double
+<span class="lineno">   95 </span>    -- ^ Maximum allowed projected uncertainty increase over the current
+<span class="lineno">   96 </span>    --   baseline (default 0.20).
+<span class="lineno">   97 </span>  }
+<span class="lineno">   98 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   99 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>defaultSandboxConfig :: SandboxConfig
+<span class="lineno">  102 </span><span class="decl"><span class="istickedoff">defaultSandboxConfig = SandboxConfig</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">{ scWindowSize        = 5</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">, scSafetyFloor       = -0.3</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, scMinNetScore       = -0.05</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, scMaxUncertaintyIncrease = 0.20</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>-- | Safety floor for projected conatus trend.
+<span class="lineno">  110 </span>conatusSafetyFloor :: Double
+<span class="lineno">  111 </span><span class="decl"><span class="nottickedoff">conatusSafetyFloor = -0.3</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>-- | Minimum net score for non-regression acceptance.
+<span class="lineno">  114 </span>minNetScore :: Double
+<span class="lineno">  115 </span><span class="decl"><span class="nottickedoff">minNetScore = -0.05</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>-- | Simulated replay window size.
+<span class="lineno">  118 </span>windowSize :: Int
+<span class="lineno">  119 </span><span class="decl"><span class="nottickedoff">windowSize = 5</span></span>
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>-- | Run the sandbox gate with default configuration.
+<span class="lineno">  122 </span>runSandboxGate :: SystemState -&gt; KnowledgeFruitPayload -&gt; SandboxResult
+<span class="lineno">  123 </span><span class="decl"><span class="istickedoff">runSandboxGate = runSandboxGateWithConfig defaultSandboxConfig</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>-- | Run the sandbox gate with explicit configuration.
+<span class="lineno">  126 </span>--
+<span class="lineno">  127 </span>-- Acceptance policy (fail-closed):
+<span class="lineno">  128 </span>-- 1. Strict non-regression: projected conatus &gt;= safetyFloor AND netScore &gt;= minNetScore.
+<span class="lineno">  129 </span>-- 2. Improvement bonus: if both conatusDelta and predictiveDelta are &gt; 0,
+<span class="lineno">  130 </span>--    the netScore threshold is relaxed slightly.
+<span class="lineno">  131 </span>-- 3. Bounded uncertainty increase: if the projected uncertainty rises too far
+<span class="lineno">  132 </span>--    above the current baseline, reject with 'SbrRisingUncertainty'.
+<span class="lineno">  133 </span>runSandboxGateWithConfig :: SandboxConfig -&gt; SystemState -&gt; KnowledgeFruitPayload -&gt; SandboxResult
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">runSandboxGateWithConfig cfg ss payload =</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">let needState = ssLearningNeedState ss</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">-- Current conatus trend from the last 3 history points (or 0 if insufficient)</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">currentConatusTrend = conatusTrendFromHistory (lnsHistory needState)</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">-- Current uncertainty proxy: amplitude of history oscillation</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">currentUncertainty  = historyOscillationWithWindow (scWindowSize cfg) (lnsHistory needState)</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">-- Projected values after applying the fruit deltas</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">projectedConatus  = currentConatusTrend + kfpConatusDelta payload</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">projectedUncertainty = max 0 (currentUncertainty - kfpPredictiveDelta payload)</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">-- Repair-loop frequency proxy: how often history levels exceed a soft threshold</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">loopFreq            = repairLoopProxyWithWindow (scWindowSize cfg) (lnsHistory needState)</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">-- Net score: weighted composite with improvement bonus</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">rawNetScore         = 0.5 * kfpConatusDelta payload + 0.5 * kfpPredictiveDelta payload</span>
+<span class="lineno">  147 </span><span class="spaces">      </span><span class="istickedoff">-- Improvement bonus: both deltas positive -&gt; relax threshold by 0.05</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">improvementBonus    = if kfpConatusDelta payload &gt; 0 &amp;&amp; kfpPredictiveDelta payload &gt; 0 then 0.05 else 0.0</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">netScore            = rawNetScore + improvementBonus</span>
+<span class="lineno">  150 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">metrics = SandboxMetrics</span>
+<span class="lineno">  152 </span><span class="spaces">        </span><span class="istickedoff">{ sbConatusTrend     = projectedConatus</span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="istickedoff">, sbUncertaintyTrend = projectedUncertainty</span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="istickedoff">, sbRepairLoopFreq   = loopFreq</span>
+<span class="lineno">  155 </span><span class="spaces">        </span><span class="istickedoff">, sbNetScore         = netScore</span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">, sbWindowSize       = scWindowSize cfg</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  158 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">effectiveMinScore = scMinNetScore cfg</span>
+<span class="lineno">  160 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">in if projectedConatus &lt; scSafetyFloor cfg</span>
+<span class="lineno">  162 </span><span class="spaces">       </span><span class="istickedoff">then SandboxReject metrics SbrDegradingConatus</span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">else if <span class="tickonlyfalse">projectedUncertainty &gt; currentUncertainty + scMaxUncertaintyIncrease cfg</span></span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">SandboxReject metrics SbrRisingUncertainty</span></span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">else if <span class="tickonlyfalse">netScore &lt; effectiveMinScore</span></span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">SandboxReject metrics SbrNegativeNetScore</span></span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">else if <span class="tickonlyfalse">loopFreq &gt; 0.8</span></span>
+<span class="lineno">  168 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">SandboxReject metrics SbrHighRepairLoopRisk</span></span>
+<span class="lineno">  169 </span><span class="spaces">     </span><span class="istickedoff">else</span>
+<span class="lineno">  170 </span><span class="spaces">       </span><span class="istickedoff">-- Non-regression or improvement: accept</span>
+<span class="lineno">  171 </span><span class="spaces">       </span><span class="istickedoff">SandboxAccept metrics</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>-- | Compute conatus trend as average slope over last 3 points.
+<span class="lineno">  174 </span>conatusTrendFromHistory :: [(Int, Double)] -&gt; Double
+<span class="lineno">  175 </span><span class="decl"><span class="istickedoff">conatusTrendFromHistory hist =</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">case reverse hist of</span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="istickedoff">(_, y2) : (_, y1) : (_, y0) : _ -&gt; ((y2 - y1) + (y1 - y0)) / 2.0</span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; 0.0</span></span>
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>-- | Simple oscillation amplitude (max - min) over last windowSize points.
+<span class="lineno">  181 </span>historyOscillationWithWindow :: Int -&gt; [(Int, Double)] -&gt; Double
+<span class="lineno">  182 </span><span class="decl"><span class="istickedoff">historyOscillationWithWindow configuredWindow hist =</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="istickedoff">let recent = take (max 1 configuredWindow) (map snd (reverse hist))</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">in if null recent then 0.0 else maximum recent - minimum recent</span></span>
+<span class="lineno">  185 </span>
+<span class="lineno">  186 </span>-- | Proxy for repair-loop frequency: fraction of recent points above 0.6.
+<span class="lineno">  187 </span>repairLoopProxyWithWindow :: Int -&gt; [(Int, Double)] -&gt; Double
+<span class="lineno">  188 </span><span class="decl"><span class="istickedoff">repairLoopProxyWithWindow configuredWindow hist =</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">let recent = take (max 1 configuredWindow) (map snd (reverse hist))</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="istickedoff">count  = fromIntegral (length (filter (&gt; 0.6) recent))</span>
+<span class="lineno">  191 </span><span class="spaces">      </span><span class="istickedoff">total  = fromIntegral (max 1 (length recent))</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">in count / total</span></span>
+<span class="lineno">  193 </span>
+<span class="lineno">  194 </span>renderSandboxRejectReason :: SandboxRejectReason -&gt; Text
+<span class="lineno">  195 </span><span class="decl"><span class="nottickedoff">renderSandboxRejectReason SbrDegradingConatus     = &quot;degrading_conatus&quot;</span>
+<span class="lineno">  196 </span><span class="spaces"></span><span class="nottickedoff">renderSandboxRejectReason SbrRisingUncertainty    = &quot;rising_uncertainty&quot;</span>
+<span class="lineno">  197 </span><span class="spaces"></span><span class="nottickedoff">renderSandboxRejectReason SbrHighRepairLoopRisk   = &quot;high_repair_loop_risk&quot;</span>
+<span class="lineno">  198 </span><span class="spaces"></span><span class="nottickedoff">renderSandboxRejectReason SbrNegativeNetScore     = &quot;negative_net_score&quot;</span></span>
+
+</pre>
+</body>
+</html>

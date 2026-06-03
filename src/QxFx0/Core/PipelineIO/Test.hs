@@ -25,6 +25,7 @@ import QxFx0.Core.PipelineIO.Internal
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
   , TurnEffectInterpreter
+  , defaultConatusPrior
   )
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -48,6 +49,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Time.Clock as Clock
 import Data.Time.Calendar (Day(ModifiedJulianDay))
+import Control.Concurrent.MVar (modifyMVar, newMVar)
+import System.IO.Unsafe (unsafePerformIO)
 
 data TestPipelineConfig = TestPipelineConfig
   { tpcRuntimeMode :: !PipelineRuntimeMode
@@ -69,19 +72,29 @@ defaultTestPipelineConfig = TestPipelineConfig
   }
 
 mkTestPipelineIO :: TestPipelineConfig -> PipelineIO
-mkTestPipelineIO cfg = PipelineIO
-  { pioRuntimeMode = tpcRuntimeMode cfg
-  , pioShadowPolicy = tpcShadowPolicy cfg
-  , pioLocalRecoveryPolicy = tpcLocalRecoveryPolicy cfg
-  , pioInterpreter = tpcInterpreter cfg
-  , pioUpdateHistory = tpcUpdateHistory cfg
-  }
+mkTestPipelineIO cfg =
+  let consciousState = unsafePerformIO (newMVar initialLoop)
+      intuitionState = unsafePerformIO (newMVar defaultIntuitiveState)
+  in PipelineIO
+      { pioRuntimeMode = tpcRuntimeMode cfg
+      , pioShadowPolicy = tpcShadowPolicy cfg
+      , pioLocalRecoveryPolicy = tpcLocalRecoveryPolicy cfg
+      , pioInterpreter = tpcInterpreter cfg
+      , pioUpdateHistory = tpcUpdateHistory cfg
+      , pioModifyConsciousLoop = \f -> modifyMVar consciousState $ \st -> do
+          (st', result) <- f st
+          pure (st', result)
+      , pioModifyIntuition = \f -> modifyMVar intuitionState $ \st -> do
+          (st', result) <- f st
+          pure (st', result)
+      , pioConatusPrior = defaultConatusPrior
+      }
 
 defaultTestInterpreter :: TurnEffectInterpreter
 defaultTestInterpreter request =
   case request of
     TurnReqEmbedding inputText ->
-      TurnResEmbedding <$> textToEmbeddingResult (T.unpack inputText)
+      TurnResEmbedding <$> textToEmbeddingResult inputText
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard (Unavailable "nix_unavailable_default_test_pipeline"))
     TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do

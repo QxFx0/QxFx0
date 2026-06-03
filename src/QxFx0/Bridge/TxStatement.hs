@@ -4,11 +4,13 @@ module QxFx0.Bridge.TxStatement
   , prepareTx
   , bindTextOrFail
   , bindIntOrFail
+  , bindInt64OrFail
   , bindDoubleOrFail
   , stepOrFail
   , rollbackAndFail
   ) where
 
+import Data.Int (Int64)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(PersistenceTxError))
 import QxFx0.Types.Persistence (PersistenceStage(..))
@@ -47,6 +49,12 @@ bindIntOrFail :: TxStmt -> CInt -> Int -> IO ()
 bindIntOrFail ts ix v =
   NSQL.bindInt (txsStmt ts) ix v >>= either
     (\err -> rollbackAndFail ts ("bindInt[" <> T.pack (show ix) <> "] failed: " <> err))
+    (const (pure ()))
+
+bindInt64OrFail :: TxStmt -> CInt -> Int64 -> IO ()
+bindInt64OrFail ts ix v =
+  NSQL.bindInt64 (txsStmt ts) ix v >>= either
+    (\err -> rollbackAndFail ts ("bindInt64[" <> T.pack (show ix) <> "] failed: " <> err))
     (const (pure ()))
 
 bindDoubleOrFail :: TxStmt -> CInt -> Double -> IO ()

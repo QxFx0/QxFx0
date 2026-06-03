@@ -79,7 +79,6 @@ data SandboxRejectReason
   | SbrRisingUncertainty
   | SbrHighRepairLoopRisk
   | SbrNegativeNetScore
-  | SbrMorphologyConflict
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
@@ -197,4 +196,3 @@ renderSandboxRejectReason SbrDegradingConatus     = "degrading_conatus"
 renderSandboxRejectReason SbrRisingUncertainty    = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk   = "high_repair_loop_risk"
 renderSandboxRejectReason SbrNegativeNetScore     = "negative_net_score"
-renderSandboxRejectReason SbrMorphologyConflict   = "morphology_conflict"

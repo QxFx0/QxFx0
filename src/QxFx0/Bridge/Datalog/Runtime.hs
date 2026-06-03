@@ -9,7 +9,7 @@ module QxFx0.Bridge.Datalog.Runtime
   , resolveSouffleExecutable
   ) where
 
-import Control.Exception (finally)
+import Control.Exception (IOException, finally, try)
 import Control.Monad (filterM)
 import Data.Char (isSpace)
 import Data.List (nub)
@@ -47,7 +47,7 @@ import QxFx0.Bridge.Datalog.Types
   , shadowUnavailableResult
   )
 import QxFx0.ExceptionPolicy (catchIO)
-import QxFx0.Resources (resolveResourcePaths, rpDatalogRules, rpResourceDir)
+import QxFx0.Resources (resolveDatalogRuleCandidates, resolveResourcePaths, rpResourceDir)
 import QxFx0.Types
   ( AtomTag
   , CanonicalMoveFamily
@@ -151,8 +151,9 @@ validateConfiguredSoufflePath configuredPath =
               then pure (Left ("configured souffle binary is not executable: " <> T.pack canonicalPath))
               else do
                 trustedRoots <- resolveSouffleTrustedRoots
+                trustedMatches <- mapM (`isPathWithin` canonicalPath) trustedRoots
                 pure $
-                  if any (`isPathWithin` canonicalPath) trustedRoots
+                  if or trustedMatches
                     then Right canonicalPath
                     else
                       Left
@@ -282,26 +283,14 @@ validateResolvedSouffleExecutable sourceLabel path = do
 loadDatalogProgram :: IO (Either Text Text)
 loadDatalogProgram =
   catchIO
-    (do paths <- resolveResourcePaths
-        let resourceRoot = rpResourceDir paths
-            rulesFile = takeFileName (rpDatalogRules paths)
-            specDatalogDir = takeDirectory (rpDatalogRules paths)
-            checkedPaths =
-              nub
-                [ specDatalogDir </> rulesFile
-                , resourceRoot </> rulesFile
-                , rpDatalogRules paths
-                ]
-        existingPaths <- filterM doesFileExist checkedPaths
-        case existingPaths of
-          (rulesPath : _) -> Right <$> TIO.readFile rulesPath
-          [] ->
-            pure
-              (Left
-                ( "datalog rules missing: checked="
-                    <> T.intercalate "|" (map T.pack checkedPaths)
-                )
-              ))
+    (do checkedPaths <- resolveDatalogRuleCandidates
+        let readFirst [] = pure (Left ("datalog rules missing: checked=" <> T.intercalate "|" (map T.pack checkedPaths)))
+            readFirst (rulesPath:rest) = do
+              result <- try (TIO.readFile rulesPath) :: IO (Either IOException Text)
+              case result of
+                Right program -> pure (Right program)
+                Left _ -> readFirst rest
+        readFirst checkedPaths)
     (\e -> pure (Left ("cannot load datalog rules: " <> compactDiagnostic (T.pack (show e)))))
 
 executeDatalogShadowWithExecutable :: FilePath -> Text -> ShadowSnapshot -> IO (Either Text DatalogExecution)

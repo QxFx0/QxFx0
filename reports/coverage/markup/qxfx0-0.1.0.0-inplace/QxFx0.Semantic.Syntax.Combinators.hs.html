@@ -1,0 +1,714 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    3 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    4 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    5 </span>{-|
+<span class="lineno">    6 </span>Abstract syntax combinators for Russian sentence assembly.
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>All constructors enforce agreement at build time.
+<span class="lineno">    9 </span>No template strings. No random choice.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>V2 additions: subordination, coordination, ellipsis, topic fronting, questions.
+<span class="lineno">   12 </span>-}
+<span class="lineno">   13 </span>module QxFx0.Semantic.Syntax.Combinators
+<span class="lineno">   14 </span>  ( -- * Syntactic categories
+<span class="lineno">   15 </span>    NP(..)
+<span class="lineno">   16 </span>  , VP(..)
+<span class="lineno">   17 </span>  , S(..)
+<span class="lineno">   18 </span>  , AP(..)
+<span class="lineno">   19 </span>  , Adv(..)
+<span class="lineno">   20 </span>  , PP(..)
+<span class="lineno">   21 </span>  , MorphError(..)
+<span class="lineno">   22 </span>  , Tense(..)
+<span class="lineno">   23 </span>  , Subord(..)
+<span class="lineno">   24 </span>  , Coord(..)
+<span class="lineno">   25 </span>  , SubordClause(..)
+<span class="lineno">   26 </span>  , CoordS(..)
+<span class="lineno">   27 </span>    -- * Comparative algebra
+<span class="lineno">   28 </span>  , CmpDir(..)
+<span class="lineno">   29 </span>  , Comparative(..)
+<span class="lineno">   30 </span>  , mkComparative
+<span class="lineno">   31 </span>    -- * Smart constructors
+<span class="lineno">   32 </span>  , mkNPRaw
+<span class="lineno">   33 </span>  , mkNP
+<span class="lineno">   34 </span>  , mkVP
+<span class="lineno">   35 </span>  , mkVPRaw
+<span class="lineno">   36 </span>  , mkFrozenVP
+<span class="lineno">   37 </span>  , mkS
+<span class="lineno">   38 </span>  , mkAP
+<span class="lineno">   39 </span>  , mkAPRaw
+<span class="lineno">   40 </span>  , addAP
+<span class="lineno">   41 </span>  , addAdv
+<span class="lineno">   42 </span>  , mkAdv
+<span class="lineno">   43 </span>  , mkAdvRaw
+<span class="lineno">   44 </span>  , mkExpression
+<span class="lineno">   45 </span>  , mkPronounNP
+<span class="lineno">   46 </span>  , mkNP_
+<span class="lineno">   47 </span>  , mkVP_
+<span class="lineno">   48 </span>  , mkAP_
+<span class="lineno">   49 </span>  , addAdvToS
+<span class="lineno">   50 </span>  , addModalParticle
+<span class="lineno">   51 </span>  , addFiller
+<span class="lineno">   52 </span>  , addQuantifierToS
+<span class="lineno">   53 </span>  , addPP
+<span class="lineno">   54 </span>  , mkPP
+<span class="lineno">   55 </span>  , addObj
+<span class="lineno">   56 </span>  , mkSubordClause
+<span class="lineno">   57 </span>  , addSubordClause
+<span class="lineno">   58 </span>  , addRelClause
+<span class="lineno">   59 </span>  , mkCoordS
+<span class="lineno">   60 </span>  , mkElliptical
+<span class="lineno">   61 </span>  , mkEllipticalNP
+<span class="lineno">   62 </span>  , mkEllipticalAdv
+<span class="lineno">   63 </span>  , mkTopicFront
+<span class="lineno">   64 </span>  , mkQuestion
+<span class="lineno">   65 </span>    -- * Linearization
+<span class="lineno">   66 </span>  , linearizeS
+<span class="lineno">   67 </span>  , linearizeNP
+<span class="lineno">   68 </span>  , linearizeVP
+<span class="lineno">   69 </span>  , linearizeAP
+<span class="lineno">   70 </span>  , linearizeAdv
+<span class="lineno">   71 </span>  , linearizePP
+<span class="lineno">   72 </span>  ) where
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>import Control.Monad (when)
+<span class="lineno">   75 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   76 </span>import Data.Text (Text)
+<span class="lineno">   77 </span>import qualified Data.Text as T
+<span class="lineno">   78 </span>
+<span class="lineno">   79 </span>import QxFx0.Semantic.Lexicon.RuntimeParadigms
+<span class="lineno">   80 </span>  ( RuntimeParadigms
+<span class="lineno">   81 </span>  , NounCase(..)
+<span class="lineno">   82 </span>  , Number(..)
+<span class="lineno">   83 </span>  , Gender(..)
+<span class="lineno">   84 </span>  , VerbForm(..)
+<span class="lineno">   85 </span>  , AdjectiveForm(..)
+<span class="lineno">   86 </span>  , lookupNounForm
+<span class="lineno">   87 </span>  , lookupVerbForm
+<span class="lineno">   88 </span>  , lookupAdjectiveForm
+<span class="lineno">   89 </span>  , lookupAdverbForm
+<span class="lineno">   90 </span>  , lookupExpression
+<span class="lineno">   91 </span>  , lemmaGender
+<span class="lineno">   92 </span>  , lemmaPos
+<span class="lineno">   93 </span>  )
+<span class="lineno">   94 </span>import QxFx0.Types (RenderStyle(..), IllocutionaryForce(..))
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>--------------------------------------------------------------------------------
+<span class="lineno">   97 </span>-- Error type
+<span class="lineno">   98 </span>--------------------------------------------------------------------------------
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>data MorphError
+<span class="lineno">  101 </span>  = MissingParadigm !Text
+<span class="lineno">  102 </span>  | MissingForm !Text !Text
+<span class="lineno">  103 </span>  | GenderMismatch !Text !Text
+<span class="lineno">  104 </span>  | NumberMismatch !Text !Text
+<span class="lineno">  105 </span>  | CaseMismatch !Text !Text
+<span class="lineno">  106 </span>  | InvalidPOS !Text !Text
+<span class="lineno">  107 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>--------------------------------------------------------------------------------
+<span class="lineno">  110 </span>-- Conjunction / subordination types
+<span class="lineno">  111 </span>--------------------------------------------------------------------------------
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>data Subord
+<span class="lineno">  114 </span>  = SubChto | SubKogda | SubPotomuChto | SubEsli | SubKotory | SubGde
+<span class="lineno">  115 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>data Coord
+<span class="lineno">  118 </span>  = CoordI | CoordA | CoordNo | CoordIli | CoordDash
+<span class="lineno">  119 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>data SubordClause = SubordClause Subord S
+<span class="lineno">  122 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>data CoordS = CoordS S Coord S
+<span class="lineno">  125 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  126 </span>
+<span class="lineno">  127 </span>data CmpDir = CmpMore | CmpLess | CmpEqual
+<span class="lineno">  128 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>data Comparative = Comparative
+<span class="lineno">  131 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmpSubject</span></span></span>   :: !Text
+<span class="lineno">  132 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmpObject</span></span></span>    :: !Text
+<span class="lineno">  133 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmpAxis</span></span></span>      :: !Text
+<span class="lineno">  134 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmpDirection</span></span></span> :: !CmpDir
+<span class="lineno">  135 </span>  }
+<span class="lineno">  136 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>--------------------------------------------------------------------------------
+<span class="lineno">  139 </span>-- Syntactic categories
+<span class="lineno">  140 </span>--------------------------------------------------------------------------------
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>data NP = NP
+<span class="lineno">  143 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npLemma</span></span></span>      :: !Text
+<span class="lineno">  144 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npCase</span></span></span>       :: !NounCase
+<span class="lineno">  145 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npNumber</span></span></span>     :: !Number
+<span class="lineno">  146 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npGender</span></span></span>     :: !Gender
+<span class="lineno">  147 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npAPs</span></span></span>        :: ![AP]
+<span class="lineno">  148 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">npRelClause</span></span></span>  :: !(Maybe S)   -- ^ relative clause: &quot;свобода, которая...&quot;
+<span class="lineno">  149 </span>  }
+<span class="lineno">  150 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>data VP = VP
+<span class="lineno">  153 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpLemma</span></span></span>     :: !Text
+<span class="lineno">  154 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpPerson</span></span></span>    :: !Int        -- 1,2,3
+<span class="lineno">  155 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpNumber</span></span></span>    :: !Number
+<span class="lineno">  156 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpGender</span></span></span>    :: !(Maybe Gender)  -- for past tense
+<span class="lineno">  157 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpTense</span></span></span>     :: !Tense
+<span class="lineno">  158 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpAdv</span></span></span>       :: ![Adv]
+<span class="lineno">  159 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpPP</span></span></span>        :: ![PP]
+<span class="lineno">  160 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">vpSubord</span></span></span>    :: !(Maybe SubordClause)  -- ^ subordinate clause attached to VP
+<span class="lineno">  161 </span>  }
+<span class="lineno">  162 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>data Tense = Past | Present | Future
+<span class="lineno">  165 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  166 </span>
+<span class="lineno">  167 </span>data S
+<span class="lineno">  168 </span>  = SimpleS
+<span class="lineno">  169 </span>      { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sSubject</span></span></span>    :: !NP
+<span class="lineno">  170 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sPredicate</span></span></span>  :: !VP
+<span class="lineno">  171 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sTopicFront</span></span></span> :: !(Maybe NP)  -- ^ fronted topic: &quot;Свободу — я ценю&quot;
+<span class="lineno">  172 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sQuestion</span></span></span>   :: !Bool
+<span class="lineno">  173 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sModal</span></span></span>      :: !(Maybe Text)  -- ^ modal particle inserted after first word
+<span class="lineno">  174 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sFill</span></span></span>       :: !(Maybe Text)  -- ^ filler prefix at sentence start
+<span class="lineno">  175 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">sQuant</span></span></span>      :: !(Maybe Text)  -- ^ quantifier before subject
+<span class="lineno">  176 </span>      }
+<span class="lineno">  177 </span>  | EllipticalS
+<span class="lineno">  178 </span>      { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ePredicate</span></span></span>  :: !VP
+<span class="lineno">  179 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eTopicFront</span></span></span> :: !(Maybe NP)
+<span class="lineno">  180 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eQuestion</span></span></span>   :: !Bool
+<span class="lineno">  181 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eModal</span></span></span>      :: !(Maybe Text)
+<span class="lineno">  182 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eFill</span></span></span>       :: !(Maybe Text)
+<span class="lineno">  183 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eQuant</span></span></span>      :: !(Maybe Text)
+<span class="lineno">  184 </span>      }
+<span class="lineno">  185 </span>  | CoordS' CoordS  -- ^ coordinated: &quot;X, а Y&quot;
+<span class="lineno">  186 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>data AP = AP
+<span class="lineno">  189 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">apLemma</span></span></span>  :: !Text
+<span class="lineno">  190 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">apGender</span></span></span> :: !Gender
+<span class="lineno">  191 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">apNumber</span></span></span> :: !Number
+<span class="lineno">  192 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">apCase</span></span></span>   :: !NounCase
+<span class="lineno">  193 </span>  }
+<span class="lineno">  194 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  195 </span>
+<span class="lineno">  196 </span>data Adv = Adv !Text
+<span class="lineno">  197 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>data PP = PP
+<span class="lineno">  200 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPreposition</span></span></span> :: !Text
+<span class="lineno">  201 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppNP</span></span></span>          :: !NP
+<span class="lineno">  202 </span>  }
+<span class="lineno">  203 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  204 </span>
+<span class="lineno">  205 </span>--------------------------------------------------------------------------------
+<span class="lineno">  206 </span>-- Smart constructors
+<span class="lineno">  207 </span>--------------------------------------------------------------------------------
+<span class="lineno">  208 </span>
+<span class="lineno">  209 </span>-- | Build NP from raw text (already inflected) with explicit agreement metadata.
+<span class="lineno">  210 </span>-- Use only when the form is pre-computed and no paradigm lookup is possible.
+<span class="lineno">  211 </span>mkNPRaw :: Text -&gt; NounCase -&gt; Number -&gt; Gender -&gt; NP
+<span class="lineno">  212 </span><span class="decl"><span class="nottickedoff">mkNPRaw form case_ number gender =</span>
+<span class="lineno">  213 </span><span class="spaces">  </span><span class="nottickedoff">NP { npLemma = form, npCase = case_, npNumber = number, npGender = gender</span>
+<span class="lineno">  214 </span><span class="spaces">     </span><span class="nottickedoff">, npAPs = [], npRelClause = Nothing }</span></span>
+<span class="lineno">  215 </span>
+<span class="lineno">  216 </span>-- | Build VP from raw text (already inflected) with explicit agreement metadata.
+<span class="lineno">  217 </span>mkVPRaw :: Text -&gt; Int -&gt; Number -&gt; Maybe Gender -&gt; Tense -&gt; VP
+<span class="lineno">  218 </span><span class="decl"><span class="nottickedoff">mkVPRaw form person number gender tense =</span>
+<span class="lineno">  219 </span><span class="spaces">  </span><span class="nottickedoff">VP { vpLemma = form, vpPerson = person, vpNumber = number, vpGender = gender</span>
+<span class="lineno">  220 </span><span class="spaces">     </span><span class="nottickedoff">, vpTense = tense, vpAdv = [], vpPP = [], vpSubord = Nothing }</span></span>
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>-- | Frozen multivord VP — no paradigm lookup possible. Grammar fields are dummies.
+<span class="lineno">  223 </span>mkFrozenVP :: Text -&gt; VP
+<span class="lineno">  224 </span><span class="decl"><span class="nottickedoff">mkFrozenVP form =</span>
+<span class="lineno">  225 </span><span class="spaces">  </span><span class="nottickedoff">VP { vpLemma = form, vpPerson = 3, vpNumber = Sg, vpGender = Nothing</span>
+<span class="lineno">  226 </span><span class="spaces">     </span><span class="nottickedoff">, vpTense = Present, vpAdv = [], vpPP = [], vpSubord = Nothing }</span></span>
+<span class="lineno">  227 </span>
+<span class="lineno">  228 </span>-- | Build AP from raw text (already inflected) with explicit agreement metadata.
+<span class="lineno">  229 </span>mkAPRaw :: Text -&gt; Gender -&gt; Number -&gt; NounCase -&gt; AP
+<span class="lineno">  230 </span><span class="decl"><span class="nottickedoff">mkAPRaw form gender number case_ =</span>
+<span class="lineno">  231 </span><span class="spaces">  </span><span class="nottickedoff">AP { apLemma = form, apGender = gender, apNumber = number, apCase = case_ }</span></span>
+<span class="lineno">  232 </span>
+<span class="lineno">  233 </span>-- | Minimal Russian adjective inflection for nominative singular and plural.
+<span class="lineno">  234 </span>-- Used as a safety net when the dictionary lookup fails.
+<span class="lineno">  235 </span>inflectAdjectiveLemma :: Text -&gt; Gender -&gt; Number -&gt; NounCase -&gt; Text
+<span class="lineno">  236 </span><span class="decl"><span class="nottickedoff">inflectAdjectiveLemma lemma gender number case_</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="nottickedoff">| case_ == Nom &amp;&amp; number == Sg =</span>
+<span class="lineno">  238 </span><span class="spaces">      </span><span class="nottickedoff">case gender of</span>
+<span class="lineno">  239 </span><span class="spaces">        </span><span class="nottickedoff">Masc -&gt; lemma</span>
+<span class="lineno">  240 </span><span class="spaces">        </span><span class="nottickedoff">Femn -&gt; adjustEnding lemma [(&quot;ый&quot;, &quot;ая&quot;), (&quot;ий&quot;, &quot;яя&quot;), (&quot;ой&quot;, &quot;ая&quot;)]</span>
+<span class="lineno">  241 </span><span class="spaces">        </span><span class="nottickedoff">Neut -&gt; adjustEnding lemma [(&quot;ый&quot;, &quot;ое&quot;), (&quot;ий&quot;, &quot;ее&quot;), (&quot;ой&quot;, &quot;ое&quot;)]</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="nottickedoff">| case_ == Nom &amp;&amp; number == Pl =</span>
+<span class="lineno">  243 </span><span class="spaces">      </span><span class="nottickedoff">adjustEnding lemma [(&quot;ый&quot;, &quot;ые&quot;), (&quot;ий&quot;, &quot;ие&quot;), (&quot;ой&quot;, &quot;ые&quot;)]</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = lemma</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  246 </span><span class="spaces">    </span><span class="nottickedoff">adjustEnding w replacements =</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="nottickedoff">case filter (\(suf, _) -&gt; T.isSuffixOf suf w) replacements of</span>
+<span class="lineno">  248 </span><span class="spaces">        </span><span class="nottickedoff">((suf, repl):_) -&gt; T.dropEnd (T.length suf) w &lt;&gt; repl</span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="nottickedoff">[]             -&gt; w</span></span>
+<span class="lineno">  250 </span>
+<span class="lineno">  251 </span>mkNP :: RuntimeParadigms -&gt; Text -&gt; NounCase -&gt; Number -&gt; Either MorphError NP
+<span class="lineno">  252 </span><span class="decl"><span class="istickedoff">mkNP rp lemma case_ number = do</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- validatePOS rp lemma <span class="nottickedoff">&quot;Noun&quot;</span></span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">form &lt;- <span class="nottickedoff">lookupFormOrError rp lemma case_ number</span></span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">g &lt;- <span class="nottickedoff">genderOrError rp lemma</span></span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">pure NP { npLemma = form, npCase = case_, npNumber = number, npGender = g</span></span>
+<span class="lineno">  257 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, npAPs = [], npRelClause = Nothing }</span></span></span>
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>mkVP :: RuntimeParadigms -&gt; Text -&gt; Int -&gt; Number -&gt; Maybe Gender -&gt; Tense
+<span class="lineno">  260 </span>     -&gt; Either MorphError VP
+<span class="lineno">  261 </span><span class="decl"><span class="istickedoff">mkVP rp lemma person number gender tense = do</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- validatePOS rp lemma <span class="nottickedoff">&quot;Verb&quot;</span></span>
+<span class="lineno">  263 </span><span class="spaces">  </span><span class="istickedoff">form &lt;- <span class="nottickedoff">verbFormOrError rp lemma person number gender tense</span></span>
+<span class="lineno">  264 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">pure VP</span></span>
+<span class="lineno">  265 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">{ vpLemma = form</span></span>
+<span class="lineno">  266 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpPerson = person</span></span>
+<span class="lineno">  267 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpNumber = number</span></span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpGender = gender</span></span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpTense = tense</span></span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpAdv = []</span></span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpPP = []</span></span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, vpSubord = Nothing</span></span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">  274 </span>
+<span class="lineno">  275 </span>mkS :: NP -&gt; VP -&gt; Either MorphError S
+<span class="lineno">  276 </span><span class="decl"><span class="nottickedoff">mkS subj pred = do</span>
+<span class="lineno">  277 </span><span class="spaces">  </span><span class="nottickedoff">-- Subject-verb number agreement</span>
+<span class="lineno">  278 </span><span class="spaces">  </span><span class="nottickedoff">when (npNumber subj /= vpNumber pred)</span>
+<span class="lineno">  279 </span><span class="spaces">    </span><span class="nottickedoff">(Left (NumberMismatch (npLemma subj) (vpLemma pred)))</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="nottickedoff">-- For past tense, gender must agree too</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="nottickedoff">case vpTense pred of</span>
+<span class="lineno">  282 </span><span class="spaces">    </span><span class="nottickedoff">Past | npNumber subj == Sg -&gt;</span>
+<span class="lineno">  283 </span><span class="spaces">      </span><span class="nottickedoff">case vpGender pred of</span>
+<span class="lineno">  284 </span><span class="spaces">        </span><span class="nottickedoff">Just g | g /= npGender subj -&gt;</span>
+<span class="lineno">  285 </span><span class="spaces">          </span><span class="nottickedoff">Left (GenderMismatch (npLemma subj) (vpLemma pred))</span>
+<span class="lineno">  286 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; Right ()</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; Right ()</span>
+<span class="lineno">  288 </span><span class="spaces">  </span><span class="nottickedoff">pure SimpleS { sSubject = subj, sPredicate = pred, sTopicFront = Nothing, sQuestion = False, sModal = Nothing, sFill = Nothing, sQuant = Nothing }</span></span>
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>mkAP :: RuntimeParadigms -&gt; Text -&gt; Gender -&gt; Number -&gt; NounCase
+<span class="lineno">  291 </span>     -&gt; Either MorphError AP
+<span class="lineno">  292 </span><span class="decl"><span class="nottickedoff">mkAP rp lemma gender number case_ = do</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- validatePOS rp lemma &quot;Adjective&quot;</span>
+<span class="lineno">  294 </span><span class="spaces">  </span><span class="nottickedoff">form &lt;- adjFormOrError rp lemma gender number case_</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="nottickedoff">pure AP { apLemma = form, apGender = gender, apNumber = number, apCase = case_ }</span></span>
+<span class="lineno">  296 </span>
+<span class="lineno">  297 </span>addAP :: NP -&gt; AP -&gt; Either MorphError NP
+<span class="lineno">  298 </span><span class="decl"><span class="nottickedoff">addAP np ap = do</span>
+<span class="lineno">  299 </span><span class="spaces">  </span><span class="nottickedoff">when (npGender np /= apGender ap)</span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="nottickedoff">(Left (GenderMismatch (npLemma np) (apLemma ap)))</span>
+<span class="lineno">  301 </span><span class="spaces">  </span><span class="nottickedoff">when (npNumber np /= apNumber ap)</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="nottickedoff">(Left (NumberMismatch (npLemma np) (apLemma ap)))</span>
+<span class="lineno">  303 </span><span class="spaces">  </span><span class="nottickedoff">when (npCase np /= apCase ap)</span>
+<span class="lineno">  304 </span><span class="spaces">    </span><span class="nottickedoff">(Left (CaseMismatch (npLemma np) (apLemma ap)))</span>
+<span class="lineno">  305 </span><span class="spaces">  </span><span class="nottickedoff">pure np { npAPs = ap : npAPs np }</span></span>
+<span class="lineno">  306 </span>
+<span class="lineno">  307 </span>addAdv :: VP -&gt; Adv -&gt; Either MorphError VP
+<span class="lineno">  308 </span><span class="decl"><span class="nottickedoff">addAdv vp adv = pure vp { vpAdv = adv : vpAdv vp }</span></span>
+<span class="lineno">  309 </span>
+<span class="lineno">  310 </span>mkAdv :: RuntimeParadigms -&gt; Text -&gt; Either MorphError Adv
+<span class="lineno">  311 </span><span class="decl"><span class="nottickedoff">mkAdv rp lemma =</span>
+<span class="lineno">  312 </span><span class="spaces">  </span><span class="nottickedoff">case lookupAdverbForm rp lemma of</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; Right (Adv form)</span>
+<span class="lineno">  314 </span><span class="spaces">    </span><span class="nottickedoff">Nothing   -&gt; Left (MissingForm lemma &quot;adverb&quot;)</span></span>
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>mkExpression :: RuntimeParadigms -&gt; Text -&gt; Either MorphError Text
+<span class="lineno">  317 </span><span class="decl"><span class="nottickedoff">mkExpression rp lemma =</span>
+<span class="lineno">  318 </span><span class="spaces">  </span><span class="nottickedoff">case lookupExpression rp lemma of</span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; Right form</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="nottickedoff">Nothing   -&gt; Left (MissingForm lemma &quot;expression&quot;)</span></span>
+<span class="lineno">  321 </span>
+<span class="lineno">  322 </span>addAdvToS :: S -&gt; Adv -&gt; S
+<span class="lineno">  323 </span><span class="decl"><span class="nottickedoff">addAdvToS s adv = case s of</span>
+<span class="lineno">  324 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS subj pred mFront isQ mModal mFill mQuant -&gt;</span>
+<span class="lineno">  325 </span><span class="spaces">    </span><span class="nottickedoff">SimpleS subj (pred { vpAdv = adv : vpAdv pred }) mFront isQ mModal mFill mQuant</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS pred mFront isQ mModal mFill mQuant -&gt;</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="nottickedoff">EllipticalS (pred { vpAdv = adv : vpAdv pred }) mFront isQ mModal mFill mQuant</span>
+<span class="lineno">  328 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' (CoordS s1 coord s2) -&gt;</span>
+<span class="lineno">  329 </span><span class="spaces">    </span><span class="nottickedoff">CoordS' (CoordS (addAdvToS s1 adv) coord (addAdvToS s2 adv))</span></span>
+<span class="lineno">  330 </span>
+<span class="lineno">  331 </span>-- | Build Adv from raw text (no paradigm lookup).
+<span class="lineno">  332 </span>mkAdvRaw :: Text -&gt; Adv
+<span class="lineno">  333 </span><span class="decl"><span class="nottickedoff">mkAdvRaw t = Adv t</span></span>
+<span class="lineno">  334 </span>
+<span class="lineno">  335 </span>addModalParticle :: Text -&gt; S -&gt; S
+<span class="lineno">  336 </span><span class="decl"><span class="nottickedoff">addModalParticle particle s = case s of</span>
+<span class="lineno">  337 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS subj pred mFront isQ _ mFill mQuant -&gt;</span>
+<span class="lineno">  338 </span><span class="spaces">    </span><span class="nottickedoff">SimpleS subj pred mFront isQ (Just particle) mFill mQuant</span>
+<span class="lineno">  339 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS pred mFront isQ _ mFill mQuant -&gt;</span>
+<span class="lineno">  340 </span><span class="spaces">    </span><span class="nottickedoff">EllipticalS pred mFront isQ (Just particle) mFill mQuant</span>
+<span class="lineno">  341 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' _ -&gt; s</span></span>
+<span class="lineno">  342 </span>
+<span class="lineno">  343 </span>addFiller :: Text -&gt; S -&gt; S
+<span class="lineno">  344 </span><span class="decl"><span class="nottickedoff">addFiller filler s = case s of</span>
+<span class="lineno">  345 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS subj pred mFront isQ mModal _ mQuant -&gt;</span>
+<span class="lineno">  346 </span><span class="spaces">    </span><span class="nottickedoff">SimpleS subj pred mFront isQ mModal (Just filler) mQuant</span>
+<span class="lineno">  347 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS pred mFront isQ mModal _ mQuant -&gt;</span>
+<span class="lineno">  348 </span><span class="spaces">    </span><span class="nottickedoff">EllipticalS pred mFront isQ mModal (Just filler) mQuant</span>
+<span class="lineno">  349 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' _ -&gt; s</span></span>
+<span class="lineno">  350 </span>
+<span class="lineno">  351 </span>addQuantifierToS :: Text -&gt; S -&gt; S
+<span class="lineno">  352 </span><span class="decl"><span class="nottickedoff">addQuantifierToS quant s = case s of</span>
+<span class="lineno">  353 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS subj pred mFront isQ mModal mFill _ -&gt;</span>
+<span class="lineno">  354 </span><span class="spaces">    </span><span class="nottickedoff">SimpleS subj pred mFront isQ mModal mFill (Just quant)</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS pred mFront isQ mModal mFill _ -&gt;</span>
+<span class="lineno">  356 </span><span class="spaces">    </span><span class="nottickedoff">EllipticalS pred mFront isQ mModal mFill (Just quant)</span>
+<span class="lineno">  357 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' _ -&gt; s</span></span>
+<span class="lineno">  358 </span>
+<span class="lineno">  359 </span>addPP :: VP -&gt; PP -&gt; Either MorphError VP
+<span class="lineno">  360 </span><span class="decl"><span class="nottickedoff">addPP vp pp = pure vp { vpPP = pp : vpPP vp }</span></span>
+<span class="lineno">  361 </span>
+<span class="lineno">  362 </span>mkPP :: Text -&gt; NP -&gt; PP
+<span class="lineno">  363 </span><span class="decl"><span class="nottickedoff">mkPP prep np = PP { ppPreposition = prep, ppNP = np }</span></span>
+<span class="lineno">  364 </span>
+<span class="lineno">  365 </span>-- | Build a subordinate clause.
+<span class="lineno">  366 </span>mkSubordClause :: Subord -&gt; S -&gt; Either MorphError SubordClause
+<span class="lineno">  367 </span><span class="decl"><span class="nottickedoff">mkSubordClause sub s = Right (SubordClause sub s)</span></span>
+<span class="lineno">  368 </span>
+<span class="lineno">  369 </span>-- | Build a pronoun NP directly (closed class, inflected by case).
+<span class="lineno">  370 </span>mkPronounNP :: Text -&gt; NounCase -&gt; NP
+<span class="lineno">  371 </span><span class="decl"><span class="nottickedoff">mkPronounNP pron case_ =</span>
+<span class="lineno">  372 </span><span class="spaces">  </span><span class="nottickedoff">let (g, n, form) = case (pron, case_) of</span>
+<span class="lineno">  373 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Nom) -&gt; (Masc, Sg, &quot;я&quot;)</span>
+<span class="lineno">  374 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Gen) -&gt; (Masc, Sg, &quot;меня&quot;)</span>
+<span class="lineno">  375 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Dat) -&gt; (Masc, Sg, &quot;мне&quot;)</span>
+<span class="lineno">  376 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Acc) -&gt; (Masc, Sg, &quot;меня&quot;)</span>
+<span class="lineno">  377 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Ins) -&gt; (Masc, Sg, &quot;мной&quot;)</span>
+<span class="lineno">  378 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;я&quot;,   Loc) -&gt; (Masc, Sg, &quot;мне&quot;)</span>
+<span class="lineno">  379 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Nom) -&gt; (Masc, Sg, &quot;ты&quot;)</span>
+<span class="lineno">  380 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Gen) -&gt; (Masc, Sg, &quot;тебя&quot;)</span>
+<span class="lineno">  381 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Dat) -&gt; (Masc, Sg, &quot;тебе&quot;)</span>
+<span class="lineno">  382 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Acc) -&gt; (Masc, Sg, &quot;тебя&quot;)</span>
+<span class="lineno">  383 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Ins) -&gt; (Masc, Sg, &quot;тобой&quot;)</span>
+<span class="lineno">  384 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;ты&quot;,  Loc) -&gt; (Masc, Sg, &quot;тебе&quot;)</span>
+<span class="lineno">  385 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Nom) -&gt; (Masc, Pl, &quot;мы&quot;)</span>
+<span class="lineno">  386 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Gen) -&gt; (Masc, Pl, &quot;нас&quot;)</span>
+<span class="lineno">  387 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Dat) -&gt; (Masc, Pl, &quot;нам&quot;)</span>
+<span class="lineno">  388 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Acc) -&gt; (Masc, Pl, &quot;нас&quot;)</span>
+<span class="lineno">  389 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Ins) -&gt; (Masc, Pl, &quot;нами&quot;)</span>
+<span class="lineno">  390 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;мы&quot;,  Loc) -&gt; (Masc, Pl, &quot;нас&quot;)</span>
+<span class="lineno">  391 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Nom) -&gt; (Masc, Pl, &quot;вы&quot;)</span>
+<span class="lineno">  392 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Gen) -&gt; (Masc, Pl, &quot;вас&quot;)</span>
+<span class="lineno">  393 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Dat) -&gt; (Masc, Pl, &quot;вам&quot;)</span>
+<span class="lineno">  394 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Acc) -&gt; (Masc, Pl, &quot;вас&quot;)</span>
+<span class="lineno">  395 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Ins) -&gt; (Masc, Pl, &quot;вами&quot;)</span>
+<span class="lineno">  396 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;вы&quot;,  Loc) -&gt; (Masc, Pl, &quot;вас&quot;)</span>
+<span class="lineno">  397 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Nom) -&gt; (Masc, Sg, &quot;он&quot;)</span>
+<span class="lineno">  398 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Gen) -&gt; (Masc, Sg, &quot;его&quot;)</span>
+<span class="lineno">  399 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Dat) -&gt; (Masc, Sg, &quot;ему&quot;)</span>
+<span class="lineno">  400 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Acc) -&gt; (Masc, Sg, &quot;его&quot;)</span>
+<span class="lineno">  401 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Ins) -&gt; (Masc, Sg, &quot;им&quot;)</span>
+<span class="lineno">  402 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;он&quot;,  Loc) -&gt; (Masc, Sg, &quot;нём&quot;)</span>
+<span class="lineno">  403 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Nom) -&gt; (Femn, Sg, &quot;она&quot;)</span>
+<span class="lineno">  404 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Gen) -&gt; (Femn, Sg, &quot;её&quot;)</span>
+<span class="lineno">  405 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Dat) -&gt; (Femn, Sg, &quot;ей&quot;)</span>
+<span class="lineno">  406 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Acc) -&gt; (Femn, Sg, &quot;её&quot;)</span>
+<span class="lineno">  407 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Ins) -&gt; (Femn, Sg, &quot;ей&quot;)</span>
+<span class="lineno">  408 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;она&quot;, Loc) -&gt; (Femn, Sg, &quot;ней&quot;)</span>
+<span class="lineno">  409 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Nom) -&gt; (Neut, Sg, &quot;оно&quot;)</span>
+<span class="lineno">  410 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Gen) -&gt; (Neut, Sg, &quot;его&quot;)</span>
+<span class="lineno">  411 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Dat) -&gt; (Neut, Sg, &quot;ему&quot;)</span>
+<span class="lineno">  412 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Acc) -&gt; (Neut, Sg, &quot;его&quot;)</span>
+<span class="lineno">  413 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Ins) -&gt; (Neut, Sg, &quot;им&quot;)</span>
+<span class="lineno">  414 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;оно&quot;, Loc) -&gt; (Neut, Sg, &quot;нём&quot;)</span>
+<span class="lineno">  415 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Nom) -&gt; (Masc, Pl, &quot;они&quot;)</span>
+<span class="lineno">  416 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Gen) -&gt; (Masc, Pl, &quot;их&quot;)</span>
+<span class="lineno">  417 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Dat) -&gt; (Masc, Pl, &quot;им&quot;)</span>
+<span class="lineno">  418 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Acc) -&gt; (Masc, Pl, &quot;их&quot;)</span>
+<span class="lineno">  419 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Ins) -&gt; (Masc, Pl, &quot;ими&quot;)</span>
+<span class="lineno">  420 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;они&quot;, Loc) -&gt; (Masc, Pl, &quot;них&quot;)</span>
+<span class="lineno">  421 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Nom) -&gt; (Neut, Sg, &quot;что&quot;)</span>
+<span class="lineno">  422 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Gen) -&gt; (Neut, Sg, &quot;чего&quot;)</span>
+<span class="lineno">  423 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Dat) -&gt; (Neut, Sg, &quot;чему&quot;)</span>
+<span class="lineno">  424 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Acc) -&gt; (Neut, Sg, &quot;что&quot;)</span>
+<span class="lineno">  425 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Ins) -&gt; (Neut, Sg, &quot;чем&quot;)</span>
+<span class="lineno">  426 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;что&quot;, Loc) -&gt; (Neut, Sg, &quot;чём&quot;)</span>
+<span class="lineno">  427 </span><span class="spaces">        </span><span class="nottickedoff">(&quot;это&quot;, _)   -&gt; (Neut, Sg, &quot;это&quot;)</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="nottickedoff">_            -&gt; (Masc, Sg, pron)</span>
+<span class="lineno">  429 </span><span class="spaces">  </span><span class="nottickedoff">in NP { npLemma = form, npCase = case_, npNumber = n, npGender = g</span>
+<span class="lineno">  430 </span><span class="spaces">        </span><span class="nottickedoff">, npAPs = [], npRelClause = Nothing }</span></span>
+<span class="lineno">  431 </span>
+<span class="lineno">  432 </span>-- | Strict NP builder — no fallback swallowing. Errors propagate as Left.
+<span class="lineno">  433 </span>mkNP_ :: RuntimeParadigms -&gt; Text -&gt; NounCase -&gt; Number -&gt; Gender
+<span class="lineno">  434 </span>      -&gt; Either MorphError NP
+<span class="lineno">  435 </span><span class="decl"><span class="istickedoff">mkNP_ rp lemma case_ number _gender = mkNP rp lemma <span class="nottickedoff">case_</span> <span class="nottickedoff">number</span></span></span>
+<span class="lineno">  436 </span>
+<span class="lineno">  437 </span>-- | Strict VP builder — no fallback swallowing. Errors propagate as Left.
+<span class="lineno">  438 </span>mkVP_ :: RuntimeParadigms -&gt; Text -&gt; Int -&gt; Number -&gt; Maybe Gender -&gt; Tense
+<span class="lineno">  439 </span>      -&gt; Either MorphError VP
+<span class="lineno">  440 </span><span class="decl"><span class="istickedoff">mkVP_ rp lemma person number gender tense = mkVP rp lemma <span class="nottickedoff">person</span> <span class="nottickedoff">number</span> <span class="nottickedoff">gender</span> <span class="nottickedoff">tense</span></span></span>
+<span class="lineno">  441 </span>
+<span class="lineno">  442 </span>-- | Strict AP builder — no fallback swallowing. Errors propagate as Left.
+<span class="lineno">  443 </span>mkAP_ :: RuntimeParadigms -&gt; Text -&gt; Gender -&gt; Number -&gt; NounCase
+<span class="lineno">  444 </span>      -&gt; Either MorphError AP
+<span class="lineno">  445 </span><span class="decl"><span class="nottickedoff">mkAP_ rp lemma gender number case_ = mkAP rp lemma gender number case_</span></span>
+<span class="lineno">  446 </span>
+<span class="lineno">  447 </span>-- | Attach a direct object NP to a transitive VP.
+<span class="lineno">  448 </span>addObj :: VP -&gt; NP -&gt; Either MorphError VP
+<span class="lineno">  449 </span><span class="decl"><span class="nottickedoff">addObj vp obj = pure vp { vpPP = PP &quot;&quot; obj : vpPP vp }</span></span>
+<span class="lineno">  450 </span>
+<span class="lineno">  451 </span>-- | Attach a subordinate clause to a VP.
+<span class="lineno">  452 </span>addSubordClause :: VP -&gt; SubordClause -&gt; Either MorphError VP
+<span class="lineno">  453 </span><span class="decl"><span class="nottickedoff">addSubordClause vp sc = pure vp { vpSubord = Just sc }</span></span>
+<span class="lineno">  454 </span>
+<span class="lineno">  455 </span>-- | Attach a relative clause to an NP (agreement check simplified).
+<span class="lineno">  456 </span>addRelClause :: NP -&gt; S -&gt; Either MorphError NP
+<span class="lineno">  457 </span><span class="decl"><span class="nottickedoff">addRelClause np s = pure np { npRelClause = Just s }</span></span>
+<span class="lineno">  458 </span>
+<span class="lineno">  459 </span>-- | Coordinate two sentences.
+<span class="lineno">  460 </span>mkCoordS :: Coord -&gt; S -&gt; S -&gt; Either MorphError S
+<span class="lineno">  461 </span><span class="decl"><span class="nottickedoff">mkCoordS coord s1 s2 = Right (CoordS' (CoordS s1 coord s2))</span></span>
+<span class="lineno">  462 </span>
+<span class="lineno">  463 </span>-- | Build an elliptical sentence (no explicit subject).
+<span class="lineno">  464 </span>mkElliptical :: VP -&gt; S
+<span class="lineno">  465 </span><span class="decl"><span class="nottickedoff">mkElliptical vp = EllipticalS { ePredicate = vp, eTopicFront = Nothing, eQuestion = False, eModal = Nothing, eFill = Nothing, eQuant = Nothing }</span></span>
+<span class="lineno">  466 </span>
+<span class="lineno">  467 </span>-- | Build an elliptical sentence from an NP alone (no verb).
+<span class="lineno">  468 </span>mkEllipticalNP :: NP -&gt; S
+<span class="lineno">  469 </span><span class="decl"><span class="nottickedoff">mkEllipticalNP np = SimpleS</span>
+<span class="lineno">  470 </span><span class="spaces">  </span><span class="nottickedoff">{ sSubject = np</span>
+<span class="lineno">  471 </span><span class="spaces">  </span><span class="nottickedoff">, sPredicate = VP &quot;&quot; 3 Sg Nothing Present [] [] Nothing</span>
+<span class="lineno">  472 </span><span class="spaces">  </span><span class="nottickedoff">, sTopicFront = Nothing</span>
+<span class="lineno">  473 </span><span class="spaces">  </span><span class="nottickedoff">, sQuestion = False</span>
+<span class="lineno">  474 </span><span class="spaces">  </span><span class="nottickedoff">, sModal = Nothing</span>
+<span class="lineno">  475 </span><span class="spaces">  </span><span class="nottickedoff">, sFill = Nothing</span>
+<span class="lineno">  476 </span><span class="spaces">  </span><span class="nottickedoff">, sQuant = Nothing</span>
+<span class="lineno">  477 </span><span class="spaces">  </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  478 </span>
+<span class="lineno">  479 </span>-- | Build an elliptical sentence from an adverb alone.
+<span class="lineno">  480 </span>mkEllipticalAdv :: Adv -&gt; S
+<span class="lineno">  481 </span><span class="decl"><span class="nottickedoff">mkEllipticalAdv adv = EllipticalS</span>
+<span class="lineno">  482 </span><span class="spaces">  </span><span class="nottickedoff">{ ePredicate = VP &quot;&quot; 3 Sg Nothing Present [adv] [] Nothing</span>
+<span class="lineno">  483 </span><span class="spaces">  </span><span class="nottickedoff">, eTopicFront = Nothing</span>
+<span class="lineno">  484 </span><span class="spaces">  </span><span class="nottickedoff">, eQuestion = False</span>
+<span class="lineno">  485 </span><span class="spaces">  </span><span class="nottickedoff">, eModal = Nothing</span>
+<span class="lineno">  486 </span><span class="spaces">  </span><span class="nottickedoff">, eFill = Nothing</span>
+<span class="lineno">  487 </span><span class="spaces">  </span><span class="nottickedoff">, eQuant = Nothing</span>
+<span class="lineno">  488 </span><span class="spaces">  </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  489 </span>
+<span class="lineno">  490 </span>-- | Front a topic NP before a sentence.
+<span class="lineno">  491 </span>mkTopicFront :: NP -&gt; S -&gt; Either MorphError S
+<span class="lineno">  492 </span><span class="decl"><span class="nottickedoff">mkTopicFront np s = case s of</span>
+<span class="lineno">  493 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS {} -&gt; Right s { sTopicFront = Just np }</span>
+<span class="lineno">  494 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS {} -&gt; Right s { eTopicFront = Just np }</span>
+<span class="lineno">  495 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' _ -&gt; Left (InvalidPOS &quot;topic_front&quot; &quot;coordS&quot;)</span></span>
+<span class="lineno">  496 </span>
+<span class="lineno">  497 </span>-- | Turn a sentence into a question.
+<span class="lineno">  498 </span>mkQuestion :: S -&gt; IllocutionaryForce -&gt; S
+<span class="lineno">  499 </span><span class="decl"><span class="nottickedoff">mkQuestion s IFAsk = case s of</span>
+<span class="lineno">  500 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS {} -&gt; s { sQuestion = True }</span>
+<span class="lineno">  501 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS {} -&gt; s { eQuestion = True }</span>
+<span class="lineno">  502 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' _ -&gt; s</span>
+<span class="lineno">  503 </span><span class="spaces"></span><span class="nottickedoff">mkQuestion s _ = s</span></span>
+<span class="lineno">  504 </span>
+<span class="lineno">  505 </span>mkComparative :: RuntimeParadigms -&gt; Text -&gt; Text -&gt; Text -&gt; CmpDir -&gt; Either MorphError S
+<span class="lineno">  506 </span><span class="decl"><span class="nottickedoff">mkComparative rp subj obj axis dir = do</span>
+<span class="lineno">  507 </span><span class="spaces">  </span><span class="nottickedoff">subjNP &lt;- mkNP rp subj Nom Sg</span>
+<span class="lineno">  508 </span><span class="spaces">  </span><span class="nottickedoff">objNP &lt;- case dir of</span>
+<span class="lineno">  509 </span><span class="spaces">    </span><span class="nottickedoff">CmpMore  -&gt; mkNP rp obj Gen Sg</span>
+<span class="lineno">  510 </span><span class="spaces">    </span><span class="nottickedoff">CmpLess  -&gt; mkNP rp obj Gen Sg</span>
+<span class="lineno">  511 </span><span class="spaces">    </span><span class="nottickedoff">CmpEqual -&gt; mkNP rp obj Gen Sg</span>
+<span class="lineno">  512 </span><span class="spaces">  </span><span class="nottickedoff">let compText = case dir of</span>
+<span class="lineno">  513 </span><span class="spaces">        </span><span class="nottickedoff">CmpMore  -&gt; &quot;важнее&quot;</span>
+<span class="lineno">  514 </span><span class="spaces">        </span><span class="nottickedoff">CmpLess  -&gt; &quot;менее важно&quot;</span>
+<span class="lineno">  515 </span><span class="spaces">        </span><span class="nottickedoff">CmpEqual -&gt; &quot;так же важно как&quot;</span>
+<span class="lineno">  516 </span><span class="spaces">  </span><span class="nottickedoff">let subjNP' = subjNP { npAPs = [AP compText (npGender subjNP) (npNumber subjNP) (npCase subjNP)] }</span>
+<span class="lineno">  517 </span><span class="spaces">  </span><span class="nottickedoff">objNP' &lt;- addAP objNP (AP compText (npGender objNP) (npNumber objNP) (npCase objNP))</span>
+<span class="lineno">  518 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  519 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS subjNP vp</span>
+<span class="lineno">  520 </span><span class="spaces">  </span><span class="nottickedoff">mkTopicFront objNP' s</span></span>
+<span class="lineno">  521 </span>
+<span class="lineno">  522 </span>--------------------------------------------------------------------------------
+<span class="lineno">  523 </span>-- Linearization
+<span class="lineno">  524 </span>--------------------------------------------------------------------------------
+<span class="lineno">  525 </span>
+<span class="lineno">  526 </span>linearizeS :: S -&gt; Text
+<span class="lineno">  527 </span><span class="decl"><span class="nottickedoff">linearizeS s = case s of</span>
+<span class="lineno">  528 </span><span class="spaces">  </span><span class="nottickedoff">SimpleS { sSubject = subj, sPredicate = pred, sTopicFront = mFront, sQuestion = isQ, sModal = mModal, sFill = mFill, sQuant = mQuant } -&gt;</span>
+<span class="lineno">  529 </span><span class="spaces">    </span><span class="nottickedoff">let core = T.unwords [linearizeNP subj, linearizeVPWith (npGender subj) (npNumber subj) pred]</span>
+<span class="lineno">  530 </span><span class="spaces">        </span><span class="nottickedoff">punct = if isQ then &quot;?&quot; else &quot;.&quot;</span>
+<span class="lineno">  531 </span><span class="spaces">        </span><span class="nottickedoff">withModal = case mModal of</span>
+<span class="lineno">  532 </span><span class="spaces">                      </span><span class="nottickedoff">Nothing -&gt; core</span>
+<span class="lineno">  533 </span><span class="spaces">                      </span><span class="nottickedoff">Just p  -&gt; insertAfterFirstWord p core</span>
+<span class="lineno">  534 </span><span class="spaces">        </span><span class="nottickedoff">withFiller = case mFill of</span>
+<span class="lineno">  535 </span><span class="spaces">                       </span><span class="nottickedoff">Nothing -&gt; withModal</span>
+<span class="lineno">  536 </span><span class="spaces">                       </span><span class="nottickedoff">Just f  -&gt; f &lt;&gt; &quot;, &quot; &lt;&gt; withModal</span>
+<span class="lineno">  537 </span><span class="spaces">        </span><span class="nottickedoff">withQuant = case mQuant of</span>
+<span class="lineno">  538 </span><span class="spaces">                       </span><span class="nottickedoff">Nothing -&gt; withFiller</span>
+<span class="lineno">  539 </span><span class="spaces">                       </span><span class="nottickedoff">Just q  -&gt; q &lt;&gt; &quot; &quot; &lt;&gt; withFiller</span>
+<span class="lineno">  540 </span><span class="spaces">    </span><span class="nottickedoff">in case mFront of</span>
+<span class="lineno">  541 </span><span class="spaces">         </span><span class="nottickedoff">Nothing  -&gt; withQuant &lt;&gt; punct</span>
+<span class="lineno">  542 </span><span class="spaces">         </span><span class="nottickedoff">Just np  -&gt; linearizeNP np &lt;&gt; &quot; — &quot; &lt;&gt; withQuant &lt;&gt; punct</span>
+<span class="lineno">  543 </span><span class="spaces">  </span><span class="nottickedoff">EllipticalS { ePredicate = pred, eTopicFront = mFront, eQuestion = isQ, eModal = mModal, eFill = mFill, eQuant = mQuant } -&gt;</span>
+<span class="lineno">  544 </span><span class="spaces">    </span><span class="nottickedoff">let core = linearizeVP pred</span>
+<span class="lineno">  545 </span><span class="spaces">        </span><span class="nottickedoff">punct = if isQ then &quot;?&quot; else &quot;.&quot;</span>
+<span class="lineno">  546 </span><span class="spaces">        </span><span class="nottickedoff">withModal = case mModal of</span>
+<span class="lineno">  547 </span><span class="spaces">                      </span><span class="nottickedoff">Nothing -&gt; core</span>
+<span class="lineno">  548 </span><span class="spaces">                      </span><span class="nottickedoff">Just p  -&gt; insertAfterFirstWord p core</span>
+<span class="lineno">  549 </span><span class="spaces">        </span><span class="nottickedoff">withFiller = case mFill of</span>
+<span class="lineno">  550 </span><span class="spaces">                       </span><span class="nottickedoff">Nothing -&gt; withModal</span>
+<span class="lineno">  551 </span><span class="spaces">                       </span><span class="nottickedoff">Just f  -&gt; f &lt;&gt; &quot;, &quot; &lt;&gt; withModal</span>
+<span class="lineno">  552 </span><span class="spaces">        </span><span class="nottickedoff">withQuant = case mQuant of</span>
+<span class="lineno">  553 </span><span class="spaces">                       </span><span class="nottickedoff">Nothing -&gt; withFiller</span>
+<span class="lineno">  554 </span><span class="spaces">                       </span><span class="nottickedoff">Just q  -&gt; q &lt;&gt; &quot; &quot; &lt;&gt; withFiller</span>
+<span class="lineno">  555 </span><span class="spaces">    </span><span class="nottickedoff">in case mFront of</span>
+<span class="lineno">  556 </span><span class="spaces">         </span><span class="nottickedoff">Nothing  -&gt; withQuant &lt;&gt; punct</span>
+<span class="lineno">  557 </span><span class="spaces">         </span><span class="nottickedoff">Just np  -&gt; linearizeNP np &lt;&gt; &quot; — &quot; &lt;&gt; withQuant &lt;&gt; punct</span>
+<span class="lineno">  558 </span><span class="spaces">  </span><span class="nottickedoff">CoordS' (CoordS s1 coord s2) -&gt;</span>
+<span class="lineno">  559 </span><span class="spaces">    </span><span class="nottickedoff">let s1text = fromMaybe (linearizeS s1) (T.stripSuffix &quot;.&quot; (linearizeS s1))</span>
+<span class="lineno">  560 </span><span class="spaces">    </span><span class="nottickedoff">in s1text &lt;&gt; &quot;, &quot; &lt;&gt; coordWord coord &lt;&gt; &quot; &quot; &lt;&gt; linearizeS s2</span></span>
+<span class="lineno">  561 </span>
+<span class="lineno">  562 </span>insertAfterFirstWord :: Text -&gt; Text -&gt; Text
+<span class="lineno">  563 </span><span class="decl"><span class="nottickedoff">insertAfterFirstWord w txt =</span>
+<span class="lineno">  564 </span><span class="spaces">  </span><span class="nottickedoff">case T.words txt of</span>
+<span class="lineno">  565 </span><span class="spaces">    </span><span class="nottickedoff">[]     -&gt; w</span>
+<span class="lineno">  566 </span><span class="spaces">    </span><span class="nottickedoff">(x:xs) -&gt; T.unwords (x : w : xs)</span></span>
+<span class="lineno">  567 </span>
+<span class="lineno">  568 </span>coordWord :: Coord -&gt; Text
+<span class="lineno">  569 </span><span class="decl"><span class="nottickedoff">coordWord = \case</span>
+<span class="lineno">  570 </span><span class="spaces">  </span><span class="nottickedoff">CoordI  -&gt; &quot;и&quot;</span>
+<span class="lineno">  571 </span><span class="spaces">  </span><span class="nottickedoff">CoordA  -&gt; &quot;а&quot;</span>
+<span class="lineno">  572 </span><span class="spaces">  </span><span class="nottickedoff">CoordNo -&gt; &quot;но&quot;</span>
+<span class="lineno">  573 </span><span class="spaces">  </span><span class="nottickedoff">CoordIli -&gt; &quot;или&quot;</span>
+<span class="lineno">  574 </span><span class="spaces">  </span><span class="nottickedoff">CoordDash -&gt; &quot;—&quot;</span></span>
+<span class="lineno">  575 </span>
+<span class="lineno">  576 </span>subordWord :: Subord -&gt; Text
+<span class="lineno">  577 </span><span class="decl"><span class="nottickedoff">subordWord = \case</span>
+<span class="lineno">  578 </span><span class="spaces">  </span><span class="nottickedoff">SubChto       -&gt; &quot;что&quot;</span>
+<span class="lineno">  579 </span><span class="spaces">  </span><span class="nottickedoff">SubKogda      -&gt; &quot;когда&quot;</span>
+<span class="lineno">  580 </span><span class="spaces">  </span><span class="nottickedoff">SubPotomuChto -&gt; &quot;потому что&quot;</span>
+<span class="lineno">  581 </span><span class="spaces">  </span><span class="nottickedoff">SubEsli       -&gt; &quot;если&quot;</span>
+<span class="lineno">  582 </span><span class="spaces">  </span><span class="nottickedoff">SubKotory     -&gt; &quot;который&quot;</span>
+<span class="lineno">  583 </span><span class="spaces">  </span><span class="nottickedoff">SubGde        -&gt; &quot;где&quot;</span></span>
+<span class="lineno">  584 </span>
+<span class="lineno">  585 </span>kotoryForm :: Gender -&gt; Number -&gt; Text
+<span class="lineno">  586 </span><span class="decl"><span class="nottickedoff">kotoryForm Masc Sg  = &quot;который&quot;</span>
+<span class="lineno">  587 </span><span class="spaces"></span><span class="nottickedoff">kotoryForm Femn Sg  = &quot;которая&quot;</span>
+<span class="lineno">  588 </span><span class="spaces"></span><span class="nottickedoff">kotoryForm Neut Sg  = &quot;которое&quot;</span>
+<span class="lineno">  589 </span><span class="spaces"></span><span class="nottickedoff">kotoryForm _    Pl  = &quot;которые&quot;</span></span>
+<span class="lineno">  590 </span>
+<span class="lineno">  591 </span>linearizeNP :: NP -&gt; Text
+<span class="lineno">  592 </span><span class="decl"><span class="nottickedoff">linearizeNP np =</span>
+<span class="lineno">  593 </span><span class="spaces">  </span><span class="nottickedoff">let adjs = T.unwords (map linearizeAP (reverse (npAPs np)))</span>
+<span class="lineno">  594 </span><span class="spaces">      </span><span class="nottickedoff">headN = npLemma np</span>
+<span class="lineno">  595 </span><span class="spaces">      </span><span class="nottickedoff">rel = case npRelClause np of</span>
+<span class="lineno">  596 </span><span class="spaces">              </span><span class="nottickedoff">Nothing -&gt; &quot;&quot;</span>
+<span class="lineno">  597 </span><span class="spaces">              </span><span class="nottickedoff">Just clause -&gt; &quot;, &quot; &lt;&gt; kotoryForm (npGender np) (npNumber np) &lt;&gt; &quot; &quot; &lt;&gt; linearizeS clause</span>
+<span class="lineno">  598 </span><span class="spaces">      </span><span class="nottickedoff">base = if T.null adjs then headN else adjs &lt;&gt; &quot; &quot; &lt;&gt; headN</span>
+<span class="lineno">  599 </span><span class="spaces">  </span><span class="nottickedoff">in if T.null rel then base else base &lt;&gt; rel</span></span>
+<span class="lineno">  600 </span>
+<span class="lineno">  601 </span>linearizeVP :: VP -&gt; Text
+<span class="lineno">  602 </span><span class="decl"><span class="nottickedoff">linearizeVP vp = linearizeVPWith Masc Sg vp</span></span>
+<span class="lineno">  603 </span>
+<span class="lineno">  604 </span>linearizeVPWith :: Gender -&gt; Number -&gt; VP -&gt; Text
+<span class="lineno">  605 </span><span class="decl"><span class="nottickedoff">linearizeVPWith g n vp =</span>
+<span class="lineno">  606 </span><span class="spaces">  </span><span class="nottickedoff">let verb = vpLemma vp</span>
+<span class="lineno">  607 </span><span class="spaces">      </span><span class="nottickedoff">adverbs = T.unwords (map linearizeAdv (reverse (vpAdv vp)))</span>
+<span class="lineno">  608 </span><span class="spaces">      </span><span class="nottickedoff">pps = T.unwords (map linearizePP (reverse (vpPP vp)))</span>
+<span class="lineno">  609 </span><span class="spaces">      </span><span class="nottickedoff">subord = case vpSubord vp of</span>
+<span class="lineno">  610 </span><span class="spaces">                 </span><span class="nottickedoff">Nothing -&gt; &quot;&quot;</span>
+<span class="lineno">  611 </span><span class="spaces">                 </span><span class="nottickedoff">Just (SubordClause conj clause) -&gt;</span>
+<span class="lineno">  612 </span><span class="spaces">                   </span><span class="nottickedoff">let pron = case conj of</span>
+<span class="lineno">  613 </span><span class="spaces">                                </span><span class="nottickedoff">SubKotory -&gt; kotoryForm g n</span>
+<span class="lineno">  614 </span><span class="spaces">                                </span><span class="nottickedoff">_         -&gt; subordWord conj</span>
+<span class="lineno">  615 </span><span class="spaces">                   </span><span class="nottickedoff">in &quot;, &quot; &lt;&gt; pron &lt;&gt; &quot; &quot; &lt;&gt; linearizeSClause clause</span>
+<span class="lineno">  616 </span><span class="spaces">      </span><span class="nottickedoff">parts = filter (not . T.null) [adverbs, verb, pps]</span>
+<span class="lineno">  617 </span><span class="spaces">      </span><span class="nottickedoff">core = T.unwords parts</span>
+<span class="lineno">  618 </span><span class="spaces">  </span><span class="nottickedoff">in if T.null subord then core else core &lt;&gt; subord</span></span>
+<span class="lineno">  619 </span>
+<span class="lineno">  620 </span>linearizeSClause :: S -&gt; Text
+<span class="lineno">  621 </span><span class="decl"><span class="nottickedoff">linearizeSClause s = fromMaybe (linearizeS s) (T.stripSuffix &quot;.&quot; (linearizeS s))</span></span>
+<span class="lineno">  622 </span>
+<span class="lineno">  623 </span>linearizeAP :: AP -&gt; Text
+<span class="lineno">  624 </span><span class="decl"><span class="nottickedoff">linearizeAP = apLemma</span></span>
+<span class="lineno">  625 </span>
+<span class="lineno">  626 </span>linearizeAdv :: Adv -&gt; Text
+<span class="lineno">  627 </span><span class="decl"><span class="nottickedoff">linearizeAdv (Adv t) = t</span></span>
+<span class="lineno">  628 </span>
+<span class="lineno">  629 </span>linearizePP :: PP -&gt; Text
+<span class="lineno">  630 </span><span class="decl"><span class="nottickedoff">linearizePP pp =</span>
+<span class="lineno">  631 </span><span class="spaces">  </span><span class="nottickedoff">let prep = ppPreposition pp</span>
+<span class="lineno">  632 </span><span class="spaces">      </span><span class="nottickedoff">npText = linearizeNP (ppNP pp)</span>
+<span class="lineno">  633 </span><span class="spaces">  </span><span class="nottickedoff">in if T.null prep then npText else prep &lt;&gt; &quot; &quot; &lt;&gt; npText</span></span>
+<span class="lineno">  634 </span>
+<span class="lineno">  635 </span>--------------------------------------------------------------------------------
+<span class="lineno">  636 </span>-- Helpers
+<span class="lineno">  637 </span>--------------------------------------------------------------------------------
+<span class="lineno">  638 </span>
+<span class="lineno">  639 </span>validatePOS :: RuntimeParadigms -&gt; Text -&gt; Text -&gt; Either MorphError ()
+<span class="lineno">  640 </span><span class="decl"><span class="istickedoff">validatePOS rp lemma expected =</span>
+<span class="lineno">  641 </span><span class="spaces">  </span><span class="istickedoff">case lemmaPos rp lemma of</span>
+<span class="lineno">  642 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; Left <span class="nottickedoff">(MissingParadigm lemma)</span></span>
+<span class="lineno">  643 </span><span class="spaces">    </span><span class="istickedoff">Just actual | <span class="nottickedoff">actual == expected</span> -&gt; <span class="nottickedoff">Right ()</span></span>
+<span class="lineno">  644 </span><span class="spaces">    </span><span class="istickedoff">Just actual -&gt; <span class="nottickedoff">Left (InvalidPOS lemma actual)</span></span></span>
+<span class="lineno">  645 </span>
+<span class="lineno">  646 </span>lookupFormOrError :: RuntimeParadigms -&gt; Text -&gt; NounCase -&gt; Number
+<span class="lineno">  647 </span>                  -&gt; Either MorphError Text
+<span class="lineno">  648 </span><span class="decl"><span class="nottickedoff">lookupFormOrError rp lemma case_ number =</span>
+<span class="lineno">  649 </span><span class="spaces">  </span><span class="nottickedoff">case lookupNounForm rp lemma case_ number of</span>
+<span class="lineno">  650 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; Left (MissingForm lemma (T.pack (show case_ &lt;&gt; show number)))</span>
+<span class="lineno">  651 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; Right form</span></span>
+<span class="lineno">  652 </span>
+<span class="lineno">  653 </span>genderOrError :: RuntimeParadigms -&gt; Text -&gt; Either MorphError Gender
+<span class="lineno">  654 </span><span class="decl"><span class="nottickedoff">genderOrError rp lemma =</span>
+<span class="lineno">  655 </span><span class="spaces">  </span><span class="nottickedoff">case lemmaGender rp lemma of</span>
+<span class="lineno">  656 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; Left (MissingParadigm lemma)</span>
+<span class="lineno">  657 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;masc&quot;  -&gt; Right Masc</span>
+<span class="lineno">  658 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;femn&quot;  -&gt; Right Femn</span>
+<span class="lineno">  659 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;neut&quot;  -&gt; Right Neut</span>
+<span class="lineno">  660 </span><span class="spaces">    </span><span class="nottickedoff">Just g       -&gt; Left (InvalidPOS lemma g)</span></span>
+<span class="lineno">  661 </span>
+<span class="lineno">  662 </span>verbFormOrError :: RuntimeParadigms -&gt; Text -&gt; Int -&gt; Number -&gt; Maybe Gender -&gt; Tense
+<span class="lineno">  663 </span>                -&gt; Either MorphError Text
+<span class="lineno">  664 </span><span class="decl"><span class="nottickedoff">verbFormOrError rp lemma person number gender tense =</span>
+<span class="lineno">  665 </span><span class="spaces">  </span><span class="nottickedoff">let form = case tense of</span>
+<span class="lineno">  666 </span><span class="spaces">        </span><span class="nottickedoff">Past -&gt; case number of</span>
+<span class="lineno">  667 </span><span class="spaces">          </span><span class="nottickedoff">Sg -&gt; case gender of</span>
+<span class="lineno">  668 </span><span class="spaces">            </span><span class="nottickedoff">Just Masc -&gt; PastSgMasc</span>
+<span class="lineno">  669 </span><span class="spaces">            </span><span class="nottickedoff">Just Femn  -&gt; PastSgFem</span>
+<span class="lineno">  670 </span><span class="spaces">            </span><span class="nottickedoff">Just Neut -&gt; PastSgNeut</span>
+<span class="lineno">  671 </span><span class="spaces">            </span><span class="nottickedoff">Nothing   -&gt; PastSgMasc  -- default</span>
+<span class="lineno">  672 </span><span class="spaces">          </span><span class="nottickedoff">Pl -&gt; PastPl</span>
+<span class="lineno">  673 </span><span class="spaces">        </span><span class="nottickedoff">Present -&gt; case (person, number) of</span>
+<span class="lineno">  674 </span><span class="spaces">          </span><span class="nottickedoff">(1, Sg) -&gt; Pres1Sg; (2, Sg) -&gt; Pres2Sg; (3, Sg) -&gt; Pres3Sg</span>
+<span class="lineno">  675 </span><span class="spaces">          </span><span class="nottickedoff">(1, Pl) -&gt; Pres1Pl; (2, Pl) -&gt; Pres2Pl; (3, Pl) -&gt; Pres3Pl</span>
+<span class="lineno">  676 </span><span class="spaces">          </span><span class="nottickedoff">_       -&gt; Pres3Sg</span>
+<span class="lineno">  677 </span><span class="spaces">        </span><span class="nottickedoff">Future -&gt; case (person, number) of</span>
+<span class="lineno">  678 </span><span class="spaces">          </span><span class="nottickedoff">(1, Sg) -&gt; Fut1Sg; (2, Sg) -&gt; Fut2Sg; (3, Sg) -&gt; Fut3Sg</span>
+<span class="lineno">  679 </span><span class="spaces">          </span><span class="nottickedoff">(1, Pl) -&gt; Fut1Pl; (2, Pl) -&gt; Fut2Pl; (3, Pl) -&gt; Fut3Pl</span>
+<span class="lineno">  680 </span><span class="spaces">          </span><span class="nottickedoff">_       -&gt; Fut3Sg</span>
+<span class="lineno">  681 </span><span class="spaces">  </span><span class="nottickedoff">in case lookupVerbForm rp lemma form of</span>
+<span class="lineno">  682 </span><span class="spaces">       </span><span class="nottickedoff">Nothing -&gt; Left (MissingForm lemma (T.pack (show form)))</span>
+<span class="lineno">  683 </span><span class="spaces">       </span><span class="nottickedoff">Just w  -&gt; Right w</span></span>
+<span class="lineno">  684 </span>
+<span class="lineno">  685 </span>adjFormOrError :: RuntimeParadigms -&gt; Text -&gt; Gender -&gt; Number -&gt; NounCase
+<span class="lineno">  686 </span>               -&gt; Either MorphError Text
+<span class="lineno">  687 </span><span class="decl"><span class="nottickedoff">adjFormOrError rp lemma gender number case_ =</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="nottickedoff">let form = AdjFull case_ number (Just gender)</span>
+<span class="lineno">  689 </span><span class="spaces">  </span><span class="nottickedoff">in case lookupAdjectiveForm rp lemma form of</span>
+<span class="lineno">  690 </span><span class="spaces">       </span><span class="nottickedoff">Nothing -&gt; Left (MissingForm lemma (T.pack (show form)))</span>
+<span class="lineno">  691 </span><span class="spaces">       </span><span class="nottickedoff">Just w  -&gt; Right w</span></span>
+
+</pre>
+</body>
+</html>

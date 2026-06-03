@@ -24,6 +24,7 @@ import Test.Suite.TraceSchema (traceSchemaTests)
 import Test.Suite.RegenerableDerived (regenerableDerivedTests)
 import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
 import Test.Suite.ReplayGate (replayGateTests)
+import Test.Suite.RenderAuthorityStub (renderAuthorityStubTests)
 import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.RussianQuality (russianQualityTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
@@ -47,7 +48,7 @@ import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ statePersistenceTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ renderAuthorityStubTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

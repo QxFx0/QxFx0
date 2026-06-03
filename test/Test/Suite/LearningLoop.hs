@@ -63,28 +63,34 @@ import QxFx0.Self.Perspective
   , opinionCore
   )
 import QxFx0.Core.TurnPipeline.Route.Render (isTopicNoisyOrAmbiguous)
+import QxFx0.Types.Decision (DialogueOutputMode(..))
 import QxFx0.Types.State
   ( AdaptiveDecision(..)
-  , EvidenceStrength(..)
+   , EvidenceStrength(..)
   , AdaptiveMutationKind(..)
-  , AdaptiveMutationRecord(..)
-  , BeliefPolarity(..)
-  , BeliefRecord(..)
-  , BeliefStore(..)
-  , AdaptiveDecisionRecord(..)
-  , DialogueOutcomeKind(..)
-  , DialogueOutcomeLearningState(..)
-  , DialogueOutcomeSample(..)
+   , AdaptiveMutationRecord(..)
+   , BeliefPolarity(..)
+   , BeliefRecord(..)
+   , BeliefStore(..)
+   , AdaptiveDecisionRecord(..)
+   , PersistenceDomain(..)
+   , PersistenceDomainClass(..)
+   , StatePersistenceSnapshot(..)
+   , DialogueOutcomeKind(..)
+   , DialogueOutcomeLearningState(..)
+   , DialogueOutcomeSample(..)
   , SpeechPolicyState(..)
   , SystemState(..)
   , emptyBeliefStore
   , emptyDialogueOutcomeLearningState
-  , emptySpeechPolicyState
-  , emptySystemState
-  , appendAdaptiveMutationRecords
-  , ssKnowledgeTree
-  , ssMorphology
-  , ConatusSlice(..)
+   , emptySpeechPolicyState
+   , emptySystemState
+   , appendAdaptiveMutationRecords
+   , persistenceDomainClass
+   , preparePersistenceSnapshot
+   , ssKnowledgeTree
+   , ssMorphology
+   , ConatusSlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
   , EvidenceRef(..)
@@ -103,8 +109,15 @@ import QxFx0.Types.State
   , PerspectiveThread(..)
   , PerspectiveVersionId(..)
   , ClaimStanceRef(..)
-  , defaultNormativeProfile
-  , defaultPerspectiveRegistry
+   , defaultNormativeProfile
+   , defaultPerspectiveRegistry
+   )
+import QxFx0.Types.State.Governance
+  ( GovernanceProjection(..)
+  , GovernanceRuntimeFault(..)
+  , ProjectionMeta(..)
+  , currentProjectionVersion
+  , currentReducerVersion
   )
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
@@ -192,12 +205,17 @@ learningLoopTests =
   , testRealPathMiniEvalScenario2
   , testRealPathMiniEvalScenario3
   , testRealPathMiniEvalScenario4
-  , testRealPathMiniEvalScenario5
-  -- WP1-WP5 cumulative learning tests
-  , testSystemStatePersistenceRoundTrip
-  , testOldSystemStateDialogueDevelopmentDefaults
-  , testAdaptiveMutationLogIsBounded
-  , testPerspectiveAdmissibilityRejectsInsufficientEvidence
+        , testRealPathMiniEvalScenario5
+   -- WP1-WP5 cumulative learning tests
+   , testSystemStatePersistenceRoundTrip
+   , testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient
+   , testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains
+   , testSystemStateJsonOmitsDerivedGovernanceViews
+   , testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews
+   , testSystemStateV2MissingGovernanceFieldsFailDecode
+   , testOldSystemStateDialogueDevelopmentDefaults
+   , testAdaptiveMutationLogIsBounded
+   , testPerspectiveAdmissibilityRejectsInsufficientEvidence
   , testPerspectivePromotionRequiresStabilityAndStrongEvidence
   , testPerspectiveRegistryLineageIsCanonicalAndBounded
   , testPerspectiveSuspendClearsActiveProjection
@@ -935,16 +953,147 @@ testSystemStatePersistenceRoundTrip = TestCase $ do
   assertBool "belief store claim must survive round-trip"
     (M.member "свобода" (bsClaims (ssBeliefStore ss1)))
 
--- | ADR-0032: old SystemState JSON without dialogue-development fields
--- loads with empty defaults.
+-- | P5 persistence seam separates canonical truth from projection/transient domains.
+testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient :: Test
+testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient = TestCase $ do
+  assertEqual "core conversation must remain canonical truth"
+    PdcCanonicalTruth
+    (persistenceDomainClass PdCoreConversation)
+  assertEqual "governance history must remain canonical truth"
+    PdcCanonicalTruth
+    (persistenceDomainClass PdGovernanceCanonical)
+  assertEqual "governance views must be rebuildable projections"
+    PdcRebuildableProjection
+    (persistenceDomainClass PdGovernanceDerived)
+  assertEqual "session contour must remain runtime-transient"
+    PdcRuntimeTransient
+    (persistenceDomainClass PdSessionTransient)
+
+testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains :: Test
+testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains = TestCase $ do
+  let scope = ScopeTopic "freedom"
+      bundle = mkPerspectiveBundleForScope scope
+      candidate = opinionCore bundle
+      registry = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed
+      projection = GovernanceProjection
+        { gpMeta = ProjectionMeta
+            { pmProjectionVersion = currentProjectionVersion
+            , pmReducerVersion = currentReducerVersion
+            , pmSnapshotTurn = Just 1
+            }
+        , gpPerspectiveRegistry = registry
+        , gpActivePerspectiveProjections = buildActivePerspectiveProjections registry
+        , gpGovernedRefs = []
+        , gpProjectionChecksum = "projection_fixture"
+        }
+      liveState = emptySystemState
+        { ssSessionId = "live-session"
+        , ssOutputMode = SemanticIntrospectionOutput
+        , ssPerspectiveRegistry = registry
+        , ssGovernanceProjection = projection
+        , ssGovernanceRuntimeFault = Just GrfRebuildMismatch
+        }
+      snapshot = preparePersistenceSnapshot "persisted-session" liveState
+      canonicalState = spsCanonicalState snapshot
+      runtimeState = spsRuntimeContinuation snapshot
+  assertEqual "canonical snapshot must rebind persisted session id"
+    "persisted-session"
+    (ssSessionId canonicalState)
+  assertEqual "runtime continuation must also rebind session id"
+    "persisted-session"
+    (ssSessionId runtimeState)
+  assertEqual "canonical snapshot must clear runtime output mode"
+    DialogueOutput
+    (ssOutputMode canonicalState)
+  assertEqual "runtime continuation must preserve live output mode"
+    SemanticIntrospectionOutput
+    (ssOutputMode runtimeState)
+  assertEqual "canonical snapshot must clear rebuildable registry"
+    (ssPerspectiveRegistry emptySystemState)
+    (ssPerspectiveRegistry canonicalState)
+  assertEqual "canonical snapshot must clear rebuildable projection"
+    (ssGovernanceProjection emptySystemState)
+    (ssGovernanceProjection canonicalState)
+  assertEqual "runtime continuation must preserve live registry"
+    registry
+    (ssPerspectiveRegistry runtimeState)
+  assertEqual "runtime continuation must preserve live projection"
+    projection
+    (ssGovernanceProjection runtimeState)
+  assertEqual "canonical snapshot must clear runtime governance fault"
+    Nothing
+    (ssGovernanceRuntimeFault canonicalState)
+  assertEqual "runtime continuation must preserve live governance fault"
+    (Just GrfRebuildMismatch)
+    (ssGovernanceRuntimeFault runtimeState)
+
+testSystemStateJsonOmitsDerivedGovernanceViews :: Test
+testSystemStateJsonOmitsDerivedGovernanceViews = TestCase $
+  case toJSON emptySystemState of
+    Object obj -> do
+      assertBool "schema version must be persisted"
+        (KM.member "schemaVersion" obj)
+      assertBool "canonical governance history must be persisted"
+        (KM.member "governanceHistory" obj)
+      assertBool "derived perspective registry must not be persisted"
+        (not (KM.member "perspectiveRegistry" obj))
+      assertBool "derived governance projection must not be persisted"
+        (not (KM.member "governanceProjection" obj))
+    _ -> assertFailure "SystemState JSON must encode as an object"
+
+-- | P5 decode must ignore persisted derived governance views.
+testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews :: Test
+testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews = TestCase $ do
+  let blobWithStaleDerivedViews =
+        case toJSON emptySystemState of
+          Object obj -> Object
+            ( KM.insert "perspectiveRegistry" (String "stale_persisted_registry")
+            . KM.insert "governanceProjection" (String "stale_persisted_projection")
+            $ obj
+            )
+          value -> value
+      decoded = decode (encode blobWithStaleDerivedViews) :: Maybe SystemState
+  assertBool "state with stale persisted derived governance views must decode"
+    (decoded /= Nothing)
+  let ss = maybe emptySystemState id decoded
+  assertEqual "persisted perspective registry must be ignored on decode"
+    (ssPerspectiveRegistry emptySystemState)
+    (ssPerspectiveRegistry ss)
+  assertEqual "persisted governance projection must be ignored on decode"
+    (ssGovernanceProjection emptySystemState)
+    (ssGovernanceProjection ss)
+
+-- | P5 schema v2 must fail closed when governance/dialogue fields are absent.
+testSystemStateV2MissingGovernanceFieldsFailDecode :: Test
+testSystemStateV2MissingGovernanceFieldsFailDecode = TestCase $ do
+  let missingGovernanceFields =
+        case toJSON emptySystemState of
+          Object obj -> Object
+            ( KM.delete "governanceHistory"
+            . KM.delete "dialogueThread"
+            $ obj
+            )
+          value -> value
+      decoded = decode (encode missingGovernanceFields) :: Maybe SystemState
+  assertEqual "schema-v2 JSON missing governance/dialogue fields must fail decode"
+    Nothing decoded
+
+-- | Legacy pre-v2 SystemState JSON without dialogue-development and
+-- governance fields loads with empty defaults.
 testOldSystemStateDialogueDevelopmentDefaults :: Test
 testOldSystemStateDialogueDevelopmentDefaults = TestCase $ do
   let withoutDialogueDevelopment =
         case toJSON emptySystemState of
           Object obj -> Object
-            ( KM.delete "beliefStore"
+            ( KM.delete "schemaVersion"
+            . KM.delete "beliefStore"
             . KM.delete "speechPolicyState"
             . KM.delete "dialogueOutcomeLearning"
+            . KM.delete "dialogueThread"
+            . KM.delete "dialogueCommitmentLedger"
+            . KM.delete "dialoguePhase"
+            . KM.delete "governanceHistory"
+            . KM.delete "governanceRuntimeFault"
             . KM.delete "adaptiveMutationLog"
             $ obj
             )
@@ -958,6 +1107,8 @@ testOldSystemStateDialogueDevelopmentDefaults = TestCase $ do
     emptySpeechPolicyState (ssSpeechPolicyState ss)
   assertEqual "belief store defaults must be empty"
     emptyBeliefStore (ssBeliefStore ss)
+  assertEqual "governance history defaults must be empty"
+    [] (ssGovernanceHistory ss)
   let legacySampleJson = "{\"dosTurn\":1,\"dosKind\":\"DialogueOutcomeSuccess\",\"dosTopic\":\"свобода\",\"dosSignals\":[\"positive_confirmation\"],\"dosStrongUpdate\":true}"
       decodedSample = decode legacySampleJson :: Maybe DialogueOutcomeSample
   assertBool "old DialogueOutcomeSample JSON must decode" (decodedSample /= Nothing)
@@ -1351,7 +1502,10 @@ testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
             , eqrLatencyMs = 0
             })))
       tree = ssKnowledgeTree ss1
-      fruit = head (concatMap brFruits (concat (M.elems (ktBranches tree))))
+      allFruits = concatMap brFruits (concat (M.elems (ktBranches tree)))
+      fruit = case allFruits of
+        []    -> error "testLearningQueryIntegration: expected non-empty fruits in knowledge tree"
+        (f:_) -> f
   assertBool "conatus delta must NOT be the payload's 0.99"
     (abs (kfConatusDelta fruit - 0.99) > 0.1)
   assertBool "conatus delta must be small and positive (tree growth proxy)"

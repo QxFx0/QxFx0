@@ -1,0 +1,9 @@
+{
+  "status": "error",
+  "error": "unknown_command",
+  "message": "Unsupported worker command: mystery",
+  "protocol_version": "1",
+  "result_unknown": false,
+  "session_valid": true,
+  "restart_required": false
+}

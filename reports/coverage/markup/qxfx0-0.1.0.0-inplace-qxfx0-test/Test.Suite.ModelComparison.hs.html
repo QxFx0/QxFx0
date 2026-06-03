@@ -1,0 +1,260 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module Test.Suite.ModelComparison
+<span class="lineno">    5 </span>  ( modelComparisonTests
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Data.Text (Text)
+<span class="lineno">    9 </span>import qualified Data.Text as T
+<span class="lineno">   10 </span>import Test.HUnit
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import QxFx0.Bridge.ExternalLLM
+<span class="lineno">   13 </span>  ( LLMTransport(..)
+<span class="lineno">   14 </span>  , MockTable
+<span class="lineno">   15 </span>  )
+<span class="lineno">   16 </span>import QxFx0.Evaluation.ModelComparison
+<span class="lineno">   17 </span>import QxFx0.Learning.Loop (LearningTelemetry(..), emptyLearningTelemetry)
+<span class="lineno">   18 </span>import QxFx0.Types.ExternalQuery
+<span class="lineno">   19 </span>  ( ExternalQueryError(..)
+<span class="lineno">   20 </span>  , ExternalQueryResponse(..)
+<span class="lineno">   21 </span>  )
+<span class="lineno">   22 </span>import QxFx0.Types.State (emptySystemState)
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   25 </span>-- JSON bodies for mock responses
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>perfectBody :: Text
+<span class="lineno">   28 </span><span class="decl"><span class="istickedoff">perfectBody =</span>
+<span class="lineno">   29 </span><span class="spaces">  </span><span class="istickedoff">&quot;{\&quot;proposition\&quot;:\&quot;тест\&quot;,\&quot;word\&quot;:\&quot;тест\&quot;,\&quot;definition\&quot;:\&quot;длинное определение для прохождения валидации\&quot;,\&quot;source\&quot;:\&quot;llm\&quot;,\&quot;conatusDelta\&quot;:0.3,\&quot;predictiveDelta\&quot;:0.2,\&quot;morphology\&quot;:{\&quot;gender\&quot;:\&quot;feminine\&quot;,\&quot;declension\&quot;:\&quot;first\&quot;}}&quot;</span></span>
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>invalidBody :: Text
+<span class="lineno">   32 </span><span class="decl"><span class="istickedoff">invalidBody = &quot;this is not json&quot;</span></span>
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>degradingBody :: Text
+<span class="lineno">   35 </span><span class="decl"><span class="istickedoff">degradingBody =</span>
+<span class="lineno">   36 </span><span class="spaces">  </span><span class="istickedoff">&quot;{\&quot;proposition\&quot;:\&quot;тест\&quot;,\&quot;word\&quot;:\&quot;тест\&quot;,\&quot;definition\&quot;:\&quot;длинное определение для прохождения валидации\&quot;,\&quot;source\&quot;:\&quot;llm\&quot;,\&quot;conatusDelta\&quot;:-0.5,\&quot;predictiveDelta\&quot;:0.0,\&quot;morphology\&quot;:{\&quot;gender\&quot;:\&quot;feminine\&quot;,\&quot;declension\&quot;:\&quot;first\&quot;}}&quot;</span></span>
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>-- | Build a mock table covering all first-word prefixes used by
+<span class="lineno">   39 </span>-- 'deterministicCorpus'.  Each row maps a prefix to a response.
+<span class="lineno">   40 </span>mkModelMockTable :: [(Text, Either ExternalQueryError Text)] -&gt; MockTable
+<span class="lineno">   41 </span><span class="decl"><span class="istickedoff">mkModelMockTable overrides =</span>
+<span class="lineno">   42 </span><span class="spaces">  </span><span class="istickedoff">let defaults =</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="istickedoff">[ (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;что&quot;,        Right perfectBody)</span>
+<span class="lineno">   44 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;тема&quot;,       Right perfectBody)</span>
+<span class="lineno">   45 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;как&quot;,        Right perfectBody)</span>
+<span class="lineno">   46 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Explore&quot;,    Right perfectBody)</span>
+<span class="lineno">   47 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;fail&quot;,       Right perfectBody)</span>
+<span class="lineno">   48 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;определение&quot;,Right perfectBody)</span>
+<span class="lineno">   49 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;What&quot;,       Right perfectBody)</span>
+<span class="lineno">   50 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Explain&quot;,    Right perfectBody)</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Describe&quot;,   Right perfectBody)</span>
+<span class="lineno">   52 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Analyze&quot;,    Right perfectBody)</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Discuss&quot;,    Right perfectBody)</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Evaluate&quot;,   Right perfectBody)</span>
+<span class="lineno">   55 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;llm-augment&quot;, &quot;NeedLexiconExtension&quot;, &quot;Interpret&quot;,  Right perfectBody)</span>
+<span class="lineno">   56 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff">applyOverride (prefix, result) table =</span>
+<span class="lineno">   58 </span><span class="spaces">        </span><span class="istickedoff">map (\(t,n,p,r) -&gt; if p == prefix then (t,n,p,result) else (t,n,p,r)) table</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">in foldr applyOverride defaults overrides</span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>perfectMockTable :: MockTable
+<span class="lineno">   62 </span><span class="decl"><span class="istickedoff">perfectMockTable = mkModelMockTable []</span></span>
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>errorMockTable :: MockTable
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">errorMockTable = mkModelMockTable [(&quot;fail&quot;, Left (EqeServerError &quot;mock_injected_failure&quot;))]</span></span>
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>invalidMockTable :: MockTable
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">invalidMockTable = mkModelMockTable [(&quot;fail&quot;, Right invalidBody)]</span></span>
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>degradingMockTable :: MockTable
+<span class="lineno">   71 </span><span class="decl"><span class="istickedoff">degradingMockTable =</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">map (\(t,n,p,_) -&gt; (t,n,p,Right degradingBody))</span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="istickedoff">(mkModelMockTable [])</span></span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   76 </span>-- Helpers
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>mkTurnResult :: ModelId -&gt; Text -&gt; Maybe Text -&gt; Maybe Int -&gt; Either ExternalQueryError ExternalQueryResponse -&gt; TurnResult
+<span class="lineno">   79 </span><span class="decl"><span class="istickedoff">mkTurnResult modelId status mReject mGraft outcome =</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">TurnResult</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">{ trModelId     = modelId</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">, trPromptIndex = 1</span>
+<span class="lineno">   83 </span><span class="spaces">    </span><span class="istickedoff">, trOutcome     = outcome</span>
+<span class="lineno">   84 </span><span class="spaces">    </span><span class="istickedoff">, trLatencyMs   = 0</span>
+<span class="lineno">   85 </span><span class="spaces">    </span><span class="istickedoff">, trTelemetry   = emptyLearningTelemetry</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">{ ltValidationStatus = status</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">, ltRejectReason     = mReject</span>
+<span class="lineno">   88 </span><span class="spaces">        </span><span class="istickedoff">, ltGraftTurn        = mGraft</span>
+<span class="lineno">   89 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   90 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   93 </span>-- Tests
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>modelComparisonTests :: [Test]
+<span class="lineno">   96 </span><span class="decl"><span class="istickedoff">modelComparisonTests =</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;corpus-length&quot;</span>                         testCorpusLength</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;sequential-perfect&quot;</span>                    testSequentialSessionPerfect</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;sequential-errors&quot;</span>                     testSequentialSessionErrors</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;sequential-invalid&quot;</span>                    testSequentialSessionInvalid</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;sequential-degrading&quot;</span>                  testSequentialSessionDegrading</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;aggregate-session&quot;</span>                     testAggregateSession</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;detect-transport-incidents&quot;</span>            testDetectTransportIncidents</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;detect-validator-incidents&quot;</span>            testDetectValidatorIncidents</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;detect-sandbox-incidents&quot;</span>              testDetectSandboxIncidents</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;detect-request-reject-loop&quot;</span>            testDetectRequestRejectLoop</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;comparison-run-three-models&quot;</span>           testComparisonRunThreeModels</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;interleaved-counts-match-sequential&quot;</span>  testInterleavedCountsMatch</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>testCorpusLength :: Test
+<span class="lineno">  112 </span><span class="decl"><span class="istickedoff">testCorpusLength = TestCase $</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;deterministic corpus must contain 40 prompts&quot;</span> 40 (length deterministicCorpus)</span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>testSequentialSessionPerfect :: Test
+<span class="lineno">  116 </span><span class="decl"><span class="istickedoff">testSequentialSessionPerfect = TestCase $ do</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">let transport = MockTransport perfectMockTable Nothing</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">(_ss, results) &lt;- runModelSession <span class="nottickedoff">1</span> &quot;perfect&quot; transport deterministicCorpus emptySystemState</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;all 40 turns must execute&quot;</span> 40 (length results)</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">let accepts = filter ((== &quot;accept&quot;) . ltValidationStatus . trTelemetry) results</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;all 40 must pass parser, validator and sandbox&quot;</span> 40 (length accepts)</span></span>
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>testSequentialSessionErrors :: Test
+<span class="lineno">  124 </span><span class="decl"><span class="istickedoff">testSequentialSessionErrors = TestCase $ do</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">let transport = MockTransport errorMockTable Nothing</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">(_ss, results) &lt;- runModelSession <span class="nottickedoff">1</span> &quot;error&quot; transport deterministicCorpus emptySystemState</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">let statuses = map (ltValidationStatus . trTelemetry) results</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;total turns&quot;</span> 40 (length statuses)</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;transport errors on 'fail' prompts&quot;</span> 8 (length (filter (== &quot;transport_error&quot;) statuses))</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;remaining accepts&quot;</span> 32 (length (filter (== &quot;accept&quot;) statuses))</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">let incidents = detectIncidents <span class="nottickedoff">&quot;error&quot;</span> results</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;no 3+ consecutive transport errors because fails are spaced&quot;</span> 0 (length incidents)</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>testSequentialSessionInvalid :: Test
+<span class="lineno">  135 </span><span class="decl"><span class="istickedoff">testSequentialSessionInvalid = TestCase $ do</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">let transport = MockTransport invalidMockTable Nothing</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">(_ss, results) &lt;- runModelSession <span class="nottickedoff">1</span> &quot;invalid&quot; transport deterministicCorpus emptySystemState</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">let statuses = map (ltValidationStatus . trTelemetry) results</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;total turns&quot;</span> 40 (length statuses)</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;parse rejects on 'fail' prompts&quot;</span> 8 (length (filter (== &quot;invalid_response&quot;) statuses))</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;remaining accepts&quot;</span> 32 (length (filter (== &quot;accept&quot;) statuses))</span></span>
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>testSequentialSessionDegrading :: Test
+<span class="lineno">  144 </span><span class="decl"><span class="istickedoff">testSequentialSessionDegrading = TestCase $ do</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">let transport = MockTransport degradingMockTable Nothing</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">(_ss, results) &lt;- runModelSession <span class="nottickedoff">1</span> &quot;degrading&quot; transport deterministicCorpus emptySystemState</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">let statuses = map (ltValidationStatus . trTelemetry) results</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;total turns&quot;</span> 40 (length statuses)</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;all 40 sandbox rejects&quot;</span> 40 (length (filter (== &quot;sandbox_reject&quot;) statuses))</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="istickedoff">let incidents = detectIncidents <span class="nottickedoff">&quot;degrading&quot;</span> results</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;at least one incident detected&quot;</span> (length incidents &gt;= 1)</span></span>
+<span class="lineno">  152 </span>
+<span class="lineno">  153 </span>testAggregateSession :: Test
+<span class="lineno">  154 </span><span class="decl"><span class="istickedoff">testAggregateSession = TestCase $ do</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">let results =</span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">[ mkTurnResult &quot;m&quot; &quot;accept&quot; Nothing (Just <span class="nottickedoff">1</span>) (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;accept&quot; Nothing (Just <span class="nottickedoff">2</span>) (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  158 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;transport_error&quot; (Just <span class="nottickedoff">&quot;network&quot;</span>) Nothing (Left <span class="nottickedoff">(EqeServerError &quot;mock&quot;)</span>)</span>
+<span class="lineno">  159 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;invalid_response&quot; (Just <span class="nottickedoff">&quot;parser&quot;</span>) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;validation_reject&quot; (Just <span class="nottickedoff">&quot;conflict&quot;</span>) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  161 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;sandbox_reject&quot; (Just <span class="nottickedoff">&quot;degrading_conatus&quot;</span>) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">, mkTurnResult &quot;m&quot; &quot;accept&quot; Nothing (Just <span class="nottickedoff">7</span>) (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>)</span>
+<span class="lineno">  163 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff">so = aggregateSession &quot;m&quot; 1 results</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;total turns&quot;</span> 7 (soTotalTurns so)</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;successes&quot;</span> 3 (soSuccessCount so)</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;transport errors&quot;</span> 1 (soTransportErrorCount so)</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;parse rejects&quot;</span> 1 (soParseRejectCount so)</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;validation rejects&quot;</span> 1 (soValidationRejectCount so)</span>
+<span class="lineno">  170 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;sandbox rejects&quot;</span> 1 (soSandboxRejectCount so)</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;sandbox accepts&quot;</span> 3 (soSandboxAcceptCount so)</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>testDetectTransportIncidents :: Test
+<span class="lineno">  174 </span><span class="decl"><span class="istickedoff">testDetectTransportIncidents = TestCase $ do</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">let results = replicate 5 (mkTurnResult &quot;m&quot; &quot;transport_error&quot; (Just <span class="nottickedoff">&quot;network&quot;</span>) Nothing (Left <span class="nottickedoff">(EqeServerError &quot;mock&quot;)</span>))</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff">incidents = detectIncidents &quot;m&quot; results</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;transport incident of length 5 present&quot;</span></span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">(any (\case IncidentConsecutiveTransportErrors &quot;m&quot; 1 5 -&gt; True; _ -&gt; <span class="nottickedoff">False</span>) incidents)</span></span>
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>testDetectValidatorIncidents :: Test
+<span class="lineno">  181 </span><span class="decl"><span class="istickedoff">testDetectValidatorIncidents = TestCase $ do</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">let results = replicate 6 (mkTurnResult &quot;m&quot; &quot;invalid_response&quot; (Just <span class="nottickedoff">&quot;parser&quot;</span>) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>))</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="istickedoff">incidents = detectIncidents &quot;m&quot; results</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;validator incident of length 6 present&quot;</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">(any (\case IncidentConsecutiveValidatorRejects &quot;m&quot; 1 6 -&gt; True; _ -&gt; <span class="nottickedoff">False</span>) incidents)</span></span>
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>testDetectSandboxIncidents :: Test
+<span class="lineno">  188 </span><span class="decl"><span class="istickedoff">testDetectSandboxIncidents = TestCase $ do</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">let results = replicate 4 (mkTurnResult &quot;m&quot; &quot;sandbox_reject&quot; (Just &quot;degrading_conatus&quot;) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>))</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="istickedoff">incidents = detectIncidents &quot;m&quot; results</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;sandbox incident present&quot;</span></span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">(any (\case IncidentConsecutiveSandboxRejects &quot;m&quot; 1 &quot;degrading_conatus&quot; 4 -&gt; True; _ -&gt; <span class="nottickedoff">False</span>) incidents)</span></span>
+<span class="lineno">  193 </span>
+<span class="lineno">  194 </span>testDetectRequestRejectLoop :: Test
+<span class="lineno">  195 </span><span class="decl"><span class="istickedoff">testDetectRequestRejectLoop = TestCase $ do</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">let results = replicate 6 (mkTurnResult &quot;m&quot; &quot;sandbox_reject&quot; (Just &quot;degrading_conatus&quot;) Nothing (Right <span class="nottickedoff">(ExternalQueryResponse &quot;&quot; &quot;&quot; &quot;&quot; 0)</span>))</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">incidents = detectIncidents &quot;m&quot; results</span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;request-reject-loop incident present&quot;</span></span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="istickedoff">(any (\case IncidentRequestRejectLoop &quot;m&quot; 6 -&gt; True; _ -&gt; False) incidents)</span></span>
+<span class="lineno">  200 </span>
+<span class="lineno">  201 </span>testComparisonRunThreeModels :: Test
+<span class="lineno">  202 </span><span class="decl"><span class="istickedoff">testComparisonRunThreeModels = TestCase $ do</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">let models =</span>
+<span class="lineno">  204 </span><span class="spaces">        </span><span class="istickedoff">[ (&quot;glm&quot;,      MockTransport perfectMockTable   Nothing)</span>
+<span class="lineno">  205 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;deepseek&quot;, MockTransport errorMockTable       Nothing)</span>
+<span class="lineno">  206 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;kimi&quot;,     MockTransport degradingMockTable   Nothing)</span>
+<span class="lineno">  207 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">run &lt;- runComparison &quot;test-run-001&quot; Sequential models deterministicCorpus emptySystemState</span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;3 model outcomes&quot;</span> 3 (length (crModelOutcomes run))</span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">let outcomes = crModelOutcomes run</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="istickedoff">glm = case filter ((== &quot;glm&quot;) . moModelId) outcomes of</span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="istickedoff">[]    -&gt; <span class="nottickedoff">error &quot;testComparisonRunThreeModels: glm outcome not found&quot;</span></span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="istickedoff">(x:_) -&gt; x</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">ds  = case filter ((== &quot;deepseek&quot;) . moModelId) outcomes of</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">[]    -&gt; <span class="nottickedoff">error &quot;testComparisonRunThreeModels: deepseek outcome not found&quot;</span></span>
+<span class="lineno">  216 </span><span class="spaces">        </span><span class="istickedoff">(x:_) -&gt; x</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="istickedoff">km  = case filter ((== &quot;kimi&quot;) . moModelId) outcomes of</span>
+<span class="lineno">  218 </span><span class="spaces">        </span><span class="istickedoff">[]    -&gt; <span class="nottickedoff">error &quot;testComparisonRunThreeModels: kimi outcome not found&quot;</span></span>
+<span class="lineno">  219 </span><span class="spaces">        </span><span class="istickedoff">(x:_) -&gt; x</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;glm perfect success rate&quot;</span> 1.0 (moAvgSuccessRate glm)</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;glm zero incidents&quot;</span> 0 (moTotalIncidents glm)</span>
+<span class="lineno">  222 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;deepseek has reduced success rate&quot;</span> (moAvgSuccessRate ds &lt; 1.0)</span>
+<span class="lineno">  223 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;deepseek validator accept rate still 1.0 (non-transport responses pass)&quot;</span></span>
+<span class="lineno">  224 </span><span class="spaces">    </span><span class="istickedoff">1.0 (moAvgValidatorAcceptRate ds)</span>
+<span class="lineno">  225 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;kimi sandbox pass rate 0.0 (all degraded)&quot;</span> 0.0 (moAvgSandboxPassRate km)</span>
+<span class="lineno">  226 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;kimi has incidents&quot;</span> (moTotalIncidents km &gt; 0)</span></span>
+<span class="lineno">  227 </span>
+<span class="lineno">  228 </span>testInterleavedCountsMatch :: Test
+<span class="lineno">  229 </span><span class="decl"><span class="istickedoff">testInterleavedCountsMatch = TestCase $ do</span>
+<span class="lineno">  230 </span><span class="spaces">  </span><span class="istickedoff">let transport = MockTransport perfectMockTable Nothing</span>
+<span class="lineno">  231 </span><span class="spaces">  </span><span class="istickedoff">(_ssSeq, seqResults) &lt;- runModelSession <span class="nottickedoff">1</span> &quot;m&quot; transport deterministicCorpus emptySystemState</span>
+<span class="lineno">  232 </span><span class="spaces">  </span><span class="istickedoff">interleaved &lt;- runInterleavedSession 1 [(&quot;m&quot;, transport)] deterministicCorpus emptySystemState</span>
+<span class="lineno">  233 </span><span class="spaces">  </span><span class="istickedoff">let intResults = case lookup &quot;m&quot; interleaved of Just r -&gt; r; Nothing -&gt; <span class="nottickedoff">[]</span></span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;interleaved count matches sequential&quot;</span> (length seqResults) (length intResults)</span>
+<span class="lineno">  235 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;interleaved accept count matches sequential&quot;</span></span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">(length (filter ((== &quot;accept&quot;) . ltValidationStatus . trTelemetry) seqResults))</span>
+<span class="lineno">  237 </span><span class="spaces">    </span><span class="istickedoff">(length (filter ((== &quot;accept&quot;) . ltValidationStatus . trTelemetry) intResults))</span></span>
+
+</pre>
+</body>
+</html>

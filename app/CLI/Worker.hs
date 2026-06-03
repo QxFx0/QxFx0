@@ -6,7 +6,17 @@ module CLI.Worker
   ( runWorkerStdio
   ) where
 
-import CLI.Protocol (WorkerCommand(..), decodeWorkerCommand, healthJsonPairs, stateJsonPairs)
+import CLI.Protocol
+  ( WorkerCommand(..)
+  , WorkerProtocolError
+  , workerProtocolCapabilities
+  , workerProtocolErrorCode
+  , workerProtocolErrorMessage
+  , workerProtocolVersion
+  , decodeWorkerMessage
+  , healthJsonPairs
+  , stateJsonPairs
+  )
 import CLI.Turn (attachRuntimeDiagnostics, runTurnJsonInSession)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(RuntimeInitError)
@@ -16,6 +26,7 @@ import QxFx0.ExceptionPolicy
   )
 
 import Control.Exception (AsyncException(ThreadKilled), fromException, throwIO)
+import Control.Exception (bracketOnError)
 import Control.Monad (unless, when)
 import Data.Aeson (ToJSON, Value, encode, object, (.=))
 import Data.Char (isAlphaNum)
@@ -35,7 +46,7 @@ import System.Environment (lookupEnv)
 import System.FilePath ((</>), isAbsolute, normalise, takeDirectory, takeFileName)
 import System.IO (BufferMode(..), hClose, hGetLine, hIsEOF, hPutStr, hSetBuffering, stdin, stdout)
 import System.Posix.Files (ownerReadMode, ownerWriteMode, unionFileModes)
-import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), defaultFileFlags, fdToHandle, openFd)
+import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), closeFd, defaultFileFlags, fdToHandle, openFd)
 import System.Posix.Types (FileMode)
 
 import qualified QxFx0.Runtime as Runtime
@@ -74,9 +85,9 @@ runWorkerStdio sessionId = do
       isEof <- hIsEOF stdin
       unless isEof $ do
         line <- T.pack <$> hGetLine stdin
-        case decodeWorkerCommand line of
+        case decodeWorkerMessage line of
           Left err -> do
-            T.putStrLn (workerError err)
+            T.putStrLn (workerProtocolError err)
             loop state
           Right cmd -> do
             result <- tryAsync (handleWorkerCommand state cmd)
@@ -103,6 +114,11 @@ handleWorkerCommand state@LiveWorkerState{..} = \case
   WorkerShutdown -> do
     T.putStrLn (workerStatus lwsRuntimeEpoch lwsRuntimeTurnIndex "ok" "shutdown")
     pure (state, True)
+  WorkerHello version capabilities -> do
+    if version == workerProtocolVersion
+      then T.putStrLn (workerHelloResponse lwsRuntimeEpoch lwsRuntimeTurnIndex version capabilities)
+      else T.putStrLn (workerVersionMismatchResponse version)
+    pure (state, False)
   WorkerPing -> do
     T.putStrLn (workerStatus lwsRuntimeEpoch lwsRuntimeTurnIndex "ok" "pong")
     pure (state, False)
@@ -209,6 +225,19 @@ workerStatus runtimeEpoch runtimeTurnIndex status message =
 workerError :: Text -> Text
 workerError = workerErrorWithCode "worker_command_error"
 
+workerProtocolError :: WorkerProtocolError -> Text
+workerProtocolError err =
+  encodeAsText $
+    object
+      [ "status" .= ("error" :: Text)
+      , "error" .= workerProtocolErrorCode err
+      , "message" .= workerProtocolErrorMessage err
+      , "protocol_version" .= workerProtocolVersion
+      , "result_unknown" .= False
+      , "session_valid" .= True
+      , "restart_required" .= False
+      ]
+
 workerErrorWithCode :: Text -> Text -> Text
 workerErrorWithCode errCode message =
   encodeAsText $
@@ -216,6 +245,38 @@ workerErrorWithCode errCode message =
       [ "status" .= ("error" :: Text)
       , "error" .= errCode
       , "message" .= message
+      , "protocol_version" .= workerProtocolVersion
+      , "result_unknown" .= False
+      ]
+
+workerHelloResponse :: Text -> Int -> Text -> [Text] -> Text
+workerHelloResponse runtimeEpoch runtimeTurnIndex requestedVersion requestedCapabilities =
+  encodeAsText $
+    object
+      [ "status" .= ("ok" :: Text)
+      , "command" .= ("hello_ack" :: Text)
+      , "message" .= ("hello" :: Text)
+      , "protocol_version" .= workerProtocolVersion
+      , "protocol_match" .= (requestedVersion == workerProtocolVersion)
+      , "capabilities" .= workerProtocolCapabilities
+      , "requested_capabilities" .= requestedCapabilities
+      , "worker_mode" .= workerModeTag
+      , "runtime_epoch" .= runtimeEpoch
+      , "runtime_turn_index" .= runtimeTurnIndex
+      ]
+
+workerVersionMismatchResponse :: Text -> Text
+workerVersionMismatchResponse requestedVersion =
+  encodeAsText $
+    object
+      [ "status" .= ("error" :: Text)
+      , "error" .= ("protocol_version_mismatch" :: Text)
+      , "message" .= ("Unsupported worker protocol version" :: Text)
+      , "protocol_version" .= workerProtocolVersion
+      , "requested_protocol_version" .= requestedVersion
+      , "result_unknown" .= False
+      , "session_valid" .= True
+      , "restart_required" .= True
       ]
 
 encodeAsText :: ToJSON a => a -> Text
@@ -256,8 +317,10 @@ resolveAbsoluteMarkerPath canonicalTmp canonicalStateDir absoluteCandidate = do
     else do
       canonicalParent <- canonicalizePath parentDir
       let canonicalCandidate = canonicalParent </> markerName
+      withinTmp <- isPathWithin canonicalTmp canonicalCandidate
+      withinState <- isPathWithin canonicalStateDir canonicalCandidate
       pure $
-        if isPathWithin canonicalTmp canonicalCandidate || isPathWithin canonicalStateDir canonicalCandidate
+        if withinTmp || withinState
           then Just canonicalCandidate
           else Nothing
 
@@ -274,15 +337,18 @@ markMarkerOnce :: FilePath -> IO Bool
 markMarkerOnce path = do
   createDirectoryIfMissing True (takeDirectory path)
   catchIO
-    (do fd <- openFd path WriteOnly defaultFileFlags
+    (bracketOnError
+        (openFd path WriteOnly defaultFileFlags
           { exclusive = True
           , nofollow = True
           , creat = Just markerFileMode
-          }
-        handle <- fdToHandle fd
-        hPutStr handle "triggered\n"
-        hClose handle
-        pure True)
+          })
+        closeFd
+        (\fd -> do
+            handle <- fdToHandle fd
+            hPutStr handle "triggered\n"
+            hClose handle
+            pure True))
     (\_ -> pure False)
 
 markerFileMode :: FileMode

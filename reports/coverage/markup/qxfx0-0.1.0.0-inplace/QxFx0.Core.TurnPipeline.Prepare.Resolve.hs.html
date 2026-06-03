@@ -1,0 +1,194 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Concurrent resolution of prepare-stage effects through `PipelineIO`. -}
+<span class="lineno">    4 </span>module QxFx0.Core.TurnPipeline.Prepare.Resolve
+<span class="lineno">    5 </span>  ( resolvePrepareEffects
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Control.Concurrent.Async (forConcurrently)
+<span class="lineno">    9 </span>import QxFx0.Core.ConsciousnessLoop (initialLoop)
+<span class="lineno">   10 </span>import QxFx0.Core.Intuition
+<span class="lineno">   11 </span>  ( defaultIntuitiveState
+<span class="lineno">   12 </span>  , effectivePosterior
+<span class="lineno">   13 </span>  )
+<span class="lineno">   14 </span>import QxFx0.Core.PipelineIO
+<span class="lineno">   15 </span>  ( PipelineIO
+<span class="lineno">   16 </span>  , scheduleTurnEffects
+<span class="lineno">   17 </span>  , resolveTurnEffect
+<span class="lineno">   18 </span>  )
+<span class="lineno">   19 </span>import QxFx0.Core.TurnPipeline.Effects
+<span class="lineno">   20 </span>  ( PrepareEffectPlan(..)
+<span class="lineno">   21 </span>  , PrepareEffectRequest(..)
+<span class="lineno">   22 </span>  , PrepareStatic(..)
+<span class="lineno">   23 </span>  , TurnEffectRequest(..)
+<span class="lineno">   24 </span>  , TurnEffectResult(..)
+<span class="lineno">   25 </span>  )
+<span class="lineno">   26 </span>import QxFx0.Core.TurnPipeline.Prepare.Types
+<span class="lineno">   27 </span>  ( PrepareEffectResults(..)
+<span class="lineno">   28 </span>  , PrepareTimeline(..)
+<span class="lineno">   29 </span>  , TimedResult(..)
+<span class="lineno">   30 </span>  )
+<span class="lineno">   31 </span>import QxFx0.Semantic.Embedding
+<span class="lineno">   32 </span>  ( EmbeddingResult(..)
+<span class="lineno">   33 </span>  , EmbeddingSource(..)
+<span class="lineno">   34 </span>  )
+<span class="lineno">   35 </span>import QxFx0.Types
+<span class="lineno">   36 </span>  ( NixGuardStatus(..)
+<span class="lineno">   37 </span>  )
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>import Control.Exception (evaluate)
+<span class="lineno">   40 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   41 </span>import Data.Text (Text)
+<span class="lineno">   42 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>resolvePrepareEffects :: PipelineIO -&gt; PrepareEffectPlan -&gt; IO PrepareEffectResults
+<span class="lineno">   45 </span><span class="decl"><span class="istickedoff">resolvePrepareEffects pio effectPlan = do</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">let t0 = pepCapturedCurrentTime effectPlan</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- evaluate (pepStatic effectPlan)</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">let tStatic1 = t0</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">requestPairs :: [(Text, Maybe TurnEffectRequest)]</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">requestPairs =</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="istickedoff">[ (&quot;embedding&quot;, prepareRequestToTurnEffect (pepEmbeddingRequest effectPlan))</span>
+<span class="lineno">   52 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;nix&quot;, prepareRequestToTurnEffect (pepNixGuardRequest effectPlan))</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;consciousness&quot;, prepareRequestToTurnEffect (pepConsciousnessRequest effectPlan))</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;intuition&quot;, prepareRequestToTurnEffect (pepIntuitionRequest effectPlan))</span>
+<span class="lineno">   55 </span><span class="spaces">        </span><span class="istickedoff">, (&quot;api_health&quot;, prepareRequestToTurnEffect (pepApiHealthRequest effectPlan))</span>
+<span class="lineno">   56 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff">scheduledPairs :: [(Text, TurnEffectRequest)]</span>
+<span class="lineno">   58 </span><span class="spaces">      </span><span class="istickedoff">scheduledPairs =</span>
+<span class="lineno">   59 </span><span class="spaces">        </span><span class="istickedoff">scheduleTurnEffects pio (psConatusEnergy (pepStatic effectPlan))</span>
+<span class="lineno">   60 </span><span class="spaces">          </span><span class="istickedoff">[ (label, request)</span>
+<span class="lineno">   61 </span><span class="spaces">          </span><span class="istickedoff">| (label, Just request) &lt;- requestPairs</span>
+<span class="lineno">   62 </span><span class="spaces">          </span><span class="istickedoff">]</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">resolved &lt;- forConcurrently scheduledPairs $ \(label, turnRequest) -&gt; do</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- resolveTurnEffect pio turnRequest</span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">pure (label, result)</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">let embeddingResult =</span>
+<span class="lineno">   67 </span><span class="spaces">        </span><span class="istickedoff">fromMaybe <span class="nottickedoff">fallbackEmbeddingResult</span> $ do</span>
+<span class="lineno">   68 </span><span class="spaces">          </span><span class="istickedoff">(_, TurnResEmbedding value) &lt;- firstMatch (\(label, result) -&gt; label == &quot;embedding&quot; &amp;&amp; isEmbeddingResult result) resolved</span>
+<span class="lineno">   69 </span><span class="spaces">          </span><span class="istickedoff">Just value</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">nixStatus =</span>
+<span class="lineno">   71 </span><span class="spaces">        </span><span class="istickedoff">fromMaybe <span class="nottickedoff">(Blocked &quot;nix_guard_missing_request&quot;)</span> $ do</span>
+<span class="lineno">   72 </span><span class="spaces">          </span><span class="istickedoff">(_, TurnResNixGuard value) &lt;- firstMatch (\(label, result) -&gt; label == &quot;nix&quot; &amp;&amp; isNixResult result) resolved</span>
+<span class="lineno">   73 </span><span class="spaces">          </span><span class="istickedoff">Just value</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">consciousnessResult =</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">fromMaybe <span class="nottickedoff">(initialLoop, Nothing, Nothing)</span> $ do</span>
+<span class="lineno">   76 </span><span class="spaces">          </span><span class="istickedoff">(_, TurnResConsciousness loop narrative fragment) &lt;- firstMatch (\(label, result) -&gt; label == &quot;consciousness&quot; &amp;&amp; isConsciousnessResult result) resolved</span>
+<span class="lineno">   77 </span><span class="spaces">          </span><span class="istickedoff">Just (loop, narrative, fragment)</span>
+<span class="lineno">   78 </span><span class="spaces">      </span><span class="istickedoff">intuitionResult =</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">fromMaybe <span class="nottickedoff">(Nothing, defaultPosterior, defaultIntuitiveState)</span> $ do</span>
+<span class="lineno">   80 </span><span class="spaces">          </span><span class="istickedoff">(_, TurnResIntuition flash posterior state) &lt;- firstMatch (\(label, result) -&gt; label == &quot;intuition&quot; &amp;&amp; isIntuitionResult result) resolved</span>
+<span class="lineno">   81 </span><span class="spaces">          </span><span class="istickedoff">Just (flash, posterior, state)</span>
+<span class="lineno">   82 </span><span class="spaces">      </span><span class="istickedoff">apiHealthy =</span>
+<span class="lineno">   83 </span><span class="spaces">        </span><span class="istickedoff">fromMaybe <span class="nottickedoff">False</span> $ do</span>
+<span class="lineno">   84 </span><span class="spaces">          </span><span class="istickedoff">(_, TurnResApiHealth value) &lt;- firstMatch (\(label, result) -&gt; label == &quot;api_health&quot; &amp;&amp; isApiHealthResult result) resolved</span>
+<span class="lineno">   85 </span><span class="spaces">          </span><span class="istickedoff">Just value</span>
+<span class="lineno">   86 </span><span class="spaces">      </span><span class="istickedoff">timedEmb = TimedResult t0 t0 embeddingResult</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">timedNix = TimedResult t0 t0 nixStatus</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">timedConsciousness = TimedResult t0 t0 consciousnessResult</span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">timedIntuition = TimedResult t0 t0 intuitionResult</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">timedApiHealth = TimedResult t0 t0 apiHealthy</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">(consciousLoop', currentNarrative, narrativeFragment') = consciousnessResult</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">(mFlash, intuitPosterior, intuitionState) = intuitionResult</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">pure PrepareEffectResults</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="istickedoff">{ perTimeline = PrepareTimeline</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">{ ptlStartTime = t0</span>
+<span class="lineno">   96 </span><span class="spaces">        </span><span class="istickedoff">, ptlPrepareStaticDone = tStatic1</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff">, ptlEmbeddingStart = trStarted timedEmb</span>
+<span class="lineno">   98 </span><span class="spaces">        </span><span class="istickedoff">, ptlEmbeddingDone = trEnded timedEmb</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">, ptlNixStart = trStarted timedNix</span>
+<span class="lineno">  100 </span><span class="spaces">        </span><span class="istickedoff">, ptlNixDone = trEnded timedNix</span>
+<span class="lineno">  101 </span><span class="spaces">        </span><span class="istickedoff">, ptlConsciousnessStart = trStarted timedConsciousness</span>
+<span class="lineno">  102 </span><span class="spaces">        </span><span class="istickedoff">, ptlConsciousnessDone = trEnded timedConsciousness</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="istickedoff">, ptlIntuitionStart = trStarted timedIntuition</span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="istickedoff">, ptlIntuitionDone = trEnded timedIntuition</span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="istickedoff">, ptlApiHealthStart = trStarted timedApiHealth</span>
+<span class="lineno">  106 </span><span class="spaces">        </span><span class="istickedoff">, ptlApiHealthDone = trEnded timedApiHealth</span>
+<span class="lineno">  107 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">, perTurnCurrentTime = t0</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">, perEmbeddingResult = trValue timedEmb</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">, perNixStatus = trValue timedNix</span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">, perConsciousLoop = consciousLoop'</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">, perCurrentNarrative = currentNarrative</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">, perNarrativeFragment = narrativeFragment'</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">, perFlash = mFlash</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">, perIntuitPosterior = intuitPosterior</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">, perIntuitionState = intuitionState</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">, perApiHealthy = trValue timedApiHealth</span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>prepareRequestToTurnEffect :: PrepareEffectRequest -&gt; Maybe TurnEffectRequest
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">prepareRequestToTurnEffect request =</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">case request of</span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="istickedoff">PrepareReqEmbedding inputText -&gt;</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">Just (TurnReqEmbedding inputText)</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">PrepareReqNixGuard concept currentLoad atomLoad -&gt;</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">Just (TurnReqNixGuard concept currentLoad atomLoad)</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">PrepareReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -&gt;</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">Just (TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights)</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">PrepareReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig -&gt;</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">Just (TurnReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig)</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff">PrepareReqApiHealth -&gt;</span>
+<span class="lineno">  132 </span><span class="spaces">      </span><span class="istickedoff">Just TurnReqApiHealth</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>defaultPosterior :: Double
+<span class="lineno">  135 </span><span class="decl"><span class="nottickedoff">defaultPosterior = effectivePosterior defaultIntuitiveState</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>fallbackEmbeddingResult :: EmbeddingResult
+<span class="lineno">  138 </span><span class="decl"><span class="nottickedoff">fallbackEmbeddingResult = EmbeddingResult { erEmbedding = mempty, erSource = EmbeddingLocalImplicit }</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>isEmbeddingResult :: TurnEffectResult -&gt; Bool
+<span class="lineno">  141 </span><span class="decl"><span class="istickedoff">isEmbeddingResult result = case result of</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">TurnResEmbedding _ -&gt; True</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>isNixResult :: TurnEffectResult -&gt; Bool
+<span class="lineno">  146 </span><span class="decl"><span class="istickedoff">isNixResult result = case result of</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">TurnResNixGuard _ -&gt; True</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>isConsciousnessResult :: TurnEffectResult -&gt; Bool
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">isConsciousnessResult result = case result of</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">TurnResConsciousness _ _ _ -&gt; True</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>isIntuitionResult :: TurnEffectResult -&gt; Bool
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">isIntuitionResult result = case result of</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">TurnResIntuition _ _ _ -&gt; True</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  159 </span>
+<span class="lineno">  160 </span>isApiHealthResult :: TurnEffectResult -&gt; Bool
+<span class="lineno">  161 </span><span class="decl"><span class="istickedoff">isApiHealthResult result = case result of</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">TurnResApiHealth _ -&gt; True</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>firstMatch :: (a -&gt; Bool) -&gt; [a] -&gt; Maybe a
+<span class="lineno">  166 </span><span class="decl"><span class="istickedoff">firstMatch predicate = go</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">go [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">go (x:xs)</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">| predicate x = Just x</span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = go xs</span></span>
+
+</pre>
+</body>
+</html>

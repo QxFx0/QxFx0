@@ -19,8 +19,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(SQLiteError)
+  ( QxFx0Exception(PersistenceTxError, SQLiteError)
+  , catchIO
   , tryAsync
+  , tryQxFx0
   , throwQxFx0
   )
 import System.Timeout (timeout)
@@ -66,15 +68,25 @@ withDB path action = do
     Left err -> pure (Left err)
     Right db ->
       finally
-        (do
-            result <- tryAsync $ do
+        (catchIO
+          (do
+            qxfx0Result <- tryQxFx0 $ do
               execOrThrow db "PRAGMA journal_mode=WAL;"
               execOrThrow db "PRAGMA foreign_keys=ON;"
               action db
-            case result of
+            case qxfx0Result of
               Right value -> pure (Right value)
-              Left ex -> pure (Left ("db action failed: " <> T.pack (show ex))))
+              Left ex -> pure (Left (renderDbActionFailure ex)))
+          (\err -> pure (Left ("db action failed: " <> T.pack (show err)))))
         (safeClose db)
+
+renderDbActionFailure :: QxFx0Exception -> Text
+renderDbActionFailure ex =
+  case ex of
+    SQLiteError msg -> "db action failed: " <> msg
+    PersistenceTxError stage msg ->
+      "db action failed: stage=" <> T.pack (show stage) <> ": " <> msg
+    _ -> "db action failed"
 
 withPooledDB :: WorkerDBPool -> (NSQL.Database -> IO a) -> IO a
 withPooledDB pool action = mask $ \restore -> do

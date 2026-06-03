@@ -1,0 +1,5 @@
+{
+  "command": "hello",
+  "protocol_version": "1",
+  "capabilities": ["health", "state", "turn", "shutdown", "ping", "session_affine"]
+}

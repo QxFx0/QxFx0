@@ -23,8 +23,12 @@ import System.IO (BufferMode(..), hPutStrLn, hSetBuffering, stderr, stdout)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Control.Exception (try)
 
+import qualified QxFx0.Bridge.EmbeddedSQLSync as EmbeddedSQLSync
 import qualified QxFx0.Runtime as Runtime
+import qualified QxFx0.Resources as Resources
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
+import qualified QxFx0.Bridge.SQLite.SchemaContractCheck as SchemaContractCheck
+import qualified QxFx0.Bridge.SQLite.SchemaConsistency as SchemaConsistency
 import QxFx0.CLI.Parser (extractSessionArgs)
 import QxFx0.ExceptionPolicy (QxFx0Exception)
 
@@ -48,6 +52,10 @@ main = do
     ("--input":textParts)     -> handleTurnJson sessionId (filter (/= "--json") textParts)
     ["--json"]                -> handleStateJson sessionId
     ["--init-db-only"]        -> handleInitDb
+    ["--check-embedded-sql"]  -> handleCheckEmbeddedSql
+    ["--sync-embedded-sql"]   -> handleSyncEmbeddedSql
+    ["--check-schema-consistency"] -> handleCheckSchemaConsistency
+    ["--check-schema-contract"] -> handleCheckSchemaContract
     _                         -> do
       hPutStrLn stderr "Unsupported arguments. Use --help."
       exitFailure
@@ -68,6 +76,10 @@ printMachineHelp = do
   T.putStrLn "  --input <text>               alias for --turn-json"
   T.putStrLn "  --worker-stdio               run as JSON-over-stdio worker"
   T.putStrLn "  --serve-http [port]          start HTTP sidecar"
+  T.putStrLn "  --check-embedded-sql         verify EmbeddedSQL.hs matches spec/sql"
+  T.putStrLn "  --sync-embedded-sql          rewrite EmbeddedSQL.hs from spec/sql"
+  T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
+  T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
 
 handleTurnJson :: Text -> [String] -> IO ()
 handleTurnJson sessionId args =
@@ -93,6 +105,37 @@ handleInitDb = do
       Runtime.ensureSchemaMigrations db
       NSQL.close db
       hPutStrLn stderr $ "DB initialized at: " ++ dbPath
+
+handleCheckEmbeddedSql :: IO ()
+handleCheckEmbeddedSql = do
+  paths <- Resources.resolveResourcePaths
+  result <- EmbeddedSQLSync.checkEmbeddedSqlSync paths "src/QxFx0/Bridge/EmbeddedSQL.hs"
+  case result of
+    Right () -> T.putStrLn "EmbeddedSQL.hs is in sync with spec/sql"
+    Left err -> hPutStrLn stderr (T.unpack err) >> exitFailure
+
+handleSyncEmbeddedSql :: IO ()
+handleSyncEmbeddedSql = do
+  paths <- Resources.resolveResourcePaths
+  EmbeddedSQLSync.writeEmbeddedSqlModule paths "src/QxFx0/Bridge/EmbeddedSQL.hs"
+  T.putStrLn "wrote src/QxFx0/Bridge/EmbeddedSQL.hs"
+
+handleCheckSchemaConsistency :: IO ()
+handleCheckSchemaConsistency = do
+  paths <- Resources.resolveResourcePaths
+  result <- SchemaConsistency.checkSchemaConsistency (Resources.rpMigrationDir paths) (Resources.rpSchemaSql paths)
+  case result of
+    Right ok -> T.putStrLn ok
+    Left err -> T.putStrLn err >> exitFailure
+
+handleCheckSchemaContract :: IO ()
+handleCheckSchemaContract = do
+  result <- SchemaContractCheck.checkSchemaContractManifest
+    "spec/sql/runtime_critical_contract.tsv"
+    "spec/sql/schema.sql"
+  case result of
+    Right ok -> T.putStrLn ok
+    Left err -> T.putStrLn err >> exitFailure
 
 handleWorkerStdio :: Text -> IO ()
 handleWorkerStdio sessionId = runWorkerStdio sessionId

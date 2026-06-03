@@ -29,23 +29,29 @@ import QxFx0.Lexicon.GfMap
   , lookupGfLexemeForms
   , defaultGfLexemeId
   , GfMapLoadStatus(..)
+  , gfMapFallbackReason
   , gfMapLoadStatus
   , loadGfMapFromContent
   )
 import QxFx0.Bridge.ExternalLLM
   ( llmEndpointAllowlist
+  , llmMaxQueryChars
+  , llmMaxRequestBytes
   , llmUntrustedHostOverrideWarningTag
   , validateEndpointUrl
   , validateEndpointUrlWithContext
   , buildTransportFromEnvWithManager
+  , defaultExternalQueryConfig
   , LLMTransport(..)
+  , queryExternalToolWithConfig
   , extractStructured
   , decodeLlmBodyLimited
   , redactUpstreamError
   , classifyHttpException
   , classifyBodyReadFailure
+  , transportTimeoutMs
   )
-import QxFx0.Types.ExternalQuery (ExternalQueryError(..), TransportFallbackReason(..))
+import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), ExternalQueryError(..), TransportFallbackReason(..))
 import Test.Support (withEnvVar)
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
@@ -141,6 +147,13 @@ testGfMapValidContent = TestCase $ do
     GfMapLoaded n -> assertBool "valid content must load >0 entries" (n > 0)
     other -> assertFailure ("expected GfMapLoaded, got: " ++ show other)
 
+-- | 13a. Failed GF-map load must surface explicit non-authoritative fallback reason.
+testGfMapFailedStatusHasExplicitFallbackReason :: Test
+testGfMapFailedStatusHasExplicitFallbackReason = TestCase $ do
+  assertEqual "failed GF map must surface explicit unavailable reason"
+    (Just "gf_map_unavailable:resource_missing_or_unreadable")
+    (gfMapFallbackReason (GfMapLoadFailed "resource_missing_or_unreadable"))
+
 -- | 13. GfMap runtime load status must be healthy in test environment.
 testGfMapRuntimeLoadHealthy :: Test
 testGfMapRuntimeLoadHealthy = TestCase $ do
@@ -194,6 +207,13 @@ testLlmNonHttpsEndpoint :: Test
 testLlmNonHttpsEndpoint = TestCase $ do
   let result = validateEndpointUrl "http://api.mistral.ai/v1/chat/completions" Nothing
   assertEqual "non-https endpoint must be rejected"
+    (Left TfrUnsafeEndpoint) result
+
+-- | 20a. Allowlisted host with a custom port must be rejected.
+testLlmRejectsCustomPortOnAllowlistedHost :: Test
+testLlmRejectsCustomPortOnAllowlistedHost = TestCase $ do
+  let result = validateEndpointUrl "https://api.mistral.ai:8443/v1/chat/completions" Nothing
+  assertEqual "allowlisted host with non-default port must be rejected"
     (Left TfrUnsafeEndpoint) result
 
 -- | 21. Userinfo trick must not make an evil host look allowlisted.
@@ -250,6 +270,39 @@ testLlmOversizeBodyRejected = TestCase $ do
       assertBool "oversize response must report max_bytes" ("max_bytes=8" `T.isInfixOf` msg)
     other -> assertFailure ("expected EqeInvalidResponse for oversize body, got: " ++ show other)
 
+-- | 26a. Oversized LLM query payloads are rejected before transport dispatch.
+testLlmOversizeQueryRejected :: Test
+testLlmOversizeQueryRejected = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mock"
+        , eqcFallbackReason = Just TfrExplicitMock
+        }
+      tool = ExternalTool "llm-augment" DomainLexicon 1.0 True
+      oversized = T.replicate (llmMaxQueryChars + 1) "a"
+  result <- queryExternalToolWithConfig cfg tool NeedLexiconExtension oversized
+  case result of
+    Left (EqeInvalidResponse msg) -> do
+      assertBool "oversize query must use structured reason" ("query_too_large" `T.isInfixOf` msg)
+      assertBool "oversize query must report max_chars" (T.pack ("max_chars=" ++ show llmMaxQueryChars) `T.isInfixOf` msg)
+    other -> assertFailure ("expected EqeInvalidResponse for oversize query, got: " ++ show other)
+
+-- | 26b. Multibyte query payloads are also capped by encoded request bytes.
+testLlmOversizeRequestBytesRejected :: Test
+testLlmOversizeRequestBytesRejected = TestCase $ do
+  let cfg = defaultExternalQueryConfig
+        { eqcTransportMode = "mistral"
+        , eqcApiKey = Just "test-key"
+        , eqcFallbackReason = Nothing
+        }
+      tool = ExternalTool "llm-augment" DomainLexicon 1.0 True
+      oversized = T.replicate llmMaxQueryChars "\x1F642"
+  result <- queryExternalToolWithConfig cfg tool NeedLexiconExtension oversized
+  case result of
+    Left (EqeInvalidResponse msg) -> do
+      assertBool "oversize request must use structured reason" ("request_too_large" `T.isInfixOf` msg)
+      assertBool "oversize request must report max_bytes" (T.pack ("max_bytes=" ++ show llmMaxRequestBytes) `T.isInfixOf` msg)
+    other -> assertFailure ("expected EqeInvalidResponse for oversize request bytes, got: " ++ show other)
+
 -- | 27. Oversized 429 responses preserve rate-limit classification.
 testLlmOversizeRateLimitClassified :: Test
 testLlmOversizeRateLimitClassified = TestCase $ do
@@ -276,6 +329,32 @@ testLlmTimeoutClassified = TestCase $ do
   req <- parseRequest "https://api.mistral.ai/v1/chat/completions"
   let result = classifyHttpException (HttpExceptionRequest req ResponseTimeout)
   assertEqual "response timeout must be a typed timeout" (EqeTimeout "response_timeout") result
+
+-- | 29a. Env-provided LLM timeout is clamped to the hard upper bound.
+testLlmTimeoutEnvClampedUpperBound :: Test
+testLlmTimeoutEnvClampedUpperBound = TestCase $ do
+  manager <- newManager defaultManagerSettings
+  transport <-
+    withEnvVar "QXFX0_LLM_TRANSPORT" (Just "mistral") $
+      withEnvVar "QXFX0_MISTRAL_API_KEY" (Just "test-key") $
+        withEnvVar "QXFX0_MISTRAL_TIMEOUT_MS" (Just "999999") $
+          buildTransportFromEnvWithManager manager
+  assertEqual "env timeout above hard limit must clamp to 30000ms"
+    (Just 30000)
+    (transportTimeoutMs transport)
+
+-- | 29b. Env-provided LLM timeout is clamped to the hard lower bound.
+testLlmTimeoutEnvClampedLowerBound :: Test
+testLlmTimeoutEnvClampedLowerBound = TestCase $ do
+  manager <- newManager defaultManagerSettings
+  transport <-
+    withEnvVar "QXFX0_LLM_TRANSPORT" (Just "fireworks") $
+      withEnvVar "QXFX0_FIREWORKS_API_KEY" (Just "test-key") $
+        withEnvVar "QXFX0_FIREWORKS_TIMEOUT_MS" (Just "0") $
+          buildTransportFromEnvWithManager manager
+  assertEqual "env timeout below hard limit must clamp to 1000ms"
+    (Just 1000)
+    (transportTimeoutMs transport)
 
 -- | 30. extractStructured unwraps chat-completion envelope.
 testExtractStructuredUnwrapsContent :: Test
@@ -325,9 +404,10 @@ reliabilityHardeningTests =
   , TestLabel "gfmap-unknown-topic-fallback"      testGfMapUnknownTopicFallback
   , TestLabel "gfmap-lookup-unknown-fun"           testGfMapLookupUnknownFun
   , TestLabel "gfmap-missing-resource"           testGfMapMissingResource
-  , TestLabel "gfmap-empty-content"              testGfMapEmptyContent
-  , TestLabel "gfmap-valid-content"              testGfMapValidContent
-  , TestLabel "gfmap-runtime-load-healthy"       testGfMapRuntimeLoadHealthy
+   , TestLabel "gfmap-empty-content"              testGfMapEmptyContent
+   , TestLabel "gfmap-valid-content"              testGfMapValidContent
+   , TestLabel "gfmap-failed-status-fallback-reason" testGfMapFailedStatusHasExplicitFallbackReason
+   , TestLabel "gfmap-runtime-load-healthy"       testGfMapRuntimeLoadHealthy
   , TestLabel "llm-allowlist-mistral"            testLlmAllowlistMistral
   , TestLabel "llm-allowlist-fireworks"          testLlmAllowlistFireworks
   , TestLabel "llm-blocked-host-no-override"   testLlmBlockedHostNoOverride
@@ -335,16 +415,21 @@ reliabilityHardeningTests =
   , TestLabel "llm-blocked-host-dev-override" testLlmBlockedHostWithDevOverride
   , TestLabel "llm-blocked-host-double-confirm" testLlmBlockedHostWithDoubleConfirm
   , TestLabel "llm-non-https-endpoint"          testLlmNonHttpsEndpoint
+  , TestLabel "llm-rejects-custom-port-on-allowlisted-host" testLlmRejectsCustomPortOnAllowlistedHost
   , TestLabel "llm-rejects-userinfo-host-spoof" testLlmRejectsUserinfoHostSpoof
   , TestLabel "llm-rejects-degraded-override" testLlmRejectsDegradedOverrideContext
   , TestLabel "llm-empty-endpoint"             testLlmEmptyEndpoint
   , TestLabel "llm-env-override-builds-real-transport" testLlmEnvOverrideBuildsRealTransport
-  , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
-  , TestLabel "llm-oversize-body-rejected"     testLlmOversizeBodyRejected
-  , TestLabel "llm-oversize-rate-limit-classified" testLlmOversizeRateLimitClassified
-  , TestLabel "llm-upstream-error-redacted"    testLlmUpstreamErrorRedacted
-  , TestLabel "llm-timeout-classified"         testLlmTimeoutClassified
-  , TestLabel "extract-structured-unwraps"     testExtractStructuredUnwrapsContent
+   , TestLabel "llm-allowlist-contents"          testLlmAllowlistContents
+   , TestLabel "llm-oversize-body-rejected"     testLlmOversizeBodyRejected
+   , TestLabel "llm-oversize-query-rejected"    testLlmOversizeQueryRejected
+   , TestLabel "llm-oversize-request-bytes-rejected" testLlmOversizeRequestBytesRejected
+   , TestLabel "llm-oversize-rate-limit-classified" testLlmOversizeRateLimitClassified
+   , TestLabel "llm-upstream-error-redacted"    testLlmUpstreamErrorRedacted
+   , TestLabel "llm-timeout-classified"         testLlmTimeoutClassified
+   , TestLabel "llm-timeout-env-clamped-upper"  testLlmTimeoutEnvClampedUpperBound
+   , TestLabel "llm-timeout-env-clamped-lower"  testLlmTimeoutEnvClampedLowerBound
+   , TestLabel "extract-structured-unwraps"     testExtractStructuredUnwrapsContent
   , TestLabel "extract-structured-empty-choices" testExtractStructuredEmptyChoices
   , TestLabel "extract-structured-invalid-json" testExtractStructuredInvalidJson
   , TestLabel "extract-structured-missing-content" testExtractStructuredMissingContent

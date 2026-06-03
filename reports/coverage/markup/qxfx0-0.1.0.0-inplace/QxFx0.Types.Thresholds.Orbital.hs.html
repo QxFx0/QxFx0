@@ -1,0 +1,153 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>module QxFx0.Types.Thresholds.Orbital
+<span class="lineno">    2 </span>  ( orbitalHighRiskThreshold
+<span class="lineno">    3 </span>  , orbitalCounterpressureThreshold
+<span class="lineno">    4 </span>  , encounterMirroringTensionThreshold
+<span class="lineno">    5 </span>  , egoTensionDecayFactor
+<span class="lineno">    6 </span>  , egoTensionInputFactor
+<span class="lineno">    7 </span>  , egoAgencyDecayFactor
+<span class="lineno">    8 </span>  , egoAgencyInputFactor
+<span class="lineno">    9 </span>  , egoTrendWindow
+<span class="lineno">   10 </span>  , egoTrendRisingThreshold
+<span class="lineno">   11 </span>  , egoTrendFallingThreshold
+<span class="lineno">   12 </span>  , egoHistoryRetention
+<span class="lineno">   13 </span>  , egoHistoryLimit
+<span class="lineno">   14 </span>  , orbitalHistoryLimit
+<span class="lineno">   15 </span>  , orbitalDistEstCollapseRisk
+<span class="lineno">   16 </span>  , orbitalDistEstFreezeRisk
+<span class="lineno">   17 </span>  , orbitalDistEstCounterpressure
+<span class="lineno">   18 </span>  , orbitalDistEstRecovery
+<span class="lineno">   19 </span>  , orbitalDistEstStable
+<span class="lineno">   20 </span>  , orbitalEmaAlpha
+<span class="lineno">   21 </span>  , orbitalContactBoostRecovery
+<span class="lineno">   22 </span>  , orbitalContactBoostFreezeRisk
+<span class="lineno">   23 </span>  , orbitalContactPenaltyCounterpressure
+<span class="lineno">   24 </span>  , orbitalBoundaryBoostCollapseRisk
+<span class="lineno">   25 </span>  , orbitalBoundaryBoostCounterpressure
+<span class="lineno">   26 </span>  , orbitalBoundaryPenaltyRecovery
+<span class="lineno">   27 </span>  , directiveDefaultContactBias
+<span class="lineno">   28 </span>  , directiveDefaultBoundaryBias
+<span class="lineno">   29 </span>  , directiveDefaultAssertionForce
+<span class="lineno">   30 </span>  , directiveDefaultCounterpressureStrength
+<span class="lineno">   31 </span>  , directiveDefaultStabilityUnderTension
+<span class="lineno">   32 </span>  , directiveDefaultAbstractionBudget
+<span class="lineno">   33 </span>  , directiveDefaultMaxWordsHint
+<span class="lineno">   34 </span>  ) where
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>orbitalHighRiskThreshold :: Double
+<span class="lineno">   37 </span><span class="decl"><span class="istickedoff">orbitalHighRiskThreshold = 0.7</span></span>
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>orbitalCounterpressureThreshold :: Double
+<span class="lineno">   40 </span><span class="decl"><span class="istickedoff">orbitalCounterpressureThreshold = 0.4</span></span>
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>encounterMirroringTensionThreshold :: Double
+<span class="lineno">   43 </span><span class="decl"><span class="istickedoff">encounterMirroringTensionThreshold = 0.5</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>egoTensionDecayFactor :: Double
+<span class="lineno">   46 </span><span class="decl"><span class="istickedoff">egoTensionDecayFactor = 0.85</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>egoTensionInputFactor :: Double
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">egoTensionInputFactor = 0.15</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>egoAgencyDecayFactor :: Double
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">egoAgencyDecayFactor = 0.8</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>egoAgencyInputFactor :: Double
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">egoAgencyInputFactor = 0.2</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>egoTrendWindow :: Int
+<span class="lineno">   58 </span><span class="decl"><span class="istickedoff">egoTrendWindow = 5</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>egoTrendRisingThreshold :: Double
+<span class="lineno">   61 </span><span class="decl"><span class="istickedoff">egoTrendRisingThreshold = 0.05</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>egoTrendFallingThreshold :: Double
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">egoTrendFallingThreshold = -0.05</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>egoHistoryRetention :: Int
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">egoHistoryRetention = 19</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>egoHistoryLimit :: Int
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">egoHistoryLimit = 20</span></span>
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>orbitalHistoryLimit :: Int
+<span class="lineno">   73 </span><span class="decl"><span class="istickedoff">orbitalHistoryLimit = 24</span></span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>orbitalDistEstCollapseRisk :: Double
+<span class="lineno">   76 </span><span class="decl"><span class="nottickedoff">orbitalDistEstCollapseRisk = 0.8</span></span>
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>orbitalDistEstFreezeRisk :: Double
+<span class="lineno">   79 </span><span class="decl"><span class="nottickedoff">orbitalDistEstFreezeRisk = 0.9</span></span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>orbitalDistEstCounterpressure :: Double
+<span class="lineno">   82 </span><span class="decl"><span class="istickedoff">orbitalDistEstCounterpressure = 0.6</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>orbitalDistEstRecovery :: Double
+<span class="lineno">   85 </span><span class="decl"><span class="nottickedoff">orbitalDistEstRecovery = 0.4</span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>orbitalDistEstStable :: Double
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">orbitalDistEstStable = 0.3</span></span>
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>orbitalEmaAlpha :: Double
+<span class="lineno">   91 </span><span class="decl"><span class="istickedoff">orbitalEmaAlpha = 0.15</span></span>
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>orbitalContactBoostRecovery :: Double
+<span class="lineno">   94 </span><span class="decl"><span class="istickedoff">orbitalContactBoostRecovery = 0.15</span></span>
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>orbitalContactBoostFreezeRisk :: Double
+<span class="lineno">   97 </span><span class="decl"><span class="istickedoff">orbitalContactBoostFreezeRisk = 0.20</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>orbitalContactPenaltyCounterpressure :: Double
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">orbitalContactPenaltyCounterpressure = -0.10</span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>orbitalBoundaryBoostCollapseRisk :: Double
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">orbitalBoundaryBoostCollapseRisk = 0.15</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>orbitalBoundaryBoostCounterpressure :: Double
+<span class="lineno">  106 </span><span class="decl"><span class="istickedoff">orbitalBoundaryBoostCounterpressure = 0.20</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>orbitalBoundaryPenaltyRecovery :: Double
+<span class="lineno">  109 </span><span class="decl"><span class="istickedoff">orbitalBoundaryPenaltyRecovery = -0.10</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>directiveDefaultContactBias :: Double
+<span class="lineno">  112 </span><span class="decl"><span class="istickedoff">directiveDefaultContactBias = 0.5</span></span>
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>directiveDefaultBoundaryBias :: Double
+<span class="lineno">  115 </span><span class="decl"><span class="istickedoff">directiveDefaultBoundaryBias = 0.5</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>directiveDefaultAssertionForce :: Double
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">directiveDefaultAssertionForce = 0.5</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>directiveDefaultCounterpressureStrength :: Double
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">directiveDefaultCounterpressureStrength = 0.5</span></span>
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>directiveDefaultStabilityUnderTension :: Double
+<span class="lineno">  124 </span><span class="decl"><span class="istickedoff">directiveDefaultStabilityUnderTension = 0.5</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>directiveDefaultAbstractionBudget :: Int
+<span class="lineno">  127 </span><span class="decl"><span class="istickedoff">directiveDefaultAbstractionBudget = 1</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>directiveDefaultMaxWordsHint :: Int
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">directiveDefaultMaxWordsHint = 48</span></span>
+
+</pre>
+</body>
+</html>

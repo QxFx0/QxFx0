@@ -32,8 +32,8 @@ import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Control.Exception (try)
-import System.IO (hPutStrLn, stderr)
+import Control.Exception (IOException, try)
+import System.IO (hPutStrLn, stderr, hIsEOF, stdin)
 import System.Exit (exitSuccess)
 
 runTurn :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
@@ -43,6 +43,7 @@ runTurn ctx ss input sessionId
       turnResult <- try (runTurnBody ctx ss input sessionId) :: IO (Either QxFx0Exception (SystemState, Text))
       case turnResult of
         Left (EssenceRupture detail) -> pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
+        Left (EmbeddingError detail) -> pure (ss, "Turn blocked: embedding backend [" <> detail <> "]")
         Left err -> throwQxFx0 err
         Right result -> pure result
 
@@ -107,6 +108,11 @@ runTurnInSession session text = do
             ( s { sessReadinessMode = readiness }
             , "Turn blocked: strict runtime requires Agda verification [" <> detail <> "]"
             )
+        Left (EmbeddingError detail) ->
+          pure
+            ( s { sessReadinessMode = readiness }
+            , "Turn blocked: embedding backend [" <> detail <> "]"
+            )
         Left (EssenceRupture detail) ->
           pure
             ( s { sessReadinessMode = readiness }
@@ -121,23 +127,31 @@ runTurnInSession session text = do
 loop :: Session -> IO ()
 loop session = do
   T.putStr $ "\n[" <> promptMode (sessOutputMode session) <> "] [QxFx0] > "
-  input <- T.getLine
-  case T.strip input of
-    ":quit" -> do
-      T.putStrLn "State saved. Bye."
-      exitSuccess
-    ":help" -> printHelp >> loop session
-    ":dialogue" ->
-      T.putStrLn "Output mode: DIALOGUE" >> loop (setOutputMode DialogueMode session)
-    ":semantic" ->
-      T.putStrLn "Output mode: SEMANTIC" >> loop (setOutputMode SemanticIntrospectionMode session)
-    ":state" -> printStateSummary session >> loop session
-    text
-      | not (T.null text) -> do
-          (session', safeResponse) <- runTurnInSession session text
-          T.putStrLn safeResponse
-          loop session'
-    _ -> loop session
+  eof <- hIsEOF stdin
+  if eof
+    then pure ()
+    else do
+      inputResult <- try T.getLine :: IO (Either IOException Text)
+      case inputResult of
+        Left _ -> pure ()
+        Right input ->
+          let boundedInput = T.take maxInputLength input
+          in case T.strip boundedInput of
+            ":quit" -> do
+              T.putStrLn "State saved. Bye."
+              exitSuccess
+            ":help" -> printHelp >> loop session
+            ":dialogue" ->
+              T.putStrLn "Output mode: DIALOGUE" >> loop (setOutputMode DialogueMode session)
+            ":semantic" ->
+              T.putStrLn "Output mode: SEMANTIC" >> loop (setOutputMode SemanticIntrospectionMode session)
+            ":state" -> printStateSummary session >> loop session
+            text
+              | not (T.null text) -> do
+                  (session', safeResponse) <- runTurnInSession session text
+                  T.putStrLn safeResponse
+                  loop session'
+            _ -> loop session
   where
     promptMode DialogueMode = "DIALOGUE"
     promptMode SemanticIntrospectionMode = "SEMANTIC"

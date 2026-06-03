@@ -64,7 +64,7 @@ import           Data.Eq (Eq)
 import           Data.Function (($))
 import           Data.Maybe (Maybe (..))
 import           GHC.Generics (Generic)
-import           Prelude (Bool (..))
+import           Prelude (Bool (..), Show, String)
 
 -- | An authority-bearing GF render of a 'QxFx0.Self.Salience.SalienceDecision'
 -- or related decision contour. The stub is a single byte; the real
@@ -74,10 +74,6 @@ newtype AuthoritySurface = AuthoritySurface
   { unAuthoritySurface :: String
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (-- the project's typeclass stack is added
-                      -- when the real implementation lands; for
-                      -- now the stub is intentionally minimal.
-                      ())
 
 -- | The empty surface — the renderer always produces this until the
 -- real parser is in. Using 'emptyAuthoritySurface' rather than

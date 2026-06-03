@@ -30,7 +30,7 @@ collectAtoms input clusters =
       foundAtoms = if suppressedExhaustion then filter (not . isExhaustionAtom) foundAtoms0 else foundAtoms0
       lexical = lexicalAtoms inputLower inputTokens
       structural = if containsAnyKeywordPhrase inputTokens ["\1095\1090\1086", "\1082\1072\1082", "\1087\1086\1095\1077\1084\1091"] || T.isSuffixOf "?" (T.strip input)
-                   then [MeaningAtom (extractObject input) (Searching (extractObject input)) (fallbackEmbedding (T.unpack inputLower))]
+                   then [MeaningAtom (extractObject input) (Searching (extractObject input)) (fallbackEmbedding inputLower)]
                    else []
       allFound = foundAtoms ++ lexical ++ structural
       load = L.foldl' (\acc a -> acc + atomIntensity a) 0.0 allFound
@@ -54,7 +54,7 @@ matchCluster inp inpTokens cd =
   let keywords = map T.toLower (cdKeywords cd)
       hits = filter (containsKeywordPhrase inpTokens) keywords
   in if not (null hits)
-     then [MeaningAtom (T.intercalate ", " hits) (tagFromCluster (T.toLower $ cdName cd) (T.intercalate ", " hits)) (fallbackEmbedding (T.unpack inp))]
+     then [MeaningAtom (T.intercalate ", " hits) (tagFromCluster (T.toLower $ cdName cd) (T.intercalate ", " hits)) (fallbackEmbedding inp)]
      else []
 
 lexicalAtoms :: Text -> [Text] -> [MeaningAtom]
@@ -71,7 +71,7 @@ lexicalAtoms inputLower inputTokens =
     detect :: AtomTag -> [Text] -> [MeaningAtom]
     detect tag lexemes =
       if containsAnyKeywordPhrase inputTokens lexemes
-        then [MeaningAtom "\1083\1077\1082\1089\1080\1082\1072" tag (fallbackEmbedding (T.unpack inputLower))]
+        then [MeaningAtom "\1083\1077\1082\1089\1080\1082\1072" tag (fallbackEmbedding inputLower)]
         else []
 
     detectUnless :: Bool -> AtomTag -> [Text] -> [MeaningAtom]

@@ -131,12 +131,21 @@ testSandboxAcceptsImproving = TestCase $ do
 testPromotionVersionPointers :: Test
 testPromotionVersionPointers = TestCase $ do
   let cand = CalibrationCandidate (CalibrationId 7) CandidateSalience (Just defaultSalienceWeights) Nothing "test" 0.1 fixedTime
-      (entry, nextId) = promoteCandidate (CalibrationId 7) cand 42 (Just (CalibrationId 5))
-  assertEqual "promoted entry id must match candidate" (CalibrationId 7) (ceId entry)
-  assertEqual "promoted status must be Accepted" Accepted (ceStatus entry)
-  assertEqual "promoted prevId must link to previous" (Just (CalibrationId 5)) (cePrevId entry)
-  assertEqual "next id must be incremented" (CalibrationId 8) nextId
-  assertEqual "decided turn must be set" (Just 42) (ceDecidedTurn entry)
+  case promoteCandidate (CalibrationId 7) cand 42 (Just (CalibrationId 5)) of
+    Left err -> assertFailure (T.unpack err)
+    Right (entry, nextId) -> do
+      assertEqual "promoted entry id must match candidate" (CalibrationId 7) (ceId entry)
+      assertEqual "promoted status must be Accepted" Accepted (ceStatus entry)
+      assertEqual "promoted prevId must link to previous" (Just (CalibrationId 5)) (cePrevId entry)
+      assertEqual "next id must be incremented" (CalibrationId 8) nextId
+      assertEqual "decided turn must be set" (Just 42) (ceDecidedTurn entry)
+
+testPromotionRejectsMissingPayload :: Test
+testPromotionRejectsMissingPayload = TestCase $ do
+  let cand = CalibrationCandidate (CalibrationId 8) CandidateField Nothing Nothing "test" 0.1 fixedTime
+  case promoteCandidate (CalibrationId 8) cand 42 Nothing of
+    Left err -> assertBool "promotion should fail closed on missing payload" ("missing field heuristics" `T.isInfixOf` err)
+    Right _ -> assertFailure "promotion must reject missing field heuristics"
 
 -- | 6. Rollback restores previous version.
 testRollbackRestoresPrevious :: Test
@@ -253,6 +262,7 @@ trainingCycleTests =
   , testSandboxRejectsRegressing
   , testSandboxAcceptsImproving
   , testPromotionVersionPointers
+  , testPromotionRejectsMissingPayload
   , testRollbackRestoresPrevious
   , testTelemetryFieldsPresent
   , testRunFullCycleEndToEnd

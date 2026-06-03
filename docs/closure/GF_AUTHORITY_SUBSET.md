@@ -6,7 +6,7 @@
 - **Related**:
   - `docs/closure/SEMANTIC_CORE_MIN_SLICE.md` (Package 2)
   - `docs/closure/REPLAY_GATE_SPEC.md` (Package 3)
-  - `docs/closure/adr-0013-role-split.md` (Package 1)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (Package 1)
 
 ## 0. Why this document exists
 

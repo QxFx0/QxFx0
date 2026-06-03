@@ -7,16 +7,17 @@ module QxFx0.Types.TurnProjection
   , TurnProjection(..)
   ) where
 
-import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
+import QxFx0.Types.Domain (CanonicalMoveFamily(..), IdentityClaimRef, IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
 import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
-import QxFx0.Self.Essence (Essence (..), EssenceTrajectory (..), EssenceCommitment (..), renderEssenceMode, renderCommitmentTrigger)
+import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.Field (Field)
 import QxFx0.Types.State.Perspective (PerspectiveProjection)
-import QxFx0.Semantic.Sense (SenseAxis, SenseOperator)
+import QxFx0.Types.Sense (SenseAxis, SenseOperator)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import Data.Aeson (ToJSON)
 import Data.Text (Text)
@@ -48,6 +49,10 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDecisionDisposition :: !DecisionDisposition
   , trcLegitimacyReason :: !LegitimacyReason
   , trcParserConfidence :: !Double
+  , trcParserBackend :: !Text
+  , trcParserStatus :: !Text
+  , trcParserDegradationReason :: !(Maybe Text)
+  , trcParserLatencyMs :: !Int
   , trcEmbeddingQuality :: !Text
   , trcClaimAst :: !(Maybe ClaimAst)
   , trcPreSafetyRenderedRaw :: !Text
@@ -61,9 +66,12 @@ data TurnReplayTrace = TurnReplayTrace
   , trcTruthContractStatus :: !TruthContractStatus
   , trcAssemblyPath :: !(Maybe AssemblyPath)
   , trcArtifactManifest :: !(Maybe ArtifactManifest)
-  , trcReplayProvenanceStatus :: !ReplayProvenanceStatus
-  , trcDerivationTags :: ![Text]
-  , trcSalienceDriver :: !Text
+   , trcReplayProvenanceStatus :: !ReplayProvenanceStatus
+   , trcDerivationTags :: ![Text]
+   , trcConatusEnergy :: !ConatusEnergy
+   , trcConatusGateFired :: !Bool
+   , trcField :: !Field
+   , trcSalienceDriver :: !Text
     -- ^ Phase 5.5e: rendered snake_case tag for the dominant
     --   'QxFx0.Self.Salience.SalienceDriver' on this turn.
     --   Closed enum tag; stable across builds.
@@ -118,10 +126,11 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDialoguePhase :: !DialoguePhase
   , trcDialoguePhaseBefore :: !DialoguePhase
   , trcDialoguePhaseAfter :: !DialoguePhase
-  , trcDialogueCommitmentCount :: !Int
-  , trcDialogueCommitmentCountBefore :: !Int
-  , trcDialogueCommitmentCountAfter :: !Int
-  , trcMicroPlanMoves :: ![Text]
+   , trcDialogueCommitmentCount :: !Int
+   , trcDialogueCommitmentCountBefore :: !Int
+   , trcDialogueCommitmentCountAfter :: !Int
+   , trcIdentityClaims :: ![IdentityClaimRef]
+   , trcMicroPlanMoves :: ![Text]
   , trcMicroPlanExplicitness :: !Double
   , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)
     -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate

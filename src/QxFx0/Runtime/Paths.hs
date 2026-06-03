@@ -8,8 +8,8 @@ module QxFx0.Runtime.Paths
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time.Clock (getCurrentTime)
-import Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDv4
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 
@@ -19,8 +19,8 @@ resolveSessionId = do
   case fmap T.strip (T.pack <$> mSessionId) of
     Just sid | not (T.null sid) -> pure sid
     _ -> do
-      now <- getCurrentTime
-      pure ("session-" <> T.pack (formatTime defaultTimeLocale "%Y%m%d%H%M%S%q" now))
+      sessionUuid <- UUIDv4.nextRandom
+      pure ("session-" <> UUID.toText sessionUuid)
 
 resolveDbPath :: IO FilePath
 resolveDbPath = do
@@ -28,13 +28,17 @@ resolveDbPath = do
   case mDbPath of
     Just dbPath -> pure dbPath
     Nothing -> do
-      mStateDir <- lookupEnv "QXFX0_STATE_DIR"
-      stateDir <- case mStateDir of
-        Just dir -> pure dir
+      mDbPathAlias <- lookupEnv "QXFX0_DB_PATH"
+      case mDbPathAlias of
+        Just dbPath -> pure dbPath
         Nothing -> do
-          mXdgStateHome <- lookupEnv "XDG_STATE_HOME"
-          mHome <- lookupEnv "HOME"
-          pure $ case mXdgStateHome of
-            Just xdgStateHome -> xdgStateHome </> "qxfx0"
-            Nothing -> fromMaybe "." ((</> ".local/state/qxfx0") <$> mHome)
-      pure (stateDir </> "qxfx0.db")
+          mStateDir <- lookupEnv "QXFX0_STATE_DIR"
+          stateDir <- case mStateDir of
+            Just dir -> pure dir
+            Nothing -> do
+              mXdgStateHome <- lookupEnv "XDG_STATE_HOME"
+              mHome <- lookupEnv "HOME"
+              pure $ case mXdgStateHome of
+                Just xdgStateHome -> xdgStateHome </> "qxfx0"
+                Nothing -> fromMaybe "." ((</> ".local/state/qxfx0") <$> mHome)
+          pure (stateDir </> "qxfx0.db")

@@ -1,31 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module CLI.Http
   ( handleServeHttp
   ) where
 
-import Control.Monad (filterM, unless)
+import Control.Exception (IOException, catch)
+import Control.Monad (unless)
 import Data.Char (toLower)
-import Data.List (intercalate)
-import qualified Data.List as L
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import System.Environment (getExecutablePath, lookupEnv)
-import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist, getCurrentDirectory)
-import System.FilePath ((</>), normalise, takeDirectory, takeFileName)
 import System.Process (callProcess)
 import Text.Read (readMaybe)
 
-import Paths_qxfx0 (getDataFileName)
-import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(RuntimeInitError)
   , throwQxFx0
-  , tryIO
-  , tryQxFx0
   )
-import qualified QxFx0.Resources as Resources
+import QxFx0.Resources (resolveHttpRuntimeScriptPath)
 
 data HttpServerConfig = HttpServerConfig
   { hscHost :: !String
@@ -41,19 +35,22 @@ handleServeHttp sessionId portArgs = do
         (p:_) -> readMaybe p :: Maybe Int
         _ -> Nothing
   config <- resolveHttpServerConfig sessionId mPortOverride
-  callProcess "python3"
-    [ hscScriptPath config
-    , "--host", hscHost config
-    , "--port", show (hscPort config)
-    , "--bin", hscBinaryPath config
-    , "--default-session-id", T.unpack (hscDefaultSessionId config)
-    ]
+  let args =
+        [ hscScriptPath config
+        , "--host", hscHost config
+        , "--port", show (hscPort config)
+        , "--bin", hscBinaryPath config
+        , "--default-session-id", T.unpack (hscDefaultSessionId config)
+        ]
+  callProcess "python3" args
+    `catch` \(exc :: IOException) ->
+      throwRuntimeInit ("HTTP sidecar launcher failed: " <> show exc)
 
 resolveHttpServerConfig :: Text -> Maybe Int -> IO HttpServerConfig
 resolveHttpServerConfig sessionId mPortOverride = do
   mHost <- lookupEnv "QXFX0_HTTP_HOST"
   mPortEnv <- lookupEnv "QXFX0_HTTP_PORT"
-  scriptPath <- resolveHttpRuntimeScript
+  scriptPath <- resolveHttpRuntimeScriptPath
   binaryPath <- getExecutablePath
   let host = fromMaybe "127.0.0.1" mHost
       portFromEnv = mPortEnv >>= readMaybe
@@ -70,85 +67,6 @@ resolveHttpServerConfig sessionId mPortOverride = do
     , hscScriptPath = scriptPath
     , hscBinaryPath = binaryPath
     }
-
-resolveHttpRuntimeScript :: IO FilePath
-resolveHttpRuntimeScript = do
-  mExplicit <- lookupEnv "QXFX0_HTTP_RUNTIME"
-  case mExplicit of
-    Just path -> do
-      let normalized = normalise path
-      exists <- doesFileExist normalized
-      if exists
-        then validateExplicitScriptPath normalized
-        else throwRuntimeInit ("QXFX0_HTTP_RUNTIME points to missing file: " ++ normalized)
-    Nothing -> do
-      exePath <- getExecutablePath
-      dataFileResult <- tryIO (getDataFileName "scripts/http_runtime.py")
-      resourcePathsResult <- tryQxFx0 Resources.resolveResourcePaths
-      let candidates =
-            [ eitherToMaybe (normalise <$> dataFileResult)
-            , eitherToMaybe (normalise . (</> "scripts" </> "http_runtime.py") . Resources.rpResourceDir <$> resourcePathsResult)
-            , Just (normalise (takeDirectory exePath </> "scripts" </> "http_runtime.py"))
-            ]
-      resolveExistingScript candidates
-
-resolveExistingScript :: [Maybe FilePath] -> IO FilePath
-resolveExistingScript candidates = do
-  let materialized = [path | Just path <- candidates]
-  pick materialized
-  where
-    pick [] =
-      throwRuntimeInit
-        ("Could not locate http_runtime.py; checked: " ++ intercalate ", " [path | Just path <- candidates]
-          ++ ". Set QXFX0_HTTP_RUNTIME to an explicit script path.")
-    pick (path:rest) = do
-      exists <- doesFileExist path
-      if exists then validateAutoResolvedScriptPath path else pick rest
-
-eitherToMaybe :: Either a b -> Maybe b
-eitherToMaybe (Left _) = Nothing
-eitherToMaybe (Right value) = Just value
-
-validateExplicitScriptPath :: FilePath -> IO FilePath
-validateExplicitScriptPath path = do
-  exePath <- getExecutablePath
-  cwd <- getCurrentDirectory
-  canonicalPath <- canonicalizePath path
-  let scriptName = takeFileName canonicalPath
-  if scriptName /= "http_runtime.py"
-    then throwRuntimeInit ("QXFX0_HTTP_RUNTIME must point to http_runtime.py, got: " ++ canonicalPath)
-    else do
-      trustedRoots <- resolveTrustedScriptRoots exePath cwd
-      if any (`isPathWithin` canonicalPath) trustedRoots
-        then pure canonicalPath
-        else
-          throwRuntimeInit
-            ("QXFX0_HTTP_RUNTIME points outside trusted roots: " ++ canonicalPath)
-
-validateAutoResolvedScriptPath :: FilePath -> IO FilePath
-validateAutoResolvedScriptPath path = do
-  exePath <- getExecutablePath
-  cwd <- getCurrentDirectory
-  canonicalPath <- canonicalizePath path
-  trustedRoots <- resolveTrustedScriptRoots exePath cwd
-  if any (`isPathWithin` canonicalPath) trustedRoots
-    then pure canonicalPath
-    else
-      throwRuntimeInit
-        ("auto-resolved http_runtime.py outside trusted roots: " ++ canonicalPath
-         ++ "; trusted roots: " ++ intercalate ", " trustedRoots
-         ++ ". Set QXFX0_HTTP_RUNTIME to an explicit script path.")
-
-resolveTrustedScriptRoots :: FilePath -> FilePath -> IO [FilePath]
-resolveTrustedScriptRoots exePath cwd = do
-  let roots =
-        [ takeDirectory exePath
-        , takeDirectory exePath </> "scripts"
-        , cwd </> "scripts"
-        ]
-  existing <- filterM doesDirectoryExist roots
-  canonical <- mapM canonicalizePath existing
-  pure (L.nub canonical)
 
 throwRuntimeInit :: String -> IO a
 throwRuntimeInit = throwQxFx0 . RuntimeInitError . T.pack

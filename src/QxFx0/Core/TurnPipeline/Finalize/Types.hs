@@ -17,6 +17,7 @@ import Data.Time.Clock (UTCTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
+import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
 
@@ -29,13 +30,13 @@ data FinalizeStatic = FinalizeStatic
   } deriving stock (Eq, Show)
 
 data FinalizePrecommitRequest
-  = FinalizeReqCurrentTime
-  | FinalizeReqSemanticIntrospectionEnv
+  = FinalizeReqSemanticIntrospectionEnv
   deriving stock (Eq, Show)
 
 data FinalizePrecommitPlan = FinalizePrecommitPlan
   { fppStatic :: !FinalizeStatic
-  , fppCurrentTimeRequest :: !FinalizePrecommitRequest
+  , fppCapturedCurrentTime :: !UTCTime
+  , fppConatusEnergy :: !ConatusEnergy
   , fppIntrospectionRequest :: !FinalizePrecommitRequest
   } deriving stock (Eq, Show)
 
@@ -72,6 +73,7 @@ data FinalizeCommitPlan = FinalizeCommitPlan
   { fcpResponseObservation :: !ResponseObservation
   , fcpPreviewConsciousLoop :: !ConsciousnessLoop
   , fcpPreviewIntuition :: !IntuitiveState
+  , fcpCapturedCurrentTime :: !UTCTime
   , fcpPreviousState :: !SystemState
   , fcpSaveState :: !SystemState
   , fcpSessionId :: !Text

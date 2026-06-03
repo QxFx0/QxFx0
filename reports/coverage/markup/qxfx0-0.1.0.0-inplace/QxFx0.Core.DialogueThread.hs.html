@@ -1,0 +1,161 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module QxFx0.Core.DialogueThread
+<span class="lineno">    4 </span>  ( deriveDialogueThread
+<span class="lineno">    5 </span>  , deriveDialogueCommitmentLedger
+<span class="lineno">    6 </span>  , deriveDialoguePhase
+<span class="lineno">    7 </span>  , commitmentAllowsAdvance
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import Data.List (nub)
+<span class="lineno">   11 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   12 </span>import Data.Text (Text)
+<span class="lineno">   13 </span>import qualified Data.Text as T
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import QxFx0.Semantic.Input.Model
+<span class="lineno">   16 </span>import QxFx0.Types.State.DialogueDevelopment
+<span class="lineno">   17 </span>import QxFx0.Types.State.Dialogue
+<span class="lineno">   18 </span>import QxFx0.Types.State.Perspective (PerspectiveScope(..))
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>deriveDialogueThread :: DialogueThread -&gt; DialogueCommitmentLedger -&gt; DialogueState -&gt; UtteranceSemanticFrame -&gt; DialogueThread
+<span class="lineno">   21 </span><span class="decl"><span class="istickedoff">deriveDialogueThread previous ledger dialogue frame =</span>
+<span class="lineno">   22 </span><span class="spaces">  </span><span class="istickedoff">let focus = firstNonEmpty [usfTopic frame, <span class="nottickedoff">usfFocus frame</span>, <span class="nottickedoff">dsLastTopic dialogue</span>, <span class="nottickedoff">dtCurrentFocus previous</span>]</span>
+<span class="lineno">   23 </span><span class="spaces">      </span><span class="istickedoff">structuralScope = deriveStructuralScope previous ledger frame <span class="nottickedoff">focus</span></span>
+<span class="lineno">   24 </span><span class="spaces">      </span><span class="istickedoff">activeQuestion = if usfSpeechAct frame == ActAsk then Just (usfRawText frame) else dtActiveQuestion previous</span>
+<span class="lineno">   25 </span><span class="spaces">      </span><span class="istickedoff">userGoal = firstNonEmptyMaybe (maybeToList (usfTarget frame) ++ [usfTopic frame] ++ <span class="nottickedoff">maybeToList (dtUserGoal previous)</span>)</span>
+<span class="lineno">   26 </span><span class="spaces">      </span><span class="istickedoff">intentHypothesis = Just (renderSpeechAct (usfSpeechAct frame))</span>
+<span class="lineno">   27 </span><span class="spaces">      </span><span class="istickedoff">acceptedTerms = take 8 . nub $ dtAcceptedTerms previous ++ map wmuLemma (usfWordUnits frame)</span>
+<span class="lineno">   28 </span><span class="spaces">      </span><span class="istickedoff">openLoops = take 8 . nub $ unresolvedClaims ledger ++ if usfSpeechAct frame == ActAsk then [usfRawText frame] else []</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">clarifiedItems = if usfSpeechAct frame == ActAsk then dtClarifiedItems previous else take 8 . nub $ usfTopic frame : dtClarifiedItems previous</span>
+<span class="lineno">   30 </span><span class="spaces">      </span><span class="istickedoff">unclarifiedItems = take 8 . nub $ openLoops ++ filter (not . T.null) [usfFocus frame]</span>
+<span class="lineno">   31 </span><span class="spaces">      </span><span class="istickedoff">resistance = clamp01 (if usfPolarity frame == PolarityNegative then 0.65 else 0.25)</span>
+<span class="lineno">   32 </span><span class="spaces">      </span><span class="istickedoff">topicConfidence = clamp01 (max (usfConfidence frame) (dtTopicConfidence previous * 0.8))</span>
+<span class="lineno">   33 </span><span class="spaces">  </span><span class="istickedoff">in DialogueThread</span>
+<span class="lineno">   34 </span><span class="spaces">      </span><span class="istickedoff">{ dtCurrentFocus = focus</span>
+<span class="lineno">   35 </span><span class="spaces">      </span><span class="istickedoff">, dtActiveQuestion = activeQuestion</span>
+<span class="lineno">   36 </span><span class="spaces">      </span><span class="istickedoff">, dtUserGoal = userGoal</span>
+<span class="lineno">   37 </span><span class="spaces">      </span><span class="istickedoff">, dtIntentHypothesis = intentHypothesis</span>
+<span class="lineno">   38 </span><span class="spaces">      </span><span class="istickedoff">, dtOpenLoops = openLoops</span>
+<span class="lineno">   39 </span><span class="spaces">      </span><span class="istickedoff">, dtAcceptedTerms = acceptedTerms</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">, dtTopicConfidence = topicConfidence</span>
+<span class="lineno">   41 </span><span class="spaces">       </span><span class="istickedoff">, dtResistance = resistance</span>
+<span class="lineno">   42 </span><span class="spaces">       </span><span class="istickedoff">, dtClarifiedItems = clarifiedItems</span>
+<span class="lineno">   43 </span><span class="spaces">       </span><span class="istickedoff">, dtUnclarifiedItems = unclarifiedItems</span>
+<span class="lineno">   44 </span><span class="spaces">       </span><span class="istickedoff">, dtStructuralScope = structuralScope</span>
+<span class="lineno">   45 </span><span class="spaces">       </span><span class="istickedoff">, dtPhaseScope = focus</span>
+<span class="lineno">   46 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>deriveStructuralScope :: DialogueThread -&gt; DialogueCommitmentLedger -&gt; UtteranceSemanticFrame -&gt; Text -&gt; Maybe PerspectiveScope
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">deriveStructuralScope previous ledger frame focus =</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">case firstNonEmptyMaybe [usfTopic frame, <span class="nottickedoff">usfFocus frame</span>, <span class="nottickedoff">focus</span>] of</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">dtStructuralScope previous</span></span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">Just scopeText -&gt;</span>
+<span class="lineno">   53 </span><span class="spaces">      </span><span class="istickedoff">case dtStructuralScope previous of</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="istickedoff">Just priorScope</span>
+<span class="lineno">   55 </span><span class="spaces">          </span><span class="istickedoff">| lockedScope &amp;&amp; normalizeScopeKey (scopeTextOf priorScope) /= normalizeScopeKey scopeText -&gt;</span>
+<span class="lineno">   56 </span><span class="spaces">              </span><span class="istickedoff">Just priorScope</span>
+<span class="lineno">   57 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; Just (ScopeTopic scopeText)</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">lockedScope =</span>
+<span class="lineno">   60 </span><span class="spaces">      </span><span class="istickedoff">any ((`elem` [CsUnresolved, <span class="nottickedoff">CsContested</span>, <span class="nottickedoff">CsSuspended</span>]) . dcStatus) (dclItems ledger)</span>
+<span class="lineno">   61 </span><span class="spaces">        </span><span class="istickedoff">|| <span class="nottickedoff">usfSpeechAct frame == ActAsk</span></span>
+<span class="lineno">   62 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">scopeTextOf :: PerspectiveScope -&gt; Text</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="istickedoff">scopeTextOf scope =</span>
+<span class="lineno">   65 </span><span class="spaces">      </span><span class="istickedoff">case scope of</span>
+<span class="lineno">   66 </span><span class="spaces">        </span><span class="istickedoff">ScopeTopic topic -&gt; topic</span>
+<span class="lineno">   67 </span><span class="spaces">        </span><span class="istickedoff">ScopeTheme theme -&gt; <span class="nottickedoff">theme</span></span>
+<span class="lineno">   68 </span><span class="spaces">        </span><span class="istickedoff">ScopeCluster cluster -&gt; <span class="nottickedoff">cluster</span></span>
+<span class="lineno">   69 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">normalizeScopeKey :: Text -&gt; Text</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">normalizeScopeKey = T.unwords . T.words . T.toLower . T.strip</span></span>
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>deriveDialogueCommitmentLedger :: DialogueCommitmentLedger -&gt; UtteranceSemanticFrame -&gt; DialogueCommitmentLedger
+<span class="lineno">   74 </span><span class="decl"><span class="istickedoff">deriveDialogueCommitmentLedger (DialogueCommitmentLedger existing) frame =</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">let currentClaim = firstNonEmpty [usfTopic frame, <span class="nottickedoff">usfFocus frame</span>, <span class="nottickedoff">usfRawText frame</span>]</span>
+<span class="lineno">   76 </span><span class="spaces">      </span><span class="istickedoff">nextItem</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlyfalse">T.null currentClaim</span> = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">| usfSpeechAct frame == ActAsk = Just (DialogueCommitment currentClaim CsUnresolved 0)</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">| usfPolarity frame == PolarityNegative = Just (DialogueCommitment currentClaim CsContested 0)</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Just (DialogueCommitment currentClaim CsAccepted 0)</span>
+<span class="lineno">   81 </span><span class="spaces">      </span><span class="istickedoff">merged = take 16 (existing ++ maybe <span class="nottickedoff">[]</span> pure nextItem)</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">in DialogueCommitmentLedger merged</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>deriveDialoguePhase :: DialogueThread -&gt; DialogueCommitmentLedger -&gt; UtteranceSemanticFrame -&gt; DialoguePhase
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">deriveDialoguePhase thread ledger frame</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">| hasContested ledger = Contesting</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">| hasRepairNeed thread frame = Repairing</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">| hasUnresolved ledger = Clarifying</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">usfSpeechAct frame == ActAsk</span> = <span class="nottickedoff">Exploring</span></span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">commitmentAllowsAdvance ledger</span> = Advancing</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Grounding</span></span></span>
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>commitmentAllowsAdvance :: DialogueCommitmentLedger -&gt; Bool
+<span class="lineno">   94 </span><span class="decl"><span class="istickedoff">commitmentAllowsAdvance (DialogueCommitmentLedger items) =</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">not (any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) items)</span></span>
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>hasUnresolved :: DialogueCommitmentLedger -&gt; Bool
+<span class="lineno">   98 </span><span class="decl"><span class="istickedoff">hasUnresolved (DialogueCommitmentLedger items) = any ((== CsUnresolved) . dcStatus) items</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>hasContested :: DialogueCommitmentLedger -&gt; Bool
+<span class="lineno">  101 </span><span class="decl"><span class="istickedoff">hasContested (DialogueCommitmentLedger items) = any ((== CsContested) . dcStatus) items</span></span>
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>hasRepairNeed :: DialogueThread -&gt; UtteranceSemanticFrame -&gt; Bool
+<span class="lineno">  104 </span><span class="decl"><span class="istickedoff">hasRepairNeed thread frame =</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">dtResistance thread &gt; 0.6 || any isRepairClass (concatMap wmuSemanticClasses (usfWordUnits frame))</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">isRepairClass SemDialogueRepair = True</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">isRepairClass _ = False</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>unresolvedClaims :: DialogueCommitmentLedger -&gt; [Text]
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">unresolvedClaims (DialogueCommitmentLedger items) = [dcClaim item | item &lt;- items, dcStatus item == CsUnresolved]</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>renderSpeechAct :: InputSpeechAct -&gt; Text
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">renderSpeechAct act = case act of</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">ActAssert -&gt; &quot;assert&quot;</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">ActAsk -&gt; &quot;ask&quot;</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">ActRequest -&gt; &quot;request&quot;</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">ActInvite -&gt; <span class="nottickedoff">&quot;invite&quot;</span></span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">ActReport -&gt; &quot;report&quot;</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">ActUnknown -&gt; <span class="nottickedoff">&quot;unknown&quot;</span></span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>firstNonEmpty :: [Text] -&gt; Text
+<span class="lineno">  123 </span><span class="decl"><span class="istickedoff">firstNonEmpty = fromMaybe <span class="nottickedoff">&quot;&quot;</span> . firstNonEmptyMaybe</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>firstNonEmptyMaybe :: [Text] -&gt; Maybe Text
+<span class="lineno">  126 </span><span class="decl"><span class="istickedoff">firstNonEmptyMaybe = go</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">go [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">go (x:xs)</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">T.null (T.strip x)</span> = <span class="nottickedoff">go xs</span></span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Just x</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>clamp01 :: Double -&gt; Double
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">clamp01 = max 0.0 . min 1.0</span></span>
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>maybeToList :: Maybe Text -&gt; [Text]
+<span class="lineno">  137 </span><span class="decl"><span class="istickedoff">maybeToList (Just value) = [value]</span>
+<span class="lineno">  138 </span><span class="spaces"></span><span class="istickedoff">maybeToList Nothing = []</span></span>
+
+</pre>
+</body>
+</html>

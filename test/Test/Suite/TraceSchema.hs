@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 
 {-|
@@ -14,16 +15,16 @@ test is the **runtime** companion.
 
 The two checks together enforce the discipline:
 
-  * the static check reports P4 status (OK or GAP)
-    and links GAPs to TRACE_SCHEMA.md sections.
-  * the runtime test asserts that the **OK** contours
-    remain OK (a regression lock) and that the
-    discipline doc is present and current.
+  * the static check reports P4 status for every
+    canonical contour.
+  * the runtime test asserts that the canonical
+    contours remain locked and that the discipline
+    doc is present and current.
 
 == What this test does
 
-For each of the 3 OK canonical contours (Salience,
-Deliberation, Essence), it reads the
+For each of the 6 canonical contours (Conatus,
+Field, Salience, Deliberation, Essence, Identity), it reads the
 @src/QxFx0/Types/TurnProjection.hs@ source file and
 asserts that the documented @trc*@ field is declared
 in the @data TurnReplayTrace = TurnReplayTrace { ... }@
@@ -40,15 +41,9 @@ For TRACE_SCHEMA.md, the test asserts:
 
 == What this test does NOT do
 
-It does not assert that the 3 GAP contours (Conatus,
-Field, Identity) have their fields in the type —
-the discipline says they are "expected but not yet
-landed" (Package 3 work). When the GAPs are closed,
-this test is updated to add new OK-contour tests.
-
-The static @check_replay_gate.sh@ continues to
-report the GAPs; this test only locks the OK
-contours and the schema doc.
+The static @check_replay_gate.sh@ remains the source
+of truth for P1-P4 status; this test locks the
+canonical field presence and the schema doc.
 -}
 module Test.Suite.TraceSchema
   ( traceSchemaTests
@@ -57,36 +52,20 @@ module Test.Suite.TraceSchema
 import Test.HUnit (Test (..), assertFailure, assertBool)
 
 import Control.Exception (SomeException, catch)
-import Prelude (Bool (..), IO, String, all, elem, filter, isInfixOf, lines, mapM_, not, null, unlines, (.))
+import Prelude (Bool (..), FilePath, IO, String, all, elem, filter, lines, mapM_, not, null, unlines, (.))
 
 import qualified Data.List as L
 
--- | The list of OK canonical contours and their
--- expected trc* fields. These are the contours that
--- currently pass P4 (see TRACE_SCHEMA.md §1).
---
--- Adding a contour: append a (contour, field) pair.
--- Closing a GAP: move the pair from
--- 'expectedMissingFields' to 'okTrcFields'.
+-- | The canonical contours and one representative
+-- expected trc* field per contour.
 okTrcFields :: [(String, String)]
 okTrcFields =
-  [ ("Salience",     "trcSalienceDriver")
+  [ ("Conatus",      "trcConatusEnergy")
+  , ("Field",        "trcField")
+  , ("Salience",     "trcSalienceDriver")
   , ("Deliberation", "trcDeliberationRule")
   , ("Essence",      "trcEssenceMode")
-  ]
-
--- | The 3 GAP contours and their expected trc* fields.
--- The test does NOT assert these are present in the
--- type; the discipline says they are "expected but
--- not yet landed" (Package 3 work).
---
--- Listed here for documentation; the static
--- @check_replay_gate.sh@ script uses this list.
-expectedMissingFields :: [(String, String)]
-expectedMissingFields =
-  [ ("Conatus",  "trcConatusEnergy")
-  , ("Field",    "trcField")
-  , ("Identity", "trcIdentityClaims")
+  , ("Identity",     "trcIdentityClaims")
   ]
 
 -- | Read a file or return empty string on error.
@@ -109,7 +88,7 @@ extractTrcFieldName line =
     stripComment s = case L.breakOn "--" s of
       (before, _) -> before
 
--- | The runtime check: for each OK contour, assert
+-- | The runtime check: for each canonical contour, assert
 -- that the expected trc* field is declared in
 -- @TurnReplayTrace@.
 p4OkContoursHaveTrcField :: Test
@@ -144,26 +123,23 @@ traceSchemaMdExists = TestLabel "TRACE_SCHEMA.md exists and lists 6 canonical co
        <> "or the §6 Essence section. Found headers: " <> show sectionHeaders)
       (hasSection1 && hasSection6)
 
--- | The discipline check: the 3 GAPs are documented
--- in TRACE_SCHEMA.md and the discipline section
--- explains how to add a new contour.
+-- | The discipline check: the canonical contours are documented
+-- in TRACE_SCHEMA.md and the discipline section explains how to
+-- add a new contour.
 traceSchemaMdHasDiscipline :: Test
-traceSchemaMdHasDiscipline = TestLabel "TRACE_SCHEMA.md documents the 3 GAPs and the discipline for new contours" $
+traceSchemaMdHasDiscipline = TestLabel "TRACE_SCHEMA.md documents the canonical contours and the discipline for new contours" $
   TestCase $ do
     let docPath = "docs/closure/TRACE_SCHEMA.md"
     contents <- readFileOrEmpty docPath
-    -- Each GAP contour must have a §N section.
-    let gapContours = map fst expectedMissingFields
+    let canonicalContours = map fst okTrcFields
     let missingSections = filter
           (\c -> not (any (\line -> L.isInfixOf ("## ") c line) (lines contents)))
-          gapContours
-    -- We do an "infix of name in section header" check,
-    -- which is a weak but sufficient discipline signal.
+          canonicalContours
     let hasDisciplineSection = any
           (\line -> L.isInfixOf "Discipline: adding a new canonical contour" line)
           (lines contents)
     assertBool
-      ("TRACE_SCHEMA.md is missing GAP sections for: " <> show missingSections
+      ("TRACE_SCHEMA.md is missing canonical contour sections for: " <> show missingSections
        <> "; or the §9 'Discipline' section is missing.")
       (null missingSections && hasDisciplineSection)
 

@@ -1,0 +1,288 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Calibration
+<span class="lineno">    9 </span>Description : WP4 — Closed learning loop with calibration versioning.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Implements the @ask → verify → simulate → accept / reject → persist
+<span class="lineno">   12 </span>→ monitor → rollback@ lifecycle for every externally sourced proposal.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>* No runtime code is patched automatically.
+<span class="lineno">   15 </span>* Only 'SalienceWeights', 'FieldHeuristics', or rule/concept config
+<span class="lineno">   16 </span>  may be updated through the validated channel.
+<span class="lineno">   17 </span>* Every accepted change is versioned; degradation triggers automatic
+<span class="lineno">   18 </span>  rollback to the previous version.
+<span class="lineno">   19 </span>-}
+<span class="lineno">   20 </span>module QxFx0.Learning.Calibration
+<span class="lineno">   21 </span>  ( CalibrationId(..)
+<span class="lineno">   22 </span>  , CalibrationProposal(..)
+<span class="lineno">   23 </span>  , CalibrationStatus(..)
+<span class="lineno">   24 </span>  , CalibrationEntry(..)
+<span class="lineno">   25 </span>  , CalibrationLog(..)
+<span class="lineno">   26 </span>  , emptyCalibrationLog
+<span class="lineno">   27 </span>  , verifyProposal
+<span class="lineno">   28 </span>  , simulateProposal
+<span class="lineno">   29 </span>  , acceptProposal
+<span class="lineno">   30 </span>  , monitorCalibration
+<span class="lineno">   31 </span>  , rollbackCalibration
+<span class="lineno">   32 </span>  , currentCalibrationVersion
+<span class="lineno">   33 </span>  ) where
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   36 </span>import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
+<span class="lineno">   37 </span>import Data.Text (Text)
+<span class="lineno">   38 </span>import qualified Data.Text as T
+<span class="lineno">   39 </span>import GHC.Generics (Generic)
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>import QxFx0.Self.Salience
+<span class="lineno">   42 </span>  ( SalienceWeights(..)
+<span class="lineno">   43 </span>  )
+<span class="lineno">   44 </span>import QxFx0.Self.Field
+<span class="lineno">   45 </span>  ( FieldHeuristics(..)
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>-- | Monotonically increasing calibration version number.
+<span class="lineno">   49 </span>newtype CalibrationId = CalibrationId { <span class="istickedoff"><span class="decl"><span class="istickedoff">unCalibrationId</span></span></span> :: Int }
+<span class="lineno">   50 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">   51 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>-- | A proposal received from an external tool (or human mentor).
+<span class="lineno">   54 </span>data CalibrationProposal
+<span class="lineno">   55 </span>  = ProposalSalienceWeights !SalienceWeights
+<span class="lineno">   56 </span>    -- ^ Adjust salience weights empirically.
+<span class="lineno">   57 </span>  | ProposalFieldHeuristics !FieldHeuristics
+<span class="lineno">   58 </span>    -- ^ Adjust field heuristics empirically.
+<span class="lineno">   59 </span>  | ProposalRule !Text
+<span class="lineno">   60 </span>    -- ^ Add or modify a deliberation / routing rule.
+<span class="lineno">   61 </span>  | ProposalConcept !Text
+<span class="lineno">   62 </span>    -- ^ Add a new keyword or concept to the local ontology.
+<span class="lineno">   63 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">   64 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>-- | Stage of a proposal in the closed loop.
+<span class="lineno">   67 </span>data CalibrationStatus
+<span class="lineno">   68 </span>  = Pending
+<span class="lineno">   69 </span>    -- ^ Just received; not yet validated.
+<span class="lineno">   70 </span>  | Verified
+<span class="lineno">   71 </span>    -- ^ Passed basic syntactic / range sanity checks.
+<span class="lineno">   72 </span>  | Simulated
+<span class="lineno">   73 </span>    -- ^ Dry-run against synthetic or historical trace succeeded.
+<span class="lineno">   74 </span>  | Accepted
+<span class="lineno">   75 </span>    -- ^ Passed verify + simulate; persisted to runtime config.
+<span class="lineno">   76 </span>  | Rejected
+<span class="lineno">   77 </span>    -- ^ Failed at verify or simulate stage.
+<span class="lineno">   78 </span>  | RolledBack
+<span class="lineno">   79 </span>    -- ^ Was Accepted but later degraded; reverted to previous version.
+<span class="lineno">   80 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">   81 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>-- | Single record in the calibration ledger.
+<span class="lineno">   84 </span>data CalibrationEntry = CalibrationEntry
+<span class="lineno">   85 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ceId</span></span></span>          :: !CalibrationId
+<span class="lineno">   86 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceProposal</span></span></span>    :: !CalibrationProposal
+<span class="lineno">   87 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceStatus</span></span></span>      :: !CalibrationStatus
+<span class="lineno">   88 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceCreatedTurn</span></span></span> :: !Int
+<span class="lineno">   89 </span>    -- ^ Turn when the proposal was received.
+<span class="lineno">   90 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceDecidedTurn</span></span></span> :: !(Maybe Int)
+<span class="lineno">   91 </span>    -- ^ Turn when the proposal reached Accepted / Rejected / RolledBack.
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">cePrevId</span></span></span>      :: !(Maybe CalibrationId)
+<span class="lineno">   93 </span>    -- ^ Previous version to roll back to (Nothing for the first entry).
+<span class="lineno">   94 </span>  }
+<span class="lineno">   95 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   96 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON CalibrationEntry</span></span></span></span></span></span></span></span> where
+<span class="lineno">   99 </span>  <span class="decl"><span class="istickedoff">toJSON e = object</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;id&quot;          .= unCalibrationId (ceId e)</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">, &quot;proposal&quot;    .= ceProposal e</span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="istickedoff">, &quot;status&quot;      .= ceStatus e</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">, &quot;createdTurn&quot; .= ceCreatedTurn e</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">, &quot;decidedTurn&quot; .= ceDecidedTurn e</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">, &quot;prevId&quot;      .= fmap unCalibrationId (cePrevId e)</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON CalibrationEntry</span></span></span></span> where
+<span class="lineno">  109 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;CalibrationEntry&quot;</span> $ \o -&gt;</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">CalibrationEntry</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; (CalibrationId &lt;$&gt; o .: &quot;id&quot;)</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;proposal&quot;</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;status&quot; .!= <span class="nottickedoff">Pending</span></span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;createdTurn&quot; .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;decidedTurn&quot; .!= <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; (fmap CalibrationId &lt;$&gt; o .:? &quot;prevId&quot; .!= Nothing)</span></span>
+<span class="lineno">  117 </span>
+<span class="lineno">  118 </span>-- | The calibration ledger kept in 'SystemState'.
+<span class="lineno">  119 </span>newtype CalibrationLog = CalibrationLog { <span class="istickedoff"><span class="decl"><span class="istickedoff">unCalibrationLog</span></span></span> :: [CalibrationEntry] }
+<span class="lineno">  120 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  121 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>emptyCalibrationLog :: CalibrationLog
+<span class="lineno">  124 </span><span class="decl"><span class="istickedoff">emptyCalibrationLog = CalibrationLog []</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>-- | Basic sanity verification of a proposal.
+<span class="lineno">  127 </span>--
+<span class="lineno">  128 </span>-- * 'ProposalSalienceWeights' — all weights must be in [0, 1].
+<span class="lineno">  129 </span>-- * 'ProposalFieldHeuristics' — all heuristics must be non-negative.
+<span class="lineno">  130 </span>-- * 'ProposalRule' — non-empty and not already present in the
+<span class="lineno">  131 </span>--   blocked-concept list (simple collision guard).
+<span class="lineno">  132 </span>-- * 'ProposalConcept' — non-empty.
+<span class="lineno">  133 </span>verifyProposal :: [Text] -&gt; CalibrationProposal -&gt; Either Text ()
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">verifyProposal blocked proposal =</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">case proposal of</span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="istickedoff">ProposalSalienceWeights _ -&gt; <span class="nottickedoff">Right ()</span> -- range checks delegated to SalienceWeights smart constructor</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">ProposalFieldHeuristics _ -&gt; <span class="nottickedoff">Right ()</span> -- non-negativity enforced by FieldHeuristics constructor</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="istickedoff">ProposalRule txt</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">| T.null txt -&gt; Left &quot;empty_rule&quot;</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">txt `elem` blocked</span> -&gt; Left &quot;blocked_rule&quot;</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">Right ()</span></span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="istickedoff">ProposalConcept txt</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">T.null txt</span> -&gt; <span class="nottickedoff">Left &quot;empty_concept&quot;</span></span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt; Right ()</span></span>
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>-- | Simulate a proposal against a lightweight synthetic signal.
+<span class="lineno">  147 </span>--
+<span class="lineno">  148 </span>-- For weights / heuristics: apply them to a neutral synthetic
+<span class="lineno">  149 </span>-- 'ConatusEnergy' and verify the result does not flip the gate
+<span class="lineno">  150 </span>-- (i.e. energy must not become *more* negative).
+<span class="lineno">  151 </span>--
+<span class="lineno">  152 </span>-- For rules / concepts: succeed trivially in this stub; real trace
+<span class="lineno">  153 </span>-- replay is Phase-7 infrastructure.
+<span class="lineno">  154 </span>simulateProposal :: CalibrationProposal -&gt; Either Text ()
+<span class="lineno">  155 </span><span class="decl"><span class="nottickedoff">simulateProposal proposal =</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="nottickedoff">case proposal of</span>
+<span class="lineno">  157 </span><span class="spaces">    </span><span class="nottickedoff">ProposalSalienceWeights weights -&gt; do</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="nottickedoff">let coeffs =</span>
+<span class="lineno">  159 </span><span class="spaces">            </span><span class="nottickedoff">[ weightResonance weights</span>
+<span class="lineno">  160 </span><span class="spaces">            </span><span class="nottickedoff">, weightAtmosphere weights</span>
+<span class="lineno">  161 </span><span class="spaces">            </span><span class="nottickedoff">, weightConsolidation weights</span>
+<span class="lineno">  162 </span><span class="spaces">            </span><span class="nottickedoff">, weightCounterfactual weights</span>
+<span class="lineno">  163 </span><span class="spaces">            </span><span class="nottickedoff">, weightFieldConfidence weights</span>
+<span class="lineno">  164 </span><span class="spaces">            </span><span class="nottickedoff">]</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="nottickedoff">if any (&lt; 0.0) coeffs || any (&gt; 2.0) coeffs</span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="nottickedoff">then Left &quot;salience_weights_out_of_range&quot;</span>
+<span class="lineno">  167 </span><span class="spaces">        </span><span class="nottickedoff">else if conatusGateThreshold weights &lt; (-1.0) || conatusGateThreshold weights &gt; 1.0</span>
+<span class="lineno">  168 </span><span class="spaces">          </span><span class="nottickedoff">then Left &quot;conatus_gate_threshold_out_of_range&quot;</span>
+<span class="lineno">  169 </span><span class="spaces">          </span><span class="nottickedoff">else if verdictThreshold weights &lt; 0.0 || verdictThreshold weights &gt; 0.5</span>
+<span class="lineno">  170 </span><span class="spaces">            </span><span class="nottickedoff">then Left &quot;verdict_threshold_out_of_range&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">            </span><span class="nottickedoff">else if sigmoidTemperature weights &lt;= 0.0</span>
+<span class="lineno">  172 </span><span class="spaces">              </span><span class="nottickedoff">then Left &quot;sigmoid_temperature_non_positive&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">              </span><span class="nottickedoff">else Right ()</span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="nottickedoff">ProposalFieldHeuristics heuristics -&gt; do</span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="nottickedoff">if fhNarrativeWindowSize heuristics &lt;= 0</span>
+<span class="lineno">  176 </span><span class="spaces">        </span><span class="nottickedoff">then Left &quot;field_window_non_positive&quot;</span>
+<span class="lineno">  177 </span><span class="spaces">        </span><span class="nottickedoff">else if fhEntropyEpsilon heuristics &lt;= 0.0</span>
+<span class="lineno">  178 </span><span class="spaces">          </span><span class="nottickedoff">then Left &quot;field_entropy_epsilon_non_positive&quot;</span>
+<span class="lineno">  179 </span><span class="spaces">          </span><span class="nottickedoff">else</span>
+<span class="lineno">  180 </span><span class="spaces">            </span><span class="nottickedoff">let boundedCoeffs =</span>
+<span class="lineno">  181 </span><span class="spaces">                  </span><span class="nottickedoff">[ fhDefaultNarrativeRate heuristics</span>
+<span class="lineno">  182 </span><span class="spaces">                  </span><span class="nottickedoff">, fhTopicStabilityBoost heuristics</span>
+<span class="lineno">  183 </span><span class="spaces">                  </span><span class="nottickedoff">, fhHolisticStreakBoostRate heuristics</span>
+<span class="lineno">  184 </span><span class="spaces">                  </span><span class="nottickedoff">, fhHolisticStreakBoostCap heuristics</span>
+<span class="lineno">  185 </span><span class="spaces">                  </span><span class="nottickedoff">, fhLegitimacyMidpoint heuristics</span>
+<span class="lineno">  186 </span><span class="spaces">                  </span><span class="nottickedoff">, fhLegitimacyBonusScale heuristics</span>
+<span class="lineno">  187 </span><span class="spaces">                  </span><span class="nottickedoff">]</span>
+<span class="lineno">  188 </span><span class="spaces">            </span><span class="nottickedoff">in if any (&lt; 0.0) boundedCoeffs || any (&gt; 1.0) boundedCoeffs</span>
+<span class="lineno">  189 </span><span class="spaces">                 </span><span class="nottickedoff">then Left &quot;field_heuristics_out_of_range&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">                 </span><span class="nottickedoff">else Right ()</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="nottickedoff">ProposalRule txt</span>
+<span class="lineno">  192 </span><span class="spaces">      </span><span class="nottickedoff">| T.length (T.strip txt) &lt; 8 -&gt; Left &quot;rule_too_short&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">      </span><span class="nottickedoff">| otherwise -&gt; Right ()</span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="nottickedoff">ProposalConcept txt</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="nottickedoff">| T.length (T.strip txt) &lt; 3 -&gt; Left &quot;concept_too_short&quot;</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="nottickedoff">| otherwise -&gt; Right ()</span></span>
+<span class="lineno">  197 </span>
+<span class="lineno">  198 </span>-- | Accept a verified &amp; simulated proposal, producing the updated
+<span class="lineno">  199 </span>-- entry, next version ID, and the human-readable tag to persist.
+<span class="lineno">  200 </span>acceptProposal
+<span class="lineno">  201 </span>  :: CalibrationId        -- ^ next available version ID
+<span class="lineno">  202 </span>  -&gt; CalibrationProposal
+<span class="lineno">  203 </span>  -&gt; Int                  -- ^ current turn
+<span class="lineno">  204 </span>  -&gt; Maybe CalibrationId  -- ^ previous version to link for rollback
+<span class="lineno">  205 </span>  -&gt; (CalibrationEntry, CalibrationId)
+<span class="lineno">  206 </span><span class="decl"><span class="istickedoff">acceptProposal nextId proposal turn prevId =</span>
+<span class="lineno">  207 </span><span class="spaces">  </span><span class="istickedoff">let entry = CalibrationEntry</span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="istickedoff">{ ceId          = nextId</span>
+<span class="lineno">  209 </span><span class="spaces">        </span><span class="istickedoff">, ceProposal    = proposal</span>
+<span class="lineno">  210 </span><span class="spaces">        </span><span class="istickedoff">, ceStatus      = Accepted</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="istickedoff">, ceCreatedTurn = turn</span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="istickedoff">, ceDecidedTurn = Just turn</span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="istickedoff">, cePrevId      = prevId</span>
+<span class="lineno">  214 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  215 </span><span class="spaces">  </span><span class="istickedoff">in (entry, CalibrationId (unCalibrationId nextId + 1))</span></span>
+<span class="lineno">  216 </span>
+<span class="lineno">  217 </span>-- | Monitor an accepted calibration after a window of turns.
+<span class="lineno">  218 </span>--
+<span class="lineno">  219 </span>-- If the 'LearningNeed' that triggered the proposal has gotten
+<span class="lineno">  220 </span>-- *worse* (level increased or trend is Rising) within the monitor
+<span class="lineno">  221 </span>-- window, recommend rollback.
+<span class="lineno">  222 </span>--
+<span class="lineno">  223 </span>-- Parameters:
+<span class="lineno">  224 </span>--   * preAcceptLevel   — level at the turn of acceptance.
+<span class="lineno">  225 </span>--   * currentLevel     — level now.
+<span class="lineno">  226 </span>--   * currentTrend     — trend now.
+<span class="lineno">  227 </span>--   * windowTurns      — how many turns have passed since acceptance.
+<span class="lineno">  228 </span>--   * minMonitorWindow — minimum turns before rollback is allowed.
+<span class="lineno">  229 </span>monitorCalibration
+<span class="lineno">  230 </span>  :: Double       -- ^ preAcceptLevel
+<span class="lineno">  231 </span>  -&gt; Double       -- ^ currentLevel
+<span class="lineno">  232 </span>  -&gt; Int          -- ^ windowTurns
+<span class="lineno">  233 </span>  -&gt; Int          -- ^ minMonitorWindow
+<span class="lineno">  234 </span>  -&gt; Either Text ()
+<span class="lineno">  235 </span><span class="decl"><span class="istickedoff">monitorCalibration preAcceptLevel currentLevel windowTurns minMonitorWindow</span>
+<span class="lineno">  236 </span><span class="spaces">  </span><span class="istickedoff">| windowTurns &lt; minMonitorWindow = Right ()</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">currentLevel &gt; preAcceptLevel</span>  = Left &quot;degradation_detected&quot;</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span>                      = <span class="nottickedoff">Right ()</span></span></span>
+<span class="lineno">  239 </span>
+<span class="lineno">  240 </span>-- | Roll back to the previous calibration version.
+<span class="lineno">  241 </span>-- Returns the rolled-back entry and the ID of the version that is
+<span class="lineno">  242 </span>-- now current (the prevId linked in the accepted entry).
+<span class="lineno">  243 </span>rollbackCalibration :: CalibrationEntry -&gt; Int -&gt; Maybe (CalibrationEntry, CalibrationId)
+<span class="lineno">  244 </span><span class="decl"><span class="istickedoff">rollbackCalibration entry turn =</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">case (ceStatus entry, cePrevId entry) of</span>
+<span class="lineno">  246 </span><span class="spaces">    </span><span class="istickedoff">(Accepted, Just prev) -&gt;</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">let rolled = entry</span>
+<span class="lineno">  248 </span><span class="spaces">            </span><span class="istickedoff">{ ceStatus      = RolledBack</span>
+<span class="lineno">  249 </span><span class="spaces">            </span><span class="istickedoff">, ceDecidedTurn = Just turn</span>
+<span class="lineno">  250 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">in Just (rolled, prev)</span>
+<span class="lineno">  252 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">  253 </span>
+<span class="lineno">  254 </span>-- | Extract the version ID of the most recent Accepted entry.
+<span class="lineno">  255 </span>currentCalibrationVersion :: CalibrationLog -&gt; Maybe CalibrationId
+<span class="lineno">  256 </span><span class="decl"><span class="istickedoff">currentCalibrationVersion (CalibrationLog log) =</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">case filter ((== Accepted) . ceStatus) log of</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  259 </span><span class="spaces">    </span><span class="istickedoff">xs -&gt; lastElem xs &gt;&gt;= Just . ceId</span>
+<span class="lineno">  260 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  261 </span><span class="spaces">    </span><span class="istickedoff">-- | Total last-element extractor.</span>
+<span class="lineno">  262 </span><span class="spaces">    </span><span class="istickedoff">lastElem :: [a] -&gt; Maybe a</span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="istickedoff">lastElem []     = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="istickedoff">lastElem [z]    = Just z</span>
+<span class="lineno">  265 </span><span class="spaces">    </span><span class="istickedoff">lastElem (_:zs) = <span class="nottickedoff">lastElem zs</span></span></span>
+
+</pre>
+</body>
+</html>

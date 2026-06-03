@@ -50,12 +50,12 @@ checkConstitution nixPath concept agency tension =
       let nixExpr = "let agency = " <> T.pack (show agency)
                    <> "; tension = " <> T.pack (show tension)
                    <> "; data = import " <> nixStringLiteral (T.pack nixPath)
-                    <> "; key = " <> nixStringLiteral conceptKey
-                    <> "; match = builtins.filter (c: builtins.toLower c.name == builtins.toLower key) data.concepts;"
-                   <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
-                   <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
-                   <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"
-                   <> " in if concept != null then agencyOk && tensionOk else true"
+                   <> "; key = " <> nixStringLiteral conceptKey
+                    <> "; match = builtins.filter (c: builtins.toLower c.id == builtins.toLower key) data.concepts;"
+                    <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
+                    <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
+                    <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"
+                    <> " in if concept != null then agencyOk && tensionOk else true"
       result <- runNixEval nixExpr
       case result of
         Right "true"  -> return Allowed
@@ -104,14 +104,57 @@ normalizeConceptKey raw =
   let normalized = T.toLower (T.strip raw)
   in if T.null normalized
        then Nothing
-       else if T.all isConceptChar normalized
-         then Just normalized
-         else Nothing
+       else case conceptAlias normalized of
+         Just canonical -> Just canonical
+         Nothing -> if T.all isConceptChar normalized
+           then Just normalized
+           else Nothing
 
 isConceptChar :: Char -> Bool
 isConceptChar c =
   (isAscii c && (isAlphaNum c || c == '-' || c == '_'))
     || (not (isAscii c) && isLetter c)
+
+conceptAlias :: Text -> Maybe Text
+conceptAlias key =
+  case key of
+    "воля" -> Just "volya"
+    "свобода" -> Just "svoboda"
+    "смерть" -> Just "smert"
+    "граница" -> Just "granitsa"
+    "цифра" -> Just "cifra"
+    "смысл" -> Just "smysl"
+    "истина" -> Just "istina"
+    "любовь" -> Just "lyubov"
+    "время" -> Just "vremya"
+    "язык" -> Just "yazyk"
+    "идентичность" -> Just "identichnost"
+    "ремонт" -> Just "remont"
+    "якорь" -> Just "yakor"
+    "одиночество" -> Just "odinochestvo"
+    "ответственность" -> Just "otvetstvennost"
+    "страдание" -> Just "stradanie"
+    "надежда" -> Just "nadezhda"
+    "справедливость" -> Just "spravedlivost"
+    "доверие" -> Just "doverie"
+    "ничто" -> Just "nichto"
+    "вечность" -> Just "vechnost"
+    "разум" -> Just "razum"
+    "память" -> Just "pamyat"
+    "молчание" -> Just "molchanie"
+    "выбор" -> Just "vybor"
+    "тело" -> Just "telo"
+    "долг" -> Just "dolg"
+    "страх" -> Just "strah"
+    "смирение" -> Just "smirenie"
+    "гордость" -> Just "gordost"
+    "иллюзия" -> Just "illyuziya"
+    "присутствие" -> Just "prisutstvie"
+    "уход" -> Just "uhod"
+    "честность" -> Just "chestnost"
+    "хрупкость" -> Just "hrupkost"
+    "пустота" -> Just "pustota"
+    _ -> Nothing
 
 isLenientMode :: IO Bool
 isLenientMode = do

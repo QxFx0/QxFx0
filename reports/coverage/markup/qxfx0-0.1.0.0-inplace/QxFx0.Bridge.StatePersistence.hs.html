@@ -1,0 +1,366 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData, RankNTypes #-}
+<span class="lineno">    2 </span>module QxFx0.Bridge.StatePersistence
+<span class="lineno">    3 </span>  ( saveState
+<span class="lineno">    4 </span>  , saveStateWithProjection
+<span class="lineno">    5 </span>  , rollbackTurnProjections
+<span class="lineno">    6 </span>  , loadState
+<span class="lineno">    7 </span>  , stateBlobDiagnostics
+<span class="lineno">    8 </span>  -- Re-exported from QxFx0.Types.Persistence for backward compatibility
+<span class="lineno">    9 </span>  , PersistenceDiagnostic(..)
+<span class="lineno">   10 </span>  , PersistenceStage(..)
+<span class="lineno">   11 </span>  , LoadStateResult(..)
+<span class="lineno">   12 </span>  , renderPersistenceDiagnostics
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import QxFx0.Types.State
+<span class="lineno">   16 </span>  ( StatePersistenceSnapshot(..)
+<span class="lineno">   17 </span>  , SystemState(..)
+<span class="lineno">   18 </span>  , preparePersistenceSnapshot
+<span class="lineno">   19 </span>  , runtimeContinuationState
+<span class="lineno">   20 </span>  , ssTurnCount
+<span class="lineno">   21 </span>  )
+<span class="lineno">   22 </span>import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
+<span class="lineno">   23 </span>import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
+<span class="lineno">   24 </span>import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
+<span class="lineno">   25 </span>import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
+<span class="lineno">   26 </span>import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
+<span class="lineno">   27 </span>import QxFx0.Types.Persistence
+<span class="lineno">   28 </span>  ( PersistenceDiagnostic(..)
+<span class="lineno">   29 </span>  , PersistenceStage(..)
+<span class="lineno">   30 </span>  , LoadStateResult(..)
+<span class="lineno">   31 </span>  , renderPersistenceDiagnostics
+<span class="lineno">   32 </span>  )
+<span class="lineno">   33 </span>import QxFx0.Learning.KnowledgeTree (KnowledgeTree(..))
+<span class="lineno">   34 </span>import QxFx0.Learning.Calibration (CalibrationLog(..))
+<span class="lineno">   35 </span>import QxFx0.Learning.Guardrails (GuardrailState(..))
+<span class="lineno">   36 </span>import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+<span class="lineno">   37 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   38 </span>import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, bindIntOrFail, bindInt64OrFail, bindDoubleOrFail, stepOrFail)
+<span class="lineno">   39 </span>import QxFx0.Governance.Replay (rebuildGovernedSystemState)
+<span class="lineno">   40 </span>import Data.Text (Text)
+<span class="lineno">   41 </span>import qualified Data.Text as T
+<span class="lineno">   42 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   43 </span>import qualified Data.Aeson as Aeson
+<span class="lineno">   44 </span>import qualified Data.Aeson.Key as AK
+<span class="lineno">   45 </span>import qualified Data.Aeson.KeyMap as KM
+<span class="lineno">   46 </span>import qualified Data.ByteString.Lazy as BL
+<span class="lineno">   47 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   48 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   49 </span>import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
+<span class="lineno">   50 </span>import Control.Exception (evaluate, finally, mask, onException)
+<span class="lineno">   51 </span>import Control.Exception (try)
+<span class="lineno">   52 </span>import Data.Text.Encoding.Error (UnicodeException)
+<span class="lineno">   53 </span>import Control.Monad (when)
+<span class="lineno">   54 </span>import System.IO (hPutStrLn, stderr)
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>type DbRunner = forall a. (NSQL.Database -&gt; IO a) -&gt; IO a
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>-- | Emit a stderr trace line with counts of persisted learning artefacts.
+<span class="lineno">   59 </span>logPersistenceCounts :: String -&gt; SystemState -&gt; IO ()
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">logPersistenceCounts label ss = do</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">let tree = ssKnowledgeTree ss</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">branchesFruits = sum (map length (M.elems (ktBranches tree)))</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">quarantineFruits = length (ktQuarantine tree)</span>
+<span class="lineno">   64 </span><span class="spaces">      </span><span class="istickedoff">morph = ssMorphology ss</span>
+<span class="lineno">   65 </span><span class="spaces">      </span><span class="istickedoff">calibCount = length (unCalibrationLog (ssCalibrationLog ss))</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">guardQuarantine = length (gsQuarantine (ssGuardrailState ss))</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">hPutStrLn stderr $ concat</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;[persistence_trace] &quot;, label</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">, &quot; session_id=&quot;, T.unpack (ssSessionId ss)</span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">, &quot; turn_count=&quot;, show (ssTurnCount ss)</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">, &quot; ktree_branches_fruits=&quot;, show branchesFruits</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">, &quot; ktree_quarantine=&quot;, show quarantineFruits</span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="istickedoff">, &quot; ktree_grafted=&quot;, show (ktGraftedCount tree)</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="istickedoff">, &quot; ktree_pruned=&quot;, show (ktPrunedCount tree)</span>
+<span class="lineno">   75 </span><span class="spaces">    </span><span class="istickedoff">, &quot; morph_prep=&quot;, show (M.size (mdPrepositional morph))</span>
+<span class="lineno">   76 </span><span class="spaces">    </span><span class="istickedoff">, &quot; morph_gen=&quot;, show (M.size (mdGenitive morph))</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">, &quot; morph_nom=&quot;, show (M.size (mdNominative morph))</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">, &quot; morph_surface=&quot;, show (M.size (mdFormsBySurface morph))</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">, &quot; calib_log=&quot;, show calibCount</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">, &quot; guard_quarantine=&quot;, show guardQuarantine</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>saveState :: DbRunner -&gt; SystemState -&gt; Text -&gt; IO (Either PersistenceDiagnostic SystemState)
+<span class="lineno">   84 </span><span class="decl"><span class="istickedoff">saveState withDb ss sessionId = saveStateWithProjection withDb ss sessionId Nothing</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>saveStateWithProjection :: DbRunner -&gt; SystemState -&gt; Text -&gt; Maybe TurnProjection -&gt; IO (Either PersistenceDiagnostic SystemState)
+<span class="lineno">   87 </span><span class="decl"><span class="istickedoff">saveStateWithProjection withDb ss sessionId mProjection = do</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">logPersistenceCounts &quot;pre_save&quot; ss</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">let persistenceSnapshot = preparePersistenceSnapshot sessionId ss</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">persistedState = spsCanonicalState persistenceSnapshot</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">runtimeState = spsRuntimeContinuation persistenceSnapshot</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- tryQxFx0 $ withDb $ \db -&gt; do</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">withImmediateTransaction db $ do</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">touchRuntimeSessionActivity db sessionId</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">persistSystemBlob db sessionId persistedState</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">persistTurnArtifacts db sessionId mProjection</span>
+<span class="lineno">   97 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">pure runtimeState</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">Left (PersistenceTxError stage msg) -&gt; do</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">hPutStrLn stderr $ &quot;[persistence_debug] save_tx_error session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; stage=&quot; &lt;&gt; show stage &lt;&gt; &quot; detail=&quot; &lt;&gt; T.unpack msg</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">pure (Left <span class="nottickedoff">(diagnoseSave stage (Just msg))</span>)</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">Left other -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn stderr $ &quot;[persistence_debug] save_unknown_qxfx0_exception session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; detail=&quot; &lt;&gt; T.unpack (renderQxFx0ExceptionForLog other)</span></span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (Left (PdSaveFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))</span></span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">Right savedSs -&gt; pure $ Right savedSs</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>rollbackTurnProjections :: DbRunner -&gt; Text -&gt; Int -&gt; IO (Either PersistenceDiagnostic ())
+<span class="lineno">  109 </span><span class="decl"><span class="nottickedoff">rollbackTurnProjections withDb sessionId stableTurn = do</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- tryQxFx0 $ withDb $ \db -&gt; do</span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="nottickedoff">withImmediateTransaction db $ do</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="nottickedoff">deleteTurnQualityAbove db sessionId stableTurn</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="nottickedoff">deleteShadowDivergenceAbove db sessionId stableTurn</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="nottickedoff">Left (PersistenceTxError stage msg) -&gt; pure (Left (diagnoseRollback stage (Just msg)))</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="nottickedoff">Left other -&gt; pure (Left (PdRollbackFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="nottickedoff">Right () -&gt; pure (Right ())</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>withImmediateTransaction :: NSQL.Database -&gt; IO a -&gt; IO a
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">withImmediateTransaction db action = mask $ \restore -&gt; do</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">beginResult &lt;- NSQL.execSql db &quot;BEGIN IMMEDIATE;&quot;</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">case beginResult of</span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (PersistenceTxError StageTxBegin (&quot;tx_begin_failed: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- restore action `onException` rollbackBestEffort db</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">commitResult &lt;- NSQL.execSql db &quot;COMMIT;&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">case commitResult of</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">pure result</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  133 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">rollbackResult &lt;- NSQL.execSql db &quot;ROLLBACK;&quot;</span></span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case rollbackResult of</span></span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Right _ -&gt;</span></span>
+<span class="lineno">  136 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (PersistenceTxError StageTxCommit (&quot;tx_commit_failed: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Left rbErr -&gt;</span></span>
+<span class="lineno">  138 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0</span></span>
+<span class="lineno">  139 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">(PersistenceTxError StageTxCommit (&quot;tx_commit_and_rollback_failed: commit=&quot; &lt;&gt; err &lt;&gt; &quot; rollback=&quot; &lt;&gt; rbErr))</span></span></span>
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>rollbackBestEffort :: NSQL.Database -&gt; IO ()
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">rollbackBestEffort db = do</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.execSql db &quot;ROLLBACK;&quot;</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>saveKV :: NSQL.Database -&gt; Text -&gt; Text -&gt; Text -&gt; IO ()
+<span class="lineno">  147 </span><span class="decl"><span class="istickedoff">saveKV db sessionId k v = do</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">ts &lt;- prepareTx db (&quot;saveKV:&quot; &lt;&gt; k) sql</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 2 k</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 3 v</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">stepOrFail ts</span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>touchRuntimeSessionActivity :: NSQL.Database -&gt; Text -&gt; IO ()
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">touchRuntimeSessionActivity db sessionId = do</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;UPDATE runtime_sessions SET last_active = datetime('now'), status = 'active' WHERE id = ?&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="istickedoff">ts &lt;- prepareTx db &quot;touchRuntimeSessionActivity&quot; sql</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">stepOrFail ts</span></span>
+<span class="lineno">  161 </span>
+<span class="lineno">  162 </span>loadState :: DbRunner -&gt; Text -&gt; IO LoadStateResult
+<span class="lineno">  163 </span><span class="decl"><span class="istickedoff">loadState withDb sessionId = withDb $ \db -&gt; do</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">mBlobResult &lt;- try (loadKV db sessionId &quot;__system_state__&quot;) :: IO (Either UnicodeException (Maybe Text))</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">case mBlobResult of</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; do</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">hPutStrLn stderr $ &quot;[persistence_debug] load_unicode_exception session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; detail=&quot; &lt;&gt; show err</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">pure (LoadStateCorrupt [PdCorruptDecode])</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">Right mBlob -&gt;</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">case mBlob of</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="istickedoff">Just blob -&gt;</span>
+<span class="lineno">  172 </span><span class="spaces">          </span><span class="istickedoff">case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of</span>
+<span class="lineno">  173 </span><span class="spaces">            </span><span class="istickedoff">Right ss -&gt;</span>
+<span class="lineno">  174 </span><span class="spaces">              </span><span class="istickedoff">if persistedTruthIsAuthoritative (ssTruthContractStatus ss)</span>
+<span class="lineno">  175 </span><span class="spaces">                </span><span class="istickedoff">then do</span>
+<span class="lineno">  176 </span><span class="spaces">                  </span><span class="istickedoff">case rebuildGovernedSystemState ss of</span>
+<span class="lineno">  177 </span><span class="spaces">                    </span><span class="istickedoff">Right rebuilt -&gt; do</span>
+<span class="lineno">  178 </span><span class="spaces">                      </span><span class="istickedoff">let restored = runtimeContinuationState sessionId rebuilt</span>
+<span class="lineno">  179 </span><span class="spaces">                      </span><span class="istickedoff">logPersistenceCounts &quot;post_load&quot; restored</span>
+<span class="lineno">  180 </span><span class="spaces">                      </span><span class="istickedoff">pure (LoadStateRestored restored)</span>
+<span class="lineno">  181 </span><span class="spaces">                    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  182 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">hPutStrLn stderr $ &quot;[persistence_debug] governance_rebuild_failed session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; detail=&quot; &lt;&gt; T.unpack err</span></span>
+<span class="lineno">  183 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields [&quot;governance_rebuild_failed:&quot; &lt;&gt; err]])</span></span>
+<span class="lineno">  184 </span><span class="spaces">                </span><span class="istickedoff">else do</span>
+<span class="lineno">  185 </span><span class="spaces">                  </span><span class="istickedoff">hPutStrLn stderr $ &quot;[persistence_debug] non_authoritative_persisted_state session=&quot; &lt;&gt; T.unpack sessionId</span>
+<span class="lineno">  186 </span><span class="spaces">                  </span><span class="istickedoff">pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields [&quot;non_authoritative_persisted_state&quot;]])</span>
+<span class="lineno">  187 </span><span class="spaces">            </span><span class="istickedoff">Left decodeErr -&gt; do</span>
+<span class="lineno">  188 </span><span class="spaces">              </span><span class="istickedoff">hPutStrLn stderr $ &quot;[persistence_debug] decode_failed session=&quot; &lt;&gt; T.unpack sessionId &lt;&gt; &quot; detail=&quot; &lt;&gt; decodeErr</span>
+<span class="lineno">  189 </span><span class="spaces">              </span><span class="istickedoff">pure (LoadStateCorrupt (PdCorruptDecode : <span class="nottickedoff">stateBlobDiagnostics blob</span>))</span>
+<span class="lineno">  190 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; pure LoadStateMissing</span></span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>stateBlobDiagnostics :: Text -&gt; [PersistenceDiagnostic]
+<span class="lineno">  193 </span><span class="decl"><span class="istickedoff">stateBlobDiagnostics blob =</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">case Aeson.decode (BL.fromStrict (TE.encodeUtf8 blob)) :: Maybe Aeson.Object of</span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">[]</span></span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="istickedoff">Just obj -&gt;</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">let optionalSystemFields =</span>
+<span class="lineno">  198 </span><span class="spaces">            </span><span class="istickedoff">[ &quot;lastGuardReport&quot;</span>
+<span class="lineno">  199 </span><span class="spaces">            </span><span class="istickedoff">, &quot;dreamState&quot;</span>
+<span class="lineno">  200 </span><span class="spaces">            </span><span class="istickedoff">, &quot;intuitionState&quot;</span>
+<span class="lineno">  201 </span><span class="spaces">            </span><span class="istickedoff">, &quot;semanticAnchor&quot;</span>
+<span class="lineno">  202 </span><span class="spaces">            </span><span class="istickedoff">, &quot;lastTurnDecision&quot;</span>
+<span class="lineno">  203 </span><span class="spaces">            </span><span class="istickedoff">]</span>
+<span class="lineno">  204 </span><span class="spaces">          </span><span class="istickedoff">missing = filter (\k -&gt; not (KM.member (AK.fromText k) obj)) optionalSystemFields</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="istickedoff">in if null missing</span>
+<span class="lineno">  206 </span><span class="spaces">           </span><span class="istickedoff">then []</span>
+<span class="lineno">  207 </span><span class="spaces">           </span><span class="istickedoff">else [PdSchemaMissingFields missing]</span></span>
+<span class="lineno">  208 </span>
+<span class="lineno">  209 </span>loadKV :: NSQL.Database -&gt; Text -&gt; Text -&gt; IO (Maybe Text)
+<span class="lineno">  210 </span><span class="decl"><span class="istickedoff">loadKV db sessionId k = do</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;SELECT value FROM dialogue_state WHERE session_id = ? AND key = ?&quot;</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">withPreparedStatement db sql <span class="nottickedoff">(&quot;loadKV key=&quot; &lt;&gt; k &lt;&gt; &quot;, session=&quot; &lt;&gt; sessionId)</span> $ \stmt -&gt; do</span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 sessionId</span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 k</span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff">if hasRow</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="istickedoff">then do</span>
+<span class="lineno">  218 </span><span class="spaces">        </span><span class="istickedoff">value &lt;- NSQL.columnText stmt 0</span>
+<span class="lineno">  219 </span><span class="spaces">        </span><span class="istickedoff">_ &lt;- evaluate (T.length value)</span>
+<span class="lineno">  220 </span><span class="spaces">        </span><span class="istickedoff">pure (Just value)</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="istickedoff">else pure Nothing</span></span>
+<span class="lineno">  222 </span>
+<span class="lineno">  223 </span>persistTurnQuality :: NSQL.Database -&gt; Text -&gt; TurnProjection -&gt; IO ()
+<span class="lineno">  224 </span><span class="decl"><span class="istickedoff">persistTurnQuality db sessionId p = do</span>
+<span class="lineno">  225 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;INSERT OR REPLACE INTO turn_quality(session_id, turn, parser_mode, parser_confidence, parser_errors, planner_mode, planner_decision, atom_register, atom_load, scene_pressure, scene_request, scene_stance, render_lane, render_style, legitimacy_status, legitimacy_reason, warranted_mode, decision_disposition, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message, replay_trace_json, divergence) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)&quot;</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">replayTrace0 = tqpReplayTrace p</span>
+<span class="lineno">  227 </span><span class="spaces">      </span><span class="istickedoff">replayAuthority = fromMaybe <span class="nottickedoff">AuthorityLegacyIncomplete</span> (trcAuthorityClass replayTrace0)</span>
+<span class="lineno">  228 </span><span class="spaces">      </span><span class="istickedoff">replayTrace =</span>
+<span class="lineno">  229 </span><span class="spaces">        </span><span class="istickedoff">replayTrace0</span>
+<span class="lineno">  230 </span><span class="spaces">          </span><span class="istickedoff">{ trcReplayProvenanceStatus =</span>
+<span class="lineno">  231 </span><span class="spaces">              </span><span class="istickedoff">normalizeReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority</span>
+<span class="lineno">  232 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  233 </span><span class="spaces">      </span><span class="istickedoff">replayTraceJson = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ replayTrace</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">ts &lt;- prepareTx db &quot;turn_quality&quot; sql</span>
+<span class="lineno">  235 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  236 </span><span class="spaces">  </span><span class="istickedoff">bindInt64OrFail ts 2 (fromIntegral (tqpTurn p))</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 3 (parserModeText (tqpParserMode p))</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">bindDoubleOrFail ts 4 (tqpParserConfidence p)</span>
+<span class="lineno">  239 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 5 (T.intercalate <span class="nottickedoff">&quot;,&quot;</span> (tqpParserErrors p))</span>
+<span class="lineno">  240 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 6 (plannerModeText (tqpPlannerMode p))</span>
+<span class="lineno">  241 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 7 (T.pack (show (tqpPlannerDecision p)))</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 8 (T.pack (show (tqpAtomRegister p)))</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">bindDoubleOrFail ts 9 (tqpAtomLoad p)</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 10 (scenePressureText (tqpScenePressure p))</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 11 (tqpSceneRequest p)</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 12 (T.pack (show (tqpSceneStance p)))</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 13 (T.pack (show (tqpRenderLane p)))</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 14 (renderStyleText (tqpRenderStyle p))</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 15 (legitimacyStatusText (tqpLegitimacyStatus p))</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 16 (legitimacyReasonText (tqpLegitimacyReason p))</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 17 (T.pack (show (tqpWarrantedMode p)))</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 18 (decisionDispositionText (tqpDecisionDisposition p))</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 19 (T.pack (show (tqpOwnerFamily p)))</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 20 (T.pack (show (tqpOwnerForce p)))</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 21 (shadowStatusText (tqpShadowStatus p))</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 22 (shadowSnapshotIdText (tqpShadowSnapshotId p))</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 23 (shadowDivergenceKindText (tqpShadowDivergenceKind p))</span>
+<span class="lineno">  258 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 24 (maybe <span class="nottickedoff">&quot;&quot;</span> (T.pack . show) (tqpShadowFamily p))</span>
+<span class="lineno">  259 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 25 (maybe <span class="nottickedoff">&quot;&quot;</span> (T.pack . show) (tqpShadowForce p))</span>
+<span class="lineno">  260 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 26 (tqpShadowMessage p)</span>
+<span class="lineno">  261 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 27 replayTraceJson</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">bindIntOrFail ts 28 (if tqpDivergence p then 1 else 0)</span>
+<span class="lineno">  263 </span><span class="spaces">  </span><span class="istickedoff">stepOrFail ts</span></span>
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>persistSystemBlob :: NSQL.Database -&gt; Text -&gt; SystemState -&gt; IO ()
+<span class="lineno">  266 </span><span class="decl"><span class="istickedoff">persistSystemBlob db sessionId persistedState = do</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">let jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState</span>
+<span class="lineno">  268 </span><span class="spaces">  </span><span class="istickedoff">saveKV db sessionId &quot;__system_state__&quot; jsonBlob</span></span>
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>persistTurnArtifacts :: NSQL.Database -&gt; Text -&gt; Maybe TurnProjection -&gt; IO ()
+<span class="lineno">  271 </span><span class="decl"><span class="istickedoff">persistTurnArtifacts _ _ Nothing = pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  272 </span><span class="spaces"></span><span class="istickedoff">persistTurnArtifacts db sessionId (Just projection) = do</span>
+<span class="lineno">  273 </span><span class="spaces">  </span><span class="istickedoff">persistTurnQuality db sessionId projection</span>
+<span class="lineno">  274 </span><span class="spaces">  </span><span class="istickedoff">when (tqpDivergence projection) $</span>
+<span class="lineno">  275 </span><span class="spaces">    </span><span class="istickedoff">persistShadowDivergence db sessionId projection</span></span>
+<span class="lineno">  276 </span>
+<span class="lineno">  277 </span>persistShadowDivergence :: NSQL.Database -&gt; Text -&gt; TurnProjection -&gt; IO ()
+<span class="lineno">  278 </span><span class="decl"><span class="istickedoff">persistShadowDivergence db sessionId p = do</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="istickedoff">let sql = &quot;INSERT INTO shadow_divergence_log(session_id, turn, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)&quot;</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="istickedoff">ts &lt;- prepareTx db &quot;shadow_divergence_log&quot; sql</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="istickedoff">bindInt64OrFail ts 2 (fromIntegral (tqpTurn p))</span>
+<span class="lineno">  283 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 3 (T.pack (show (tqpOwnerFamily p)))</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 4 (T.pack (show (tqpOwnerForce p)))</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 5 (shadowStatusText (tqpShadowStatus p))</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 6 (shadowSnapshotIdText (tqpShadowSnapshotId p))</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 7 (shadowDivergenceKindText (tqpShadowDivergenceKind p))</span>
+<span class="lineno">  288 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 8 (maybe <span class="nottickedoff">&quot;&quot;</span> (T.pack . show) (tqpShadowFamily p))</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 9 (maybe <span class="nottickedoff">&quot;&quot;</span> (T.pack . show) (tqpShadowForce p))</span>
+<span class="lineno">  290 </span><span class="spaces">  </span><span class="istickedoff">bindTextOrFail ts 10 (tqpShadowMessage p)</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">stepOrFail ts</span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>deleteTurnQualityAbove :: NSQL.Database -&gt; Text -&gt; Int -&gt; IO ()
+<span class="lineno">  294 </span><span class="decl"><span class="nottickedoff">deleteTurnQualityAbove db sessionId stableTurn = do</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="nottickedoff">let sql = &quot;DELETE FROM turn_quality WHERE session_id = ? AND turn &gt; ?&quot;</span>
+<span class="lineno">  296 </span><span class="spaces">  </span><span class="nottickedoff">ts &lt;- prepareTx db &quot;delete_turn_quality_above&quot; sql</span>
+<span class="lineno">  297 </span><span class="spaces">  </span><span class="nottickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  298 </span><span class="spaces">  </span><span class="nottickedoff">bindInt64OrFail ts 2 (fromIntegral stableTurn)</span>
+<span class="lineno">  299 </span><span class="spaces">  </span><span class="nottickedoff">stepOrFail ts</span></span>
+<span class="lineno">  300 </span>
+<span class="lineno">  301 </span>deleteShadowDivergenceAbove :: NSQL.Database -&gt; Text -&gt; Int -&gt; IO ()
+<span class="lineno">  302 </span><span class="decl"><span class="nottickedoff">deleteShadowDivergenceAbove db sessionId stableTurn = do</span>
+<span class="lineno">  303 </span><span class="spaces">  </span><span class="nottickedoff">let sql = &quot;DELETE FROM shadow_divergence_log WHERE session_id = ? AND turn &gt; ?&quot;</span>
+<span class="lineno">  304 </span><span class="spaces">  </span><span class="nottickedoff">ts &lt;- prepareTx db &quot;delete_shadow_divergence_above&quot; sql</span>
+<span class="lineno">  305 </span><span class="spaces">  </span><span class="nottickedoff">bindTextOrFail ts 1 sessionId</span>
+<span class="lineno">  306 </span><span class="spaces">  </span><span class="nottickedoff">bindInt64OrFail ts 2 (fromIntegral stableTurn)</span>
+<span class="lineno">  307 </span><span class="spaces">  </span><span class="nottickedoff">stepOrFail ts</span></span>
+<span class="lineno">  308 </span>
+<span class="lineno">  309 </span>withPreparedStatement :: NSQL.Database -&gt; Text -&gt; Text -&gt; (NSQL.Statement -&gt; IO a) -&gt; IO a
+<span class="lineno">  310 </span><span class="decl"><span class="istickedoff">withPreparedStatement db sql context action = do</span>
+<span class="lineno">  311 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  312 </span><span class="spaces">  </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  314 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (PersistenceTxError StageUnknown (&quot;prepare failed for &quot; &lt;&gt; context &lt;&gt; &quot;: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">Right stmt -&gt;</span>
+<span class="lineno">  316 </span><span class="spaces">      </span><span class="istickedoff">action stmt `finally` finalizeBestEffort stmt</span></span>
+<span class="lineno">  317 </span>
+<span class="lineno">  318 </span>finalizeBestEffort :: NSQL.Statement -&gt; IO ()
+<span class="lineno">  319 </span><span class="decl"><span class="istickedoff">finalizeBestEffort stmt = do</span>
+<span class="lineno">  320 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- tryQxFx0 (NSQL.finalize stmt)</span>
+<span class="lineno">  321 </span><span class="spaces">  </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  322 </span>
+<span class="lineno">  323 </span>diagnoseSave :: PersistenceStage -&gt; Maybe Text -&gt; PersistenceDiagnostic
+<span class="lineno">  324 </span><span class="decl"><span class="nottickedoff">diagnoseSave StageTxBegin _ = PdTransactionBeginFailed</span>
+<span class="lineno">  325 </span><span class="spaces"></span><span class="nottickedoff">diagnoseSave StageTxCommit _ = PdTransactionCommitFailed</span>
+<span class="lineno">  326 </span><span class="spaces"></span><span class="nottickedoff">diagnoseSave StageTxRollback _ = PdTransactionRollbackFailed</span>
+<span class="lineno">  327 </span><span class="spaces"></span><span class="nottickedoff">diagnoseSave stage mMsg = PdSaveFailed stage Nothing mMsg</span></span>
+<span class="lineno">  328 </span>
+<span class="lineno">  329 </span>diagnoseRollback :: PersistenceStage -&gt; Maybe Text -&gt; PersistenceDiagnostic
+<span class="lineno">  330 </span><span class="decl"><span class="nottickedoff">diagnoseRollback StageTxBegin _ = PdTransactionBeginFailed</span>
+<span class="lineno">  331 </span><span class="spaces"></span><span class="nottickedoff">diagnoseRollback StageTxCommit _ = PdTransactionCommitFailed</span>
+<span class="lineno">  332 </span><span class="spaces"></span><span class="nottickedoff">diagnoseRollback StageTxRollback _ = PdTransactionRollbackFailed</span>
+<span class="lineno">  333 </span><span class="spaces"></span><span class="nottickedoff">diagnoseRollback stage mMsg = PdRollbackFailed stage Nothing mMsg</span></span>
+<span class="lineno">  334 </span>
+<span class="lineno">  335 </span>persistedTruthIsAuthoritative :: TruthContractStatus -&gt; Bool
+<span class="lineno">  336 </span><span class="decl"><span class="istickedoff">persistedTruthIsAuthoritative CanonicalSurfacePreserved = True</span>
+<span class="lineno">  337 </span><span class="spaces"></span><span class="istickedoff">persistedTruthIsAuthoritative AssembledSurfacePreserved = True</span>
+<span class="lineno">  338 </span><span class="spaces"></span><span class="istickedoff">persistedTruthIsAuthoritative _ = False</span></span>
+<span class="lineno">  339 </span>
+<span class="lineno">  340 </span>normalizeReplayProvenanceStatus :: ReplayProvenanceStatus -&gt; AuthorityClass -&gt; ReplayProvenanceStatus
+<span class="lineno">  341 </span><span class="decl"><span class="istickedoff">normalizeReplayProvenanceStatus replayStatus authority</span>
+<span class="lineno">  342 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">authority `elem` [AuthorityGeneratedArtifact, AuthorityLegacyIncomplete]</span> = <span class="nottickedoff">ReplayProvenanceLegacyIncomplete</span></span>
+<span class="lineno">  343 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = replayStatus</span></span>
+
+</pre>
+</body>
+</html>

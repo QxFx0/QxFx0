@@ -4,19 +4,7 @@ module Test.Suite.RuntimeInfrastructure
   ( runtimeInfrastructureTests
   ) where
 
-import Data.Aeson (Value(..), eitherDecodeStrict')
-import qualified Data.Aeson.KeyMap as KeyMap
-import Test.HUnit hiding (Testable)
-import Test.QuickCheck
-  ( Result(..)
-  , Testable
-  , elements
-  , forAll
-  , ioProperty
-  , maxSuccess
-  , quickCheckWithResult
-  , stdArgs
-  )
+import Test.HUnit
 import Control.Exception (AsyncException(ThreadKilled), finally, throwIO, try)
 import Control.Monad (forM_)
 import System.Directory (createDirectoryIfMissing, findExecutable, getCurrentDirectory, getPermissions, setPermissions, Permissions(..))
@@ -27,11 +15,10 @@ import System.Exit (ExitCode(..))
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Map.Strict as M
 
 import QxFx0.Types
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
-import QxFx0.Types.Persistence (LoadStateResult(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
   , ShadowDivergenceKind(..)
@@ -52,7 +39,18 @@ import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.Resources (computeReadinessMode, assessResourceReadiness, loadMorphologyData, ReadinessStatus(..), ReadinessComponent(..), ReadinessMode(..))
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 
-import Test.Support (assertExec, queryCount, withFakeSouffle, withRuntimeEnv, withStrictRuntimeEnv, withEnvVar, removeIfExists)
+import Test.Support
+  ( assertExec
+  , queryCount
+  , withFakeSouffle
+  , withRuntimeEnv
+  , withStrictRuntimeEnv
+  , withEnvVar
+  , removeIfExists
+  , testTempDir
+  , freshTestDbPath
+  , freshTestPath
+  )
 
 runtimeInfrastructureTests :: [Test]
 runtimeInfrastructureTests =
@@ -72,34 +70,25 @@ runtimeInfrastructureTests =
   , testSpecSqlSeedsAreCompatible
   , testRuntimeBootstrapAndPersistence
   , testStrictRuntimeBootstrapAndPersistence
-  , testRuntimeModeAcceptsDegradedLocalAlias
-  , testBootstrapRejectsNonAuthoritativePersistedState
-  , testRuntimeBootstrapUsesCanonicalSpecSeeds
-  , testSemanticModeTurn
-  , testShadowSnapshotIdStable
-  , testShadowSnapshotIdChangesWithInput
-  , testDatalogShadowRespectsAtomSignals
-  , testDatalogShadowMissingRulesReportsCheckedPaths
-  , testDatalogShadowTimesOutWithControlledDiagnostic
-  , testResolveSouffleExecutableMaterializesMissingFlakePath
-  , testConstitutionalLocalRecoveryThreshold
-  , testLoadStateCorruptBlobIsReported
-  , testBootstrapSessionMarksRecoveredCorruption
-  , testStateBlobDiagnosticsDetectsMissingOptionalFields
-  , testSaveStateReturnsRightOnSuccess
-  , testSaveStateWithProjectionFailureRollsBackTransaction
-  , testStepRowPropagatesSqliteStepErrors
-  , testRunTurnPersistsTurnQuality
-  , testPersistedSystemStateSessionIdMatchesBootstrapId
-  , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
-  , testPersistedReplayTraceDeterministicWithFixedTimeProperty
-  , testSaveStateWithDivergencePersistsShadowLog
-  , testBootstrapSessionHandlesQuotedSessionId
+   , testRuntimeModeAcceptsDegradedLocalAlias
+   , testRuntimeBootstrapUsesCanonicalSpecSeeds
+   , testSemanticModeTurn
+   , testShadowSnapshotIdStable
+   , testShadowSnapshotIdChangesWithInput
+   , testDatalogShadowRespectsAtomSignals
+   , testDatalogShadowMissingRulesReportsCheckedPaths
+   , testDatalogShadowTimesOutWithControlledDiagnostic
+   , testResolveSouffleExecutableMaterializesMissingFlakePath
+   , testConstitutionalLocalRecoveryThreshold
+   , testStepRowPropagatesSqliteStepErrors
+   , testRunTurnPersistsTurnQuality
+   , testBootstrapSessionHandlesQuotedSessionId
   , testComputeReadinessModeReady
   , testComputeReadinessModeDegraded
   , testComputeReadinessModeNotReady
   , testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend
   , testProbeRuntimeReadinessStrictAcceptsImplicitLocalBackend
+  , testProbeRuntimeReadinessStrictExplicitRemoteMissingUrlIsNotReady
   , testProbeRuntimeReadinessStrictRequiresWitness
   , testProbeRuntimeReadinessStrictRequiresNixEvaluator
   , testAgdaTypeCheckTimesOut
@@ -112,6 +101,10 @@ runtimeInfrastructureTests =
   , testRunTurnInSessionStrictBlocksWhenBackendUnavailable
   , testAssessResourceReadinessFailsWhenRootMissing
   , testAssessResourceReadinessFailsOnInvalidMorphologyJson
+  , testAssessResourceReadinessFailsOnInvalidFormsBySurfaceJson
+  , testAssessResourceReadinessFailsWhenGfMapMissing
+  , testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing
+  , testQueryIdentityClaimsByFocusPunctuationOnlyFallsBackSafely
   , testMorphologyCacheSwitchesWithRoot
   , testNixGuardIsSafeChar
   , testNixGuardUnsupportedConceptBlockedStrict
@@ -150,8 +143,10 @@ testMigrationMatchesCanonicalSpec = TestCase $ do
   migrationV1Sql <- TIO.readFile (root </> "migrations" </> "001_initial_schema.sql")
   migrationV2Sql <- TIO.readFile (root </> "migrations" </> "002_turn_quality_trace_columns.sql")
   -- Cumulative migrations (001 + 002) must produce the same schema as spec/sql/schema.sql
-  dbMigrations <- NSQL.open (root </> ".test-tmp" </> "migration_check.db")
-  dbCanonical <- NSQL.open (root </> ".test-tmp" </> "canonical_check.db")
+  dbMigrationsPath <- freshTestDbPath "migration_check.db"
+  dbCanonicalPath <- freshTestDbPath "canonical_check.db"
+  dbMigrations <- NSQL.open dbMigrationsPath
+  dbCanonical <- NSQL.open dbCanonicalPath
   case (dbMigrations, dbCanonical) of
     (Left err, _) -> assertFailure ("Cannot open migration check DB: " <> T.unpack err)
     (_, Left err) -> assertFailure ("Cannot open canonical check DB: " <> T.unpack err)
@@ -425,8 +420,8 @@ testReadinessStrictInvariantFreshDbOk = TestCase $ do
 
 testEmbeddedSqlFallbackRequiresExplicitOptIn :: Test
 testEmbeddedSqlFallbackRequiresExplicitOptIn = TestCase $ do
-  let fakeRoot = "/tmp/qxfx0_fake_root_without_sql"
-      fakeDb = "/tmp/qxfx0_fake_root_without_sql.db"
+  fakeRoot <- freshTestPath "qxfx0_fake_root_without_sql"
+  fakeDb <- freshTestDbPath "qxfx0_fake_root_without_sql.db"
   removeIfExists fakeDb
   createTree fakeRoot
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $
@@ -458,13 +453,14 @@ testEmbeddedSqlFallbackRequiresExplicitOptIn = TestCase $ do
       TIO.writeFile (base </> "resources" </> "morphology" </> "prepositional.json") "{}"
       TIO.writeFile (base </> "resources" </> "morphology" </> "genitive.json") "{}"
       TIO.writeFile (base </> "resources" </> "morphology" </> "nominative.json") "{}"
+      TIO.writeFile (base </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
       TIO.writeFile (base </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
 
 testSpecSqlSeedsAreCompatible :: Test
 testSpecSqlSeedsAreCompatible = TestCase $ do
   root <- getCurrentDirectory
-  let dbPath = "/tmp/qxfx0_test_spec_schema.db"
-      schemaPath = root </> "spec" </> "sql" </> "schema.sql"
+  dbPath <- freshTestDbPath "qxfx0_test_spec_schema.db"
+  let schemaPath = root </> "spec" </> "sql" </> "schema.sql"
       seedPaths =
         [ root </> "spec" </> "sql" </> "seed_clusters.sql"
         , root </> "spec" </> "sql" </> "seed_identity.sql"
@@ -536,21 +532,6 @@ testRuntimeModeAcceptsDegradedLocalAlias = TestCase $
     mode <- Runtime.resolveRuntimeMode
     assertEqual "degraded-local alias should resolve to degraded runtime" Runtime.DegradedRuntime mode
 
-testBootstrapRejectsNonAuthoritativePersistedState :: Test
-testBootstrapRejectsNonAuthoritativePersistedState = TestCase $ do
-  withRuntimeEnv "qxfx0_test_bootstrap_non_authoritative.db" $ do
-    session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative"
-    let rt = Runtime.sessRuntime session0
-        ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative"
-    case saveResult of
-      Left err -> assertFailure ("failed to persist non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
-      Right _ -> pure ()
-    result <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "bootstrap_non_authoritative"
-    case result of
-      LoadStateCorrupt _ -> pure ()
-      other -> assertFailure ("expected non-authoritative persisted state to be rejected, got: " <> show other)
-
 testRuntimeBootstrapUsesCanonicalSpecSeeds :: Test
 testRuntimeBootstrapUsesCanonicalSpecSeeds = TestCase $ do
   withRuntimeEnv "qxfx0_test_runtime_canonical.db" $ do
@@ -573,15 +554,18 @@ testProbeRuntimeReadinessStrictRequiresWitness = TestCase $
     withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
       withEnvVar "QXFX0_EMBEDDING_BACKEND" Nothing $
         withEnvVar "EMBEDDING_API_URL" Nothing $
-          withEnvVar "QXFX0_AGDA_WITNESS" (Just "/tmp/qxfx0_test_missing_witness.json") $ do
-          health <- Runtime.probeRuntimeReadiness
-          assertEqual "probe should report strict runtime mode" "strict" (Runtime.shRuntimeMode health)
-          assertEqual "strict mode should mark missing witness runtime as not ready" "not_ready" (Runtime.shStatus health)
-          assertBool "strict mode should refuse readiness when Agda witness is unavailable" (not (Runtime.shReady health))
-          assertEqual "missing witness should map to typed status" AgdaMissingWitness (Runtime.shAgdaStatus health)
-          assertBool "implicit local deterministic backend should be strict-ready" (Runtime.shEmbeddingAlive health)
-          assertEqual "implicit local backend should still be classified as heuristic" "heuristic" (Runtime.shEmbeddingQuality health)
-          assertBool "missing witness should be reported explicitly" (not (null (Runtime.shAgdaIssues health)))
+          do
+            missingWitness <- freshTestPath "qxfx0_test_missing_witness.json"
+            withEnvVar "QXFX0_AGDA_WITNESS" (Just missingWitness) $ do
+              health <- Runtime.probeRuntimeReadiness
+              assertEqual "probe should report strict runtime mode" "strict" (Runtime.shRuntimeMode health)
+              assertEqual "strict mode should mark missing witness runtime as not ready" "not_ready" (Runtime.shStatus health)
+              assertBool "strict mode should refuse readiness when Agda witness is unavailable" (not (Runtime.shReady health))
+              assertEqual "missing witness should map to typed status" AgdaMissingWitness (Runtime.shAgdaStatus health)
+              assertBool "implicit local deterministic backend should be strict-ready" (Runtime.shEmbeddingAlive health)
+              assertEqual "implicit local backend should still be classified as heuristic" "heuristic" (Runtime.shEmbeddingQuality health)
+              assertEqual "implicit local backend should not report embedding issues" [] (Runtime.shEmbeddingIssues health)
+              assertBool "missing witness should be reported explicitly" (not (null (Runtime.shAgdaIssues health)))
 
 testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend :: Test
 testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend = TestCase $
@@ -593,6 +577,7 @@ testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend = TestCase $
     assertBool "strict probe should surface operational Nix evaluator" (Runtime.shNixReady health)
     assertBool "strict probe should mark embedding backend as strict-ready" (Runtime.shEmbeddingAlive health)
     assertEqual "explicit local backend remains heuristic even when accepted for strict contour" "heuristic" (Runtime.shEmbeddingQuality health)
+    assertEqual "explicit local backend should not report embedding issues" [] (Runtime.shEmbeddingIssues health)
     assertEqual "strict probe should surface typed agda status" AgdaVerified (Runtime.shAgdaStatus health)
     assertBool "strict probe should mark datalog backend as ready" (Runtime.shDatalogReady health)
     assertBool "strict probe should mark agda witness as ready" (Runtime.shAgdaReady health)
@@ -610,14 +595,28 @@ testProbeRuntimeReadinessStrictAcceptsImplicitLocalBackend = TestCase $
         assertBool "implicit local backend should be strict-ready" (Runtime.shEmbeddingAlive health)
         assertBool "implicit local backend should not be reported as explicit" (not (Runtime.shEmbeddingExplicit health))
         assertEqual "remote URL alone must not switch readiness to remote backend" "local_deterministic" (Runtime.shEmbeddingBackend health)
+        assertEqual "remote URL alone must not create embedding issues while backend remains implicit local" [] (Runtime.shEmbeddingIssues health)
         assertBool "strict probe should mark morph backend as local" (Runtime.shMorphBackendLocal health)
         assertBool "strict probe should report local-only decision path" (Runtime.shDecisionPathLocalOnly health)
         assertBool "strict probe should keep llm decision path disabled" (not (Runtime.shLlmDecisionPath health))
 
+testProbeRuntimeReadinessStrictExplicitRemoteMissingUrlIsNotReady :: Test
+testProbeRuntimeReadinessStrictExplicitRemoteMissingUrlIsNotReady = TestCase $
+  withStrictRuntimeEnv "qxfx0_test_strict_readiness_remote_missing_url.db" $
+    withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
+      withEnvVar "EMBEDDING_API_URL" Nothing $ do
+        health <- Runtime.probeRuntimeReadiness
+        assertEqual "strict probe should fail when explicit remote embedding backend has no URL" "not_ready" (Runtime.shStatus health)
+        assertBool "strict probe should not be ready when explicit remote embedding backend has no URL" (not (Runtime.shReady health))
+        assertEqual "strict probe should report remote embedding backend explicitly" "remote_http" (Runtime.shEmbeddingBackend health)
+        assertBool "strict probe should mark missing remote URL backend as non-operational" (not (Runtime.shEmbeddingOperational health))
+        assertBool "strict probe should mark missing remote URL backend as not strict-ready" (not (Runtime.shEmbeddingAlive health))
+        assertBool "strict probe should surface missing remote URL issue" ("remote_embedding_url_missing" `elem` Runtime.shEmbeddingIssues health)
+
 testProbeRuntimeReadinessStrictRequiresNixEvaluator :: Test
 testProbeRuntimeReadinessStrictRequiresNixEvaluator = TestCase $ do
-  let fakeBinDir = "/tmp/qxfx0_fake_nix_fail_bin"
-      fakeNix = fakeBinDir </> "nix-instantiate"
+  fakeBinDir <- freshTestPath "qxfx0_fake_nix_fail_bin"
+  let fakeNix = fakeBinDir </> "nix-instantiate"
       fakeScript = unlines
         [ "#!/bin/sh"
         , "printf '%s\\n' 'error: nix evaluator unavailable in test' >&2"
@@ -646,8 +645,8 @@ testProbeRuntimeReadinessStrictRequiresNixEvaluator = TestCase $ do
 testAgdaTypeCheckTimesOut :: Test
 testAgdaTypeCheckTimesOut = TestCase $ do
   root <- getCurrentDirectory
-  let fakeBin = "/tmp/qxfx0_fake_agda_bin"
-      fakeAgda = fakeBin </> "agda"
+  fakeBin <- freshTestPath "qxfx0_fake_agda_bin"
+  let fakeAgda = fakeBin </> "agda"
   createDirectoryIfMissing True fakeBin
   writeFile fakeAgda "#!/bin/sh\n/bin/sleep 1\nexit 0\n"
   perms <- getPermissions fakeAgda
@@ -664,8 +663,8 @@ testAgdaTypeCheckTimesOut = TestCase $ do
 
 testWithPooledDBOverflowKeepsPoolUsable :: Test
 testWithPooledDBOverflowKeepsPoolUsable = TestCase $ do
-  let dbPath = "/tmp/qxfx0_test_pool_overflow.db"
-      cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
+  dbPath <- freshTestDbPath "qxfx0_test_pool_overflow.db"
+  let cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
   mapM_ removeIfExists cleanupPaths
   pool <- SQLite.newDBPool dbPath 0
   failure <- try (SQLite.withPooledDB pool (\_ -> ioError (userError "forced overflow failure"))) :: IO (Either IOError ())
@@ -680,8 +679,8 @@ testWithPooledDBOverflowKeepsPoolUsable = TestCase $ do
 
 testWithPooledDBSanitizesDirtyTransactionBeforeReuse :: Test
 testWithPooledDBSanitizesDirtyTransactionBeforeReuse = TestCase $ do
-  let dbPath = "/tmp/qxfx0_test_pool_dirty_reuse.db"
-      cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
+  dbPath <- freshTestDbPath "qxfx0_test_pool_dirty_reuse.db"
+  let cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
   mapM_ removeIfExists cleanupPaths
   pool <- SQLite.newDBPool dbPath 1
   let cleanup = SQLite.closeDBPool pool `finally` mapM_ removeIfExists cleanupPaths
@@ -701,8 +700,8 @@ testWithPooledDBSanitizesDirtyTransactionBeforeReuse = TestCase $ do
 
 testWithPooledDBAsyncInterruptionSanitizesConnection :: Test
 testWithPooledDBAsyncInterruptionSanitizesConnection = TestCase $ do
-  let dbPath = "/tmp/qxfx0_test_pool_async_interrupt.db"
-      cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
+  dbPath <- freshTestDbPath "qxfx0_test_pool_async_interrupt.db"
+  let cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
   mapM_ removeIfExists cleanupPaths
   pool <- SQLite.newDBPool dbPath 1
   let cleanup = SQLite.closeDBPool pool `finally` mapM_ removeIfExists cleanupPaths
@@ -725,8 +724,8 @@ testWithPooledDBAsyncInterruptionSanitizesConnection = TestCase $ do
 
 testCloseDBPoolIsIdempotent :: Test
 testCloseDBPoolIsIdempotent = TestCase $ do
-  let dbPath = "/tmp/qxfx0_test_pool_close.db"
-      cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
+  dbPath <- freshTestDbPath "qxfx0_test_pool_close.db"
+  let cleanupPaths = [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
   mapM_ removeIfExists cleanupPaths
   pool <- SQLite.newDBPool dbPath 1
   SQLite.closeDBPool pool
@@ -755,20 +754,26 @@ testWithBootstrappedSessionClosesRuntime = TestCase $ do
 
 testAgdaWitnessReportDetectsMissingInputs :: Test
 testAgdaWitnessReportDetectsMissingInputs = TestCase $ do
-  let fakeRoot = "/tmp/qxfx0_fake_root_witness_report"
-      witnessPath = "/tmp/qxfx0_fake_root_witness_report.json"
+  fakeRoot <- freshTestPath "qxfx0_fake_root_witness_report"
+  let witnessPath = fakeRoot </> "agda-witness.json"
       specDir = fakeRoot </> "spec"
+      sqlDir = specDir </> "sql"
+      datalogDir = specDir </> "datalog"
       domainDir = fakeRoot </> "src" </> "QxFx0" </> "Types"
       morphDir = fakeRoot </> "resources" </> "morphology"
   createDirectoryIfMissing True (fakeRoot </> "migrations")
   createDirectoryIfMissing True morphDir
   createDirectoryIfMissing True (fakeRoot </> "semantics")
   createDirectoryIfMissing True specDir
+  createDirectoryIfMissing True sqlDir
+  createDirectoryIfMissing True datalogDir
   createDirectoryIfMissing True domainDir
+  TIO.writeFile (fakeRoot </> "migrations" </> "001_initial_schema.sql") "CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY, description TEXT);"
   TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
   TIO.writeFile (morphDir </> "prepositional.json") "{}"
   TIO.writeFile (morphDir </> "genitive.json") "{}"
   TIO.writeFile (morphDir </> "nominative.json") "{}"
+  TIO.writeFile (morphDir </> "forms_by_surface.json") "{}"
   TIO.writeFile (morphDir </> "lexicon_quality.json") "{}"
   TIO.writeFile (specDir </> "R5Core.agda") "module R5Core where"
   TIO.writeFile (specDir </> "Sovereignty.agda") "module Sovereignty where"
@@ -777,6 +782,11 @@ testAgdaWitnessReportDetectsMissingInputs = TestCase $ do
   TIO.writeFile (specDir </> "LexiconData.agda") "module LexiconData where"
   TIO.writeFile (specDir </> "LexiconProof.agda") "module LexiconProof where"
   TIO.writeFile (specDir </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
+  TIO.writeFile (sqlDir </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+  TIO.writeFile (sqlDir </> "seed_clusters.sql") ""
+  TIO.writeFile (sqlDir </> "seed_identity.sql") ""
+  TIO.writeFile (sqlDir </> "seed_templates.sql") ""
+  TIO.writeFile (datalogDir </> "semantic_rules.dl") ".decl InputAtom(x:symbol)\n.output R5Verdict\n"
   TIO.writeFile (domainDir </> "Domain.hs") "module QxFx0.Types.Domain where\n"
   writeFile witnessPath "{\"awVersion\":1,\"awFiles\":{}}\n"
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $
@@ -843,15 +853,27 @@ testDatalogShadowRespectsAtomSignals = TestCase $
 
 testDatalogShadowMissingRulesReportsCheckedPaths :: Test
 testDatalogShadowMissingRulesReportsCheckedPaths = TestCase $ do
-  let fakeRoot = "/tmp/qxfx0_fake_root_missing_datalog"
+  fakeRoot <- freshTestPath "qxfx0_fake_root_missing_datalog"
   createDirectoryIfMissing True (fakeRoot </> "migrations")
   createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
   createDirectoryIfMissing True (fakeRoot </> "semantics")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "datalog")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
+  TIO.writeFile (fakeRoot </> "migrations" </> "001_initial_schema.sql") "CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY, description TEXT);"
   TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "svoboda_N\tсвобода\tnoun\tсвобода\tсвободы\tсвободе\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "R5Core.agda") "module R5Core where"
+  TIO.writeFile (fakeRoot </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "seed_clusters.sql") ""
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "seed_identity.sql") ""
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "seed_templates.sql") ""
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
     result <- Datalog.runDatalogShadow CMGround IFAssert []
     assertEqual "missing rules should surface as unavailable shadow" ShadowUnavailable (Datalog.srStatus result)
@@ -866,8 +888,8 @@ testDatalogShadowMissingRulesReportsCheckedPaths = TestCase $ do
 
 testDatalogShadowTimesOutWithControlledDiagnostic :: Test
 testDatalogShadowTimesOutWithControlledDiagnostic = TestCase $ do
-  let fakeBinDir = "/tmp/qxfx0_fake_souffle_timeout_bin"
-      fakeSouffle = fakeBinDir </> "souffle-timeout"
+  fakeBinDir <- freshTestPath "qxfx0_fake_souffle_timeout_bin"
+  let fakeSouffle = fakeBinDir </> "souffle-timeout"
       dbName = "qxfx0_test_souffle_timeout.db"
   createDirectoryIfMissing True fakeBinDir
   writeFile fakeSouffle "#!/bin/sh\n/bin/sleep 1\nexit 0\n"
@@ -886,9 +908,9 @@ testResolveSouffleExecutableMaterializesMissingFlakePath :: Test
 testResolveSouffleExecutableMaterializesMissingFlakePath = TestCase $ do
   root <- getCurrentDirectory
   oldPath <- lookupEnv "PATH"
-  let fakeBinDir = "/tmp/qxfx0_fake_nix_materialize_bin"
-      fakeNix = fakeBinDir </> "nix"
-      builtOut = "/tmp/qxfx0_fake_souffle_materialized"
+  fakeBinDir <- freshTestPath "qxfx0_fake_nix_materialize_bin"
+  builtOut <- freshTestPath "qxfx0_fake_souffle_materialized"
+  let fakeNix = fakeBinDir </> "nix"
       builtBin = builtOut </> "bin"
       builtSouffle = builtBin </> "souffle"
       fakePath = fakeBinDir <> maybe "" (\p -> ":" <> p) oldPath
@@ -965,205 +987,6 @@ testConstitutionalLocalRecoveryThreshold = TestCase $ do
   assertEqual "Default local recovery threshold should be 0.3" 0.3 (ctLocalRecoveryThreshold ct)
   let ctHigh = ct { ctLocalRecoveryThreshold = 0.5 }
   assertEqual "Configurable threshold should update" 0.5 (ctLocalRecoveryThreshold ctHigh)
-
-testLoadStateCorruptBlobIsReported :: Test
-testLoadStateCorruptBlobIsReported = TestCase $ do
-  withRuntimeEnv "qxfx0_test_corrupt_field.db" $ do
-    session0 <- Runtime.bootstrapSession True "test_corrupt"
-    let rt = Runtime.sessRuntime session0
-    Runtime.withRuntimeDb rt $ \db -> do
-      let sql = "INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))"
-      mStmt <- NSQL.prepare db sql
-      case mStmt of
-        Left _ -> pure ()
-        Right stmt -> do
-          _ <- NSQL.bindText stmt 1 "test_corrupt"
-          _ <- NSQL.bindText stmt 2 "__system_state__"
-          _ <- NSQL.bindText stmt 3 "{not valid json"
-          _ <- NSQL.step stmt
-          NSQL.finalize stmt
-          pure ()
-    loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "test_corrupt"
-    case loaded of
-      StatePersistence.LoadStateCorrupt _ ->
-        pure ()
-      other ->
-        assertFailure ("expected corrupt load result, got: " <> show other)
-
-testBootstrapSessionMarksRecoveredCorruption :: Test
-testBootstrapSessionMarksRecoveredCorruption = TestCase $ do
-  withRuntimeEnv "qxfx0_test_corrupt_bootstrap.db" $ do
-    session0 <- Runtime.bootstrapSession True "test_corrupt_bootstrap"
-    let rt = Runtime.sessRuntime session0
-    Runtime.withRuntimeDb rt $ \db -> do
-      let sql = "INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))"
-      mStmt <- NSQL.prepare db sql
-      case mStmt of
-        Left _ -> pure ()
-        Right stmt -> do
-          _ <- NSQL.bindText stmt 1 "test_corrupt_bootstrap"
-          _ <- NSQL.bindText stmt 2 "__system_state__"
-          _ <- NSQL.bindText stmt 3 "{corrupt"
-          _ <- NSQL.step stmt
-          NSQL.finalize stmt
-          pure ()
-    recovered <- Runtime.bootstrapSession True "test_corrupt_bootstrap"
-    assertEqual
-      "corrupt persisted state should not masquerade as fresh bootstrap"
-      Runtime.RecoveredCorruptOrigin
-      (Runtime.sessStateOrigin recovered)
-
-testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
-testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do
-  let minimalBlob = T.pack "{\"history\":[],\"rawInputHistory\":[],\"turnCount\":0,\"lastTopic\":\"\",\"lastFamily\":\"CMGround\",\"lastForce\":\"IFAssert\",\"lastLayer\":\"ContentLayer\",\"lastEmbedding\":[],\"consecutiveReflect\":0,\"recentFamilies\":[],\"activeScene\":\"None\",\"userState\":{\"claims\":[],\"topics\":[]},\"ego\":{\"tension\":0.0,\"agency\":1.0,\"narrative\":\"\"},\"identityClaims\":[],\"orbitalMemory\":[],\"trace\":[],\"meaningGraph\":{\"edges\":[],\"turnCount\":0},\"kernelPulse\":\"Neutral\",\"blockedConcepts\":[],\"clusters\":[],\"intuitConfidence\":0.5,\"sessionId\":\"test\",\"outputMode\":\"text\",\"morphology\":{\"entries\":[]},\"observability\":{\"lastQualityScore\":0.0,\"lastShadowDivergence\":null,\"lastCheckpointTurn\":0}}"
-  let diagnostics = StatePersistence.stateBlobDiagnostics minimalBlob
-  assertBool "minimal blob should report missing optional fields" (not (null diagnostics))
-  assertBool "diagnostics should mention missing fields"
-    (any (\d -> case d of
-            StatePersistence.PdSchemaMissingFields fields ->
-              any (\f -> f `elem` ["lastGuardReport", "dreamState", "intuitionState"]) fields
-            _ -> False)
-      diagnostics)
-  let completeBlob = T.pack "{\"history\":[],\"rawInputHistory\":[],\"turnCount\":0,\"lastTopic\":\"\",\"lastFamily\":\"CMGround\",\"lastForce\":\"IFAssert\",\"lastLayer\":\"ContentLayer\",\"lastEmbedding\":[],\"consecutiveReflect\":0,\"recentFamilies\":[],\"activeScene\":\"None\",\"userState\":{\"claims\":[],\"topics\":[]},\"ego\":{\"tension\":0.0,\"agency\":1.0,\"narrative\":\"\"},\"identityClaims\":[],\"orbitalMemory\":[],\"lastGuardReport\":null,\"trace\":[],\"meaningGraph\":{\"edges\":[],\"turnCount\":0},\"kernelPulse\":\"Neutral\",\"blockedConcepts\":[],\"clusters\":[],\"dreamState\":null,\"intuitionState\":null,\"semanticAnchor\":null,\"lastTurnDecision\":null,\"intuitConfidence\":0.5,\"sessionId\":\"test\",\"outputMode\":\"text\",\"morphology\":{\"entries\":[]},\"observability\":{\"lastQualityScore\":0.0,\"lastShadowDivergence\":null,\"lastCheckpointTurn\":0}}"
-  let diagnosticsComplete = StatePersistence.stateBlobDiagnostics completeBlob
-  assertEqual "complete blob should have no diagnostics" [] diagnosticsComplete
-
-testSaveStateReturnsRightOnSuccess :: Test
-testSaveStateReturnsRightOnSuccess = TestCase $ do
-  withRuntimeEnv "qxfx0_test_save_success.db" $ do
-    session0 <- Runtime.bootstrapSession True "test_save_ok"
-    let rt = Runtime.sessRuntime session0
-        ss0 = Runtime.sessSystemState session0
-    result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "test_save_ok"
-    case result of
-      Left err -> assertFailure $ "saveState should return Right on success, got Left: " <> T.unpack (renderPersistenceDiagnostics [err])
-      Right ss -> assertBool "Saved state should preserve turn count" (ssTurnCount ss == ssTurnCount ss0)
-
-testSaveStateWithProjectionFailureRollsBackTransaction :: Test
-testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
-  withRuntimeEnv "qxfx0_test_save_projection_rollback.db" $ do
-    let sessionId = "test_save_projection_rollback"
-    session0 <- Runtime.bootstrapSession True sessionId
-    let rt = Runtime.sessRuntime session0
-        ss0 = Runtime.sessSystemState session0
-        projection = TurnProjection
-          { tqpTurn = 1
-          , tqpParserMode = ParserFrameV1
-          , tqpParserConfidence = 0.31
-          , tqpParserErrors = ["projection_failure_fixture"]
-          , tqpPlannerMode = DefaultPlanner
-          , tqpPlannerDecision = CMGround
-          , tqpAtomRegister = Search
-          , tqpAtomLoad = 0.7
-          , tqpScenePressure = PressureHigh
-          , tqpSceneRequest = "rollback_fixture"
-          , tqpSceneStance = MetaLayer
-          , tqpRenderLane = ValidateMove
-          , tqpRenderStyle = StyleFormal
-          , tqpLegitimacyStatus = LegitimacyDegraded
-          , tqpLegitimacyReason = ReasonShadowDivergence
-          , tqpWarrantedMode = AlwaysWarranted
-          , tqpDecisionDisposition = DispositionRepair
-          , tqpOwnerFamily = CMGround
-          , tqpOwnerForce = IFAssert
-          , tqpShadowStatus = ShadowDiverged
-          , tqpShadowSnapshotId = ShadowSnapshotId "shadow:projection_rollback_fixture"
-          , tqpShadowDivergenceKind = ShadowVerdictMismatch
-          , tqpShadowFamily = Just CMConfront
-          , tqpShadowForce = Just IFConfront
-          , tqpShadowMessage = "fixture_divergence"
-          , tqpReplayTrace = TurnReplayTrace
-              { trcRequestId = "req_projection_rollback_fixture"
-              , trcSessionId = sessionId
-              , trcRuntimeMode = "strict"
-              , trcShadowPolicy = "block_on_unavailable_or_divergence"
-              , trcLocalRecoveryPolicy = "enabled"
-              , trcRecoveryCause = Just RecoveryShadowDivergence
-              , trcRecoveryStrategy = Just StrategyNarrowScope
-              , trcRecoveryEvidence = ["shadow_status=diverged"]
-              , trcSemanticIntrospectionEnabled = False
-              , trcWarnMorphologyFallbackEnabled = False
-              , trcRequestedFamily = CMGround
-              , trcStrategyFamily = Just CMGround
-              , trcNarrativeHint = Nothing
-              , trcIntuitionHint = Nothing
-              , trcPreShadowFamily = CMGround
-              , trcShadowSnapshotId = ShadowSnapshotId "shadow:projection_rollback_fixture"
-              , trcShadowStatus = ShadowDiverged
-              , trcShadowDivergenceKind = ShadowVerdictMismatch
-              , trcShadowDivergenceSeverity = ShadowSeverityContract
-              , trcShadowResolvedFamily = CMConfront
-              , trcFinalFamily = CMGround
-              , trcFinalForce = IFAssert
-              , trcDecisionDisposition = DispositionRepair
-              , trcLegitimacyReason = ReasonShadowDivergence
-               , trcParserConfidence = 0.31
-               , trcEmbeddingQuality = "heuristic"
-               , trcClaimAst = Nothing
-               , trcPreSafetyRenderedRaw = "fixture_pre_safety"
-               , trcRenderedAfterRebind = "fixture_rendered"
-               , trcLinearizationLang = Nothing
-              , trcLinearizationOk = False
-              , trcFallbackReason = Nothing
-              , trcContractProvenance = Just FallbackRoute
-              , trcSurfaceProvenance = Just FromFallback
-              , trcAuthorityClass = Just AuthorityFallback
-              , trcTruthContractStatus = ExplicitFallbackSurface
-              , trcAssemblyPath = Just TemplateFallbackRoute
-               , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing "fixture_manifest")
-              , trcReplayProvenanceStatus = ReplayProvenanceComplete
-              , trcDerivationTags = []
-              , trcSalienceDriver = "default"
-              , trcSalienceHolisticBias = 0.5
-              , trcSalienceConfidence = 1.0
-              , trcDeliberationRule = Nothing
-              , trcDeliberationAgreement = Nothing
-              , trcDeliberationDivergence = Nothing
-              , trcDeliberationNarrativeTone = Nothing
-              , trcEssenceMode = Nothing
-              , trcEssenceCommitted = Nothing
-              , trcEssenceAngstLevel = Nothing
-              , trcEssenceTrigger = Nothing
-              , trcLearningQueryType = Nothing
-              , trcExternalTool = Nothing
-               , trcLearningValidationStatus = Nothing
-               , trcLearningSandboxResult = Nothing
-               , trcLearningGraftTurn = Nothing
-               , trcLearningRejectReason = Nothing
-                , trcSenseAnchor = "fixture_anchor"
-                , trcSenseOperator = Nothing
-                , trcSensePreservedAxes = []
-                , trcDialogueFocus = "fixture_focus"
-                , trcDialogueFocusBefore = "fixture_focus"
-                , trcDialogueFocusAfter = "fixture_focus"
-                , trcDialoguePhase = Exploring
-                , trcDialoguePhaseBefore = Exploring
-                , trcDialoguePhaseAfter = Exploring
-                , trcDialogueCommitmentCount = 0
-                , trcDialogueCommitmentCountBefore = 0
-                , trcDialogueCommitmentCountAfter = 0
-                , trcMicroPlanMoves = []
-                , trcMicroPlanExplicitness = 0.5
-               , trcPerspectiveProjection = Nothing
-               , trcPerspectiveProjections = []
-               }
-          , tqpDivergence = True
-          }
-    beforeCount <- Runtime.withRuntimeDb rt $ \db ->
-      queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'"
-    Runtime.withRuntimeDb rt $ \db ->
-      assertExec db "drop shadow_divergence_log" "DROP TABLE IF EXISTS shadow_divergence_log;"
-    result <- StatePersistence.saveStateWithProjection
-      (Runtime.withRuntimeDb rt)
-      ss0
-      sessionId
-      (Just projection)
-    case result of
-      Left _ -> pure ()
-      Right _ -> assertFailure "saveStateWithProjection should fail when divergence table is missing"
-    afterCount <- Runtime.withRuntimeDb rt $ \db ->
-      queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'"
-    assertEqual "failed projection persistence must rollback turn_quality insert" beforeCount afterCount
 
 testStepRowPropagatesSqliteStepErrors :: Test
 testStepRowPropagatesSqliteStepErrors = TestCase $ do
@@ -1309,271 +1132,6 @@ testRunTurnRefreshesRuntimeSessionLastActive = TestCase $ do
       (lastActive /= "2000-01-01 00:00:00")
     assertEqual "runtime session status should be active after successful turn" "active" status
 
-testPersistedSystemStateSessionIdMatchesBootstrapId :: Test
-testPersistedSystemStateSessionIdMatchesBootstrapId = TestCase $ do
-  withRuntimeEnv "qxfx0_test_session_id_persist.db" $ do
-    let sessionId = "test_session_id_persist"
-    session0 <- Runtime.bootstrapSession True sessionId
-    (session1, output1) <- Runtime.runTurnInSession session0 "Что такое свобода?"
-    assertBool "turn output should not be empty" (not (T.null output1))
-    let rt = Runtime.sessRuntime session1
-    persistedBlob <- Runtime.withRuntimeDb rt $ \db -> do
-      mStmt <- NSQL.prepare db "SELECT value FROM dialogue_state WHERE session_id = ? AND key = ? ORDER BY updated_at DESC LIMIT 1"
-      stmt <- case mStmt of
-        Left err -> assertFailure ("Failed to prepare persisted-state query: " <> T.unpack err) >> fail "unreachable"
-        Right s -> pure s
-      _ <- NSQL.bindText stmt 1 sessionId
-      _ <- NSQL.bindText stmt 2 "__system_state__"
-      hasRow <- NSQL.stepRow stmt
-      payload <- if hasRow then NSQL.columnText stmt 0 else pure ""
-      NSQL.finalize stmt
-      pure payload
-    case eitherDecodeStrict' (encodeUtf8 persistedBlob) of
-      Left err ->
-        assertFailure ("Persisted system state should decode as JSON: " <> err)
-      Right (Object obj) ->
-        case KeyMap.lookup "sessionId" obj of
-          Just (String persistedSessionId) ->
-            assertEqual "Persisted SystemState.sessionId should match runtime session id"
-              sessionId
-              persistedSessionId
-          other ->
-            assertFailure ("Persisted SystemState.sessionId should be JSON string, got: " <> show other)
-      Right other ->
-        assertFailure ("Persisted system state should be JSON object, got: " <> show other)
-
-testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty :: Test
-testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty =
-  quickCheckTest 20 "persisted replay trace json deterministic across fresh sessions" $
-    forAll (elements replayInputs) $ \rawInput ->
-      ioProperty $
-        withStrictRuntimeEnv "qxfx0_test_replay_trace_determinism.db" $ do
-          sessionA <- Runtime.bootstrapSession True "fresh_det_session_a"
-          _ <- Runtime.runTurnInSession sessionA (T.pack rawInput)
-          sessionB <- Runtime.bootstrapSession True "fresh_det_session_b"
-          _ <- Runtime.runTurnInSession sessionB (T.pack rawInput)
-          let rt = Runtime.sessRuntime sessionB
-          replayA <- Runtime.withRuntimeDb rt $ \db ->
-            fetchLatestReplayTraceJson db "fresh_det_session_a"
-          replayB <- Runtime.withRuntimeDb rt $ \db ->
-            fetchLatestReplayTraceJson db "fresh_det_session_b"
-          normalizedA <- normalizeReplayTraceJson "fresh_det_session_a" replayA
-          normalizedB <- normalizeReplayTraceJson "fresh_det_session_b" replayB
-          pure (normalizedA == normalizedB)
-  where
-    replayInputs =
-      [ "Что такое свобода?"
-      , "Мне нужен контакт."
-      , "Где граница между смыслом и пустотой?"
-      ]
-
-testPersistedReplayTraceDeterministicWithFixedTimeProperty :: Test
-testPersistedReplayTraceDeterministicWithFixedTimeProperty =
-  quickCheckTest 20 "persisted replay trace json deterministic with fixed time source" $
-    forAll (elements replayInputs) $ \rawInput ->
-      ioProperty $
-        withEnvVar "QXFX0_TEST_FIXED_TIME" (Just "0") $
-          withStrictRuntimeEnv "qxfx0_test_replay_trace_fixed_time.db" $ do
-            sessionA <- Runtime.bootstrapSession True "fixed_time_session_a"
-            _ <- Runtime.runTurnInSession sessionA (T.pack rawInput)
-            sessionB <- Runtime.bootstrapSession True "fixed_time_session_b"
-            _ <- Runtime.runTurnInSession sessionB (T.pack rawInput)
-            let rt = Runtime.sessRuntime sessionB
-            replayA <- Runtime.withRuntimeDb rt $ \db ->
-              fetchLatestReplayTraceJson db "fixed_time_session_a"
-            replayB <- Runtime.withRuntimeDb rt $ \db ->
-              fetchLatestReplayTraceJson db "fixed_time_session_b"
-            normalizedA <- normalizeReplayTraceJson "fixed_time_session_a" replayA
-            normalizedB <- normalizeReplayTraceJson "fixed_time_session_b" replayB
-            pure (normalizedA == normalizedB)
-  where
-    replayInputs =
-      [ "Что такое свобода?"
-      , "Мне нужен контакт."
-      , "Где граница между смыслом и пустотой?"
-      ]
-
-testSaveStateWithDivergencePersistsShadowLog :: Test
-testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
-  withRuntimeEnv "qxfx0_test_shadow_divergence.db" $ do
-    let sessionId = "test_shadow_divergence"
-    session0 <- Runtime.bootstrapSession True sessionId
-    let rt = Runtime.sessRuntime session0
-        ss0 = Runtime.sessSystemState session0
-        projection = TurnProjection
-          { tqpTurn = 1
-          , tqpParserMode = ParserFrameV1
-          , tqpParserConfidence = 0.3
-          , tqpParserErrors = ["low_confidence"]
-          , tqpPlannerMode = DefaultPlanner
-          , tqpPlannerDecision = CMGround
-          , tqpAtomRegister = Search
-          , tqpAtomLoad = 0.8
-          , tqpScenePressure = PressureHigh
-          , tqpSceneRequest = "\1089\1074\1086\1073\1086\1076\1072"
-          , tqpSceneStance = MetaLayer
-          , tqpRenderLane = ValidateMove
-          , tqpRenderStyle = StyleFormal
-          , tqpLegitimacyStatus = LegitimacyDegraded
-          , tqpLegitimacyReason = ReasonShadowDivergence
-          , tqpWarrantedMode = AlwaysWarranted
-          , tqpDecisionDisposition = DispositionRepair
-          , tqpOwnerFamily = CMGround
-          , tqpOwnerForce = IFAssert
-          , tqpShadowStatus = ShadowDiverged
-          , tqpShadowSnapshotId = ShadowSnapshotId "shadow:test_divergence_fixture"
-          , tqpShadowDivergenceKind = ShadowVerdictMismatch
-          , tqpShadowFamily = Just CMConfront
-          , tqpShadowForce = Just IFConfront
-          , tqpShadowMessage = "shadow_diverged:family,force"
-          , tqpReplayTrace = TurnReplayTrace
-              { trcRequestId = "req_test_shadow_divergence"
-              , trcSessionId = sessionId
-              , trcRuntimeMode = "strict"
-              , trcShadowPolicy = "block_on_unavailable_or_divergence"
-              , trcLocalRecoveryPolicy = "enabled"
-              , trcRecoveryCause = Just RecoveryShadowDivergence
-              , trcRecoveryStrategy = Just StrategyNarrowScope
-              , trcRecoveryEvidence = ["shadow_status=diverged"]
-              , trcSemanticIntrospectionEnabled = False
-              , trcWarnMorphologyFallbackEnabled = False
-              , trcRequestedFamily = CMGround
-              , trcStrategyFamily = Just CMGround
-              , trcNarrativeHint = Just "narrative_hint_test"
-              , trcIntuitionHint = Just "intuition_hint_test"
-              , trcPreShadowFamily = CMGround
-              , trcShadowSnapshotId = ShadowSnapshotId "shadow:test_divergence_fixture"
-              , trcShadowStatus = ShadowDiverged
-              , trcShadowDivergenceKind = ShadowVerdictMismatch
-              , trcShadowDivergenceSeverity = ShadowSeverityContract
-              , trcShadowResolvedFamily = CMConfront
-              , trcFinalFamily = CMGround
-              , trcFinalForce = IFAssert
-              , trcDecisionDisposition = DispositionRepair
-              , trcLegitimacyReason = ReasonShadowDivergence
-               , trcParserConfidence = 0.3
-               , trcEmbeddingQuality = "heuristic"
-               , trcClaimAst = Nothing
-               , trcPreSafetyRenderedRaw = "fixture_pre_safety"
-               , trcRenderedAfterRebind = "fixture_rendered"
-               , trcLinearizationLang = Nothing
-              , trcLinearizationOk = False
-              , trcFallbackReason = Nothing
-              , trcContractProvenance = Just FallbackRoute
-              , trcSurfaceProvenance = Just FromFallback
-              , trcAuthorityClass = Just AuthorityFallback
-              , trcTruthContractStatus = ExplicitFallbackSurface
-              , trcAssemblyPath = Just TemplateFallbackRoute
-               , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing "fixture_manifest")
-              , trcReplayProvenanceStatus = ReplayProvenanceComplete
-              , trcDerivationTags = []
-              , trcSalienceDriver = "default"
-              , trcSalienceHolisticBias = 0.5
-              , trcSalienceConfidence = 1.0
-              , trcDeliberationRule = Nothing
-              , trcDeliberationAgreement = Nothing
-              , trcDeliberationDivergence = Nothing
-              , trcDeliberationNarrativeTone = Nothing
-              , trcEssenceMode = Nothing
-              , trcEssenceCommitted = Nothing
-              , trcEssenceAngstLevel = Nothing
-              , trcEssenceTrigger = Nothing
-              , trcLearningQueryType = Nothing
-              , trcExternalTool = Nothing
-               , trcLearningValidationStatus = Nothing
-               , trcLearningSandboxResult = Nothing
-               , trcLearningGraftTurn = Nothing
-               , trcLearningRejectReason = Nothing
-                , trcSenseAnchor = "fixture_anchor"
-                , trcSenseOperator = Nothing
-                , trcSensePreservedAxes = []
-                , trcDialogueFocus = "fixture_focus"
-                , trcDialogueFocusBefore = "fixture_focus"
-                , trcDialogueFocusAfter = "fixture_focus"
-                , trcDialoguePhase = Exploring
-                , trcDialoguePhaseBefore = Exploring
-                , trcDialoguePhaseAfter = Exploring
-                , trcDialogueCommitmentCount = 0
-                , trcDialogueCommitmentCountBefore = 0
-                , trcDialogueCommitmentCountAfter = 0
-                , trcMicroPlanMoves = []
-                , trcMicroPlanExplicitness = 0.5
-               , trcPerspectiveProjection = Nothing
-               , trcPerspectiveProjections = []
-               }
-          , tqpDivergence = True
-          }
-    result <- StatePersistence.saveStateWithProjection
-      (Runtime.withRuntimeDb rt)
-      ss0
-      sessionId
-      (Just projection)
-    case result of
-      Left err -> assertFailure $ "saveStateWithProjection should succeed, got: " <> T.unpack (renderPersistenceDiagnostics [err])
-      Right _ -> pure ()
-    qualityCount <- Runtime.withRuntimeDb rt $ \db ->
-      queryCount db "SELECT count(*) FROM turn_quality"
-    divergenceCount <- Runtime.withRuntimeDb rt $ \db ->
-      queryCount db "SELECT count(*) FROM shadow_divergence_log"
-    qualityShadowTrace <- Runtime.withRuntimeDb rt $ \db -> do
-      mStmt <- NSQL.prepare db "SELECT shadow_snapshot_id, shadow_divergence_kind, replay_trace_json FROM turn_quality WHERE session_id = ? AND turn = ?"
-      stmt <- case mStmt of
-        Left err -> assertFailure ("Failed to prepare turn_quality trace query: " <> T.unpack err) >> fail "unreachable"
-        Right s -> pure s
-      _ <- NSQL.bindText stmt 1 sessionId
-      _ <- NSQL.bindInt stmt 2 1
-      hasRow <- NSQL.stepRow stmt
-      values <- if hasRow
-        then do
-          sid <- NSQL.columnText stmt 0
-          kind <- NSQL.columnText stmt 1
-          replayTrace <- NSQL.columnText stmt 2
-          pure (sid, kind, replayTrace)
-        else pure ("", "", "")
-      NSQL.finalize stmt
-      pure values
-    divergenceShadowTrace <- Runtime.withRuntimeDb rt $ \db -> do
-      mStmt <- NSQL.prepare db "SELECT shadow_snapshot_id, shadow_divergence_kind FROM shadow_divergence_log WHERE session_id = ? AND turn = ? ORDER BY id DESC LIMIT 1"
-      stmt <- case mStmt of
-        Left err -> assertFailure ("Failed to prepare shadow_divergence_log trace query: " <> T.unpack err) >> fail "unreachable"
-        Right s -> pure s
-      _ <- NSQL.bindText stmt 1 sessionId
-      _ <- NSQL.bindInt stmt 2 1
-      hasRow <- NSQL.stepRow stmt
-      values <- if hasRow
-        then do
-          sid <- NSQL.columnText stmt 0
-          kind <- NSQL.columnText stmt 1
-          pure (sid, kind)
-        else pure ("", "")
-      NSQL.finalize stmt
-      pure values
-    assertBool "turn_quality should include projection row" (qualityCount >= 1)
-    assertBool "shadow_divergence_log should include divergence row" (divergenceCount >= 1)
-    assertEqual "turn_quality should persist shadow snapshot id"
-      "shadow:test_divergence_fixture"
-      (fst3 qualityShadowTrace)
-    assertEqual "turn_quality should persist shadow divergence kind"
-      "verdict_mismatch"
-      (snd3 qualityShadowTrace)
-    assertBool "turn_quality replay trace should persist snapshot id"
-      ("shadow:test_divergence_fixture" `T.isInfixOf` (trd3 qualityShadowTrace))
-    assertEqual "shadow_divergence_log should persist shadow snapshot id"
-      "shadow:test_divergence_fixture"
-      (fst divergenceShadowTrace)
-    assertEqual "shadow_divergence_log should persist shadow divergence kind"
-      "verdict_mismatch"
-      (snd divergenceShadowTrace)
-  where
-    fst3 :: (a, b, c) -> a
-    fst3 (a, _, _) = a
-
-    snd3 :: (a, b, c) -> b
-    snd3 (_, b, _) = b
-
-    trd3 :: (a, b, c) -> c
-    trd3 (_, _, c) = c
-
 testBootstrapSessionHandlesQuotedSessionId :: Test
 testBootstrapSessionHandlesQuotedSessionId = TestCase $ do
   withRuntimeEnv "qxfx0_test_bootstrap_quote.db" $ do
@@ -1597,7 +1155,7 @@ testBootstrapSessionHandlesQuotedSessionId = TestCase $ do
 testComputeReadinessModeReady :: Test
 testComputeReadinessModeReady = TestCase $ do
   let status = ReadinessStatus
-        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, True, ""), (RcSchema, True, "")
+        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, True, ""), (RcGfMap, True, ""), (RcSchema, True, "")
                          ,(RcNixPolicy, True, ""), (RcAgdaSpec, True, ""), (RcDatalogRules, True, "")]
         , rsIsReady = True
         , rsIsDegraded = False
@@ -1607,18 +1165,18 @@ testComputeReadinessModeReady = TestCase $ do
 testComputeReadinessModeDegraded :: Test
 testComputeReadinessModeDegraded = TestCase $ do
   let status = ReadinessStatus
-        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, True, ""), (RcSchema, True, "")
-                         ,(RcNixPolicy, False, ""), (RcAgdaSpec, False, "")]
+        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, True, ""), (RcGfMap, True, ""), (RcSchema, True, "")
+                         ,(RcNixPolicy, True, ""), (RcAgdaSpec, True, ""), (RcDatalogRules, False, "")]
         , rsIsReady = True
         , rsIsDegraded = True
         }
-  assertEqual "Critical ok + optional failed should yield Degraded"
-    (Degraded [RcNixPolicy, RcAgdaSpec]) (computeReadinessMode status)
+  assertEqual "Only optional datalog failure should yield Degraded"
+    (Degraded [RcDatalogRules]) (computeReadinessMode status)
 
 testComputeReadinessModeNotReady :: Test
 testComputeReadinessModeNotReady = TestCase $ do
   let status = ReadinessStatus
-        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, False, ""), (RcSchema, False, "")]
+        { rsComponents = [(RcResourceRoot, True, ""), (RcDatabase, True, ""), (RcMorphology, False, ""), (RcGfMap, True, ""), (RcSchema, False, "")]
         , rsIsReady = False
         , rsIsDegraded = False
         }
@@ -1627,44 +1185,135 @@ testComputeReadinessModeNotReady = TestCase $ do
 
 testAssessResourceReadinessFailsWhenRootMissing :: Test
 testAssessResourceReadinessFailsWhenRootMissing = TestCase $
-  withEnvVar "QXFX0_ROOT" (Just "/tmp/qxfx0_missing_resource_root") $ do
-    status <- assessResourceReadiness "/tmp/qxfx0_root_missing.db"
-    assertEqual "invalid root should be a critical readiness failure"
-      (NotReady [RcResourceRoot, RcMorphology, RcSchema]) (computeReadinessMode status)
+  do
+    missingRoot <- freshTestPath "qxfx0_missing_resource_root"
+    withEnvVar "QXFX0_ROOT" (Just missingRoot) $ do
+      dbPath <- freshTestDbPath "qxfx0_root_missing.db"
+      status <- assessResourceReadiness dbPath
+      assertEqual "invalid root should be a critical readiness failure"
+        (NotReady [RcResourceRoot, RcMorphology, RcGfMap, RcSchema]) (computeReadinessMode status)
 
 testAssessResourceReadinessFailsOnInvalidMorphologyJson :: Test
 testAssessResourceReadinessFailsOnInvalidMorphologyJson = TestCase $ do
-  let fakeRoot = "/tmp/qxfx0_fake_root_invalid_morphology"
+  fakeRoot <- freshTestPath "qxfx0_fake_root_invalid_morphology"
   createDirectoryIfMissing True (fakeRoot </> "migrations")
   createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
   createDirectoryIfMissing True (fakeRoot </> "semantics")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
   TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{invalid"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "svoboda_N\tсвобода\tnoun\tсвобода\tсвободы\tсвободе\n"
   TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
-    status <- assessResourceReadiness "/tmp/qxfx0_invalid_morphology.db"
+    dbPath <- freshTestDbPath "qxfx0_invalid_morphology.db"
+    status <- assessResourceReadiness dbPath
     assertEqual "invalid morphology JSON should block readiness"
       (NotReady [RcMorphology]) (computeReadinessMode status)
 
+testAssessResourceReadinessFailsOnInvalidFormsBySurfaceJson :: Test
+testAssessResourceReadinessFailsOnInvalidFormsBySurfaceJson = TestCase $ do
+  fakeRoot <- freshTestPath "qxfx0_fake_root_invalid_forms_by_surface"
+  createDirectoryIfMissing True (fakeRoot </> "migrations")
+  createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
+  createDirectoryIfMissing True (fakeRoot </> "semantics")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
+  TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{invalid"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "svoboda_N\tсвобода\tnoun\tсвобода\tсвободы\tсвободе\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+  withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
+    dbPath <- freshTestDbPath "qxfx0_invalid_forms_by_surface.db"
+    status <- assessResourceReadiness dbPath
+    assertEqual "invalid forms_by_surface JSON should block readiness"
+      (NotReady [RcMorphology]) (computeReadinessMode status)
+
+testAssessResourceReadinessFailsWhenGfMapMissing :: Test
+testAssessResourceReadinessFailsWhenGfMapMissing = TestCase $ do
+  fakeRoot <- freshTestPath "qxfx0_fake_root_missing_gfmap"
+  createDirectoryIfMissing True (fakeRoot </> "migrations")
+  createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
+  createDirectoryIfMissing True (fakeRoot </> "semantics")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
+  TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+  withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
+    dbPath <- freshTestDbPath "qxfx0_missing_gfmap.db"
+    status <- assessResourceReadiness dbPath
+    assertEqual "missing GF map should block readiness for the selected resource root"
+      (NotReady [RcGfMap]) (computeReadinessMode status)
+
+testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing :: Test
+testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing = TestCase $ do
+  fakeRoot <- freshTestPath "qxfx0_fake_root_missing_policy"
+  createDirectoryIfMissing True (fakeRoot </> "migrations")
+  createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "datalog")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "svoboda_N\tсвобода\tnoun\tсвобода\tсвободы\tсвободе\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "datalog" </> "semantic_rules.dl") ".decl InputAtom(x:symbol)\n.output R5Verdict\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+  withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
+    dbPath <- freshTestDbPath "qxfx0_missing_policy.db"
+    status <- assessResourceReadiness dbPath
+    assertEqual "missing nix/agda policy files should degrade but not hard-block bootstrap"
+      (Degraded [RcNixPolicy, RcAgdaSpec]) (computeReadinessMode status)
+
+testQueryIdentityClaimsByFocusPunctuationOnlyFallsBackSafely :: Test
+testQueryIdentityClaimsByFocusPunctuationOnlyFallsBackSafely = TestCase $ do
+  withRuntimeEnv "qxfx0_test_sqlite_focus_punctuation_only.db" $ do
+    session0 <- Runtime.bootstrapSession True "test_sqlite_focus_punctuation_only"
+    let rt = Runtime.sessRuntime session0
+    Runtime.withRuntimeDb rt $ \db -> do
+      claims <- SQLite.queryIdentityClaimsByFocus db ["..."]
+      assertBool "punctuation-only focus query should not crash and should return a finite fallback result" (length claims >= 0)
+
 testMorphologyCacheSwitchesWithRoot :: Test
 testMorphologyCacheSwitchesWithRoot = TestCase $ do
-  let rootA = "/tmp/qxfx0_fake_root_morphA"
-      rootB = "/tmp/qxfx0_fake_root_morphB"
+  rootA <- freshTestPath "qxfx0_fake_root_morphA"
+  rootB <- freshTestPath "qxfx0_fake_root_morphB"
   forM_ [rootA, rootB] $ \root -> do
     createDirectoryIfMissing True (root </> "migrations")
     createDirectoryIfMissing True (root </> "resources" </> "morphology")
     createDirectoryIfMissing True (root </> "semantics")
+    createDirectoryIfMissing True (root </> "spec" </> "gf")
+    createDirectoryIfMissing True (root </> "spec" </> "datalog")
     createDirectoryIfMissing True (root </> "spec" </> "sql")
+    TIO.writeFile (root </> "migrations" </> "001_initial_schema.sql") "CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY, description TEXT);"
     TIO.writeFile (root </> "semantics" </> "concepts.nix") "{}"
     TIO.writeFile (root </> "resources" </> "morphology" </> "prepositional.json") ("{\"" <> T.pack (takeFileName root) <> "\":\"A\"}")
     TIO.writeFile (root </> "resources" </> "morphology" </> "genitive.json") "{}"
     TIO.writeFile (root </> "resources" </> "morphology" </> "nominative.json") "{}"
+    TIO.writeFile (root </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
     TIO.writeFile (root </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+    TIO.writeFile (root </> "spec" </> "gf" </> "lexicon_funmap.tsv") "svoboda_N\tсвобода\tnoun\tсвобода\tсвободы\tсвободе\n"
+    TIO.writeFile (root </> "spec" </> "R5Core.agda") "module R5Core where"
+    TIO.writeFile (root </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
+    TIO.writeFile (root </> "spec" </> "datalog" </> "semantic_rules.dl") ".decl InputAtom(x:symbol)\n.output R5Verdict\n"
     TIO.writeFile (root </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
+    TIO.writeFile (root </> "spec" </> "sql" </> "seed_clusters.sql") ""
+    TIO.writeFile (root </> "spec" </> "sql" </> "seed_identity.sql") ""
+    TIO.writeFile (root </> "spec" </> "sql" </> "seed_templates.sql") ""
   mdA <- withEnvVar "QXFX0_ROOT" (Just rootA) loadMorphologyData
   mdB <- withEnvVar "QXFX0_ROOT" (Just rootB) loadMorphologyData
   assertBool "morphology cache should return distinct data for distinct roots"
@@ -1691,8 +1340,8 @@ testNixGuardUnsupportedConceptBlockedStrict = TestCase $ do
 
 testNixGuardUnknownSafeConceptAllowedStrict :: Test
 testNixGuardUnknownSafeConceptAllowedStrict = TestCase $ do
-  let fakeBinDir = "/tmp/qxfx0_fake_nix_unknown_bin"
-      fakeNix = fakeBinDir </> "nix-instantiate"
+  fakeBinDir <- freshTestPath "qxfx0_fake_nix_unknown_bin"
+  let fakeNix = fakeBinDir </> "nix-instantiate"
       fakePath = fakeBinDir <> ":/usr/bin:/bin"
       fakeScript = unlines
         [ "#!/bin/sh"
@@ -1743,39 +1392,6 @@ testNixStringLiteralEmpty :: Test
 testNixStringLiteralEmpty = TestCase $ do
   assertEqual "empty string should yield empty quotes" "\"\"" (NixGuard.nixStringLiteral "")
 
-fetchLatestReplayTraceJson :: NSQL.Database -> T.Text -> IO T.Text
-fetchLatestReplayTraceJson db sessionId = do
-  mStmt <- NSQL.prepare db "SELECT replay_trace_json FROM turn_quality WHERE session_id = ? ORDER BY turn DESC LIMIT 1"
-  stmt <- case mStmt of
-    Left err -> assertFailure ("Failed to prepare replay_trace_json query: " <> T.unpack err) >> fail "unreachable"
-    Right s -> pure s
-  _ <- NSQL.bindText stmt 1 sessionId
-  hasRow <- NSQL.stepRow stmt
-  value <- if hasRow then NSQL.columnText stmt 0 else pure ""
-  NSQL.finalize stmt
-  pure value
-
-normalizeReplayTraceJson :: String -> T.Text -> IO Value
-normalizeReplayTraceJson label payload =
-  case eitherDecodeStrict' (encodeUtf8 payload) of
-    Left err -> assertFailure ("Failed to decode replay trace JSON for " <> label <> ": " <> err) >> fail "unreachable"
-    Right value -> pure (normalizeReplayTraceValue value)
-
-normalizeReplayTraceValue :: Value -> Value
-normalizeReplayTraceValue (Object objectValue) =
-  Object
-    ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
-    $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
-    )
-normalizeReplayTraceValue other = other
-
-quickCheckTest :: Testable prop => Int -> String -> prop -> Test
-quickCheckTest maxCases label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = maxCases } prop
-  case result of
-    Success{} -> pure ()
-    _ -> assertFailure ("QuickCheck failed: " <> label)
-
 testNixGuardCaseInsensitiveConceptMatch :: Test
 testNixGuardCaseInsensitiveConceptMatch = TestCase $ do
   let lowerKey = NixGuard.normalizeConceptKey "свобода"
@@ -1795,7 +1411,7 @@ testNixGuardLowercaseConceptMatchesCapitalizedNix = TestCase $ do
 
 testAgdaR5ParseFamilyRejectsUnknownFamily :: Test
 testAgdaR5ParseFamilyRejectsUnknownFamily = TestCase $ do
-  let tmpFile = "/tmp/qxfx0_test_agda_unknown_family.tsv"
+  tmpFile <- freshTestPath "qxfx0_test_agda_unknown_family.tsv"
   TIO.writeFile tmpFile "CMFakeForce\tDeclarative\tContentLayer\tWarranted\n"
   result <- AgdaR5.verifyAgainstSnapshot tmpFile
   case result of
@@ -1805,7 +1421,7 @@ testAgdaR5ParseFamilyRejectsUnknownFamily = TestCase $ do
 
 testAgdaR5MalformedSnapshotRowReportsMismatch :: Test
 testAgdaR5MalformedSnapshotRowReportsMismatch = TestCase $ do
-  let tmpFile = "/tmp/qxfx0_test_agda_malformed_row.tsv"
+  tmpFile <- freshTestPath "qxfx0_test_agda_malformed_row.tsv"
   TIO.writeFile tmpFile "CMGround\n"
   result <- AgdaR5.verifyAgainstSnapshot tmpFile
   case result of

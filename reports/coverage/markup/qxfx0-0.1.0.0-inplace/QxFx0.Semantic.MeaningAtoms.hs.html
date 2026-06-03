@@ -1,0 +1,211 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>module QxFx0.Semantic.MeaningAtoms
+<span class="lineno">    3 </span>  ( collectAtoms
+<span class="lineno">    4 </span>  , updateTrace
+<span class="lineno">    5 </span>  , extractObjectFromAtom
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Data.Text (Text)
+<span class="lineno">    9 </span>import qualified Data.Text as T
+<span class="lineno">   10 </span>import qualified Data.List as L
+<span class="lineno">   11 </span>import QxFx0.Types (AtomSet(..), MeaningAtom(..), AtomTag(..), Register(..), AtomTrace(..), ClusterDef(..))
+<span class="lineno">   12 </span>import QxFx0.Semantic.Embedding (fallbackEmbedding)
+<span class="lineno">   13 </span>import QxFx0.Semantic.KeywordMatch
+<span class="lineno">   14 </span>  ( tokenizeKeywordText
+<span class="lineno">   15 </span>  , containsKeywordPhrase
+<span class="lineno">   16 </span>  , containsAnyKeywordPhrase
+<span class="lineno">   17 </span>  )
+<span class="lineno">   18 </span>import QxFx0.Policy.SemanticScoring
+<span class="lineno">   19 </span>  ( semanticAtomIntensity
+<span class="lineno">   20 </span>  , semanticLexicalAgencyLostStrength
+<span class="lineno">   21 </span>  )
+<span class="lineno">   22 </span>import QxFx0.Types.Text (textShow)
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>collectAtoms :: Text -&gt; [ClusterDef] -&gt; AtomSet
+<span class="lineno">   25 </span><span class="decl"><span class="istickedoff">collectAtoms input clusters =</span>
+<span class="lineno">   26 </span><span class="spaces">  </span><span class="istickedoff">let inputLower = T.toLower input</span>
+<span class="lineno">   27 </span><span class="spaces">      </span><span class="istickedoff">inputTokens = tokenizeKeywordText input</span>
+<span class="lineno">   28 </span><span class="spaces">      </span><span class="istickedoff">suppressedExhaustion = shouldSuppressExhaustion inputTokens</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">foundAtoms0 = concatMap (matchCluster inputLower inputTokens) clusters</span>
+<span class="lineno">   30 </span><span class="spaces">      </span><span class="istickedoff">foundAtoms = if suppressedExhaustion then filter (not . isExhaustionAtom) foundAtoms0 else foundAtoms0</span>
+<span class="lineno">   31 </span><span class="spaces">      </span><span class="istickedoff">lexical = lexicalAtoms inputLower inputTokens</span>
+<span class="lineno">   32 </span><span class="spaces">      </span><span class="istickedoff">structural = if containsAnyKeywordPhrase inputTokens [&quot;\1095\1090\1086&quot;, &quot;\1082\1072\1082&quot;, &quot;\1087\1086\1095\1077\1084\1091&quot;] || T.isSuffixOf &quot;?&quot; (T.strip input)</span>
+<span class="lineno">   33 </span><span class="spaces">                   </span><span class="istickedoff">then [MeaningAtom (extractObject input) (Searching (extractObject input)) (fallbackEmbedding inputLower)]</span>
+<span class="lineno">   34 </span><span class="spaces">                   </span><span class="istickedoff">else []</span>
+<span class="lineno">   35 </span><span class="spaces">      </span><span class="istickedoff">allFound = foundAtoms ++ lexical ++ structural</span>
+<span class="lineno">   36 </span><span class="spaces">      </span><span class="istickedoff">load = L.foldl' (\acc a -&gt; acc + atomIntensity a) 0.0 allFound</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">in AtomSet</span>
+<span class="lineno">   38 </span><span class="spaces">    </span><span class="istickedoff">{ asAtoms    = allFound</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">, asLoad     = min 1.0 load</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">, asRegister = inferRegister allFound</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>atomIntensity :: MeaningAtom -&gt; Double
+<span class="lineno">   44 </span><span class="decl"><span class="istickedoff">atomIntensity = semanticAtomIntensity . maTag</span></span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>isExhaustionAtom :: MeaningAtom -&gt; Bool
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">isExhaustionAtom atom =</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">case maTag atom of</span>
+<span class="lineno">   49 </span><span class="spaces">    </span><span class="istickedoff">Exhaustion _ -&gt; True</span>
+<span class="lineno">   50 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; False</span></span>
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>matchCluster :: Text -&gt; [Text] -&gt; ClusterDef -&gt; [MeaningAtom]
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">matchCluster inp inpTokens cd =</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">let keywords = map T.toLower (cdKeywords cd)</span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">hits = filter (containsKeywordPhrase inpTokens) keywords</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">in if not (null hits)</span>
+<span class="lineno">   57 </span><span class="spaces">     </span><span class="istickedoff">then [MeaningAtom (T.intercalate &quot;, &quot; hits) (tagFromCluster (T.toLower $ cdName cd) (T.intercalate &quot;, &quot; hits)) (fallbackEmbedding inp)]</span>
+<span class="lineno">   58 </span><span class="spaces">     </span><span class="istickedoff">else []</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>lexicalAtoms :: Text -&gt; [Text] -&gt; [MeaningAtom]
+<span class="lineno">   61 </span><span class="decl"><span class="istickedoff">lexicalAtoms inputLower inputTokens =</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">concat</span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">[ detectUnless suppressedExhaustion (Exhaustion &quot;\1083\1077\1082\1089\1080\1082\1072&quot;) exhaustionLexemes</span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="istickedoff">, detect (NeedContact &quot;\1083\1077\1082\1089\1080\1082\1072&quot;) contactLexemes</span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">, detect (NeedMeaning &quot;\1083\1077\1082\1089\1080\1082\1072&quot;) meaningLexemes</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">, detect (AgencyLost semanticLexicalAgencyLostStrength) agencyLostLexemes</span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">]</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">suppressedExhaustion = shouldSuppressExhaustion inputTokens</span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">detect :: AtomTag -&gt; [Text] -&gt; [MeaningAtom]</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">detect tag lexemes =</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">if containsAnyKeywordPhrase inputTokens lexemes</span>
+<span class="lineno">   74 </span><span class="spaces">        </span><span class="istickedoff">then [MeaningAtom &quot;\1083\1077\1082\1089\1080\1082\1072&quot; tag (fallbackEmbedding inputLower)]</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">else []</span>
+<span class="lineno">   76 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">detectUnless :: Bool -&gt; AtomTag -&gt; [Text] -&gt; [MeaningAtom]</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">detectUnless suppressed tag lexemes =</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">if suppressed then [] else detect tag lexemes</span></span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>exhaustionLexemes :: [Text]
+<span class="lineno">   82 </span><span class="decl"><span class="istickedoff">exhaustionLexemes =</span>
+<span class="lineno">   83 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1091\1089\1090\1072\1083&quot;, &quot;\1091\1089\1090\1072\1083\1072&quot;, &quot;\1074\1099\1075\1086\1088\1077\1083&quot;, &quot;\1074\1099\1075\1086\1088\1077\1083\1072&quot;, &quot;\1085\1077\1090 \1089\1080\1083&quot;, &quot;\1080\1079\1084\1086\1090\1072\1085&quot;, &quot;\1080\1079\1084\1086\1090\1072\1085\1072&quot;, &quot;\1085\1077 \1084\1086\1075\1091 \1073\1086\1083\1100\1096\1077&quot;, &quot;\1085\1077 \1084\1086\1075\1091 \1087\1088\1086\1076\1086\1083\1078\1072\1090\1100&quot; ]</span></span>
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>negatedExhaustionLexemes :: [Text]
+<span class="lineno">   86 </span><span class="decl"><span class="istickedoff">negatedExhaustionLexemes =</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1085\1077 \1091\1089\1090\1072\1083&quot;</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1085\1077 \1091\1089\1090\1072\1083\1072&quot;</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1085\1077 \1074\1099\1075\1086\1088\1077\1083&quot;</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1085\1077 \1074\1099\1075\1086\1088\1077\1083\1072&quot;</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1085\1077 \1080\1079\1084\1086\1090\1072\1085&quot;</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1085\1077 \1080\1079\1084\1086\1090\1072\1085\1072&quot;</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>modalAbilityContrastLexemes :: [Text]
+<span class="lineno">   96 </span><span class="decl"><span class="istickedoff">modalAbilityContrastLexemes =</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1084\1086\1075\1091 \1085\1077&quot;</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1101\1090\1086 \1085\1077 \1079\1085\1072\1095\1080\1090&quot;</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">, &quot;can choose not&quot;</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">, &quot;does not mean&quot;</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">, &quot;differs from being unable&quot;</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  103 </span>
+<span class="lineno">  104 </span>shouldSuppressExhaustion :: [Text] -&gt; Bool
+<span class="lineno">  105 </span><span class="decl"><span class="istickedoff">shouldSuppressExhaustion inputTokens =</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">containsAnyKeywordPhrase inputTokens negatedExhaustionLexemes</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">|| containsAnyKeywordPhrase inputTokens modalAbilityContrastLexemes</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>contactLexemes :: [Text]
+<span class="lineno">  110 </span><span class="decl"><span class="istickedoff">contactLexemes =</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1082\1086\1085\1090\1072\1082\1090&quot;, &quot;\1085\1072 \1089\1074\1103\1079\1080&quot;, &quot;\1085\1077 \1089\1083\1099\1096\1080\1096\1100&quot;, &quot;\1088\1103\1076\1086\1084&quot;, &quot;\1087\1088\1080\1089\1091\1090\1089\1090\1074\1080\1077&quot; ]</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>meaningLexemes :: [Text]
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">meaningLexemes =</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1089\1084\1099\1089\1083&quot;, &quot;\1079\1072\1095\1077\1084&quot;, &quot;\1076\1083\1103 \1095\1077\1075\1086&quot;, &quot;\1079\1085\1072\1095\1077\1085\1080\1077&quot; ]</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>agencyLostLexemes :: [Text]
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">agencyLostLexemes =</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1085\1077 \1079\1085\1072\1102 \1095\1090\1086 \1076\1077\1083\1072\1090\1100&quot;, &quot;\1087\1086\1090\1077\1088\1103\1083\1089\1103&quot;, &quot;\1079\1072\1087\1091\1090\1072\1083\1089\1103&quot;, &quot;\1079\1072\1087\1091\1090\1072\1083\1072\1089\1100&quot; ]</span></span>
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>tagFromCluster :: Text -&gt; Text -&gt; AtomTag
+<span class="lineno">  122 </span><span class="decl"><span class="istickedoff">tagFromCluster t val</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;exhaustion&quot;   = Exhaustion val</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">t == &quot;need_contact&quot;</span> = <span class="nottickedoff">NeedContact val</span></span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">t == &quot;need_meaning&quot;</span> = <span class="nottickedoff">NeedMeaning val</span></span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;anchoring&quot;    = Anchoring val</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;verification&quot; = Verification val</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;doubt&quot;        = Doubt val</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;logicalinference&quot; = Verification val</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;proofrequest&quot; = Searching val</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;distinctionrequest&quot; = Doubt val</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;counterexamplerequest&quot; = Contradiction val val</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;obligationduty&quot; = Verification val</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;permissionright&quot; = Verification val</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;temporalordering&quot; = Verification val</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">| t == &quot;contrastcorrection&quot; = Doubt val</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>           = CustomAtom t val</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>inferRegister :: [MeaningAtom] -&gt; Register
+<span class="lineno">  140 </span><span class="decl"><span class="istickedoff">inferRegister as</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">| any (\a -&gt; case maTag a of Exhaustion _ -&gt; True; _ -&gt; False) as = Exhaust</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">| any (\a -&gt; case maTag a of NeedContact _ -&gt; True; _ -&gt; False) as = Contact</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">| any (\a -&gt; case maTag a of Anchoring _ -&gt; True; _ -&gt; False) as = Anchor</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">| any (\a -&gt; case maTag a of Searching _ -&gt; True; _ -&gt; False) as = Search</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Neutral</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>updateTrace :: AtomTrace -&gt; Int -&gt; AtomSet -&gt; AtomTrace
+<span class="lineno">  148 </span><span class="decl"><span class="istickedoff">updateTrace old turn atoms =</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">let newHistory = take 20 $ (fromIntegral turn, asLoad atoms) : atHistory old</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">alpha = atAlpha old</span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">newLoad = if null (atHistory old)</span>
+<span class="lineno">  152 </span><span class="spaces">                </span><span class="istickedoff">then asLoad atoms</span>
+<span class="lineno">  153 </span><span class="spaces">                </span><span class="istickedoff">else alpha * asLoad atoms + (1.0 - alpha) * atCurrentLoad old</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="istickedoff">in old { atHistory = newHistory, atCurrentLoad = newLoad }</span></span>
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span>extractObject :: Text -&gt; Text
+<span class="lineno">  157 </span><span class="decl"><span class="istickedoff">extractObject t =</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="istickedoff">let ws = filter (\w -&gt; T.length w &gt; 3 &amp;&amp; not (isStopWord w)) (T.words t)</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="istickedoff">in case ws of</span>
+<span class="lineno">  160 </span><span class="spaces">       </span><span class="istickedoff">(x:_) -&gt; T.filter (`notElem` (&quot;?!&quot; :: String)) x</span>
+<span class="lineno">  161 </span><span class="spaces">       </span><span class="istickedoff">[]    -&gt; &quot;\1101\1090\1086&quot;</span></span>
+<span class="lineno">  162 </span>
+<span class="lineno">  163 </span>isStopWord :: Text -&gt; Bool
+<span class="lineno">  164 </span><span class="decl"><span class="istickedoff">isStopWord w = T.toLower w `elem`</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;\1090\1077\1073\1077&quot;, &quot;\1084\1077\1085\1103&quot;, &quot;\1073\1099\1083\1086&quot;, &quot;\1077\1089\1090\1100&quot;, &quot;\1082\1086\1075\1076\1072&quot;, &quot;\1077\1089\1083\1080&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1074\1089\1077&quot;, &quot;\1074\1089\1103\1082\1086\1077&quot;, &quot;\1089\1083\1077\1076\1086\1074\1072\1090\1077\1083\1100\1085\1086&quot;, &quot;\1079\1076\1077\1089\1100&quot;, &quot;\1084\1086\1078\1085\1086&quot;</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1089\1090\1072\1083\1086&quot;, &quot;\1073\1099\1090\1100&quot;, &quot;\1080\1090\1072\1082&quot;, &quot;\1087\1086\1101\1090\1086\1084\1091&quot;, &quot;\1087\1086\1090\1086\1084\1091&quot;, &quot;\1083\1086\1075\1080\1095\1077\1089\1082\1080&quot;, &quot;\1083\1086\1075\1080\1095\1077\1089\1082\1080\1081&quot;, &quot;\1090\1086&quot;</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1084\1086\1075\1091&quot;, &quot;\1084\1086\1078\1085\1086&quot;, &quot;\1085\1077\1083\1100\1079\1103&quot;, &quot;\1085\1091\1078\1085\1086&quot;, &quot;\1085\1072\1076\1086&quot;, &quot;\1076\1086\1083\1078\1077\1085&quot;, &quot;\1076\1086\1083\1078\1085\1072&quot;, &quot;\1076\1086\1083\1078\1085\1086&quot;, &quot;\1076\1086\1083\1078\1085\1099&quot;</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">, &quot;\1086\1073\1103\1079\1072\1085&quot;, &quot;\1086\1073\1103\1079\1072\1085\1072&quot;, &quot;\1086\1073\1103\1079\1072\1085\1086&quot;, &quot;\1086\1073\1103\1079\1072\1085\1099&quot;, &quot;\1087\1088\1072\1074\1086&quot;, &quot;\1087\1088\1072\1074\1072&quot;, &quot;\1087\1088\1072\1074\1086\1084&quot;, &quot;\1076\1086\1083\1075&quot;, &quot;\1076\1086\1083\1075\1072&quot;, &quot;\1086\1073\1103\1079\1072\1085\1085\1086\1089\1090\1100&quot;, &quot;\1086\1073\1103\1079\1072\1085\1085\1086\1089\1090\1100\1102&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">  </span><span class="istickedoff">, &quot;if&quot;, &quot;then&quot;, &quot;therefore&quot;, &quot;because&quot;, &quot;all&quot;, &quot;every&quot;, &quot;hence&quot;, &quot;thus&quot;, &quot;so&quot;, &quot;consequently&quot;, &quot;since&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">, &quot;can&quot;, &quot;may&quot;, &quot;should&quot;, &quot;must&quot;, &quot;allowed&quot;, &quot;forbidden&quot;, &quot;right&quot;, &quot;obligation&quot;, &quot;duty&quot;</span>
+<span class="lineno">  172 </span><span class="spaces">  </span><span class="istickedoff">, &quot;obligated&quot;, &quot;responsible&quot;, &quot;boundary&quot;, &quot;fault&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>extractObjectFromAtom :: MeaningAtom -&gt; Text
+<span class="lineno">  176 </span><span class="decl"><span class="nottickedoff">extractObjectFromAtom a = case maTag a of</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="nottickedoff">Searching x     -&gt; x</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="nottickedoff">Verification x  -&gt; x</span>
+<span class="lineno">  179 </span><span class="spaces">  </span><span class="nottickedoff">Doubt x         -&gt; x</span>
+<span class="lineno">  180 </span><span class="spaces">  </span><span class="nottickedoff">AgencyFound x   -&gt; textShow x</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="nottickedoff">AgencyLost x    -&gt; textShow x</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="nottickedoff">Anchoring x     -&gt; x</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="nottickedoff">Contradiction x _ -&gt; x</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="nottickedoff">Exhaustion x    -&gt; x</span>
+<span class="lineno">  185 </span><span class="spaces">  </span><span class="nottickedoff">NeedContact x   -&gt; x</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="nottickedoff">NeedMeaning x   -&gt; x</span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="nottickedoff">CustomAtom _ x  -&gt; x</span>
+<span class="lineno">  188 </span><span class="spaces">  </span><span class="nottickedoff">AffectiveAtom x _ -&gt; x</span></span>
+
+</pre>
+</body>
+</html>

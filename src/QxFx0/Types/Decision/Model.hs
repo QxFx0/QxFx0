@@ -70,7 +70,8 @@ import QxFx0.Types.Orbital
   )
 import QxFx0.Types.Thresholds (DepthMode, LegitimacyStatus(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
-import QxFx0.Semantic.Sense (MicroPlan, ResponseSensePlan, emptyMicroPlan, emptyResponseSensePlan)
+import QxFx0.Types.Sense (MicroPlan, ResponseSensePlan, emptyMicroPlan, emptyResponseSensePlan)
+import QxFx0.Types.State.Perspective (PerspectiveScope)
 
 data ResponseMeaningPlan = ResponseMeaningPlan
   { rmpFamily :: !CanonicalMoveFamily
@@ -83,6 +84,7 @@ data ResponseMeaningPlan = ResponseMeaningPlan
   , rmpTopic :: !Text
   , rmpPrimaryClaim :: !Text
   , rmpPrimaryClaimAst :: !(Maybe ClaimAst)
+  , rmpScope :: !(Maybe PerspectiveScope)
   , rmpContrastAxis :: !Text
   , rmpImplicationDirection :: !Text
   , rmpProvenance :: !ContractProvenance
@@ -106,6 +108,7 @@ instance ToJSON ResponseMeaningPlan where
     , "rmpTopic" .= rmpTopic rmp
     , "rmpPrimaryClaim" .= rmpPrimaryClaim rmp
     , "rmpPrimaryClaimAst" .= rmpPrimaryClaimAst rmp
+    , "rmpScope" .= rmpScope rmp
     , "rmpContrastAxis" .= rmpContrastAxis rmp
     , "rmpImplicationDirection" .= rmpImplicationDirection rmp
     , "rmpProvenance" .= rmpProvenance rmp
@@ -129,6 +132,7 @@ instance FromJSON ResponseMeaningPlan where
       <*> o .: "rmpTopic"
       <*> o .: "rmpPrimaryClaim"
       <*> o .:? "rmpPrimaryClaimAst"
+      <*> o .:? "rmpScope"
       <*> o .: "rmpContrastAxis"
       <*> o .: "rmpImplicationDirection"
       <*> o .: "rmpProvenance"

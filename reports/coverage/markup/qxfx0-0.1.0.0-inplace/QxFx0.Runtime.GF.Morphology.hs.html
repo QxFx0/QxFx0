@@ -1,0 +1,325 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Morphology utilities: case/number/verb conjugation lookups.
+<span class="lineno">    5 </span>    Replaces the old Inflection.hs with resolver-based morphology.
+<span class="lineno">    6 </span>-}
+<span class="lineno">    7 </span>module QxFx0.Runtime.GF.Morphology
+<span class="lineno">    8 </span>  ( toNominative
+<span class="lineno">    9 </span>  , genitiveForm
+<span class="lineno">   10 </span>  , accusativeForm
+<span class="lineno">   11 </span>  , prepositionalForm
+<span class="lineno">   12 </span>  , conjugateVerb
+<span class="lineno">   13 </span>  , VerbPerson(..)
+<span class="lineno">   14 </span>  , pluralNominative
+<span class="lineno">   15 </span>  , pluralGenitive
+<span class="lineno">   16 </span>  , pluralAccusative
+<span class="lineno">   17 </span>  , pluralPrepositional
+<span class="lineno">   18 </span>  ) where
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import Data.Text (Text)
+<span class="lineno">   21 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   22 </span>import qualified Data.Text as T
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>import QxFx0.Policy.RenderLexicon
+<span class="lineno">   25 </span>  ( morphFemSuffixA
+<span class="lineno">   26 </span>  , morphFemSuffixYa
+<span class="lineno">   27 </span>  , morphNeutSuffixE
+<span class="lineno">   28 </span>  , morphNeutSuffixO
+<span class="lineno">   29 </span>  , morphNounSuffixA
+<span class="lineno">   30 </span>  , morphNounSuffixIya
+<span class="lineno">   31 </span>  )
+<span class="lineno">   32 </span>import QxFx0.Types (MorphologyData(..))
+<span class="lineno">   33 </span>import QxFx0.Types.Domain.Atoms (LexemeForm(..), LexemeCase(..), LexemeNumber(..))
+<span class="lineno">   34 </span>import QxFx0.Lexicon.Resolver (resolveLexemeForm)
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>toNominative :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">   37 </span><span class="decl"><span class="nottickedoff">toNominative md w =</span>
+<span class="lineno">   38 </span><span class="spaces">  </span><span class="nottickedoff">case M.lookup w (mdNominative md) of</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="nottickedoff">Just f -&gt; f</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; case M.lookup (T.toLower w) (mdNominative md) of</span>
+<span class="lineno">   41 </span><span class="spaces">      </span><span class="nottickedoff">Just f -&gt; f</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="nottickedoff">Nothing -&gt; resolveCandidateNominative md w</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>resolveCandidateNominative :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">   45 </span><span class="decl"><span class="nottickedoff">resolveCandidateNominative md surface =</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md surface (Just NominativeCase) Nothing of</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfLemma form</span>
+<span class="lineno">   48 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; surface</span></span>
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>genitiveForm :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">   51 </span><span class="decl"><span class="istickedoff">genitiveForm md w = case M.lookup w (mdGenitive md) of</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">Just f -&gt; f</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">Nothing -&gt; case M.lookup (T.toLower w) (mdGenitive md) of</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">Just f -&gt; <span class="nottickedoff">f</span></span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; resolveCandidateGenitive md w</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>resolveCandidateGenitive :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">   58 </span><span class="decl"><span class="istickedoff">resolveCandidateGenitive md surface =</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">case resolveLexemeForm md surface (Just GenitiveCase) Nothing of</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">Just form -&gt; <span class="nottickedoff">lfSurface form</span></span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; surface</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>accusativeForm :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">accusativeForm md w =</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">case resolveCandidateAccusative md w of</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">Just form -&gt; form</span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   68 </span><span class="spaces">      </span><span class="istickedoff">let gender = guessGender w</span>
+<span class="lineno">   69 </span><span class="spaces">          </span><span class="istickedoff">animacy = guessAnimacy <span class="nottickedoff">w</span></span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">in case (gender, animacy) of</span>
+<span class="lineno">   71 </span><span class="spaces">            </span><span class="istickedoff">(Masculine, Inanimate) -&gt; w</span>
+<span class="lineno">   72 </span><span class="spaces">            </span><span class="istickedoff">(Neuter, _) -&gt; w</span>
+<span class="lineno">   73 </span><span class="spaces">            </span><span class="istickedoff">(Feminine, Inanimate) -&gt; feminineAccusativeByRule w</span>
+<span class="lineno">   74 </span><span class="spaces">            </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">genitiveForm md w</span></span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>resolveCandidateAccusative :: MorphologyData -&gt; Text -&gt; Maybe Text
+<span class="lineno">   77 </span><span class="decl"><span class="istickedoff">resolveCandidateAccusative md surface =</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">lfSurface &lt;$&gt; resolveLexemeForm md surface (Just AccusativeCase) Nothing</span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>data Animacy = Animate | Inanimate
+<span class="lineno">   81 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>data Gender = Masculine | Feminine | Neuter
+<span class="lineno">   84 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>guessAnimacy :: Text -&gt; Animacy
+<span class="lineno">   87 </span><span class="decl"><span class="istickedoff">guessAnimacy _ = Inanimate</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>guessGender :: Text -&gt; Gender
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">guessGender w</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">T.toLower w `elem` feminineSoftSignExceptions</span> = <span class="nottickedoff">Feminine</span></span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">| T.isSuffixOf morphFemSuffixA lower = Feminine</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">| T.isSuffixOf morphFemSuffixYa lower = Feminine</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">T.isSuffixOf morphNounSuffixA lower</span> = <span class="nottickedoff">Feminine</span></span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">T.isSuffixOf morphNounSuffixIya lower</span> = <span class="nottickedoff">Feminine</span></span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">| T.isSuffixOf morphNeutSuffixO lower = Neuter</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">| T.isSuffixOf morphNeutSuffixE lower = Neuter</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Masculine</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">lower = T.toLower w</span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>feminineSoftSignExceptions :: [Text]
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">feminineSoftSignExceptions =</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;дверь&quot;, &quot;мышь&quot;, &quot;ночь&quot;, &quot;речь&quot;, &quot;вещь&quot;, &quot;часть&quot;, &quot;грудь&quot;</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, &quot;кость&quot;, &quot;лестница&quot;, &quot;постель&quot;, &quot;тень&quot;, &quot;цель&quot;, &quot;чь&quot;, &quot;цепь&quot;</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, &quot;боль&quot;, &quot;роль&quot;, &quot;сталь&quot;, &quot;соль&quot;, &quot;мать&quot;, &quot;дочь&quot;</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, &quot;любовь&quot;, &quot;морковь&quot;, &quot;пыль&quot;, &quot;медь&quot;, &quot;гроз&quot;, &quot;кровь&quot;</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">, &quot;область&quot;, &quot;гавань&quot;, &quot;мелочь&quot;</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>feminineAccusativeByRule :: Text -&gt; Text
+<span class="lineno">  112 </span><span class="decl"><span class="istickedoff">feminineAccusativeByRule w</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">| T.isSuffixOf morphFemSuffixA lower = T.dropEnd 1 lower &lt;&gt; &quot;у&quot;</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">T.isSuffixOf morphFemSuffixYa lower</span> = T.dropEnd 1 lower &lt;&gt; &quot;ю&quot;</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">T.isSuffixOf morphNounSuffixA lower</span> = <span class="nottickedoff">T.dropEnd 1 lower &lt;&gt; &quot;у&quot;</span></span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">T.isSuffixOf morphNounSuffixIya lower</span> = <span class="nottickedoff">T.dropEnd 2 lower &lt;&gt; &quot;ию&quot;</span></span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">w</span></span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="istickedoff">lower = T.toLower w</span></span>
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>prepositionalForm :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  122 </span><span class="decl"><span class="istickedoff">prepositionalForm md w = case M.lookup w (mdPrepositional md) of</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">Just f -&gt; f</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">Nothing -&gt; case M.lookup (T.toLower w) (mdPrepositional md) of</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">Just f -&gt; <span class="nottickedoff">f</span></span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; resolveCandidatePrepositional md w</span></span>
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>resolveCandidatePrepositional :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  129 </span><span class="decl"><span class="istickedoff">resolveCandidatePrepositional md surface =</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">case resolveLexemeForm md surface (Just PrepositionalCase) Nothing of</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff">Just form -&gt; lfLemma form</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; surface</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>data VerbPerson
+<span class="lineno">  135 </span>  = Person1Sg
+<span class="lineno">  136 </span>  | Person2Sg
+<span class="lineno">  137 </span>  | Person3Sg
+<span class="lineno">  138 </span>  | Person1Pl
+<span class="lineno">  139 </span>  | Person2Pl
+<span class="lineno">  140 </span>  | Person3Pl
+<span class="lineno">  141 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>conjugateVerb :: MorphologyData -&gt; Text -&gt; VerbPerson -&gt; Text
+<span class="lineno">  144 </span><span class="decl"><span class="nottickedoff">conjugateVerb md infinitive person =</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md infinitive (Just NominativeCase) (case person of</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="nottickedoff">Person1Pl -&gt; Just PluralNumber</span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="nottickedoff">Person2Pl -&gt; Just PluralNumber</span>
+<span class="lineno">  148 </span><span class="spaces">    </span><span class="nottickedoff">Person3Pl -&gt; Just PluralNumber</span>
+<span class="lineno">  149 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; Just SingularNumber) of</span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfSurface form</span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; conjugateByRule infinitive person</span></span>
+<span class="lineno">  152 </span>
+<span class="lineno">  153 </span>conjugateByRule :: Text -&gt; VerbPerson -&gt; Text
+<span class="lineno">  154 </span><span class="decl"><span class="nottickedoff">conjugateByRule infinitive person =</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="nottickedoff">let stem = infinitiveStem infinitive</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="nottickedoff">conjClass = classifyVerb infinitive</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="nottickedoff">in case conjClass of</span>
+<span class="lineno">  158 </span><span class="spaces">       </span><span class="nottickedoff">FirstConj -&gt;</span>
+<span class="lineno">  159 </span><span class="spaces">         </span><span class="nottickedoff">case person of</span>
+<span class="lineno">  160 </span><span class="spaces">           </span><span class="nottickedoff">Person1Sg -&gt; stem &lt;&gt; first1SgEnding infinitive</span>
+<span class="lineno">  161 </span><span class="spaces">           </span><span class="nottickedoff">Person2Sg -&gt; stem &lt;&gt; &quot;ешь&quot;</span>
+<span class="lineno">  162 </span><span class="spaces">           </span><span class="nottickedoff">Person3Sg -&gt; stem &lt;&gt; &quot;ет&quot;</span>
+<span class="lineno">  163 </span><span class="spaces">           </span><span class="nottickedoff">Person1Pl -&gt; stem &lt;&gt; &quot;ем&quot;</span>
+<span class="lineno">  164 </span><span class="spaces">           </span><span class="nottickedoff">Person2Pl -&gt; stem &lt;&gt; &quot;ете&quot;</span>
+<span class="lineno">  165 </span><span class="spaces">           </span><span class="nottickedoff">Person3Pl -&gt; stem &lt;&gt; &quot;ют&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">       </span><span class="nottickedoff">SecondConj -&gt;</span>
+<span class="lineno">  167 </span><span class="spaces">         </span><span class="nottickedoff">case person of</span>
+<span class="lineno">  168 </span><span class="spaces">           </span><span class="nottickedoff">Person1Sg -&gt; stem &lt;&gt; second1SgEnding infinitive</span>
+<span class="lineno">  169 </span><span class="spaces">           </span><span class="nottickedoff">Person2Sg -&gt; stem &lt;&gt; &quot;ишь&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">           </span><span class="nottickedoff">Person3Sg -&gt; stem &lt;&gt; &quot;ит&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">           </span><span class="nottickedoff">Person1Pl -&gt; stem &lt;&gt; &quot;им&quot;</span>
+<span class="lineno">  172 </span><span class="spaces">           </span><span class="nottickedoff">Person2Pl -&gt; stem &lt;&gt; &quot;ите&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">           </span><span class="nottickedoff">Person3Pl -&gt; stem &lt;&gt; &quot;ат&quot;</span></span>
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>infinitiveStem :: Text -&gt; Text
+<span class="lineno">  176 </span><span class="decl"><span class="nottickedoff">infinitiveStem infinitive =</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower infinitive</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  179 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  180 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ивать&quot; lower -&gt; s</span>
+<span class="lineno">  181 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;евать&quot; lower -&gt; s</span>
+<span class="lineno">  182 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;овать&quot; lower -&gt; s</span>
+<span class="lineno">  183 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ывать&quot; lower -&gt; s</span>
+<span class="lineno">  184 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ать&quot; lower -&gt; s</span>
+<span class="lineno">  185 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ять&quot; lower -&gt; s</span>
+<span class="lineno">  186 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;еть&quot; lower -&gt; s</span>
+<span class="lineno">  187 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ить&quot; lower -&gt; s</span>
+<span class="lineno">  188 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;чь&quot; lower -&gt; s &lt;&gt; &quot;г&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">         </span><span class="nottickedoff">| Just s &lt;- T.stripSuffix &quot;ти&quot; lower -&gt; s</span>
+<span class="lineno">  190 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; lower</span></span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>classifyVerb :: Text -&gt; ConjugationClass
+<span class="lineno">  193 </span><span class="decl"><span class="nottickedoff">classifyVerb infinitive =</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower infinitive</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  196 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  197 </span><span class="spaces">         </span><span class="nottickedoff">| lower `elem` secondConjExceptions -&gt; SecondConj</span>
+<span class="lineno">  198 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ить&quot; lower -&gt; SecondConj</span>
+<span class="lineno">  199 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;еть&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  200 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ать&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  201 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ять&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  202 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;оть&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  203 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;уть&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  204 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ыть&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  205 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;чь&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  206 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ти&quot; lower -&gt; FirstConj</span>
+<span class="lineno">  207 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; FirstConj</span></span>
+<span class="lineno">  208 </span>
+<span class="lineno">  209 </span>secondConjExceptions :: [Text]
+<span class="lineno">  210 </span><span class="decl"><span class="nottickedoff">secondConjExceptions =</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="nottickedoff">[ &quot;смотреть&quot;, &quot;видеть&quot;, &quot;ненавидеть&quot;, &quot;обидеть&quot;, &quot;зависеть&quot;, &quot;терпеть&quot;</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="nottickedoff">, &quot;вертеть&quot;, &quot;дышать&quot;, &quot;держать&quot;, &quot;слышать&quot;, &quot;гнать&quot;</span>
+<span class="lineno">  213 </span><span class="spaces">  </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  214 </span>
+<span class="lineno">  215 </span>data ConjugationClass = FirstConj | SecondConj
+<span class="lineno">  216 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>first1SgEnding :: Text -&gt; Text
+<span class="lineno">  219 </span><span class="decl"><span class="nottickedoff">first1SgEnding infinitive =</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower infinitive</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  222 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  223 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;овать&quot; lower -&gt; &quot;ую&quot;</span>
+<span class="lineno">  224 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;евать&quot; lower -&gt; &quot;ую&quot;</span>
+<span class="lineno">  225 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ивать&quot; lower -&gt; &quot;иваю&quot;</span>
+<span class="lineno">  226 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ывать&quot; lower -&gt; &quot;ываю&quot;</span>
+<span class="lineno">  227 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ать&quot; lower -&gt; &quot;аю&quot;</span>
+<span class="lineno">  228 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ять&quot; lower -&gt; &quot;яю&quot;</span>
+<span class="lineno">  229 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; &quot;у&quot;</span></span>
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>second1SgEnding :: Text -&gt; Text
+<span class="lineno">  232 </span><span class="decl"><span class="nottickedoff">second1SgEnding infinitive =</span>
+<span class="lineno">  233 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower infinitive</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  235 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  236 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ить&quot; lower -&gt; &quot;ю&quot;</span>
+<span class="lineno">  237 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;еть&quot; lower -&gt; &quot;ю&quot;</span>
+<span class="lineno">  238 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; &quot;ю&quot;</span></span>
+<span class="lineno">  239 </span>
+<span class="lineno">  240 </span>pluralNominative :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  241 </span><span class="decl"><span class="nottickedoff">pluralNominative md w =</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md w (Just NominativeCase) (Just PluralNumber) of</span>
+<span class="lineno">  243 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfSurface form</span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pluralizeByRule w</span></span>
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>pluralGenitive :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  247 </span><span class="decl"><span class="nottickedoff">pluralGenitive md w =</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md w (Just GenitiveCase) (Just PluralNumber) of</span>
+<span class="lineno">  249 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfSurface form</span>
+<span class="lineno">  250 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pluralizeGenitiveByRule w</span></span>
+<span class="lineno">  251 </span>
+<span class="lineno">  252 </span>pluralAccusative :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  253 </span><span class="decl"><span class="nottickedoff">pluralAccusative md w =</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md w (Just AccusativeCase) (Just PluralNumber) of</span>
+<span class="lineno">  255 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfSurface form</span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pluralizeByRule w</span></span>
+<span class="lineno">  257 </span>
+<span class="lineno">  258 </span>pluralPrepositional :: MorphologyData -&gt; Text -&gt; Text
+<span class="lineno">  259 </span><span class="decl"><span class="nottickedoff">pluralPrepositional md w =</span>
+<span class="lineno">  260 </span><span class="spaces">  </span><span class="nottickedoff">case resolveLexemeForm md w (Just PrepositionalCase) (Just PluralNumber) of</span>
+<span class="lineno">  261 </span><span class="spaces">    </span><span class="nottickedoff">Just form -&gt; lfLemma form</span>
+<span class="lineno">  262 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; pluralPrepositionalByRule w</span></span>
+<span class="lineno">  263 </span>
+<span class="lineno">  264 </span>pluralizeByRule :: Text -&gt; Text
+<span class="lineno">  265 </span><span class="decl"><span class="nottickedoff">pluralizeByRule w =</span>
+<span class="lineno">  266 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower w</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  268 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  269 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;а&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ы&quot;</span>
+<span class="lineno">  270 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;я&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;и&quot;</span>
+<span class="lineno">  271 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;о&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;а&quot;</span>
+<span class="lineno">  272 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;е&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;и&quot;</span>
+<span class="lineno">  273 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ия&quot; lower -&gt; T.dropEnd 2 lower &lt;&gt; &quot;ии&quot;</span>
+<span class="lineno">  274 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ье&quot; lower -&gt; T.dropEnd 2 lower &lt;&gt; &quot;ья&quot;</span>
+<span class="lineno">  275 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ь&quot; lower -&gt; lower &lt;&gt; &quot;и&quot;</span>
+<span class="lineno">  276 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; lower &lt;&gt; &quot;ы&quot;</span></span>
+<span class="lineno">  277 </span>
+<span class="lineno">  278 </span>pluralizeGenitiveByRule :: Text -&gt; Text
+<span class="lineno">  279 </span><span class="decl"><span class="nottickedoff">pluralizeGenitiveByRule w =</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower w</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  282 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  283 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;а&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ы&quot;</span>
+<span class="lineno">  284 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;я&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;и&quot;</span>
+<span class="lineno">  285 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;о&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ов&quot;</span>
+<span class="lineno">  286 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;е&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ей&quot;</span>
+<span class="lineno">  287 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ия&quot; lower -&gt; T.dropEnd 2 lower &lt;&gt; &quot;ий&quot;</span>
+<span class="lineno">  288 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ь&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ей&quot;</span>
+<span class="lineno">  289 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; lower &lt;&gt; &quot;ов&quot;</span></span>
+<span class="lineno">  290 </span>
+<span class="lineno">  291 </span>pluralPrepositionalByRule :: Text -&gt; Text
+<span class="lineno">  292 </span><span class="decl"><span class="nottickedoff">pluralPrepositionalByRule w =</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="nottickedoff">let lower = T.toLower w</span>
+<span class="lineno">  294 </span><span class="spaces">  </span><span class="nottickedoff">in case () of</span>
+<span class="lineno">  295 </span><span class="spaces">       </span><span class="nottickedoff">_</span>
+<span class="lineno">  296 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;а&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ах&quot;</span>
+<span class="lineno">  297 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;я&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ях&quot;</span>
+<span class="lineno">  298 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;о&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ах&quot;</span>
+<span class="lineno">  299 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;е&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ах&quot;</span>
+<span class="lineno">  300 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ия&quot; lower -&gt; T.dropEnd 2 lower &lt;&gt; &quot;иях&quot;</span>
+<span class="lineno">  301 </span><span class="spaces">         </span><span class="nottickedoff">| T.isSuffixOf &quot;ь&quot; lower -&gt; T.dropEnd 1 lower &lt;&gt; &quot;ах&quot;</span>
+<span class="lineno">  302 </span><span class="spaces">         </span><span class="nottickedoff">| otherwise -&gt; lower &lt;&gt; &quot;ах&quot;</span></span>
+
+</pre>
+</body>
+</html>

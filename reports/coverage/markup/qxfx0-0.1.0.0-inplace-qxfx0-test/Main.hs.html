@@ -1,0 +1,71 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Main (main) where
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>import System.Exit (exitFailure, exitSuccess)
+<span class="lineno">    6 </span>import Test.HUnit
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Test.Suite.CoreBehavior (coreBehaviorTests)
+<span class="lineno">    9 </span>import Test.Suite.ArchitectureInvariants (architectureInvariantTests)
+<span class="lineno">   10 </span>import Test.Suite.SelfPerspective (selfPerspectiveTests)
+<span class="lineno">   11 </span>import Test.Suite.PerspectiveRegistry (perspectiveRegistryTests)
+<span class="lineno">   12 </span>import Test.Suite.Guardrails (guardrailsTests)
+<span class="lineno">   13 </span>import Test.Suite.KnowledgeTree (knowledgeTreeTests)
+<span class="lineno">   14 </span>import Test.Suite.DialogueDevelopment (dialogueDevelopmentTests)
+<span class="lineno">   15 </span>import Test.Suite.TurnPipelineProtocol (turnPipelineProtocolTests)
+<span class="lineno">   16 </span>import Test.Suite.RuntimeInfrastructure (runtimeInfrastructureTests)
+<span class="lineno">   17 </span>import Test.Suite.StatePersistence (statePersistenceTests)
+<span class="lineno">   18 </span>import Test.Suite.HttpRuntime (httpRuntimeTests)
+<span class="lineno">   19 </span>import Test.Suite.SemanticCorpus (semanticCorpusTests)
+<span class="lineno">   20 </span>import Test.Suite.LexiconTests (lexiconTests)
+<span class="lineno">   21 </span>import Test.Suite.LegalAdapter (legalAdapterTests)
+<span class="lineno">   22 </span>import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
+<span class="lineno">   23 </span>import Test.Suite.RussianQuality (russianQualityTests)
+<span class="lineno">   24 </span>import Test.Suite.SelfBlanket (selfBlanketTests)
+<span class="lineno">   25 </span>import Test.Suite.SelfConatus (selfConatusTests)
+<span class="lineno">   26 </span>import Test.Suite.SelfAdjunction (selfAdjunctionTests)
+<span class="lineno">   27 </span>import Test.Suite.SelfField (selfFieldTests)
+<span class="lineno">   28 </span>import Test.Suite.SelfSalience (selfSalienceTests)
+<span class="lineno">   29 </span>import Test.Suite.SelfDeliberation (selfDeliberationTests)
+<span class="lineno">   30 </span>import Test.Suite.SelfEssence (selfEssenceTests)
+<span class="lineno">   31 </span>import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
+<span class="lineno">   32 </span>import Test.Suite.P5Governance (p5GovernanceTests)
+<span class="lineno">   33 </span>import Test.Suite.LongSessionCorpus (longSessionCorpusTests)
+<span class="lineno">   34 </span>import Test.Suite.PhaseM2d (phaseM2dTests)
+<span class="lineno">   35 </span>import Test.Suite.VecProperties (vecPropertiesTests)
+<span class="lineno">   36 </span>import Test.Suite.EgoRead (egoReadTests)
+<span class="lineno">   37 </span>import Test.Suite.LearningLoop (learningLoopTests)
+<span class="lineno">   38 </span>import Test.Suite.TrainingCycle (trainingCycleTests)
+<span class="lineno">   39 </span>import Test.Suite.ModelComparison (modelComparisonTests)
+<span class="lineno">   40 </span>import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>main :: IO ()
+<span class="lineno">   43 </span><span class="decl"><span class="istickedoff">main = do</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">testCounts &lt;- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ statePersistenceTests ++ httpRuntimeTests</span>
+<span class="lineno">   45 </span><span class="spaces">     </span><span class="istickedoff">++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">errors testCounts + failures testCounts &gt; 0</span></span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">exitFailure</span></span>
+<span class="lineno">   48 </span><span class="spaces">    </span><span class="istickedoff">else exitSuccess</span></span>
+
+</pre>
+</body>
+</html>

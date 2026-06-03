@@ -31,7 +31,10 @@ module QxFx0.Bridge.ExternalLLM
   , queryExternalToolWithConfig
   , defaultExternalQueryConfig
   , llmEndpointAllowlist
+  , llmMaxQueryChars
+  , llmMaxRequestBytes
   , llmUntrustedHostOverrideWarningTag
+  , transportTimeoutMs
   , validateEndpointUrl
   , validateEndpointUrlWithContext
   , extractStructured
@@ -46,12 +49,12 @@ import Control.Exception (try)
 import Data.Aeson (FromJSON(..), ToJSON, decodeStrict, encode, object, (.=))
 import Data.Aeson.Types (withObject, (.:), (.:?))
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Char (isSpace)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Text.Encoding.Error (lenientDecode)
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
 import GHC.Generics (Generic)
 import Network.HTTP.Client
@@ -78,6 +81,7 @@ import Network.HTTP.Types.Status (Status, statusCode)
 import Network.URI (URI(..), URIAuth(..), parseURI)
 import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
+import Text.Read (readMaybe)
 
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Learning.Tool (ExternalTool(..), etName)
@@ -145,6 +149,21 @@ llmEndpointAllowlist =
 llmUntrustedHostOverrideWarningTag :: Text
 llmUntrustedHostOverrideWarningTag = "llm_untrusted_host_override_allowed"
 
+llmDefaultTimeoutMs :: Int
+llmDefaultTimeoutMs = 30000
+
+llmMinTimeoutMs :: Int
+llmMinTimeoutMs = 1000
+
+llmMaxTimeoutMs :: Int
+llmMaxTimeoutMs = 30000
+
+llmMaxQueryChars :: Int
+llmMaxQueryChars = 4096
+
+llmMaxRequestBytes :: Int
+llmMaxRequestBytes = 16384
+
 llmMaxResponseBytes :: Int
 llmMaxResponseBytes = 65536
 
@@ -205,7 +224,9 @@ parseEndpointHost endpoint = do
   auth <- uriAuthority uri
   let scheme = T.toLower (T.pack (uriScheme uri))
       rawHost = uriRegName auth
-  if scheme == "https:" && null (uriUserInfo auth) && not (null rawHost)
+      rawPort = uriPort auth
+      portAllowed = null rawPort || rawPort == ":443"
+  if scheme == "https:" && null (uriUserInfo auth) && not (null rawHost) && portAllowed
     then Just (T.toLower (T.pack rawHost))
     else Nothing
 
@@ -231,9 +252,16 @@ defaultExternalQueryConfig = ExternalQueryConfig
   , eqcApiKey         = Nothing
   , eqcModel          = "mistral-small-latest"
   , eqcEndpoint       = "https://api.mistral.ai/v1/chat/completions"
-  , eqcTimeoutMs      = 30000
+  , eqcTimeoutMs      = llmDefaultTimeoutMs
   , eqcFallbackReason = Just TfrEnvNotSet
   }
+
+transportTimeoutMs :: LLMTransport -> Maybe Int
+transportTimeoutMs transport =
+  case transport of
+    MockTransport _ mCfg -> eqcTimeoutMs <$> mCfg
+    MistralTransport _ cfg -> Just (mcTimeoutMs cfg)
+    FireworksTransport _ cfg -> Just (fcTimeoutMs cfg)
 
 -- | Build transport from environment.
 --
@@ -270,13 +298,16 @@ resolveTransportConfigFromEnv = do
     "mistral" -> do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
       overrideContext <- readOverrideContext
+      timeoutMs <- readTransportTimeoutMs ["QXFX0_MISTRAL_TIMEOUT_MS", "QXFX0_LLM_TIMEOUT_MS"]
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "mistral"
+          , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key | T.null key -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "mistral"
+          , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key -> do
@@ -288,6 +319,7 @@ resolveTransportConfigFromEnv = do
               , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
+              , eqcTimeoutMs = timeoutMs
               , eqcFallbackReason = Just reason
               }
             Right mWarningTag -> do
@@ -297,19 +329,22 @@ resolveTransportConfigFromEnv = do
                 , eqcApiKey = Just key
                 , eqcModel = model
                 , eqcEndpoint = endpoint
-                , eqcTimeoutMs = 30000
+                , eqcTimeoutMs = timeoutMs
                 , eqcFallbackReason = Nothing
                 }
     "fireworks" -> do
       mKey <- lookupEnv "QXFX0_FIREWORKS_API_KEY"
       overrideContext <- readOverrideContext
+      timeoutMs <- readTransportTimeoutMs ["QXFX0_FIREWORKS_TIMEOUT_MS", "QXFX0_LLM_TIMEOUT_MS"]
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "fireworks"
+          , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key | T.null key -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "fireworks"
+          , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key -> do
@@ -321,6 +356,7 @@ resolveTransportConfigFromEnv = do
               , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
+              , eqcTimeoutMs = timeoutMs
               , eqcFallbackReason = Just reason
               }
             Right mWarningTag -> do
@@ -330,7 +366,7 @@ resolveTransportConfigFromEnv = do
                 , eqcApiKey = Just key
                 , eqcModel = model
                 , eqcEndpoint = endpoint
-                , eqcTimeoutMs = 30000
+                , eqcTimeoutMs = timeoutMs
                 , eqcFallbackReason = Nothing
                 }
     _ -> pure $ defaultExternalQueryConfig
@@ -366,6 +402,24 @@ firstTruthy [] = Nothing
 firstTruthy (x:xs)
   | isTruthy x = x
   | otherwise = firstTruthy xs
+
+readTransportTimeoutMs :: [String] -> IO Int
+readTransportTimeoutMs names = do
+  raw <- firstPresentEnv names
+  pure (sanitizeTimeoutMs raw)
+
+firstPresentEnv :: [String] -> IO (Maybe String)
+firstPresentEnv [] = pure Nothing
+firstPresentEnv (name:rest) = do
+  value <- lookupEnv name
+  case value of
+    Just raw | not (null raw) -> pure (Just raw)
+    _ -> firstPresentEnv rest
+
+sanitizeTimeoutMs :: Maybe String -> Int
+sanitizeTimeoutMs raw =
+  let parsed = fromMaybe llmDefaultTimeoutMs (raw >>= readMaybe)
+  in max llmMinTimeoutMs (min llmMaxTimeoutMs parsed)
 
 emitOverrideWarning :: Text -> Maybe Text -> IO ()
 emitOverrideWarning _ Nothing = pure ()
@@ -490,13 +544,16 @@ queryExternalTool
   -> Text        -- ^ user query / prompt
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalTool transport tool need query =
-  case transport of
-    MockTransport table mCfg  ->
-      case mCfg >>= eqcFallbackReason of
-        Just reason | reason /= TfrExplicitMock -> pure (Left (EqeFallback reason))
-        _ -> mockQuery table tool need query
-    MistralTransport mgr cfg  -> mistralQuery mgr cfg tool need query
-    FireworksTransport mgr cfg -> fireworksQuery mgr cfg tool need query
+  let queryChars = T.length query
+  in if queryChars > llmMaxQueryChars
+       then pure (Left (queryTooLarge queryChars llmMaxQueryChars))
+       else case transport of
+         MockTransport table mCfg  ->
+           case mCfg >>= eqcFallbackReason of
+             Just reason | reason /= TfrExplicitMock -> pure (Left (EqeFallback reason))
+             _ -> mockQuery table tool need query
+         MistralTransport mgr cfg  -> mistralQuery mgr cfg tool need query
+         FireworksTransport mgr cfg -> fireworksQuery mgr cfg tool need query
 
 -- | Execute a query with explicit config (for tests and telemetry).
 queryExternalToolWithConfig
@@ -577,19 +634,24 @@ buildChatRequest endpoint model apiKey timeoutMs query = do
   parsed <- try (parseRequest (T.unpack endpoint)) :: IO (Either HttpException Request)
   pure $ case parsed of
     Left err -> Left (classifyHttpException err)
-    Right req0 -> Right req0
-      { method = "POST"
-      , requestHeaders =
-          [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", apiKey]))
-          , ("Content-Type", "application/json")
-          ]
-      , requestBody = RequestBodyLBS $ encode $ object
-          [ "model" .= model
-          , "messages" .= [object ["role" .= ("user" :: Text), "content" .= query]]
-          ]
-      , responseTimeout = responseTimeoutMicro (timeoutMicroseconds timeoutMs)
-      , checkResponse = \_ _ -> pure ()
-      }
+    Right req0 ->
+      let payload = encode $ object
+            [ "model" .= model
+            , "messages" .= [object ["role" .= ("user" :: Text), "content" .= query]]
+            ]
+          payloadBytes = fromIntegral (LBS.length payload)
+      in if payloadBytes > llmMaxRequestBytes
+           then Left (requestBodyTooLarge payloadBytes llmMaxRequestBytes)
+           else Right req0
+             { method = "POST"
+             , requestHeaders =
+                 [ ("Authorization", TE.encodeUtf8 (T.concat ["Bearer ", apiKey]))
+                 , ("Content-Type", "application/json")
+                 ]
+             , requestBody = RequestBodyLBS payload
+             , responseTimeout = responseTimeoutMicro (timeoutMicroseconds timeoutMs)
+             , checkResponse = \_ _ -> pure ()
+             }
 
 runChatHttp :: Manager -> Request -> IO (Either HttpException (Status, Either ExternalQueryError BS.ByteString))
 runChatHttp mgr req =
@@ -668,12 +730,33 @@ readResponseBodyLimited maxBytes reader = go 0 []
 decodeLlmBodyLimited :: Int -> BS.ByteString -> Either ExternalQueryError Text
 decodeLlmBodyLimited maxBytes raw
   | BS.length raw > maxBytes = Left (responseTooLarge (BS.length raw) maxBytes)
-  | otherwise = Right (TE.decodeUtf8With lenientDecode raw)
+  | otherwise =
+      case TE.decodeUtf8' raw of
+        Left _ -> Left (EqeInvalidResponse "invalid_utf8_response")
+        Right text -> Right text
 
 responseTooLarge :: Int -> Int -> ExternalQueryError
 responseTooLarge actual maxBytes =
   EqeInvalidResponse $ T.concat
     [ "response_too_large:max_bytes="
+    , T.pack (show maxBytes)
+    , ":actual_bytes="
+    , T.pack (show actual)
+    ]
+
+queryTooLarge :: Int -> Int -> ExternalQueryError
+queryTooLarge actual maxChars =
+  EqeInvalidResponse $ T.concat
+    [ "query_too_large:max_chars="
+    , T.pack (show maxChars)
+    , ":actual_chars="
+    , T.pack (show actual)
+    ]
+
+requestBodyTooLarge :: Int -> Int -> ExternalQueryError
+requestBodyTooLarge actual maxBytes =
+  EqeInvalidResponse $ T.concat
+    [ "request_too_large:max_bytes="
     , T.pack (show maxBytes)
     , ":actual_bytes="
     , T.pack (show actual)

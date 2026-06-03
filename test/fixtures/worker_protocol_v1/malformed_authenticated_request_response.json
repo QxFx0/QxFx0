@@ -1,0 +1,7 @@
+{
+  "error": "bad_request",
+  "error_code": "malformed_authenticated_request",
+  "result_unknown": false,
+  "session_valid": true,
+  "restart_required": false
+}

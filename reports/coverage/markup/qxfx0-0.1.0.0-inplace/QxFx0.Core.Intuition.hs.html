@@ -1,0 +1,307 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies, OverloadedStrings, DeriveGeneric, DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-| Intuition heuristics for flash detection, posterior updates, and directive shaping. -}
+<span class="lineno">    3 </span>module QxFx0.Core.Intuition
+<span class="lineno">    4 </span>  ( IntuitiveState(..)
+<span class="lineno">    5 </span>  , defaultIntuitiveState
+<span class="lineno">    6 </span>  , basePrior
+<span class="lineno">    7 </span>  , IntuitiveFlash(..)
+<span class="lineno">    8 </span>  , likelihoodGivenFlash
+<span class="lineno">    9 </span>  , updatePosterior
+<span class="lineno">   10 </span>  , likelihoodGivenNoFlash
+<span class="lineno">   11 </span>  , posteriorAfterFlash
+<span class="lineno">   12 </span>  , longPosteriorAfterFlash
+<span class="lineno">   13 </span>  , updateLongPosterior
+<span class="lineno">   14 </span>  , flashThreshold
+<span class="lineno">   15 </span>  , checkIntuition
+<span class="lineno">   16 </span>  , checkIntuitionWithInput
+<span class="lineno">   17 </span>  , checkIntuitionWithSalience
+<span class="lineno">   18 </span>  , checkIntuitionWithInputAndSalience
+<span class="lineno">   19 </span>  , applySalienceToFlash
+<span class="lineno">   20 </span>  , salienceFlashMultiplier
+<span class="lineno">   21 </span>  , bayesianBeliefNudge
+<span class="lineno">   22 </span>  , triggerToGapDomains
+<span class="lineno">   23 </span>  , intuitionSignalStrength
+<span class="lineno">   24 </span>  , effectivePosterior
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import Data.Text (Text)
+<span class="lineno">   28 </span>import qualified Data.Text as T
+<span class="lineno">   29 </span>import Data.Aeson
+<span class="lineno">   30 </span>  ( FromJSON(..)
+<span class="lineno">   31 </span>  , ToJSON(..)
+<span class="lineno">   32 </span>  )
+<span class="lineno">   33 </span>import GHC.Generics (Generic)
+<span class="lineno">   34 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   35 </span>  ( clamp01
+<span class="lineno">   36 </span>  , intuitionCrisisTensionThreshold
+<span class="lineno">   37 </span>  , intuitionDeepResonanceThreshold
+<span class="lineno">   38 </span>  , intuitionElevatedResonanceThreshold
+<span class="lineno">   39 </span>  , intuitionElevatedTensionThreshold
+<span class="lineno">   40 </span>  , intuitionFlashThreshold
+<span class="lineno">   41 </span>  , intuitionHighResonanceThreshold
+<span class="lineno">   42 </span>  , intuitionHighTensionThreshold
+<span class="lineno">   43 </span>  , intuitionNoFlashBaselineLikelihood
+<span class="lineno">   44 </span>  , intuitionFlashLikelihoodConvergent
+<span class="lineno">   45 </span>  , intuitionFlashLikelihoodElevated
+<span class="lineno">   46 </span>  , intuitionFlashLikelihoodDeep
+<span class="lineno">   47 </span>  , intuitionFlashLikelihoodBaseline
+<span class="lineno">   48 </span>  , intuitionNoFlashLikelihoodConvergent
+<span class="lineno">   49 </span>  , intuitionNoFlashLikelihoodElevated
+<span class="lineno">   50 </span>  , intuitionNoFlashLikelihoodDeep
+<span class="lineno">   51 </span>  , intuitionPosteriorAfterFlashDecayFactor
+<span class="lineno">   52 </span>  , intuitionLongPosteriorAfterFlashDecayFactor
+<span class="lineno">   53 </span>  , intuitionLongPosteriorPriorWeight
+<span class="lineno">   54 </span>  , intuitionLongPosteriorCurrentWeight
+<span class="lineno">   55 </span>  , intuitionFlashOverrideStrengthThreshold
+<span class="lineno">   56 </span>  , intuitionCoreVecPresence
+<span class="lineno">   57 </span>  , intuitionCoreVecDepth
+<span class="lineno">   58 </span>  , intuitionCoreVecAutonomy
+<span class="lineno">   59 </span>  , intuitionCoreVecDirectiveness
+<span class="lineno">   60 </span>  , intuitionCoreVecSteadiness
+<span class="lineno">   61 </span>  , intuitionSteadinessBaseline
+<span class="lineno">   62 </span>  , intuitionSignalSteadyBonusScale
+<span class="lineno">   63 </span>  , intuitionCooldownTurns
+<span class="lineno">   64 </span>  )
+<span class="lineno">   65 </span>import QxFx0.Policy.Consciousness
+<span class="lineno">   66 </span>  ( triggerDeepResonance, triggerCrisisMoment, triggerPureKernel, triggerConvergence
+<span class="lineno">   67 </span>  , kernelSignalPresence, kernelSignalDepth
+<span class="lineno">   68 </span>  , triggerContextDeepResonance, triggerContextCrisisMoment
+<span class="lineno">   69 </span>  , triggerContextPureKernel, triggerContextConvergence
+<span class="lineno">   70 </span>  , intuitionHeaderPrefix, intuitionTriggerLabel
+<span class="lineno">   71 </span>  , intuitionOverrideDirective, intuitionSupplementaryDirective
+<span class="lineno">   72 </span>  , intuitionFormDirective
+<span class="lineno">   73 </span>  )
+<span class="lineno">   74 </span>import QxFx0.Types.Intuition
+<span class="lineno">   75 </span>  ( IntuitiveState(..)
+<span class="lineno">   76 </span>  , basePrior
+<span class="lineno">   77 </span>  , defaultIntuitiveState
+<span class="lineno">   78 </span>  , effectivePosterior
+<span class="lineno">   79 </span>  , FlashTrigger(..)
+<span class="lineno">   80 </span>  , IntuitiveFlash(..)
+<span class="lineno">   81 </span>  )
+<span class="lineno">   82 </span>import QxFx0.Types.Vec (CoreVec(..))
+<span class="lineno">   83 </span>import QxFx0.Types.SemanticConfig (SemanticConfig(..), defaultSemanticConfig)
+<span class="lineno">   84 </span>import QxFx0.Types.Bayesian (initialBeliefs)
+<span class="lineno">   85 </span>import QxFx0.Core.Bayesian (bayesianUpdateFromText, maxBelief)
+<span class="lineno">   86 </span>import QxFx0.Self.Salience (Salience, salienceHolisticBias)
+<span class="lineno">   87 </span>import Text.Printf (printf)
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>flashThreshold :: Double
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">flashThreshold = intuitionFlashThreshold</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>likelihoodGivenFlash :: Double -&gt; Double -&gt; Double
+<span class="lineno">   93 </span><span class="decl"><span class="istickedoff">likelihoodGivenFlash resonance tension</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionHighResonanceThreshold &amp;&amp; tension &gt; intuitionHighTensionThreshold = intuitionFlashLikelihoodConvergent</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionElevatedResonanceThreshold || tension &gt; intuitionElevatedTensionThreshold = intuitionFlashLikelihoodElevated</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionDeepResonanceThreshold = intuitionFlashLikelihoodDeep</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>                          = intuitionFlashLikelihoodBaseline</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>likelihoodGivenNoFlash :: Double -&gt; Double -&gt; Double
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">likelihoodGivenNoFlash resonance tension</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionHighResonanceThreshold &amp;&amp; tension &gt; intuitionHighTensionThreshold = intuitionNoFlashLikelihoodConvergent</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionElevatedResonanceThreshold || tension &gt; intuitionElevatedTensionThreshold = intuitionNoFlashLikelihoodElevated</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">| resonance &gt; intuitionDeepResonanceThreshold = intuitionNoFlashLikelihoodDeep</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>                          = intuitionNoFlashBaselineLikelihood</span></span>
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>updatePosterior :: Double -&gt; Double -&gt; Double -&gt; Double
+<span class="lineno">  107 </span><span class="decl"><span class="istickedoff">updatePosterior resonance tension prior =</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">let pEH  = likelihoodGivenFlash  resonance tension</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">pEnH = likelihoodGivenNoFlash resonance tension</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">pE   = pEH * prior + pEnH * (1.0 - prior)</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">in clamp01 ((pEH * prior) / max 1e-9 pE)</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>renderTrigger :: FlashTrigger -&gt; Text
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">renderTrigger DeepResonanceTrigger = <span class="nottickedoff">triggerDeepResonance</span></span>
+<span class="lineno">  115 </span><span class="spaces"></span><span class="istickedoff">renderTrigger CrisisMomentTrigger  = <span class="nottickedoff">triggerCrisisMoment</span></span>
+<span class="lineno">  116 </span><span class="spaces"></span><span class="istickedoff">renderTrigger PureKernelTrigger    = <span class="nottickedoff">triggerPureKernel</span></span>
+<span class="lineno">  117 </span><span class="spaces"></span><span class="istickedoff">renderTrigger ConvergenceTrigger   = triggerConvergence</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>triggerToGapDomains :: FlashTrigger -&gt; [Text]
+<span class="lineno">  120 </span><span class="decl"><span class="nottickedoff">triggerToGapDomains ConvergenceTrigger   = [&quot;HumanPsychology&quot;, &quot;CausalChains&quot;]</span>
+<span class="lineno">  121 </span><span class="spaces"></span><span class="nottickedoff">triggerToGapDomains CrisisMomentTrigger  = [&quot;HumanPsychology&quot;]</span>
+<span class="lineno">  122 </span><span class="spaces"></span><span class="nottickedoff">triggerToGapDomains DeepResonanceTrigger = [&quot;HumanPsychology&quot;, &quot;CulturalAnthropology&quot;]</span>
+<span class="lineno">  123 </span><span class="spaces"></span><span class="nottickedoff">triggerToGapDomains PureKernelTrigger    = [&quot;CausalChains&quot;, &quot;RhetoricalAnalysis&quot;]</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>qxfx0CoreVec :: CoreVec
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">qxfx0CoreVec =</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="nottickedoff">CoreVec</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">intuitionCoreVecPresence</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="nottickedoff">intuitionCoreVecDepth</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="nottickedoff">intuitionCoreVecAutonomy</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="nottickedoff">intuitionCoreVecDirectiveness</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="nottickedoff">intuitionCoreVecSteadiness</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>bayesianBeliefNudge :: SemanticConfig -&gt; Text -&gt; Double
+<span class="lineno">  135 </span><span class="decl"><span class="istickedoff">bayesianBeliefNudge cfg raw =</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">clamp01 (maxBelief (bayesianUpdateFromText cfg initialBeliefs raw) * 0.08)</span></span>
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>-- Contract status: bounded causal contour. The experimental Bayesian
+<span class="lineno">  139 </span>-- module remains narrow, but this nudge is a live capped input to
+<span class="lineno">  140 </span>-- intuition flash detection rather than a decorative trace field.
+<span class="lineno">  141 </span>checkIntuitionWithInputConfig :: SemanticConfig -&gt; Text -&gt; Double -&gt; Double -&gt; Int -&gt; IntuitiveState -&gt; (Maybe IntuitiveFlash, IntuitiveState)
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">checkIntuitionWithInputConfig cfg raw resonance tension turnNumber state =</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">let nudge = bayesianBeliefNudge cfg raw</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">adjustedResonance = clamp01 (resonance + nudge * 0.25)</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">adjustedTension = clamp01 (tension + nudge * 0.15)</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">in checkIntuition adjustedResonance adjustedTension <span class="nottickedoff">turnNumber</span> state</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>checkIntuitionWithInput :: Text -&gt; Double -&gt; Double -&gt; Int -&gt; IntuitiveState -&gt; (Maybe IntuitiveFlash, IntuitiveState)
+<span class="lineno">  149 </span><span class="decl"><span class="istickedoff">checkIntuitionWithInput = checkIntuitionWithInputConfig defaultSemanticConfig</span></span>
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>checkIntuition :: Double -&gt; Double -&gt; Int -&gt; IntuitiveState -&gt; (Maybe IntuitiveFlash, IntuitiveState)
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">checkIntuition resonance tension turnNumber state =</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">let newPost = updatePosterior resonance tension (isPosterior state)</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">newLongPost = updateLongPosterior resonance tension (isLongPosterior state)</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">newCooldown = max 0 (isCooldown state - 1)</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">state' = state</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="istickedoff">{ isPosterior = newPost</span>
+<span class="lineno">  158 </span><span class="spaces">        </span><span class="istickedoff">, isLongPosterior = newLongPost</span>
+<span class="lineno">  159 </span><span class="spaces">        </span><span class="istickedoff">, isCooldown = newCooldown</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  161 </span><span class="spaces">      </span><span class="istickedoff">currentPosterior = effectivePosterior state'</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlyfalse">newCooldown &gt; 0</span></span>
+<span class="lineno">  163 </span><span class="spaces">     </span><span class="istickedoff">then <span class="nottickedoff">(Nothing, state')</span></span>
+<span class="lineno">  164 </span><span class="spaces">     </span><span class="istickedoff">else if currentPosterior &gt;= flashThreshold</span>
+<span class="lineno">  165 </span><span class="spaces">           </span><span class="istickedoff">then let flash = buildFlash resonance tension currentPosterior</span>
+<span class="lineno">  166 </span><span class="spaces">                    </span><span class="istickedoff">state'' = state'</span>
+<span class="lineno">  167 </span><span class="spaces">                      </span><span class="istickedoff">{ isPosterior  = posteriorAfterFlash newPost</span>
+<span class="lineno">  168 </span><span class="spaces">                      </span><span class="istickedoff">, isLongPosterior = longPosteriorAfterFlash newLongPost</span>
+<span class="lineno">  169 </span><span class="spaces">                      </span><span class="istickedoff">, isCooldown   = intuitionCooldownTurns</span>
+<span class="lineno">  170 </span><span class="spaces">                      </span><span class="istickedoff">, isFlashCount = isFlashCount state + 1</span>
+<span class="lineno">  171 </span><span class="spaces">                      </span><span class="istickedoff">, isLastTurn   = turnNumber</span>
+<span class="lineno">  172 </span><span class="spaces">                      </span><span class="istickedoff">}</span>
+<span class="lineno">  173 </span><span class="spaces">               </span><span class="istickedoff">in (Just flash, state'')</span>
+<span class="lineno">  174 </span><span class="spaces">          </span><span class="istickedoff">else (Nothing, state')</span></span>
+<span class="lineno">  175 </span>
+<span class="lineno">  176 </span>posteriorAfterFlash :: Double -&gt; Double
+<span class="lineno">  177 </span><span class="decl"><span class="istickedoff">posteriorAfterFlash posterior =</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="istickedoff">max basePrior (posterior * intuitionPosteriorAfterFlashDecayFactor)</span></span>
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>longPosteriorAfterFlash :: Double -&gt; Double
+<span class="lineno">  181 </span><span class="decl"><span class="istickedoff">longPosteriorAfterFlash posterior =</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">max basePrior (posterior * intuitionLongPosteriorAfterFlashDecayFactor)</span></span>
+<span class="lineno">  183 </span>
+<span class="lineno">  184 </span>updateLongPosterior :: Double -&gt; Double -&gt; Double -&gt; Double
+<span class="lineno">  185 </span><span class="decl"><span class="istickedoff">updateLongPosterior resonance tension prior =</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">clamp01</span>
+<span class="lineno">  187 </span><span class="spaces">    </span><span class="istickedoff">( prior * intuitionLongPosteriorPriorWeight</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="istickedoff">+ updatePosterior resonance tension prior * intuitionLongPosteriorCurrentWeight</span>
+<span class="lineno">  189 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  190 </span>
+<span class="lineno">  191 </span>buildFlash :: Double -&gt; Double -&gt; Double -&gt; IntuitiveFlash
+<span class="lineno">  192 </span><span class="decl"><span class="istickedoff">buildFlash resonance tension posterior =</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">let trigger = selectTrigger resonance tension</span>
+<span class="lineno">  194 </span><span class="spaces">      </span><span class="istickedoff">strength = clamp01 ((posterior - flashThreshold) / (1.0 - flashThreshold))</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="istickedoff">kernelSig = buildKernelSignal trigger</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">directive = buildDirective trigger strength</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">in IntuitiveFlash strength trigger kernelSig directive (strength &gt; intuitionFlashOverrideStrengthThreshold)</span></span>
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>selectTrigger :: Double -&gt; Double -&gt; FlashTrigger
+<span class="lineno">  200 </span><span class="decl"><span class="istickedoff">selectTrigger resonance tension</span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">resonance &gt; intuitionHighResonanceThreshold &amp;&amp; tension &gt; intuitionHighTensionThreshold</span> = ConvergenceTrigger</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">tension &gt; intuitionCrisisTensionThreshold</span> = <span class="nottickedoff">CrisisMomentTrigger</span></span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">resonance &gt; intuitionHighResonanceThreshold</span> = <span class="nottickedoff">DeepResonanceTrigger</span></span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span>                         = <span class="nottickedoff">PureKernelTrigger</span></span></span>
+<span class="lineno">  205 </span>
+<span class="lineno">  206 </span>buildKernelSignal :: FlashTrigger -&gt; Text
+<span class="lineno">  207 </span><span class="decl"><span class="istickedoff">buildKernelSignal trigger = T.intercalate &quot;. &quot;</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">[ kernelSignalPresence</span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">, kernelSignalDepth</span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">, triggerContext trigger</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>triggerContext :: FlashTrigger -&gt; Text
+<span class="lineno">  214 </span><span class="decl"><span class="istickedoff">triggerContext DeepResonanceTrigger = <span class="nottickedoff">triggerContextDeepResonance</span></span>
+<span class="lineno">  215 </span><span class="spaces"></span><span class="istickedoff">triggerContext CrisisMomentTrigger  = <span class="nottickedoff">triggerContextCrisisMoment</span></span>
+<span class="lineno">  216 </span><span class="spaces"></span><span class="istickedoff">triggerContext PureKernelTrigger    = <span class="nottickedoff">triggerContextPureKernel</span></span>
+<span class="lineno">  217 </span><span class="spaces"></span><span class="istickedoff">triggerContext ConvergenceTrigger   = triggerContextConvergence</span></span>
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>buildDirective :: FlashTrigger -&gt; Double -&gt; Text
+<span class="lineno">  220 </span><span class="decl"><span class="istickedoff">buildDirective trigger strength =</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">let header = intuitionHeaderPrefix &lt;&gt; fmtPctText strength &lt;&gt; &quot;]&quot;</span>
+<span class="lineno">  222 </span><span class="spaces">      </span><span class="istickedoff">trig   = intuitionTriggerLabel &lt;&gt; renderTrigger trigger</span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="istickedoff">ovrd   = if <span class="tickonlytrue">strength &gt; intuitionFlashOverrideStrengthThreshold</span></span>
+<span class="lineno">  224 </span><span class="spaces">               </span><span class="istickedoff">then intuitionOverrideDirective</span>
+<span class="lineno">  225 </span><span class="spaces">               </span><span class="istickedoff">else <span class="nottickedoff">intuitionSupplementaryDirective</span></span>
+<span class="lineno">  226 </span><span class="spaces">  </span><span class="istickedoff">in T.unlines [header, trig, ovrd, intuitionFormDirective]</span></span>
+<span class="lineno">  227 </span>
+<span class="lineno">  228 </span>fmtPctText :: Double -&gt; Text
+<span class="lineno">  229 </span><span class="decl"><span class="istickedoff">fmtPctText value = T.pack (printf &quot;%.0f%%&quot; (value * 100.0) :: String)</span></span>
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>intuitionSignalStrength :: Double
+<span class="lineno">  232 </span><span class="decl"><span class="nottickedoff">intuitionSignalStrength =</span>
+<span class="lineno">  233 </span><span class="spaces">  </span><span class="nottickedoff">let v = qxfx0CoreVec</span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="nottickedoff">base = cvPresence v * cvDepth v * (1.0 - cvDirectiveness v) * cvAutonomy v</span>
+<span class="lineno">  235 </span><span class="spaces">      </span><span class="nottickedoff">steadyBonus = 1.0 + (cvSteadiness v - intuitionSteadinessBaseline) * intuitionSignalSteadyBonusScale</span>
+<span class="lineno">  236 </span><span class="spaces">  </span><span class="nottickedoff">in base * steadyBonus</span></span>
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>-- | Multiplier applied to flash strength under a 'Salience' verdict.
+<span class="lineno">  239 </span>--
+<span class="lineno">  240 </span>-- Capped at @1.0@ so neutral or holistic-leaning salience never
+<span class="lineno">  241 </span>-- /boosts/ flashes above their base strength; only formal-leaning
+<span class="lineno">  242 </span>-- salience attenuates. At @salienceHolisticBias = 0.5@ (the
+<span class="lineno">  243 </span>-- neutral / dead-band point) the multiplier is exactly @1.0@,
+<span class="lineno">  244 </span>-- so wiring the salience controller into a call site that does
+<span class="lineno">  245 </span>-- not yet supply rich Field signals is a strict no-op.
+<span class="lineno">  246 </span>salienceFlashMultiplier :: Salience -&gt; Double
+<span class="lineno">  247 </span><span class="decl"><span class="nottickedoff">salienceFlashMultiplier salience = min 1.0 (2.0 * salienceHolisticBias salience)</span></span>
+<span class="lineno">  248 </span>
+<span class="lineno">  249 </span>-- | Re-shape an 'IntuitiveFlash' under a salience verdict. The
+<span class="lineno">  250 </span>-- flash strength is scaled by 'salienceFlashMultiplier'; the
+<span class="lineno">  251 </span>-- override flag and directive text are recomputed so the trace
+<span class="lineno">  252 </span>-- stays internally consistent.
+<span class="lineno">  253 </span>applySalienceToFlash :: Salience -&gt; IntuitiveFlash -&gt; IntuitiveFlash
+<span class="lineno">  254 </span><span class="decl"><span class="nottickedoff">applySalienceToFlash salience flash =</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="nottickedoff">let multiplier   = salienceFlashMultiplier salience</span>
+<span class="lineno">  256 </span><span class="spaces">      </span><span class="nottickedoff">newStrength  = clamp01 (ifStrength flash * multiplier)</span>
+<span class="lineno">  257 </span><span class="spaces">      </span><span class="nottickedoff">newOverride  = newStrength &gt; intuitionFlashOverrideStrengthThreshold</span>
+<span class="lineno">  258 </span><span class="spaces">      </span><span class="nottickedoff">newDirective = buildDirective (ifTrigger flash) newStrength</span>
+<span class="lineno">  259 </span><span class="spaces">  </span><span class="nottickedoff">in flash</span>
+<span class="lineno">  260 </span><span class="spaces">       </span><span class="nottickedoff">{ ifStrength     = newStrength</span>
+<span class="lineno">  261 </span><span class="spaces">       </span><span class="nottickedoff">, ifDirective    = newDirective</span>
+<span class="lineno">  262 </span><span class="spaces">       </span><span class="nottickedoff">, ifOverridesAll = newOverride</span>
+<span class="lineno">  263 </span><span class="spaces">       </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>-- | Salience-aware variant of 'checkIntuition'. The flash-detection
+<span class="lineno">  266 </span>-- decision is unchanged; the produced flash, if any, is
+<span class="lineno">  267 </span>-- post-processed via 'applySalienceToFlash'.
+<span class="lineno">  268 </span>checkIntuitionWithSalience
+<span class="lineno">  269 </span>  :: Salience
+<span class="lineno">  270 </span>  -&gt; Double -&gt; Double -&gt; Int -&gt; IntuitiveState
+<span class="lineno">  271 </span>  -&gt; (Maybe IntuitiveFlash, IntuitiveState)
+<span class="lineno">  272 </span><span class="decl"><span class="nottickedoff">checkIntuitionWithSalience salience resonance tension turnNumber state =</span>
+<span class="lineno">  273 </span><span class="spaces">  </span><span class="nottickedoff">let (mFlash, state') = checkIntuition resonance tension turnNumber state</span>
+<span class="lineno">  274 </span><span class="spaces">  </span><span class="nottickedoff">in (fmap (applySalienceToFlash salience) mFlash, state')</span></span>
+<span class="lineno">  275 </span>
+<span class="lineno">  276 </span>-- | Salience-aware variant of 'checkIntuitionWithInput'.
+<span class="lineno">  277 </span>checkIntuitionWithInputAndSalience
+<span class="lineno">  278 </span>  :: Salience
+<span class="lineno">  279 </span>  -&gt; SemanticConfig
+<span class="lineno">  280 </span>  -&gt; Text -&gt; Double -&gt; Double -&gt; Int -&gt; IntuitiveState
+<span class="lineno">  281 </span>  -&gt; (Maybe IntuitiveFlash, IntuitiveState)
+<span class="lineno">  282 </span><span class="decl"><span class="istickedoff">checkIntuitionWithInputAndSalience salience cfg raw resonance tension turnNumber state =</span>
+<span class="lineno">  283 </span><span class="spaces">  </span><span class="istickedoff">let (mFlash, state') = checkIntuitionWithInputConfig cfg raw resonance tension <span class="nottickedoff">turnNumber</span> state</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="istickedoff">in (fmap <span class="nottickedoff">(applySalienceToFlash salience)</span> mFlash, state')</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Signal
+<span class="lineno">    9 </span>Description : WP4 — Bounded Phase-7 calibration signal.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Replaces the hardcoded @signal = 0.0@ in
+<span class="lineno">   12 </span>'buildNextSystemState' with an explainable, bounded composite
+<span class="lineno">   13 </span>computed from:
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>1. Conatus trend (from 'LearningNeedState' history slope),
+<span class="lineno">   16 </span>2. Field uncertainty trend (counterfactual trajectory),
+<span class="lineno">   17 </span>3. Repair-loop risk (frequency of recovery over a window),
+<span class="lineno">   18 </span>4. Branch health trend (from 'KnowledgeTree').
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>The signal is clamped to [-1, 1].  Positive = empirical evidence
+<span class="lineno">   21 </span>suggests the current weights/heuristics should shift in the direction
+<span class="lineno">   22 </span>of the observed deficit.  Negative = evidence is contradictory or
+<span class="lineno">   23 </span>improving; adaptation should be conservative.
+<span class="lineno">   24 </span>-}
+<span class="lineno">   25 </span>module QxFx0.Learning.Signal
+<span class="lineno">   26 </span>  ( CalibrationSignal(..)
+<span class="lineno">   27 </span>  , SignalComponents(..)
+<span class="lineno">   28 </span>  , CalibrationSnapshot(..)
+<span class="lineno">   29 </span>  , CalibrationDecision(..)
+<span class="lineno">   30 </span>  , SignalPipelineConfig(..)
+<span class="lineno">   31 </span>  , defaultSignalPipelineConfig
+<span class="lineno">   32 </span>  , computeCalibrationSignal
+<span class="lineno">   33 </span>  , emptySignalComponents
+<span class="lineno">   34 </span>  , applyCalibrationGated
+<span class="lineno">   35 </span>  ) where
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   38 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   39 </span>import Data.Text (Text)
+<span class="lineno">   40 </span>import qualified Data.Text as T
+<span class="lineno">   41 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   42 </span>import GHC.Generics (Generic)
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>import QxFx0.Learning.Need (LearningNeedState(..), NeedTrend(..), lnsHistory)
+<span class="lineno">   45 </span>import QxFx0.Learning.KnowledgeTree (KnowledgeTree, branchHealthTrend)
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>-- | Bounded calibration signal in [-1, 1].
+<span class="lineno">   48 </span>newtype CalibrationSignal = CalibrationSignal { <span class="istickedoff"><span class="decl"><span class="istickedoff">unCalibrationSignal</span></span></span> :: Double }
+<span class="lineno">   49 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   50 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>-- | Raw components that feed into the composite signal.
+<span class="lineno">   53 </span>-- Each component is independently normalised to [-1, 1] before
+<span class="lineno">   54 </span>-- weighting so the formula remains explainable.
+<span class="lineno">   55 </span>data SignalComponents = SignalComponents
+<span class="lineno">   56 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">scConatusTrend</span></span></span>      :: !Double
+<span class="lineno">   57 </span>    -- ^ Slope of need level over the recent 3 history points.
+<span class="lineno">   58 </span>    --   Positive = deficit worsening.
+<span class="lineno">   59 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scUncertaintyTrend</span></span></span>  :: !Double
+<span class="lineno">   60 </span>    -- ^ Normalised counterfactual magnitude.  Positive = higher
+<span class="lineno">   61 </span>    --   ambiguity / more alternative parses.
+<span class="lineno">   62 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scLoopRisk</span></span></span>          :: !Double
+<span class="lineno">   63 </span>    -- ^ Normalised repair-loop frequency.  Positive = frequent
+<span class="lineno">   64 </span>    --   recovery-driven turns.
+<span class="lineno">   65 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scBranchHealthTrend</span></span></span> :: !Double
+<span class="lineno">   66 </span>    -- ^ Average branch health from the knowledge tree.
+<span class="lineno">   67 </span>    --   Negative = tree is decaying.
+<span class="lineno">   68 </span>  }
+<span class="lineno">   69 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   70 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>emptySignalComponents :: SignalComponents
+<span class="lineno">   73 </span><span class="decl"><span class="istickedoff">emptySignalComponents = SignalComponents</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">{ scConatusTrend = 0.0</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">, scUncertaintyTrend = 0.0</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">, scLoopRisk = 0.0</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">, scBranchHealthTrend = 0.0</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>-- | Persisted snapshot of a calibration signal computation.
+<span class="lineno">   81 </span>-- Captures the full feature vector and decision so the pipeline is
+<span class="lineno">   82 </span>-- reproducible and auditable.
+<span class="lineno">   83 </span>data CalibrationSnapshot = CalibrationSnapshot
+<span class="lineno">   84 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csTimestamp</span></span></span>   :: !UTCTime
+<span class="lineno">   85 </span>    -- ^ When the snapshot was taken (turn resolution time).
+<span class="lineno">   86 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">csRunId</span></span></span>       :: !Text
+<span class="lineno">   87 </span>    -- ^ Session + turn identifier for traceability.
+<span class="lineno">   88 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">csComponents</span></span></span>  :: !SignalComponents
+<span class="lineno">   89 </span>    -- ^ The four raw feature values that fed the signal.
+<span class="lineno">   90 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">csSignal</span></span></span>      :: !Double
+<span class="lineno">   91 </span>    -- ^ Final clamped signal value.
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">csDecision</span></span></span>    :: !CalibrationDecision
+<span class="lineno">   93 </span>    -- ^ What the system decided to do with the signal.
+<span class="lineno">   94 </span>  }
+<span class="lineno">   95 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   96 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>-- | Decision made by the calibration pipeline for a given snapshot.
+<span class="lineno">   99 </span>data CalibrationDecision
+<span class="lineno">  100 </span>  = CdApplySignal
+<span class="lineno">  101 </span>    -- ^ Signal confidence and guardrails passed; apply to weights/heuristics.
+<span class="lineno">  102 </span>  | CdHoldLowConfidence
+<span class="lineno">  103 </span>    -- ^ Signal magnitude below threshold or confidence insufficient.
+<span class="lineno">  104 </span>  | CdHoldGuardrails
+<span class="lineno">  105 </span>    -- ^ Guardrails blocked application (e.g. rate limit, circuit breaker open).
+<span class="lineno">  106 </span>  | CdHoldNoNeed
+<span class="lineno">  107 </span>    -- ^ No active learning need; signal computed but not actionable.
+<span class="lineno">  108 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  109 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>-- | Configuration for the calibration signal pipeline.
+<span class="lineno">  112 </span>-- Keeps the pipeline gated and conservative by default.
+<span class="lineno">  113 </span>data SignalPipelineConfig = SignalPipelineConfig
+<span class="lineno">  114 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">spcMinConfidence</span></span></span>      :: !Double
+<span class="lineno">  115 </span>    -- ^ Minimum |signal| to be considered actionable (default 0.15).
+<span class="lineno">  116 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">spcApplyRateLimit</span></span></span>     :: !Int
+<span class="lineno">  117 </span>    -- ^ Max applications per N turns (default 1 per 5 turns).
+<span class="lineno">  118 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">spcApplyWindow</span></span></span>        :: !Int
+<span class="lineno">  119 </span>    -- ^ Window size for rate limit (default 5 turns).
+<span class="lineno">  120 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">spcConatusWeight</span></span></span>      :: !Double
+<span class="lineno">  121 </span>    -- ^ Weight for conatus trend component (default 0.30).
+<span class="lineno">  122 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">spcUncertaintyWeight</span></span></span>  :: !Double
+<span class="lineno">  123 </span>    -- ^ Weight for uncertainty trend component (default 0.30).
+<span class="lineno">  124 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">spcLoopRiskWeight</span></span></span>     :: !Double
+<span class="lineno">  125 </span>    -- ^ Weight for loop risk component (default 0.20).
+<span class="lineno">  126 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">spcBranchHealthWeight</span></span></span> :: !Double
+<span class="lineno">  127 </span>    -- ^ Weight for branch health component (default 0.20).
+<span class="lineno">  128 </span>  }
+<span class="lineno">  129 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  130 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>defaultSignalPipelineConfig :: SignalPipelineConfig
+<span class="lineno">  133 </span><span class="decl"><span class="istickedoff">defaultSignalPipelineConfig = SignalPipelineConfig</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">{ spcMinConfidence      = 0.15</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">, spcApplyRateLimit     = 1</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">, spcApplyWindow        = 5</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">, spcConatusWeight      = 0.30</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">, spcUncertaintyWeight  = 0.30</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">, spcLoopRiskWeight     = 0.20</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">, spcBranchHealthWeight = 0.20</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>-- | Gated application of a calibration signal.
+<span class="lineno">  144 </span>-- Returns 'True' if the signal should be applied to weights/heuristics,
+<span class="lineno">  145 </span>-- 'False' if held back by confidence threshold or rate limit.
+<span class="lineno">  146 </span>applyCalibrationGated
+<span class="lineno">  147 </span>  :: SignalPipelineConfig
+<span class="lineno">  148 </span>  -&gt; CalibrationSignal
+<span class="lineno">  149 </span>  -&gt; [CalibrationSnapshot]  -- ^ prior snapshots (for rate-limit check)
+<span class="lineno">  150 </span>  -&gt; (Bool, CalibrationDecision)
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">applyCalibrationGated cfg signal snapshots =</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">let s = unCalibrationSignal signal</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">nonFinite = isNaN s || isInfinite s</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">absS = abs s</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">-- Rate limit: count recent CdApplySignal within window</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">recentApplies = length (filter (\cs -&gt; csDecision cs == CdApplySignal)</span>
+<span class="lineno">  157 </span><span class="spaces">                              </span><span class="istickedoff">(take (spcApplyWindow cfg) snapshots))</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">rateLimitOk = recentApplies &lt; spcApplyRateLimit cfg</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlyfalse">nonFinite</span></span>
+<span class="lineno">  160 </span><span class="spaces">       </span><span class="istickedoff">then <span class="nottickedoff">(False, CdHoldLowConfidence)</span></span>
+<span class="lineno">  161 </span><span class="spaces">     </span><span class="istickedoff">else if absS &lt; spcMinConfidence cfg</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">then (False, CdHoldLowConfidence)</span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">else if <span class="tickonlytrue">not rateLimitOk</span></span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">then (False, CdHoldGuardrails)</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">else <span class="nottickedoff">(True, CdApplySignal)</span></span></span>
+<span class="lineno">  166 </span>
+<span class="lineno">  167 </span>-- | Compute the bounded calibration signal.
+<span class="lineno">  168 </span>--
+<span class="lineno">  169 </span>-- Formula (fixed weights for interpretability):
+<span class="lineno">  170 </span>--
+<span class="lineno">  171 </span>-- @
+<span class="lineno">  172 </span>-- signal = clamp [-1,1] (
+<span class="lineno">  173 </span>--     0.30 * conatusTrend
+<span class="lineno">  174 </span>--   + 0.30 * uncertaintyTrend
+<span class="lineno">  175 </span>--   + 0.20 * loopRisk
+<span class="lineno">  176 </span>--   + 0.20 * (-branchHealthTrend)   -- decaying tree pushes signal up
+<span class="lineno">  177 </span>-- )
+<span class="lineno">  178 </span>-- @
+<span class="lineno">  179 </span>--
+<span class="lineno">  180 </span>-- Rationale:
+<span class="lineno">  181 </span>-- * Conatus and uncertainty each get 30 % because they are the most
+<span class="lineno">  182 </span>--   direct indicators of structural drift.
+<span class="lineno">  183 </span>-- * Loop risk gets 20 % as a lagging but robust proxy.
+<span class="lineno">  184 </span>-- * Branch health gets 20 % with inverted sign: a decaying
+<span class="lineno">  185 </span>--   knowledge tree means the current calibration is failing to
+<span class="lineno">  186 </span>--   retain useful structure, so adaptation pressure rises.
+<span class="lineno">  187 </span>computeCalibrationSignal
+<span class="lineno">  188 </span>  :: LearningNeedState
+<span class="lineno">  189 </span>  -&gt; Double       -- ^ current field counterfactual (raw [0,1])
+<span class="lineno">  190 </span>  -&gt; Int          -- ^ repair-loop count in recent window
+<span class="lineno">  191 </span>  -&gt; Int          -- ^ window size for loop normalisation
+<span class="lineno">  192 </span>  -&gt; KnowledgeTree
+<span class="lineno">  193 </span>  -&gt; (CalibrationSignal, SignalComponents)
+<span class="lineno">  194 </span><span class="decl"><span class="istickedoff">computeCalibrationSignal needState counterfactual loopCount windowSize tree =</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">let       -- 1. Conatus trend: slope over recent 3 points</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">conatusTrend = case lnsHistory needState of</span>
+<span class="lineno">  197 </span><span class="spaces">        </span><span class="istickedoff">(_, y2) : (_, y1) : (_, y0) : _ -&gt;</span>
+<span class="lineno">  198 </span><span class="spaces">          </span><span class="istickedoff">let avgSlope = ((y2 - y1) + (y1 - y0)) / 2.0</span>
+<span class="lineno">  199 </span><span class="spaces">          </span><span class="istickedoff">in clampUnit (avgSlope * 5.0)  -- scale: 0.2 level diff -&gt; 1.0</span>
+<span class="lineno">  200 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; 0.0</span>
+<span class="lineno">  201 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="istickedoff">-- 2. Uncertainty trend: raw counterfactual scaled to [-1,1]</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="istickedoff">-- centred at 0.5; &gt;0.5 positive, &lt;0.5 negative</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="istickedoff">uncertaintyTrend = clampUnit ((counterfactual - 0.5) * 4.0)</span>
+<span class="lineno">  205 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff">-- 3. Loop risk: normalised by window size</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="istickedoff">loopRisk =</span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlyfalse">windowSize &lt;= 0</span></span>
+<span class="lineno">  209 </span><span class="spaces">           </span><span class="istickedoff">then <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  210 </span><span class="spaces">           </span><span class="istickedoff">else clampUnit (fromIntegral loopCount / fromIntegral windowSize * 2.0 - 1.0)</span>
+<span class="lineno">  211 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="istickedoff">-- 4. Branch health trend: inverted so decay -&gt; positive signal</span>
+<span class="lineno">  213 </span><span class="spaces">      </span><span class="istickedoff">avgHealth = branchHealthTrend tree</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">branchHealthTrend' =</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlyfalse">isNaN avgHealth || isInfinite avgHealth</span></span>
+<span class="lineno">  216 </span><span class="spaces">          </span><span class="istickedoff">then <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  217 </span><span class="spaces">          </span><span class="istickedoff">else clampUnit (-avgHealth * 2.0)</span>
+<span class="lineno">  218 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  219 </span><span class="spaces">      </span><span class="istickedoff">comps = SignalComponents</span>
+<span class="lineno">  220 </span><span class="spaces">        </span><span class="istickedoff">{ scConatusTrend = conatusTrend</span>
+<span class="lineno">  221 </span><span class="spaces">        </span><span class="istickedoff">, scUncertaintyTrend = uncertaintyTrend</span>
+<span class="lineno">  222 </span><span class="spaces">        </span><span class="istickedoff">, scLoopRisk = loopRisk</span>
+<span class="lineno">  223 </span><span class="spaces">        </span><span class="istickedoff">, scBranchHealthTrend = branchHealthTrend'</span>
+<span class="lineno">  224 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  225 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">rawSignal =</span>
+<span class="lineno">  227 </span><span class="spaces">          </span><span class="istickedoff">0.30 * conatusTrend</span>
+<span class="lineno">  228 </span><span class="spaces">        </span><span class="istickedoff">+ 0.30 * uncertaintyTrend</span>
+<span class="lineno">  229 </span><span class="spaces">        </span><span class="istickedoff">+ 0.20 * loopRisk</span>
+<span class="lineno">  230 </span><span class="spaces">        </span><span class="istickedoff">+ 0.20 * branchHealthTrend'</span>
+<span class="lineno">  231 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  232 </span><span class="spaces">      </span><span class="istickedoff">signal = CalibrationSignal (clampRange (-1.0) 1.0 rawSignal)</span>
+<span class="lineno">  233 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">in (signal, comps)</span></span>
+<span class="lineno">  235 </span>
+<span class="lineno">  236 </span>clampUnit :: Double -&gt; Double
+<span class="lineno">  237 </span><span class="decl"><span class="istickedoff">clampUnit x</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">isNaN x || isInfinite x</span> = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  239 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = max (-1.0) (min 1.0 x)</span></span>
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>clampRange :: Double -&gt; Double -&gt; Double -&gt; Double
+<span class="lineno">  242 </span><span class="decl"><span class="istickedoff">clampRange lo hi x</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">isNaN x || isInfinite x</span> = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = max lo (min hi x)</span></span>
+
+</pre>
+</body>
+</html>

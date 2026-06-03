@@ -11,6 +11,7 @@ module QxFx0.Bridge.Datalog.Support
   , compactDiagnostic
   ) where
 
+import Control.Exception (onException)
 import Data.List (nub, sort)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -25,6 +26,7 @@ import QxFx0.Types
 import QxFx0.Types.ShadowDivergence (ShadowSnapshot(..))
 import System.Directory
   ( createDirectory
+  , createDirectoryIfMissing
   , doesFileExist
   , getTemporaryDirectory
   , removeDirectoryRecursive
@@ -32,6 +34,7 @@ import System.Directory
   )
 import System.FilePath ((</>))
 import System.IO (hClose, openTempFile)
+import System.Posix.Files (ownerExecuteMode, ownerReadMode, ownerWriteMode, setFileMode, unionFileModes)
 import Text.Read (readMaybe)
 
 data DatalogExecution = DatalogExecution
@@ -42,15 +45,23 @@ data DatalogExecution = DatalogExecution
 createShadowTempFiles :: IO (FilePath, FilePath, IO ())
 createShadowTempFiles = do
   tmpDir <- getTemporaryDirectory
-  (dlFile, handle) <- openTempFile tmpDir "qxfx0_shadow_rules.dl"
+  (seedFile, handle) <- openTempFile tmpDir "qxfx0_shadow_rules.seed"
   hClose handle
-  let outDir = dlFile <> ".out"
-  createDirectory outDir
-  pure (dlFile, outDir, cleanup dlFile outDir)
+  let workDir = seedFile <> ".dir"
+      dlFile = workDir </> "qxfx0_shadow_rules.dl"
+      outDir = workDir </> "out"
+      dirMode = ownerReadMode `unionFileModes` ownerWriteMode `unionFileModes` ownerExecuteMode
+      cleanupAction = cleanup seedFile workDir
+  (do createDirectory workDir
+      setFileMode workDir dirMode
+      createDirectory outDir
+      setFileMode outDir dirMode
+      pure (dlFile, outDir, cleanupAction))
+    `onException` cleanupAction
   where
-    cleanup dlFile outDir = do
-      ignoreCleanup (removeFile dlFile)
-      ignoreCleanup (removeDirectoryRecursive outDir)
+    cleanup seedFile workDir = do
+      ignoreCleanup (removeFile seedFile)
+      ignoreCleanup (removeDirectoryRecursive workDir)
     ignoreCleanup action =
       catchIO action (\_ -> pure ())
 
@@ -190,6 +201,11 @@ escapeSymbol =
   T.concatMap $ \ch -> case ch of
     '\\' -> "\\\\"
     '"' -> "\\\""
+    '(' -> "_"
+    ')' -> "_"
+    ';' -> "_"
+    '.' -> "_"
+    '%' -> "_"
     '\n' -> " "
     '\r' -> " "
     '\t' -> " "

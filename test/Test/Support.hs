@@ -4,10 +4,15 @@ module Test.Support
   ( assertExec
   , queryCount
   , withFakeSouffle
+  , withFakeNixInstantiateOk
   , withRuntimeEnv
   , withStrictRuntimeEnv
   , withEnvVar
   , removeIfExists
+  , removeDirIfExists
+  , testTempDir
+  , freshTestPath
+  , freshTestDbPath
   ) where
 
 import Test.HUnit (assertFailure)
@@ -15,11 +20,13 @@ import Control.Exception (bracket_)
 import System.Directory
   ( Permissions(..)
   , createDirectoryIfMissing
+  , doesDirectoryExist
   , doesFileExist
   , findExecutable
   , getCurrentDirectory
   , getPermissions
   , removeFile
+  , removePathForcibly
   , setPermissions
   )
 import System.Environment (lookupEnv, setEnv, unsetEnv)
@@ -30,6 +37,16 @@ import qualified Data.Text as T
 import qualified QxFx0.Bridge.AgdaWitness as AW
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Runtime as Runtime
+
+freshTestPath :: FilePath -> IO FilePath
+freshTestPath stem = do
+  tmpDir <- testTempDir
+  ts <- getPOSIXTime
+  let suffix = show (round (ts * 1000000) :: Integer)
+  pure (tmpDir <> "/" <> stem <> "-" <> suffix)
+
+freshTestDbPath :: FilePath -> IO FilePath
+freshTestDbPath = freshTestPath
 
 assertExec :: NSQL.Database -> FilePath -> T.Text -> IO ()
 assertExec db label sql = do
@@ -52,14 +69,15 @@ queryCount db sql = do
 withFakeSouffle :: IO a -> IO a
 withFakeSouffle action = do
   oldPath <- lookupEnv "PATH"
-  let binDir = "/tmp/qxfx0_fake_souffle_bin"
+  binDir <- freshTestPath "qxfx0_fake_souffle_bin"
+  let cleanup = removeDirIfExists binDir
       scriptPath = binDir </> "souffle"
       fakePath = binDir <> maybe "" (\p -> ":" <> p) oldPath
-  createDirectoryIfMissing True binDir
-  writeFile scriptPath (unlines fakeSouffleScript)
-  perms <- getPermissions scriptPath
-  setPermissions scriptPath perms { executable = True }
-  withEnvVar "PATH" (Just fakePath) action
+  bracket_ (createDirectoryIfMissing True binDir) cleanup $ do
+    writeFile scriptPath (unlines fakeSouffleScript)
+    perms <- getPermissions scriptPath
+    setPermissions scriptPath perms { executable = True }
+    withEnvVar "PATH" (Just fakePath) action
   where
     fakeSouffleScript =
       [ "#!/bin/sh"
@@ -86,14 +104,15 @@ withFakeSouffle action = do
 withFakeNixInstantiateOk :: IO a -> IO a
 withFakeNixInstantiateOk action = do
   oldPath <- lookupEnv "PATH"
-  let binDir = "/tmp/qxfx0_fake_nix_bin"
+  binDir <- freshTestPath "qxfx0_fake_nix_bin"
+  let cleanup = removeDirIfExists binDir
       scriptPath = binDir </> "nix-instantiate"
       fakePath = binDir <> maybe "" (\p -> ":" <> p) oldPath
-  createDirectoryIfMissing True binDir
-  writeFile scriptPath (unlines fakeNixScript)
-  perms <- getPermissions scriptPath
-  setPermissions scriptPath perms { executable = True }
-  withEnvVar "PATH" (Just fakePath) action
+  bracket_ (createDirectoryIfMissing True binDir) cleanup $ do
+    writeFile scriptPath (unlines fakeNixScript)
+    perms <- getPermissions scriptPath
+    setPermissions scriptPath perms { executable = True }
+    withEnvVar "PATH" (Just fakePath) action
   where
     fakeNixScript =
       [ "#!/bin/sh"
@@ -110,41 +129,52 @@ testTempDir = do
 withRuntimeEnv :: FilePath -> IO a -> IO a
 withRuntimeEnv dbName action = do
   root <- getCurrentDirectory
-  tmpDir <- testTempDir
-  ts <- getPOSIXTime
-  let suffix = show (round (ts * 1000000) :: Integer)
-      dbPath = tmpDir <> "/" <> dbName <> "-" <> suffix
-  withCleanFiles (runtimeArtifacts dbPath) $
-    withEnvVar "QXFX0_ROOT" (Just root) $
-      withEnvVar "QXFX0_DB" (Just dbPath) $
-        withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded") $
-          action
+  dbPath <- freshTestDbPath dbName
+  stateDir <- freshTestPath (dbName <> ".state")
+  bracket_
+    (do
+      mapM_ removeIfExists (runtimeArtifacts dbPath)
+      removeDirIfExists stateDir)
+    (do
+      mapM_ removeIfExists (runtimeArtifacts dbPath)
+      removeDirIfExists stateDir)
+    $ withEnvVar "QXFX0_ROOT" (Just root) $
+        withEnvVar "QXFX0_DB" (Just dbPath) $
+          withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+            withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded") $
+              action
 
 withStrictRuntimeEnv :: FilePath -> IO a -> IO a
 withStrictRuntimeEnv dbName action = do
   root <- getCurrentDirectory
-  tmpDir <- testTempDir
-  ts <- getPOSIXTime
-  let suffix = show (round (ts * 1000000) :: Integer)
-      dbPath = tmpDir <> "/" <> dbName <> "-" <> suffix
-      witnessPath = dbPath <> ".agda-witness.json"
-  withCleanFiles (witnessPath : runtimeArtifacts dbPath) $
-    withFakeSouffle $
-      withFakeNixInstantiateOk $
-        withEnvVar "QXFX0_ROOT" (Just root) $
-          withEnvVar "QXFX0_DB" (Just dbPath) $
-            withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
-              withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
-                withEnvVar "EMBEDDING_API_URL" Nothing $
-                  withEnvVar "QXFX0_AGDA_WITNESS" (Just witnessPath) $ do
-                    mAgda <- findExecutable "agda"
-                    case mAgda of
-                      Just _  -> do
-                        _ <- Runtime.writeAgdaWitness
-                        action
-                      Nothing -> do
-                        AW.writeStubAgdaWitness witnessPath
-                        action
+  dbPath <- freshTestDbPath dbName
+  witnessPath <- freshTestPath (dbName <> ".agda-witness.json")
+  stateDir <- freshTestPath (dbName <> ".state")
+  let cleanup = witnessPath : runtimeArtifacts dbPath
+  bracket_
+    (do
+      mapM_ removeIfExists cleanup
+      removeDirIfExists stateDir)
+    (do
+      mapM_ removeIfExists cleanup
+      removeDirIfExists stateDir)
+    $ withFakeSouffle $
+        withFakeNixInstantiateOk $
+          withEnvVar "QXFX0_ROOT" (Just root) $
+            withEnvVar "QXFX0_DB" (Just dbPath) $
+              withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+                withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
+                  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
+                    withEnvVar "EMBEDDING_API_URL" Nothing $
+                      withEnvVar "QXFX0_AGDA_WITNESS" (Just witnessPath) $ do
+                        mAgda <- findExecutable "agda"
+                        case mAgda of
+                          Just _  -> do
+                            _ <- Runtime.writeAgdaWitness
+                            action
+                          Nothing -> do
+                            AW.writeStubAgdaWitness witnessPath
+                            action
 
 withEnvVar :: String -> Maybe String -> IO a -> IO a
 withEnvVar key mValue action = do
@@ -161,6 +191,11 @@ removeIfExists :: FilePath -> IO ()
 removeIfExists filePath = do
   exists <- doesFileExist filePath
   if exists then removeFile filePath else pure ()
+
+removeDirIfExists :: FilePath -> IO ()
+removeDirIfExists dirPath = do
+  exists <- doesDirectoryExist dirPath
+  if exists then removePathForcibly dirPath else pure ()
 
 withCleanFiles :: [FilePath] -> IO a -> IO a
 withCleanFiles paths =

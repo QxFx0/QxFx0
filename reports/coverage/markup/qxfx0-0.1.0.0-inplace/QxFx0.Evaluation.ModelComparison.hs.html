@@ -1,0 +1,522 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Evaluation.ModelComparison
+<span class="lineno">    9 </span>Description : Fireworks multi-model A/B evaluation harness.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Deterministic corpus, session runner, metrics aggregation, and
+<span class="lineno">   12 </span>incident detection for comparing external LLM transports.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>Constraints:
+<span class="lineno">   15 </span>- Identical corpus and policy across all models.
+<span class="lineno">   16 </span>- Per-model state fork so sessions are independent.
+<span class="lineno">   17 </span>- Incident detection is fail-closed: any anomaly is reported,
+<span class="lineno">   18 </span>  never silently swallowed.
+<span class="lineno">   19 </span>- Mock-based tests use model-characteristic mock tables for
+<span class="lineno">   20 </span>  deterministic 360-turn simulation.
+<span class="lineno">   21 </span>-}
+<span class="lineno">   22 </span>module QxFx0.Evaluation.ModelComparison
+<span class="lineno">   23 </span>  ( -- * Types
+<span class="lineno">   24 </span>    ModelId
+<span class="lineno">   25 </span>  , TurnPrompt(..)
+<span class="lineno">   26 </span>  , TurnResult(..)
+<span class="lineno">   27 </span>  , SessionOutcome(..)
+<span class="lineno">   28 </span>  , ModelOutcome(..)
+<span class="lineno">   29 </span>  , ComparisonRun(..)
+<span class="lineno">   30 </span>  , ComparisonIncident(..)
+<span class="lineno">   31 </span>  , SessionMode(..)
+<span class="lineno">   32 </span>    -- * Corpus and runner
+<span class="lineno">   33 </span>  , deterministicCorpus
+<span class="lineno">   34 </span>  , runTurn
+<span class="lineno">   35 </span>  , runModelSession
+<span class="lineno">   36 </span>  , runInterleavedSession
+<span class="lineno">   37 </span>  , runComparison
+<span class="lineno">   38 </span>    -- * Aggregation and incident detection
+<span class="lineno">   39 </span>  , aggregateSession
+<span class="lineno">   40 </span>  , aggregateModel
+<span class="lineno">   41 </span>  , detectIncidents
+<span class="lineno">   42 </span>  , renderComparisonRun
+<span class="lineno">   43 </span>  ) where
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   46 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   47 </span>import Data.List (sortBy)
+<span class="lineno">   48 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   49 </span>import Data.Ord (comparing)
+<span class="lineno">   50 </span>import Data.Text (Text)
+<span class="lineno">   51 </span>import qualified Data.Text as T
+<span class="lineno">   52 </span>import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+<span class="lineno">   53 </span>import GHC.Generics (Generic)
+<span class="lineno">   54 </span>import System.Random (mkStdGen, randoms)
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>import QxFx0.Bridge.ExternalLLM
+<span class="lineno">   57 </span>  ( LLMTransport(..)
+<span class="lineno">   58 </span>  , queryExternalTool
+<span class="lineno">   59 </span>  )
+<span class="lineno">   60 </span>import QxFx0.Learning.Loop
+<span class="lineno">   61 </span>  ( LearningTelemetry(..)
+<span class="lineno">   62 </span>  , runLearningStep
+<span class="lineno">   63 </span>  )
+<span class="lineno">   64 </span>import QxFx0.Learning.Need (LearningNeed(..))
+<span class="lineno">   65 </span>import QxFx0.Learning.Tool
+<span class="lineno">   66 </span>  ( ExternalTool(..)
+<span class="lineno">   67 </span>  , ToolDomain(..)
+<span class="lineno">   68 </span>  )
+<span class="lineno">   69 </span>import QxFx0.Types.ExternalQuery
+<span class="lineno">   70 </span>  ( ExternalQueryError(..)
+<span class="lineno">   71 </span>  , ExternalQueryResponse(..)
+<span class="lineno">   72 </span>  )
+<span class="lineno">   73 </span>import QxFx0.Types.State.Dialogue (DialogueState(..))
+<span class="lineno">   74 </span>import QxFx0.Types.State.System (SystemState(..), emptySystemState, ssTurnCount)
+<span class="lineno">   75 </span>import Control.Monad (foldM)
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   78 </span>-- Types
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>-- | Canonical model identifier (e.g. &quot;glm-5p1&quot;).
+<span class="lineno">   81 </span>type ModelId = Text
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>-- | One entry in the deterministic evaluation corpus.
+<span class="lineno">   84 </span>data TurnPrompt = TurnPrompt
+<span class="lineno">   85 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tpIndex</span></span></span> :: !Int
+<span class="lineno">   86 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpText</span></span></span>  :: !Text
+<span class="lineno">   87 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   88 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>-- | Result of one evaluation turn.
+<span class="lineno">   91 </span>data TurnResult = TurnResult
+<span class="lineno">   92 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trModelId</span></span></span>     :: !ModelId
+<span class="lineno">   93 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trPromptIndex</span></span></span> :: !Int
+<span class="lineno">   94 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trOutcome</span></span></span>     :: !(Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">   95 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trLatencyMs</span></span></span>   :: !Int
+<span class="lineno">   96 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trTelemetry</span></span></span>   :: !LearningTelemetry
+<span class="lineno">   97 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   98 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>-- | Aggregated metrics for a single model session.
+<span class="lineno">  101 </span>data SessionOutcome = SessionOutcome
+<span class="lineno">  102 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">soModelId</span></span></span>               :: !ModelId
+<span class="lineno">  103 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">soSessionId</span></span></span>             :: !Int
+<span class="lineno">  104 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soTotalTurns</span></span></span>            :: !Int
+<span class="lineno">  105 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soSuccessCount</span></span></span>          :: !Int
+<span class="lineno">  106 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soTransportErrorCount</span></span></span>   :: !Int
+<span class="lineno">  107 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soParseRejectCount</span></span></span>      :: !Int
+<span class="lineno">  108 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soValidationRejectCount</span></span></span> :: !Int
+<span class="lineno">  109 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soSandboxRejectCount</span></span></span>    :: !Int
+<span class="lineno">  110 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soSandboxAcceptCount</span></span></span>    :: !Int
+<span class="lineno">  111 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soTotalLatencyMs</span></span></span>        :: !Int
+<span class="lineno">  112 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">soIncidents</span></span></span>             :: ![ComparisonIncident]
+<span class="lineno">  113 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  114 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>-- | Incident detected during session analysis.
+<span class="lineno">  117 </span>data ComparisonIncident
+<span class="lineno">  118 </span>  = IncidentConsecutiveTransportErrors !ModelId !Int !Int
+<span class="lineno">  119 </span>    -- ^ model, startTurn(1-based), count
+<span class="lineno">  120 </span>  | IncidentConsecutiveValidatorRejects !ModelId !Int !Int
+<span class="lineno">  121 </span>    -- ^ model, startTurn(1-based), count
+<span class="lineno">  122 </span>  | IncidentConsecutiveSandboxRejects !ModelId !Int !Text !Int
+<span class="lineno">  123 </span>    -- ^ model, startTurn(1-based), degradationTag, count
+<span class="lineno">  124 </span>  | IncidentRequestRejectLoop !ModelId !Int
+<span class="lineno">  125 </span>    -- ^ model, loopLength
+<span class="lineno">  126 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  127 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>-- | Per-model outcome across all sessions.
+<span class="lineno">  130 </span>data ModelOutcome = ModelOutcome
+<span class="lineno">  131 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">moModelId</span></span></span>              :: !ModelId
+<span class="lineno">  132 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">moSessions</span></span></span>             :: ![SessionOutcome]
+<span class="lineno">  133 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">moAvgSuccessRate</span></span></span>       :: !Double
+<span class="lineno">  134 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">moAvgLatencyMs</span></span></span>         :: !Double
+<span class="lineno">  135 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">moAvgValidatorAcceptRate</span></span></span> :: !Double
+<span class="lineno">  136 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">moAvgSandboxPassRate</span></span></span>     :: !Double
+<span class="lineno">  137 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">moTotalIncidents</span></span></span>       :: !Int
+<span class="lineno">  138 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  139 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>-- | Full comparison run.
+<span class="lineno">  142 </span>data ComparisonRun = ComparisonRun
+<span class="lineno">  143 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">crRunId</span></span></span>         :: !Text
+<span class="lineno">  144 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">crTimestamp</span></span></span>     :: !UTCTime
+<span class="lineno">  145 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">crModelOutcomes</span></span></span> :: ![ModelOutcome]
+<span class="lineno">  146 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">crGlobalIncidents</span></span></span> :: ![ComparisonIncident]
+<span class="lineno">  147 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  148 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>-- | Execution mode for a session.
+<span class="lineno">  151 </span>data SessionMode = Sequential | Interleaved
+<span class="lineno">  152 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  153 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  156 </span>-- Corpus
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>-- | Deterministic 40-prompt corpus.  Identical for every model.
+<span class="lineno">  159 </span>-- Prompts cover Russian philosophical vocabulary and morphology
+<span class="lineno">  160 </span>-- queries so the parser, validator, and sandbox are exercised.
+<span class="lineno">  161 </span>deterministicCorpus :: [TurnPrompt]
+<span class="lineno">  162 </span><span class="decl"><span class="istickedoff">deterministicCorpus = zipWith TurnPrompt [1..]</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;что такое свобода&quot;</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема диалектики&quot;</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'книга'&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Explore the nature of consciousness&quot;</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail test transport error&quot;</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение справедливости&quot;</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема бытия и ничто&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'свобода'&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">, &quot;What is the meaning of existence&quot;</span>
+<span class="lineno">  172 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail second error case&quot;</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение истины&quot;</span>
+<span class="lineno">  174 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема времени&quot;</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'истина'&quot;</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Explain phenomenological reduction&quot;</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail third error cluster&quot;</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение добра&quot;</span>
+<span class="lineno">  179 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема воли&quot;</span>
+<span class="lineno">  180 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'воля'&quot;</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Describe transcendental idealism&quot;</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail fourth error&quot;</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение красоты&quot;</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема смерти&quot;</span>
+<span class="lineno">  185 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'смерть'&quot;</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Analyze categorical imperative&quot;</span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail fifth error&quot;</span>
+<span class="lineno">  188 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение долга&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема ответственности&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'долг'&quot;</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Discuss ethical egoism&quot;</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail sixth error&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение власти&quot;</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема государства&quot;</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'власть'&quot;</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Evaluate social contract theory&quot;</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail seventh error&quot;</span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">, &quot;определение права&quot;</span>
+<span class="lineno">  199 </span><span class="spaces">  </span><span class="istickedoff">, &quot;тема закона&quot;</span>
+<span class="lineno">  200 </span><span class="spaces">  </span><span class="istickedoff">, &quot;как склоняется слово 'право'&quot;</span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">, &quot;Interpret hermeneutic circle&quot;</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">, &quot;fail eighth error&quot;</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  204 </span>
+<span class="lineno">  205 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  206 </span>-- Runner
+<span class="lineno">  207 </span>
+<span class="lineno">  208 </span>-- | Single turn: query external tool, run learning loop, capture telemetry.
+<span class="lineno">  209 </span>runTurn
+<span class="lineno">  210 </span>  :: SystemState
+<span class="lineno">  211 </span>  -&gt; LLMTransport
+<span class="lineno">  212 </span>  -&gt; ExternalTool
+<span class="lineno">  213 </span>  -&gt; LearningNeed
+<span class="lineno">  214 </span>  -&gt; ModelId
+<span class="lineno">  215 </span>  -&gt; TurnPrompt
+<span class="lineno">  216 </span>  -&gt; IO (SystemState, TurnResult)
+<span class="lineno">  217 </span><span class="decl"><span class="istickedoff">runTurn ss transport tool need modelId prompt = do</span>
+<span class="lineno">  218 </span><span class="spaces">  </span><span class="istickedoff">t0 &lt;- getCurrentTime</span>
+<span class="lineno">  219 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- queryExternalTool transport tool need (tpText prompt)</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">t1 &lt;- getCurrentTime</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">let latency = round (diffUTCTime t1 t0 * 1000.0) :: Int</span>
+<span class="lineno">  222 </span><span class="spaces">      </span><span class="istickedoff">(ss', tel) = runLearningStep ss tool need <span class="nottickedoff">(tpText prompt)</span> (Just result)</span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="istickedoff">d    = ssDialogue ss</span>
+<span class="lineno">  224 </span><span class="spaces">      </span><span class="istickedoff">ss'' = ss' { ssDialogue = d { dsTurnCount = dsTurnCount d + 1 } }</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">tr = TurnResult</span>
+<span class="lineno">  226 </span><span class="spaces">        </span><span class="istickedoff">{ trModelId     = modelId</span>
+<span class="lineno">  227 </span><span class="spaces">        </span><span class="istickedoff">, trPromptIndex = tpIndex prompt</span>
+<span class="lineno">  228 </span><span class="spaces">        </span><span class="istickedoff">, trOutcome     = result</span>
+<span class="lineno">  229 </span><span class="spaces">        </span><span class="istickedoff">, trLatencyMs   = latency</span>
+<span class="lineno">  230 </span><span class="spaces">        </span><span class="istickedoff">, trTelemetry   = tel</span>
+<span class="lineno">  231 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  232 </span><span class="spaces">  </span><span class="istickedoff">return (ss'', tr)</span></span>
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>-- | Run one model through all prompts sequentially.
+<span class="lineno">  235 </span>-- State is forked from the supplied baseline.
+<span class="lineno">  236 </span>runModelSession
+<span class="lineno">  237 </span>  :: Int           -- ^ session id
+<span class="lineno">  238 </span>  -&gt; ModelId
+<span class="lineno">  239 </span>  -&gt; LLMTransport
+<span class="lineno">  240 </span>  -&gt; [TurnPrompt]
+<span class="lineno">  241 </span>  -&gt; SystemState   -- ^ baseline state
+<span class="lineno">  242 </span>  -&gt; IO (SystemState, [TurnResult])
+<span class="lineno">  243 </span><span class="decl"><span class="istickedoff">runModelSession _sessionId modelId transport prompts ss0 =</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">let tool = ExternalTool &quot;llm-augment&quot; DomainLexicon 0.7 True</span>
+<span class="lineno">  245 </span><span class="spaces">      </span><span class="istickedoff">need = NeedLexiconExtension</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">go ss [] acc = return (<span class="nottickedoff">ss</span>, reverse acc)</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">go ss (p:ps) acc = do</span>
+<span class="lineno">  248 </span><span class="spaces">        </span><span class="istickedoff">(ss', tr) &lt;- runTurn ss transport tool need modelId p</span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="istickedoff">go ss' ps (tr : acc)</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">in go ss0 prompts []</span></span>
+<span class="lineno">  251 </span>
+<span class="lineno">  252 </span>-- | Deterministic Fisher-Yates shuffle keyed by an integer seed.
+<span class="lineno">  253 </span>deterministicShuffle :: Int -&gt; [a] -&gt; [a]
+<span class="lineno">  254 </span><span class="decl"><span class="istickedoff">deterministicShuffle seed xs =</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">let gen = mkStdGen seed</span>
+<span class="lineno">  256 </span><span class="spaces">      </span><span class="istickedoff">keys = take (length xs) (randoms gen :: [Int])</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">in map snd (sortBy (comparing fst) (zip keys xs))</span></span>
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>-- | Run an interleaved session: every prompt is issued to every model,
+<span class="lineno">  260 </span>-- but turn order is deterministically shuffled per session seed.
+<span class="lineno">  261 </span>-- Each model carries its own state fork.
+<span class="lineno">  262 </span>runInterleavedSession
+<span class="lineno">  263 </span>  :: Int
+<span class="lineno">  264 </span>  -&gt; [(ModelId, LLMTransport)]
+<span class="lineno">  265 </span>  -&gt; [TurnPrompt]
+<span class="lineno">  266 </span>  -&gt; SystemState
+<span class="lineno">  267 </span>  -&gt; IO [(ModelId, [TurnResult])]
+<span class="lineno">  268 </span><span class="decl"><span class="istickedoff">runInterleavedSession sessionId models prompts ss0 = do</span>
+<span class="lineno">  269 </span><span class="spaces">  </span><span class="istickedoff">let modelIds = map fst models</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="istickedoff">transports = M.fromList models</span>
+<span class="lineno">  271 </span><span class="spaces">      </span><span class="istickedoff">states0 = M.fromList [(mid, ss0) | mid &lt;- modelIds]</span>
+<span class="lineno">  272 </span><span class="spaces">      </span><span class="istickedoff">pairs = concatMap (\p -&gt; [(mid, p) | mid &lt;- modelIds]) prompts</span>
+<span class="lineno">  273 </span><span class="spaces">      </span><span class="istickedoff">shuffled = deterministicShuffle sessionId pairs</span>
+<span class="lineno">  274 </span><span class="spaces">  </span><span class="istickedoff">(states, acc) &lt;- foldM (runPair transports) (states0, M.empty) shuffled</span>
+<span class="lineno">  275 </span><span class="spaces">  </span><span class="istickedoff">let results = map (\mid -&gt; (mid, reverse (M.findWithDefault <span class="nottickedoff">[]</span> mid acc))) modelIds</span>
+<span class="lineno">  276 </span><span class="spaces">      </span><span class="istickedoff">-- Restore final states so caller can inspect them if desired</span>
+<span class="lineno">  277 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">_finalStates = states</span></span>
+<span class="lineno">  278 </span><span class="spaces">  </span><span class="istickedoff">return results</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  280 </span><span class="spaces">    </span><span class="istickedoff">tool = ExternalTool &quot;llm-augment&quot; DomainLexicon 0.7 True</span>
+<span class="lineno">  281 </span><span class="spaces">    </span><span class="istickedoff">need = NeedLexiconExtension</span>
+<span class="lineno">  282 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  283 </span><span class="spaces">    </span><span class="istickedoff">runPair trans (states, acc) (mid, prompt) =</span>
+<span class="lineno">  284 </span><span class="spaces">      </span><span class="istickedoff">case M.lookup mid trans of</span>
+<span class="lineno">  285 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">return (states, acc)</span></span>
+<span class="lineno">  286 </span><span class="spaces">        </span><span class="istickedoff">Just transport -&gt;</span>
+<span class="lineno">  287 </span><span class="spaces">          </span><span class="istickedoff">case M.lookup mid states of</span>
+<span class="lineno">  288 </span><span class="spaces">            </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">return (states, acc)</span></span>
+<span class="lineno">  289 </span><span class="spaces">            </span><span class="istickedoff">Just ss -&gt; do</span>
+<span class="lineno">  290 </span><span class="spaces">              </span><span class="istickedoff">(ss', tr) &lt;- runTurn ss transport tool need mid prompt</span>
+<span class="lineno">  291 </span><span class="spaces">              </span><span class="istickedoff">let states' = M.insert mid ss' states</span>
+<span class="lineno">  292 </span><span class="spaces">                  </span><span class="istickedoff">acc'    = M.insertWith (++) mid [tr] acc</span>
+<span class="lineno">  293 </span><span class="spaces">              </span><span class="istickedoff">return (states', acc')</span></span>
+<span class="lineno">  294 </span>
+<span class="lineno">  295 </span>-- | Full comparison run across all models and sessions.
+<span class="lineno">  296 </span>-- Each session starts from the same baseline state.
+<span class="lineno">  297 </span>runComparison
+<span class="lineno">  298 </span>  :: Text                       -- ^ run identifier
+<span class="lineno">  299 </span>  -&gt; SessionMode
+<span class="lineno">  300 </span>  -&gt; [(ModelId, LLMTransport)]  -- ^ models under test
+<span class="lineno">  301 </span>  -&gt; [TurnPrompt]
+<span class="lineno">  302 </span>  -&gt; SystemState               -- ^ baseline state
+<span class="lineno">  303 </span>  -&gt; IO ComparisonRun
+<span class="lineno">  304 </span><span class="decl"><span class="istickedoff">runComparison runId mode models prompts ss0 = do</span>
+<span class="lineno">  305 </span><span class="spaces">  </span><span class="istickedoff">t0 &lt;- getCurrentTime</span>
+<span class="lineno">  306 </span><span class="spaces">  </span><span class="istickedoff">outcomes &lt;- mapM (runModelOutcomes mode ss0) models</span>
+<span class="lineno">  307 </span><span class="spaces">  </span><span class="istickedoff">let globalIncidents = concatMap moTotalIncidentsList outcomes</span>
+<span class="lineno">  308 </span><span class="spaces">  </span><span class="istickedoff">return ComparisonRun</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="istickedoff">{ crRunId         = runId</span>
+<span class="lineno">  310 </span><span class="spaces">    </span><span class="istickedoff">, crTimestamp     = t0</span>
+<span class="lineno">  311 </span><span class="spaces">    </span><span class="istickedoff">, crModelOutcomes = outcomes</span>
+<span class="lineno">  312 </span><span class="spaces">    </span><span class="istickedoff">, crGlobalIncidents = globalIncidents</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">sessionCount = 3 :: Int</span>
+<span class="lineno">  316 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  317 </span><span class="spaces">    </span><span class="istickedoff">runModelOutcomes Sequential baseline (mid, transport) = do</span>
+<span class="lineno">  318 </span><span class="spaces">      </span><span class="istickedoff">sessions &lt;- mapM (\sid -&gt; do</span>
+<span class="lineno">  319 </span><span class="spaces">        </span><span class="istickedoff">(ss', results) &lt;- runModelSession <span class="nottickedoff">sid</span> mid transport prompts baseline</span>
+<span class="lineno">  320 </span><span class="spaces">        </span><span class="istickedoff">let incidents = detectIncidents <span class="nottickedoff">mid</span> results</span>
+<span class="lineno">  321 </span><span class="spaces">        </span><span class="istickedoff">return (aggregateSession mid sid results) { soIncidents = incidents }</span>
+<span class="lineno">  322 </span><span class="spaces">        </span><span class="istickedoff">) [1..sessionCount]</span>
+<span class="lineno">  323 </span><span class="spaces">      </span><span class="istickedoff">return (aggregateModel mid sessions)</span>
+<span class="lineno">  324 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  325 </span><span class="spaces">    </span><span class="istickedoff">runModelOutcomes Interleaved baseline (mid, transport) = <span class="nottickedoff">do</span></span>
+<span class="lineno">  326 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">sessions &lt;- mapM (\sid -&gt; do</span></span>
+<span class="lineno">  327 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">resultsMap &lt;- runInterleavedSession sid [(mid, transport)] prompts baseline</span></span>
+<span class="lineno">  328 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let results = case lookup mid resultsMap of</span></span>
+<span class="lineno">  329 </span><span class="spaces">                        </span><span class="istickedoff"><span class="nottickedoff">Just rs -&gt; rs</span></span>
+<span class="lineno">  330 </span><span class="spaces">                        </span><span class="istickedoff"><span class="nottickedoff">Nothing -&gt; []</span></span>
+<span class="lineno">  331 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">incidents = detectIncidents mid results</span></span>
+<span class="lineno">  332 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">return (aggregateSession mid sid results) { soIncidents = incidents }</span></span>
+<span class="lineno">  333 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">) [1..sessionCount]</span></span>
+<span class="lineno">  334 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">return (aggregateModel mid sessions)</span></span>
+<span class="lineno">  335 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  336 </span><span class="spaces">    </span><span class="istickedoff">moTotalIncidentsList mo = concatMap soIncidents (moSessions mo)</span></span>
+<span class="lineno">  337 </span>
+<span class="lineno">  338 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  339 </span>-- Aggregation
+<span class="lineno">  340 </span>
+<span class="lineno">  341 </span>-- | Aggregate a single session's turn results.
+<span class="lineno">  342 </span>aggregateSession :: ModelId -&gt; Int -&gt; [TurnResult] -&gt; SessionOutcome
+<span class="lineno">  343 </span><span class="decl"><span class="istickedoff">aggregateSession modelId sessionId results =</span>
+<span class="lineno">  344 </span><span class="spaces">  </span><span class="istickedoff">SessionOutcome</span>
+<span class="lineno">  345 </span><span class="spaces">    </span><span class="istickedoff">{ soModelId               = modelId</span>
+<span class="lineno">  346 </span><span class="spaces">    </span><span class="istickedoff">, soSessionId             = sessionId</span>
+<span class="lineno">  347 </span><span class="spaces">    </span><span class="istickedoff">, soTotalTurns            = length results</span>
+<span class="lineno">  348 </span><span class="spaces">    </span><span class="istickedoff">, soSuccessCount          = countWhere isAccept</span>
+<span class="lineno">  349 </span><span class="spaces">    </span><span class="istickedoff">, soTransportErrorCount   = countWhere isTransportError</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="istickedoff">, soParseRejectCount      = countWhere isParseReject</span>
+<span class="lineno">  351 </span><span class="spaces">    </span><span class="istickedoff">, soValidationRejectCount = countWhere isValidationReject</span>
+<span class="lineno">  352 </span><span class="spaces">    </span><span class="istickedoff">, soSandboxRejectCount    = countWhere isSandboxReject</span>
+<span class="lineno">  353 </span><span class="spaces">    </span><span class="istickedoff">, soSandboxAcceptCount    = countWhere isAccept</span>
+<span class="lineno">  354 </span><span class="spaces">    </span><span class="istickedoff">, soTotalLatencyMs        = sum (map trLatencyMs results)</span>
+<span class="lineno">  355 </span><span class="spaces">    </span><span class="istickedoff">, soIncidents             = []</span>
+<span class="lineno">  356 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  357 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  358 </span><span class="spaces">    </span><span class="istickedoff">status r = ltValidationStatus (trTelemetry r)</span>
+<span class="lineno">  359 </span><span class="spaces">    </span><span class="istickedoff">isAccept r       = status r == &quot;accept&quot;</span>
+<span class="lineno">  360 </span><span class="spaces">    </span><span class="istickedoff">isTransportError r = case trOutcome r of</span>
+<span class="lineno">  361 </span><span class="spaces">                           </span><span class="istickedoff">Left _  -&gt; True</span>
+<span class="lineno">  362 </span><span class="spaces">                           </span><span class="istickedoff">Right _ -&gt; False</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">isParseReject r      = status r == &quot;invalid_response&quot;</span>
+<span class="lineno">  364 </span><span class="spaces">    </span><span class="istickedoff">isValidationReject r = status r == &quot;validation_reject&quot;</span>
+<span class="lineno">  365 </span><span class="spaces">    </span><span class="istickedoff">isSandboxReject r    = status r == &quot;sandbox_reject&quot;</span>
+<span class="lineno">  366 </span><span class="spaces">    </span><span class="istickedoff">countWhere p = length (filter p results)</span></span>
+<span class="lineno">  367 </span>
+<span class="lineno">  368 </span>-- | Aggregate across sessions for one model.
+<span class="lineno">  369 </span>aggregateModel :: ModelId -&gt; [SessionOutcome] -&gt; ModelOutcome
+<span class="lineno">  370 </span><span class="decl"><span class="istickedoff">aggregateModel modelId sessions =</span>
+<span class="lineno">  371 </span><span class="spaces">  </span><span class="istickedoff">let totalTurns    = sum (map soTotalTurns sessions)</span>
+<span class="lineno">  372 </span><span class="spaces">      </span><span class="istickedoff">totalSuccess  = sum (map soSuccessCount sessions)</span>
+<span class="lineno">  373 </span><span class="spaces">      </span><span class="istickedoff">totalLatency  = sum (map soTotalLatencyMs sessions)</span>
+<span class="lineno">  374 </span><span class="spaces">      </span><span class="istickedoff">totalTransportErrors = sum (map soTransportErrorCount sessions)</span>
+<span class="lineno">  375 </span><span class="spaces">      </span><span class="istickedoff">totalParseRejects    = sum (map soParseRejectCount sessions)</span>
+<span class="lineno">  376 </span><span class="spaces">      </span><span class="istickedoff">totalValRejects    = sum (map soValidationRejectCount sessions)</span>
+<span class="lineno">  377 </span><span class="spaces">      </span><span class="istickedoff">totalValidatorChecks = max 0 (totalTurns - totalTransportErrors)</span>
+<span class="lineno">  378 </span><span class="spaces">      </span><span class="istickedoff">totalSandboxChecks   = max 0 (totalValidatorChecks - totalParseRejects - totalValRejects)</span>
+<span class="lineno">  379 </span><span class="spaces">      </span><span class="istickedoff">totalIncidents = sum (map (length . soIncidents) sessions)</span>
+<span class="lineno">  380 </span><span class="spaces">  </span><span class="istickedoff">in ModelOutcome</span>
+<span class="lineno">  381 </span><span class="spaces">    </span><span class="istickedoff">{ moModelId              = modelId</span>
+<span class="lineno">  382 </span><span class="spaces">    </span><span class="istickedoff">, moSessions             = sessions</span>
+<span class="lineno">  383 </span><span class="spaces">    </span><span class="istickedoff">, moAvgSuccessRate       = rate totalSuccess totalTurns</span>
+<span class="lineno">  384 </span><span class="spaces">    </span><span class="istickedoff">, moAvgLatencyMs         = rate totalLatency totalTurns</span>
+<span class="lineno">  385 </span><span class="spaces">    </span><span class="istickedoff">, moAvgValidatorAcceptRate = rate totalSuccess totalValidatorChecks</span>
+<span class="lineno">  386 </span><span class="spaces">    </span><span class="istickedoff">, moAvgSandboxPassRate     = rate totalSuccess totalSandboxChecks</span>
+<span class="lineno">  387 </span><span class="spaces">    </span><span class="istickedoff">, moTotalIncidents       = totalIncidents</span>
+<span class="lineno">  388 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  389 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  390 </span><span class="spaces">    </span><span class="istickedoff">rate _ 0 = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  391 </span><span class="spaces">    </span><span class="istickedoff">rate n d = fromIntegral n / fromIntegral d</span></span>
+<span class="lineno">  392 </span>
+<span class="lineno">  393 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  394 </span>-- Incident detection
+<span class="lineno">  395 </span>
+<span class="lineno">  396 </span>detectIncidents :: ModelId -&gt; [TurnResult] -&gt; [ComparisonIncident]
+<span class="lineno">  397 </span><span class="decl"><span class="istickedoff">detectIncidents modelId results =</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">concat</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="istickedoff">[ detectConsecutiveTransportErrors modelId results</span>
+<span class="lineno">  400 </span><span class="spaces">    </span><span class="istickedoff">, detectConsecutiveValidatorRejects modelId results</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">, detectConsecutiveSandboxRejects modelId results</span>
+<span class="lineno">  402 </span><span class="spaces">    </span><span class="istickedoff">, detectRequestRejectLoops modelId results</span>
+<span class="lineno">  403 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  404 </span>
+<span class="lineno">  405 </span>-- | 3+ consecutive transport errors.
+<span class="lineno">  406 </span>detectConsecutiveTransportErrors :: ModelId -&gt; [TurnResult] -&gt; [ComparisonIncident]
+<span class="lineno">  407 </span><span class="decl"><span class="istickedoff">detectConsecutiveTransportErrors modelId results =</span>
+<span class="lineno">  408 </span><span class="spaces">  </span><span class="istickedoff">map (\(i, len) -&gt; IncidentConsecutiveTransportErrors modelId i len) $</span>
+<span class="lineno">  409 </span><span class="spaces">  </span><span class="istickedoff">findConsecutive 3 (\r -&gt; case trOutcome r of Left _ -&gt; True; _ -&gt; False) results</span></span>
+<span class="lineno">  410 </span>
+<span class="lineno">  411 </span>-- | 5+ consecutive validator-level rejects (transport, parse, validation).
+<span class="lineno">  412 </span>detectConsecutiveValidatorRejects :: ModelId -&gt; [TurnResult] -&gt; [ComparisonIncident]
+<span class="lineno">  413 </span><span class="decl"><span class="istickedoff">detectConsecutiveValidatorRejects modelId results =</span>
+<span class="lineno">  414 </span><span class="spaces">  </span><span class="istickedoff">map (\(i, len) -&gt; IncidentConsecutiveValidatorRejects modelId i len) $</span>
+<span class="lineno">  415 </span><span class="spaces">  </span><span class="istickedoff">findConsecutive 5 (\r -&gt;</span>
+<span class="lineno">  416 </span><span class="spaces">    </span><span class="istickedoff">let s = ltValidationStatus (trTelemetry r)</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">in s `elem` [&quot;transport_error&quot;, &quot;invalid_response&quot;, &quot;validation_reject&quot;]</span>
+<span class="lineno">  418 </span><span class="spaces">  </span><span class="istickedoff">) results</span></span>
+<span class="lineno">  419 </span>
+<span class="lineno">  420 </span>-- | 3+ consecutive sandbox rejects with the *same* degradation tag.
+<span class="lineno">  421 </span>detectConsecutiveSandboxRejects :: ModelId -&gt; [TurnResult] -&gt; [ComparisonIncident]
+<span class="lineno">  422 </span><span class="decl"><span class="istickedoff">detectConsecutiveSandboxRejects modelId results =</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">concatMap (\(i, len, tag) -&gt; [IncidentConsecutiveSandboxRejects modelId i tag len]) $</span>
+<span class="lineno">  424 </span><span class="spaces">  </span><span class="istickedoff">findConsecutiveWithSameReason 3 isSandboxReject getSandboxReason results</span>
+<span class="lineno">  425 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  426 </span><span class="spaces">    </span><span class="istickedoff">isSandboxReject r = ltValidationStatus (trTelemetry r) == &quot;sandbox_reject&quot;</span>
+<span class="lineno">  427 </span><span class="spaces">    </span><span class="istickedoff">getSandboxRejectReason r = ltRejectReason (trTelemetry r)</span>
+<span class="lineno">  428 </span><span class="spaces">    </span><span class="istickedoff">getSandboxReason r =</span>
+<span class="lineno">  429 </span><span class="spaces">      </span><span class="istickedoff">if <span class="tickonlytrue">isSandboxReject r</span></span>
+<span class="lineno">  430 </span><span class="spaces">        </span><span class="istickedoff">then getSandboxRejectReason r</span>
+<span class="lineno">  431 </span><span class="spaces">        </span><span class="istickedoff">else <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">  432 </span>
+<span class="lineno">  433 </span>-- | Repeated request-&gt;reject loop without new grafts.
+<span class="lineno">  434 </span>-- Simplified: 5+ consecutive turns where graft is Nothing and status /= accept.
+<span class="lineno">  435 </span>detectRequestRejectLoops :: ModelId -&gt; [TurnResult] -&gt; [ComparisonIncident]
+<span class="lineno">  436 </span><span class="decl"><span class="istickedoff">detectRequestRejectLoops modelId results =</span>
+<span class="lineno">  437 </span><span class="spaces">  </span><span class="istickedoff">map (\(_i, len) -&gt; IncidentRequestRejectLoop modelId len) $</span>
+<span class="lineno">  438 </span><span class="spaces">  </span><span class="istickedoff">findConsecutive 5 (\r -&gt;</span>
+<span class="lineno">  439 </span><span class="spaces">    </span><span class="istickedoff">ltGraftTurn (trTelemetry r) == Nothing &amp;&amp; ltValidationStatus (trTelemetry r) /= &quot;accept&quot;</span>
+<span class="lineno">  440 </span><span class="spaces">  </span><span class="istickedoff">) results</span></span>
+<span class="lineno">  441 </span>
+<span class="lineno">  442 </span>-- | Find runs of at least @minLen@ elements satisfying predicate @p@.
+<span class="lineno">  443 </span>-- Returns 1-based (startIndex, runLength).
+<span class="lineno">  444 </span>findConsecutive :: Int -&gt; (a -&gt; Bool) -&gt; [a] -&gt; [(Int, Int)]
+<span class="lineno">  445 </span><span class="decl"><span class="istickedoff">findConsecutive minLen p = go 1</span>
+<span class="lineno">  446 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  447 </span><span class="spaces">    </span><span class="istickedoff">go _ [] = []</span>
+<span class="lineno">  448 </span><span class="spaces">    </span><span class="istickedoff">go i xs@(y:_) =</span>
+<span class="lineno">  449 </span><span class="spaces">      </span><span class="istickedoff">if p y</span>
+<span class="lineno">  450 </span><span class="spaces">        </span><span class="istickedoff">then let (run, rest) = span p xs</span>
+<span class="lineno">  451 </span><span class="spaces">                 </span><span class="istickedoff">len = length run</span>
+<span class="lineno">  452 </span><span class="spaces">             </span><span class="istickedoff">in if len &gt;= minLen</span>
+<span class="lineno">  453 </span><span class="spaces">                  </span><span class="istickedoff">then (i, len) : go <span class="nottickedoff">(i + len)</span> rest</span>
+<span class="lineno">  454 </span><span class="spaces">                  </span><span class="istickedoff">else go <span class="nottickedoff">(i + len)</span> rest</span>
+<span class="lineno">  455 </span><span class="spaces">        </span><span class="istickedoff">else go <span class="nottickedoff">(i + 1)</span> (drop 1 xs)</span>
+<span class="lineno">  456 </span><span class="spaces">    </span><span class="istickedoff">go _ _ = <span class="nottickedoff">[]</span></span></span>
+<span class="lineno">  457 </span>
+<span class="lineno">  458 </span>-- | Like 'findConsecutive' but also requires the same 'Just' reason.
+<span class="lineno">  459 </span>findConsecutiveWithSameReason :: Int -&gt; (a -&gt; Bool) -&gt; (a -&gt; Maybe Text) -&gt; [a] -&gt; [(Int, Int, Text)]
+<span class="lineno">  460 </span><span class="decl"><span class="istickedoff">findConsecutiveWithSameReason minLen p getR = go 1</span>
+<span class="lineno">  461 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  462 </span><span class="spaces">    </span><span class="istickedoff">go _ [] = []</span>
+<span class="lineno">  463 </span><span class="spaces">    </span><span class="istickedoff">go i xs@(y:_) =</span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">if p y</span>
+<span class="lineno">  465 </span><span class="spaces">        </span><span class="istickedoff">then case getR y of</span>
+<span class="lineno">  466 </span><span class="spaces">               </span><span class="istickedoff">Just r0 -&gt; let (run, rest) = span (\z -&gt; p z &amp;&amp; getR z == Just r0) xs</span>
+<span class="lineno">  467 </span><span class="spaces">                              </span><span class="istickedoff">len = length run</span>
+<span class="lineno">  468 </span><span class="spaces">                          </span><span class="istickedoff">in if <span class="tickonlytrue">len &gt;= minLen</span></span>
+<span class="lineno">  469 </span><span class="spaces">                               </span><span class="istickedoff">then (i, len, r0) : go <span class="nottickedoff">(i + len)</span> rest</span>
+<span class="lineno">  470 </span><span class="spaces">                               </span><span class="istickedoff">else <span class="nottickedoff">go (i + len) rest</span></span>
+<span class="lineno">  471 </span><span class="spaces">               </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">go (i + 1) (drop 1 xs)</span></span>
+<span class="lineno">  472 </span><span class="spaces">        </span><span class="istickedoff">else go <span class="nottickedoff">(i + 1)</span> (drop 1 xs)</span>
+<span class="lineno">  473 </span><span class="spaces">    </span><span class="istickedoff">go _ _ = <span class="nottickedoff">[]</span></span></span>
+<span class="lineno">  474 </span>
+<span class="lineno">  475 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  476 </span>-- Rendering
+<span class="lineno">  477 </span>
+<span class="lineno">  478 </span>-- | Render a comparison run as markdown-like telemetry text.
+<span class="lineno">  479 </span>renderComparisonRun :: ComparisonRun -&gt; Text
+<span class="lineno">  480 </span><span class="decl"><span class="nottickedoff">renderComparisonRun cr =</span>
+<span class="lineno">  481 </span><span class="spaces">  </span><span class="nottickedoff">T.concat</span>
+<span class="lineno">  482 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;# Model Comparison Run: &quot;, crRunId cr, &quot;\n&quot;</span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;Timestamp: &quot;, T.pack (show (crTimestamp cr)), &quot;\n&quot;</span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;Models: &quot;, T.pack (show (length (crModelOutcomes cr))), &quot;\n&quot;</span>
+<span class="lineno">  485 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;Global incidents: &quot;, T.pack (show (length (crGlobalIncidents cr))), &quot;\n&quot;</span>
+<span class="lineno">  486 </span><span class="spaces">    </span><span class="nottickedoff">, T.concat (map renderModelOutcome (crModelOutcomes cr))</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>renderModelOutcome :: ModelOutcome -&gt; Text
+<span class="lineno">  490 </span><span class="decl"><span class="nottickedoff">renderModelOutcome mo =</span>
+<span class="lineno">  491 </span><span class="spaces">  </span><span class="nottickedoff">T.concat</span>
+<span class="lineno">  492 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;\n## &quot;, moModelId mo, &quot;\n&quot;</span>
+<span class="lineno">  493 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Sessions: &quot;, T.pack (show (length (moSessions mo))), &quot;\n&quot;</span>
+<span class="lineno">  494 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Avg success rate: &quot;, T.pack (show (moAvgSuccessRate mo)), &quot;\n&quot;</span>
+<span class="lineno">  495 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Avg latency (ms/turn): &quot;, T.pack (show (moAvgLatencyMs mo)), &quot;\n&quot;</span>
+<span class="lineno">  496 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Validator accept rate: &quot;, T.pack (show (moAvgValidatorAcceptRate mo)), &quot;\n&quot;</span>
+<span class="lineno">  497 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Sandbox pass rate: &quot;, T.pack (show (moAvgSandboxPassRate mo)), &quot;\n&quot;</span>
+<span class="lineno">  498 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;- Total incidents: &quot;, T.pack (show (moTotalIncidents mo)), &quot;\n&quot;</span>
+<span class="lineno">  499 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+
+</pre>
+</body>
+</html>

@@ -132,6 +132,14 @@ validateFruitPayload payload morphData = do
     (Left (VeLexiconConflict (T.concat ["nominative collision: ", word])))
   when (M.member word (mdFormsBySurface morphData))
     (Left (VeLexiconConflict (T.concat ["surface collision: ", word])))
+  case kfpMorphology payload >>= mpCases of
+    Nothing -> pure ()
+    Just cMap ->
+      forM_ (M.toList cMap) (\(_caseKey, surfaceRaw) -> do
+        let surface = T.toLower (T.strip surfaceRaw)
+        when (not (T.null surface) && M.member surface (mdFormsBySurface morphData))
+          (Left (VeLexiconConflict (T.concat ["surface collision: ", surface])))
+        )
 
   pure payload
 

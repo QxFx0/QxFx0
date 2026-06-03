@@ -1,0 +1,630 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Self.Salience
+<span class="lineno">    9 </span>Description : Phase-5 salience controller (pure).
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>A typed, pure realisation of the salience controller pinned by
+<span class="lineno">   12 </span>@docs\/adr\/0010-salience-controller.md@.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>== What this module is
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>The salience controller is the runtime component that decides,
+<span class="lineno">   17 </span>per turn, which of the two adjoint modes — 'Holistic' (right-
+<span class="lineno">   18 </span>hemispheric, generative) or 'Formal' (left-hemispheric,
+<span class="lineno">   19 </span>constraint-respecting) — should /lead/. Concretely it is a pure
+<span class="lineno">   20 </span>morphism
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>@
+<span class="lineno">   23 </span>'Field' \\(\\times\\) 'ConatusEnergy' -&gt; 'Salience'
+<span class="lineno">   24 </span>@
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>producing a structured verdict that carries:
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>* a continuous bias on @[0, 1]@ ('salienceHolisticBias'),
+<span class="lineno">   29 </span>* a confidence score on @[0, 1]@ ('salienceConfidence'),
+<span class="lineno">   30 </span>* a closed driver tag ('SalienceDriver') for trace.
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>The verdict is then dispatched through the Phase-3 adjunction
+<span class="lineno">   33 </span>('chooseBranch') to select which of two caller-supplied morphisms
+<span class="lineno">   34 </span>('Holistic a -&gt; b' or 'a -&gt; Formal b') is actually evaluated.
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>== What this module is /not/
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>This module is the algebraic /shape/ of salience-driven dispatch.
+<span class="lineno">   39 </span>It does /not/ wire into the turn pipeline, does /not/ touch
+<span class="lineno">   40 </span>@Core.Intuition@ \/ @Core.ConsciousnessLoop@ \/ @RouteEffects@ \/
+<span class="lineno">   41 </span>@RenderStyle@ \/ @Recovery@. Those re-shapings are Phase-5.5 work
+<span class="lineno">   42 </span>and live in their own future PRs.
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>== Decision rule (overview)
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>@
+<span class="lineno">   47 </span>raw =
+<span class="lineno">   48 </span>    weightResonance       * fieldResonance      f
+<span class="lineno">   49 </span>  + weightAtmosphere      * atmosphereArousal (fieldAtmosphere f)
+<span class="lineno">   50 </span>  - weightConsolidation   * fieldConsolidation  f      -- inverse
+<span class="lineno">   51 </span>  + weightCounterfactual  * fieldCounterfactual f
+<span class="lineno">   52 </span>  - weightFieldConfidence * fieldConfidence    f      -- inverse
+<span class="lineno">   53 </span>@
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>Conatus gate: if @ceScalar &lt; conatusGateThreshold@, the controller
+<span class="lineno">   56 </span>short-circuits to a 'PreferFormal' verdict with confidence @1.0@
+<span class="lineno">   57 </span>and driver 'DrivenByConatusGate'. Otherwise the raw score is
+<span class="lineno">   58 </span>squashed to @[0, 1]@ by a logistic and the dominant driver is
+<span class="lineno">   59 </span>the input whose absolute contribution to @raw@ was largest.
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>The exact functional forms (sigmoid temperature, dispersion-based
+<span class="lineno">   62 </span>confidence) are implementation choices; the algebraic shape and
+<span class="lineno">   63 </span>its laws (totality, range, monotonicity, Conatus-gate priority,
+<span class="lineno">   64 </span>determinism) are the contract.
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>== Anti-correlation discipline
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>ADR-0007 mandates that &quot;the non-leading mode listens but does not
+<span class="lineno">   69 </span>emit.&quot; This module enforces that operationally through three
+<span class="lineno">   70 </span>invariants:
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>* 'chooseBranch' returns a single morphism, not a pair. Whichever
+<span class="lineno">   73 </span>  branch the controller selects is the one whose value reaches the
+<span class="lineno">   74 </span>  caller; the other branch is well-typed and may be evaluated for
+<span class="lineno">   75 </span>  diagnostics, but its value does not flow into the output.
+<span class="lineno">   76 </span>* 'salienceVerdict' produces 'Tied' inside a small dead band
+<span class="lineno">   77 </span>  around @0.5@, dispatched deterministically to the documented
+<span class="lineno">   78 </span>  default ('PreferFormal' fallback) so that near-tied fields do
+<span class="lineno">   79 </span>  not cause the system to flap between modes under noise.
+<span class="lineno">   80 </span>* The Conatus gate has uncontested priority: when
+<span class="lineno">   81 </span>  @ceScalar &lt; conatusGateThreshold@, no Field-derived signal
+<span class="lineno">   82 </span>  contributes to the verdict.
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>== Honest scope
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>The default weights ('defaultSalienceWeights') are pinned to make
+<span class="lineno">   87 </span>the property tests pass and the operational mapping plausible.
+<span class="lineno">   88 </span>We do not claim they are calibrated. Calibration is Phase-7
+<span class="lineno">   89 </span>(lifeness gates) work.
+<span class="lineno">   90 </span>-}
+<span class="lineno">   91 </span>module QxFx0.Self.Salience
+<span class="lineno">   92 </span>  ( -- * Verdict
+<span class="lineno">   93 </span>    Salience (..)
+<span class="lineno">   94 </span>  , SalienceDriver (..)
+<span class="lineno">   95 </span>  , SalienceVerdict (..)
+<span class="lineno">   96 </span>    -- * Tunable weights
+<span class="lineno">   97 </span>  , SalienceWeights (..)
+<span class="lineno">   98 </span>  , defaultSalienceWeights
+<span class="lineno">   99 </span>    -- * Tunable behavioural thresholds
+<span class="lineno">  100 </span>  , SalienceModulation (..)
+<span class="lineno">  101 </span>  , defaultSalienceModulation
+<span class="lineno">  102 </span>    -- * Controller
+<span class="lineno">  103 </span>  , computeSalience
+<span class="lineno">  104 </span>  , salienceVerdict
+<span class="lineno">  105 </span>    -- * Adjunction-aware dispatch
+<span class="lineno">  106 </span>  , chooseBranch
+<span class="lineno">  107 </span>    -- * Phase-5.5 transitional helpers
+<span class="lineno">  108 </span>  , salienceFromField
+<span class="lineno">  109 </span>  , salienceFromResonance
+<span class="lineno">  110 </span>    -- * Phase-2.5 runtime-Conatus helpers
+<span class="lineno">  111 </span>  , salienceFromConatusEnergy
+<span class="lineno">  112 </span>  , salienceFromConatusResonance
+<span class="lineno">  113 </span>  , salienceFromBlanket
+<span class="lineno">  114 </span>  , conatusGateFires
+<span class="lineno">  115 </span>    -- * Trace rendering (Phase 5.5e)
+<span class="lineno">  116 </span>  , renderSalienceDriver
+<span class="lineno">  117 </span>    -- * Family classification (Holistic / Formal)
+<span class="lineno">  118 </span>  , isHolisticFamily
+<span class="lineno">  119 </span>  , isFormalFamily
+<span class="lineno">  120 </span>    -- * Phase-B bounded post-commitment adaptation
+<span class="lineno">  121 </span>  , adaptSalienceWeights
+<span class="lineno">  122 </span>  ) where
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>import Control.DeepSeq (NFData)
+<span class="lineno">  125 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">  126 </span>import Data.Text (Text)
+<span class="lineno">  127 </span>import GHC.Generics (Generic)
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
+<span class="lineno">  130 </span>import QxFx0.Self.Conatus
+<span class="lineno">  131 </span>  ( ConatusComponents (..)
+<span class="lineno">  132 </span>  , ConatusEnergy (..)
+<span class="lineno">  133 </span>  , computeConatusEnergy
+<span class="lineno">  134 </span>  )
+<span class="lineno">  135 </span>import QxFx0.Self.Types (BlanketViolation, SelfBlanket)
+<span class="lineno">  136 </span>import QxFx0.Self.Field
+<span class="lineno">  137 </span>  ( Atmosphere (..)
+<span class="lineno">  138 </span>  , Consolidation (..)
+<span class="lineno">  139 </span>  , Counterfactual (..)
+<span class="lineno">  140 </span>  , Field (..)
+<span class="lineno">  141 </span>  , FieldConfidence (..)
+<span class="lineno">  142 </span>  , Resonance (..)
+<span class="lineno">  143 </span>  , emptyField
+<span class="lineno">  144 </span>  , mkResonance
+<span class="lineno">  145 </span>  )
+<span class="lineno">  146 </span>import QxFx0.Types.Domain (CanonicalMoveFamily(..))
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  149 </span>-- Verdict types
+<span class="lineno">  150 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>-- | Closed enumeration of which input dominated the controller's
+<span class="lineno">  153 </span>-- decision. Used in trace records and diagnostics.
+<span class="lineno">  154 </span>data SalienceDriver
+<span class="lineno">  155 </span>  = DrivenByResonance
+<span class="lineno">  156 </span>  | DrivenByAtmosphere
+<span class="lineno">  157 </span>  | DrivenByConsolidation
+<span class="lineno">  158 </span>  | DrivenByCounterfactual
+<span class="lineno">  159 </span>  | DrivenByFieldConfidence
+<span class="lineno">  160 </span>  | DrivenByConatusGate
+<span class="lineno">  161 </span>  | DrivenByDefault
+<span class="lineno">  162 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  163 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>-- | The controller's verdict for a single turn.
+<span class="lineno">  166 </span>--
+<span class="lineno">  167 </span>-- Invariants (verified by 'Test.Suite.SelfSalience'):
+<span class="lineno">  168 </span>--
+<span class="lineno">  169 </span>-- * @0 \\&lt;= salienceHolisticBias \\&lt;= 1@
+<span class="lineno">  170 </span>-- * @0 \\&lt;= salienceConfidence   \\&lt;= 1@
+<span class="lineno">  171 </span>-- * Identical @(SalienceWeights, ConatusEnergy, Field)@ inputs
+<span class="lineno">  172 </span>--   produce identical 'Salience' values, including the discrete
+<span class="lineno">  173 </span>--   'salienceDriver' tag.
+<span class="lineno">  174 </span>data Salience = Salience
+<span class="lineno">  175 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">salienceHolisticBias</span></span></span> :: !Double
+<span class="lineno">  176 </span>    -- ^ In @[0, 1]@: @0@ = pure formal, @1@ = pure holistic.
+<span class="lineno">  177 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">salienceConfidence</span></span></span>   :: !Double
+<span class="lineno">  178 </span>    -- ^ In @[0, 1]@: @1@ = one driver decisively dominates,
+<span class="lineno">  179 </span>    --   @0@ = contributions cancel.
+<span class="lineno">  180 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">salienceDriver</span></span></span>       :: !SalienceDriver
+<span class="lineno">  181 </span>    -- ^ Which input dominated the decision. Closed enum so it
+<span class="lineno">  182 </span>    --   fits a trace record without further serialisation.
+<span class="lineno">  183 </span>  }
+<span class="lineno">  184 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  185 </span>
+<span class="lineno">  186 </span>-- | The dispatched form of a 'Salience' value.
+<span class="lineno">  187 </span>--
+<span class="lineno">  188 </span>-- 'Tied' falls inside the dead band defined by
+<span class="lineno">  189 </span>-- 'verdictThreshold'. Downstream code dispatches @Tied@ to the
+<span class="lineno">  190 </span>-- documented default ('PreferFormal' fallback in 'chooseBranch').
+<span class="lineno">  191 </span>data SalienceVerdict
+<span class="lineno">  192 </span>  = PreferHolistic !Double  -- ^ Magnitude in @(0, 1]@.
+<span class="lineno">  193 </span>  | PreferFormal   !Double  -- ^ Magnitude in @(0, 1]@.
+<span class="lineno">  194 </span>  | Tied
+<span class="lineno">  195 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  196 </span>
+<span class="lineno">  197 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  198 </span>-- Tunable weights
+<span class="lineno">  199 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  200 </span>
+<span class="lineno">  201 </span>-- | Tunable coefficients of the decision rule. Phase 5 ships
+<span class="lineno">  202 </span>-- 'defaultSalienceWeights'; Phase 7 (lifeness gates) is the
+<span class="lineno">  203 </span>-- calibration step.
+<span class="lineno">  204 </span>data SalienceWeights = SalienceWeights
+<span class="lineno">  205 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">weightResonance</span></span></span>       :: !Double
+<span class="lineno">  206 </span>    -- ^ Multiplier on 'fieldResonance'. Direction: positive
+<span class="lineno">  207 </span>    --   (more resonance ⇒ more bias toward Holistic).
+<span class="lineno">  208 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">weightAtmosphere</span></span></span>      :: !Double
+<span class="lineno">  209 </span>    -- ^ Multiplier on @atmosphereArousal (fieldAtmosphere f)@.
+<span class="lineno">  210 </span>    --   Direction: positive.
+<span class="lineno">  211 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">weightConsolidation</span></span></span>   :: !Double
+<span class="lineno">  212 </span>    -- ^ Multiplier on 'fieldConsolidation'. Direction: inverse
+<span class="lineno">  213 </span>    --   (more consolidation ⇒ more bias toward Formal).
+<span class="lineno">  214 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">weightCounterfactual</span></span></span>  :: !Double
+<span class="lineno">  215 </span>    -- ^ Multiplier on 'fieldCounterfactual'. Direction: positive.
+<span class="lineno">  216 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">weightFieldConfidence</span></span></span> :: !Double
+<span class="lineno">  217 </span>    -- ^ Multiplier on 'fieldConfidence'. Direction: inverse
+<span class="lineno">  218 </span>    --   (lower field confidence ⇒ more bias toward Formal, in
+<span class="lineno">  219 </span>    --   keeping with &quot;the system can\'t trust holistic signals;
+<span class="lineno">  220 </span>    --   fall back to formal contracts&quot;).
+<span class="lineno">  221 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">conatusGateThreshold</span></span></span>  :: !Double
+<span class="lineno">  222 </span>    -- ^ If @ceScalar &lt; this@, force 'PreferFormal' with full
+<span class="lineno">  223 </span>    --   confidence and 'DrivenByConatusGate' driver.
+<span class="lineno">  224 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">verdictThreshold</span></span></span>      :: !Double
+<span class="lineno">  225 </span>    -- ^ Half-width of the dead band around @0.5@ within which
+<span class="lineno">  226 </span>    --   the verdict is 'Tied'. In @[0, 0.5]@.
+<span class="lineno">  227 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sigmoidTemperature</span></span></span>    :: !Double
+<span class="lineno">  228 </span>    -- ^ Slope parameter for the @sigmoid (raw \/ temperature)@
+<span class="lineno">  229 </span>    --   squash. @1.0@ is the textbook default.
+<span class="lineno">  230 </span>  }
+<span class="lineno">  231 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  232 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>-- | The Phase-5 default weights.
+<span class="lineno">  235 </span>--
+<span class="lineno">  236 </span>-- These are pinned to make the property tests pass and to make
+<span class="lineno">  237 </span>-- the operational mapping (ADR-0010 §6) plausible. They are
+<span class="lineno">  238 </span>-- explicitly /not/ calibrated against empirical ground truth;
+<span class="lineno">  239 </span>-- Phase 7 will replace them.
+<span class="lineno">  240 </span>defaultSalienceWeights :: SalienceWeights
+<span class="lineno">  241 </span><span class="decl"><span class="istickedoff">defaultSalienceWeights = SalienceWeights</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="istickedoff">{ weightResonance       = 1.0</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">, weightAtmosphere      = 0.5</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">, weightConsolidation   = 0.75</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">, weightCounterfactual  = 0.75</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">, weightFieldConfidence = 0.5</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">, conatusGateThreshold  = 0.0  -- @ceScalar@ can be negative under heavy violation; gate trips at 0</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="istickedoff">, verdictThreshold      = 0.05 -- 5% dead band each side of 0.5</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">, sigmoidTemperature    = 1.0</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  251 </span>
+<span class="lineno">  252 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  253 </span>-- Tunable behavioural thresholds
+<span class="lineno">  254 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  255 </span>
+<span class="lineno">  256 </span>-- | Tunable thresholds of the /behavioural/ layer that consumes a
+<span class="lineno">  257 </span>-- 'Salience' verdict — cascade modulation
+<span class="lineno">  258 </span>-- ('QxFx0.Core.TurnRouting.Cascade.applyPrincipledFamilyModulated' \/
+<span class="lineno">  259 </span>-- 'applyGuardGatingModulated') and soft family escalation
+<span class="lineno">  260 </span>-- ('QxFx0.Core.TurnRouting.applySalienceEscalation').
+<span class="lineno">  261 </span>--
+<span class="lineno">  262 </span>-- Distinct from 'SalienceWeights' (which calibrates the
+<span class="lineno">  263 </span>-- /computation/ of 'Salience'); this record calibrates how
+<span class="lineno">  264 </span>-- downstream code /uses/ it. Like 'defaultSalienceWeights', the
+<span class="lineno">  265 </span>-- defaults here are pinned to make the property and integration
+<span class="lineno">  266 </span>-- tests pass; Phase 7 (lifeness gates) is the calibration step.
+<span class="lineno">  267 </span>data SalienceModulation = SalienceModulation
+<span class="lineno">  268 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">smModulationHolisticBiasFloor</span></span></span> :: !Double
+<span class="lineno">  269 </span>    -- ^ Above this 'salienceHolisticBias', the principled-cascade
+<span class="lineno">  270 </span>    --   and guard-gating modulation paths /relax/ (intuition and
+<span class="lineno">  271 </span>    --   narrative hints retain more influence; only
+<span class="lineno">  272 </span>    --   agency-collapse remains hard-blocked). Default: @0.6@.
+<span class="lineno">  273 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">smEscalationConfidenceFloor</span></span></span>   :: !Double
+<span class="lineno">  274 </span>    -- ^ Above this 'salienceConfidence', soft family escalation
+<span class="lineno">  275 </span>    --   nudges the cascade family to its nearest Holistic \/ Formal
+<span class="lineno">  276 </span>    --   counterpart when bias and family side disagree.
+<span class="lineno">  277 </span>    --   Default: @0.7@.
+<span class="lineno">  278 </span>  }
+<span class="lineno">  279 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  280 </span>
+<span class="lineno">  281 </span>-- | The Phase-5.5 default modulation thresholds.
+<span class="lineno">  282 </span>--
+<span class="lineno">  283 </span>-- Pinned to match the values previously embedded as magic
+<span class="lineno">  284 </span>-- constants in 'QxFx0.Core.TurnRouting.applySalienceEscalation'
+<span class="lineno">  285 </span>-- and 'QxFx0.Core.TurnRouting.Cascade.applyPrincipledFamilyModulated'
+<span class="lineno">  286 </span>-- \/ 'applyGuardGatingModulated' before centralisation.
+<span class="lineno">  287 </span>defaultSalienceModulation :: SalienceModulation
+<span class="lineno">  288 </span><span class="decl"><span class="istickedoff">defaultSalienceModulation = SalienceModulation</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">{ smModulationHolisticBiasFloor = 0.6</span>
+<span class="lineno">  290 </span><span class="spaces">  </span><span class="istickedoff">, smEscalationConfidenceFloor   = 0.7</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  294 </span>-- Controller
+<span class="lineno">  295 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  296 </span>
+<span class="lineno">  297 </span>-- | Compute the salience verdict for a single turn.
+<span class="lineno">  298 </span>--
+<span class="lineno">  299 </span>-- Total, deterministic, pure. Identical inputs produce identical
+<span class="lineno">  300 </span>-- 'Salience' values, including the discrete 'salienceDriver' tag.
+<span class="lineno">  301 </span>--
+<span class="lineno">  302 </span>-- The Conatus gate fires unconditionally when
+<span class="lineno">  303 </span>-- @ceScalar c \\&lt; conatusGateThreshold w@, returning a
+<span class="lineno">  304 </span>-- 'PreferFormal'-shaped verdict with full confidence and
+<span class="lineno">  305 </span>-- 'DrivenByConatusGate'. Otherwise the rule of ADR-0010 §3 is
+<span class="lineno">  306 </span>-- applied.
+<span class="lineno">  307 </span>computeSalience :: SalienceWeights -&gt; ConatusEnergy -&gt; Field -&gt; Salience
+<span class="lineno">  308 </span><span class="decl"><span class="istickedoff">computeSalience w ce f</span>
+<span class="lineno">  309 </span><span class="spaces">  </span><span class="istickedoff">| ceScalar ce &lt; conatusGateThreshold w =</span>
+<span class="lineno">  310 </span><span class="spaces">      </span><span class="istickedoff">Salience</span>
+<span class="lineno">  311 </span><span class="spaces">        </span><span class="istickedoff">{ salienceHolisticBias = 0.0</span>
+<span class="lineno">  312 </span><span class="spaces">        </span><span class="istickedoff">, salienceConfidence   = 1.0</span>
+<span class="lineno">  313 </span><span class="spaces">        </span><span class="istickedoff">, salienceDriver       = DrivenByConatusGate</span>
+<span class="lineno">  314 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  315 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  316 </span><span class="spaces">      </span><span class="istickedoff">let cs = contributions w f</span>
+<span class="lineno">  317 </span><span class="spaces">          </span><span class="istickedoff">raw =</span>
+<span class="lineno">  318 </span><span class="spaces">            </span><span class="istickedoff">contribResonance      cs</span>
+<span class="lineno">  319 </span><span class="spaces">            </span><span class="istickedoff">+ contribAtmosphere     cs</span>
+<span class="lineno">  320 </span><span class="spaces">            </span><span class="istickedoff">- contribConsolidation  cs</span>
+<span class="lineno">  321 </span><span class="spaces">            </span><span class="istickedoff">+ contribCounterfactual cs</span>
+<span class="lineno">  322 </span><span class="spaces">            </span><span class="istickedoff">- contribFieldConfidence cs</span>
+<span class="lineno">  323 </span><span class="spaces">          </span><span class="istickedoff">bias = sigmoid (raw / sigmoidTemperature w)</span>
+<span class="lineno">  324 </span><span class="spaces">       </span><span class="istickedoff">in Salience</span>
+<span class="lineno">  325 </span><span class="spaces">            </span><span class="istickedoff">{ salienceHolisticBias = bias</span>
+<span class="lineno">  326 </span><span class="spaces">            </span><span class="istickedoff">, salienceConfidence   = computeConfidence cs</span>
+<span class="lineno">  327 </span><span class="spaces">            </span><span class="istickedoff">, salienceDriver       = dominantDriver cs</span>
+<span class="lineno">  328 </span><span class="spaces">            </span><span class="istickedoff">}</span></span>
+<span class="lineno">  329 </span>
+<span class="lineno">  330 </span>-- | Dispatch a 'Salience' to a 'SalienceVerdict' using the
+<span class="lineno">  331 </span>-- @verdictThreshold@ from the weights as the dead-band half-width.
+<span class="lineno">  332 </span>salienceVerdict :: SalienceWeights -&gt; Salience -&gt; SalienceVerdict
+<span class="lineno">  333 </span><span class="decl"><span class="istickedoff">salienceVerdict w s</span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="istickedoff">| bias &gt; 0.5 + t = PreferHolistic bias</span>
+<span class="lineno">  335 </span><span class="spaces">  </span><span class="istickedoff">| bias &lt; 0.5 - t = PreferFormal   (1.0 - bias)</span>
+<span class="lineno">  336 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>      = Tied</span>
+<span class="lineno">  337 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  338 </span><span class="spaces">    </span><span class="istickedoff">bias = salienceHolisticBias s</span>
+<span class="lineno">  339 </span><span class="spaces">    </span><span class="istickedoff">t    = verdictThreshold w</span></span>
+<span class="lineno">  340 </span>
+<span class="lineno">  341 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  342 </span>-- Adjunction-aware dispatch
+<span class="lineno">  343 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>-- | Dispatch a precomputed 'SalienceVerdict' to one of two
+<span class="lineno">  346 </span>-- caller-supplied branches through the Phase-3 adjunction.
+<span class="lineno">  347 </span>--
+<span class="lineno">  348 </span>-- Both branches are always provided by the caller (the adjunction
+<span class="lineno">  349 </span>-- guarantees they are inter-translatable, see ADR-0008). The
+<span class="lineno">  350 </span>-- controller picks which one to /use/; the other remains a
+<span class="lineno">  351 </span>-- well-typed value the caller may evaluate for tracing.
+<span class="lineno">  352 </span>--
+<span class="lineno">  353 </span>-- 'Tied' is dispatched to the formal-first branch (the
+<span class="lineno">  354 </span>-- contract-driven mode is the safe default). This is the
+<span class="lineno">  355 </span>-- single-output-channel half of the anti-correlation discipline
+<span class="lineno">  356 </span>-- (ADR-0010 §5).
+<span class="lineno">  357 </span>--
+<span class="lineno">  358 </span>-- __Status (as of Phase 5.5e):__ 'chooseBranch' is now consumed by
+<span class="lineno">  359 </span>-- 'QxFx0.Core.TurnRender.Strategy.applySalienceToStyle' (the
+<span class="lineno">  360 </span>-- render-style dispatch point). This is the first production
+<span class="lineno">  361 </span>-- call site that threads a real 'Field' into the adjunction.
+<span class="lineno">  362 </span>-- Other channels (intuition flash strength, narrative fragment)
+<span class="lineno">  363 </span>-- still use direct @case salienceVerdict ... of@ rewrites
+<span class="lineno">  364 </span>-- because they are @Salience -&gt; a -&gt; a@ post-processors, not
+<span class="lineno">  365 </span>-- Field-parameterized dispatches.
+<span class="lineno">  366 </span>--
+<span class="lineno">  367 </span>-- Property-test coverage in @Test.Suite.SelfSalience@ exercises
+<span class="lineno">  368 </span>-- the adjunction laws on the type level; the runtime call site
+<span class="lineno">  369 </span>-- exercises them on the value level.
+<span class="lineno">  370 </span>chooseBranch
+<span class="lineno">  371 </span>  :: SalienceVerdict
+<span class="lineno">  372 </span>  -&gt; (Holistic a -&gt; b)   -- ^ Holistic-first branch.
+<span class="lineno">  373 </span>  -&gt; (a -&gt; Formal b)     -- ^ Formal-first branch.
+<span class="lineno">  374 </span>  -&gt; (Holistic a -&gt; b)
+<span class="lineno">  375 </span><span class="decl"><span class="istickedoff">chooseBranch v holistic formal = case v of</span>
+<span class="lineno">  376 </span><span class="spaces">  </span><span class="istickedoff">PreferHolistic _ -&gt; holistic</span>
+<span class="lineno">  377 </span><span class="spaces">  </span><span class="istickedoff">PreferFormal   _ -&gt; rightAdjunct formal</span>
+<span class="lineno">  378 </span><span class="spaces">  </span><span class="istickedoff">Tied             -&gt; rightAdjunct formal</span></span>
+<span class="lineno">  379 </span>
+<span class="lineno">  380 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  381 </span>-- Phase-5.5 transitional helpers
+<span class="lineno">  382 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  383 </span>
+<span class="lineno">  384 </span>-- | Compute a 'Salience' from a 'ConatusEnergy' and a 'Field'.
+<span class="lineno">  385 </span>-- Uses 'defaultSalienceWeights'.  The Conatus gate is evaluated
+<span class="lineno">  386 </span>-- with the real runtime energy; there is no placeholder.
+<span class="lineno">  387 </span>--
+<span class="lineno">  388 </span>-- This is the Phase-5.5 wiring helper.  Call sites that already
+<span class="lineno">  389 </span>-- have access to a runtime 'ConatusEnergy' (e.g. from
+<span class="lineno">  390 </span>-- 'PrepareStatic' or 'TurnInput') should pass it here.
+<span class="lineno">  391 </span>salienceFromField :: ConatusEnergy -&gt; Field -&gt; Salience
+<span class="lineno">  392 </span><span class="decl"><span class="nottickedoff">salienceFromField ce =</span>
+<span class="lineno">  393 </span><span class="spaces">  </span><span class="nottickedoff">computeSalience defaultSalienceWeights ce</span></span>
+<span class="lineno">  394 </span>
+<span class="lineno">  395 </span>-- | Build a 'Salience' from a single resonance signal, using
+<span class="lineno">  396 </span>-- 'salienceFromField' on an otherwise-empty 'Field'.
+<span class="lineno">  397 </span>--
+<span class="lineno">  398 </span>-- This helper is kept for call sites that only have a resonance
+<span class="lineno">  399 </span>-- scalar (e.g. the intuition handler in
+<span class="lineno">  400 </span>-- 'QxFx0.Runtime.Wiring.Handlers').  Full-pipeline call sites
+<span class="lineno">  401 </span>-- (routing, render-style, recovery) already use 'salienceFromField'
+<span class="lineno">  402 </span>-- with a five-component 'Field'.
+<span class="lineno">  403 </span>salienceFromResonance :: ConatusEnergy -&gt; Double -&gt; Salience
+<span class="lineno">  404 </span><span class="decl"><span class="nottickedoff">salienceFromResonance ce resonance =</span>
+<span class="lineno">  405 </span><span class="spaces">  </span><span class="nottickedoff">salienceFromField ce (emptyField { fieldResonance = mkResonance resonance })</span></span>
+<span class="lineno">  406 </span>
+<span class="lineno">  407 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  408 </span>-- Phase-2.5 runtime-Conatus helpers (M2d)
+<span class="lineno">  409 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  410 </span>
+<span class="lineno">  411 </span>-- | Compute a 'Salience' from a precomputed 'ConatusEnergy' and a
+<span class="lineno">  412 </span>-- 'Field'. Uses 'defaultSalienceWeights'.
+<span class="lineno">  413 </span>--
+<span class="lineno">  414 </span>-- This is the canonical entry point for the M2d wiring: every
+<span class="lineno">  415 </span>-- runtime call site that has access to a real 'ConatusEnergy'
+<span class="lineno">  416 </span>-- (either by computing it directly from a 'SelfBlanket' or by
+<span class="lineno">  417 </span>-- receiving a precomputed one through 'PrepareStatic') goes
+<span class="lineno">  418 </span>-- through this helper. The Conatus gate is now a real runtime
+<span class="lineno">  419 </span>-- force; under structural risk ('ceScalar' below
+<span class="lineno">  420 </span>-- 'conatusGateThreshold') the verdict 'salienceDriver' becomes
+<span class="lineno">  421 </span>-- 'DrivenByConatusGate' and the 5.5b\/5.5c post-processors
+<span class="lineno">  422 </span>-- automatically dispatch to 'StyleRecovery' and suppress the
+<span class="lineno">  423 </span>-- narrative fragment, respectively.
+<span class="lineno">  424 </span>salienceFromConatusEnergy :: ConatusEnergy -&gt; Field -&gt; Salience
+<span class="lineno">  425 </span><span class="decl"><span class="istickedoff">salienceFromConatusEnergy = computeSalience defaultSalienceWeights</span></span>
+<span class="lineno">  426 </span>
+<span class="lineno">  427 </span>-- | Convenience: build a 'Salience' from a precomputed
+<span class="lineno">  428 </span>-- 'ConatusEnergy' and a single resonance signal (otherwise-empty
+<span class="lineno">  429 </span>-- 'Field'). Used by the runtime handlers that receive the Conatus
+<span class="lineno">  430 </span>-- via the request constructor and have resonance in scope.
+<span class="lineno">  431 </span>salienceFromConatusResonance :: ConatusEnergy -&gt; Double -&gt; Salience
+<span class="lineno">  432 </span><span class="decl"><span class="nottickedoff">salienceFromConatusResonance ce resonance =</span>
+<span class="lineno">  433 </span><span class="spaces">  </span><span class="nottickedoff">salienceFromConatusEnergy</span>
+<span class="lineno">  434 </span><span class="spaces">    </span><span class="nottickedoff">ce</span>
+<span class="lineno">  435 </span><span class="spaces">    </span><span class="nottickedoff">(emptyField { fieldResonance = mkResonance resonance })</span></span>
+<span class="lineno">  436 </span>
+<span class="lineno">  437 </span>-- | Compute a 'Salience' from a 'SelfBlanket', its current list
+<span class="lineno">  438 </span>-- of 'BlanketViolation's, and a 'Field'.
+<span class="lineno">  439 </span>--
+<span class="lineno">  440 </span>-- The 'ConatusEnergy' is computed by 'computeConatusEnergy'
+<span class="lineno">  441 </span>-- internally. Used by call sites that have direct access to the
+<span class="lineno">  442 </span>-- runtime 'SystemState' (and hence to a 'SelfBlanket') without
+<span class="lineno">  443 </span>-- needing to thread Conatus through a request shape.
+<span class="lineno">  444 </span>salienceFromBlanket :: SelfBlanket -&gt; [BlanketViolation] -&gt; Field -&gt; Salience
+<span class="lineno">  445 </span><span class="decl"><span class="nottickedoff">salienceFromBlanket b violations =</span>
+<span class="lineno">  446 </span><span class="spaces">  </span><span class="nottickedoff">salienceFromConatusEnergy (computeConatusEnergy b violations)</span></span>
+<span class="lineno">  447 </span>
+<span class="lineno">  448 </span>-- | Predicate: does the Conatus gate fire on this energy under
+<span class="lineno">  449 </span>-- 'defaultSalienceWeights'?
+<span class="lineno">  450 </span>--
+<span class="lineno">  451 </span>-- This is the same boundary used by 'computeSalience' to decide
+<span class="lineno">  452 </span>-- whether to short-circuit to 'DrivenByConatusGate'. Exposed so
+<span class="lineno">  453 </span>-- that the recovery-decision call site in
+<span class="lineno">  454 </span>-- 'QxFx0.Core.TurnPipeline.Route.Render' can priority-override
+<span class="lineno">  455 </span>-- other recovery causes when the gate fires, keeping the
+<span class="lineno">  456 </span>-- decision boundary single-sourced.
+<span class="lineno">  457 </span>conatusGateFires :: ConatusEnergy -&gt; Bool
+<span class="lineno">  458 </span><span class="decl"><span class="istickedoff">conatusGateFires ce =</span>
+<span class="lineno">  459 </span><span class="spaces">  </span><span class="istickedoff">ceScalar ce &lt; conatusGateThreshold defaultSalienceWeights</span></span>
+<span class="lineno">  460 </span>
+<span class="lineno">  461 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  462 </span>-- Trace rendering (Phase 5.5e)
+<span class="lineno">  463 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  464 </span>
+<span class="lineno">  465 </span>-- | Render a 'SalienceDriver' to a stable snake_case 'Text' tag
+<span class="lineno">  466 </span>-- for inclusion in 'QxFx0.Types.TurnProjection.TurnReplayTrace'
+<span class="lineno">  467 </span>-- and JSON-encoded turn projections.
+<span class="lineno">  468 </span>--
+<span class="lineno">  469 </span>-- The tags are closed-set and trace-stable: any change to a tag
+<span class="lineno">  470 </span>-- is a breaking change to the replay-trace JSON schema.
+<span class="lineno">  471 </span>renderSalienceDriver :: SalienceDriver -&gt; Text
+<span class="lineno">  472 </span><span class="decl"><span class="istickedoff">renderSalienceDriver DrivenByResonance       = &quot;resonance&quot;</span>
+<span class="lineno">  473 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByAtmosphere      = &quot;atmosphere&quot;</span>
+<span class="lineno">  474 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByConsolidation   = &quot;consolidation&quot;</span>
+<span class="lineno">  475 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByCounterfactual  = &quot;counterfactual&quot;</span>
+<span class="lineno">  476 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByFieldConfidence = &quot;field_confidence&quot;</span>
+<span class="lineno">  477 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByConatusGate     = &quot;conatus_gate&quot;</span>
+<span class="lineno">  478 </span><span class="spaces"></span><span class="istickedoff">renderSalienceDriver DrivenByDefault         = &quot;default&quot;</span></span>
+<span class="lineno">  479 </span>
+<span class="lineno">  480 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  481 </span>-- Phase-B bounded post-commitment adaptation
+<span class="lineno">  482 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  483 </span>
+<span class="lineno">  484 </span>-- | Bounded adaptation of salience weights.
+<span class="lineno">  485 </span>--
+<span class="lineno">  486 </span>-- * @signal@ in @[-1, 1]@: positive reinforces Holistic-bias weights,
+<span class="lineno">  487 </span>--   negative reinforces Formal-bias weights.
+<span class="lineno">  488 </span>-- * Learning rate capped at @0.02@ per turn.
+<span class="lineno">  489 </span>-- * All adapted weights clamped to @[0.0, 2.0]@.
+<span class="lineno">  490 </span>-- * Anti-drift: total deviation from 'defaultSalienceWeights'
+<span class="lineno">  491 </span>--   per weight cannot exceed @1.0@.
+<span class="lineno">  492 </span>--
+<span class="lineno">  493 </span>-- Empirical signal generation is deferred to Phase 7; this
+<span class="lineno">  494 </span>-- function provides the bounded mechanics so that future
+<span class="lineno">  495 </span>-- calibration only needs to change the caller-supplied signal.
+<span class="lineno">  496 </span>adaptSalienceWeights :: Double -&gt; SalienceWeights -&gt; SalienceWeights
+<span class="lineno">  497 </span><span class="decl"><span class="istickedoff">adaptSalienceWeights rawSignal w =</span>
+<span class="lineno">  498 </span><span class="spaces">  </span><span class="istickedoff">let lr        = 0.02</span>
+<span class="lineno">  499 </span><span class="spaces">      </span><span class="istickedoff">signal    = max (-1.0) (min 1.0 rawSignal)</span>
+<span class="lineno">  500 </span><span class="spaces">      </span><span class="istickedoff">delta     = signal * lr</span>
+<span class="lineno">  501 </span><span class="spaces">      </span><span class="istickedoff">def       = defaultSalienceWeights</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff">clamped x = max 0.0 (min 2.0 x)</span>
+<span class="lineno">  503 </span><span class="spaces">      </span><span class="istickedoff">-- Anti-drift only applies when we are actually adapting;</span>
+<span class="lineno">  504 </span><span class="spaces">      </span><span class="istickedoff">-- signal=0 must be identity to respect the gating contract.</span>
+<span class="lineno">  505 </span><span class="spaces">      </span><span class="istickedoff">bounded target x =</span>
+<span class="lineno">  506 </span><span class="spaces">        </span><span class="istickedoff">let adapted = clamped (x + delta)</span>
+<span class="lineno">  507 </span><span class="spaces">        </span><span class="istickedoff">in if abs delta &lt; 1e-12</span>
+<span class="lineno">  508 </span><span class="spaces">             </span><span class="istickedoff">then x</span>
+<span class="lineno">  509 </span><span class="spaces">             </span><span class="istickedoff">else max (target - 1.0) (min (target + 1.0) adapted)</span>
+<span class="lineno">  510 </span><span class="spaces">  </span><span class="istickedoff">in w</span>
+<span class="lineno">  511 </span><span class="spaces">       </span><span class="istickedoff">{ weightResonance       = bounded (weightResonance       def) (weightResonance       w)</span>
+<span class="lineno">  512 </span><span class="spaces">       </span><span class="istickedoff">, weightAtmosphere      = bounded (weightAtmosphere      def) (weightAtmosphere      w)</span>
+<span class="lineno">  513 </span><span class="spaces">       </span><span class="istickedoff">, weightConsolidation   = bounded (weightConsolidation   def) (weightConsolidation   w)</span>
+<span class="lineno">  514 </span><span class="spaces">       </span><span class="istickedoff">, weightCounterfactual  = bounded (weightCounterfactual  def) (weightCounterfactual  w)</span>
+<span class="lineno">  515 </span><span class="spaces">       </span><span class="istickedoff">, weightFieldConfidence = bounded (weightFieldConfidence def) (weightFieldConfidence w)</span>
+<span class="lineno">  516 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  519 </span>-- Internals
+<span class="lineno">  520 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  521 </span>
+<span class="lineno">  522 </span>-- | Per-driver signed contributions to the raw score.
+<span class="lineno">  523 </span>--
+<span class="lineno">  524 </span>-- The sign of each contribution matches the rule direction
+<span class="lineno">  525 </span>-- (ADR-0010 §3): positive contributions push toward Holistic,
+<span class="lineno">  526 </span>-- negative toward Formal. Confidence and driver attribution use
+<span class="lineno">  527 </span>-- the absolute values.
+<span class="lineno">  528 </span>data Contributions = Contributions
+<span class="lineno">  529 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">contribResonance</span></span></span>       :: !Double
+<span class="lineno">  530 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">contribAtmosphere</span></span></span>      :: !Double
+<span class="lineno">  531 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">contribConsolidation</span></span></span>   :: !Double
+<span class="lineno">  532 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">contribCounterfactual</span></span></span>  :: !Double
+<span class="lineno">  533 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">contribFieldConfidence</span></span></span> :: !Double
+<span class="lineno">  534 </span>  }
+<span class="lineno">  535 </span>
+<span class="lineno">  536 </span>contributions :: SalienceWeights -&gt; Field -&gt; Contributions
+<span class="lineno">  537 </span><span class="decl"><span class="istickedoff">contributions w f = Contributions</span>
+<span class="lineno">  538 </span><span class="spaces">  </span><span class="istickedoff">{ contribResonance       = weightResonance       w * unResonance       (fieldResonance      f)</span>
+<span class="lineno">  539 </span><span class="spaces">  </span><span class="istickedoff">, contribAtmosphere      = weightAtmosphere      w * atmosphereArousal (fieldAtmosphere     f)</span>
+<span class="lineno">  540 </span><span class="spaces">  </span><span class="istickedoff">, contribConsolidation   = weightConsolidation   w * unConsolidation   (fieldConsolidation  f)</span>
+<span class="lineno">  541 </span><span class="spaces">  </span><span class="istickedoff">, contribCounterfactual  = weightCounterfactual  w * unCounterfactual  (fieldCounterfactual f)</span>
+<span class="lineno">  542 </span><span class="spaces">  </span><span class="istickedoff">, contribFieldConfidence = weightFieldConfidence w * unFieldConfidence (fieldConfidence     f)</span>
+<span class="lineno">  543 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>-- | Closed-form logistic squash.
+<span class="lineno">  546 </span>sigmoid :: Double -&gt; Double
+<span class="lineno">  547 </span><span class="decl"><span class="istickedoff">sigmoid x = 1.0 / (1.0 + exp (negate x))</span></span>
+<span class="lineno">  548 </span>
+<span class="lineno">  549 </span>-- | The driver with the largest absolute contribution.
+<span class="lineno">  550 </span>--
+<span class="lineno">  551 </span>-- All-zero contributions return 'DrivenByDefault' (no signal
+<span class="lineno">  552 </span>-- exceeded the threshold of any kind).
+<span class="lineno">  553 </span>dominantDriver :: Contributions -&gt; SalienceDriver
+<span class="lineno">  554 </span><span class="decl"><span class="istickedoff">dominantDriver cs</span>
+<span class="lineno">  555 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">totalMagnitude == 0.0</span> = <span class="nottickedoff">DrivenByDefault</span></span>
+<span class="lineno">  556 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>             = fst (foldr1 pickLarger cs')</span>
+<span class="lineno">  557 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  558 </span><span class="spaces">    </span><span class="istickedoff">cs' =</span>
+<span class="lineno">  559 </span><span class="spaces">      </span><span class="istickedoff">[ (DrivenByResonance      , abs (contribResonance       cs))</span>
+<span class="lineno">  560 </span><span class="spaces">      </span><span class="istickedoff">, (DrivenByAtmosphere     , abs (contribAtmosphere      cs))</span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="istickedoff">, (DrivenByConsolidation  , abs (contribConsolidation   cs))</span>
+<span class="lineno">  562 </span><span class="spaces">      </span><span class="istickedoff">, (DrivenByCounterfactual , abs (contribCounterfactual  cs))</span>
+<span class="lineno">  563 </span><span class="spaces">      </span><span class="istickedoff">, (DrivenByFieldConfidence, abs (contribFieldConfidence cs))</span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno">  565 </span><span class="spaces">    </span><span class="istickedoff">totalMagnitude = sum (map snd cs')</span>
+<span class="lineno">  566 </span><span class="spaces">    </span><span class="istickedoff">pickLarger a@(_, va) b@(_, vb) = if va &gt;= vb then a else b</span></span>
+<span class="lineno">  567 </span>
+<span class="lineno">  568 </span>-- | Confidence as 1 minus normalised dispersion of the
+<span class="lineno">  569 </span>-- contributions.
+<span class="lineno">  570 </span>--
+<span class="lineno">  571 </span>-- Concretely: let @dominant = max |c_i|@ and
+<span class="lineno">  572 </span>-- @other = sum |c_i| − dominant@; with @n = 5@ contributions,
+<span class="lineno">  573 </span>-- @confidence = max 0 (1 − other / ((n−1) × dominant))@. This
+<span class="lineno">  574 </span>-- yields @1.0@ when one contribution dominates and the others
+<span class="lineno">  575 </span>-- are zero, and @0.0@ when all five contributions are equal in
+<span class="lineno">  576 </span>-- magnitude. All-zero contributions return @1.0@ (no signal to
+<span class="lineno">  577 </span>-- disagree on).
+<span class="lineno">  578 </span>computeConfidence :: Contributions -&gt; Double
+<span class="lineno">  579 </span><span class="decl"><span class="istickedoff">computeConfidence cs</span>
+<span class="lineno">  580 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">dominant == 0.0</span> = <span class="nottickedoff">1.0</span></span>
+<span class="lineno">  581 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>       = max 0.0 (1.0 - other / (4.0 * dominant))</span>
+<span class="lineno">  582 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  583 </span><span class="spaces">    </span><span class="istickedoff">magnitudes =</span>
+<span class="lineno">  584 </span><span class="spaces">      </span><span class="istickedoff">[ abs (contribResonance       cs)</span>
+<span class="lineno">  585 </span><span class="spaces">      </span><span class="istickedoff">, abs (contribAtmosphere      cs)</span>
+<span class="lineno">  586 </span><span class="spaces">      </span><span class="istickedoff">, abs (contribConsolidation   cs)</span>
+<span class="lineno">  587 </span><span class="spaces">      </span><span class="istickedoff">, abs (contribCounterfactual  cs)</span>
+<span class="lineno">  588 </span><span class="spaces">      </span><span class="istickedoff">, abs (contribFieldConfidence cs)</span>
+<span class="lineno">  589 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno">  590 </span><span class="spaces">    </span><span class="istickedoff">dominant = maximum magnitudes</span>
+<span class="lineno">  591 </span><span class="spaces">    </span><span class="istickedoff">other    = sum magnitudes - dominant</span></span>
+<span class="lineno">  592 </span>
+<span class="lineno">  593 </span>-- | Classify a 'CanonicalMoveFamily' as holistic (right-hemispheric).
+<span class="lineno">  594 </span>-- This is the single source of truth for the Holistic / Formal
+<span class="lineno">  595 </span>-- partition used by the salience controller and the feedback loop.
+<span class="lineno">  596 </span>isHolisticFamily :: CanonicalMoveFamily -&gt; Bool
+<span class="lineno">  597 </span><span class="decl"><span class="istickedoff">isHolisticFamily CMReflect    = True</span>
+<span class="lineno">  598 </span><span class="spaces"></span><span class="istickedoff">isHolisticFamily CMDefine     = True</span>
+<span class="lineno">  599 </span><span class="spaces"></span><span class="istickedoff">isHolisticFamily CMHypothesis = <span class="nottickedoff">True</span></span>
+<span class="lineno">  600 </span><span class="spaces"></span><span class="istickedoff">isHolisticFamily CMDeepen     = True</span>
+<span class="lineno">  601 </span><span class="spaces"></span><span class="istickedoff">isHolisticFamily CMPurpose    = True</span>
+<span class="lineno">  602 </span><span class="spaces"></span><span class="istickedoff">isHolisticFamily _            = False</span></span>
+<span class="lineno">  603 </span>
+<span class="lineno">  604 </span>-- | Inverse of 'isHolisticFamily'.  Kept explicit so callers do
+<span class="lineno">  605 </span>-- not need to remember which side is default.
+<span class="lineno">  606 </span>isFormalFamily :: CanonicalMoveFamily -&gt; Bool
+<span class="lineno">  607 </span><span class="decl"><span class="nottickedoff">isFormalFamily = not . isHolisticFamily</span></span>
+
+</pre>
+</body>
+</html>

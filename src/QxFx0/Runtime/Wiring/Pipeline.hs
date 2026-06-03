@@ -8,11 +8,13 @@ import QxFx0.Core.PipelineIO
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
   )
-import QxFx0.Core.PipelineIO.Internal (PipelineIO(..))
+import QxFx0.Core.PipelineIO.Internal (PipelineIO(..), defaultConatusPrior)
 import QxFx0.Runtime.Mode (RuntimeMode(..))
 import QxFx0.Runtime.Wiring.Handlers (handleTurnEffect)
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
+  , modifyConsciousLoop
+  , modifyIntuition
   , rcMode
   , updateHistoryStrict
   )
@@ -29,4 +31,7 @@ toPipelineIO ctx = PipelineIO
   , pioLocalRecoveryPolicy = LocalRecoveryEnabled
   , pioInterpreter = handleTurnEffect ctx
   , pioUpdateHistory = updateHistoryStrict
+  , pioModifyConsciousLoop = modifyConsciousLoop ctx
+  , pioModifyIntuition = modifyIntuition ctx
+  , pioConatusPrior = defaultConatusPrior
   }

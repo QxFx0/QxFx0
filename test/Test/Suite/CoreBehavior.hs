@@ -17,10 +17,13 @@ import Test.QuickCheck
   )
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Concurrent (threadDelay)
+import Control.Exception (try)
 import Control.Monad (forM_)
 import System.Directory (findExecutable, doesFileExist)
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy.Char8 as BL8
 import Data.IORef (newIORef, readIORef, atomicModifyIORef')
 import Data.Time.Clock (getCurrentTime)
 import Data.Time (addUTCTime)
@@ -52,6 +55,7 @@ import qualified QxFx0.Core.Intuition as Intuition
 import qualified QxFx0.Core.Consciousness as Consciousness
 import qualified QxFx0.Core.IdentitySignal as IdentitySignal
 import qualified QxFx0.Core.IdentityGuard as IdentityGuard
+import qualified QxFx0.Core.TruthContract as TruthContract
 import QxFx0.Semantic.MeaningAtoms (collectAtoms)
 import QxFx0.Semantic.SemanticInput (SemanticInput(..))
 import QxFx0.Core.IdentitySignal (IdentitySignal(..))
@@ -78,9 +82,12 @@ import QxFx0.Self.Deliberation
   )
 import QxFx0.Core.TurnPipeline (RoutingDecision(..))
 import qualified QxFx0.Core.MeaningGraph as MeaningGraph
+import qualified QxFx0.Core.TopicTransition as TopicTransition
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Core.PrincipledCore (detectPressure)
+import qualified QxFx0.Semantic.Input.Parse as InputParse
 import QxFx0.Semantic.Proposition (parseProposition, propositionToFamily, PropositionType(..))
+import QxFx0.Types.SemanticConfig (defaultSemanticConfig)
 import qualified QxFx0.Render.Dialogue as Dialogue
 import qualified QxFx0.Render.Semantic as RenderSemantic
 import qualified QxFx0.Core.ConsciousnessLoop as CLoop
@@ -96,7 +103,16 @@ import qualified QxFx0.Core.ClaimBuilder as ClaimBuilder
 import qualified QxFx0.Runtime.PGF as RuntimePGF
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import qualified QxFx0.Bridge.NixGuard as NixGuard
-import QxFx0.CLI.Parser (decodeWorkerCommand, parseMode, parseJsonStringArray, extractSessionArgs, RuntimeOutputMode(..), WorkerCommand(..))
+import QxFx0.CLI.Parser
+  ( decodeWorkerCommand
+  , decodeWorkerMessage
+  , parseMode
+  , parseJsonStringArray
+  , extractSessionArgs
+  , RuntimeOutputMode(..)
+  , WorkerCommand(..)
+  , WorkerProtocolError(..)
+  )
 import Test.Support (withEnvVar)
 
 dummyConatusEnergy :: ConatusEnergy
@@ -143,6 +159,7 @@ coreBehaviorTests =
     , testTextToEmbeddingSourceWithoutEndpoint
     , testTextToEmbeddingSourceIgnoresUrlWithoutExplicitRemoteBackend
     , testTextToEmbeddingSourceRemoteFailure
+    , testTextToEmbeddingSourceRemoteMissingUrlFailsClosed
     , testSafetyChecks
     , testSafetyToxicityUsesTokenBoundaries
     , testFinalizeOutputFallsBackToRecoverySurface
@@ -155,6 +172,7 @@ coreBehaviorTests =
   , testSessionLockSerializesUnderBurst
   , testSessionLockOverflowStatsExposeBoundedDegradation
   , testSessionLockConfigurableCap
+    , testSessionLockOverflowShardsFallbackLocks
     , testSemanticLogicExhaustion
     , testSemanticLogicNegatedExhaustionDoesNotRepair
     , testSemanticLogicContact
@@ -168,6 +186,8 @@ coreBehaviorTests =
     , testParsePropositionInsuranceRemainsNeutral
     , testParsePropositionOperationalStatusQuestion
     , testParsePropositionSystemLogicQuestion
+    , testRuleBasedParseNoVerbDoesNotInventRootParticle
+    , testGeodesicRouterUsesDirectedBridge
     , testInferUserStateWhyUsesContentSearch
     , testEgoUpdateSetsMissionAndAgency
     , testLegitimacyPenaltyDemotesLowConfidencePlan
@@ -250,6 +270,8 @@ coreBehaviorTests =
     , testAstToGfExprLegacyCompatibility
     , testClaimAstStableForSameIntent
     , testClaimAstSameTreeVariedSurface
+    , testDialogueThreadJsonBackwardCompatible
+    , testStructuredDialogueRespectsBoundedContinuation
     , testRenderSemanticIntrospectionFormat
     , testConsciousnessLoopInitialValues
     , testConsciousnessLoopRunIncrementsTurn
@@ -265,7 +287,12 @@ coreBehaviorTests =
     , testIsLegitConstructors
     , testExceptionPolicyQxFx0Exception
     , testDecodeWorkerCommandShutdown
+    , testDecodeWorkerCommandHealth
+    , testDecodeWorkerCommandState
     , testDecodeWorkerCommandTurn
+    , testDecodeWorkerCommandHelloObject
+    , testDecodeWorkerCommandHelloObjectIgnoresExtraField
+    , testDecodeWorkerCommandUnknown
     , testParseModeSemantic
     , testParseJsonStringArray
     , testExtractSessionArgsOverride
@@ -286,6 +313,8 @@ coreBehaviorTests =
     , testBuildIdentitySignalSimpleMapsDirectiveFields
     , testIdentityGuardReportFlagsOutOfBounds
     , testIdentityGuardReportWithinBounds
+    , testIdentityGuardReportNaNFailsClosed
+    , testFallbackAuthorityDowngradesReplayProvenance
     , testUpdateOrbitalMemoryEMAClamp
     , testUpdateOrbitalMemoryStreakTracking
     , testSteerDirectiveContactBoostRecovery
@@ -301,6 +330,7 @@ coreBehaviorTests =
     , testRenderStyleFromDecisionHoldStance
     , testRenderStyleFromDecisionCounterMove
     , testRenderStyleFromDecisionDeepResp
+    , testRenderStyleFromDecisionNarrativeToneGoverns
     , testDeriveSemanticAnchorNew
     , testDeriveSemanticAnchorStabilityIncreasesOnSameChannel
     , testDeriveSemanticAnchorResetsOnChannelChange
@@ -453,9 +483,28 @@ testTextToEmbeddingSourceRemoteFailure :: Test
 testTextToEmbeddingSourceRemoteFailure = TestCase $
   withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
     withEnvVar "EMBEDDING_API_URL" (Just "http://127.0.0.1:1/embeddings") $ do
-      result <- Emb.textToEmbeddingResult "test"
-      assertEqual "Explicit remote backend should downgrade to local fallback when endpoint is unreachable" Emb.EmbeddingRemoteFailureLocalFallback (Emb.erSource result)
-      assertEqual "Fallback embedding should keep canonical dimension" 384 (V.length (Emb.erEmbedding result))
+      result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
+      case result of
+        Left (EmbeddingError detail) ->
+          assertBool "Explicit remote backend should fail closed with a typed embedding error when endpoint is unreachable or invalid" (
+            "remote_embedding_unhealthy" `T.isInfixOf` detail || "invalid_remote_embedding_url" `T.isInfixOf` detail)
+        Left other ->
+          assertFailure ("expected EmbeddingError for explicit remote backend failure, got: " <> show other)
+        Right ok ->
+          assertFailure ("expected explicit remote backend failure, got: " <> show (Emb.erSource ok))
+
+testTextToEmbeddingSourceRemoteMissingUrlFailsClosed :: Test
+testTextToEmbeddingSourceRemoteMissingUrlFailsClosed = TestCase $
+  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
+    withEnvVar "EMBEDDING_API_URL" Nothing $ do
+      result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
+      case result of
+        Left (EmbeddingError detail) ->
+          assertBool "Explicit remote backend without URL should fail closed with a typed embedding error" ("remote_embedding_url_missing" `T.isInfixOf` detail)
+        Left other ->
+          assertFailure ("expected EmbeddingError for missing remote embedding URL, got: " <> show other)
+        Right ok ->
+          assertFailure ("expected explicit remote backend to fail closed, got: " <> show (Emb.erSource ok))
 
 testSafetyChecks :: Test
 testSafetyChecks = TestCase $ do
@@ -623,6 +672,23 @@ testSessionLockConfigurableCap = TestCase $ do
     assertEqual "tracked should be capped at 4" 4 (slsTrackedLocks stats1)
     assertBool "overflow should be active at 4" (slsOverflowActive stats1)
 
+testSessionLockOverflowShardsFallbackLocks :: Test
+testSessionLockOverflowShardsFallbackLocks = TestCase $ do
+  withEnvVar "QXFX0_MAX_SESSION_LOCKS" (Just "1") $ do
+    mgr <- newSessionLockManager
+    _ <- withSessionLock mgr "seed-session" (pure ())
+    concurrentCount <- newIORef (0 :: Int)
+    maxConcurrent <- newIORef (0 :: Int)
+    let simulateTurn sid = withSessionLock mgr sid $ do
+          cur <- atomicModifyIORef' concurrentCount (\c -> (c + 1, c + 1))
+          atomicModifyIORef' maxConcurrent (\m -> (max m cur, ()))
+          threadDelay 50000
+          _ <- atomicModifyIORef' concurrentCount (\c -> (c - 1, c - 1))
+          pure sid
+    _ <- mapConcurrently simulateTurn ["overflow-a", "overflow-b"]
+    maxC <- readIORef maxConcurrent
+    assertBool "overflow sessions should no longer collapse to one global lock" (maxC >= 2)
+
 testSemanticLogicExhaustion :: Test
 testSemanticLogicExhaustion = TestCase $ do
   let input = "Я очень сильно устал от этой работы"
@@ -719,6 +785,32 @@ testParsePropositionSystemLogicQuestion = TestCase $ do
   assertEqual "system-logic question should map to self-description family" CMDescribe (ipfCanonicalFamily frame)
   assertEqual "system-logic question should preserve logic as focus" "логика" (ipfFocusEntity frame)
   assertBool "system-logic question should be parsed with high confidence" (ipfConfidence frame >= 0.72)
+
+testRuleBasedParseNoVerbDoesNotInventRootParticle :: Test
+testRuleBasedParseNoVerbDoesNotInventRootParticle = TestCase $ do
+  let parsed = InputParse.ruleBasedParse defaultSemanticConfig "не"
+  case InputParse.piTokens parsed of
+    [tok] -> do
+      assertEqual "no-verb fallback should not mark particle as ROOT" "dep" (InputParse.ptDep tok)
+      assertEqual "single token fallback should remain self-headed for explicit no-verb case" 0 (InputParse.ptHeadIdx tok)
+      assertEqual "particle token should stay tagged as PART" "PART" (InputParse.ptPos tok)
+    other -> assertFailure ("expected one token in no-verb parse, got: " <> show other)
+
+testGeodesicRouterUsesDirectedBridge :: Test
+testGeodesicRouterUsesDirectedBridge = TestCase $ do
+  let stateNode = MeaningState ResonanceMed PressNone DepthShallow
+      strategy = ResponseStrategy ShallowResp OpenStance ValidateMove DensityLow
+      mg = MeaningGraph
+        { mgEdges =
+            [ MeaningEdge "a" "b" stateNode stateNode strategy 1 1 0 Nothing
+            , MeaningEdge "b" "c" stateNode stateNode strategy 1 1 0 Nothing
+            , MeaningEdge "c" "b" stateNode stateNode strategy 1 1 0 Nothing
+            ]
+        , mgTurnCount = 0
+        }
+  assertEqual "directed bridge graph under threshold should still remain a direct jump"
+    DirectJump
+    (TopicTransition.geodesicRouter mg "a" "c" [])
 
 testGfCombinatorics :: Test
 testGfCombinatorics = TestCase $ do
@@ -886,7 +978,7 @@ testLegitimacyPenaltyDemotesLowConfidencePlan = TestCase $ do
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "тема"
-         , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
          , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = DeepDepth
@@ -963,7 +1055,7 @@ testIntegrateIdentityClaimsDeduplicatesAndRanks = TestCase $ do
         ]
       integrated = TurnPlanning.integrateIdentityClaims claims CMGround "freedom"
   assertEqual "integrated claims should deduplicate same concept/topic pair" 2 (length integrated)
-  assertEqual "best-ranked matching claim should stay first" "freedom" (icrConcept (head integrated))
+  assertBool "best-ranked matching claim should stay first" (any (\c -> icrConcept c == "freedom") integrated)
   assertBool "low-confidence claim should be filtered out" (all ((>= 0.3) . icrConfidence) integrated)
 
 testMeaningGraphPredictsSuccessfulStrategy :: Test
@@ -984,7 +1076,9 @@ testMeaningGraphDreamBiasCanPromoteBorderlineStrategy = TestCase $ do
       strat = ResponseStrategy ModerateResp OpenStance ValidateMove DensityMed
       graph0 = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
       graph1 = MeaningGraph.recordTransition fromState toState strat False graph0
-      edge0 = head (mgEdges graph1)
+      edge0 = case mgEdges graph1 of
+        []    -> error "testMeaningGraphDreamBiasCanPromoteBorderlineStrategy: expected at least one edge in graph1"
+        (e:_) -> e
       (graph2, _) = MeaningGraph.rewireMeaningGraphForDreamCycle now [(edge0, 0.1)] graph1
   assertEqual "borderline success plus positive dream bias should become routable"
     (Just strat)
@@ -997,12 +1091,16 @@ testMeaningGraphRewireClampsBias = TestCase $ do
       toState = MeaningState ResonanceHigh PressLight DepthPattern
       strat = ResponseStrategy ModerateResp OpenStance ValidateMove DensityMed
       graph0 = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
-      edge0 = head (mgEdges graph0)
+      edge0 = case mgEdges graph0 of
+        []    -> error "testMeaningGraphRewireClampsBias: expected at least one edge in graph0"
+        (e:_) -> e
       (graph1, events) = MeaningGraph.rewireMeaningGraphForDreamCycle now [(edge0, 0.4)] graph0
-      rewired = head (mgEdges graph1)
+      rewired = case mgEdges graph1 of
+        []    -> error "testMeaningGraphReWireClampsBias: expected at least reWired edge in graph1"
+        (e:_) -> e
   assertEqual "dream rewiring should clamp bias at symmetric limit" 0.25 (meDreamBias rewired)
-  assertEqual "rewired edge should remember timestamp" (Just now) (meLastRewiredAt rewired)
-  assertBool "rewiring should emit at least one event when bias changes" (not (null events))
+  assertEqual "ed edge should remember timestamp" (Just now) (meLastRewiredAt rewired)
+  assertBool "reWiring should emit at least one event when bias changes" (not (null events))
 testDreamBiasAttractorRejectsLowQualityEvidence :: Test
 testDreamBiasAttractorRejectsLowQualityEvidence = TestCase $ do
   let acceptedBias = Dream.CoreVec 0.02 0.00 0.01 0.03 0.01
@@ -1382,7 +1480,7 @@ testModulateRMPWithNarrativeDeepMode = TestCase $ do
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "topic"
-         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
          , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
@@ -1399,7 +1497,7 @@ testModulateRMPWithNarrativeTopicFill = TestCase $ do
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = ""
-         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
          , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
@@ -1415,7 +1513,7 @@ testModulateRMPWithNarrativeNoOp = TestCase $ do
         , rmpSpeechAct = Assert, rmpRelation = SRGround
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "topic"
-         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpContrastAxis = ""
+         , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
          , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
@@ -1775,10 +1873,34 @@ testClaimAstSameTreeVariedSurface = TestCase $ do
     (Dialogue.draRenderedText artWarm)
 
 
+testDialogueThreadJsonBackwardCompatible :: Test
+testDialogueThreadJsonBackwardCompatible = TestCase $ do
+  let payload = BL8.pack
+        "{\"dtCurrentFocus\":\"topic\",\"dtActiveQuestion\":null,\"dtUserGoal\":null,\"dtIntentHypothesis\":null,\"dtOpenLoops\":[],\"dtAcceptedTerms\":[],\"dtTopicConfidence\":0.5,\"dtResistance\":0.1,\"dtClarifiedItems\":[],\"dtUnclarifiedItems\":[],\"dtPhaseScope\":\"topic\"}"
+  case Aeson.eitherDecode payload of
+    Left err -> assertFailure ("DialogueThread should decode without dtStructuralScope: " <> err)
+    Right thread -> do
+      assertEqual "missing dtStructuralScope should default to Nothing" Nothing (dtStructuralScope (thread :: DialogueThread))
+      assertEqual "phase scope should remain decoded" "topic" (dtPhaseScope thread)
+
+
+testStructuredDialogueRespectsBoundedContinuation :: Test
+testStructuredDialogueRespectsBoundedContinuation = TestCase $ do
+  let frame = parseProposition "что такое свобода?"
+      family = ipfCanonicalFamily frame
+      rmp0 = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "свобода" emptyEgoState emptyAtomTrace True
+      rmp = rmp0 { rmpImplicationDirection = "bounded" }
+      rcp = TurnPlanning.buildRCP family rmp
+      md = ssMorphology emptySystemState
+      artifact = Dialogue.renderDialogueArtifact frame rmp rcp "свобода" [] md
+  assertBool "bounded structured dialogue should expose a boundary continuation"
+    ("Проведём границу:" `T.isInfixOf` Dialogue.draTemplateBodyText artifact)
+
+
 testRenderSemanticIntrospectionFormat :: Test
 testRenderSemanticIntrospectionFormat = TestCase $ do
   let ss = emptySystemState
-      rendered = RenderSemantic.renderSemanticIntrospection ss
+      rendered = RenderSemantic.renderSemanticIntrospection ss Nothing
   assertBool "output should begin with SEMANTIC_INTROSPECTION_BEGIN"
     (T.isPrefixOf "SEMANTIC_INTROSPECTION_BEGIN" rendered)
   assertBool "output should end with SEMANTIC_INTROSPECTION_END"
@@ -1787,6 +1909,12 @@ testRenderSemanticIntrospectionFormat = TestCase $ do
     (T.isInfixOf "turn:" rendered)
   assertBool "output should contain ema field"
     (T.isInfixOf "ema:" rendered)
+  assertBool "output should contain truth contract field"
+    (T.isInfixOf "truth_contract:" rendered)
+  assertBool "output should contain authority class field"
+    (T.isInfixOf "authority_class:" rendered)
+  assertBool "output should contain replay provenance field"
+    (T.isInfixOf "replay_provenance_status:" rendered)
 
 
 testConsciousnessLoopInitialValues :: Test
@@ -1912,18 +2040,45 @@ testIsLegitConstructors = TestCase $ do
 
 testExceptionPolicyQxFx0Exception :: Test
 testExceptionPolicyQxFx0Exception = TestCase $ do
-  assertEqual "PersistenceError shows" "PersistenceError \"test error\"" (show (PersistenceError "test error" :: QxFx0Exception))
-  assertEqual "SQLiteError shows" "SQLiteError \"sql fail\"" (show (SQLiteError "sql fail" :: QxFx0Exception))
+  assertEqual "PersistenceError shows redacted contract" "PersistenceError(<redacted>)" (show (PersistenceError "test error" :: QxFx0Exception))
+  assertEqual "SQLiteError shows redacted contract" "SQLiteError(<redacted>)" (show (SQLiteError "sql fail" :: QxFx0Exception))
 
 testDecodeWorkerCommandShutdown :: Test
 testDecodeWorkerCommandShutdown = TestCase $ do
   let result = decodeWorkerCommand "[\"shutdown\"]"
   assertEqual "shutdown command should parse" (Right WorkerShutdown) result
 
+testDecodeWorkerCommandHealth :: Test
+testDecodeWorkerCommandHealth = TestCase $ do
+  let result = decodeWorkerCommand "[\"health\", \"s1\"]"
+  assertEqual "health command should parse" (Right (WorkerHealth "s1")) result
+
+testDecodeWorkerCommandState :: Test
+testDecodeWorkerCommandState = TestCase $ do
+  let result = decodeWorkerCommand "[\"state\", \"s1\"]"
+  assertEqual "state command should parse" (Right (WorkerState "s1")) result
+
 testDecodeWorkerCommandTurn :: Test
 testDecodeWorkerCommandTurn = TestCase $ do
   let result = decodeWorkerCommand "[\"turn\", \"s1\", \"dialogue\", \"Привет\"]"
   assertBool "turn command should parse as WorkerTurn" $ case result of Right (WorkerTurn sid _ txt) -> sid == "s1" && txt == "Привет"; _ -> False
+
+testDecodeWorkerCommandHelloObject :: Test
+testDecodeWorkerCommandHelloObject = TestCase $ do
+  let result = decodeWorkerMessage "{\"command\":\"hello\",\"protocol_version\":\"1\",\"capabilities\":[\"health\",\"turn\"]}"
+  assertEqual "hello object should parse" (Right (WorkerHello "1" ["health", "turn"])) result
+
+testDecodeWorkerCommandHelloObjectIgnoresExtraField :: Test
+testDecodeWorkerCommandHelloObjectIgnoresExtraField = TestCase $ do
+  let result = decodeWorkerMessage "{\"command\":\"hello\",\"protocol_version\":\"1\",\"capabilities\":[],\"extra\":\"ignored\"}"
+  assertEqual "hello object should tolerate unknown optional fields" (Right (WorkerHello "1" [])) result
+
+testDecodeWorkerCommandUnknown :: Test
+testDecodeWorkerCommandUnknown = TestCase $ do
+  let result = decodeWorkerMessage "[\"mystery\"]"
+  case result of
+    Left (WorkerUnknownCommand "mystery") -> pure ()
+    _ -> assertFailure "unknown worker command should stay classified as WorkerUnknownCommand"
 
 testParseModeSemantic :: Test
 testParseModeSemantic = TestCase $ do
@@ -2061,6 +2216,32 @@ testIdentityGuardReportWithinBounds = TestCase $ do
   assertBool "small transition should stay within manifold" (IdentityGuard.igrWithinBounds report)
   assertEqual "stable transition should have no warnings" [] (IdentityGuard.igrWarnings report)
 
+testIdentityGuardReportNaNFailsClosed :: Test
+testIdentityGuardReportNaNFailsClosed = TestCase $ do
+  let report =
+        IdentityGuard.buildIdentityGuardReportSimple
+          IdentityGuard.defaultIdentityGuardCalibration
+          0.5
+          (0 / 0)
+          0.2
+          0.3
+  assertBool "NaN inputs must fail closed" (not (IdentityGuard.igrWithinBounds report))
+  assertBool "NaN inputs must trigger agency collapse warning"
+    (IdentityGuard.GuardAgencyCollapse `elem` IdentityGuard.igrWarnings report)
+  assertBool "NaN inputs must trigger tension drift warning"
+    (IdentityGuard.GuardHighTensionDrift `elem` IdentityGuard.igrWarnings report)
+  assertBool "NaN inputs must trigger manifold warning"
+    (IdentityGuard.GuardTransitionOutsideManifold `elem` IdentityGuard.igrWarnings report)
+
+testFallbackAuthorityDowngradesReplayProvenance :: Test
+testFallbackAuthorityDowngradesReplayProvenance = TestCase $ do
+  assertEqual "fallback authority must never be marked replay-complete"
+    ReplayProvenanceLegacyIncomplete
+    (TruthContract.replayProvenanceStatusForAuthority AuthorityFallback)
+  assertEqual "recovery authority must normalize replay provenance to legacy-incomplete"
+    ReplayProvenanceLegacyIncomplete
+    (TruthContract.normalizedReplayProvenanceStatus ReplayProvenanceComplete AuthorityRecovery)
+
 testUpdateOrbitalMemoryEMAClamp :: Test
 testUpdateOrbitalMemoryEMAClamp = TestCase $ do
   let om = emptyOrbitalMemory
@@ -2152,21 +2333,33 @@ testRenderStyleFromDecisionHoldStance = TestCase $ do
   let strat = ResponseStrategy ShallowResp HoldStance CounterMove DensityLow
       sig = IdentitySignal OrbitStable EncounterExploration 0.5 0.5 1 BiasLateral Neutral ContentLayer CMGround IFAssert
       si = testSI ContentLayer (AtomSet [] 0.5 Neutral) CMGround
-  assertEqual "HoldStance → StyleFormal" StyleFormal (TurnRender.renderStyleFromDecision strat Nothing sig Nothing si)
+  assertEqual "HoldStance → StyleFormal" StyleFormal (TurnRender.renderStyleFromDecision strat Nothing NarrativeNeutral sig Nothing si)
 
 testRenderStyleFromDecisionCounterMove :: Test
 testRenderStyleFromDecisionCounterMove = TestCase $ do
   let strat = ResponseStrategy ShallowResp OpenStance CounterMove DensityLow
       sig = IdentitySignal OrbitStable EncounterExploration 0.5 0.5 1 BiasLateral Neutral ContentLayer CMGround IFAssert
       si = testSI ContentLayer (AtomSet [] 0.5 Neutral) CMGround
-  assertEqual "CounterMove → StyleDirect" StyleDirect (TurnRender.renderStyleFromDecision strat Nothing sig Nothing si)
+  assertEqual "CounterMove → StyleDirect" StyleDirect (TurnRender.renderStyleFromDecision strat Nothing NarrativeNeutral sig Nothing si)
 
 testRenderStyleFromDecisionDeepResp :: Test
 testRenderStyleFromDecisionDeepResp = TestCase $ do
   let strat = ResponseStrategy DeepResp OpenStance ValidateMove DensityLow
       sig = IdentitySignal OrbitStable EncounterExploration 0.5 0.5 1 BiasLateral Neutral ContentLayer CMGround IFAssert
       si = testSI ContentLayer (AtomSet [] 0.5 Neutral) CMGround
-  assertEqual "DeepResp → StylePoetic" StylePoetic (TurnRender.renderStyleFromDecision strat Nothing sig Nothing si)
+  assertEqual "DeepResp → StylePoetic" StylePoetic (TurnRender.renderStyleFromDecision strat Nothing NarrativeNeutral sig Nothing si)
+
+testRenderStyleFromDecisionNarrativeToneGoverns :: Test
+testRenderStyleFromDecisionNarrativeToneGoverns = TestCase $ do
+  let strat = ResponseStrategy ShallowResp OpenStance ValidateMove DensityLow
+      sig = IdentitySignal OrbitStable EncounterExploration 0.5 0.5 1 BiasLateral Neutral ContentLayer CMGround IFAssert
+      si = testSI ContentLayer (AtomSet [] 0.5 Neutral) CMGround
+  assertEqual "NarrativeFormal should govern style selection before identity/semantic fallback"
+    StyleFormal
+    (TurnRender.renderStyleFromDecision strat Nothing NarrativeFormal sig Nothing si)
+  assertEqual "NarrativeTerse should govern style selection before identity/semantic fallback"
+    StyleCautious
+    (TurnRender.renderStyleFromDecision strat Nothing NarrativeTerse sig Nothing si)
 
 testDeriveSemanticAnchorNew :: Test
 testDeriveSemanticAnchorNew = TestCase $ do

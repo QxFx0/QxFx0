@@ -47,7 +47,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
-import Control.Exception (finally, mask, onException)
+import Control.Exception (evaluate, finally, mask, onException)
 import Control.Exception (try)
 import Data.Text.Encoding.Error (UnicodeException)
 import Control.Monad (when)
@@ -214,7 +214,10 @@ loadKV db sessionId k = do
     _ <- NSQL.bindText stmt 2 k
     hasRow <- NSQL.stepRow stmt
     if hasRow
-      then Just <$> NSQL.columnText stmt 0
+      then do
+        value <- NSQL.columnText stmt 0
+        _ <- evaluate (T.length value)
+        pure (Just value)
       else pure Nothing
 
 persistTurnQuality :: NSQL.Database -> Text -> TurnProjection -> IO ()

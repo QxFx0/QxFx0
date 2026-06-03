@@ -1,0 +1,115 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>{-| Minimal legal DB adapter: traceable fact pipeline with safety boundary.
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>  For low-RAM environments the adapter uses an in-memory lookup table.
+<span class="lineno">    6 </span>  All legal responses carry a mandatory disclaimer and source trace.
+<span class="lineno">    7 </span>-}
+<span class="lineno">    8 </span>module QxFx0.Legal.Adapter
+<span class="lineno">    9 </span>  ( LegalFact(..)
+<span class="lineno">   10 </span>  , retrieveLegalFact
+<span class="lineno">   11 </span>  , legalDisclaimer
+<span class="lineno">   12 </span>  , legalFactToKnowledgeFragment
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import qualified Data.Text as T
+<span class="lineno">   17 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>-- | A legal fact retrieved from an external or embedded source.
+<span class="lineno">   20 </span>data LegalFact = LegalFact
+<span class="lineno">   21 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">lfSourceId</span></span></span> :: !Text    -- ^ Canonical source identifier (e.g. &quot;ru.civil.code.art1&quot;)
+<span class="lineno">   22 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lfSection</span></span></span> :: !Text     -- ^ Section or article reference
+<span class="lineno">   23 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lfText</span></span></span> :: !Text        -- ^ Fact text in Russian
+<span class="lineno">   24 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lfConfidence</span></span></span> :: !Double -- ^ Confidence score in [0,1]
+<span class="lineno">   25 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lfUncertainty</span></span></span> :: !Bool  -- ^ True when the fact has known uncertainty / caveats
+<span class="lineno">   26 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>-- | Mandatory safety disclaimer appended to every legal response.
+<span class="lineno">   29 </span>legalDisclaimer :: Text
+<span class="lineno">   30 </span><span class="decl"><span class="istickedoff">legalDisclaimer = &quot;Это не юридическая консультация.&quot;</span></span>
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>-- | In-memory legal fact DB for low-RAM / degraded-local profiles.
+<span class="lineno">   33 </span>--   Keys are lowercase Russian topic keywords.
+<span class="lineno">   34 </span>legalFactDb :: M.Map Text LegalFact
+<span class="lineno">   35 </span><span class="decl"><span class="istickedoff">legalFactDb = M.fromList</span>
+<span class="lineno">   36 </span><span class="spaces">  </span><span class="istickedoff">[ (&quot;право&quot;, LegalFact</span>
+<span class="lineno">   37 </span><span class="spaces">      </span><span class="istickedoff">{ lfSourceId = &quot;ru.civil.code.art1&quot;</span>
+<span class="lineno">   38 </span><span class="spaces">      </span><span class="istickedoff">, lfSection = &quot;Общие положения&quot;</span>
+<span class="lineno">   39 </span><span class="spaces">      </span><span class="istickedoff">, lfText = &quot;Право регулирует имущественные и личные неимущественные отношения.&quot;</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">, lfConfidence = 0.92</span>
+<span class="lineno">   41 </span><span class="spaces">      </span><span class="istickedoff">, lfUncertainty = False</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="istickedoff">})</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">, (&quot;закон&quot;, LegalFact</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="istickedoff">{ lfSourceId = &quot;ru.constitution.art15&quot;</span>
+<span class="lineno">   45 </span><span class="spaces">      </span><span class="istickedoff">, lfSection = &quot;Верховенство закона&quot;</span>
+<span class="lineno">   46 </span><span class="spaces">      </span><span class="istickedoff">, lfText = &quot;Конституция РФ имеет высшую юридическую силу.&quot;</span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="istickedoff">, lfConfidence = 0.95</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff">, lfUncertainty = False</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">})</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">, (&quot;хартия&quot;, LegalFact</span>
+<span class="lineno">   51 </span><span class="spaces">      </span><span class="istickedoff">{ lfSourceId = &quot;en.magna-carta.1215&quot;</span>
+<span class="lineno">   52 </span><span class="spaces">      </span><span class="istickedoff">, lfSection = &quot;Ограничение власти&quot;</span>
+<span class="lineno">   53 </span><span class="spaces">      </span><span class="istickedoff">, lfText = &quot;Великая хартия вольностей 1215 года ограничила власть английского короля.&quot;</span>
+<span class="lineno">   54 </span><span class="spaces">      </span><span class="istickedoff">, lfConfidence = 0.88</span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">, lfUncertainty = True</span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff">})</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">, (&quot;презумпция&quot;, LegalFact</span>
+<span class="lineno">   58 </span><span class="spaces">      </span><span class="istickedoff">{ lfSourceId = &quot;ru.criminal.procedure.art14&quot;</span>
+<span class="lineno">   59 </span><span class="spaces">      </span><span class="istickedoff">, lfSection = &quot;Презумпция невиновности&quot;</span>
+<span class="lineno">   60 </span><span class="spaces">      </span><span class="istickedoff">, lfText = &quot;Обвиняемый считается невиновным, пока его виновность не будет доказана.&quot;</span>
+<span class="lineno">   61 </span><span class="spaces">      </span><span class="istickedoff">, lfConfidence = 0.97</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">, lfUncertainty = False</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">})</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">, (&quot;юридический&quot;, LegalFact</span>
+<span class="lineno">   65 </span><span class="spaces">      </span><span class="istickedoff">{ lfSourceId = &quot;ru.civil.code.art1&quot;</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">, lfSection = &quot;Общие положения&quot;</span>
+<span class="lineno">   67 </span><span class="spaces">      </span><span class="istickedoff">, lfText = &quot;Юридические понятия регулируются нормами права.&quot;</span>
+<span class="lineno">   68 </span><span class="spaces">      </span><span class="istickedoff">, lfConfidence = 0.90</span>
+<span class="lineno">   69 </span><span class="spaces">      </span><span class="istickedoff">, lfUncertainty = False</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">})</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>-- | Retrieve a legal fact by subject keyword.
+<span class="lineno">   74 </span>--   Returns 'Nothing' for non-legal topics or unknown keywords.
+<span class="lineno">   75 </span>retrieveLegalFact :: Text -&gt; IO (Maybe LegalFact)
+<span class="lineno">   76 </span><span class="decl"><span class="istickedoff">retrieveLegalFact key = pure $ M.lookup (T.toLower (T.strip key)) legalFactDb</span></span>
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>-- | Render a 'LegalFact' into a single knowledge fragment.
+<span class="lineno">   79 </span>--   Includes the fact text, source trace, confidence annotation, and mandatory disclaimer.
+<span class="lineno">   80 </span>legalFactToKnowledgeFragment :: LegalFact -&gt; Text
+<span class="lineno">   81 </span><span class="decl"><span class="istickedoff">legalFactToKnowledgeFragment lf =</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">let sourceTrace = &quot;[источник: &quot; &lt;&gt; lfSourceId lf &lt;&gt; &quot; | раздел: &quot; &lt;&gt; lfSection lf &lt;&gt; &quot;]&quot;</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff">confidenceLabel</span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff">| lfConfidence lf &gt;= 0.95 = &quot; (высокая достоверность)&quot;</span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">lfUncertainty lf</span>        = &quot; (есть неопределенность)&quot;</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span>               = <span class="nottickedoff">&quot;&quot;</span></span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">in T.intercalate &quot; &quot;</span>
+<span class="lineno">   88 </span><span class="spaces">       </span><span class="istickedoff">[ lfText lf</span>
+<span class="lineno">   89 </span><span class="spaces">       </span><span class="istickedoff">, sourceTrace</span>
+<span class="lineno">   90 </span><span class="spaces">       </span><span class="istickedoff">, confidenceLabel</span>
+<span class="lineno">   91 </span><span class="spaces">       </span><span class="istickedoff">, legalDisclaimer</span>
+<span class="lineno">   92 </span><span class="spaces">       </span><span class="istickedoff">]</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    5 </span>module QxFx0.Types.TurnProjection
+<span class="lineno">    6 </span>  ( TurnReplayTrace(..)
+<span class="lineno">    7 </span>  , TurnProjection(..)
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
+<span class="lineno">   11 </span>import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
+<span class="lineno">   12 </span>import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, SurfaceProvenance, TruthContractStatus)
+<span class="lineno">   13 </span>import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
+<span class="lineno">   14 </span>import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
+<span class="lineno">   15 </span>import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
+<span class="lineno">   16 </span>import QxFx0.Types.Decision (ClaimAst)
+<span class="lineno">   17 </span>import QxFx0.Types.State.Perspective (PerspectiveProjection)
+<span class="lineno">   18 </span>import QxFx0.Types.Sense (SenseAxis, SenseOperator)
+<span class="lineno">   19 </span>import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
+<span class="lineno">   20 </span>import Data.Aeson (ToJSON)
+<span class="lineno">   21 </span>import Data.Text (Text)
+<span class="lineno">   22 </span>import GHC.Generics (Generic)
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>data TurnReplayTrace = TurnReplayTrace
+<span class="lineno">   25 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcRequestId</span></span></span> :: !Text
+<span class="lineno">   26 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSessionId</span></span></span> :: !Text
+<span class="lineno">   27 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcRuntimeMode</span></span></span> :: !Text
+<span class="lineno">   28 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcShadowPolicy</span></span></span> :: !Text
+<span class="lineno">   29 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLocalRecoveryPolicy</span></span></span> :: !Text
+<span class="lineno">   30 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcRecoveryCause</span></span></span> :: !(Maybe LocalRecoveryCause)
+<span class="lineno">   31 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcRecoveryStrategy</span></span></span> :: !(Maybe LocalRecoveryStrategy)
+<span class="lineno">   32 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcRecoveryEvidence</span></span></span> :: ![Text]
+<span class="lineno">   33 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSemanticIntrospectionEnabled</span></span></span> :: !Bool
+<span class="lineno">   34 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcWarnMorphologyFallbackEnabled</span></span></span> :: !Bool
+<span class="lineno">   35 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcRequestedFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   36 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcStrategyFamily</span></span></span> :: !(Maybe CanonicalMoveFamily)
+<span class="lineno">   37 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcNarrativeHint</span></span></span> :: !(Maybe Text)
+<span class="lineno">   38 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcIntuitionHint</span></span></span> :: !(Maybe Text)
+<span class="lineno">   39 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcPreShadowFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   40 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcShadowSnapshotId</span></span></span> :: !ShadowSnapshotId
+<span class="lineno">   41 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcShadowStatus</span></span></span> :: !ShadowStatus
+<span class="lineno">   42 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcShadowDivergenceKind</span></span></span> :: !ShadowDivergenceKind
+<span class="lineno">   43 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcShadowDivergenceSeverity</span></span></span> :: !ShadowDivergenceSeverity
+<span class="lineno">   44 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcShadowResolvedFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   45 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcFinalFamily</span></span></span> :: !CanonicalMoveFamily
+<span class="lineno">   46 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcFinalForce</span></span></span> :: !IllocutionaryForce
+<span class="lineno">   47 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDecisionDisposition</span></span></span> :: !DecisionDisposition
+<span class="lineno">   48 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLegitimacyReason</span></span></span> :: !LegitimacyReason
+<span class="lineno">   49 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcParserConfidence</span></span></span> :: !Double
+<span class="lineno">   50 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcParserBackend</span></span></span> :: !Text
+<span class="lineno">   51 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcParserStatus</span></span></span> :: !Text
+<span class="lineno">   52 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcParserDegradationReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">   53 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcParserLatencyMs</span></span></span> :: !Int
+<span class="lineno">   54 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcEmbeddingQuality</span></span></span> :: !Text
+<span class="lineno">   55 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcClaimAst</span></span></span> :: !(Maybe ClaimAst)
+<span class="lineno">   56 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcPreSafetyRenderedRaw</span></span></span> :: !Text
+<span class="lineno">   57 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcRenderedAfterRebind</span></span></span> :: !Text
+<span class="lineno">   58 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLinearizationLang</span></span></span> :: !(Maybe Text)
+<span class="lineno">   59 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLinearizationOk</span></span></span> :: !Bool
+<span class="lineno">   60 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcFallbackReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">   61 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcContractProvenance</span></span></span> :: !(Maybe ContractProvenance)
+<span class="lineno">   62 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcSurfaceProvenance</span></span></span> :: !(Maybe SurfaceProvenance)
+<span class="lineno">   63 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcAuthorityClass</span></span></span> :: !(Maybe AuthorityClass)
+<span class="lineno">   64 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcTruthContractStatus</span></span></span> :: !TruthContractStatus
+<span class="lineno">   65 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcAssemblyPath</span></span></span> :: !(Maybe AssemblyPath)
+<span class="lineno">   66 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcArtifactManifest</span></span></span> :: !(Maybe ArtifactManifest)
+<span class="lineno">   67 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcReplayProvenanceStatus</span></span></span> :: !ReplayProvenanceStatus
+<span class="lineno">   68 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDerivationTags</span></span></span> :: ![Text]
+<span class="lineno">   69 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSalienceDriver</span></span></span> :: !Text
+<span class="lineno">   70 </span>    -- ^ Phase 5.5e: rendered snake_case tag for the dominant
+<span class="lineno">   71 </span>    --   'QxFx0.Self.Salience.SalienceDriver' on this turn.
+<span class="lineno">   72 </span>    --   Closed enum tag; stable across builds.
+<span class="lineno">   73 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSalienceHolisticBias</span></span></span> :: !Double
+<span class="lineno">   74 </span>    -- ^ Phase 5.5e: 'salienceHolisticBias' in @[0, 1]@.
+<span class="lineno">   75 </span>    --   @0@ = pure formal, @1@ = pure holistic, @0.5@ = neutral.
+<span class="lineno">   76 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSalienceConfidence</span></span></span> :: !Double
+<span class="lineno">   77 </span>    -- ^ Phase 5.5e: 'salienceConfidence' in @[0, 1]@.
+<span class="lineno">   78 </span>    --   @1@ = one driver decisively dominates,
+<span class="lineno">   79 </span>    --   @0@ = contributions cancel.
+<span class="lineno">   80 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDeliberationRule</span></span></span> :: !(Maybe Text)
+<span class="lineno">   81 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDeliberationAgreement</span></span></span> :: !(Maybe Text)
+<span class="lineno">   82 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDeliberationDivergence</span></span></span> :: !(Maybe Double)
+<span class="lineno">   83 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDeliberationNarrativeTone</span></span></span> :: !(Maybe Text)
+<span class="lineno">   84 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcEssenceMode</span></span></span> :: !(Maybe Text)
+<span class="lineno">   85 </span>    -- ^ Phase 9: snake_case 'renderEssenceMode' tag of the
+<span class="lineno">   86 </span>    --   post-turn essence.  @Just &quot;witnessing&quot;@ pre-commit;
+<span class="lineno">   87 </span>    --   @Just &quot;contemplative&quot; | &quot;dialogical&quot; | &quot;integrative&quot;@
+<span class="lineno">   88 </span>    --   post-commit (Phase 10).  @Nothing@ only when the essence
+<span class="lineno">   89 </span>    --   layer is statically disabled (not currently exposed).
+<span class="lineno">   90 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcEssenceCommitted</span></span></span> :: !(Maybe Bool)
+<span class="lineno">   91 </span>    -- ^ Phase 9: @Just False@ pre-commit, @Just True@ post-commit
+<span class="lineno">   92 </span>    --   (Phase 10).  Always @Just False@ in Phase 9 by contract.
+<span class="lineno">   93 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcEssenceAngstLevel</span></span></span> :: !(Maybe Double)
+<span class="lineno">   94 </span>    -- ^ Phase 9: 'etAngstLevel' of the post-turn trajectory in
+<span class="lineno">   95 </span>    --   @[0, 1]@.  Tracks accumulated unresolved divergence.
+<span class="lineno">   96 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcEssenceTrigger</span></span></span> :: !(Maybe Text)
+<span class="lineno">   97 </span>    -- ^ Phase 9: snake_case 'renderCommitmentTrigger' tag set only
+<span class="lineno">   98 </span>    --   on the turn a commitment fires (Phase 10).  Always
+<span class="lineno">   99 </span>    --   @Nothing@ in Phase 9.
+<span class="lineno">  100 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcLearningQueryType</span></span></span> :: !(Maybe Text)
+<span class="lineno">  101 </span>    -- ^ Phase 8: type of learning query, e.g. &quot;definition&quot;,
+<span class="lineno">  102 </span>    --   &quot;declension&quot;, &quot;concept&quot;.  Nothing when no learning loop
+<span class="lineno">  103 </span>    --   was activated this turn.
+<span class="lineno">  104 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcExternalTool</span></span></span> :: !(Maybe Text)
+<span class="lineno">  105 </span>    -- ^ Phase 8: canonical tool name selected for the learning query.
+<span class="lineno">  106 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcLearningValidationStatus</span></span></span> :: !(Maybe Text)
+<span class="lineno">  107 </span>    -- ^ Phase 8: &quot;accept&quot; | &quot;reject&quot; | &quot;invalid_response&quot; |
+<span class="lineno">  108 </span>    --   &quot;sandbox_reject&quot; | &quot;not_attempted&quot;.
+<span class="lineno">  109 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLearningSandboxResult</span></span></span> :: !(Maybe Text)
+<span class="lineno">  110 </span>    -- ^ Phase 8: JSON-encoded 'SandboxMetrics' or reject reason.
+<span class="lineno">  111 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLearningGraftTurn</span></span></span> :: !(Maybe Int)
+<span class="lineno">  112 </span>    -- ^ Phase 8: turn number when the fruit was grafted (if accepted).
+<span class="lineno">  113 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcLearningRejectReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">  114 </span>    -- ^ Phase 8: human-readable reject reason for audit.
+<span class="lineno">  115 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSenseAnchor</span></span></span> :: !Text
+<span class="lineno">  116 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSenseOperator</span></span></span> :: !(Maybe SenseOperator)
+<span class="lineno">  117 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcSensePreservedAxes</span></span></span> :: ![SenseAxis]
+<span class="lineno">  118 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueFocus</span></span></span> :: !Text
+<span class="lineno">  119 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueFocusBefore</span></span></span> :: !Text
+<span class="lineno">  120 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueFocusAfter</span></span></span> :: !Text
+<span class="lineno">  121 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialoguePhase</span></span></span> :: !DialoguePhase
+<span class="lineno">  122 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialoguePhaseBefore</span></span></span> :: !DialoguePhase
+<span class="lineno">  123 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialoguePhaseAfter</span></span></span> :: !DialoguePhase
+<span class="lineno">  124 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueCommitmentCount</span></span></span> :: !Int
+<span class="lineno">  125 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueCommitmentCountBefore</span></span></span> :: !Int
+<span class="lineno">  126 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcDialogueCommitmentCountAfter</span></span></span> :: !Int
+<span class="lineno">  127 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcMicroPlanMoves</span></span></span> :: ![Text]
+<span class="lineno">  128 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">trcMicroPlanExplicitness</span></span></span> :: !Double
+<span class="lineno">  129 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcPerspectiveProjection</span></span></span> :: !(Maybe PerspectiveProjection)
+<span class="lineno">  130 </span>    -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate
+<span class="lineno">  131 </span>    --   internals and registry lineage are not exposed to render/replay.
+<span class="lineno">  132 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trcPerspectiveProjections</span></span></span> :: ![PerspectiveProjection]
+<span class="lineno">  133 </span>    -- ^ P4: bounded list of active safe projections, preserving the fact
+<span class="lineno">  134 </span>    --   that the canonical registry may contain multiple active scopes.
+<span class="lineno">  135 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  136 </span>    deriving anyclass (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>data TurnProjection = TurnProjection
+<span class="lineno">  139 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpTurn</span></span></span>              :: !Int
+<span class="lineno">  140 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpParserMode</span></span></span>        :: !ParserMode
+<span class="lineno">  141 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpParserConfidence</span></span></span>  :: !Double
+<span class="lineno">  142 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpParserErrors</span></span></span>      :: ![Text]
+<span class="lineno">  143 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpPlannerMode</span></span></span>       :: !PlannerMode
+<span class="lineno">  144 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpPlannerDecision</span></span></span>   :: !CanonicalMoveFamily
+<span class="lineno">  145 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpAtomRegister</span></span></span>      :: !Register
+<span class="lineno">  146 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpAtomLoad</span></span></span>          :: !Double
+<span class="lineno">  147 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpScenePressure</span></span></span>     :: !ScenePressure
+<span class="lineno">  148 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpSceneRequest</span></span></span>      :: !Text
+<span class="lineno">  149 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpSceneStance</span></span></span>       :: !SemanticLayer
+<span class="lineno">  150 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpRenderLane</span></span></span>        :: !ConvMove
+<span class="lineno">  151 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpRenderStyle</span></span></span>       :: !RenderStyle
+<span class="lineno">  152 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpLegitimacyStatus</span></span></span>  :: !LegitimacyStatus
+<span class="lineno">  153 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpLegitimacyReason</span></span></span>  :: !LegitimacyReason
+<span class="lineno">  154 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpWarrantedMode</span></span></span>     :: !WarrantedMoveMode
+<span class="lineno">  155 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpDecisionDisposition</span></span></span> :: !DecisionDisposition
+<span class="lineno">  156 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpOwnerFamily</span></span></span>       :: !CanonicalMoveFamily
+<span class="lineno">  157 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpOwnerForce</span></span></span>        :: !IllocutionaryForce
+<span class="lineno">  158 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowStatus</span></span></span>      :: !ShadowStatus
+<span class="lineno">  159 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowSnapshotId</span></span></span>  :: !ShadowSnapshotId
+<span class="lineno">  160 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowDivergenceKind</span></span></span> :: !ShadowDivergenceKind
+<span class="lineno">  161 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowFamily</span></span></span>      :: !(Maybe CanonicalMoveFamily)
+<span class="lineno">  162 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowForce</span></span></span>       :: !(Maybe IllocutionaryForce)
+<span class="lineno">  163 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpShadowMessage</span></span></span>     :: !Text
+<span class="lineno">  164 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpReplayTrace</span></span></span>       :: !TurnReplayTrace
+<span class="lineno">  165 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tqpDivergence</span></span></span>        :: !Bool
+<span class="lineno">  166 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+
+</pre>
+</body>
+</html>

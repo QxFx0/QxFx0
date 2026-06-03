@@ -1,0 +1,735 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    3 </span>{-|
+<span class="lineno">    4 </span>Dialog assembly V2: pure combinator-based Russian sentence generation.
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>No template strings. No random pickV.
+<span class="lineno">    7 </span>Each step builds a syntactic tree (NP/VP/S) and linearizes it.
+<span class="lineno">    8 </span>-}
+<span class="lineno">    9 </span>module QxFx0.Semantic.DialogAssembly
+<span class="lineno">   10 </span>  ( assembleTurn
+<span class="lineno">   11 </span>  , assembleTurnWithGraph
+<span class="lineno">   12 </span>  , planAssembly
+<span class="lineno">   13 </span>  , planAssemblyWithTransition
+<span class="lineno">   14 </span>  , StepId(..)
+<span class="lineno">   15 </span>  ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import Data.Text (Text)
+<span class="lineno">   18 </span>import qualified Data.Text as T
+<span class="lineno">   19 </span>import Control.Monad (foldM)
+<span class="lineno">   20 </span>import Data.Maybe (fromMaybe, listToMaybe, mapMaybe, maybeToList)
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>import QxFx0.Semantic.DialogAtom
+<span class="lineno">   23 </span>import QxFx0.Semantic.Lexicon.RuntimeParadigms
+<span class="lineno">   24 </span>  ( RuntimeParadigms, NounCase(..), Number(..), Gender(..)
+<span class="lineno">   25 </span>  , emptyRuntimeParadigms, lookupMetaphor
+<span class="lineno">   26 </span>  , guessGenderOr
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>import QxFx0.Semantic.Syntax.Combinators
+<span class="lineno">   29 </span>  ( NP(..), VP(..), S(..), AP(..), Adv(..)
+<span class="lineno">   30 </span>  , MorphError(..)
+<span class="lineno">   31 </span>  , Tense(..)
+<span class="lineno">   32 </span>  , Coord(..)
+<span class="lineno">   33 </span>  , mkNPRaw, mkNP, mkVPRaw, mkFrozenVP, mkS, mkAP, addAP, addPP, mkPP
+<span class="lineno">   34 </span>  , mkTopicFront, mkElliptical, mkEllipticalNP, mkEllipticalAdv, mkCoordS, mkQuestion
+<span class="lineno">   35 </span>  , mkAdv, mkAdvRaw, addAdvToS, addModalParticle, addFiller, addQuantifierToS
+<span class="lineno">   36 </span>  , linearizeS, linearizeNP, mkPronounNP, mkNP_, mkVP_, mkAP_, addObj
+<span class="lineno">   37 </span>  )
+<span class="lineno">   38 </span>import QxFx0.Types (RenderStyle(..), IllocutionaryForce(..), GeodesicPlan(..))
+<span class="lineno">   39 </span>import QxFx0.Types.State.Discourse
+<span class="lineno">   40 </span>  ( DiscourseState(..)
+<span class="lineno">   41 </span>  , EngagementLevel(..), DialogPhase(..)
+<span class="lineno">   42 </span>  , recomputeDiscourse
+<span class="lineno">   43 </span>  )
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>--------------------------------------------------------------------------------
+<span class="lineno">   47 </span>-- Main entry
+<span class="lineno">   48 </span>--------------------------------------------------------------------------------
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>assembleTurn :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; DiscourseState -&gt; Either MorphError Text
+<span class="lineno">   51 </span><span class="decl"><span class="istickedoff">assembleTurn rp da style ds = assembleTurnWithGraph rp da <span class="nottickedoff">style</span> ds Nothing</span></span>
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>assembleTurnWithGraph :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; DiscourseState -&gt; Maybe GeodesicPlan -&gt; Either MorphError Text
+<span class="lineno">   54 </span><span class="decl"><span class="istickedoff">assembleTurnWithGraph rp da style ds mGeodesicPlan =</span>
+<span class="lineno">   55 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">recomputed = recomputeDiscourse ds</span></span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">usePoliteness = dscEngagement recomputed == LowEngagement &amp;&amp; topicHash da `mod` 10 &lt; 5</span></span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">useEmphatic = hasTag TEmphatic da &amp;&amp; topicHash da `mod` 10 &lt; 4</span></span>
+<span class="lineno">   58 </span><span class="spaces">      </span><span class="istickedoff">plan = planAssemblyWithTransition da ds mGeodesicPlan</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">in case plan of</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">[]       -&gt; <span class="nottickedoff">Right &quot;&quot;</span></span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">[step]   -&gt; do</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- runStep rp da <span class="nottickedoff">style</span> step</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">withEmph = if useEmphatic</span></span>
+<span class="lineno">   64 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">then addFiller (headAtomValue TEmphatic da) s</span></span>
+<span class="lineno">   65 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">else s</span></span>
+<span class="lineno">   66 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withModal = if hasTag TModal da</span></span>
+<span class="lineno">   67 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">then addModalParticle (headAtomValue TModal da) withEmph</span></span>
+<span class="lineno">   68 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">else withEmph</span></span>
+<span class="lineno">   69 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withFiller = if hasTag TFiller da</span></span>
+<span class="lineno">   70 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">then addFiller (headAtomValue TFiller da) withModal</span></span>
+<span class="lineno">   71 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">else withModal</span></span>
+<span class="lineno">   72 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withPolite = if usePoliteness</span></span>
+<span class="lineno">   73 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">then addFiller &quot;если можно&quot; withFiller</span></span>
+<span class="lineno">   74 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">else withFiller</span></span>
+<span class="lineno">   75 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">Right (linearizeS withPolite)</span></span>
+<span class="lineno">   76 </span><span class="spaces">    </span><span class="istickedoff">(firstStep:restSteps) -&gt; do</span>
+<span class="lineno">   77 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">planLen = length restSteps + 1</span></span>
+<span class="lineno">   78 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">useSelfCorrect = planLen &gt;= 3 &amp;&amp; topicHash da `mod` 10 &lt; 3</span></span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">firstSent &lt;- runStep rp da <span class="nottickedoff">style</span> firstStep</span>
+<span class="lineno">   80 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">withEmph = if useEmphatic</span></span>
+<span class="lineno">   81 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">then addFiller (headAtomValue TEmphatic da) firstSent</span></span>
+<span class="lineno">   82 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">else firstSent</span></span>
+<span class="lineno">   83 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withModal = if hasTag TModal da</span></span>
+<span class="lineno">   84 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">then addModalParticle (headAtomValue TModal da) withEmph</span></span>
+<span class="lineno">   85 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">else withEmph</span></span>
+<span class="lineno">   86 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withFiller = if hasTag TFiller da</span></span>
+<span class="lineno">   87 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">then addFiller (headAtomValue TFiller da) withModal</span></span>
+<span class="lineno">   88 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">else withModal</span></span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">withPolite = if usePoliteness</span></span>
+<span class="lineno">   90 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">then addFiller &quot;если можно&quot; withFiller</span></span>
+<span class="lineno">   91 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">else withFiller</span></span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">if useSelfCorrect &amp;&amp; planLen &gt;= 2</span></span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">then do</span></span>
+<span class="lineno">   94 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">let (initSteps, [lastStep]) = splitAt (planLen - 1) (firstStep:restSteps)</span></span>
+<span class="lineno">   95 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">initSents &lt;- mapM (runStep rp da style) initSteps</span></span>
+<span class="lineno">   96 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">lastSent &lt;- runStep rp da style lastStep</span></span>
+<span class="lineno">   97 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">let corrected = addFiller &quot;то есть&quot; lastSent</span></span>
+<span class="lineno">   98 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">combined &lt;- foldM (\acc s -&gt; mkCoordS CoordA acc s) withPolite (initSents ++ [corrected])</span></span>
+<span class="lineno">   99 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Right (linearizeS combined)</span></span>
+<span class="lineno">  100 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">else do</span></span>
+<span class="lineno">  101 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">restSents &lt;- mapM (runStep rp da style) restSteps</span></span>
+<span class="lineno">  102 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">combined &lt;- foldM (\acc s -&gt; mkCoordS CoordA acc s) withPolite restSents</span></span>
+<span class="lineno">  103 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Right (linearizeS combined)</span></span></span>
+<span class="lineno">  104 </span>data StepId = SAcknowledge | SStance | SEngage | SReflect
+<span class="lineno">  105 </span>  | SIdentity    | SConstraint | SRepair
+<span class="lineno">  106 </span>  | SContact     | SGround | SClarify | SDeepen
+<span class="lineno">  107 </span>  | SNext | SGreet | SFarewell
+<span class="lineno">  108 </span>  | SHedge | SConnect
+<span class="lineno">  109 </span>  | SDefine | SPurpose | SDistinguish
+<span class="lineno">  110 </span>  | SAgree | SDisagree | SRelated
+<span class="lineno">  111 </span>  | SModal | SQuantify | SSelfCorrect | SEmphatic | SNarrative | SMetaphor
+<span class="lineno">  112 </span>  deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>type AssemblyPlan = [StepId]
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>planAssembly :: DialogAtoms -&gt; DiscourseState -&gt; AssemblyPlan
+<span class="lineno">  117 </span><span class="decl"><span class="istickedoff">planAssembly da ds =</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">let recomputed = recomputeDiscourse ds</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">intent = headAtomValue TUserIntent da</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">topic = headAtomValue TTopic da</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">isGreet = hasTag TGreeting da</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">isFarewell = hasTag TFarewell da</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">isDistress = emotionIs &quot;distress&quot; da</span></span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">topicRepeated = topic `elem` dscTopicChain ds</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">turnDepth = length (dscTurnMemory ds)</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">primary = case <span class="nottickedoff">()</span> of</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">_ | isGreet                    -&gt; SGreet</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlyfalse">isFarewell</span>                 -&gt; <span class="nottickedoff">SFarewell</span></span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;define&quot;         -&gt; SDefine</span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;clarify&quot;        -&gt; SClarify</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;deepen&quot;         -&gt; SDeepen</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;ask_purpose&quot;    -&gt; SPurpose</span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlyfalse">intent == &quot;hypothesize&quot;</span>    -&gt; <span class="nottickedoff">SDeepen</span></span>
+<span class="lineno">  134 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;next&quot;           -&gt; SNext</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;complain&quot;       -&gt; SRepair</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;distinguish&quot;    -&gt; SDistinguish</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlyfalse">intent == &quot;reflect&quot;</span>        -&gt; <span class="nottickedoff">SReflect</span></span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;describe&quot;       -&gt; if <span class="tickonlyfalse">hasTag TScale da</span> then <span class="nottickedoff">SNarrative</span> else SAcknowledge</span>
+<span class="lineno">  139 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;ground&quot;         -&gt; SGround</span>
+<span class="lineno">  140 </span><span class="spaces">        </span><span class="istickedoff">_ | intent == &quot;connect&quot;        -&gt; SEngage</span>
+<span class="lineno">  141 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlytrue">intent == &quot;anchor&quot;</span>         -&gt; SGround</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="nottickedoff">isDistress</span>                 -&gt; <span class="nottickedoff">SReflect</span></span>
+<span class="lineno">  143 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="nottickedoff">otherwise</span>                  -&gt; <span class="nottickedoff">SEngage</span></span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">hasTopic = hasTag TTopic da</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">hasRelated = hasTag TRelatedTopic da</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">planLen = case dscEngagement recomputed of</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">HighEngagement   -&gt; <span class="nottickedoff">4</span></span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">MediumEngagement -&gt; 3</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="istickedoff">LowEngagement    -&gt; <span class="nottickedoff">2</span></span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">-- Suppress grounding in deep phase</span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">needGround = hasTopic &amp;&amp; not topicRepeated &amp;&amp; dscPhase recomputed /= PhaseDeep</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">secondary = case primary of</span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="istickedoff">SGround -&gt; Nothing</span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="istickedoff">_ | needGround                   -&gt; Just <span class="nottickedoff">SGround</span></span>
+<span class="lineno">  155 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlytrue">hasTopic &amp;&amp; turnDepth &lt; 3</span>    -&gt; Just <span class="nottickedoff">SGround</span></span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">tertiary = if <span class="tickonlyfalse">topicRepeated &amp;&amp; hasRelated</span> then <span class="nottickedoff">Just SRelated</span> else Nothing</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">hasProps = hasTag TProperty da</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">qStep = if <span class="tickonlyfalse">hasProps</span> then <span class="nottickedoff">Just SQuantify</span> else Nothing</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff">allSteps = primary : maybeToList qStep ++ maybeToList secondary ++ maybeToList tertiary</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">in take planLen allSteps</span></span>
+<span class="lineno">  162 </span>
+<span class="lineno">  163 </span>planAssemblyWithTransition :: DialogAtoms -&gt; DiscourseState -&gt; Maybe GeodesicPlan -&gt; AssemblyPlan
+<span class="lineno">  164 </span><span class="decl"><span class="istickedoff">planAssemblyWithTransition da ds mGeodesicPlan =</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">let basePlan = planAssembly da ds</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">topic = headAtomValue TTopic da</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">prevTopic = case dscTopicChain ds of</span>
+<span class="lineno">  168 </span><span class="spaces">                    </span><span class="istickedoff">(prev:_) | prev /= topic &amp;&amp; not (T.null prev) &amp;&amp; not (T.null topic) -&gt; Just <span class="nottickedoff">prev</span></span>
+<span class="lineno">  169 </span><span class="spaces">                    </span><span class="istickedoff">_ -&gt; Nothing</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">transitionSteps = case (prevTopic, mGeodesicPlan) of</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="istickedoff">(Just _, Just (BridgedJump _)) -&gt; <span class="nottickedoff">[SContact]</span></span>
+<span class="lineno">  172 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; []</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlytrue">null transitionSteps</span> then basePlan else <span class="nottickedoff">transitionSteps ++ basePlan</span></span></span>
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>emotionIs :: Text -&gt; DialogAtoms -&gt; Bool
+<span class="lineno">  176 </span><span class="decl"><span class="nottickedoff">emotionIs tag da = any ((tag ==) . asValue) (atomValue TEmotion da)</span></span>
+<span class="lineno">  177 </span>
+<span class="lineno">  178 </span>--------------------------------------------------------------------------------
+<span class="lineno">  179 </span>-- Step implementations (combinators)
+<span class="lineno">  180 </span>--------------------------------------------------------------------------------
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>runStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; StepId -&gt; Either MorphError S
+<span class="lineno">  183 </span><span class="decl"><span class="istickedoff">runStep rp da style = \case</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">SAcknowledge -&gt; ackStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  185 </span><span class="spaces">  </span><span class="istickedoff">SStance      -&gt; <span class="nottickedoff">stStep rp da style</span></span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">SEngage      -&gt; engStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="istickedoff">SReflect     -&gt; <span class="nottickedoff">refStep rp da style</span></span>
+<span class="lineno">  188 </span><span class="spaces">  </span><span class="istickedoff">SIdentity    -&gt; <span class="nottickedoff">idStep rp da style</span></span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">SConstraint  -&gt; <span class="nottickedoff">conStep rp da style</span></span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">SRepair      -&gt; repStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">SContact     -&gt; <span class="nottickedoff">con2Step rp da style</span></span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">SGround      -&gt; gndStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">SClarify     -&gt; clarStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">SDeepen      -&gt; dStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">SNext        -&gt; nStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">SGreet       -&gt; greStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">SFarewell    -&gt; <span class="nottickedoff">farStep rp da style</span></span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">SHedge       -&gt; <span class="nottickedoff">hedgeStep rp da style</span></span>
+<span class="lineno">  199 </span><span class="spaces">  </span><span class="istickedoff">SConnect     -&gt; <span class="nottickedoff">connectStep rp da style</span></span>
+<span class="lineno">  200 </span><span class="spaces">  </span><span class="istickedoff">SDefine      -&gt; defStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">SPurpose     -&gt; purpStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">SDistinguish -&gt; distStep rp da <span class="nottickedoff">style</span></span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">SAgree       -&gt; <span class="nottickedoff">agreeStep rp da style</span></span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">SDisagree    -&gt; <span class="nottickedoff">disagreeStep rp da style</span></span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">SRelated     -&gt; <span class="nottickedoff">relatedStep rp da style</span></span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="istickedoff">SModal       -&gt; <span class="nottickedoff">modalStep rp da style</span></span>
+<span class="lineno">  207 </span><span class="spaces">  </span><span class="istickedoff">SQuantify    -&gt; <span class="nottickedoff">quantifyStep rp da style</span></span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">SSelfCorrect  -&gt; <span class="nottickedoff">selfCorrectStep rp da style</span></span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">SEmphatic     -&gt; <span class="nottickedoff">emphaticStep rp da style</span></span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">SNarrative    -&gt; <span class="nottickedoff">narrativeStep rp da style</span></span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">SMetaphor     -&gt; <span class="nottickedoff">metaphorStep rp da style</span></span></span>
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>-- | Helper: deterministic topic-based hash for variant selection
+<span class="lineno">  214 </span>topicHash :: DialogAtoms -&gt; Int
+<span class="lineno">  215 </span><span class="decl"><span class="istickedoff">topicHash da = T.length (headAtomValue TTopic da)</span></span>
+<span class="lineno">  216 </span>
+<span class="lineno">  217 </span>-- | ACKNOWLEDGE (3 variants)
+<span class="lineno">  218 </span>ackStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  219 </span><span class="decl"><span class="istickedoff">ackStep rp da _style = do</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">let intent = headAtomValue TUserIntent da</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">fillers = atomValues TFiller da</span></span>
+<span class="lineno">  222 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">useFiller = not (null fillers) &amp;&amp; (T.length (daUserRaw da) `mod` 10 &lt; 3)</span></span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="istickedoff">v = topicHash da `mod` 3</span>
+<span class="lineno">  224 </span><span class="spaces">  </span><span class="istickedoff">base &lt;- case intent of</span>
+<span class="lineno">  225 </span><span class="spaces">    </span><span class="istickedoff">&quot;define&quot; -&gt; <span class="nottickedoff">case v of</span></span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">0 -&gt; do</span></span>
+<span class="lineno">  227 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  228 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;слышать&quot; 1 Sg Nothing Present</span></span>
+<span class="lineno">  229 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">topic &lt;- topicNP rp da Acc</span></span>
+<span class="lineno">  230 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;о&quot; topic</span></span>
+<span class="lineno">  231 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp2 &lt;- addPP vp pp</span></span>
+<span class="lineno">  232 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">s &lt;- mkS subj vp2</span></span>
+<span class="lineno">  233 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">pure (mkQuestion s IFAsk)</span></span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">1 -&gt; do</span></span>
+<span class="lineno">  235 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  236 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;слышать&quot; 1 Sg Nothing Present</span></span>
+<span class="lineno">  237 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">topic &lt;- topicNP rp da Gen</span></span>
+<span class="lineno">  238 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp2 &lt;- addPP vp (mkPP &quot;про&quot; topic)</span></span>
+<span class="lineno">  239 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">s &lt;- mkS subj vp2</span></span>
+<span class="lineno">  240 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">pure (mkQuestion s IFAsk)</span></span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">_ -&gt; do</span></span>
+<span class="lineno">  242 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">tf &lt;- mkNP_ rp &quot;вопрос&quot; Nom Sg Masc</span></span>
+<span class="lineno">  243 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">topic &lt;- topicNP rp da Gen</span></span>
+<span class="lineno">  244 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;касаться&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  245 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vp2 &lt;- addObj vp topic</span></span>
+<span class="lineno">  246 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">s1 &lt;- mkS tf vp2</span></span>
+<span class="lineno">  247 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  248 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">vpI &lt;- mkVP_ rp &quot;слышать&quot; 1 Sg Nothing Present</span></span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">s2 &lt;- mkS subj vpI</span></span>
+<span class="lineno">  250 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">mkCoordS CoordDash s1 s2</span></span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; case v of</span>
+<span class="lineno">  252 </span><span class="spaces">      </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;слышать&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  255 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  256 </span><span class="spaces">      </span><span class="istickedoff">1 -&gt; do</span>
+<span class="lineno">  257 </span><span class="spaces">        </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;слышать&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="istickedoff">adv &lt;- <span class="nottickedoff">mkAdv rp &quot;хорошо&quot;</span></span>
+<span class="lineno">  260 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">pure (addAdvToS (mkElliptical vp) adv)</span></span>
+<span class="lineno">  261 </span><span class="spaces">      </span><span class="istickedoff">_ -&gt; do</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;слышать&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  265 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">pure (if useFiller then addFiller (fromMaybe &quot;&quot; (listToMaybe fillers)) base else base)</span></span></span>
+<span class="lineno">  266 </span>
+<span class="lineno">  267 </span>-- | STANCE (2 variants)
+<span class="lineno">  268 </span>stStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  269 </span><span class="decl"><span class="nottickedoff">stStep rp da _style = do</span>
+<span class="lineno">  270 </span><span class="spaces">  </span><span class="nottickedoff">let stance = headAtomValue TStance da</span>
+<span class="lineno">  271 </span><span class="spaces">      </span><span class="nottickedoff">v = topicHash da `mod` 2</span>
+<span class="lineno">  272 </span><span class="spaces">  </span><span class="nottickedoff">case stance of</span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="nottickedoff">&quot;firm&quot; -&gt; case v of</span>
+<span class="lineno">  274 </span><span class="spaces">      </span><span class="nottickedoff">0 -&gt; adjAsPredicateS rp (mkPronounNP &quot;я&quot; Nom) &quot;уверенный&quot; Masc</span>
+<span class="lineno">  275 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  276 </span><span class="spaces">        </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  277 </span><span class="spaces">        </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  278 </span><span class="spaces">        </span><span class="nottickedoff">predNP &lt;- mkNP_ rp &quot;уверенность&quot; Nom Sg Femn</span>
+<span class="lineno">  279 </span><span class="spaces">        </span><span class="nottickedoff">mkS subj vp &gt;&gt;= mkTopicFront predNP</span>
+<span class="lineno">  280 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; case v of</span>
+<span class="lineno">  281 </span><span class="spaces">      </span><span class="nottickedoff">0 -&gt; do</span>
+<span class="lineno">  282 </span><span class="spaces">        </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  283 </span><span class="spaces">        </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;думать&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  284 </span><span class="spaces">        </span><span class="nottickedoff">mkS subj vp</span>
+<span class="lineno">  285 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  286 </span><span class="spaces">        </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  287 </span><span class="spaces">        </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;полагать&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  288 </span><span class="spaces">        </span><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>-- | ENGAGE (7 variants including colloquial questions)
+<span class="lineno">  291 </span>engStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  292 </span><span class="decl"><span class="istickedoff">engStep rp da _style = do</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Loc</span></span>
+<span class="lineno">  294 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 7</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  297 </span><span class="spaces">      </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;ты&quot; Nom)</span></span>
+<span class="lineno">  298 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;думать&quot; <span class="nottickedoff">2</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  299 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">pp = mkPP &quot;о&quot; topic</span></span>
+<span class="lineno">  300 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">1 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;ты&quot; Nom)</span></span>
+<span class="lineno">  303 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;считать&quot; 2 Sg Nothing Present</span></span>
+<span class="lineno">  304 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;насчёт&quot; topic</span></span>
+<span class="lineno">  305 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  306 </span><span class="spaces">    </span><span class="istickedoff">2 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  307 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">h &lt;- mkNP_ rp &quot;ход&quot; Nom Sg Masc</span></span>
+<span class="lineno">  308 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">a &lt;- mkAP_ rp &quot;твой&quot; Masc Sg Nom</span></span>
+<span class="lineno">  309 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">h' &lt;- addAP h a</span></span>
+<span class="lineno">  310 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic (mkEllipticalNP h')</span></span>
+<span class="lineno">  311 </span><span class="spaces">    </span><span class="istickedoff">3 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  312 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">adv &lt;- mkAdv rp &quot;серьёзно&quot;</span></span>
+<span class="lineno">  313 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic (mkEllipticalAdv adv)</span></span>
+<span class="lineno">  314 </span><span class="spaces">    </span><span class="istickedoff">4 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  315 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let vp = mkFrozenVP &quot;это вообще&quot;</span></span>
+<span class="lineno">  316 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;о&quot; (mkPronounNP &quot;что&quot; Loc)</span></span>
+<span class="lineno">  317 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp' &lt;- addPP vp pp</span></span>
+<span class="lineno">  318 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS (mkPronounNP &quot;это&quot; Nom) vp'</span></span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="istickedoff">5 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  320 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let vp = mkFrozenVP &quot;а что насчёт&quot;</span></span>
+<span class="lineno">  321 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">obj &lt;- topicNP rp da Gen</span></span>
+<span class="lineno">  322 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp' &lt;- addObj vp obj</span></span>
+<span class="lineno">  323 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (mkElliptical vp')</span></span>
+<span class="lineno">  324 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  325 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;ты&quot; Nom)</span></span>
+<span class="lineno">  326 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;хотеть&quot; 2 Sg Nothing Present</span></span>
+<span class="lineno">  327 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">obj &lt;- topicNP rp da Gen</span></span>
+<span class="lineno">  328 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp' &lt;- addObj vp obj</span></span>
+<span class="lineno">  329 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj vp'</span></span></span>
+<span class="lineno">  330 </span>
+<span class="lineno">  331 </span>-- | REFLECT (2 variants)
+<span class="lineno">  332 </span>refStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  333 </span><span class="decl"><span class="nottickedoff">refStep rp da _style = do</span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="nottickedoff">topic &lt;- topicNP rp da Acc</span>
+<span class="lineno">  335 </span><span class="spaces">  </span><span class="nottickedoff">let subj = mkPronounNP &quot;это&quot; Nom</span>
+<span class="lineno">  336 </span><span class="spaces">  </span><span class="nottickedoff">case topicHash da `mod` 2 of</span>
+<span class="lineno">  337 </span><span class="spaces">    </span><span class="nottickedoff">0 -&gt; do</span>
+<span class="lineno">  338 </span><span class="spaces">      </span><span class="nottickedoff">_ &lt;- mkAP_ rp &quot;непростой&quot; Neut Sg Nom</span>
+<span class="lineno">  339 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  340 </span><span class="spaces">      </span><span class="nottickedoff">s &lt;- mkS subj vp</span>
+<span class="lineno">  341 </span><span class="spaces">      </span><span class="nottickedoff">mkTopicFront topic s</span>
+<span class="lineno">  342 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  343 </span><span class="spaces">      </span><span class="nottickedoff">subj2 &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  344 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;чувствовать&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  345 </span><span class="spaces">      </span><span class="nottickedoff">s &lt;- mkS subj2 vp</span>
+<span class="lineno">  346 </span><span class="spaces">      </span><span class="nottickedoff">mkTopicFront topic s</span></span>
+<span class="lineno">  347 </span>
+<span class="lineno">  348 </span>-- | IDENTITY
+<span class="lineno">  349 </span>idStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  350 </span><span class="decl"><span class="nottickedoff">idStep rp _da _style = do</span>
+<span class="lineno">  351 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  352 </span><span class="spaces">  </span><span class="nottickedoff">predNP &lt;- pure (mkNPRaw &quot;диалоговая система&quot; Nom Sg Femn)</span>
+<span class="lineno">  353 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  354 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS subj vp</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="nottickedoff">mkTopicFront predNP s</span></span>
+<span class="lineno">  356 </span>
+<span class="lineno">  357 </span>-- | CONSTRAINT
+<span class="lineno">  358 </span>conStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  359 </span><span class="decl"><span class="nottickedoff">conStep rp _da _style = do</span>
+<span class="lineno">  360 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;работать&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  362 </span><span class="spaces">  </span><span class="nottickedoff">ramki &lt;- mkNP_ rp &quot;рамка&quot; Loc Pl Femn</span>
+<span class="lineno">  363 </span><span class="spaces">  </span><span class="nottickedoff">let pp = mkPP &quot;в&quot; ramki</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  365 </span>
+<span class="lineno">  366 </span>-- | CONTACT
+<span class="lineno">  367 </span>con2Step :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  368 </span><span class="decl"><span class="nottickedoff">con2Step rp _da _style = do</span>
+<span class="lineno">  369 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  370 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  371 </span><span class="spaces">  </span><span class="nottickedoff">let pp = mkPP &quot;с&quot; (mkPronounNP &quot;ты&quot; Ins)</span>
+<span class="lineno">  372 </span><span class="spaces">  </span><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  373 </span>
+<span class="lineno">  374 </span>-- | REPAIR (3 variants)
+<span class="lineno">  375 </span>repStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  376 </span><span class="decl"><span class="istickedoff">repStep rp da _style = do</span>
+<span class="lineno">  377 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Loc</span></span>
+<span class="lineno">  378 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 3</span>
+<span class="lineno">  379 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  380 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  381 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  382 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;возвращаться&quot; 1 Sg Nothing Present</span></span>
+<span class="lineno">  383 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;к&quot; topic</span></span>
+<span class="lineno">  384 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  385 </span><span class="spaces">    </span><span class="istickedoff">1 -&gt; do</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  387 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;понимать&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  388 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  389 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  390 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;вернуться&quot; 1 Pl Nothing Future</span></span>
+<span class="lineno">  391 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic (mkElliptical vp)</span></span></span>
+<span class="lineno">  392 </span>
+<span class="lineno">  393 </span>-- | GROUND (2 variants)
+<span class="lineno">  394 </span>gndStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  395 </span><span class="decl"><span class="istickedoff">gndStep rp da _style = do</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Nom</span></span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 2</span>
+<span class="lineno">  398 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">quants = atomValues TQuantifier da</span></span>
+<span class="lineno">  399 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">useQuant = T.length (daTopicNominative da) `mod` 10 &lt; 4</span></span>
+<span class="lineno">  400 </span><span class="spaces">  </span><span class="istickedoff">base &lt;- case v of</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  402 </span><span class="spaces">      </span><span class="istickedoff">linkNP &lt;- mkNP_ rp &quot;связь&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Femn</span></span>
+<span class="lineno">  403 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  404 </span><span class="spaces">      </span><span class="istickedoff">ap &lt;- <span class="nottickedoff">mkAP_ rp &quot;опорный&quot; (npGender topic) Sg Nom</span></span>
+<span class="lineno">  405 </span><span class="spaces">      </span><span class="istickedoff">topic2 &lt;- <span class="nottickedoff">addAP topic ap</span></span>
+<span class="lineno">  406 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS topic2 vp</span></span>
+<span class="lineno">  407 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront linkNP s</span></span>
+<span class="lineno">  408 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; do</span>
+<span class="lineno">  409 </span><span class="spaces">      </span><span class="istickedoff">linkNP &lt;- mkNP_ rp &quot;связь&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Femn</span></span>
+<span class="lineno">  410 </span><span class="spaces">      </span><span class="istickedoff">ap &lt;- <span class="nottickedoff">mkAP_ rp &quot;опорный&quot; Femn Sg Nom</span></span>
+<span class="lineno">  411 </span><span class="spaces">      </span><span class="istickedoff">link2 &lt;- <span class="nottickedoff">addAP linkNP ap</span></span>
+<span class="lineno">  412 </span><span class="spaces">      </span><span class="istickedoff">ap2 &lt;- <span class="nottickedoff">mkAP_ rp &quot;опорный&quot; (npGender topic) Sg Nom</span></span>
+<span class="lineno">  413 </span><span class="spaces">      </span><span class="istickedoff">topic2 &lt;- <span class="nottickedoff">addAP topic ap2</span></span>
+<span class="lineno">  414 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  415 </span><span class="spaces">      </span><span class="istickedoff">s1 &lt;- <span class="nottickedoff">mkS link2 vp</span></span>
+<span class="lineno">  416 </span><span class="spaces">      </span><span class="istickedoff">s2 &lt;- <span class="nottickedoff">mkS topic2 vp</span></span>
+<span class="lineno">  417 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkCoordS CoordDash s1 s2</span></span>
+<span class="lineno">  418 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">pure (if useQuant &amp;&amp; not (null quants) then addQuantifierToS (fromMaybe &quot;&quot; (listToMaybe quants)) base else base)</span></span></span>
+<span class="lineno">  419 </span>
+<span class="lineno">  420 </span>-- | CLARIFY (2 variants)
+<span class="lineno">  421 </span>clarStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  422 </span><span class="decl"><span class="istickedoff">clarStep rp da _style = do</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Acc</span></span>
+<span class="lineno">  424 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 2</span>
+<span class="lineno">  425 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  426 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  427 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;ты&quot; Nom)</span></span>
+<span class="lineno">  428 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;вкладывать&quot; 2 Sg Nothing Present</span></span>
+<span class="lineno">  429 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;в&quot; topic</span></span>
+<span class="lineno">  430 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">s &lt;- mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  431 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure s { sQuestion = True }</span></span>
+<span class="lineno">  432 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; do</span>
+<span class="lineno">  433 </span><span class="spaces">      </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;ты&quot; Nom)</span></span>
+<span class="lineno">  434 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;иметь&quot; <span class="nottickedoff">2</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  435 </span><span class="spaces">      </span><span class="istickedoff">vp2 &lt;- <span class="nottickedoff">addPP vp (mkPP &quot;в&quot; topic)</span></span>
+<span class="lineno">  436 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS subj vp2</span></span>
+<span class="lineno">  437 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure s { sQuestion = True }</span></span></span>
+<span class="lineno">  438 </span>
+<span class="lineno">  439 </span>-- | DEEPEN (3 variants)
+<span class="lineno">  440 </span>dStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  441 </span><span class="decl"><span class="istickedoff">dStep rp da _style = do</span>
+<span class="lineno">  442 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Acc</span></span>
+<span class="lineno">  443 </span><span class="spaces">  </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;мы&quot; Nom)</span></span>
+<span class="lineno">  444 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 3</span>
+<span class="lineno">  445 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  446 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;копнуть&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Pl</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Future</span></span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">pp = mkPP &quot;в&quot; topic</span></span>
+<span class="lineno">  449 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  450 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">s1 = s { sQuestion = True }</span></span>
+<span class="lineno">  451 </span><span class="spaces">      </span><span class="istickedoff">props &lt;- <span class="nottickedoff">propertyAPs rp da subj</span></span>
+<span class="lineno">  452 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">if length props &gt;= 2</span></span>
+<span class="lineno">  453 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">then do</span></span>
+<span class="lineno">  454 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">vp2 &lt;- mkVP_ rp &quot;разобраться&quot; 1 Pl Nothing Present</span></span>
+<span class="lineno">  455 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">mkCoordS CoordA s1 (mkElliptical vp2)</span></span>
+<span class="lineno">  456 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">else pure s1</span></span>
+<span class="lineno">  457 </span><span class="spaces">    </span><span class="istickedoff">1 -&gt; do</span>
+<span class="lineno">  458 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;углубляться&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Pl</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  459 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">pp = mkPP &quot;в&quot; topic</span></span>
+<span class="lineno">  460 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  461 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (s { sQuestion = True })</span></span>
+<span class="lineno">  462 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; do</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="istickedoff">tf &lt;- pure <span class="nottickedoff">(mkNPRaw &quot;глубже&quot; Acc Sg Neut)</span></span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;копнуть&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Pl</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Future</span></span>
+<span class="lineno">  465 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  466 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront tf s</span></span></span>
+<span class="lineno">  467 </span>
+<span class="lineno">  468 </span>-- | NEXT (2 variants)
+<span class="lineno">  469 </span>nStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  470 </span><span class="decl"><span class="istickedoff">nStep rp da _style = do</span>
+<span class="lineno">  471 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Ins</span></span>
+<span class="lineno">  472 </span><span class="spaces">  </span><span class="istickedoff">let v = topicHash da `mod` 2</span>
+<span class="lineno">  473 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  474 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  475 </span><span class="spaces">      </span><span class="istickedoff">frontNP &lt;- mkNP_ rp &quot;ход&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Masc</span></span>
+<span class="lineno">  476 </span><span class="spaces">      </span><span class="istickedoff">subj &lt;- <span class="nottickedoff">mkNP_ rp &quot;шаг&quot; Nom Sg Masc</span></span>
+<span class="lineno">  477 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;состоять&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  478 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">pp = mkPP &quot;в&quot; topic</span></span>
+<span class="lineno">  479 </span><span class="spaces">      </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  480 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront frontNP s</span></span>
+<span class="lineno">  481 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  482 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">frontNP &lt;- mkNP_ rp &quot;ход&quot; Nom Sg Masc</span></span>
+<span class="lineno">  483 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">subj &lt;- mkNP_ rp &quot;шаг&quot; Nom Sg Masc</span></span>
+<span class="lineno">  484 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;вести&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  485 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let pp = mkPP &quot;к&quot; (mkNPRaw (headAtomValue TTopic da) Dat Sg (guessGenderOr rp Masc (headAtomValue TTopic da)))</span></span>
+<span class="lineno">  486 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">s &lt;- mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  487 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront frontNP s</span></span></span>
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>-- | GREET (3 variants)
+<span class="lineno">  490 </span>greStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  491 </span><span class="decl"><span class="istickedoff">greStep rp da _style = do</span>
+<span class="lineno">  492 </span><span class="spaces">  </span><span class="istickedoff">let v = T.length (daUserRaw da) `mod` 3</span>
+<span class="lineno">  493 </span><span class="spaces">  </span><span class="istickedoff">case v of</span>
+<span class="lineno">  494 </span><span class="spaces">    </span><span class="istickedoff">0 -&gt; do</span>
+<span class="lineno">  495 </span><span class="spaces">      </span><span class="istickedoff">subj &lt;- pure <span class="nottickedoff">(mkPronounNP &quot;я&quot; Nom)</span></span>
+<span class="lineno">  496 </span><span class="spaces">      </span><span class="istickedoff">vp &lt;- mkVP_ rp &quot;радоваться&quot; <span class="nottickedoff">1</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Nothing</span> <span class="nottickedoff">Present</span></span>
+<span class="lineno">  497 </span><span class="spaces">      </span><span class="istickedoff">vstrecha &lt;- <span class="nottickedoff">mkNP_ rp &quot;встреча&quot; Loc Sg Femn</span></span>
+<span class="lineno">  498 </span><span class="spaces">      </span><span class="istickedoff">let <span class="nottickedoff">pp = mkPP &quot;о&quot; vstrecha</span></span>
+<span class="lineno">  499 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  500 </span><span class="spaces">    </span><span class="istickedoff">1 -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  501 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;начать&quot; 1 Pl Nothing Future</span></span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (mkElliptical vp)</span></span>
+<span class="lineno">  503 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; do</span>
+<span class="lineno">  504 </span><span class="spaces">      </span><span class="istickedoff">p &lt;- mkNP_ rp &quot;привет&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Masc</span></span>
+<span class="lineno">  505 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (mkEllipticalNP p)</span></span></span>
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>-- | FAREWELL (2 variants)
+<span class="lineno">  508 </span>farStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  509 </span><span class="decl"><span class="nottickedoff">farStep rp da _style = do</span>
+<span class="lineno">  510 </span><span class="spaces">  </span><span class="nottickedoff">let v = T.length (daUserRaw da) `mod` 2</span>
+<span class="lineno">  511 </span><span class="spaces">  </span><span class="nottickedoff">case v of</span>
+<span class="lineno">  512 </span><span class="spaces">    </span><span class="nottickedoff">0 -&gt; do</span>
+<span class="lineno">  513 </span><span class="spaces">      </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;мы&quot; Nom)</span>
+<span class="lineno">  514 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;встретиться&quot; 1 Pl Nothing Future</span>
+<span class="lineno">  515 </span><span class="spaces">      </span><span class="nottickedoff">mkS subj vp</span>
+<span class="lineno">  516 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  517 </span><span class="spaces">      </span><span class="nottickedoff">vstrecha &lt;- mkNP_ rp &quot;встреча&quot; Gen Sg Femn</span>
+<span class="lineno">  518 </span><span class="spaces">      </span><span class="nottickedoff">let pp = mkPP &quot;до&quot; vstrecha</span>
+<span class="lineno">  519 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- addPP (mkVPRaw &quot;&quot; 1 Pl Nothing Present) pp</span>
+<span class="lineno">  520 </span><span class="spaces">      </span><span class="nottickedoff">pure (mkElliptical vp)</span></span>
+<span class="lineno">  521 </span>
+<span class="lineno">  522 </span>-- | EMPHATIC: inserted into first sentence for emphasis
+<span class="lineno">  523 </span>emphaticStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  524 </span><span class="decl"><span class="nottickedoff">emphaticStep rp da _style = do</span>
+<span class="lineno">  525 </span><span class="spaces">  </span><span class="nottickedoff">let emphatics = atomValues TEmphatic da</span>
+<span class="lineno">  526 </span><span class="spaces">      </span><span class="nottickedoff">particle = fromMaybe &quot;именно&quot; (listToMaybe emphatics)</span>
+<span class="lineno">  527 </span><span class="spaces">  </span><span class="nottickedoff">topic &lt;- topicNP rp da Nom</span>
+<span class="lineno">  528 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure topic</span>
+<span class="lineno">  529 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  530 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS subj vp</span>
+<span class="lineno">  531 </span><span class="spaces">  </span><span class="nottickedoff">let advUnsafe = mkAdvRaw particle</span>
+<span class="lineno">  532 </span><span class="spaces">  </span><span class="nottickedoff">pure (addAdvToS s advUnsafe)</span></span>
+<span class="lineno">  533 </span>
+<span class="lineno">  534 </span>-- | NARRATIVE: &quot;представь себе...&quot; / &quot;однажды...&quot;
+<span class="lineno">  535 </span>narrativeStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  536 </span><span class="decl"><span class="nottickedoff">narrativeStep rp da _style = do</span>
+<span class="lineno">  537 </span><span class="spaces">  </span><span class="nottickedoff">let v = topicHash da `mod` 3</span>
+<span class="lineno">  538 </span><span class="spaces">  </span><span class="nottickedoff">case v of</span>
+<span class="lineno">  539 </span><span class="spaces">    </span><span class="nottickedoff">0 -&gt; do</span>
+<span class="lineno">  540 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;представить&quot; 2 Sg Nothing Present</span>
+<span class="lineno">  541 </span><span class="spaces">      </span><span class="nottickedoff">pure (mkElliptical vp)</span>
+<span class="lineno">  542 </span><span class="spaces">    </span><span class="nottickedoff">1 -&gt; do</span>
+<span class="lineno">  543 </span><span class="spaces">      </span><span class="nottickedoff">topicFront &lt;- topicNP rp da Nom</span>
+<span class="lineno">  544 </span><span class="spaces">      </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  545 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;рассказывать&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  546 </span><span class="spaces">      </span><span class="nottickedoff">s &lt;- mkS subj vp</span>
+<span class="lineno">  547 </span><span class="spaces">      </span><span class="nottickedoff">mkTopicFront topicFront s</span>
+<span class="lineno">  548 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  549 </span><span class="spaces">      </span><span class="nottickedoff">frontAdv &lt;- mkAdv rp &quot;однажды&quot;</span>
+<span class="lineno">  550 </span><span class="spaces">      </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;это&quot; Nom)</span>
+<span class="lineno">  551 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  552 </span><span class="spaces">      </span><span class="nottickedoff">s &lt;- mkS subj vp</span>
+<span class="lineno">  553 </span><span class="spaces">      </span><span class="nottickedoff">pure (addAdvToS s frontAdv)</span></span>
+<span class="lineno">  554 </span>
+<span class="lineno">  555 </span>-- | METAPHOR: &quot;если вдуматься, X — это как Y...&quot;
+<span class="lineno">  556 </span>metaphorStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  557 </span><span class="decl"><span class="nottickedoff">metaphorStep rp da _style = do</span>
+<span class="lineno">  558 </span><span class="spaces">  </span><span class="nottickedoff">let topic = headAtomValue TTopic da</span>
+<span class="lineno">  559 </span><span class="spaces">  </span><span class="nottickedoff">case lookupMetaphor rp topic Nothing of</span>
+<span class="lineno">  560 </span><span class="spaces">    </span><span class="nottickedoff">Just (_, source) -&gt; do</span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="nottickedoff">let subj = mkNPRaw topic Nom Sg (guessGenderOr rp Masc topic)</span>
+<span class="lineno">  562 </span><span class="spaces">      </span><span class="nottickedoff">let advUnsafe = mkAdvRaw &quot;вдуматься&quot;</span>
+<span class="lineno">  563 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="nottickedoff">let pp = mkPP &quot;как&quot; (mkNPRaw source Nom Sg Neut)</span>
+<span class="lineno">  565 </span><span class="spaces">      </span><span class="nottickedoff">vp' &lt;- addPP vp pp</span>
+<span class="lineno">  566 </span><span class="spaces">      </span><span class="nottickedoff">s &lt;- mkS subj vp'</span>
+<span class="lineno">  567 </span><span class="spaces">      </span><span class="nottickedoff">pure (addAdvToS s advUnsafe)</span>
+<span class="lineno">  568 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; do</span>
+<span class="lineno">  569 </span><span class="spaces">      </span><span class="nottickedoff">subj &lt;- pure (mkNPRaw topic Nom Sg Masc)</span>
+<span class="lineno">  570 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  571 </span><span class="spaces">      </span><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  572 </span>
+<span class="lineno">  573 </span>-- | SELFCORRECT: &quot;то есть... вернее...&quot; self-correction step
+<span class="lineno">  574 </span>selfCorrectStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  575 </span><span class="decl"><span class="nottickedoff">selfCorrectStep rp da _style = do</span>
+<span class="lineno">  576 </span><span class="spaces">  </span><span class="nottickedoff">let v = topicHash da `mod` 2</span>
+<span class="lineno">  577 </span><span class="spaces">  </span><span class="nottickedoff">case v of</span>
+<span class="lineno">  578 </span><span class="spaces">    </span><span class="nottickedoff">0 -&gt; do</span>
+<span class="lineno">  579 </span><span class="spaces">      </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;это&quot; Nom)</span>
+<span class="lineno">  580 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  581 </span><span class="spaces">      </span><span class="nottickedoff">mkS subj vp</span>
+<span class="lineno">  582 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; do</span>
+<span class="lineno">  583 </span><span class="spaces">      </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;уточнить&quot; 1 Pl Nothing Present</span>
+<span class="lineno">  584 </span><span class="spaces">      </span><span class="nottickedoff">pure (mkElliptical vp)</span></span>
+<span class="lineno">  585 </span>
+<span class="lineno">  586 </span>-- | HEDGE: softening prefix before assertion
+<span class="lineno">  587 </span>hedgeStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  588 </span><span class="decl"><span class="nottickedoff">hedgeStep rp _da _style = do</span>
+<span class="lineno">  589 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;это&quot; Nom)</span>
+<span class="lineno">  590 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  591 </span><span class="spaces">  </span><span class="nottickedoff">-- Build a sentence that carries the hedge as adverb-like prefix</span>
+<span class="lineno">  592 </span><span class="spaces">  </span><span class="nottickedoff">-- Simplified: &quot;это, в некотором смысле, так&quot;</span>
+<span class="lineno">  593 </span><span class="spaces">  </span><span class="nottickedoff">pure SimpleS { sSubject = subj, sPredicate = vp, sTopicFront = Nothing, sQuestion = False, sModal = Nothing, sFill = Nothing, sQuant = Nothing }</span></span>
+<span class="lineno">  594 </span>
+<span class="lineno">  595 </span>-- | CONNECT: discourse linker between steps
+<span class="lineno">  596 </span>connectStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  597 </span><span class="decl"><span class="nottickedoff">connectStep rp _da _style = do</span>
+<span class="lineno">  598 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;мы&quot; Nom)</span>
+<span class="lineno">  599 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;делать&quot; 1 Pl Nothing Present</span>
+<span class="lineno">  600 </span><span class="spaces">  </span><span class="nottickedoff">pure SimpleS { sSubject = subj, sPredicate = vp, sTopicFront = Nothing, sQuestion = False, sModal = Nothing, sFill = Nothing, sQuant = Nothing }</span></span>
+<span class="lineno">  601 </span>
+<span class="lineno">  602 </span>-- | DEFINE
+<span class="lineno">  603 </span>
+<span class="lineno">  604 </span>defStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  605 </span><span class="decl"><span class="istickedoff">defStep rp da _style = do</span>
+<span class="lineno">  606 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Nom</span></span>
+<span class="lineno">  607 </span><span class="spaces">  </span><span class="istickedoff">predNP &lt;- mkNP_ rp &quot;смысл&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Masc</span></span>
+<span class="lineno">  608 </span><span class="spaces">  </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  609 </span><span class="spaces">  </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS predNP vp</span></span>
+<span class="lineno">  610 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic s</span></span></span>
+<span class="lineno">  611 </span>
+<span class="lineno">  612 </span>-- | PURPOSE
+<span class="lineno">  613 </span>purpStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  614 </span><span class="decl"><span class="istickedoff">purpStep rp da _style = do</span>
+<span class="lineno">  615 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Nom</span></span>
+<span class="lineno">  616 </span><span class="spaces">  </span><span class="istickedoff">predNP &lt;- mkNP_ rp &quot;функция&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Femn</span></span>
+<span class="lineno">  617 </span><span class="spaces">  </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  618 </span><span class="spaces">  </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS predNP vp</span></span>
+<span class="lineno">  619 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic s</span></span></span>
+<span class="lineno">  620 </span>
+<span class="lineno">  621 </span>-- | DISTINGUISH
+<span class="lineno">  622 </span>distStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  623 </span><span class="decl"><span class="istickedoff">distStep rp da _style = do</span>
+<span class="lineno">  624 </span><span class="spaces">  </span><span class="istickedoff">topic &lt;- topicNP rp da <span class="nottickedoff">Nom</span></span>
+<span class="lineno">  625 </span><span class="spaces">  </span><span class="istickedoff">predNP &lt;- mkNP_ rp &quot;отличие&quot; <span class="nottickedoff">Nom</span> <span class="nottickedoff">Sg</span> <span class="nottickedoff">Neut</span></span>
+<span class="lineno">  626 </span><span class="spaces">  </span><span class="istickedoff">vp &lt;- <span class="nottickedoff">mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span></span>
+<span class="lineno">  627 </span><span class="spaces">  </span><span class="istickedoff">s &lt;- <span class="nottickedoff">mkS predNP vp</span></span>
+<span class="lineno">  628 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">mkTopicFront topic s</span></span></span>
+<span class="lineno">  629 </span>
+<span class="lineno">  630 </span>-- | AGREE
+<span class="lineno">  631 </span>agreeStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  632 </span><span class="decl"><span class="nottickedoff">agreeStep rp da _style = do</span>
+<span class="lineno">  633 </span><span class="spaces">  </span><span class="nottickedoff">topic &lt;- topicNP rp da Nom</span>
+<span class="lineno">  634 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  635 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;соглашаться&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  636 </span><span class="spaces">  </span><span class="nottickedoff">let pp = mkPP &quot;с&quot; topic</span>
+<span class="lineno">  637 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS subj =&lt;&lt; addPP vp pp</span>
+<span class="lineno">  638 </span><span class="spaces">  </span><span class="nottickedoff">adv &lt;- mkAdv rp &quot;верно&quot;</span>
+<span class="lineno">  639 </span><span class="spaces">  </span><span class="nottickedoff">pure (addAdvToS s adv)</span></span>
+<span class="lineno">  640 </span>
+<span class="lineno">  641 </span>-- | DISAGREE
+<span class="lineno">  642 </span>disagreeStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  643 </span><span class="decl"><span class="nottickedoff">disagreeStep rp da _style = do</span>
+<span class="lineno">  644 </span><span class="spaces">  </span><span class="nottickedoff">topic &lt;- topicNP rp da Gen</span>
+<span class="lineno">  645 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;я&quot; Nom)</span>
+<span class="lineno">  646 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;сомневаться&quot; 1 Sg Nothing Present</span>
+<span class="lineno">  647 </span><span class="spaces">  </span><span class="nottickedoff">let pp = mkPP &quot;в&quot; topic</span>
+<span class="lineno">  648 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS subj =&lt;&lt; addPP vp pp</span>
+<span class="lineno">  649 </span><span class="spaces">  </span><span class="nottickedoff">adv &lt;- mkAdv rp &quot;осторожно&quot;</span>
+<span class="lineno">  650 </span><span class="spaces">  </span><span class="nottickedoff">pure (addAdvToS s adv)</span></span>
+<span class="lineno">  651 </span>
+<span class="lineno">  652 </span>-- | RELATED
+<span class="lineno">  653 </span>relatedStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  654 </span><span class="decl"><span class="nottickedoff">relatedStep rp da _style = do</span>
+<span class="lineno">  655 </span><span class="spaces">  </span><span class="nottickedoff">let rels = atomValues TRelatedTopic da</span>
+<span class="lineno">  656 </span><span class="spaces">  </span><span class="nottickedoff">related &lt;- case rels of</span>
+<span class="lineno">  657 </span><span class="spaces">    </span><span class="nottickedoff">(r:_) -&gt; Right (mkNPRaw r Acc Sg Neut)</span>
+<span class="lineno">  658 </span><span class="spaces">    </span><span class="nottickedoff">[]    -&gt; mkNP_ rp &quot;тема&quot; Acc Sg Femn</span>
+<span class="lineno">  659 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;это&quot; Nom)</span>
+<span class="lineno">  660 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;связать&quot; 3 Sg (Just Neut) Past</span>
+<span class="lineno">  661 </span><span class="spaces">  </span><span class="nottickedoff">let pp = mkPP &quot;с&quot; related</span>
+<span class="lineno">  662 </span><span class="spaces">  </span><span class="nottickedoff">mkS subj =&lt;&lt; addPP vp pp</span></span>
+<span class="lineno">  663 </span>
+<span class="lineno">  664 </span>-- | MODAL particle step (injected in assembleTurn, not via plan)
+<span class="lineno">  665 </span>modalStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  666 </span><span class="decl"><span class="nottickedoff">modalStep rp _da _style = do</span>
+<span class="lineno">  667 </span><span class="spaces">  </span><span class="nottickedoff">subj &lt;- pure (mkPronounNP &quot;это&quot; Nom)</span>
+<span class="lineno">  668 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  669 </span><span class="spaces">  </span><span class="nottickedoff">mkS subj vp</span></span>
+<span class="lineno">  670 </span>
+<span class="lineno">  671 </span>-- | QUANTIFY number step
+<span class="lineno">  672 </span>quantifyStep :: RuntimeParadigms -&gt; DialogAtoms -&gt; RenderStyle -&gt; Either MorphError S
+<span class="lineno">  673 </span><span class="decl"><span class="nottickedoff">quantifyStep rp da _style = do</span>
+<span class="lineno">  674 </span><span class="spaces">  </span><span class="nottickedoff">let numbers = atomValues TNumber da</span>
+<span class="lineno">  675 </span><span class="spaces">      </span><span class="nottickedoff">num = fromMaybe &quot;три&quot; (listToMaybe numbers)</span>
+<span class="lineno">  676 </span><span class="spaces">  </span><span class="nottickedoff">topic &lt;- topicNP rp da Nom</span>
+<span class="lineno">  677 </span><span class="spaces">  </span><span class="nottickedoff">numNP &lt;- pure (mkNPRaw num Nom Sg Masc)</span>
+<span class="lineno">  678 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; 3 Sg Nothing Present</span>
+<span class="lineno">  679 </span><span class="spaces">  </span><span class="nottickedoff">s &lt;- mkS numNP vp</span>
+<span class="lineno">  680 </span><span class="spaces">  </span><span class="nottickedoff">mkTopicFront topic s</span></span>
+<span class="lineno">  681 </span>
+<span class="lineno">  682 </span>--------------------------------------------------------------------------------
+<span class="lineno">  683 </span>-- Helpers
+<span class="lineno">  684 </span>--------------------------------------------------------------------------------
+<span class="lineno">  685 </span>
+<span class="lineno">  686 </span>topicNP :: RuntimeParadigms -&gt; DialogAtoms -&gt; NounCase -&gt; Either MorphError NP
+<span class="lineno">  687 </span><span class="decl"><span class="istickedoff">topicNP rp da case_ =</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="istickedoff">let raw = headAtomValue TTopic da</span>
+<span class="lineno">  689 </span><span class="spaces">      </span><span class="istickedoff">nom = if <span class="tickonlyfalse">T.null raw</span> then <span class="nottickedoff">&quot;тема&quot;</span> else raw</span>
+<span class="lineno">  690 </span><span class="spaces">  </span><span class="istickedoff">in case mkNP rp nom <span class="nottickedoff">case_</span> <span class="nottickedoff">Sg</span> of</span>
+<span class="lineno">  691 </span><span class="spaces">       </span><span class="istickedoff">Right np -&gt; <span class="nottickedoff">Right np</span></span>
+<span class="lineno">  692 </span><span class="spaces">       </span><span class="istickedoff">Left _ -&gt;</span>
+<span class="lineno">  693 </span><span class="spaces">         </span><span class="istickedoff">-- Graceful degradation: placeholder NP preserves surface text</span>
+<span class="lineno">  694 </span><span class="spaces">         </span><span class="istickedoff">let <span class="nottickedoff">g = guessGenderOr rp Masc nom</span></span>
+<span class="lineno">  695 </span><span class="spaces">         </span><span class="istickedoff">in Right <span class="nottickedoff">(mkNPRaw nom case_ Sg g)</span></span></span>
+<span class="lineno">  696 </span>
+<span class="lineno">  697 </span>adjAsPredicateS :: RuntimeParadigms -&gt; NP -&gt; Text -&gt; Gender -&gt; Either MorphError S
+<span class="lineno">  698 </span><span class="decl"><span class="nottickedoff">adjAsPredicateS rp subj lemma gender = do</span>
+<span class="lineno">  699 </span><span class="spaces">  </span><span class="nottickedoff">ap &lt;- mkAP_ rp lemma gender (npNumber subj) (npCase subj)</span>
+<span class="lineno">  700 </span><span class="spaces">  </span><span class="nottickedoff">subj2 &lt;- addAP subj ap</span>
+<span class="lineno">  701 </span><span class="spaces">  </span><span class="nottickedoff">vp &lt;- mkVP_ rp &quot;быть&quot; (case npNumber subj of Sg -&gt; 3; Pl -&gt; 3) (npNumber subj) Nothing Present</span>
+<span class="lineno">  702 </span><span class="spaces">  </span><span class="nottickedoff">mkS subj2 vp</span></span>
+<span class="lineno">  703 </span>
+<span class="lineno">  704 </span>-- | Build APs from TProperty atoms (up to 3)
+<span class="lineno">  705 </span>propertyAPs :: RuntimeParadigms -&gt; DialogAtoms -&gt; NP -&gt; Either MorphError [AP]
+<span class="lineno">  706 </span><span class="decl"><span class="nottickedoff">propertyAPs rp da _subj =</span>
+<span class="lineno">  707 </span><span class="spaces">  </span><span class="nottickedoff">let props = atomValues TProperty da</span>
+<span class="lineno">  708 </span><span class="spaces">      </span><span class="nottickedoff">tryMakeAP p = mkAP_ rp p Masc Sg Nom</span>
+<span class="lineno">  709 </span><span class="spaces">  </span><span class="nottickedoff">in Right (mapMaybe (eitherToMaybe . tryMakeAP) (take 3 props))</span>
+<span class="lineno">  710 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  711 </span><span class="spaces">    </span><span class="nottickedoff">eitherToMaybe (Right x) = Just x</span>
+<span class="lineno">  712 </span><span class="spaces">    </span><span class="nottickedoff">eitherToMaybe (Left _)   = Nothing</span></span>
+
+</pre>
+</body>
+</html>

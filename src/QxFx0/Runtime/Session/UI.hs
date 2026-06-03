@@ -22,7 +22,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Text.IO as T
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Core.MeaningGraph (graphStats)
-import QxFx0.Governance.Replay (rebuildGovernedPerspectiveState)
+import QxFx0.Governance.Replay (rebuildGovernedViews)
 import QxFx0.Runtime.Session.Types
   ( Session(..)
   , StateOrigin(..)
@@ -37,10 +37,12 @@ import QxFx0.Self.Salience (defaultSalienceWeights)
 import QxFx0.Types.Domain (atCurrentLoad)
 import QxFx0.Types.Domain.R5 (R5CoreProfile(..), R5PolicyProfile(..), defaultR5CoreProfile, defaultR5PolicyProfile)
 import QxFx0.Types.Observability (KernelPulse(..))
+import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Types.State.Governance
   ( GovernanceDecision(..)
   , GovernanceEvent(..)
   , GovernanceEventEnvelope(..)
+  , GovernanceProjection(..)
   , GovernanceLifecycleStatus(..)
   , GovernanceProvenanceLink(..)
   , GovernedSubject(..)
@@ -54,6 +56,7 @@ import QxFx0.Types.State
   , PerspectiveRegistry(..)
   , SystemState(..)
   , ssGovernanceHistory
+  , ssGovernanceProjection
   , ssGovernanceRuntimeFault
   , ssPerspectiveRegistry
   , ssEgo
@@ -65,6 +68,8 @@ import QxFx0.Types.State
   , ssMeaningGraph
   , ssSalienceWeights
   , ssTrace
+  , ssTruthContractStatus
+  , ssDialoguePhase
   , ssTurnCount
   )
 
@@ -82,7 +87,30 @@ data ReplayTraceSummary = ReplayTraceSummary
   , rtsSurfaceProvenance :: !(Maybe Text)
   , rtsContractProvenance :: !(Maybe Text)
   , rtsDerivationTags :: ![Text]
+  , rtsLoadStatus :: !Text
   }
+
+data ReplayTraceLoad
+  = ReplayTraceMissing
+  | ReplayTraceDbError !Text
+  | ReplayTraceDecodeError !Text
+  | ReplayTraceSchemaError !Text
+  | ReplayTraceLoaded !ReplayTraceSummary
+
+replayTraceLoadStatus :: ReplayTraceLoad -> Text
+replayTraceLoadStatus traceLoad =
+  case traceLoad of
+    ReplayTraceMissing -> "missing"
+    ReplayTraceDbError reason -> "db_error:" <> reason
+    ReplayTraceDecodeError reason -> "decode_error:" <> reason
+    ReplayTraceSchemaError reason -> "schema_error:" <> reason
+    ReplayTraceLoaded summary -> rtsLoadStatus summary
+
+replayTraceSummaryMaybe :: ReplayTraceLoad -> Maybe ReplayTraceSummary
+replayTraceSummaryMaybe traceLoad =
+  case traceLoad of
+    ReplayTraceLoaded summary -> Just summary
+    _ -> Nothing
 
 printHelp :: IO ()
 printHelp = do
@@ -96,10 +124,11 @@ printHelp = do
   T.putStrLn "Environment:"
   T.putStrLn "  QXFX0_SESSION_ID    session identifier"
   T.putStrLn "  QXFX0_DB            database path"
+  T.putStrLn "  QXFX0_DB_PATH       deprecated alias for QXFX0_DB"
   T.putStrLn "  QXFX0_ROOT          project root"
   T.putStrLn "  QXFX0_RUNTIME_MODE  strict(default)|degraded(test harness only)"
   T.putStrLn "  QXFX0_EMBEDDING_BACKEND  local-deterministic|remote-http"
-  T.putStrLn "  QXFX0_SESSION_LOCK  enable session locking"
+  T.putStrLn "  QXFX0_SESSION_LOCK  on(default)|off(debug/test only)"
 
 printStateSummary :: Session -> IO ()
 printStateSummary session = stateSummaryLines session >>= mapM_ T.putStrLn
@@ -107,20 +136,26 @@ printStateSummary session = stateSummaryLines session >>= mapM_ T.putStrLn
 governanceSummaryLines :: SystemState -> [Text]
 governanceSummaryLines ss =
   let history = ssGovernanceHistory ss
+      liveProjection = ssGovernanceProjection ss
       liveRegistry = ssPerspectiveRegistry ss
-      rebuildResult = rebuildGovernedPerspectiveState history
+      rebuildResult = rebuildGovernedViews ss
       latestProvenance = latestGovernanceProvenance history
-      (rebuildStatus, summaryRegistry, staleCount) =
+      (rebuildStatus, summaryProjection, staleCount) =
         case rebuildResult of
-          Right rebuiltRegistry
-            | rebuiltRegistry == liveRegistry -> ("ok", rebuiltRegistry, 0)
-            | otherwise -> ("mismatch", rebuiltRegistry, registryDifferenceCount liveRegistry rebuiltRegistry)
-          Left _ -> ("unavailable", liveRegistry, M.size (prThreads liveRegistry))
+          Right (rebuiltRegistry, rebuiltProjection)
+            | rebuiltProjection == liveProjection -> ("ok", rebuiltProjection, 0)
+            | otherwise ->
+                ( "mismatch"
+                , rebuiltProjection
+                , registryDifferenceCount liveRegistry rebuiltRegistry
+                )
+          Left _ -> ("unavailable", liveProjection, M.size (prThreads liveRegistry))
   in
     [ "governance_events_count: " <> renderValue (length history)
     , "governance_fingerprint: " <> governanceHistoryFingerprint history
     , "governance_rebuild_status: " <> rebuildStatus
-    , "active_perspectives_count: " <> renderValue (length (buildActivePerspectiveProjections summaryRegistry))
+    , "active_perspectives_count: " <> renderValue (length (gpActivePerspectiveProjections summaryProjection))
+    , "governed_refs_count: " <> renderValue (length (gpGovernedRefs summaryProjection))
     , "governance_denied_count: " <> renderValue (countGovernanceLifecycle GlsDenied history)
      , "governance_rollback_count: " <> renderValue (countGovernanceLifecycle GlsRolledBack history)
     , "governance_stale_count: " <> renderValue staleCount
@@ -136,8 +171,9 @@ governanceSummaryLines ss =
 
 stateSummaryLines :: Session -> IO [Text]
 stateSummaryLines session = do
-  latestTrace <- loadLatestReplayTrace session
+  traceLoad <- loadLatestReplayTrace session
   let ss = sessSystemState session
+      latestTrace = replayTraceSummaryMaybe traceLoad
       renderValue :: Show a => a -> Text
       renderValue = T.pack . show
       essenceModeTag =
@@ -157,6 +193,7 @@ stateSummaryLines session = do
       replayProvenanceTag = maybe "n/a" id (latestTrace >>= rtsReplayProvenanceStatus)
       surfaceProvenanceTag = maybe "n/a" id (latestTrace >>= rtsSurfaceProvenance)
       contractProvenanceTag = maybe "n/a" id (latestTrace >>= rtsContractProvenance)
+      replayTraceLoadTag = replayTraceLoadStatus traceLoad
   pure
     $ [ "STATE_BEGIN"
       , "session_id: " <> sessSessionId session
@@ -184,6 +221,7 @@ stateSummaryLines session = do
       , "replay_provenance_status: " <> replayProvenanceTag
       , "surface_provenance: " <> surfaceProvenanceTag
       , "contract_provenance: " <> contractProvenanceTag
+      , "replay_trace_load_status: " <> replayTraceLoadTag
       , "r5_core_version: " <> renderValue (r5cVersionId defaultR5CoreProfile)
       , "r5_policy_version: " <> renderValue (r5pVersionId defaultR5PolicyProfile)
       , "r5_policy_authority_status: " <> renderEpistemicStatus r5PolicyAuthorityStatus
@@ -196,14 +234,18 @@ renderStateOrigin RecoveredCorruptOrigin = "recovered_corrupt"
 
 salienceFieldContractStatus :: SystemState -> Text
 salienceFieldContractStatus ss
-  | ssSalienceWeights ss == defaultSalienceWeights && ssFieldHeuristics ss == defaultFieldHeuristics = "persisted_observable_non_governing"
-  | otherwise = "persisted_observable_non_governing"
+  | ssSalienceWeights ss == defaultSalienceWeights && ssFieldHeuristics ss == defaultFieldHeuristics = "persisted_governing_default"
+  | otherwise = "persisted_governing_runtime_tuned"
 
 planNarrativeToneContractStatus :: SystemState -> Text
-planNarrativeToneContractStatus _ss = "bounded_causal_contour"
+planNarrativeToneContractStatus ss
+  | ssDialoguePhase ss `elem` [Clarifying, Repairing, Contesting] = "bounded_causal_contour_runtime_locked"
+  | otherwise = "bounded_causal_contour_policy"
 
 bayesianContractStatus :: SystemState -> Text
-bayesianContractStatus _ss = "bounded_causal_contour"
+bayesianContractStatus ss
+  | truthContractIsAuthoritative (ssTruthContractStatus ss) = "bounded_causal_contour_runtime_authoritative"
+  | otherwise = "bounded_causal_contour_runtime_capped"
 
 countGovernanceLifecycle :: GovernanceLifecycleStatus -> [GovernanceEvent] -> Int
 countGovernanceLifecycle lifecycle = length . filter ((== lifecycle) . geeLifecycleStatus . geEnvelope)
@@ -303,28 +345,28 @@ isFreezeEvent event =
 renderValue :: Show a => a -> Text
 renderValue = T.pack . show
 
-loadLatestReplayTrace :: Session -> IO (Maybe ReplayTraceSummary)
+loadLatestReplayTrace :: Session -> IO ReplayTraceLoad
 loadLatestReplayTrace session = do
   result <- try $ withRuntimeDb (sessRuntime session) $ \db -> do
     let sql = "SELECT replay_trace_json FROM turn_quality WHERE session_id = ? ORDER BY turn DESC LIMIT 1"
     mStmt <- NSQL.prepare db sql
     case mStmt of
-      Left _ -> pure Nothing
+      Left err -> pure (ReplayTraceDbError ("prepare_failed:" <> err))
       Right stmt -> do
         result' <- (
           do
             _ <- NSQL.bindText stmt 1 (sessSessionId session)
             hasRow <- NSQL.stepRow stmt
             if not hasRow
-              then pure Nothing
+              then pure ReplayTraceMissing
               else do
                 payload <- NSQL.columnText stmt 0
                 pure (decodeReplayTraceSummary payload)
           ) `finally` finalizeQuietly stmt
         pure result'
-  pure (either (const Nothing) id (result :: Either SomeException (Maybe ReplayTraceSummary)))
+  pure (either (ReplayTraceDbError . T.pack . show) id (result :: Either SomeException ReplayTraceLoad))
   where
-    decodeReplayTraceSummary :: Text -> Maybe ReplayTraceSummary
+    decodeReplayTraceSummary :: Text -> ReplayTraceLoad
     decodeReplayTraceSummary payload =
       case Aeson.decode (BL.fromStrict (TE.encodeUtf8 payload)) :: Maybe Aeson.Value of
         Just (Aeson.Object obj) ->
@@ -344,10 +386,10 @@ loadLatestReplayTrace session = do
               surfaceProvenance = decodeScalarField "trcSurfaceProvenance" obj
               contractProvenance = decodeScalarField "trcContractProvenance" obj
               derivationTags = decodeStringArrayField "trcDerivationTags" obj
-           in Just ReplayTraceSummary
-                { rtsRecoveryCause = recoveryCause
-                , rtsRecoveryStrategy = recoveryStrategy
-                , rtsRecoveryEvidence = evidence
+            in ReplayTraceLoaded ReplayTraceSummary
+                 { rtsRecoveryCause = recoveryCause
+                 , rtsRecoveryStrategy = recoveryStrategy
+                 , rtsRecoveryEvidence = evidence
                  , rtsShadowSeverity = shadowSeverity
                  , rtsLearningValidationStatus = learningValidationStatus
                  , rtsFallbackReason = fallbackReason
@@ -355,11 +397,13 @@ loadLatestReplayTrace session = do
                  , rtsTruthContractStatus = truthContractStatus
                  , rtsAssemblyPath = assemblyPath
                  , rtsReplayProvenanceStatus = replayProvenanceStatus
-                 , rtsSurfaceProvenance = surfaceProvenance
-                 , rtsContractProvenance = contractProvenance
-                 , rtsDerivationTags = derivationTags
-                }
-        _ -> Nothing
+                  , rtsSurfaceProvenance = surfaceProvenance
+                  , rtsContractProvenance = contractProvenance
+                  , rtsDerivationTags = derivationTags
+                  , rtsLoadStatus = "loaded"
+                 }
+        Just _ -> ReplayTraceSchemaError "replay_trace_not_object"
+        Nothing -> ReplayTraceDecodeError "replay_trace_decode_failed"
 
     decodeScalarField :: Text -> Aeson.Object -> Maybe Text
     decodeScalarField key obj =

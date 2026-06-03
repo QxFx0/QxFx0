@@ -69,6 +69,13 @@ import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (hPutStrLn, stderr)
 
+runtimeInitSchemaMessage :: QxFx0Exception -> Text
+runtimeInitSchemaMessage err =
+  case err of
+    SQLiteError msg -> "Cannot initialize schema: " <> msg
+    PersistenceTxError _ msg -> "Cannot initialize schema: " <> msg
+    _ -> "Cannot initialize schema: " <> renderQxFx0ExceptionForLog err
+
 bootstrapSession :: Bool -> Text -> IO Session
 bootstrapSession quiet sessionId = do
   dbPath <- resolveDbPath
@@ -95,7 +102,7 @@ bootstrapSession quiet sessionId = do
   case schemaInitResult of
     Left err -> do
       hPutStrLn stderr $ "[runtime_init_debug] schema_init_qxfx0_exception db=" <> dbPath <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog err)
-      throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> renderQxFx0ExceptionForLog err)
+      throwQxFx0 (RuntimeInitError (runtimeInitSchemaMessage err))
     Right (Left err) -> do
       hPutStrLn stderr $ "[runtime_init_debug] schema_init_sql_error db=" <> dbPath <> " detail=" <> T.unpack err
       throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> err)
@@ -156,30 +163,27 @@ bootstrapSession quiet sessionId = do
               , freshState { ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap rendered) }
               )
       Right (LoadStateRestored ss) ->
-        if ssTurnCount ss == 0 && null (ssHistory ss)
-          then pure (FreshOrigin, freshState)
-          else
-            let restored0 = ss
-                  { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
-                  , ssMorphology = mergeMorphology morphology (ssMorphology ss)
-                  , ssIdentity = (ssIdentity ss)
-                    { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
-                    }
-                  , ssSemantic = (ssSemantic ss)
-                    { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
-                    }
-                  , ssSessionId = sessionId
-                  }
-            in case rebuildGovernedSystemState restored0 of
-                 Right restored1 ->
-                   pure
-                     ( RestoredOrigin
-                     , restored1
-                     )
-                 Left err -> pure
-                    ( RecoveredCorruptOrigin
-                    , freshState { ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap err) }
-                    )
+        let restored0 = ss
+              { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
+              , ssMorphology = mergeMorphology morphology (ssMorphology ss)
+              , ssIdentity = (ssIdentity ss)
+                { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
+                }
+              , ssSemantic = (ssSemantic ss)
+                { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
+                }
+              , ssSessionId = sessionId
+              }
+        in case rebuildGovernedSystemState restored0 of
+             Right restored1 ->
+               pure
+                 ( RestoredOrigin
+                 , restored1
+                 )
+             Left err -> pure
+                ( RecoveredCorruptOrigin
+                , freshState { ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap err) }
+                )
   -- Phase 1: verify that the freshly bootstrapped state forms a
   -- structurally coherent self (see docs/THEORY.md §4.1 and
   -- docs/adr/0007-dual-mode-conatus.md). Failure here is categorical:

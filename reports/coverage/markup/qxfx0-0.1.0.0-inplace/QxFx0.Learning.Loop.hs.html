@@ -1,0 +1,450 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Loop
+<span class="lineno">    9 </span>Description : Phase 8 — End-to-end learning loop: transport -&gt; validator -&gt; parser -&gt; sandbox -&gt; graft -&gt; telemetry.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Pure function that takes the current 'SystemState', an external query
+<span class="lineno">   12 </span>result, and returns the updated state plus telemetry.  This is the
+<span class="lineno">   13 </span>vertical-slice integration point: the runtime executes the
+<span class="lineno">   14 </span>'TurnReqExternalQuery' effect elsewhere and feeds the result into
+<span class="lineno">   15 </span>this function at finalize time.
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>The loop is fail-closed:
+<span class="lineno">   18 </span>- transport error   -&gt; record telemetry, update tool reliability down
+<span class="lineno">   19 </span>- parse failure    -&gt; record telemetry, reliability down
+<span class="lineno">   20 </span>- validation fail  -&gt; quarantine fruit (not graft), reliability down
+<span class="lineno">   21 </span>- sandbox reject   -&gt; record telemetry, reliability down
+<span class="lineno">   22 </span>- sandbox accept   -&gt; graft fruit, update lexicon/morph if provided,
+<span class="lineno">   23 </span>                      reliability up
+<span class="lineno">   24 </span>-}
+<span class="lineno">   25 </span>module QxFx0.Learning.Loop
+<span class="lineno">   26 </span>  ( LearningTelemetry(..)
+<span class="lineno">   27 </span>  , runLearningStep
+<span class="lineno">   28 </span>  , applyExternalLearning
+<span class="lineno">   29 </span>  , emptyLearningTelemetry
+<span class="lineno">   30 </span>  ) where
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   33 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   34 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   35 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   36 </span>import Data.Text (Text)
+<span class="lineno">   37 </span>import qualified Data.Text as T
+<span class="lineno">   38 </span>import GHC.Generics (Generic)
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationLog)
+<span class="lineno">   41 </span>import QxFx0.Learning.Guardrails (GuardrailState, recordAcceptance, recordProposalSubmission, recordRejection)
+<span class="lineno">   42 </span>import QxFx0.Learning.KnowledgeTree
+<span class="lineno">   43 </span>  ( KnowledgeFruit(..)
+<span class="lineno">   44 </span>  , KnowledgeSource(..)
+<span class="lineno">   45 </span>  , KnowledgeTree
+<span class="lineno">   46 </span>  , emptyKnowledgeTree
+<span class="lineno">   47 </span>  , graftFruit
+<span class="lineno">   48 </span>  , quarantineFruit
+<span class="lineno">   49 </span>  , ktBranches
+<span class="lineno">   50 </span>  , ktQuarantine
+<span class="lineno">   51 </span>  )
+<span class="lineno">   52 </span>import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), emptyLearningNeedState)
+<span class="lineno">   53 </span>import QxFx0.Learning.Parser (parseLLMResponseToFruit)
+<span class="lineno">   54 </span>import QxFx0.Learning.Sandbox
+<span class="lineno">   55 </span>  ( SandboxMetrics(..)
+<span class="lineno">   56 </span>  , SandboxRejectReason(..)
+<span class="lineno">   57 </span>  , SandboxResult(..)
+<span class="lineno">   58 </span>  , runSandboxGate
+<span class="lineno">   59 </span>  )
+<span class="lineno">   60 </span>import QxFx0.Learning.Signal (CalibrationSignal(..), SignalComponents(..), computeCalibrationSignal)
+<span class="lineno">   61 </span>import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, updateToolReliability, defaultAvailableTools)
+<span class="lineno">   62 </span>import QxFx0.Learning.Validator
+<span class="lineno">   63 </span>  ( KnowledgeFruitPayload(..)
+<span class="lineno">   64 </span>  , MorphologyPayload(..)
+<span class="lineno">   65 </span>  , ValidationError(..)
+<span class="lineno">   66 </span>  , validateFruitPayload
+<span class="lineno">   67 </span>  )
+<span class="lineno">   68 </span>import QxFx0.Types.Domain.Atoms (MorphologyData(..), LexemeForm(..), LexemeCase(..), LexemeNumber(..), SourceTier(..))
+<span class="lineno">   69 </span>import QxFx0.Types.ExternalQuery
+<span class="lineno">   70 </span>  ( ExternalQueryError(..)
+<span class="lineno">   71 </span>  , ExternalQueryResponse(..)
+<span class="lineno">   72 </span>  , renderFallbackReason
+<span class="lineno">   73 </span>  )
+<span class="lineno">   74 </span>import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
+<span class="lineno">   75 </span>import QxFx0.Types.Decision.Model (ipfRawText)
+<span class="lineno">   76 </span>import QxFx0.Types.State.System (SystemState(..), ssGuardrailState, ssLearningNeedState, ssKnowledgeTree, ssToolReliability, ssMorphology, ssTurnCount)
+<span class="lineno">   77 </span>import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
+<span class="lineno">   78 </span>import QxFx0.Types.State.AdaptiveMutation
+<span class="lineno">   79 </span>  ( AdaptiveDecision(..)
+<span class="lineno">   80 </span>  , AdaptiveMutationKind(..)
+<span class="lineno">   81 </span>  , AdaptiveMutationRecord(..)
+<span class="lineno">   82 </span>  , EvidenceStrength(..)
+<span class="lineno">   83 </span>  )
+<span class="lineno">   84 </span>import QxFx0.Self.Blanket (computeSelfBlanket)
+<span class="lineno">   85 </span>import QxFx0.Self.Invariants (checkInitialBlanket)
+<span class="lineno">   86 </span>import QxFx0.Self.Conatus (computeConatusEnergy, ceScalar)
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>-- | Telemetry emitted by one learning-loop iteration.
+<span class="lineno">   89 </span>data LearningTelemetry = LearningTelemetry
+<span class="lineno">   90 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ltQueryType</span></span></span>           :: !(Maybe Text)
+<span class="lineno">   91 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ltExternalTool</span></span></span>        :: !(Maybe Text)
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ltValidationStatus</span></span></span>    :: !Text
+<span class="lineno">   93 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ltSandboxResult</span></span></span>       :: !(Maybe Text)
+<span class="lineno">   94 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ltGraftTurn</span></span></span>           :: !(Maybe Int)
+<span class="lineno">   95 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ltRejectReason</span></span></span>        :: !(Maybe Text)
+<span class="lineno">   96 </span>  }
+<span class="lineno">   97 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   98 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>emptyLearningTelemetry :: LearningTelemetry
+<span class="lineno">  101 </span><span class="decl"><span class="istickedoff">emptyLearningTelemetry = LearningTelemetry</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">{ ltQueryType        = Nothing</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">, ltExternalTool     = Nothing</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">, ltValidationStatus = &quot;not_attempted&quot;</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, ltSandboxResult    = Nothing</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, ltGraftTurn        = Nothing</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, ltRejectReason     = Nothing</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>-- | Run one learning-step iteration.
+<span class="lineno">  111 </span>--
+<span class="lineno">  112 </span>-- Arguments:
+<span class="lineno">  113 </span>--   * current system state
+<span class="lineno">  114 </span>--   * selected tool (for reliability tracking)
+<span class="lineno">  115 </span>--   * active learning need (for strategy selection)
+<span class="lineno">  116 </span>--   * user query text (for telemetry)
+<span class="lineno">  117 </span>--   * maybe external query result (Nothing = no external call attempted)
+<span class="lineno">  118 </span>--
+<span class="lineno">  119 </span>-- Returns: (updated state, telemetry)
+<span class="lineno">  120 </span>runLearningStep
+<span class="lineno">  121 </span>  :: SystemState
+<span class="lineno">  122 </span>  -&gt; ExternalTool
+<span class="lineno">  123 </span>  -&gt; LearningNeed
+<span class="lineno">  124 </span>  -&gt; Text
+<span class="lineno">  125 </span>  -&gt; Maybe (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  126 </span>  -&gt; (SystemState, LearningTelemetry)
+<span class="lineno">  127 </span><span class="decl"><span class="istickedoff">runLearningStep ss tool need query mResult =</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">let turn = ssTurnCount ss</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">tree0 = ssKnowledgeTree ss</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">rel0  = ssToolReliability ss</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">morph = ssMorphology ss</span>
+<span class="lineno">  132 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">needState = ssLearningNeedState ss</span></span>
+<span class="lineno">  133 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">baseTelemetry = emptyLearningTelemetry</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">{ ltQueryType    = Just (renderNeedTag need)</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">, ltExternalTool = Just (etName tool)</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  138 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">in case mResult of</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">-- No external call attempted.</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(ss, baseTelemetry)</span></span>
+<span class="lineno">  143 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">Just (Left err) -&gt;</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">-- Transport / API failure: fail-closed, penalise tool.</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">let rel1 = updateToolReliability (etName tool) False rel0</span>
+<span class="lineno">  147 </span><span class="spaces">          </span><span class="istickedoff">records =</span>
+<span class="lineno">  148 </span><span class="spaces">            </span><span class="istickedoff">[ toolReliabilityMutation turn (etName tool) False (renderQueryError err)</span>
+<span class="lineno">  149 </span><span class="spaces">            </span><span class="istickedoff">]</span>
+<span class="lineno">  150 </span><span class="spaces">          </span><span class="istickedoff">tel  = baseTelemetry</span>
+<span class="lineno">  151 </span><span class="spaces">            </span><span class="istickedoff">{ ltValidationStatus = case err of</span>
+<span class="lineno">  152 </span><span class="spaces">                </span><span class="istickedoff">EqeFallback _ -&gt; &quot;fallback_non_authoritative&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">                </span><span class="istickedoff">_ -&gt; &quot;transport_error&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">            </span><span class="istickedoff">, ltRejectReason     = Just (renderQueryError err)</span>
+<span class="lineno">  155 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)</span>
+<span class="lineno">  157 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">Just (Right resp) -&gt;</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">-- Got a response: parse -&gt; validate -&gt; sandbox -&gt; graft.</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff">let preProxy = conatusProxyFromState ss</span>
+<span class="lineno">  161 </span><span class="spaces">      </span><span class="istickedoff">in case parseLLMResponseToFruit resp of</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  163 </span><span class="spaces">          </span><span class="istickedoff">let rel1 = updateToolReliability (etName tool) False rel0</span>
+<span class="lineno">  164 </span><span class="spaces">              </span><span class="istickedoff">records =</span>
+<span class="lineno">  165 </span><span class="spaces">                </span><span class="istickedoff">[ <span class="nottickedoff">toolReliabilityMutation turn (etName tool) False &quot;parser_rejected_schema_or_text&quot;</span></span>
+<span class="lineno">  166 </span><span class="spaces">                </span><span class="istickedoff">]</span>
+<span class="lineno">  167 </span><span class="spaces">              </span><span class="istickedoff">tel  = baseTelemetry</span>
+<span class="lineno">  168 </span><span class="spaces">                </span><span class="istickedoff">{ ltValidationStatus = &quot;invalid_response&quot;</span>
+<span class="lineno">  169 </span><span class="spaces">                </span><span class="istickedoff">, ltRejectReason     = Just <span class="nottickedoff">&quot;parser_rejected_schema_or_text&quot;</span></span>
+<span class="lineno">  170 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  171 </span><span class="spaces">          </span><span class="istickedoff">in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)</span>
+<span class="lineno">  172 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff">Just payload -&gt;</span>
+<span class="lineno">  174 </span><span class="spaces">          </span><span class="istickedoff">case validateFruitPayload payload morph of</span>
+<span class="lineno">  175 </span><span class="spaces">            </span><span class="istickedoff">Left valErr -&gt;</span>
+<span class="lineno">  176 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">let rel1 = updateToolReliability (etName tool) False rel0</span></span>
+<span class="lineno">  177 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }</span></span>
+<span class="lineno">  178 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">-- ss1 does not yet contain the quarantined fruit; add 0.01 proxy for tree growth</span></span>
+<span class="lineno">  179 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">postProxy = conatusProxyFromState ss1 + 0.01</span></span>
+<span class="lineno">  180 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">fruit = payloadToFruit payload turn False (postProxy - preProxy)</span></span>
+<span class="lineno">  181 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">tree1 = quarantineFruit fruit tree0</span></span>
+<span class="lineno">  182 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">ss2   = ss1 { ssKnowledgeTree = tree1 }</span></span>
+<span class="lineno">  183 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">reason = renderValidationError valErr</span></span>
+<span class="lineno">  184 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">records =</span></span>
+<span class="lineno">  185 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">[ toolReliabilityMutation turn (etName tool) False reason</span></span>
+<span class="lineno">  186 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">, knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong &quot;external_learning:validation_reject&quot; reason</span></span>
+<span class="lineno">  187 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">]</span></span>
+<span class="lineno">  188 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">tel   = baseTelemetry</span></span>
+<span class="lineno">  189 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">{ ltValidationStatus = &quot;validation_reject&quot;</span></span>
+<span class="lineno">  190 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">, ltRejectReason     = Just reason</span></span>
+<span class="lineno">  191 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  192 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">in (appendAdaptiveMutationRecords records ss2, tel)</span></span>
+<span class="lineno">  193 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  194 </span><span class="spaces">            </span><span class="istickedoff">Right validatedPayload -&gt;</span>
+<span class="lineno">  195 </span><span class="spaces">              </span><span class="istickedoff">case runSandboxGate ss validatedPayload of</span>
+<span class="lineno">  196 </span><span class="spaces">                </span><span class="istickedoff">SandboxReject metrics reason -&gt;</span>
+<span class="lineno">  197 </span><span class="spaces">                  </span><span class="istickedoff">let rel1 = updateToolReliability (etName tool) False rel0</span>
+<span class="lineno">  198 </span><span class="spaces">                      </span><span class="istickedoff">ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }</span>
+<span class="lineno">  199 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">postProxy = conatusProxyFromState ss1</span></span>
+<span class="lineno">  200 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)</span></span>
+<span class="lineno">  201 </span><span class="spaces">                      </span><span class="istickedoff">tree1 = quarantineFruit <span class="nottickedoff">fruit</span> tree0</span>
+<span class="lineno">  202 </span><span class="spaces">                      </span><span class="istickedoff">ss2   = ss1 { ssKnowledgeTree = tree1 }</span>
+<span class="lineno">  203 </span><span class="spaces">                      </span><span class="istickedoff">reasonText = renderSandboxRejectReason reason</span>
+<span class="lineno">  204 </span><span class="spaces">                      </span><span class="istickedoff">records =</span>
+<span class="lineno">  205 </span><span class="spaces">                        </span><span class="istickedoff">[ <span class="nottickedoff">toolReliabilityMutation turn (etName tool) False reasonText</span></span>
+<span class="lineno">  206 </span><span class="spaces">                        </span><span class="istickedoff">, <span class="nottickedoff">knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong &quot;external_learning:sandbox_reject&quot; reasonText</span></span>
+<span class="lineno">  207 </span><span class="spaces">                        </span><span class="istickedoff">]</span>
+<span class="lineno">  208 </span><span class="spaces">                      </span><span class="istickedoff">tel   = baseTelemetry</span>
+<span class="lineno">  209 </span><span class="spaces">                        </span><span class="istickedoff">{ ltValidationStatus = &quot;sandbox_reject&quot;</span>
+<span class="lineno">  210 </span><span class="spaces">                        </span><span class="istickedoff">, ltSandboxResult  = Just <span class="nottickedoff">(renderSandboxMetrics metrics)</span></span>
+<span class="lineno">  211 </span><span class="spaces">                        </span><span class="istickedoff">, ltRejectReason   = Just reasonText</span>
+<span class="lineno">  212 </span><span class="spaces">                        </span><span class="istickedoff">}</span>
+<span class="lineno">  213 </span><span class="spaces">                  </span><span class="istickedoff">in (appendAdaptiveMutationRecords records ss2, tel)</span>
+<span class="lineno">  214 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  215 </span><span class="spaces">                </span><span class="istickedoff">SandboxAccept metrics -&gt;</span>
+<span class="lineno">  216 </span><span class="spaces">                  </span><span class="istickedoff">let rel1 = updateToolReliability (etName tool) True rel0</span>
+<span class="lineno">  217 </span><span class="spaces">                      </span><span class="istickedoff">morph1 = mergeMorphologyPayload morph validatedPayload</span>
+<span class="lineno">  218 </span><span class="spaces">                      </span><span class="istickedoff">ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1, ssMorphology = morph1 }</span>
+<span class="lineno">  219 </span><span class="spaces">                      </span><span class="istickedoff">postProxy = conatusProxyFromState ss1 + 0.01</span>
+<span class="lineno">  220 </span><span class="spaces">                      </span><span class="istickedoff">fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)</span>
+<span class="lineno">  221 </span><span class="spaces">                      </span><span class="istickedoff">tree1 = graftFruit (renderNeedTag need) fruit tree0</span>
+<span class="lineno">  222 </span><span class="spaces">                      </span><span class="istickedoff">ss2   = ss1 { ssKnowledgeTree = tree1 }</span>
+<span class="lineno">  223 </span><span class="spaces">                      </span><span class="istickedoff">records =</span>
+<span class="lineno">  224 </span><span class="spaces">                        </span><span class="istickedoff">[ toolReliabilityMutation turn (etName tool) True &quot;sandbox_accept&quot;</span>
+<span class="lineno">  225 </span><span class="spaces">                        </span><span class="istickedoff">, knowledgeTreeMutation turn MutKnowledgeTree AdaptiveAccepted EvidenceStrong &quot;external_learning:graft&quot; <span class="nottickedoff">(renderNeedTag need)</span></span>
+<span class="lineno">  226 </span><span class="spaces">                        </span><span class="istickedoff">]</span>
+<span class="lineno">  227 </span><span class="spaces">                      </span><span class="istickedoff">tel   = baseTelemetry</span>
+<span class="lineno">  228 </span><span class="spaces">                        </span><span class="istickedoff">{ ltValidationStatus = &quot;accept&quot;</span>
+<span class="lineno">  229 </span><span class="spaces">                        </span><span class="istickedoff">, ltSandboxResult    = Just <span class="nottickedoff">(renderSandboxMetrics metrics)</span></span>
+<span class="lineno">  230 </span><span class="spaces">                        </span><span class="istickedoff">, ltGraftTurn        = Just <span class="nottickedoff">turn</span></span>
+<span class="lineno">  231 </span><span class="spaces">                        </span><span class="istickedoff">}</span>
+<span class="lineno">  232 </span><span class="spaces">                  </span><span class="istickedoff">in (appendAdaptiveMutationRecords records ss2, tel)</span></span>
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>-- | Compute a proxy Conatus scalar from the current SystemState.
+<span class="lineno">  235 </span>-- Includes the actual ConatusEnergy from SelfBlanket plus a small
+<span class="lineno">  236 </span>-- knowledge-tree-size term so that graft/quarantine changes are visible.
+<span class="lineno">  237 </span>conatusProxyFromState :: SystemState -&gt; Double
+<span class="lineno">  238 </span><span class="decl"><span class="istickedoff">conatusProxyFromState s =</span>
+<span class="lineno">  239 </span><span class="spaces">  </span><span class="istickedoff">let blanket = computeSelfBlanket s</span>
+<span class="lineno">  240 </span><span class="spaces">      </span><span class="istickedoff">violations = checkInitialBlanket blanket</span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff">energy = ceScalar (computeConatusEnergy blanket violations)</span>
+<span class="lineno">  242 </span><span class="spaces">      </span><span class="istickedoff">tree = ssKnowledgeTree s</span>
+<span class="lineno">  243 </span><span class="spaces">      </span><span class="istickedoff">treeSize = sum (map <span class="nottickedoff">length</span> (M.elems (ktBranches tree))) + length (ktQuarantine tree)</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">in energy + 0.01 * fromIntegral treeSize</span></span>
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>-- | Convert a validated payload into a 'KnowledgeFruit'.
+<span class="lineno">  247 </span>-- The conatus delta is derived from actual state change (pre vs post)
+<span class="lineno">  248 </span>-- rather than trusting the external payload.
+<span class="lineno">  249 </span>payloadToFruit :: KnowledgeFruitPayload -&gt; Int -&gt; Bool -&gt; Double -&gt; KnowledgeFruit
+<span class="lineno">  250 </span><span class="decl"><span class="istickedoff">payloadToFruit payload turn validated conatusDelta =</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">KnowledgeFruit</span>
+<span class="lineno">  252 </span><span class="spaces">    </span><span class="istickedoff">{ kfProposition     = kfpProposition payload</span>
+<span class="lineno">  253 </span><span class="spaces">    </span><span class="istickedoff">, kfWord            = kfpWord payload</span>
+<span class="lineno">  254 </span><span class="spaces">    </span><span class="istickedoff">, kfSource          = kfpSource payload</span>
+<span class="lineno">  255 </span><span class="spaces">    </span><span class="istickedoff">, kfValidated       = validated</span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">, kfConatusDelta    = conatusDelta</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">, kfPredictiveDelta = kfpPredictiveDelta payload</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">, kfGraftedTurn     = if <span class="tickonlytrue">validated</span> then Just <span class="nottickedoff">turn</span> else <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  259 </span><span class="spaces">    </span><span class="istickedoff">, kfObservedTurn    = turn</span>
+<span class="lineno">  260 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  261 </span>
+<span class="lineno">  262 </span>-- | Merge morphology payload into runtime MorphologyData.
+<span class="lineno">  263 </span>-- This is intentionally shallow: only adds surface forms to
+<span class="lineno">  264 </span>-- prepositional/genitive/nominative maps, never overwrites.
+<span class="lineno">  265 </span>-- 'mdFormsBySurface' is left untouched because 'LexemeForm' construction
+<span class="lineno">  266 </span>-- requires case/number/tier metadata that the LLM payload does not
+<span class="lineno">  267 </span>-- yet provide.
+<span class="lineno">  268 </span>mergeMorphologyPayload :: MorphologyData -&gt; KnowledgeFruitPayload -&gt; MorphologyData
+<span class="lineno">  269 </span><span class="decl"><span class="istickedoff">mergeMorphologyPayload morph payload =</span>
+<span class="lineno">  270 </span><span class="spaces">  </span><span class="istickedoff">case kfpMorphology payload of</span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; morph</span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="istickedoff">Just mp -&gt;</span>
+<span class="lineno">  273 </span><span class="spaces">      </span><span class="istickedoff">case mpCases mp of</span>
+<span class="lineno">  274 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; morph</span>
+<span class="lineno">  275 </span><span class="spaces">        </span><span class="istickedoff">Just cMap -&gt;</span>
+<span class="lineno">  276 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">let normalizedWord = T.toLower (T.strip (kfpWord payload))</span></span>
+<span class="lineno">  277 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">normalizedCases = M.mapKeys T.toLower cMap</span></span>
+<span class="lineno">  278 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">applyCase key selector currentMap =</span></span>
+<span class="lineno">  279 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">case M.lookup key normalizedCases of</span></span>
+<span class="lineno">  280 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">Just surfaceValue | not (T.null (T.strip surfaceValue)) -&gt; M.insert normalizedWord (T.toLower (T.strip surfaceValue)) currentMap</span></span>
+<span class="lineno">  281 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">_ -&gt; currentMap</span></span>
+<span class="lineno">  282 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">newSurfaceForms = learnedSurfaceForms normalizedWord normalizedCases</span></span>
+<span class="lineno">  283 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">mergedSurfaceForms = M.unionWith (++) newSurfaceForms (mdFormsBySurface morph)</span></span>
+<span class="lineno">  284 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">in morph</span></span>
+<span class="lineno">  285 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">{ mdNominative     = applyCase &quot;nom&quot; id (mdNominative morph)</span></span>
+<span class="lineno">  286 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, mdGenitive       = applyCase &quot;gen&quot; id (mdGenitive morph)</span></span>
+<span class="lineno">  287 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, mdPrepositional  = applyCase &quot;prep&quot; id (mdPrepositional morph)</span></span>
+<span class="lineno">  288 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">, mdFormsBySurface = mergedSurfaceForms</span></span>
+<span class="lineno">  289 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">  290 </span>
+<span class="lineno">  291 </span>learnedSurfaceForms :: Text -&gt; M.Map Text Text -&gt; M.Map Text [LexemeForm]
+<span class="lineno">  292 </span><span class="decl"><span class="nottickedoff">learnedSurfaceForms lemma casesMap =</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="nottickedoff">M.fromListWith (++)</span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="nottickedoff">[ (surfaceValue, [mkForm lexCase surfaceValue])</span>
+<span class="lineno">  295 </span><span class="spaces">    </span><span class="nottickedoff">| (caseKey, surfaceValueRaw) &lt;- M.toList casesMap</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="nottickedoff">, let surfaceValue = T.toLower (T.strip surfaceValueRaw)</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="nottickedoff">, not (T.null surfaceValue)</span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="nottickedoff">, Just lexCase &lt;- [learnedLexemeCase caseKey]</span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  300 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="nottickedoff">mkForm lexCase surfaceValue =</span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="nottickedoff">LexemeForm</span>
+<span class="lineno">  303 </span><span class="spaces">        </span><span class="nottickedoff">{ lfSurface = surfaceValue</span>
+<span class="lineno">  304 </span><span class="spaces">        </span><span class="nottickedoff">, lfLemma = lemma</span>
+<span class="lineno">  305 </span><span class="spaces">        </span><span class="nottickedoff">, lfPOS = &quot;noun&quot;</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="nottickedoff">, lfCase = lexCase</span>
+<span class="lineno">  307 </span><span class="spaces">        </span><span class="nottickedoff">, lfNumber = SingularNumber</span>
+<span class="lineno">  308 </span><span class="spaces">        </span><span class="nottickedoff">, lfTier = AutoCoverageTier</span>
+<span class="lineno">  309 </span><span class="spaces">        </span><span class="nottickedoff">, lfQuality = 0.55</span>
+<span class="lineno">  310 </span><span class="spaces">        </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  311 </span>
+<span class="lineno">  312 </span>learnedLexemeCase :: Text -&gt; Maybe LexemeCase
+<span class="lineno">  313 </span><span class="decl"><span class="nottickedoff">learnedLexemeCase rawCase =</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="nottickedoff">case T.toLower (T.strip rawCase) of</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="nottickedoff">&quot;nom&quot; -&gt; Just NominativeCase</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="nottickedoff">&quot;nominative&quot; -&gt; Just NominativeCase</span>
+<span class="lineno">  317 </span><span class="spaces">    </span><span class="nottickedoff">&quot;gen&quot; -&gt; Just GenitiveCase</span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="nottickedoff">&quot;genitive&quot; -&gt; Just GenitiveCase</span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="nottickedoff">&quot;dat&quot; -&gt; Just DativeCase</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="nottickedoff">&quot;dative&quot; -&gt; Just DativeCase</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="nottickedoff">&quot;acc&quot; -&gt; Just AccusativeCase</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="nottickedoff">&quot;accusative&quot; -&gt; Just AccusativeCase</span>
+<span class="lineno">  323 </span><span class="spaces">    </span><span class="nottickedoff">&quot;ins&quot; -&gt; Just InstrumentalCase</span>
+<span class="lineno">  324 </span><span class="spaces">    </span><span class="nottickedoff">&quot;instrumental&quot; -&gt; Just InstrumentalCase</span>
+<span class="lineno">  325 </span><span class="spaces">    </span><span class="nottickedoff">&quot;prep&quot; -&gt; Just PrepositionalCase</span>
+<span class="lineno">  326 </span><span class="spaces">    </span><span class="nottickedoff">&quot;prepositional&quot; -&gt; Just PrepositionalCase</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">  328 </span>
+<span class="lineno">  329 </span>renderNeedTag :: LearningNeed -&gt; Text
+<span class="lineno">  330 </span><span class="decl"><span class="istickedoff">renderNeedTag NeedSalienceCalibration = <span class="nottickedoff">&quot;NeedSalienceCalibration&quot;</span></span>
+<span class="lineno">  331 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedKeywordEnrichment   = <span class="nottickedoff">&quot;NeedKeywordEnrichment&quot;</span></span>
+<span class="lineno">  332 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedLexiconExtension      = &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  333 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedNone                  = &quot;NeedNone&quot;</span></span>
+<span class="lineno">  334 </span>
+<span class="lineno">  335 </span>renderQueryError :: ExternalQueryError -&gt; Text
+<span class="lineno">  336 </span><span class="decl"><span class="istickedoff">renderQueryError (EqeNetworkUnavailable t) = <span class="nottickedoff">T.concat [&quot;network:&quot;, t]</span></span>
+<span class="lineno">  337 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeAuthFailure t)        = <span class="nottickedoff">T.concat [&quot;auth:&quot;, t]</span></span>
+<span class="lineno">  338 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeRateLimited t)        = T.concat [&quot;rate_limit:&quot;, t]</span>
+<span class="lineno">  339 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeServerError t)        = <span class="nottickedoff">T.concat [&quot;server:&quot;, t]</span></span>
+<span class="lineno">  340 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeTimeout t)            = <span class="nottickedoff">T.concat [&quot;timeout:&quot;, t]</span></span>
+<span class="lineno">  341 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeInvalidResponse t)    = <span class="nottickedoff">T.concat [&quot;invalid:&quot;, t]</span></span>
+<span class="lineno">  342 </span><span class="spaces"></span><span class="istickedoff">renderQueryError (EqeFallback reason)      = T.concat [&quot;fallback:&quot;, renderFallbackReason reason]</span>
+<span class="lineno">  343 </span><span class="spaces"></span><span class="istickedoff">renderQueryError EqeEmptyResponse          = <span class="nottickedoff">&quot;empty&quot;</span></span></span>
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>renderValidationError :: ValidationError -&gt; Text
+<span class="lineno">  346 </span><span class="decl"><span class="nottickedoff">renderValidationError VeEmptyWord = &quot;empty_word&quot;</span>
+<span class="lineno">  347 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError VeEmptyDefinition = &quot;empty_definition&quot;</span>
+<span class="lineno">  348 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError (VeDefinitionTooShort a r) =</span>
+<span class="lineno">  349 </span><span class="spaces">  </span><span class="nottickedoff">T.concat [&quot;too_short:&quot;, T.pack (show a), &quot;/&quot;, T.pack (show r)]</span>
+<span class="lineno">  350 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError VeSemanticallyEmpty = &quot;semantically_empty&quot;</span>
+<span class="lineno">  351 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError (VeMorphologyParseFailure t) = T.concat [&quot;morph_parse:&quot;, t]</span>
+<span class="lineno">  352 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError (VeLexiconConflict t) = T.concat [&quot;conflict:&quot;, t]</span>
+<span class="lineno">  353 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError (VeInvalidSchema t) = T.concat [&quot;schema:&quot;, t]</span>
+<span class="lineno">  354 </span><span class="spaces"></span><span class="nottickedoff">renderValidationError (VeInvalidField f r) = T.concat [&quot;field:&quot;, f, &quot;=&quot;, r]</span></span>
+<span class="lineno">  355 </span>
+<span class="lineno">  356 </span>renderSandboxMetrics :: SandboxMetrics -&gt; Text
+<span class="lineno">  357 </span><span class="decl"><span class="nottickedoff">renderSandboxMetrics m =</span>
+<span class="lineno">  358 </span><span class="spaces">  </span><span class="nottickedoff">T.concat</span>
+<span class="lineno">  359 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;conatus=&quot;, T.pack (show (sbConatusTrend m))</span>
+<span class="lineno">  360 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;;unc=&quot;, T.pack (show (sbUncertaintyTrend m))</span>
+<span class="lineno">  361 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;;loop=&quot;, T.pack (show (sbRepairLoopFreq m))</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;;net=&quot;, T.pack (show (sbNetScore m))</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  364 </span>
+<span class="lineno">  365 </span>renderSandboxRejectReason :: SandboxRejectReason -&gt; Text
+<span class="lineno">  366 </span><span class="decl"><span class="istickedoff">renderSandboxRejectReason SbrDegradingConatus   = &quot;degrading_conatus&quot;</span>
+<span class="lineno">  367 </span><span class="spaces"></span><span class="istickedoff">renderSandboxRejectReason SbrRisingUncertainty  = <span class="nottickedoff">&quot;rising_uncertainty&quot;</span></span>
+<span class="lineno">  368 </span><span class="spaces"></span><span class="istickedoff">renderSandboxRejectReason SbrHighRepairLoopRisk = <span class="nottickedoff">&quot;repair_loop&quot;</span></span>
+<span class="lineno">  369 </span><span class="spaces"></span><span class="istickedoff">renderSandboxRejectReason SbrNegativeNetScore   = <span class="nottickedoff">&quot;negative_net&quot;</span></span></span>
+<span class="lineno">  370 </span>
+<span class="lineno">  371 </span>toolReliabilityMutation :: Int -&gt; Text -&gt; Bool -&gt; Text -&gt; AdaptiveMutationRecord
+<span class="lineno">  372 </span><span class="decl"><span class="istickedoff">toolReliabilityMutation turn toolName accepted reason = AdaptiveMutationRecord</span>
+<span class="lineno">  373 </span><span class="spaces">  </span><span class="istickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  374 </span><span class="spaces">  </span><span class="istickedoff">, amrKind = MutToolReliability</span>
+<span class="lineno">  375 </span><span class="spaces">  </span><span class="istickedoff">, amrCause = if accepted then &quot;tool_reliability:accepted&quot; else &quot;tool_reliability:rejected&quot;</span>
+<span class="lineno">  376 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidence = [&quot;tool=&quot; &lt;&gt; toolName, &quot;reason=&quot; &lt;&gt; reason]</span>
+<span class="lineno">  377 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidenceStrength = EvidenceStrong</span>
+<span class="lineno">  378 </span><span class="spaces">  </span><span class="istickedoff">, amrConfidence = 0.80</span>
+<span class="lineno">  379 </span><span class="spaces">  </span><span class="istickedoff">, amrBoundedDelta = Just (if <span class="tickonlyfalse">accepted</span> then <span class="nottickedoff">0.05</span> else 0.10)</span>
+<span class="lineno">  380 </span><span class="spaces">  </span><span class="istickedoff">, amrDecision = if accepted then AdaptiveAccepted else AdaptiveRejected</span>
+<span class="lineno">  381 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  382 </span>
+<span class="lineno">  383 </span>knowledgeTreeMutation
+<span class="lineno">  384 </span>  :: Int
+<span class="lineno">  385 </span>  -&gt; AdaptiveMutationKind
+<span class="lineno">  386 </span>  -&gt; AdaptiveDecision
+<span class="lineno">  387 </span>  -&gt; EvidenceStrength
+<span class="lineno">  388 </span>  -&gt; Text
+<span class="lineno">  389 </span>  -&gt; Text
+<span class="lineno">  390 </span>  -&gt; AdaptiveMutationRecord
+<span class="lineno">  391 </span><span class="decl"><span class="istickedoff">knowledgeTreeMutation turn kind decision strength cause evidence = AdaptiveMutationRecord</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="istickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  393 </span><span class="spaces">  </span><span class="istickedoff">, amrKind = kind</span>
+<span class="lineno">  394 </span><span class="spaces">  </span><span class="istickedoff">, amrCause = cause</span>
+<span class="lineno">  395 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidence = [<span class="nottickedoff">evidence</span>]</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidenceStrength = strength</span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">, amrConfidence = 0.80</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">, amrBoundedDelta = Just <span class="nottickedoff">1.0</span></span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">, amrDecision = decision</span>
+<span class="lineno">  400 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  401 </span>
+<span class="lineno">  402 </span>-- | Convenience wrapper: apply the learning loop to a system state
+<span class="lineno">  403 </span>-- when an external query result is present.
+<span class="lineno">  404 </span>-- If no result was carried, returns the state unchanged.
+<span class="lineno">  405 </span>applyExternalLearning :: SystemState -&gt; Maybe (Either ExternalQueryError ExternalQueryResponse) -&gt; SystemState
+<span class="lineno">  406 </span><span class="decl"><span class="istickedoff">applyExternalLearning ss mResult =</span>
+<span class="lineno">  407 </span><span class="spaces">  </span><span class="istickedoff">case mResult of</span>
+<span class="lineno">  408 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; ss</span>
+<span class="lineno">  409 </span><span class="spaces">    </span><span class="istickedoff">Just result -&gt;</span>
+<span class="lineno">  410 </span><span class="spaces">      </span><span class="istickedoff">let needState = ssLearningNeedState ss</span>
+<span class="lineno">  411 </span><span class="spaces">          </span><span class="istickedoff">need = lnsCurrentNeed needState</span>
+<span class="lineno">  412 </span><span class="spaces">          </span><span class="istickedoff">mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools</span>
+<span class="lineno">  413 </span><span class="spaces">          </span><span class="istickedoff">tool = fromMaybe (ExternalTool &quot;unknown&quot; DomainGeneral 0.5 False) mTool</span>
+<span class="lineno">  414 </span><span class="spaces">          </span><span class="istickedoff">turn = ssTurnCount ss</span>
+<span class="lineno">  415 </span><span class="spaces">          </span><span class="istickedoff">proposalId = CalibrationId turn</span>
+<span class="lineno">  416 </span><span class="spaces">          </span><span class="istickedoff">submittedGuard = recordProposalSubmission (ssGuardrailState ss) turn proposalId</span>
+<span class="lineno">  417 </span><span class="spaces">          </span><span class="istickedoff">ssSubmitted = ss { ssGuardrailState = submittedGuard }</span>
+<span class="lineno">  418 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">queryText = case result of</span></span>
+<span class="lineno">  419 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">Right resp -&gt; eqrToolName resp &lt;&gt; &quot; &quot; &lt;&gt; T.pack (show (eqrLatencyMs resp))</span></span>
+<span class="lineno">  420 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">Left _     -&gt; &quot;&quot;</span></span>
+<span class="lineno">  421 </span><span class="spaces">          </span><span class="istickedoff">(updated, telemetry) = runLearningStep ssSubmitted tool need <span class="nottickedoff">queryText</span> (Just result)</span>
+<span class="lineno">  422 </span><span class="spaces">          </span><span class="istickedoff">finalizedGuard =</span>
+<span class="lineno">  423 </span><span class="spaces">            </span><span class="istickedoff">case ltValidationStatus telemetry of</span>
+<span class="lineno">  424 </span><span class="spaces">              </span><span class="istickedoff">&quot;accept&quot; -&gt; recordAcceptance (ssGuardrailState updated)</span>
+<span class="lineno">  425 </span><span class="spaces">              </span><span class="istickedoff">&quot;not_attempted&quot; -&gt; <span class="nottickedoff">ssGuardrailState updated</span></span>
+<span class="lineno">  426 </span><span class="spaces">              </span><span class="istickedoff">_ -&gt; recordRejection (ssGuardrailState updated) turn</span>
+<span class="lineno">  427 </span><span class="spaces">      </span><span class="istickedoff">in updated { ssGuardrailState = finalizedGuard }</span></span>
+
+</pre>
+</body>
+</html>

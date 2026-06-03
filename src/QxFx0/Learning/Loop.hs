@@ -65,7 +65,7 @@ import QxFx0.Learning.Validator
   , ValidationError(..)
   , validateFruitPayload
   )
-import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..), LexemeForm(..), LexemeCase(..), LexemeNumber(..), SourceTier(..))
 import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
@@ -273,12 +273,58 @@ mergeMorphologyPayload morph payload =
       case mpCases mp of
         Nothing -> morph
         Just cMap ->
-          let addForms mOld = M.union (M.mapKeys T.toLower cMap) mOld
+          let normalizedWord = T.toLower (T.strip (kfpWord payload))
+              normalizedCases = M.mapKeys T.toLower cMap
+              applyCase key selector currentMap =
+                case M.lookup key normalizedCases of
+                  Just surfaceValue | not (T.null (T.strip surfaceValue)) -> M.insert normalizedWord (T.toLower (T.strip surfaceValue)) currentMap
+                  _ -> currentMap
+              newSurfaceForms = learnedSurfaceForms normalizedWord normalizedCases
+              mergedSurfaceForms = M.unionWith (++) newSurfaceForms (mdFormsBySurface morph)
           in morph
-               { mdNominative     = addForms (mdNominative morph)
-               , mdGenitive       = addForms (mdGenitive morph)
-               , mdPrepositional  = addForms (mdPrepositional morph)
-               }
+               { mdNominative     = applyCase "nom" id (mdNominative morph)
+               , mdGenitive       = applyCase "gen" id (mdGenitive morph)
+               , mdPrepositional  = applyCase "prep" id (mdPrepositional morph)
+                , mdFormsBySurface = mergedSurfaceForms
+                }
+
+learnedSurfaceForms :: Text -> M.Map Text Text -> M.Map Text [LexemeForm]
+learnedSurfaceForms lemma casesMap =
+  M.fromListWith (++)
+    [ (surfaceValue, [mkForm lexCase surfaceValue])
+    | (caseKey, surfaceValueRaw) <- M.toList casesMap
+    , let surfaceValue = T.toLower (T.strip surfaceValueRaw)
+    , not (T.null surfaceValue)
+    , Just lexCase <- [learnedLexemeCase caseKey]
+    ]
+  where
+    mkForm lexCase surfaceValue =
+      LexemeForm
+        { lfSurface = surfaceValue
+        , lfLemma = lemma
+        , lfPOS = "noun"
+        , lfCase = lexCase
+        , lfNumber = SingularNumber
+        , lfTier = AutoCoverageTier
+        , lfQuality = 0.55
+        }
+
+learnedLexemeCase :: Text -> Maybe LexemeCase
+learnedLexemeCase rawCase =
+  case T.toLower (T.strip rawCase) of
+    "nom" -> Just NominativeCase
+    "nominative" -> Just NominativeCase
+    "gen" -> Just GenitiveCase
+    "genitive" -> Just GenitiveCase
+    "dat" -> Just DativeCase
+    "dative" -> Just DativeCase
+    "acc" -> Just AccusativeCase
+    "accusative" -> Just AccusativeCase
+    "ins" -> Just InstrumentalCase
+    "instrumental" -> Just InstrumentalCase
+    "prep" -> Just PrepositionalCase
+    "prepositional" -> Just PrepositionalCase
+    _ -> Nothing
 
 renderNeedTag :: LearningNeed -> Text
 renderNeedTag NeedSalienceCalibration = "NeedSalienceCalibration"
@@ -321,7 +367,6 @@ renderSandboxRejectReason SbrDegradingConatus   = "degrading_conatus"
 renderSandboxRejectReason SbrRisingUncertainty  = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk = "repair_loop"
 renderSandboxRejectReason SbrNegativeNetScore   = "negative_net"
-renderSandboxRejectReason SbrMorphologyConflict = "morph_conflict"
 
 toolReliabilityMutation :: Int -> Text -> Bool -> Text -> AdaptiveMutationRecord
 toolReliabilityMutation turn toolName accepted reason = AdaptiveMutationRecord

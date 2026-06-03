@@ -1,0 +1,931 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.P5Governance
+<span class="lineno">    4 </span>  ( p5GovernanceTests
+<span class="lineno">    5 </span>  ) where
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>import qualified Data.Text as T
+<span class="lineno">    8 </span>import Test.HUnit
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import QxFx0.Runtime.Session
+<span class="lineno">   11 </span>  ( governanceSummaryLines
+<span class="lineno">   12 </span>  , governanceAuthorityStatus
+<span class="lineno">   13 </span>  )
+<span class="lineno">   14 </span>import QxFx0.Types.Observability (TruthContractStatus(..))
+<span class="lineno">   15 </span>import QxFx0.Self.Conatus
+<span class="lineno">   16 </span>  ( ConatusComponents(..)
+<span class="lineno">   17 </span>  , ConatusEnergy(..)
+<span class="lineno">   18 </span>  )
+<span class="lineno">   19 </span>import QxFx0.Self.Field
+<span class="lineno">   20 </span>  ( defaultFieldHeuristics
+<span class="lineno">   21 </span>  , FieldHeuristics(..)
+<span class="lineno">   22 </span>  , emptyField
+<span class="lineno">   23 </span>  )
+<span class="lineno">   24 </span>import QxFx0.Self.Perspective
+<span class="lineno">   25 </span>  ( applyPerspectiveDecision
+<span class="lineno">   26 </span>  , applyPerspectiveOperator
+<span class="lineno">   27 </span>  , buildActivePerspectiveProjections
+<span class="lineno">   28 </span>  , buildPerspectiveProjection
+<span class="lineno">   29 </span>  , opinionCore
+<span class="lineno">   30 </span>  )
+<span class="lineno">   31 </span>import QxFx0.Governance.Replay
+<span class="lineno">   32 </span>  ( rebuildGovernanceProjection
+<span class="lineno">   33 </span>  , governanceReplayProof
+<span class="lineno">   34 </span>  , rebuildGovernedPerspectiveState
+<span class="lineno">   35 </span>  , rebuildGovernedSystemState
+<span class="lineno">   36 </span>  , verifyPerspectiveRegistryRebuild
+<span class="lineno">   37 </span>  )
+<span class="lineno">   38 </span>import QxFx0.Types.State.Governance
+<span class="lineno">   39 </span>  ( CarryPayload(..)
+<span class="lineno">   40 </span>  , CapabilityEvidence(..)
+<span class="lineno">   41 </span>  , CapabilityPayload(..)
+<span class="lineno">   42 </span>  , ClaimStancePayload(..)
+<span class="lineno">   43 </span>  , FreezePayload(..)
+<span class="lineno">   44 </span>  , FreezeScope(..)
+<span class="lineno">   45 </span>  , GovernanceActor(..)
+<span class="lineno">   46 </span>  , GovernanceArchiveContract(..)
+<span class="lineno">   47 </span>  , GovernanceDataClass(..)
+<span class="lineno">   48 </span>  , GovernanceDecision(..)
+<span class="lineno">   49 </span>  , GovernanceEvent(..)
+<span class="lineno">   50 </span>  , GovernanceEventEnvelope(..)
+<span class="lineno">   51 </span>  , GovernanceEventId(..)
+<span class="lineno">   52 </span>  , GovernanceLifecycleStatus(..)
+<span class="lineno">   53 </span>  , GovernancePayload(..)
+<span class="lineno">   54 </span>  , GovernancePermission(..)
+<span class="lineno">   55 </span>  , GovernedProjectionRef(..)
+<span class="lineno">   56 </span>  , GovernanceProvenanceLink(..)
+<span class="lineno">   57 </span>  , GovernanceReplayOrderingContract(..)
+<span class="lineno">   58 </span>  , GovernanceReason(..)
+<span class="lineno">   59 </span>  , GovernanceRef(..)
+<span class="lineno">   60 </span>  , GovernanceSchemaEvolutionContract(..)
+<span class="lineno">   61 </span>  , GovernedSubject(..)
+<span class="lineno">   62 </span>  , NormativeRevisionPayload(..)
+<span class="lineno">   63 </span>  , buildPerspectiveGovernanceEvent
+<span class="lineno">   64 </span>  , appendGovernanceEventToHistory
+<span class="lineno">   65 </span>  , normalizeGovernanceEventChecked
+<span class="lineno">   66 </span>  , currentGovernancePayloadVersion
+<span class="lineno">   67 </span>  , currentGovernanceSchemaVersion
+<span class="lineno">   68 </span>  , currentEvaluatorVersion
+<span class="lineno">   69 </span>  , currentProjectionVersion
+<span class="lineno">   70 </span>  , currentReducerVersion
+<span class="lineno">   71 </span>  , defaultGovernanceArchiveContract
+<span class="lineno">   72 </span>  , defaultGovernanceReplayOrderingContract
+<span class="lineno">   73 </span>  , defaultGovernanceSchemaEvolutionContract
+<span class="lineno">   74 </span>  , governanceDeterminismBoundary
+<span class="lineno">   75 </span>  , governancePermission
+<span class="lineno">   76 </span>  , governanceProjectionChecksum
+<span class="lineno">   77 </span>  , gpActivePerspectiveProjections
+<span class="lineno">   78 </span>  , gpGovernedRefs
+<span class="lineno">   79 </span>  , gpMeta
+<span class="lineno">   80 </span>  , gpPerspectiveRegistry
+<span class="lineno">   81 </span>  , gpProjectionChecksum
+<span class="lineno">   82 </span>  , validateGovernanceEventContract
+<span class="lineno">   83 </span>  )
+<span class="lineno">   84 </span>import QxFx0.Types.State.Perspective
+<span class="lineno">   85 </span>  ( ClaimStanceRef(..)
+<span class="lineno">   86 </span>  , ConatusSlice(..)
+<span class="lineno">   87 </span>  , CounterargumentRef(..)
+<span class="lineno">   88 </span>  , EvidenceRef(..)
+<span class="lineno">   89 </span>  , IdentitySlice(..)
+<span class="lineno">   90 </span>  , NormativeProfile
+<span class="lineno">   91 </span>  , PerspectiveAdmissibility(..)
+<span class="lineno">   92 </span>  , PerspectiveCandidate(..)
+<span class="lineno">   93 </span>  , PerspectiveId(..)
+<span class="lineno">   94 </span>  , PerspectiveInputBundle(..)
+<span class="lineno">   95 </span>  , PerspectivePromotionDecision(..)
+<span class="lineno">   96 </span>  , PerspectiveRegistry
+<span class="lineno">   97 </span>  , PerspectiveRevisionRecord
+<span class="lineno">   98 </span>  , PerspectiveScope(..)
+<span class="lineno">   99 </span>  , defaultNormativeProfile
+<span class="lineno">  100 </span>  , defaultPerspectiveRegistry
+<span class="lineno">  101 </span>  )
+<span class="lineno">  102 </span>import QxFx0.Types.State
+<span class="lineno">  103 </span>  ( emptySystemState
+<span class="lineno">  104 </span>    , ssAdaptiveMutationLog
+<span class="lineno">  105 </span>    , ssGovernanceHistory
+<span class="lineno">  106 </span>    , ssGovernanceProjection
+<span class="lineno">  107 </span>    , ssGovernanceRuntimeFault
+<span class="lineno">  108 </span>    , ssPerspectiveRegistry
+<span class="lineno">  109 </span>    , ssFieldHeuristics
+<span class="lineno">  110 </span>  , ssTruthContractStatus
+<span class="lineno">  111 </span>  )
+<span class="lineno">  112 </span>import QxFx0.Types.State.Governance (EpistemicStatus(..))
+<span class="lineno">  113 </span>import QxFx0.Core.TurnPipeline
+<span class="lineno">  114 </span>  ( PrepareEffectPlan(..)
+<span class="lineno">  115 </span>  , PrepareStatic(..)
+<span class="lineno">  116 </span>  , buildPrepareEffectPlan
+<span class="lineno">  117 </span>  )
+<span class="lineno">  118 </span>import Data.Time.Calendar (fromGregorian)
+<span class="lineno">  119 </span>import Data.Time.Clock (UTCTime(..))
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>p5GovernanceTests :: [Test]
+<span class="lineno">  122 </span><span class="decl"><span class="istickedoff">p5GovernanceTests =</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;P5 event envelope preserves explicit intent/outcome split&quot;</span> testIntentOutcomeSplit</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 append is idempotent for identical event id and rejects semantic conflict&quot;</span> testAppendIdempotenceAndConflict</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 append fails closed on broken hash chain or ordering&quot;</span> testAppendFailsClosedOnBrokenChain</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 perspective operator keeps derived state unchanged when canonical append fails&quot;</span> testPerspectiveOperatorAtomicOnAppendFailure</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 deterministic rebuild reproduces governed perspective registry&quot;</span> testDeterministicPerspectiveRebuild</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 rebuild verification rejects derived registry mismatches&quot;</span> testRebuildVerificationGuard</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 replay is independent of input order but ordered by sequence/partition/id&quot;</span> testCanonicalOrdering</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 system-state rebuild derives registry from canonical history&quot;</span> testSystemStateRebuildsDerivedRegistry</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 system-state rebuild fails closed under non-authoritative truth&quot;</span> testSystemStateReplayFailsClosedWhenTruthNonAuthoritative</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 governance authority status fails closed on non-authoritative truth&quot;</span> testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 lifecycle-sensitive ref validation follows deny/promote/rollback contracts&quot;</span> testLifecycleSensitiveRefValidation</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 denied perspective event is replay-visible without endorsing state&quot;</span> testDeniedPathReplay</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 rollback path is replay-visible and restores prior projection&quot;</span> testRollbackPathReplay</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 typed non-perspective paths remain replay-visible in projection refs&quot;</span> testTypedNonPerspectiveReplayPreservesProjection</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 perspective replay rejects envelope payload decision mismatch&quot;</span> testPerspectiveReplayRejectsDecisionMismatch</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 governance summary exposes operator-visible evidence&quot;</span> testGovernanceSummaryVisibility</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 governance fingerprint canonicalizes history&quot;</span> testGovernanceFingerprintCanonicalizesHistory</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 replay proof exposes canonical provenance trail&quot;</span> testReplayProofExposesCanonicalProvenance</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 prepare path keeps field heuristics non-governing&quot;</span> testPreparePathUsesDefaultFieldHeuristics</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 deny-first permissions protect privileged actions&quot;</span> testDenyFirstPermissions</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;P5 contracts expose schema, ordering, determinism boundary, and archive rules&quot;</span> testGovernanceContracts</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>testIntentOutcomeSplit :: Test
+<span class="lineno">  147 </span><span class="decl"><span class="istickedoff">testIntentOutcomeSplit = TestCase $ do</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle 1 [] [] [] defaultNormativeProfile []</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">eventWithIntent = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  151 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  152 </span><span class="spaces">        </span><span class="istickedoff">1</span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  155 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">defaultPerspectiveRegistry</span></span>
+<span class="lineno">  156 </span><span class="spaces">        </span><span class="istickedoff">defaultPerspectiveRegistry</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  158 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  159 </span><span class="spaces">        </span><span class="istickedoff">(PerspectiveInadmissible &quot;insufficient_evidence&quot;)</span>
+<span class="lineno">  160 </span><span class="spaces">        </span><span class="istickedoff">(Just PpdPromoteEndorsed)</span>
+<span class="lineno">  161 </span><span class="spaces">        </span><span class="istickedoff">PpdObserveOnly</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">eventWithoutIntent = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  165 </span><span class="spaces">        </span><span class="istickedoff">2</span>
+<span class="lineno">  166 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  167 </span><span class="spaces">        </span><span class="istickedoff">(Just eventWithIntent)</span>
+<span class="lineno">  168 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">defaultPerspectiveRegistry</span></span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="istickedoff">defaultPerspectiveRegistry</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  172 </span><span class="spaces">        </span><span class="istickedoff">(PerspectiveInadmissible &quot;insufficient_evidence&quot;)</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  174 </span><span class="spaces">        </span><span class="istickedoff">PpdObserveOnly</span>
+<span class="lineno">  175 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff">envelope = geEnvelope eventWithIntent</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff">absentEnvelope = geEnvelope eventWithoutIntent</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;requested decision records the considered intent&quot;</span></span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">(Just GovPromote)</span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff">(geeRequestedDecision envelope)</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;resolved decision records canonical denial outcome&quot;</span></span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="istickedoff">(Just GovDeny)</span>
+<span class="lineno">  183 </span><span class="spaces">    </span><span class="istickedoff">(geeResolvedDecision envelope)</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;canonical decision follows resolved outcome&quot;</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">GovDeny</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="istickedoff">(geeDecision envelope)</span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;denied lifecycle is explicit&quot;</span></span>
+<span class="lineno">  188 </span><span class="spaces">    </span><span class="istickedoff">GlsDenied</span>
+<span class="lineno">  189 </span><span class="spaces">    </span><span class="istickedoff">(geeLifecycleStatus envelope)</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;requested decision can remain absent when intent was absent&quot;</span></span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">(geeRequestedDecision absentEnvelope)</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;before_ref is mandatory&quot;</span> (geeBeforeRef envelope /= Nothing)</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;after_ref is mandatory&quot;</span> (geeAfterRef envelope /= Nothing)</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;effect_ref is mandatory&quot;</span> (geeEffectRef envelope /= Nothing)</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;typed contract validates&quot;</span> (Right ()) (validateGovernanceEventContract eventWithIntent)</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;absent intent still validates&quot;</span> (Right ()) (validateGovernanceEventContract eventWithoutIntent)</span></span>
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>testAppendIdempotenceAndConflict :: Test
+<span class="lineno">  200 </span><span class="decl"><span class="istickedoff">testAppendIdempotenceAndConflict = TestCase $ do</span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">let (event, _) = promotionEvent 1 Nothing</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">case appendGovernanceEventToHistory event [] of</span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;initial append failed: &quot; &lt;&gt; T.unpack err)</span></span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">Right history1 -&gt; do</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;initial append stores one event&quot;</span> 1 (length history1)</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;duplicate append is idempotent&quot;</span> (Right history1) (appendGovernanceEventToHistory event history1)</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="istickedoff">let conflicting = event</span>
+<span class="lineno">  208 </span><span class="spaces">            </span><span class="istickedoff">{ geEnvelope = (geEnvelope event)</span>
+<span class="lineno">  209 </span><span class="spaces">                </span><span class="istickedoff">{ geeReason = GovernanceReason &quot;conflicting_duplicate&quot; [<span class="nottickedoff">&quot;same id, changed reason&quot;</span>]</span>
+<span class="lineno">  210 </span><span class="spaces">                </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  211 </span><span class="spaces">                </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  212 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  213 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">case appendGovernanceEventToHistory conflicting history1 of</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  216 </span><span class="spaces">        </span><span class="istickedoff">Right _ -&gt; <span class="nottickedoff">assertFailure &quot;conflicting duplicate unexpectedly accepted&quot;</span></span></span>
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>testAppendFailsClosedOnBrokenChain :: Test
+<span class="lineno">  219 </span><span class="decl"><span class="istickedoff">testAppendFailsClosedOnBrokenChain = TestCase $ do</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="istickedoff">(event2, _) = revisionEvent 2 (Just event1) registry1</span>
+<span class="lineno">  222 </span><span class="spaces">      </span><span class="istickedoff">firstWithPrevHash = event1</span>
+<span class="lineno">  223 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope event1)</span>
+<span class="lineno">  224 </span><span class="spaces">            </span><span class="istickedoff">{ geePrevHash = Just <span class="nottickedoff">&quot;fnv1a64:unexpected&quot;</span></span>
+<span class="lineno">  225 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  226 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  227 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  228 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">event2WrongPrev = event2</span>
+<span class="lineno">  230 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope event2)</span>
+<span class="lineno">  231 </span><span class="spaces">            </span><span class="istickedoff">{ geePrevHash = Just &quot;fnv1a64:wrong&quot;</span>
+<span class="lineno">  232 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  233 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  234 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  235 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  236 </span><span class="spaces">      </span><span class="istickedoff">event2NonMonotonic = event2</span>
+<span class="lineno">  237 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope event2)</span>
+<span class="lineno">  238 </span><span class="spaces">            </span><span class="istickedoff">{ geeSequenceNo = 1</span>
+<span class="lineno">  239 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  240 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  241 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  242 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;first canonical event cannot carry prev_hash&quot;</span> (appendGovernanceEventToHistory firstWithPrevHash [])</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">history1 &lt;- assertRight (appendGovernanceEventToHistory event1 [])</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;append rejects wrong prev_hash&quot;</span> (appendGovernanceEventToHistory event2WrongPrev history1)</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;append rejects non-monotonic sequence&quot;</span> (appendGovernanceEventToHistory event2NonMonotonic history1)</span></span>
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>testPerspectiveOperatorAtomicOnAppendFailure :: Test
+<span class="lineno">  249 </span><span class="decl"><span class="istickedoff">testPerspectiveOperatorAtomicOnAppendFailure = TestCase $ do</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">(event2, _) = revisionEvent 2 (Just event1) registry1</span>
+<span class="lineno">  252 </span><span class="spaces">      </span><span class="istickedoff">brokenHistory =</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="istickedoff">[ event1</span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="istickedoff">, event2</span>
+<span class="lineno">  255 </span><span class="spaces">            </span><span class="istickedoff">{ geEnvelope = (geEnvelope event2)</span>
+<span class="lineno">  256 </span><span class="spaces">                </span><span class="istickedoff">{ geePrevHash = Just &quot;fnv1a64:wrong&quot;</span>
+<span class="lineno">  257 </span><span class="spaces">                </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  258 </span><span class="spaces">                </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  259 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  260 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  262 </span><span class="spaces">      </span><span class="istickedoff">before = emptySystemState</span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="istickedoff">{ ssGovernanceHistory = brokenHistory</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">, ssPerspectiveRegistry = registry1</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  266 </span><span class="spaces">      </span><span class="istickedoff">after = applyPerspectiveOperator before positiveConatus False emptyField</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;append failure leaves canonical history unchanged&quot;</span></span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">(ssGovernanceHistory before)</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">(ssGovernanceHistory after)</span>
+<span class="lineno">  270 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;append failure leaves derived registry unchanged&quot;</span></span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">(ssPerspectiveRegistry before)</span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="istickedoff">(ssPerspectiveRegistry after)</span>
+<span class="lineno">  273 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;append failure leaves adaptive mutation log unchanged&quot;</span></span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="istickedoff">(ssAdaptiveMutationLog before)</span>
+<span class="lineno">  275 </span><span class="spaces">    </span><span class="istickedoff">(ssAdaptiveMutationLog after)</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;append failure surfaces governance runtime fault&quot;</span></span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="istickedoff">(ssGovernanceRuntimeFault after /= Nothing)</span></span>
+<span class="lineno">  278 </span>
+<span class="lineno">  279 </span>testDeterministicPerspectiveRebuild :: Test
+<span class="lineno">  280 </span><span class="decl"><span class="istickedoff">testDeterministicPerspectiveRebuild = TestCase $ do</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="istickedoff">let (event, expectedRegistry) = promotionEvent 1 Nothing</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="istickedoff">projection1 &lt;- assertRight (rebuildGovernanceProjection [event])</span>
+<span class="lineno">  283 </span><span class="spaces">  </span><span class="istickedoff">projection2 &lt;- assertRight (rebuildGovernanceProjection [event])</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;rebuilt registry must match direct P4 application&quot;</span></span>
+<span class="lineno">  285 </span><span class="spaces">    </span><span class="istickedoff">expectedRegistry</span>
+<span class="lineno">  286 </span><span class="spaces">    </span><span class="istickedoff">(gpPerspectiveRegistry projection1)</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;same history + versions must produce same projection&quot;</span></span>
+<span class="lineno">  288 </span><span class="spaces">    </span><span class="istickedoff">projection1</span>
+<span class="lineno">  289 </span><span class="spaces">    </span><span class="istickedoff">projection2</span>
+<span class="lineno">  290 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection checksum is deterministic equality criterion&quot;</span></span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="istickedoff">(gpProjectionChecksum projection1)</span>
+<span class="lineno">  292 </span><span class="spaces">    </span><span class="istickedoff">(governanceProjectionChecksum (gpMeta projection1) (gpPerspectiveRegistry projection1) (gpActivePerspectiveProjections projection1) (gpGovernedRefs projection1))</span></span>
+<span class="lineno">  293 </span>
+<span class="lineno">  294 </span>testRebuildVerificationGuard :: Test
+<span class="lineno">  295 </span><span class="decl"><span class="istickedoff">testRebuildVerificationGuard = TestCase $ do</span>
+<span class="lineno">  296 </span><span class="spaces">  </span><span class="istickedoff">let (event, expectedRegistry) = promotionEvent 1 Nothing</span>
+<span class="lineno">  297 </span><span class="spaces">  </span><span class="istickedoff">rebuilt &lt;- assertRight (verifyPerspectiveRegistryRebuild [event] expectedRegistry)</span>
+<span class="lineno">  298 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;verified rebuild returns canonical registry&quot;</span> expectedRegistry rebuilt</span>
+<span class="lineno">  299 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;mismatched live registry fails closed&quot;</span></span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="istickedoff">(verifyPerspectiveRegistryRebuild [event] defaultPerspectiveRegistry)</span></span>
+<span class="lineno">  301 </span>
+<span class="lineno">  302 </span>testCanonicalOrdering :: Test
+<span class="lineno">  303 </span><span class="decl"><span class="istickedoff">testCanonicalOrdering = TestCase $ do</span>
+<span class="lineno">  304 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  305 </span><span class="spaces">      </span><span class="istickedoff">(event2, expectedRegistry) = revisionEvent 2 (Just event1) registry1</span>
+<span class="lineno">  306 </span><span class="spaces">  </span><span class="istickedoff">rebuiltForward &lt;- assertRight (rebuildGovernedPerspectiveState [event1, event2])</span>
+<span class="lineno">  307 </span><span class="spaces">  </span><span class="istickedoff">rebuiltShuffled &lt;- assertRight (rebuildGovernedPerspectiveState [event2, event1])</span>
+<span class="lineno">  308 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;forward replay matches expected registry&quot;</span> expectedRegistry rebuiltForward</span>
+<span class="lineno">  309 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;shuffled import canonicalizes before replay&quot;</span> expectedRegistry rebuiltShuffled</span></span>
+<span class="lineno">  310 </span>
+<span class="lineno">  311 </span>testSystemStateRebuildsDerivedRegistry :: Test
+<span class="lineno">  312 </span><span class="decl"><span class="istickedoff">testSystemStateRebuildsDerivedRegistry = TestCase $ do</span>
+<span class="lineno">  313 </span><span class="spaces">  </span><span class="istickedoff">let (event, expectedRegistry) = promotionEvent 1 Nothing</span>
+<span class="lineno">  314 </span><span class="spaces">      </span><span class="istickedoff">staleState = emptySystemState</span>
+<span class="lineno">  315 </span><span class="spaces">        </span><span class="istickedoff">{ ssPerspectiveRegistry = defaultPerspectiveRegistry</span>
+<span class="lineno">  316 </span><span class="spaces">        </span><span class="istickedoff">, ssGovernanceHistory = [event]</span>
+<span class="lineno">  317 </span><span class="spaces">        </span><span class="istickedoff">, ssTruthContractStatus = CanonicalSurfacePreserved</span>
+<span class="lineno">  318 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  319 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;fixture has stale derived registry&quot;</span> (ssPerspectiveRegistry staleState /= expectedRegistry)</span>
+<span class="lineno">  320 </span><span class="spaces">  </span><span class="istickedoff">rebuilt &lt;- assertRight (rebuildGovernedSystemState staleState)</span>
+<span class="lineno">  321 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;canonical history is preserved&quot;</span> [event] (ssGovernanceHistory rebuilt)</span>
+<span class="lineno">  322 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;derived registry is rebuilt from canonical history&quot;</span> expectedRegistry (ssPerspectiveRegistry rebuilt)</span></span>
+<span class="lineno">  323 </span>
+<span class="lineno">  324 </span>testSystemStateReplayFailsClosedWhenTruthNonAuthoritative :: Test
+<span class="lineno">  325 </span><span class="decl"><span class="istickedoff">testSystemStateReplayFailsClosedWhenTruthNonAuthoritative = TestCase $ do</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="istickedoff">case rebuildGovernedSystemState emptySystemState { ssTruthContractStatus = LegacyIncompleteSurface } of</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; assertBool <span class="nottickedoff">&quot;non-authoritative truth should fail closed&quot;</span> (&quot;non_authoritative&quot; `T.isInfixOf` err)</span>
+<span class="lineno">  328 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt; <span class="nottickedoff">assertFailure &quot;rebuild should fail closed for non-authoritative truth&quot;</span></span></span>
+<span class="lineno">  329 </span>
+<span class="lineno">  330 </span>testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth :: Test
+<span class="lineno">  331 </span><span class="decl"><span class="istickedoff">testGovernanceAuthorityStatusFailsClosedOnNonAuthoritativeTruth = TestCase $ do</span>
+<span class="lineno">  332 </span><span class="spaces">  </span><span class="istickedoff">let status = governanceAuthorityStatus (emptySystemState { ssTruthContractStatus = LegacyIncompleteSurface }) <span class="nottickedoff">&quot;ok&quot;</span></span>
+<span class="lineno">  333 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;non-authoritative truth must fail closed in operator summary&quot;</span> EpstNonAuthoritative status</span></span>
+<span class="lineno">  334 </span>
+<span class="lineno">  335 </span>testLifecycleSensitiveRefValidation :: Test
+<span class="lineno">  336 </span><span class="decl"><span class="istickedoff">testLifecycleSensitiveRefValidation = TestCase $ do</span>
+<span class="lineno">  337 </span><span class="spaces">  </span><span class="istickedoff">let (promote, _) = promotionEvent 1 Nothing</span>
+<span class="lineno">  338 </span><span class="spaces">      </span><span class="istickedoff">deny = promote</span>
+<span class="lineno">  339 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope promote)</span>
+<span class="lineno">  340 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:deny:sparse&quot;</span>
+<span class="lineno">  341 </span><span class="spaces">            </span><span class="istickedoff">, geeDecision = GovDeny</span>
+<span class="lineno">  342 </span><span class="spaces">            </span><span class="istickedoff">, geeResolvedDecision = Just GovDeny</span>
+<span class="lineno">  343 </span><span class="spaces">            </span><span class="istickedoff">, geeLifecycleStatus = GlsDenied</span>
+<span class="lineno">  344 </span><span class="spaces">            </span><span class="istickedoff">, geeAfterRef = Nothing</span>
+<span class="lineno">  345 </span><span class="spaces">            </span><span class="istickedoff">, geeEffectRef = Nothing</span>
+<span class="lineno">  346 </span><span class="spaces">            </span><span class="istickedoff">, geeRollbackLink = Nothing</span>
+<span class="lineno">  347 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  348 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  349 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  350 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  351 </span><span class="spaces">      </span><span class="istickedoff">promoteMissingAfter = promote</span>
+<span class="lineno">  352 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope promote)</span>
+<span class="lineno">  353 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:promote:missing-after&quot;</span>
+<span class="lineno">  354 </span><span class="spaces">            </span><span class="istickedoff">, geeAfterRef = Nothing</span>
+<span class="lineno">  355 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  356 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  357 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  358 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  359 </span><span class="spaces">      </span><span class="istickedoff">promoteMissingEffect = promote</span>
+<span class="lineno">  360 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope promote)</span>
+<span class="lineno">  361 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:promote:missing-effect&quot;</span>
+<span class="lineno">  362 </span><span class="spaces">            </span><span class="istickedoff">, geeEffectRef = Nothing</span>
+<span class="lineno">  363 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  364 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  365 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  366 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  367 </span><span class="spaces">      </span><span class="istickedoff">promoteMissingResolved = promote</span>
+<span class="lineno">  368 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope promote)</span>
+<span class="lineno">  369 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:promote:missing-resolved&quot;</span>
+<span class="lineno">  370 </span><span class="spaces">            </span><span class="istickedoff">, geeResolvedDecision = Nothing</span>
+<span class="lineno">  371 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  372 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  373 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  374 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  375 </span><span class="spaces">      </span><span class="istickedoff">rollbackMissingLink = promote</span>
+<span class="lineno">  376 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope promote)</span>
+<span class="lineno">  377 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:rollback:missing-link&quot;</span>
+<span class="lineno">  378 </span><span class="spaces">            </span><span class="istickedoff">, geeDecision = GovRollback</span>
+<span class="lineno">  379 </span><span class="spaces">            </span><span class="istickedoff">, geeResolvedDecision = Just GovRollback</span>
+<span class="lineno">  380 </span><span class="spaces">            </span><span class="istickedoff">, geeLifecycleStatus = GlsRolledBack</span>
+<span class="lineno">  381 </span><span class="spaces">            </span><span class="istickedoff">, geeRollbackLink = Nothing</span>
+<span class="lineno">  382 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  383 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  384 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  385 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">rollbackWithLink = rollbackMissingLink</span>
+<span class="lineno">  387 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope rollbackMissingLink)</span>
+<span class="lineno">  388 </span><span class="spaces">            </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq1:rollback:with-link&quot;</span>
+<span class="lineno">  389 </span><span class="spaces">            </span><span class="istickedoff">, geeRollbackLink = Just <span class="nottickedoff">(geeId (geEnvelope promote))</span></span>
+<span class="lineno">  390 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  391 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  392 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  393 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  394 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;deny can omit impossible after/effect refs while preserving resolved decision&quot;</span></span>
+<span class="lineno">  395 </span><span class="spaces">    </span><span class="istickedoff">(Right ())</span>
+<span class="lineno">  396 </span><span class="spaces">    </span><span class="istickedoff">(validateGovernanceEventContract deny)</span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;promote requires after_ref&quot;</span> (validateGovernanceEventContract promoteMissingAfter)</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;promote requires effect_ref&quot;</span> (validateGovernanceEventContract promoteMissingEffect)</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;event requires resolved decision&quot;</span> (validateGovernanceEventContract promoteMissingResolved)</span>
+<span class="lineno">  400 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;rollback requires rollback_link&quot;</span> (validateGovernanceEventContract rollbackMissingLink)</span>
+<span class="lineno">  401 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;rollback validates when rollback_link is present&quot;</span></span>
+<span class="lineno">  402 </span><span class="spaces">    </span><span class="istickedoff">(Right ())</span>
+<span class="lineno">  403 </span><span class="spaces">    </span><span class="istickedoff">(validateGovernanceEventContract rollbackWithLink)</span></span>
+<span class="lineno">  404 </span>
+<span class="lineno">  405 </span>testDeniedPathReplay :: Test
+<span class="lineno">  406 </span><span class="decl"><span class="istickedoff">testDeniedPathReplay = TestCase $ do</span>
+<span class="lineno">  407 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle 1 [] [] [] defaultNormativeProfile []</span>
+<span class="lineno">  408 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  409 </span><span class="spaces">      </span><span class="istickedoff">event = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  410 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  411 </span><span class="spaces">        </span><span class="istickedoff">1</span>
+<span class="lineno">  412 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  413 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  414 </span><span class="spaces">        </span><span class="istickedoff">defaultPerspectiveRegistry</span>
+<span class="lineno">  415 </span><span class="spaces">        </span><span class="istickedoff">defaultPerspectiveRegistry</span>
+<span class="lineno">  416 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  417 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  418 </span><span class="spaces">        </span><span class="istickedoff">(PerspectiveInadmissible &quot;insufficient_evidence&quot;)</span>
+<span class="lineno">  419 </span><span class="spaces">        </span><span class="istickedoff">(Just PpdPromoteEndorsed)</span>
+<span class="lineno">  420 </span><span class="spaces">        </span><span class="istickedoff">PpdObserveOnly</span>
+<span class="lineno">  421 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  422 </span><span class="spaces">  </span><span class="istickedoff">registry &lt;- assertRight (rebuildGovernedPerspectiveState [event])</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;denied path advances no endorsed projections&quot;</span> [] (buildActivePerspectiveProjections registry)</span></span>
+<span class="lineno">  424 </span>
+<span class="lineno">  425 </span>testRollbackPathReplay :: Test
+<span class="lineno">  426 </span><span class="decl"><span class="istickedoff">testRollbackPathReplay = TestCase $ do</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  428 </span><span class="spaces">      </span><span class="istickedoff">(event2, registry2) = revisionEvent 2 (Just event1) registry1</span>
+<span class="lineno">  429 </span><span class="spaces">      </span><span class="istickedoff">bundle = mkPerspectiveBundleWithThesis 3 &quot;rollback pressure&quot;</span>
+<span class="lineno">  430 </span><span class="spaces">      </span><span class="istickedoff">candidate = (opinionCore bundle) { pcCounterargumentPressure = 0.50 }</span>
+<span class="lineno">  431 </span><span class="spaces">      </span><span class="istickedoff">registry3 = applyPerspectiveDecision 3 registry2 <span class="nottickedoff">bundle</span> candidate PpdRollbackPrior</span>
+<span class="lineno">  432 </span><span class="spaces">      </span><span class="istickedoff">event3 = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  433 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  434 </span><span class="spaces">        </span><span class="istickedoff">3</span>
+<span class="lineno">  435 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  436 </span><span class="spaces">        </span><span class="istickedoff">(Just event2)</span>
+<span class="lineno">  437 </span><span class="spaces">        </span><span class="istickedoff">registry2</span>
+<span class="lineno">  438 </span><span class="spaces">        </span><span class="istickedoff">registry3</span>
+<span class="lineno">  439 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  440 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="istickedoff">PerspectiveAdmissibleQuarantined</span>
+<span class="lineno">  442 </span><span class="spaces">        </span><span class="istickedoff">(Just PpdRollbackPrior)</span>
+<span class="lineno">  443 </span><span class="spaces">        </span><span class="istickedoff">PpdRollbackPrior</span>
+<span class="lineno">  444 </span><span class="spaces">        </span><span class="istickedoff">(buildPerspectiveProjection registry3 (pibScope bundle))</span>
+<span class="lineno">  445 </span><span class="spaces">      </span><span class="istickedoff">envelope = geEnvelope event3</span>
+<span class="lineno">  446 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;rollback event carries rollback_link&quot;</span> (geeRollbackLink envelope /= Nothing)</span>
+<span class="lineno">  447 </span><span class="spaces">  </span><span class="istickedoff">rebuilt &lt;- assertRight (rebuildGovernedPerspectiveState [event1, event2, event3])</span>
+<span class="lineno">  448 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;rollback replay matches direct registry&quot;</span> registry3 rebuilt</span></span>
+<span class="lineno">  449 </span>
+<span class="lineno">  450 </span>testTypedNonPerspectiveReplayPreservesProjection :: Test
+<span class="lineno">  451 </span><span class="decl"><span class="istickedoff">testTypedNonPerspectiveReplayPreservesProjection = TestCase $ do</span>
+<span class="lineno">  452 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  453 </span><span class="spaces">  </span><span class="istickedoff">freeze &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent event1 freezeEventTemplate))</span>
+<span class="lineno">  454 </span><span class="spaces">  </span><span class="istickedoff">carry &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent freeze carryEventTemplate))</span>
+<span class="lineno">  455 </span><span class="spaces">  </span><span class="istickedoff">claim &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent carry claimStanceEventTemplate))</span>
+<span class="lineno">  456 </span><span class="spaces">  </span><span class="istickedoff">capability &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent claim capabilityEventTemplate))</span>
+<span class="lineno">  457 </span><span class="spaces">  </span><span class="istickedoff">normative &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent capability normativeRevisionEventTemplate))</span>
+<span class="lineno">  458 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- assertRight (rebuildGovernanceProjection [event1, freeze, carry, claim, capability, normative])</span>
+<span class="lineno">  459 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;all governed events remain replay-visible in projection refs&quot;</span></span>
+<span class="lineno">  460 </span><span class="spaces">    </span><span class="istickedoff">[ SubjectPerspective (PerspectiveId &quot;perspective-1&quot;)</span>
+<span class="lineno">  461 </span><span class="spaces">    </span><span class="istickedoff">, SubjectFreeze FreezeGlobal</span>
+<span class="lineno">  462 </span><span class="spaces">    </span><span class="istickedoff">, SubjectCrossSessionCarry &quot;carry:handoff&quot;</span>
+<span class="lineno">  463 </span><span class="spaces">    </span><span class="istickedoff">, SubjectClaimStance &quot;claim:freedom&quot;</span>
+<span class="lineno">  464 </span><span class="spaces">    </span><span class="istickedoff">, SubjectCapability &quot;capability:gf-map&quot;</span>
+<span class="lineno">  465 </span><span class="spaces">    </span><span class="istickedoff">, SubjectNormativeProfile &quot;default&quot;</span>
+<span class="lineno">  466 </span><span class="spaces">    </span><span class="istickedoff">]</span>
+<span class="lineno">  467 </span><span class="spaces">    </span><span class="istickedoff">(map gprSubject (gpGovernedRefs projection))</span>
+<span class="lineno">  468 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;perspective registry should stay unchanged by foreign payloads&quot;</span></span>
+<span class="lineno">  469 </span><span class="spaces">    </span><span class="istickedoff">registry1</span>
+<span class="lineno">  470 </span><span class="spaces">    </span><span class="istickedoff">(gpPerspectiveRegistry projection)</span>
+<span class="lineno">  471 </span><span class="spaces">  </span><span class="istickedoff">mapM_</span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="istickedoff">(\(label, event) -&gt; assertEqual <span class="nottickedoff">label</span> (Right ()) (validateGovernanceEventContract event))</span>
+<span class="lineno">  473 </span><span class="spaces">    </span><span class="istickedoff">[ (<span class="nottickedoff">&quot;freeze event validates as typed payload&quot;</span>, freeze)</span>
+<span class="lineno">  474 </span><span class="spaces">    </span><span class="istickedoff">, (<span class="nottickedoff">&quot;carry event validates as typed payload&quot;</span>, carry)</span>
+<span class="lineno">  475 </span><span class="spaces">    </span><span class="istickedoff">, (<span class="nottickedoff">&quot;claim-stance event validates as typed payload&quot;</span>, claim)</span>
+<span class="lineno">  476 </span><span class="spaces">    </span><span class="istickedoff">, (<span class="nottickedoff">&quot;capability event validates as typed payload&quot;</span>, capability)</span>
+<span class="lineno">  477 </span><span class="spaces">    </span><span class="istickedoff">, (<span class="nottickedoff">&quot;normative revision event validates as typed payload&quot;</span>, normative)</span>
+<span class="lineno">  478 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  479 </span>
+<span class="lineno">  480 </span>testPerspectiveReplayRejectsDecisionMismatch :: Test
+<span class="lineno">  481 </span><span class="decl"><span class="istickedoff">testPerspectiveReplayRejectsDecisionMismatch = TestCase $ do</span>
+<span class="lineno">  482 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  483 </span><span class="spaces">      </span><span class="istickedoff">bundle = mkPerspectiveBundleWithThesis 2 &quot;mismatch&quot;</span>
+<span class="lineno">  484 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  485 </span><span class="spaces">      </span><span class="istickedoff">registry2 = applyPerspectiveDecision 2 registry1 bundle candidate PpdPromoteEndorsed</span>
+<span class="lineno">  486 </span><span class="spaces">      </span><span class="istickedoff">event2 = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  487 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  488 </span><span class="spaces">        </span><span class="istickedoff">2</span>
+<span class="lineno">  489 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  490 </span><span class="spaces">        </span><span class="istickedoff">(Just event1)</span>
+<span class="lineno">  491 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">registry1</span></span>
+<span class="lineno">  492 </span><span class="spaces">        </span><span class="istickedoff">registry2</span>
+<span class="lineno">  493 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  494 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  495 </span><span class="spaces">        </span><span class="istickedoff">PerspectiveAdmissibleAccepted</span>
+<span class="lineno">  496 </span><span class="spaces">        </span><span class="istickedoff">(Just <span class="nottickedoff">PpdPromoteEndorsed</span>)</span>
+<span class="lineno">  497 </span><span class="spaces">        </span><span class="istickedoff">PpdPromoteEndorsed</span>
+<span class="lineno">  498 </span><span class="spaces">        </span><span class="istickedoff">(buildPerspectiveProjection registry2 (pibScope bundle))</span>
+<span class="lineno">  499 </span><span class="spaces">      </span><span class="istickedoff">mismatched = event2</span>
+<span class="lineno">  500 </span><span class="spaces">        </span><span class="istickedoff">{ geEnvelope = (geEnvelope event2)</span>
+<span class="lineno">  501 </span><span class="spaces">            </span><span class="istickedoff">{ geeDecision = GovSuspend</span>
+<span class="lineno">  502 </span><span class="spaces">            </span><span class="istickedoff">, geeResolvedDecision = Just GovSuspend</span>
+<span class="lineno">  503 </span><span class="spaces">            </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  504 </span><span class="spaces">            </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  505 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  506 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  507 </span><span class="spaces">  </span><span class="istickedoff">assertLeft <span class="nottickedoff">&quot;perspective replay must reject envelope/payload decision mismatch&quot;</span></span>
+<span class="lineno">  508 </span><span class="spaces">    </span><span class="istickedoff">(rebuildGovernedPerspectiveState [event1, mismatched])</span></span>
+<span class="lineno">  509 </span>
+<span class="lineno">  510 </span>testGovernanceSummaryVisibility :: Test
+<span class="lineno">  511 </span><span class="decl"><span class="istickedoff">testGovernanceSummaryVisibility = TestCase $ do</span>
+<span class="lineno">  512 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  513 </span><span class="spaces">  </span><span class="istickedoff">freeze &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent event1 freezeEventTemplate))</span>
+<span class="lineno">  514 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- assertRight (rebuildGovernanceProjection [event1, freeze])</span>
+<span class="lineno">  515 </span><span class="spaces">  </span><span class="istickedoff">let ss = emptySystemState</span>
+<span class="lineno">  516 </span><span class="spaces">        </span><span class="istickedoff">{ ssGovernanceHistory = [event1, freeze]</span>
+<span class="lineno">  517 </span><span class="spaces">        </span><span class="istickedoff">, ssPerspectiveRegistry = registry1</span>
+<span class="lineno">  518 </span><span class="spaces">        </span><span class="istickedoff">, ssGovernanceProjection = projection</span>
+<span class="lineno">  519 </span><span class="spaces">        </span><span class="istickedoff">, ssTruthContractStatus = CanonicalSurfacePreserved</span>
+<span class="lineno">  520 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  521 </span><span class="spaces">      </span><span class="istickedoff">summary = governanceSummaryLines ss</span>
+<span class="lineno">  522 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes event count&quot;</span> &quot;governance_events_count: 2&quot; summary</span>
+<span class="lineno">  523 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;summary exposes governance fingerprint&quot;</span></span>
+<span class="lineno">  524 </span><span class="spaces">    </span><span class="istickedoff">(any (&quot;governance_fingerprint: &quot; `T.isPrefixOf`) summary)</span>
+<span class="lineno">  525 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes rebuild status&quot;</span> &quot;governance_rebuild_status: ok&quot; summary</span>
+<span class="lineno">  526 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes active perspective count&quot;</span> &quot;active_perspectives_count: 1&quot; summary</span>
+<span class="lineno">  527 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes denied count&quot;</span> &quot;governance_denied_count: 0&quot; summary</span>
+<span class="lineno">  528 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes rollback count&quot;</span> &quot;governance_rollback_count: 0&quot; summary</span>
+<span class="lineno">  529 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes stale count&quot;</span> &quot;governance_stale_count: 0&quot; summary</span>
+<span class="lineno">  530 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes freeze status&quot;</span> &quot;governance_freeze_status: frozen&quot; summary</span>
+<span class="lineno">  531 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes governance authority status&quot;</span> &quot;governance_authority_status: authoritative&quot; summary</span>
+<span class="lineno">  532 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes governance runtime fault status&quot;</span> &quot;governance_runtime_fault: none&quot; summary</span>
+<span class="lineno">  533 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes latest governed subject&quot;</span> &quot;latest_governed_subject: SubjectFreeze FreezeGlobal&quot; summary</span>
+<span class="lineno">  534 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes latest governance reason tag&quot;</span> &quot;latest_governance_reason_tag: freeze:entry&quot; summary</span>
+<span class="lineno">  535 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes salience/field contract status&quot;</span> &quot;salience_field_contract_status: persisted_governing_default&quot; summary</span>
+<span class="lineno">  536 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes plan narrative tone contract status&quot;</span> &quot;plan_narrative_tone_contract_status: bounded_causal_contour_policy&quot; summary</span>
+<span class="lineno">  537 </span><span class="spaces">  </span><span class="istickedoff">assertLinePresent <span class="nottickedoff">&quot;summary exposes bayesian contract status&quot;</span> &quot;bayesian_contract_status: bounded_causal_contour_runtime_authoritative&quot; summary</span></span>
+<span class="lineno">  538 </span>
+<span class="lineno">  539 </span>testReplayProofExposesCanonicalProvenance :: Test
+<span class="lineno">  540 </span><span class="decl"><span class="istickedoff">testReplayProofExposesCanonicalProvenance = TestCase $ do</span>
+<span class="lineno">  541 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  542 </span><span class="spaces">  </span><span class="istickedoff">freeze &lt;- assertRight (normalizeGovernanceEventChecked (linkEvent event1 freezeEventTemplate))</span>
+<span class="lineno">  543 </span><span class="spaces">  </span><span class="istickedoff">proof &lt;- assertRight (governanceReplayProof [event1, freeze] registry1)</span>
+<span class="lineno">  544 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;replay proof preserves canonical event order&quot;</span></span>
+<span class="lineno">  545 </span><span class="spaces">    </span><span class="istickedoff">[geeId (geEnvelope event1), geeId (geEnvelope freeze)]</span>
+<span class="lineno">  546 </span><span class="spaces">    </span><span class="istickedoff">(map gplEventId proof)</span>
+<span class="lineno">  547 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;replay proof exposes subject ancestry via parent refs&quot;</span></span>
+<span class="lineno">  548 </span><span class="spaces">    </span><span class="istickedoff">[ [], [geeId (geEnvelope event1)] ]</span>
+<span class="lineno">  549 </span><span class="spaces">    </span><span class="istickedoff">(map gplParentRefs proof)</span>
+<span class="lineno">  550 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;replay proof exposes governance reason tags&quot;</span></span>
+<span class="lineno">  551 </span><span class="spaces">    </span><span class="istickedoff">[&quot;perspective:GovPromote&quot;, &quot;freeze:entry&quot;]</span>
+<span class="lineno">  552 </span><span class="spaces">    </span><span class="istickedoff">(map gplReasonTag proof)</span></span>
+<span class="lineno">  553 </span>
+<span class="lineno">  554 </span>testGovernanceFingerprintCanonicalizesHistory :: Test
+<span class="lineno">  555 </span><span class="decl"><span class="istickedoff">testGovernanceFingerprintCanonicalizesHistory = TestCase $ do</span>
+<span class="lineno">  556 </span><span class="spaces">  </span><span class="istickedoff">let (event1, registry1) = promotionEvent 1 Nothing</span>
+<span class="lineno">  557 </span><span class="spaces">      </span><span class="istickedoff">(event2, _) = revisionEvent 2 (Just event1) registry1</span>
+<span class="lineno">  558 </span><span class="spaces">      </span><span class="istickedoff">projection1 = case rebuildGovernanceProjection [event1, event2] of</span>
+<span class="lineno">  559 </span><span class="spaces">        </span><span class="istickedoff">Right value -&gt; value</span>
+<span class="lineno">  560 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">error (T.unpack err)</span></span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="istickedoff">projection2 = case rebuildGovernanceProjection [event2, event1] of</span>
+<span class="lineno">  562 </span><span class="spaces">        </span><span class="istickedoff">Right value -&gt; value</span>
+<span class="lineno">  563 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">error (T.unpack err)</span></span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="istickedoff">summaryForward = governanceSummaryLines emptySystemState</span>
+<span class="lineno">  565 </span><span class="spaces">        </span><span class="istickedoff">{ ssGovernanceHistory = [event1, event2]</span>
+<span class="lineno">  566 </span><span class="spaces">        </span><span class="istickedoff">, ssPerspectiveRegistry = registry1</span>
+<span class="lineno">  567 </span><span class="spaces">        </span><span class="istickedoff">, ssGovernanceProjection = projection1</span>
+<span class="lineno">  568 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  569 </span><span class="spaces">      </span><span class="istickedoff">summaryShuffled = governanceSummaryLines emptySystemState</span>
+<span class="lineno">  570 </span><span class="spaces">        </span><span class="istickedoff">{ ssGovernanceHistory = [event2, event1]</span>
+<span class="lineno">  571 </span><span class="spaces">        </span><span class="istickedoff">, ssPerspectiveRegistry = registry1</span>
+<span class="lineno">  572 </span><span class="spaces">        </span><span class="istickedoff">, ssGovernanceProjection = projection2</span>
+<span class="lineno">  573 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  574 </span><span class="spaces">      </span><span class="istickedoff">fingerprint lines' = case [ value | line &lt;- lines', Just value &lt;- [T.stripPrefix &quot;governance_fingerprint: &quot; line] ] of</span>
+<span class="lineno">  575 </span><span class="spaces">        </span><span class="istickedoff">value:_ -&gt; value</span>
+<span class="lineno">  576 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">&quot;&quot;</span></span>
+<span class="lineno">  577 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;canonical fingerprint must ignore raw list ordering&quot;</span></span>
+<span class="lineno">  578 </span><span class="spaces">    </span><span class="istickedoff">(fingerprint summaryForward)</span>
+<span class="lineno">  579 </span><span class="spaces">    </span><span class="istickedoff">(fingerprint summaryShuffled)</span></span>
+<span class="lineno">  580 </span>
+<span class="lineno">  581 </span>testPreparePathUsesDefaultFieldHeuristics :: Test
+<span class="lineno">  582 </span><span class="decl"><span class="istickedoff">testPreparePathUsesDefaultFieldHeuristics = TestCase $ do</span>
+<span class="lineno">  583 </span><span class="spaces">  </span><span class="istickedoff">let ss = emptySystemState</span>
+<span class="lineno">  584 </span><span class="spaces">        </span><span class="istickedoff">{ ssFieldHeuristics = defaultFieldHeuristics { fhDefaultNarrativeRate = 0.99 }</span>
+<span class="lineno">  585 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  586 </span><span class="spaces">      </span><span class="istickedoff">plan = buildPrepareEffectPlan ss &quot;что такое свобода&quot; (UTCTime <span class="nottickedoff">(fromGregorian 2026 1 1)</span> <span class="nottickedoff">0</span>)</span>
+<span class="lineno">  587 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;prepare path should thread persisted field heuristics&quot;</span></span>
+<span class="lineno">  588 </span><span class="spaces">    </span><span class="istickedoff">(ssFieldHeuristics ss)</span>
+<span class="lineno">  589 </span><span class="spaces">    </span><span class="istickedoff">(psFieldHeuristics (pepStatic plan))</span></span>
+<span class="lineno">  590 </span>
+<span class="lineno">  591 </span>testDenyFirstPermissions :: Test
+<span class="lineno">  592 </span><span class="decl"><span class="istickedoff">testDenyFirstPermissions = TestCase $ do</span>
+<span class="lineno">  593 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;runtime cannot revise normative profile&quot;</span></span>
+<span class="lineno">  594 </span><span class="spaces">    </span><span class="istickedoff">(GovernanceDenied &quot;runtime cannot revise normative profile&quot;)</span>
+<span class="lineno">  595 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorRuntime (SubjectNormativeProfile &quot;default&quot;) <span class="nottickedoff">GovPromote</span>)</span>
+<span class="lineno">  596 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;runtime cannot promote cross-session carry&quot;</span></span>
+<span class="lineno">  597 </span><span class="spaces">    </span><span class="istickedoff">(GovernanceDenied &quot;runtime cannot promote cross-session carry&quot;)</span>
+<span class="lineno">  598 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorRuntime (SubjectCrossSessionCarry &quot;carry:key&quot;) GovPromote)</span>
+<span class="lineno">  599 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;runtime cannot promote capability updates&quot;</span></span>
+<span class="lineno">  600 </span><span class="spaces">    </span><span class="istickedoff">(GovernanceDenied &quot;runtime cannot promote capability updates&quot;)</span>
+<span class="lineno">  601 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorRuntime (SubjectCapability &quot;capability:gf&quot;) GovPromote)</span>
+<span class="lineno">  602 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;operator can commit normative revision path&quot;</span></span>
+<span class="lineno">  603 </span><span class="spaces">    </span><span class="istickedoff">GovernanceAllowed</span>
+<span class="lineno">  604 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorOperator (SubjectNormativeProfile &quot;default&quot;) GovPromote)</span>
+<span class="lineno">  605 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;operator is still deny-first for unsupported actions&quot;</span></span>
+<span class="lineno">  606 </span><span class="spaces">    </span><span class="istickedoff">(GovernanceDenied &quot;privileged action not explicitly allowed&quot;)</span>
+<span class="lineno">  607 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorOperator (SubjectPerspective (PerspectiveId &quot;p1&quot;)) GovFreeze)</span>
+<span class="lineno">  608 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;replay actor is read-only&quot;</span></span>
+<span class="lineno">  609 </span><span class="spaces">    </span><span class="istickedoff">(GovernanceDenied &quot;replay actor is read-only&quot;)</span>
+<span class="lineno">  610 </span><span class="spaces">    </span><span class="istickedoff">(governancePermission ActorReplayRebuild <span class="nottickedoff">(SubjectPerspective (PerspectiveId &quot;p1&quot;))</span> <span class="nottickedoff">GovObserveOnly</span>)</span></span>
+<span class="lineno">  611 </span>
+<span class="lineno">  612 </span>testGovernanceContracts :: Test
+<span class="lineno">  613 </span><span class="decl"><span class="istickedoff">testGovernanceContracts = TestCase $ do</span>
+<span class="lineno">  614 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;current schema version is explicit&quot;</span> 1 currentGovernanceSchemaVersion</span>
+<span class="lineno">  615 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;current payload version is explicit&quot;</span> 1 currentGovernancePayloadVersion</span>
+<span class="lineno">  616 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;schema contract exposes unsupported-version handling&quot;</span></span>
+<span class="lineno">  617 </span><span class="spaces">    </span><span class="istickedoff">(not (T.null (gsecUnsupportedVersionHandling defaultGovernanceSchemaEvolutionContract)))</span>
+<span class="lineno">  618 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;ordering contract has total-order tie-break rule&quot;</span></span>
+<span class="lineno">  619 </span><span class="spaces">    </span><span class="istickedoff">(&quot;sequence_no&quot; `T.isInfixOf` grocTotalOrderTieBreakRule defaultGovernanceReplayOrderingContract)</span>
+<span class="lineno">  620 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;canonical history compaction is forbidden&quot;</span></span>
+<span class="lineno">  621 </span><span class="spaces">    </span><span class="istickedoff">False</span>
+<span class="lineno">  622 </span><span class="spaces">    </span><span class="istickedoff">(gacCanonicalHistoryCompactionAllowed defaultGovernanceArchiveContract)</span>
+<span class="lineno">  623 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;determinism boundary classifies canonical history&quot;</span></span>
+<span class="lineno">  624 </span><span class="spaces">    </span><span class="istickedoff">(Just GdcCanonical)</span>
+<span class="lineno">  625 </span><span class="spaces">    </span><span class="istickedoff">(lookup &quot;canonical_history&quot; governanceDeterminismBoundary)</span></span>
+<span class="lineno">  626 </span>
+<span class="lineno">  627 </span>promotionEvent :: Int -&gt; Maybe GovernanceEvent -&gt; (GovernanceEvent, PerspectiveRegistry)
+<span class="lineno">  628 </span><span class="decl"><span class="istickedoff">promotionEvent sequenceNo previousEvent =</span>
+<span class="lineno">  629 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundleWithThesis sequenceNo &quot;initial promoted thesis&quot;</span>
+<span class="lineno">  630 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  631 </span><span class="spaces">      </span><span class="istickedoff">registry = applyPerspectiveDecision sequenceNo defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed</span>
+<span class="lineno">  632 </span><span class="spaces">      </span><span class="istickedoff">event = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  633 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  634 </span><span class="spaces">        </span><span class="istickedoff">sequenceNo</span>
+<span class="lineno">  635 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  636 </span><span class="spaces">        </span><span class="istickedoff">previousEvent</span>
+<span class="lineno">  637 </span><span class="spaces">        </span><span class="istickedoff">defaultPerspectiveRegistry</span>
+<span class="lineno">  638 </span><span class="spaces">        </span><span class="istickedoff">registry</span>
+<span class="lineno">  639 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  640 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  641 </span><span class="spaces">        </span><span class="istickedoff">PerspectiveAdmissibleAccepted</span>
+<span class="lineno">  642 </span><span class="spaces">        </span><span class="istickedoff">(Just PpdPromoteEndorsed)</span>
+<span class="lineno">  643 </span><span class="spaces">        </span><span class="istickedoff">PpdPromoteEndorsed</span>
+<span class="lineno">  644 </span><span class="spaces">        </span><span class="istickedoff">(buildPerspectiveProjection registry (pibScope bundle))</span>
+<span class="lineno">  645 </span><span class="spaces">  </span><span class="istickedoff">in (event, registry)</span></span>
+<span class="lineno">  646 </span>
+<span class="lineno">  647 </span>revisionEvent :: Int -&gt; Maybe GovernanceEvent -&gt; PerspectiveRegistry -&gt; (GovernanceEvent, PerspectiveRegistry)
+<span class="lineno">  648 </span><span class="decl"><span class="istickedoff">revisionEvent sequenceNo previousEvent beforeRegistry =</span>
+<span class="lineno">  649 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundleWithThesis sequenceNo &quot;revised promoted thesis&quot;</span>
+<span class="lineno">  650 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  651 </span><span class="spaces">      </span><span class="istickedoff">registry = applyPerspectiveDecision sequenceNo beforeRegistry bundle candidate PpdReviseActive</span>
+<span class="lineno">  652 </span><span class="spaces">      </span><span class="istickedoff">event = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  653 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  654 </span><span class="spaces">        </span><span class="istickedoff">sequenceNo</span>
+<span class="lineno">  655 </span><span class="spaces">        </span><span class="istickedoff">&quot;session-p5&quot;</span>
+<span class="lineno">  656 </span><span class="spaces">        </span><span class="istickedoff">previousEvent</span>
+<span class="lineno">  657 </span><span class="spaces">        </span><span class="istickedoff">beforeRegistry</span>
+<span class="lineno">  658 </span><span class="spaces">        </span><span class="istickedoff">registry</span>
+<span class="lineno">  659 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  660 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  661 </span><span class="spaces">        </span><span class="istickedoff">PerspectiveAdmissibleAccepted</span>
+<span class="lineno">  662 </span><span class="spaces">        </span><span class="istickedoff">(Just PpdReviseActive)</span>
+<span class="lineno">  663 </span><span class="spaces">        </span><span class="istickedoff">PpdReviseActive</span>
+<span class="lineno">  664 </span><span class="spaces">        </span><span class="istickedoff">(buildPerspectiveProjection registry (pibScope bundle))</span>
+<span class="lineno">  665 </span><span class="spaces">  </span><span class="istickedoff">in (event, registry)</span></span>
+<span class="lineno">  666 </span>
+<span class="lineno">  667 </span>mkPerspectiveBundleWithThesis :: Int -&gt; T.Text -&gt; PerspectiveInputBundle
+<span class="lineno">  668 </span><span class="decl"><span class="istickedoff">mkPerspectiveBundleWithThesis turn thesis =</span>
+<span class="lineno">  669 </span><span class="spaces">  </span><span class="istickedoff">let evidence =</span>
+<span class="lineno">  670 </span><span class="spaces">        </span><span class="istickedoff">[ EvidenceRef (&quot;knowledge:&quot; &lt;&gt; thesis)</span>
+<span class="lineno">  671 </span><span class="spaces">        </span><span class="istickedoff">, EvidenceRef &quot;dialogue:DialogueOutcomeSuccess:freedom&quot;</span>
+<span class="lineno">  672 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  673 </span><span class="spaces">      </span><span class="istickedoff">stance = [ClaimStanceRef &quot;stance:BeliefAffirmed:freedom requires responsibility&quot;]</span>
+<span class="lineno">  674 </span><span class="spaces">  </span><span class="istickedoff">in mkPerspectiveBundle turn evidence stance [] defaultNormativeProfile []</span></span>
+<span class="lineno">  675 </span>
+<span class="lineno">  676 </span>mkPerspectiveBundle
+<span class="lineno">  677 </span>  :: Int
+<span class="lineno">  678 </span>  -&gt; [EvidenceRef]
+<span class="lineno">  679 </span>  -&gt; [ClaimStanceRef]
+<span class="lineno">  680 </span>  -&gt; [CounterargumentRef]
+<span class="lineno">  681 </span>  -&gt; NormativeProfile
+<span class="lineno">  682 </span>  -&gt; [PerspectiveRevisionRecord]
+<span class="lineno">  683 </span>  -&gt; PerspectiveInputBundle
+<span class="lineno">  684 </span><span class="decl"><span class="istickedoff">mkPerspectiveBundle turn evidence stance counterarguments profile lineage = PerspectiveInputBundle</span>
+<span class="lineno">  685 </span><span class="spaces">  </span><span class="istickedoff">{ pibScope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  686 </span><span class="spaces">  </span><span class="istickedoff">, pibEvidence = evidence</span>
+<span class="lineno">  687 </span><span class="spaces">  </span><span class="istickedoff">, pibStanceSlice = stance</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="istickedoff">, pibIdentitySlice = IdentitySlice</span>
+<span class="lineno">  689 </span><span class="spaces">      </span><span class="istickedoff">{ isSessionId = &quot;session-p5&quot;</span>
+<span class="lineno">  690 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaims = []</span>
+<span class="lineno">  691 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaimCount = 0</span>
+<span class="lineno">  692 </span><span class="spaces">      </span><span class="istickedoff">, isTurnCount = turn</span>
+<span class="lineno">  693 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  694 </span><span class="spaces">  </span><span class="istickedoff">, pibConatusSlice = ConatusSlice</span>
+<span class="lineno">  695 </span><span class="spaces">      </span><span class="istickedoff">{ csEnergy = 10.0</span>
+<span class="lineno">  696 </span><span class="spaces">      </span><span class="istickedoff">, csGateFired = False</span>
+<span class="lineno">  697 </span><span class="spaces">      </span><span class="istickedoff">, csFieldConfidence = 1.0</span>
+<span class="lineno">  698 </span><span class="spaces">      </span><span class="istickedoff">, csStability = 1.0</span>
+<span class="lineno">  699 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  700 </span><span class="spaces">  </span><span class="istickedoff">, pibNormativeProfile = profile</span>
+<span class="lineno">  701 </span><span class="spaces">  </span><span class="istickedoff">, pibCounterarguments = counterarguments</span>
+<span class="lineno">  702 </span><span class="spaces">  </span><span class="istickedoff">, pibRevisionLineage = lineage</span>
+<span class="lineno">  703 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  704 </span>
+<span class="lineno">  705 </span>linkEvent :: GovernanceEvent -&gt; GovernanceEvent -&gt; GovernanceEvent
+<span class="lineno">  706 </span><span class="decl"><span class="istickedoff">linkEvent previous event =</span>
+<span class="lineno">  707 </span><span class="spaces">  </span><span class="istickedoff">let previousEnvelope = geEnvelope previous</span>
+<span class="lineno">  708 </span><span class="spaces">  </span><span class="istickedoff">in event</span>
+<span class="lineno">  709 </span><span class="spaces">    </span><span class="istickedoff">{ geEnvelope = (geEnvelope event)</span>
+<span class="lineno">  710 </span><span class="spaces">        </span><span class="istickedoff">{ geePrevHash = geeEventHash previousEnvelope</span>
+<span class="lineno">  711 </span><span class="spaces">        </span><span class="istickedoff">, geeParentRefs = [geeId previousEnvelope]</span>
+<span class="lineno">  712 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  713 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  714 </span>
+<span class="lineno">  715 </span>freezeEventTemplate :: GovernanceEvent
+<span class="lineno">  716 </span><span class="decl"><span class="istickedoff">freezeEventTemplate = GovernanceEvent</span>
+<span class="lineno">  717 </span><span class="spaces">  </span><span class="istickedoff">{ geEnvelope = baseEnvelope</span>
+<span class="lineno">  718 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq10:freeze:global&quot;</span>
+<span class="lineno">  719 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  720 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectFreeze FreezeGlobal</span>
+<span class="lineno">  721 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = GovFreeze</span>
+<span class="lineno">  722 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = Just GovFreeze</span>
+<span class="lineno">  723 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just GovFreeze</span>
+<span class="lineno">  724 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  725 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = 10</span>
+<span class="lineno">  726 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;freeze&quot;</span>
+<span class="lineno">  727 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = GovernanceReason &quot;freeze:entry&quot; [&quot;budget exceeded&quot;]</span>
+<span class="lineno">  728 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefSnapshot &quot;freeze:before&quot;)</span>
+<span class="lineno">  729 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefSnapshot &quot;freeze:after&quot;)</span>
+<span class="lineno">  730 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefSnapshot &quot;freeze:global&quot;)</span>
+<span class="lineno">  731 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  732 </span><span class="spaces">  </span><span class="istickedoff">, gePayload = GpFreeze FreezePayload</span>
+<span class="lineno">  733 </span><span class="spaces">      </span><span class="istickedoff">{ fpScope = FreezeGlobal</span>
+<span class="lineno">  734 </span><span class="spaces">      </span><span class="istickedoff">, fpEntryReason = GovernanceReason &quot;freeze:entry&quot; [&quot;budget exceeded&quot;]</span>
+<span class="lineno">  735 </span><span class="spaces">      </span><span class="istickedoff">, fpReleaseConditions = [&quot;operator review&quot;, &quot;cooldown elapsed&quot;]</span>
+<span class="lineno">  736 </span><span class="spaces">      </span><span class="istickedoff">, fpCooldownTurns = 3</span>
+<span class="lineno">  737 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  738 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  739 </span>
+<span class="lineno">  740 </span>carryEventTemplate :: GovernanceEvent
+<span class="lineno">  741 </span><span class="decl"><span class="istickedoff">carryEventTemplate = GovernanceEvent</span>
+<span class="lineno">  742 </span><span class="spaces">  </span><span class="istickedoff">{ geEnvelope = baseEnvelope</span>
+<span class="lineno">  743 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq11:carry:handoff&quot;</span>
+<span class="lineno">  744 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  745 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectCrossSessionCarry &quot;carry:handoff&quot;</span>
+<span class="lineno">  746 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = GovPromote</span>
+<span class="lineno">  747 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = Just GovPromote</span>
+<span class="lineno">  748 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just GovPromote</span>
+<span class="lineno">  749 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  750 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = 11</span>
+<span class="lineno">  751 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;carry&quot;</span>
+<span class="lineno">  752 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = GovernanceReason &quot;carry:handoff&quot; [&quot;operator approved&quot;]</span>
+<span class="lineno">  753 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefSnapshot &quot;carry:before&quot;)</span>
+<span class="lineno">  754 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefSnapshot &quot;carry:after&quot;)</span>
+<span class="lineno">  755 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefSnapshot &quot;carry:handoff&quot;)</span>
+<span class="lineno">  756 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  757 </span><span class="spaces">  </span><span class="istickedoff">, gePayload = GpCarry CarryPayload</span>
+<span class="lineno">  758 </span><span class="spaces">      </span><span class="istickedoff">{ cpCarryKey = &quot;carry:handoff&quot;</span>
+<span class="lineno">  759 </span><span class="spaces">      </span><span class="istickedoff">, cpSourceSession = Just &quot;session-p5&quot;</span>
+<span class="lineno">  760 </span><span class="spaces">      </span><span class="istickedoff">, cpTargetSession = Just &quot;session-p5-next&quot;</span>
+<span class="lineno">  761 </span><span class="spaces">      </span><span class="istickedoff">, cpEligibilityReason = GovernanceReason &quot;carry:handoff&quot; [&quot;bounded handoff&quot;]</span>
+<span class="lineno">  762 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  763 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  764 </span>
+<span class="lineno">  765 </span>claimStanceEventTemplate :: GovernanceEvent
+<span class="lineno">  766 </span><span class="decl"><span class="istickedoff">claimStanceEventTemplate = GovernanceEvent</span>
+<span class="lineno">  767 </span><span class="spaces">  </span><span class="istickedoff">{ geEnvelope = baseEnvelope</span>
+<span class="lineno">  768 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq12:claim:stance&quot;</span>
+<span class="lineno">  769 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  770 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectClaimStance &quot;claim:freedom&quot;</span>
+<span class="lineno">  771 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = GovPromote</span>
+<span class="lineno">  772 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = Just GovPromote</span>
+<span class="lineno">  773 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just GovPromote</span>
+<span class="lineno">  774 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  775 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = 12</span>
+<span class="lineno">  776 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;claim-stance&quot;</span>
+<span class="lineno">  777 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = GovernanceReason &quot;claim-stance:revision&quot; [&quot;strong evidence accepted&quot;]</span>
+<span class="lineno">  778 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefClaim &quot;claim:freedom:before&quot;)</span>
+<span class="lineno">  779 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefClaim &quot;claim:freedom:after&quot;)</span>
+<span class="lineno">  780 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefClaim &quot;claim:freedom&quot;)</span>
+<span class="lineno">  781 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  782 </span><span class="spaces">  </span><span class="istickedoff">, gePayload = GpClaimStance ClaimStancePayload</span>
+<span class="lineno">  783 </span><span class="spaces">      </span><span class="istickedoff">{ cspClaimRef = &quot;claim:freedom&quot;</span>
+<span class="lineno">  784 </span><span class="spaces">      </span><span class="istickedoff">, cspBefore = Just &quot;contested&quot;</span>
+<span class="lineno">  785 </span><span class="spaces">      </span><span class="istickedoff">, cspAfter = Just &quot;affirmed&quot;</span>
+<span class="lineno">  786 </span><span class="spaces">      </span><span class="istickedoff">, cspReason = GovernanceReason &quot;claim-stance:revision&quot; [&quot;strong evidence accepted&quot;]</span>
+<span class="lineno">  787 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  788 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  789 </span>
+<span class="lineno">  790 </span>capabilityEventTemplate :: GovernanceEvent
+<span class="lineno">  791 </span><span class="decl"><span class="istickedoff">capabilityEventTemplate = GovernanceEvent</span>
+<span class="lineno">  792 </span><span class="spaces">  </span><span class="istickedoff">{ geEnvelope = baseEnvelope</span>
+<span class="lineno">  793 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq13:capability:gf-map&quot;</span>
+<span class="lineno">  794 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  795 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectCapability &quot;capability:gf-map&quot;</span>
+<span class="lineno">  796 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = GovSuspend</span>
+<span class="lineno">  797 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = Just GovSuspend</span>
+<span class="lineno">  798 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just GovSuspend</span>
+<span class="lineno">  799 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  800 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = 13</span>
+<span class="lineno">  801 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;capability&quot;</span>
+<span class="lineno">  802 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = GovernanceReason &quot;capability:degrade&quot; [&quot;sandbox failures exceeded budget&quot;]</span>
+<span class="lineno">  803 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefCapability &quot;capability:gf-map:normal&quot;)</span>
+<span class="lineno">  804 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefCapability &quot;capability:gf-map:degraded&quot;)</span>
+<span class="lineno">  805 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefCapability &quot;capability:gf-map&quot;)</span>
+<span class="lineno">  806 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  807 </span><span class="spaces">  </span><span class="istickedoff">, gePayload = GpCapability CapabilityPayload</span>
+<span class="lineno">  808 </span><span class="spaces">      </span><span class="istickedoff">{ cpCapabilityRef = &quot;capability:gf-map&quot;</span>
+<span class="lineno">  809 </span><span class="spaces">      </span><span class="istickedoff">, cpScope = &quot;render&quot;</span>
+<span class="lineno">  810 </span><span class="spaces">      </span><span class="istickedoff">, cpOperation = &quot;linearize&quot;</span>
+<span class="lineno">  811 </span><span class="spaces">      </span><span class="istickedoff">, cpMode = &quot;degraded&quot;</span>
+<span class="lineno">  812 </span><span class="spaces">      </span><span class="istickedoff">, cpBeforeConfidence = Just 0.82</span>
+<span class="lineno">  813 </span><span class="spaces">      </span><span class="istickedoff">, cpAfterConfidence = 0.43</span>
+<span class="lineno">  814 </span><span class="spaces">      </span><span class="istickedoff">, cpEvidence = CapabilityEvidence</span>
+<span class="lineno">  815 </span><span class="spaces">          </span><span class="istickedoff">{ ceObservedFailures = 3</span>
+<span class="lineno">  816 </span><span class="spaces">          </span><span class="istickedoff">, ceSandboxFailures = 2</span>
+<span class="lineno">  817 </span><span class="spaces">          </span><span class="istickedoff">, ceFreezeCount = 1</span>
+<span class="lineno">  818 </span><span class="spaces">          </span><span class="istickedoff">, ceRollbackCount = 0</span>
+<span class="lineno">  819 </span><span class="spaces">          </span><span class="istickedoff">, ceDegradedCount = 1</span>
+<span class="lineno">  820 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  821 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  822 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  823 </span>
+<span class="lineno">  824 </span>normativeRevisionEventTemplate :: GovernanceEvent
+<span class="lineno">  825 </span><span class="decl"><span class="istickedoff">normativeRevisionEventTemplate = GovernanceEvent</span>
+<span class="lineno">  826 </span><span class="spaces">  </span><span class="istickedoff">{ geEnvelope = baseEnvelope</span>
+<span class="lineno">  827 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:session-p5:turn1:seq14:normative:default&quot;</span>
+<span class="lineno">  828 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  829 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectNormativeProfile &quot;default&quot;</span>
+<span class="lineno">  830 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = GovPromote</span>
+<span class="lineno">  831 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = Just GovPromote</span>
+<span class="lineno">  832 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just GovPromote</span>
+<span class="lineno">  833 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  834 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = 14</span>
+<span class="lineno">  835 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;normative&quot;</span>
+<span class="lineno">  836 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = GovernanceReason &quot;normative:revision&quot; [&quot;offline governance approved&quot;]</span>
+<span class="lineno">  837 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefSnapshot &quot;normative:default:v1&quot;)</span>
+<span class="lineno">  838 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefSnapshot &quot;normative:default:v2&quot;)</span>
+<span class="lineno">  839 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefSnapshot &quot;normative:default&quot;)</span>
+<span class="lineno">  840 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  841 </span><span class="spaces">  </span><span class="istickedoff">, gePayload = GpNormativeRevision NormativeRevisionPayload</span>
+<span class="lineno">  842 </span><span class="spaces">      </span><span class="istickedoff">{ nrpProfileId = &quot;default&quot;</span>
+<span class="lineno">  843 </span><span class="spaces">      </span><span class="istickedoff">, nrpVersionId = 2</span>
+<span class="lineno">  844 </span><span class="spaces">      </span><span class="istickedoff">, nrpRevisionPolicy = &quot;operator-reviewed&quot;</span>
+<span class="lineno">  845 </span><span class="spaces">      </span><span class="istickedoff">, nrpAuditReason = GovernanceReason &quot;normative:revision&quot; [&quot;offline governance approved&quot;]</span>
+<span class="lineno">  846 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  847 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  848 </span>
+<span class="lineno">  849 </span>baseEnvelope :: GovernanceEventEnvelope
+<span class="lineno">  850 </span><span class="decl"><span class="istickedoff">baseEnvelope = GovernanceEventEnvelope</span>
+<span class="lineno">  851 </span><span class="spaces">  </span><span class="istickedoff">{ geeId = GovernanceEventId &quot;gov:base&quot;</span>
+<span class="lineno">  852 </span><span class="spaces">  </span><span class="istickedoff">, geeSchemaVersion = currentGovernanceSchemaVersion</span>
+<span class="lineno">  853 </span><span class="spaces">  </span><span class="istickedoff">, geePayloadVersion = currentGovernancePayloadVersion</span>
+<span class="lineno">  854 </span><span class="spaces">  </span><span class="istickedoff">, geeLifecycleStatus = GlsCommitted</span>
+<span class="lineno">  855 </span><span class="spaces">  </span><span class="istickedoff">, geeSubject = SubjectClaimStance &quot;base&quot;</span>
+<span class="lineno">  856 </span><span class="spaces">  </span><span class="istickedoff">, geeActor = ActorOperator</span>
+<span class="lineno">  857 </span><span class="spaces">  </span><span class="istickedoff">, geeTurnId = Just 1</span>
+<span class="lineno">  858 </span><span class="spaces">  </span><span class="istickedoff">, geeSessionId = Just &quot;session-p5&quot;</span>
+<span class="lineno">  859 </span><span class="spaces">  </span><span class="istickedoff">, geeStreamId = &quot;governance:session-p5&quot;</span>
+<span class="lineno">  860 </span><span class="spaces">  </span><span class="istickedoff">, geePartitionId = &quot;base&quot;</span>
+<span class="lineno">  861 </span><span class="spaces">  </span><span class="istickedoff">, geeSequenceNo = 1</span>
+<span class="lineno">  862 </span><span class="spaces">  </span><span class="istickedoff">, geeParentRefs = []</span>
+<span class="lineno">  863 </span><span class="spaces">  </span><span class="istickedoff">, geeDecision = GovObserveOnly</span>
+<span class="lineno">  864 </span><span class="spaces">  </span><span class="istickedoff">, geeRequestedDecision = Just <span class="nottickedoff">GovObserveOnly</span></span>
+<span class="lineno">  865 </span><span class="spaces">  </span><span class="istickedoff">, geeResolvedDecision = Just <span class="nottickedoff">GovObserveOnly</span></span>
+<span class="lineno">  866 </span><span class="spaces">  </span><span class="istickedoff">, geeReason = GovernanceReason &quot;base&quot; []</span>
+<span class="lineno">  867 </span><span class="spaces">  </span><span class="istickedoff">, geeNormativeProfileVersion = Just 1</span>
+<span class="lineno">  868 </span><span class="spaces">  </span><span class="istickedoff">, geeProjectionVersion = currentProjectionVersion</span>
+<span class="lineno">  869 </span><span class="spaces">  </span><span class="istickedoff">, geeReducerVersion = currentReducerVersion</span>
+<span class="lineno">  870 </span><span class="spaces">  </span><span class="istickedoff">, geeNormativeEvaluatorVersion = currentEvaluatorVersion</span>
+<span class="lineno">  871 </span><span class="spaces">  </span><span class="istickedoff">, geeConfidenceAlgebraVersion = currentEvaluatorVersion</span>
+<span class="lineno">  872 </span><span class="spaces">  </span><span class="istickedoff">, geeCapabilityEvaluatorVersion = currentEvaluatorVersion</span>
+<span class="lineno">  873 </span><span class="spaces">  </span><span class="istickedoff">, geeSandboxVersion = currentEvaluatorVersion</span>
+<span class="lineno">  874 </span><span class="spaces">  </span><span class="istickedoff">, geeRollbackLink = Nothing</span>
+<span class="lineno">  875 </span><span class="spaces">  </span><span class="istickedoff">, geeBeforeRef = Just <span class="nottickedoff">(GovRefSnapshot &quot;base:before&quot;)</span></span>
+<span class="lineno">  876 </span><span class="spaces">  </span><span class="istickedoff">, geeAfterRef = Just <span class="nottickedoff">(GovRefSnapshot &quot;base:after&quot;)</span></span>
+<span class="lineno">  877 </span><span class="spaces">  </span><span class="istickedoff">, geeEffectRef = Just <span class="nottickedoff">(GovRefSnapshot &quot;base:effect&quot;)</span></span>
+<span class="lineno">  878 </span><span class="spaces">  </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  879 </span><span class="spaces">  </span><span class="istickedoff">, geePrevHash = Nothing</span>
+<span class="lineno">  880 </span><span class="spaces">  </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  881 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  882 </span>
+<span class="lineno">  883 </span>assertRight :: Show e =&gt; Either e a -&gt; IO a
+<span class="lineno">  884 </span><span class="decl"><span class="istickedoff">assertRight result =</span>
+<span class="lineno">  885 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  886 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (show err)</span></span>
+<span class="lineno">  887 </span><span class="spaces">    </span><span class="istickedoff">Right value -&gt; pure value</span></span>
+<span class="lineno">  888 </span>
+<span class="lineno">  889 </span>assertLeft :: String -&gt; Either e a -&gt; IO ()
+<span class="lineno">  890 </span><span class="decl"><span class="istickedoff">assertLeft label result =</span>
+<span class="lineno">  891 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  892 </span><span class="spaces">    </span><span class="istickedoff">Left _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  893 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt; <span class="nottickedoff">assertFailure label</span></span></span>
+<span class="lineno">  894 </span>
+<span class="lineno">  895 </span>assertLinePresent :: String -&gt; T.Text -&gt; [T.Text] -&gt; IO ()
+<span class="lineno">  896 </span><span class="decl"><span class="istickedoff">assertLinePresent label expected lines' =</span>
+<span class="lineno">  897 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">label</span> (expected `elem` lines')</span></span>
+<span class="lineno">  898 </span>
+<span class="lineno">  899 </span>positiveConatus :: ConatusEnergy
+<span class="lineno">  900 </span><span class="decl"><span class="istickedoff">positiveConatus = ConatusEnergy</span>
+<span class="lineno">  901 </span><span class="spaces">  </span><span class="istickedoff">{ ceScalar = 10.0</span>
+<span class="lineno">  902 </span><span class="spaces">  </span><span class="istickedoff">, ceComponents = ConatusComponents</span>
+<span class="lineno">  903 </span><span class="spaces">      </span><span class="istickedoff">{ ccMorphology = 0.0</span>
+<span class="lineno">  904 </span><span class="spaces">      </span><span class="istickedoff">, ccIdentity = 0.0</span>
+<span class="lineno">  905 </span><span class="spaces">      </span><span class="istickedoff">, ccTurns = 10.0</span>
+<span class="lineno">  906 </span><span class="spaces">      </span><span class="istickedoff">, ccPenalty = 0.0</span>
+<span class="lineno">  907 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  908 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,8 @@
+ 51% expressions used (221799/427187)
+ 34% boolean coverage (820/2352)
+      31% guards (464/1475), 282 always True, 433 always False, 296 unevaluated
+      39% 'if' conditions (312/793), 82 always True, 200 always False, 199 unevaluated
+      52% qualifiers (44/84), 20 always True, 6 always False, 14 unevaluated
+ 38% alternatives used (4658/12211)
+ 84% local declarations used (4062/4779)
+ 39% top-level declarations used (5767/14520)

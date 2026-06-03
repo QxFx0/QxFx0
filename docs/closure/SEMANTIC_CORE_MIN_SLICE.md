@@ -9,7 +9,7 @@
   - `docs/closure/REPLAY_GATE_SPEC.md` (Package 3)
   - `docs/closure/GF_AUTHORITY_SUBSET.md` (Package 4)
   - `docs/closure/COGNITIVE_MEMORY_DESIGN.md` (Package 7)
-  - `docs/closure/adr-0013-role-split.md` (Package 1)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (Package 1)
 
 ## 0. Why this slice exists
 
@@ -188,7 +188,7 @@ proves the **plumbing**, not the full retrieval.
   in-session only. The closure plan's Package 1 classifies the
   related `ssEssence` field as `canonical-flag-off`; semantic
   commitments follow the same pattern (deferred cross-session per
-  `docs/adr/proposed/0013-cross-session-essence-persistence.md`).
+  `docs/adr/proposed/0041-cross-session-essence-persistence.md`).
 - Distributed / multi-store semantics. The slice is single-session,
   single-store, in-memory with JSON-serialisable boundary.
 - Indexing beyond the simple HashMap. Package 7 adds indexing.
@@ -296,7 +296,7 @@ The minimal slice is closed when:
    A long session will grow the store. Package 7 introduces
    forgetting; the slice does not.
 3. **Cross-session provenance.** Out of scope; deferred per
-   `docs/adr/proposed/0013-cross-session-essence-persistence.md`.
+   `docs/adr/proposed/0041-cross-session-essence-persistence.md`.
 4. **Auto-commit policy.** The slice is manual at the call site.
    A future slice can introduce an auto-commit threshold (e.g.
    "if parser confidence ≥ 0.95, commit without orchestrator

@@ -33,6 +33,7 @@ import Test.Suite.ReplayGate (replayGateTests)
 import Test.Suite.TraceSchema (traceSchemaTests)
 import Test.Suite.RegenerableDerived (regenerableDerivedTests)
 import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
+import Test.Suite.RenderAuthorityStub (renderAuthorityStubTests)
 
 main :: IO ()
 main = do
@@ -62,10 +63,11 @@ main = do
              ++ phaseM2dTests
             ++ learningLoopTests
             ++ trainingCycleTests
-            ++ modelComparisonTests
-            ++ replayGateTests
-            ++ traceSchemaTests
-            ++ regenerableDerivedTests
+             ++ modelComparisonTests
+             ++ renderAuthorityStubTests
+             ++ replayGateTests
+             ++ traceSchemaTests
+             ++ regenerableDerivedTests
             ++ promotionFlagDisciplineTests
          )
   if errors testCounts + failures testCounts > 0

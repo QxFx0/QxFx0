@@ -1,0 +1,185 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Parser
+<span class="lineno">    9 </span>Description : WP4 — Parse external tool response into KnowledgeFruitPayload.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Supports strict JSON schema first; falls back to constrained text
+<span class="lineno">   12 </span>parsing only when the response body is not valid JSON.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>The JSON schema expected from an LLM (or script) is:
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>```json
+<span class="lineno">   17 </span>{
+<span class="lineno">   18 </span>  &quot;proposition&quot;: &quot;string&quot;,
+<span class="lineno">   19 </span>  &quot;word&quot;: &quot;string&quot;,
+<span class="lineno">   20 </span>  &quot;definition&quot;: &quot;string&quot;,
+<span class="lineno">   21 </span>  &quot;morphology&quot;: {
+<span class="lineno">   22 </span>    &quot;gender&quot;: &quot;masculine|feminine|neuter&quot;,
+<span class="lineno">   23 </span>    &quot;declension&quot;: &quot;first|second|...&quot;,
+<span class="lineno">   24 </span>    &quot;cases&quot;: {
+<span class="lineno">   25 </span>      &quot;nom&quot;: &quot;...&quot;, &quot;gen&quot;: &quot;...&quot;, &quot;dat&quot;: &quot;...&quot;,
+<span class="lineno">   26 </span>      &quot;acc&quot;: &quot;...&quot;, &quot;ins&quot;: &quot;...&quot;, &quot;pre&quot;: &quot;...&quot;
+<span class="lineno">   27 </span>    }
+<span class="lineno">   28 </span>  },
+<span class="lineno">   29 </span>  &quot;source&quot;: &quot;llm|human|script|internal&quot;,
+<span class="lineno">   30 </span>  &quot;conatusDelta&quot;: 0.0,
+<span class="lineno">   31 </span>  &quot;predictiveDelta&quot;: 0.0
+<span class="lineno">   32 </span>}
+<span class="lineno">   33 </span>```
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>All fields except @morphology@ are required.  Missing optional fields
+<span class="lineno">   36 </span>yield 'Nothing' / 'False' / '0.0' defaults.
+<span class="lineno">   37 </span>-}
+<span class="lineno">   38 </span>module QxFx0.Learning.Parser
+<span class="lineno">   39 </span>  ( parseLLMResponseToFruit
+<span class="lineno">   40 </span>  , parseStructuredTextToFruit
+<span class="lineno">   41 </span>  ) where
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>import Control.Applicative ((&lt;|&gt;))
+<span class="lineno">   44 </span>import Data.Aeson (FromJSON, ToJSON, Value(..), decodeStrict, withObject, (.:), (.:?), (.!=))
+<span class="lineno">   45 </span>import Data.Aeson.Types (Parser, parseEither)
+<span class="lineno">   46 </span>import Data.ByteString (ByteString)
+<span class="lineno">   47 </span>import qualified Data.ByteString.Lazy as LBS
+<span class="lineno">   48 </span>import Data.Char (isSpace)
+<span class="lineno">   49 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   50 </span>import Data.Text (Text)
+<span class="lineno">   51 </span>import qualified Data.Text as T
+<span class="lineno">   52 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   53 </span>import GHC.Generics (Generic)
+<span class="lineno">   54 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>import QxFx0.Learning.KnowledgeTree (KnowledgeSource(..))
+<span class="lineno">   57 </span>import QxFx0.Learning.Validator
+<span class="lineno">   58 </span>  ( KnowledgeFruitPayload(..)
+<span class="lineno">   59 </span>  , MorphologyPayload(..)
+<span class="lineno">   60 </span>  )
+<span class="lineno">   61 </span>import QxFx0.Types.ExternalQuery (ExternalQueryResponse(..))
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>-- | Top-level entry point: parse an 'ExternalQueryResponse' into a
+<span class="lineno">   64 </span>-- 'KnowledgeFruitPayload'.
+<span class="lineno">   65 </span>--
+<span class="lineno">   66 </span>-- 1. Try the structured field (already extracted JSON from Mistral
+<span class="lineno">   67 </span>--    chat-completion envelope).
+<span class="lineno">   68 </span>-- 2. Try the raw body as JSON.
+<span class="lineno">   69 </span>-- 3. Fallback to constrained text parsing.
+<span class="lineno">   70 </span>parseLLMResponseToFruit :: ExternalQueryResponse -&gt; Maybe KnowledgeFruitPayload
+<span class="lineno">   71 </span><span class="decl"><span class="istickedoff">parseLLMResponseToFruit resp =</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">-- First: try structured field (JSON inside the LLM content field)</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">parseJsonPayload (eqrStructured resp)</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">-- Second: try raw body (in case structured extraction failed)</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">&lt;|&gt; parseJsonPayload (eqrRawBody resp)</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">-- Third: fallback text parser</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">&lt;|&gt; parseStructuredTextToFruit (eqrRawBody resp)</span></span>
+<span class="lineno">   78 </span>
+<span class="lineno">   79 </span>-- | Parse a strict JSON payload.
+<span class="lineno">   80 </span>parseJsonPayload :: Text -&gt; Maybe KnowledgeFruitPayload
+<span class="lineno">   81 </span><span class="decl"><span class="istickedoff">parseJsonPayload txt =</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">case decodeStrict (TE.encodeUtf8 txt) of</span>
+<span class="lineno">   83 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; Nothing</span>
+<span class="lineno">   84 </span><span class="spaces">    </span><span class="istickedoff">Just val -&gt;</span>
+<span class="lineno">   85 </span><span class="spaces">      </span><span class="istickedoff">case parseEither parseFruitPayload val of</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">Left _  -&gt; Nothing</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">Right p -&gt; Just p</span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>parseFruitPayload :: Value -&gt; Parser KnowledgeFruitPayload
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">parseFruitPayload = withObject <span class="nottickedoff">&quot;KnowledgeFruitPayload&quot;</span> $ \o -&gt; do</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">prop      &lt;- o .:  &quot;proposition&quot;</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">word      &lt;- o .:  &quot;word&quot;</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">def       &lt;- o .:  &quot;definition&quot;</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">morphObj  &lt;- o .:? &quot;morphology&quot;</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">srcTag    &lt;- o .:? &quot;source&quot; .!= <span class="nottickedoff">&quot;llm&quot;</span></span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">cDelta    &lt;- o .:? &quot;conatusDelta&quot; .!= <span class="nottickedoff">0.0</span></span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">pDelta    &lt;- o .:? &quot;predictiveDelta&quot; .!= <span class="nottickedoff">0.0</span></span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">morph &lt;- case morphObj of</span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; pure Nothing</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">Just m  -&gt; Just &lt;$&gt; parseMorphologyPayload m</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">pure KnowledgeFruitPayload</span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="istickedoff">{ kfpProposition     = prop</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">, kfpWord            = word</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">, kfpDefinition      = def</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">, kfpMorphology      = morph</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">, kfpSource          = parseSourceTag srcTag</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">, kfpConatusDelta    = cDelta</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">, kfpPredictiveDelta = pDelta</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>parseMorphologyPayload :: Value -&gt; Parser MorphologyPayload
+<span class="lineno">  112 </span><span class="decl"><span class="istickedoff">parseMorphologyPayload = withObject <span class="nottickedoff">&quot;MorphologyPayload&quot;</span> $ \o -&gt;</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">MorphologyPayload</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">&lt;$&gt; o .:? &quot;gender&quot;</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">&lt;*&gt; o .:? &quot;declension&quot;</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">&lt;*&gt; o .:? &quot;cases&quot;</span></span>
+<span class="lineno">  117 </span>
+<span class="lineno">  118 </span>parseSourceTag :: Text -&gt; KnowledgeSource
+<span class="lineno">  119 </span><span class="decl"><span class="istickedoff">parseSourceTag &quot;llm&quot;      = SourceLLM</span>
+<span class="lineno">  120 </span><span class="spaces"></span><span class="istickedoff">parseSourceTag &quot;human&quot;    = <span class="nottickedoff">SourceHuman</span></span>
+<span class="lineno">  121 </span><span class="spaces"></span><span class="istickedoff">parseSourceTag &quot;script&quot;   = <span class="nottickedoff">SourceScript</span></span>
+<span class="lineno">  122 </span><span class="spaces"></span><span class="istickedoff">parseSourceTag &quot;internal&quot; = <span class="nottickedoff">SourceInternal</span></span>
+<span class="lineno">  123 </span><span class="spaces"></span><span class="istickedoff">parseSourceTag _          = <span class="nottickedoff">SourceLLM</span></span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>-- | Fallback constrained text parser.
+<span class="lineno">  126 </span>--
+<span class="lineno">  127 </span>-- Expects a very rigid format (one per line):
+<span class="lineno">  128 </span>--   Word: &lt;word&gt;
+<span class="lineno">  129 </span>--   Definition: &lt;definition&gt;
+<span class="lineno">  130 </span>--   Proposition: &lt;proposition&gt;
+<span class="lineno">  131 </span>--   ConatusDelta: &lt;float&gt;
+<span class="lineno">  132 </span>--   PredictiveDelta: &lt;float&gt;
+<span class="lineno">  133 </span>--
+<span class="lineno">  134 </span>-- If any required line is missing or malformed, returns 'Nothing'.
+<span class="lineno">  135 </span>parseStructuredTextToFruit :: Text -&gt; Maybe KnowledgeFruitPayload
+<span class="lineno">  136 </span><span class="decl"><span class="istickedoff">parseStructuredTextToFruit txt = do</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">let lines' = map T.strip (T.lines txt)</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">dict   = M.fromList</span>
+<span class="lineno">  139 </span><span class="spaces">                 </span><span class="istickedoff">[ (T.toLower (T.takeWhile (/= ':') line), T.strip (T.drop 1 (T.dropWhile (/= ':') line)))</span>
+<span class="lineno">  140 </span><span class="spaces">                 </span><span class="istickedoff">| line &lt;- lines'</span>
+<span class="lineno">  141 </span><span class="spaces">                 </span><span class="istickedoff">, T.isInfixOf &quot;:&quot; line</span>
+<span class="lineno">  142 </span><span class="spaces">                 </span><span class="istickedoff">]</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">word        &lt;- M.lookup (T.pack &quot;word&quot;) dict</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">definition  &lt;- <span class="nottickedoff">M.lookup (T.pack &quot;definition&quot;) dict</span></span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">proposition &lt;- <span class="nottickedoff">Just (fromMaybe word (M.lookup (T.pack &quot;proposition&quot;) dict))</span></span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">cDelta  = readDouble (fromMaybe &quot;0.0&quot; (M.lookup (T.pack &quot;conatusdelta&quot;) dict))</span></span>
+<span class="lineno">  147 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pDelta  = readDouble (fromMaybe &quot;0.0&quot; (M.lookup (T.pack &quot;predictivedelta&quot;) dict))</span></span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">pure KnowledgeFruitPayload</span></span>
+<span class="lineno">  149 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">{ kfpProposition     = proposition</span></span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpWord            = word</span></span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpDefinition      = definition</span></span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpMorphology      = Nothing</span></span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpSource          = SourceLLM</span></span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpConatusDelta    = cDelta</span></span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">, kfpPredictiveDelta = pDelta</span></span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>readDouble :: Text -&gt; Double
+<span class="lineno">  159 </span><span class="decl"><span class="nottickedoff">readDouble t =</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="nottickedoff">case reads (T.unpack (T.strip t)) of</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="nottickedoff">[(d, &quot;&quot;)] -&gt; d</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="nottickedoff">_         -&gt; 0.0</span></span>
+
+</pre>
+</body>
+</html>

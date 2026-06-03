@@ -1,0 +1,960 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE BangPatterns #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>{-| Finalize-stage construction of persisted state, projection, output, and final metrics. -}
+<span class="lineno">    6 </span>module QxFx0.Core.TurnPipeline.Finalize.State
+<span class="lineno">    7 </span>  ( buildNextSystemState
+<span class="lineno">    8 </span>  , buildTurnProjection
+<span class="lineno">    9 </span>  , buildFinalOutput
+<span class="lineno">   10 </span>  , finalizeMetrics
+<span class="lineno">   11 </span>  , computeEssenceValidation
+<span class="lineno">   12 </span>  ) where
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>import QxFx0.Types
+<span class="lineno">   15 </span>import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
+<span class="lineno">   16 </span>import QxFx0.Types.ExternalQuery (renderExternalQueryError)
+<span class="lineno">   17 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   18 </span>  ( legitimacyPassThreshold
+<span class="lineno">   19 </span>  , legitimacyRecoveryThreshold
+<span class="lineno">   20 </span>  , parserLowConfidenceThreshold
+<span class="lineno">   21 </span>  , scenePressureLowThreshold
+<span class="lineno">   22 </span>  , scenePressureMediumThreshold
+<span class="lineno">   23 </span>  , ScenePressure(..)
+<span class="lineno">   24 </span>  , LegitimacyStatus(..)
+<span class="lineno">   25 </span>  , blockedConceptsRetentionLimit
+<span class="lineno">   26 </span>  , recentFamiliesLimit
+<span class="lineno">   27 </span>  , rawInputHistoryLimit
+<span class="lineno">   28 </span>  )
+<span class="lineno">   29 </span>import QxFx0.Core.TurnPipeline.Types
+<span class="lineno">   30 </span>import QxFx0.Core.TurnRender (updateStateNixCache)
+<span class="lineno">   31 </span>import qualified QxFx0.Core.Guard as Guard
+<span class="lineno">   32 </span>import QxFx0.Core.TurnLegitimacy (safeOutputText)
+<span class="lineno">   33 </span>import QxFx0.Core.Observability
+<span class="lineno">   34 </span>import QxFx0.Core.TruthContract (truthContractIsAuthoritative, replayProvenanceStatusForOutcome, normalizedReplayProvenanceStatus)
+<span class="lineno">   35 </span>import QxFx0.Core.Intuition (IntuitiveFlash(..))
+<span class="lineno">   36 </span>import QxFx0.Render.Semantic (renderSemanticIntrospection)
+<span class="lineno">   37 </span>import QxFx0.Semantic.Embedding (embeddingQualityText)
+<span class="lineno">   38 </span>import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
+<span class="lineno">   39 </span>import QxFx0.Semantic.Proposition (parseProposition)
+<span class="lineno">   40 </span>import QxFx0.Self.Salience
+<span class="lineno">   41 </span>  ( Salience (..)
+<span class="lineno">   42 </span>  , SalienceWeights(..)
+<span class="lineno">   43 </span>  , renderSalienceDriver
+<span class="lineno">   44 </span>  , salienceFromConatusEnergy
+<span class="lineno">   45 </span>  , isHolisticFamily
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>import QxFx0.Self.Deliberation
+<span class="lineno">   48 </span>  ( renderAgreement
+<span class="lineno">   49 </span>  , renderReconcileRule
+<span class="lineno">   50 </span>  , renderNarrativeTone
+<span class="lineno">   51 </span>  , Deliberation(..)
+<span class="lineno">   52 </span>  , DeliberationTrace(..)
+<span class="lineno">   53 </span>  , Plan(..)
+<span class="lineno">   54 </span>  , defaultDeliberation
+<span class="lineno">   55 </span>  )
+<span class="lineno">   56 </span>import QxFx0.Self.Essence
+<span class="lineno">   57 </span>  ( Essence(..)
+<span class="lineno">   58 </span>  , EssenceMode (..)
+<span class="lineno">   59 </span>  , EssenceTrajectory (..)
+<span class="lineno">   60 </span>  , EssenceCommitment (..)
+<span class="lineno">   61 </span>  , CommitmentTrigger (..)
+<span class="lineno">   62 </span>  , EssenceViolation(..)
+<span class="lineno">   63 </span>  , defaultEssenceModulation
+<span class="lineno">   64 </span>  , renderEssenceMode
+<span class="lineno">   65 </span>  , renderCommitmentTrigger
+<span class="lineno">   66 </span>  , shouldCommit
+<span class="lineno">   67 </span>  , commit
+<span class="lineno">   68 </span>  , validatePlan
+<span class="lineno">   69 </span>  , witness
+<span class="lineno">   70 </span>  )
+<span class="lineno">   71 </span>import QxFx0.Self.Salience (adaptSalienceWeights)
+<span class="lineno">   72 </span>import QxFx0.Self.Perspective (buildActivePerspectiveProjections)
+<span class="lineno">   73 </span>import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..))
+<span class="lineno">   74 </span>import QxFx0.Learning.Need
+<span class="lineno">   75 </span>  ( detectLearningNeedWithPressure
+<span class="lineno">   76 </span>  , defaultLearningPressureConfig
+<span class="lineno">   77 </span>  , LearningNeed(..)
+<span class="lineno">   78 </span>  , LearningNeedState(..)
+<span class="lineno">   79 </span>  , renderLearningNeed
+<span class="lineno">   80 </span>  )
+<span class="lineno">   81 </span>import QxFx0.Learning.Calibration
+<span class="lineno">   82 </span>  ( CalibrationId(..)
+<span class="lineno">   83 </span>  , CalibrationEntry(..)
+<span class="lineno">   84 </span>  , CalibrationLog(..)
+<span class="lineno">   85 </span>  , CalibrationProposal(..)
+<span class="lineno">   86 </span>  , acceptProposal
+<span class="lineno">   87 </span>  , currentCalibrationVersion
+<span class="lineno">   88 </span>  )
+<span class="lineno">   89 </span>import QxFx0.Learning.Signal
+<span class="lineno">   90 </span>  ( CalibrationDecision(..)
+<span class="lineno">   91 </span>  , CalibrationSignal(..)
+<span class="lineno">   92 </span>  , CalibrationSnapshot(..)
+<span class="lineno">   93 </span>  , SignalComponents(..)
+<span class="lineno">   94 </span>  , applyCalibrationGated
+<span class="lineno">   95 </span>  , computeCalibrationSignal
+<span class="lineno">   96 </span>  , defaultSignalPipelineConfig
+<span class="lineno">   97 </span>  , emptySignalComponents
+<span class="lineno">   98 </span>  )
+<span class="lineno">   99 </span>import QxFx0.Learning.KnowledgeTree
+<span class="lineno">  100 </span>  ( KnowledgeTree(..)
+<span class="lineno">  101 </span>  , emptyKnowledgeTree
+<span class="lineno">  102 </span>  , graftFruit
+<span class="lineno">  103 </span>  , quarantineFruit
+<span class="lineno">  104 </span>  , promoteFromQuarantine
+<span class="lineno">  105 </span>  , pruneBranches
+<span class="lineno">  106 </span>  , pruneFruits
+<span class="lineno">  107 </span>  , rootStressSignal
+<span class="lineno">  108 </span>  , isTermKnownInKnowledgeTree
+<span class="lineno">  109 </span>  , ktGraftedCount
+<span class="lineno">  110 </span>  )
+<span class="lineno">  111 </span>import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
+<span class="lineno">  112 </span>import QxFx0.Self.Essence
+<span class="lineno">  113 </span>  ( EssenceCommitment(..)
+<span class="lineno">  114 </span>  , EssenceMode(..)
+<span class="lineno">  115 </span>  , renderEssenceMode
+<span class="lineno">  116 </span>  , renderCommitmentTrigger
+<span class="lineno">  117 </span>  )
+<span class="lineno">  118 </span>import QxFx0.Semantic.AtomAccretion
+<span class="lineno">  119 </span>  ( observeNovelAtom
+<span class="lineno">  120 </span>  , promoteProvisionalAtoms
+<span class="lineno">  121 </span>  , decayProvisionalAtoms
+<span class="lineno">  122 </span>  , resolveCollisions
+<span class="lineno">  123 </span>  )
+<span class="lineno">  124 </span>import QxFx0.Types.Text (textShow)
+<span class="lineno">  125 </span>import QxFx0.Types.State.DialogueDevelopment
+<span class="lineno">  126 </span>  ( CommitmentStatus(..)
+<span class="lineno">  127 </span>  , DialogueCommitment(..)
+<span class="lineno">  128 </span>  , DialogueCommitmentLedger(..)
+<span class="lineno">  129 </span>  , DialoguePhase(..)
+<span class="lineno">  130 </span>  , DialogueThread(..)
+<span class="lineno">  131 </span>  )
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">  134 </span>import Control.Applicative ((&lt;|&gt;))
+<span class="lineno">  135 </span>import Data.Sequence (Seq)
+<span class="lineno">  136 </span>import qualified Data.Foldable as F
+<span class="lineno">  137 </span>import qualified Data.Set as Set
+<span class="lineno">  138 </span>import Data.Text (Text)
+<span class="lineno">  139 </span>import qualified Data.Text as T
+<span class="lineno">  140 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>-- | Local helper: derive the canonical pre-turn Salience verdict
+<span class="lineno">  143 </span>-- from a 'TurnInput'.  Used by both 'buildNextSystemState' (for
+<span class="lineno">  144 </span>-- 'dsLastSalienceBias' on the persisted state) and
+<span class="lineno">  145 </span>-- 'buildTurnProjection' (for the @trcSalience*@ trace fields).
+<span class="lineno">  146 </span>-- Computed identically in both call sites; centralised here so
+<span class="lineno">  147 </span>-- they cannot drift.
+<span class="lineno">  148 </span>turnInputSalience :: TurnInput -&gt; Salience
+<span class="lineno">  149 </span><span class="decl"><span class="istickedoff">turnInputSalience ti = salienceFromConatusEnergy (tiConatusEnergy ti) (tiField ti)</span></span>
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>-- | WP1 (contour closure): validate the reconciled 'Plan' against a
+<span class="lineno">  152 </span>-- pre-turn committed essence.  Only runs when the pre-turn state
+<span class="lineno">  153 </span>-- is already 'EssenceCommitted' — the commitment itself is law-driven
+<span class="lineno">  154 </span>-- in 'buildNextSystemState' and does not depend on a feature flag.
+<span class="lineno">  155 </span>computeEssenceValidation
+<span class="lineno">  156 </span>  :: TurnInput
+<span class="lineno">  157 </span>  -&gt; TurnPlan
+<span class="lineno">  158 </span>  -&gt; Essence          -- ^ post-'buildNextSystemState' essence
+<span class="lineno">  159 </span>  -&gt; Maybe CommitmentTrigger
+<span class="lineno">  160 </span>  -&gt; Either EssenceViolation ()
+<span class="lineno">  161 </span><span class="decl"><span class="istickedoff">computeEssenceValidation ti tp nextEssence mTrigger =</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">case (mTrigger, nextEssence) of</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">(Just trigger, EssenceUncommitted _) -&gt;</span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">Left (ViolationRefusedCommitment trigger)</span></span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">(_, EssenceCommitted _ commitment)</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">| Just delib &lt;- <span class="nottickedoff">tpDeliberation tp</span></span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">-&gt; <span class="nottickedoff">case validatePlan commitment (delibReconciled delib) of</span></span>
+<span class="lineno">  168 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">Right _ -&gt; Right ()</span></span>
+<span class="lineno">  169 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">Left v  -&gt; Left v</span></span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; Right ()</span></span>
+<span class="lineno">  171 </span>
+<span class="lineno">  172 </span>selfTuningMutationRecords
+<span class="lineno">  173 </span>  :: Int
+<span class="lineno">  174 </span>  -&gt; Double
+<span class="lineno">  175 </span>  -&gt; SignalComponents
+<span class="lineno">  176 </span>  -&gt; SalienceWeights
+<span class="lineno">  177 </span>  -&gt; FieldHeuristics
+<span class="lineno">  178 </span>  -&gt; SalienceWeights
+<span class="lineno">  179 </span>  -&gt; FieldHeuristics
+<span class="lineno">  180 </span>  -&gt; [AdaptiveMutationRecord]
+<span class="lineno">  181 </span><span class="decl"><span class="nottickedoff">selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights oldHeuristics =</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="nottickedoff">salienceRecord &lt;&gt; fieldRecord</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  184 </span><span class="spaces">    </span><span class="nottickedoff">signalEvidence =</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="nottickedoff">[ &quot;signal=&quot; &lt;&gt; textShow signal</span>
+<span class="lineno">  186 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;conatus=&quot; &lt;&gt; textShow (scConatusTrend comps)</span>
+<span class="lineno">  187 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;uncertainty=&quot; &lt;&gt; textShow (scUncertaintyTrend comps)</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;loop=&quot; &lt;&gt; textShow (scLoopRisk comps)</span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;branch=&quot; &lt;&gt; textShow (scBranchHealthTrend comps)</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="nottickedoff">]</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="nottickedoff">strength = if abs signal &gt;= 0.15 then EvidenceStrong else EvidenceWeak</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="nottickedoff">decision = if abs signal &gt;= 0.15 then AdaptiveAccepted else AdaptiveObserved</span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="nottickedoff">salienceDelta = salienceWeightsMaxDelta oldWeights newWeights</span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="nottickedoff">fieldDelta = fieldHeuristicsMaxDelta oldHeuristics newHeuristics</span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="nottickedoff">salienceRecord =</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="nottickedoff">if oldWeights == newWeights</span>
+<span class="lineno">  197 </span><span class="spaces">        </span><span class="nottickedoff">then []</span>
+<span class="lineno">  198 </span><span class="spaces">        </span><span class="nottickedoff">else</span>
+<span class="lineno">  199 </span><span class="spaces">          </span><span class="nottickedoff">[ AdaptiveMutationRecord</span>
+<span class="lineno">  200 </span><span class="spaces">              </span><span class="nottickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  201 </span><span class="spaces">              </span><span class="nottickedoff">, amrKind = MutSalienceWeights</span>
+<span class="lineno">  202 </span><span class="spaces">              </span><span class="nottickedoff">, amrCause = &quot;finalize:bounded_salience_adaptation&quot;</span>
+<span class="lineno">  203 </span><span class="spaces">              </span><span class="nottickedoff">, amrEvidence = signalEvidence</span>
+<span class="lineno">  204 </span><span class="spaces">              </span><span class="nottickedoff">, amrEvidenceStrength = strength</span>
+<span class="lineno">  205 </span><span class="spaces">              </span><span class="nottickedoff">, amrConfidence = min 1.0 (abs signal)</span>
+<span class="lineno">  206 </span><span class="spaces">              </span><span class="nottickedoff">, amrBoundedDelta = Just salienceDelta</span>
+<span class="lineno">  207 </span><span class="spaces">              </span><span class="nottickedoff">, amrDecision = decision</span>
+<span class="lineno">  208 </span><span class="spaces">              </span><span class="nottickedoff">}</span>
+<span class="lineno">  209 </span><span class="spaces">          </span><span class="nottickedoff">]</span>
+<span class="lineno">  210 </span><span class="spaces">    </span><span class="nottickedoff">fieldRecord =</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="nottickedoff">if oldHeuristics == newHeuristics</span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="nottickedoff">then []</span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="nottickedoff">else</span>
+<span class="lineno">  214 </span><span class="spaces">          </span><span class="nottickedoff">[ AdaptiveMutationRecord</span>
+<span class="lineno">  215 </span><span class="spaces">              </span><span class="nottickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  216 </span><span class="spaces">              </span><span class="nottickedoff">, amrKind = MutFieldHeuristics</span>
+<span class="lineno">  217 </span><span class="spaces">              </span><span class="nottickedoff">, amrCause = &quot;finalize:bounded_field_heuristics_adaptation&quot;</span>
+<span class="lineno">  218 </span><span class="spaces">              </span><span class="nottickedoff">, amrEvidence = signalEvidence</span>
+<span class="lineno">  219 </span><span class="spaces">              </span><span class="nottickedoff">, amrEvidenceStrength = strength</span>
+<span class="lineno">  220 </span><span class="spaces">              </span><span class="nottickedoff">, amrConfidence = min 1.0 (abs signal)</span>
+<span class="lineno">  221 </span><span class="spaces">              </span><span class="nottickedoff">, amrBoundedDelta = Just fieldDelta</span>
+<span class="lineno">  222 </span><span class="spaces">              </span><span class="nottickedoff">, amrDecision = decision</span>
+<span class="lineno">  223 </span><span class="spaces">              </span><span class="nottickedoff">}</span>
+<span class="lineno">  224 </span><span class="spaces">          </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  225 </span>
+<span class="lineno">  226 </span>knowledgeMaintenanceMutationRecords :: Int -&gt; Int -&gt; Int -&gt; [AdaptiveMutationRecord]
+<span class="lineno">  227 </span><span class="decl"><span class="nottickedoff">knowledgeMaintenanceMutationRecords turn prunedBranches prunedFruits =</span>
+<span class="lineno">  228 </span><span class="spaces">  </span><span class="nottickedoff">if prunedBranches &lt;= 0 &amp;&amp; prunedFruits &lt;= 0</span>
+<span class="lineno">  229 </span><span class="spaces">    </span><span class="nottickedoff">then []</span>
+<span class="lineno">  230 </span><span class="spaces">    </span><span class="nottickedoff">else</span>
+<span class="lineno">  231 </span><span class="spaces">      </span><span class="nottickedoff">[ AdaptiveMutationRecord</span>
+<span class="lineno">  232 </span><span class="spaces">          </span><span class="nottickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  233 </span><span class="spaces">          </span><span class="nottickedoff">, amrKind = MutKnowledgeTree</span>
+<span class="lineno">  234 </span><span class="spaces">          </span><span class="nottickedoff">, amrCause = &quot;finalize:knowledge_tree_maintenance&quot;</span>
+<span class="lineno">  235 </span><span class="spaces">          </span><span class="nottickedoff">, amrEvidence =</span>
+<span class="lineno">  236 </span><span class="spaces">              </span><span class="nottickedoff">[ &quot;pruned_branches=&quot; &lt;&gt; textShow prunedBranches</span>
+<span class="lineno">  237 </span><span class="spaces">              </span><span class="nottickedoff">, &quot;pruned_fruits=&quot; &lt;&gt; textShow prunedFruits</span>
+<span class="lineno">  238 </span><span class="spaces">              </span><span class="nottickedoff">]</span>
+<span class="lineno">  239 </span><span class="spaces">          </span><span class="nottickedoff">, amrEvidenceStrength = EvidenceStrong</span>
+<span class="lineno">  240 </span><span class="spaces">          </span><span class="nottickedoff">, amrConfidence = 1.0</span>
+<span class="lineno">  241 </span><span class="spaces">          </span><span class="nottickedoff">, amrBoundedDelta = Just (fromIntegral (prunedBranches + prunedFruits))</span>
+<span class="lineno">  242 </span><span class="spaces">          </span><span class="nottickedoff">, amrDecision = AdaptiveRejected</span>
+<span class="lineno">  243 </span><span class="spaces">          </span><span class="nottickedoff">}</span>
+<span class="lineno">  244 </span><span class="spaces">      </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>quarantinePromotionMutationRecords :: Int -&gt; Int -&gt; [AdaptiveMutationRecord]
+<span class="lineno">  247 </span><span class="decl"><span class="nottickedoff">quarantinePromotionMutationRecords turn promotedCount</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="nottickedoff">| promotedCount &lt;= 0 = []</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise =</span>
+<span class="lineno">  250 </span><span class="spaces">      </span><span class="nottickedoff">[ AdaptiveMutationRecord</span>
+<span class="lineno">  251 </span><span class="spaces">          </span><span class="nottickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  252 </span><span class="spaces">          </span><span class="nottickedoff">, amrKind = MutKnowledgeTree</span>
+<span class="lineno">  253 </span><span class="spaces">          </span><span class="nottickedoff">, amrCause = &quot;finalize:knowledge_tree_quarantine_promotion&quot;</span>
+<span class="lineno">  254 </span><span class="spaces">          </span><span class="nottickedoff">, amrEvidence = [&quot;promoted_from_quarantine=&quot; &lt;&gt; textShow promotedCount]</span>
+<span class="lineno">  255 </span><span class="spaces">          </span><span class="nottickedoff">, amrEvidenceStrength = EvidenceModerate</span>
+<span class="lineno">  256 </span><span class="spaces">          </span><span class="nottickedoff">, amrConfidence = 0.75</span>
+<span class="lineno">  257 </span><span class="spaces">          </span><span class="nottickedoff">, amrBoundedDelta = Just (fromIntegral promotedCount)</span>
+<span class="lineno">  258 </span><span class="spaces">          </span><span class="nottickedoff">, amrDecision = AdaptivePromoted</span>
+<span class="lineno">  259 </span><span class="spaces">          </span><span class="nottickedoff">}</span>
+<span class="lineno">  260 </span><span class="spaces">      </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  261 </span>
+<span class="lineno">  262 </span>appendCalibrationEntries :: Int -&gt; CalibrationLog -&gt; [Maybe CalibrationProposal] -&gt; CalibrationLog
+<span class="lineno">  263 </span><span class="decl"><span class="nottickedoff">appendCalibrationEntries turn (CalibrationLog existing) proposals =</span>
+<span class="lineno">  264 </span><span class="spaces">  </span><span class="nottickedoff">let concrete = [ proposal | Just proposal &lt;- proposals ]</span>
+<span class="lineno">  265 </span><span class="spaces">      </span><span class="nottickedoff">nextBase = maybe 1 ((+ 1) . unCalibrationId . ceId) (safeLastEntry existing)</span>
+<span class="lineno">  266 </span><span class="spaces">      </span><span class="nottickedoff">prevId = currentCalibrationVersion (CalibrationLog existing)</span>
+<span class="lineno">  267 </span><span class="spaces">      </span><span class="nottickedoff">step (entries, nextId, previous) proposal =</span>
+<span class="lineno">  268 </span><span class="spaces">        </span><span class="nottickedoff">let (entry, CalibrationId nextRaw) = acceptProposal (CalibrationId nextId) proposal turn previous</span>
+<span class="lineno">  269 </span><span class="spaces">        </span><span class="nottickedoff">in (entries ++ [entry], nextRaw, Just (ceId entry))</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="nottickedoff">(newEntries, _, _) = foldl step ([], nextBase, prevId) concrete</span>
+<span class="lineno">  271 </span><span class="spaces">  </span><span class="nottickedoff">in CalibrationLog (existing ++ newEntries)</span>
+<span class="lineno">  272 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="nottickedoff">safeLastEntry [] = Nothing</span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="nottickedoff">safeLastEntry xs = foldl (\_ entry -&gt; Just entry) Nothing xs</span></span>
+<span class="lineno">  275 </span>
+<span class="lineno">  276 </span>calibrationMutationRecord :: Int -&gt; CalibrationDecision -&gt; Double -&gt; SignalComponents -&gt; AdaptiveMutationRecord
+<span class="lineno">  277 </span><span class="decl"><span class="nottickedoff">calibrationMutationRecord turn decision signal comps = AdaptiveMutationRecord</span>
+<span class="lineno">  278 </span><span class="spaces">  </span><span class="nottickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="nottickedoff">, amrKind = MutCalibration</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="nottickedoff">, amrCause = &quot;finalize:calibration_signal&quot;</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="nottickedoff">, amrEvidence =</span>
+<span class="lineno">  282 </span><span class="spaces">      </span><span class="nottickedoff">[ &quot;decision=&quot; &lt;&gt; renderCalibrationDecision decision</span>
+<span class="lineno">  283 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;signal=&quot; &lt;&gt; textShow signal</span>
+<span class="lineno">  284 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;conatus=&quot; &lt;&gt; textShow (scConatusTrend comps)</span>
+<span class="lineno">  285 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;uncertainty=&quot; &lt;&gt; textShow (scUncertaintyTrend comps)</span>
+<span class="lineno">  286 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;loop=&quot; &lt;&gt; textShow (scLoopRisk comps)</span>
+<span class="lineno">  287 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;branch=&quot; &lt;&gt; textShow (scBranchHealthTrend comps)</span>
+<span class="lineno">  288 </span><span class="spaces">      </span><span class="nottickedoff">]</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="nottickedoff">, amrEvidenceStrength = if abs signal &gt;= 0.15 then EvidenceStrong else EvidenceWeak</span>
+<span class="lineno">  290 </span><span class="spaces">  </span><span class="nottickedoff">, amrConfidence = min 1.0 (abs signal)</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="nottickedoff">, amrBoundedDelta = Just 1.0</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="nottickedoff">, amrDecision = adaptiveDecisionForCalibration decision</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  294 </span>
+<span class="lineno">  295 </span>adaptiveDecisionForCalibration :: CalibrationDecision -&gt; AdaptiveDecision
+<span class="lineno">  296 </span><span class="decl"><span class="nottickedoff">adaptiveDecisionForCalibration decision =</span>
+<span class="lineno">  297 </span><span class="spaces">  </span><span class="nottickedoff">case decision of</span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="nottickedoff">CdApplySignal -&gt; AdaptiveAccepted</span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldLowConfidence -&gt; AdaptiveObserved</span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldGuardrails -&gt; AdaptiveRejected</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldNoNeed -&gt; AdaptiveObserved</span></span>
+<span class="lineno">  302 </span>
+<span class="lineno">  303 </span>renderCalibrationDecision :: CalibrationDecision -&gt; Text
+<span class="lineno">  304 </span><span class="decl"><span class="nottickedoff">renderCalibrationDecision decision =</span>
+<span class="lineno">  305 </span><span class="spaces">  </span><span class="nottickedoff">case decision of</span>
+<span class="lineno">  306 </span><span class="spaces">    </span><span class="nottickedoff">CdApplySignal -&gt; &quot;apply_signal&quot;</span>
+<span class="lineno">  307 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldLowConfidence -&gt; &quot;hold_low_confidence&quot;</span>
+<span class="lineno">  308 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldGuardrails -&gt; &quot;hold_guardrails&quot;</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="nottickedoff">CdHoldNoNeed -&gt; &quot;hold_no_need&quot;</span></span>
+<span class="lineno">  310 </span>
+<span class="lineno">  311 </span>salienceWeightsMaxDelta :: SalienceWeights -&gt; SalienceWeights -&gt; Double
+<span class="lineno">  312 </span><span class="decl"><span class="nottickedoff">salienceWeightsMaxDelta old new = maximumOrZero</span>
+<span class="lineno">  313 </span><span class="spaces">  </span><span class="nottickedoff">[ abs (weightResonance new - weightResonance old)</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="nottickedoff">, abs (weightAtmosphere new - weightAtmosphere old)</span>
+<span class="lineno">  315 </span><span class="spaces">  </span><span class="nottickedoff">, abs (weightConsolidation new - weightConsolidation old)</span>
+<span class="lineno">  316 </span><span class="spaces">  </span><span class="nottickedoff">, abs (weightCounterfactual new - weightCounterfactual old)</span>
+<span class="lineno">  317 </span><span class="spaces">  </span><span class="nottickedoff">, abs (weightFieldConfidence new - weightFieldConfidence old)</span>
+<span class="lineno">  318 </span><span class="spaces">  </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  319 </span>
+<span class="lineno">  320 </span>fieldHeuristicsMaxDelta :: FieldHeuristics -&gt; FieldHeuristics -&gt; Double
+<span class="lineno">  321 </span><span class="decl"><span class="nottickedoff">fieldHeuristicsMaxDelta old new = maximumOrZero</span>
+<span class="lineno">  322 </span><span class="spaces">  </span><span class="nottickedoff">[ abs (fhDefaultNarrativeRate new - fhDefaultNarrativeRate old)</span>
+<span class="lineno">  323 </span><span class="spaces">  </span><span class="nottickedoff">, abs (fhTopicStabilityBoost new - fhTopicStabilityBoost old)</span>
+<span class="lineno">  324 </span><span class="spaces">  </span><span class="nottickedoff">, abs (fhHolisticStreakBoostRate new - fhHolisticStreakBoostRate old)</span>
+<span class="lineno">  325 </span><span class="spaces">  </span><span class="nottickedoff">, abs (fhHolisticStreakBoostCap new - fhHolisticStreakBoostCap old)</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="nottickedoff">, abs (fhLegitimacyMidpoint new - fhLegitimacyMidpoint old)</span>
+<span class="lineno">  327 </span><span class="spaces">  </span><span class="nottickedoff">, abs (fhLegitimacyBonusScale new - fhLegitimacyBonusScale old)</span>
+<span class="lineno">  328 </span><span class="spaces">  </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  329 </span>
+<span class="lineno">  330 </span>maximumOrZero :: [Double] -&gt; Double
+<span class="lineno">  331 </span><span class="decl"><span class="nottickedoff">maximumOrZero = foldr max 0.0</span></span>
+<span class="lineno">  332 </span>
+<span class="lineno">  333 </span>buildNextSystemState :: (Text -&gt; Seq Text -&gt; Seq Text) -&gt; SystemState -&gt; TurnInput -&gt; TurnSignals -&gt; TurnPlan -&gt; TurnArtifacts -&gt; DreamState -&gt; MeaningGraph -&gt; CanonicalMoveFamily -&gt; R5Verdict -&gt; Int -&gt; (SystemState, Maybe CommitmentTrigger)
+<span class="lineno">  334 </span><span class="decl"><span class="istickedoff">buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =</span>
+<span class="lineno">  335 </span><span class="spaces">  </span><span class="istickedoff">let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)</span>
+<span class="lineno">  336 </span><span class="spaces">      </span><span class="istickedoff">updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))</span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff">turnSalience = turnInputSalience ti</span>
+<span class="lineno">  338 </span><span class="spaces">      </span><span class="istickedoff">newHolisticStreak = if isHolisticFamily outcomeFamily then ssHolisticStreak ss + 1 else 0</span>
+<span class="lineno">  339 </span><span class="spaces">      </span><span class="istickedoff">narrativeSuccess = maybe <span class="nottickedoff">False</span> (not . T.null) (tsNarrativeFragment ts)</span>
+<span class="lineno">  340 </span><span class="spaces">      </span><span class="istickedoff">newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)</span>
+<span class="lineno">  341 </span><span class="spaces">      </span><span class="istickedoff">-- WP1 (contour closure): law-driven commitment.</span>
+<span class="lineno">  342 </span><span class="spaces">      </span><span class="istickedoff">-- 'shouldCommit' is always evaluated; no feature flag.</span>
+<span class="lineno">  343 </span><span class="spaces">      </span><span class="istickedoff">-- The trigger (if any) is exposed for downstream validation.</span>
+<span class="lineno">  344 </span><span class="spaces">      </span><span class="istickedoff">(nextEssence, commitmentTrigger) =</span>
+<span class="lineno">  345 </span><span class="spaces">        </span><span class="istickedoff">case tiEssence ti of</span>
+<span class="lineno">  346 </span><span class="spaces">          </span><span class="istickedoff">EssenceUncommitted trajectory -&gt;</span>
+<span class="lineno">  347 </span><span class="spaces">            </span><span class="istickedoff">let trajectory' =</span>
+<span class="lineno">  348 </span><span class="spaces">                  </span><span class="istickedoff">witness</span>
+<span class="lineno">  349 </span><span class="spaces">                    </span><span class="istickedoff">defaultEssenceModulation</span>
+<span class="lineno">  350 </span><span class="spaces">                    </span><span class="istickedoff">(ssTurnCount ss + 1)</span>
+<span class="lineno">  351 </span><span class="spaces">                    </span><span class="istickedoff">(tiConatusEnergy ti)</span>
+<span class="lineno">  352 </span><span class="spaces">                    </span><span class="istickedoff">(tiField ti)</span>
+<span class="lineno">  353 </span><span class="spaces">                    </span><span class="istickedoff">(fromMaybe <span class="nottickedoff">defaultDeliberation</span> (tpDeliberation tp))</span>
+<span class="lineno">  354 </span><span class="spaces">                    </span><span class="istickedoff">trajectory</span>
+<span class="lineno">  355 </span><span class="spaces">            </span><span class="istickedoff">in case shouldCommit defaultEssenceModulation trajectory' of</span>
+<span class="lineno">  356 </span><span class="spaces">                 </span><span class="istickedoff">Nothing      -&gt; (EssenceUncommitted trajectory', Nothing)</span>
+<span class="lineno">  357 </span><span class="spaces">                 </span><span class="istickedoff">Just trigger -&gt;</span>
+<span class="lineno">  358 </span><span class="spaces">                   </span><span class="istickedoff"><span class="nottickedoff">( EssenceCommitted</span></span>
+<span class="lineno">  359 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">trajectory'</span></span>
+<span class="lineno">  360 </span><span class="spaces">                       </span><span class="istickedoff"><span class="nottickedoff">(commit (ssTurnCount ss + 1) trigger trajectory')</span></span>
+<span class="lineno">  361 </span><span class="spaces">                   </span><span class="istickedoff"><span class="nottickedoff">, Just trigger</span></span>
+<span class="lineno">  362 </span><span class="spaces">                   </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  363 </span><span class="spaces">          </span><span class="istickedoff">EssenceCommitted trajectory commitment -&gt;</span>
+<span class="lineno">  364 </span><span class="spaces">             </span><span class="istickedoff">-- Sticky: committed essences are never reverted. We still</span>
+<span class="lineno">  365 </span><span class="spaces">             </span><span class="istickedoff">-- ingest a witness so etAngstLevel/etConatusFloor track</span>
+<span class="lineno">  366 </span><span class="spaces">             </span><span class="istickedoff">-- post-commit deliberation for diagnostics.</span>
+<span class="lineno">  367 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">let trajectory' =</span></span>
+<span class="lineno">  368 </span><span class="spaces">                   </span><span class="istickedoff"><span class="nottickedoff">witness</span></span>
+<span class="lineno">  369 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">defaultEssenceModulation</span></span>
+<span class="lineno">  370 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">(ssTurnCount ss + 1)</span></span>
+<span class="lineno">  371 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">(tiConatusEnergy ti)</span></span>
+<span class="lineno">  372 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">(tiField ti)</span></span>
+<span class="lineno">  373 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">(fromMaybe defaultDeliberation (tpDeliberation tp))</span></span>
+<span class="lineno">  374 </span><span class="spaces">                     </span><span class="istickedoff"><span class="nottickedoff">trajectory</span></span>
+<span class="lineno">  375 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">in (EssenceCommitted trajectory' commitment, Nothing)</span></span>
+<span class="lineno">  376 </span><span class="spaces">      </span><span class="istickedoff">-- Phase 7: bounded calibration signal + rooted tree maintenance.</span>
+<span class="lineno">  377 </span><span class="spaces">      </span><span class="istickedoff">-- Compute signal from conatus trend, uncertainty, loop risk,</span>
+<span class="lineno">  378 </span><span class="spaces">      </span><span class="istickedoff">-- and branch health.  Only adapt when committed.</span>
+<span class="lineno">  379 </span><span class="spaces">      </span><span class="istickedoff">(adaptedWeights, adaptedHeuristics, nextTree, calibrationSnapshots, nextCalibrationLog, adaptiveRecords) =</span>
+<span class="lineno">  380 </span><span class="spaces">        </span><span class="istickedoff">case nextEssence of</span>
+<span class="lineno">  381 </span><span class="spaces">          </span><span class="istickedoff">EssenceCommitted _ commitment -&gt;</span>
+<span class="lineno">  382 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">let -- Extract counterfactual from the pre-turn Field</span></span>
+<span class="lineno">  383 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">counterfactual =</span></span>
+<span class="lineno">  384 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">case tiField ti of</span></span>
+<span class="lineno">  385 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">field -&gt; unCounterfactual (fieldCounterfactual field)</span></span>
+<span class="lineno">  386 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Proxy loop risk: blocked-concept count / 10 (window)</span></span>
+<span class="lineno">  387 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">loopCount = length (ssBlockedConcepts ss)</span></span>
+<span class="lineno">  388 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">windowSize = 10</span></span>
+<span class="lineno">  389 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(calSignal, sigComps) =</span></span>
+<span class="lineno">  390 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">computeCalibrationSignal</span></span>
+<span class="lineno">  391 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">(ssLearningNeedState ss)</span></span>
+<span class="lineno">  392 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">counterfactual</span></span>
+<span class="lineno">  393 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">loopCount</span></span>
+<span class="lineno">  394 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">windowSize</span></span>
+<span class="lineno">  395 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">(ssKnowledgeTree ss)</span></span>
+<span class="lineno">  396 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">signal = unCalibrationSignal calSignal</span></span>
+<span class="lineno">  397 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(shouldApplySignal, calibrationDecision) =</span></span>
+<span class="lineno">  398 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">applyCalibrationGated defaultSignalPipelineConfig calSignal (ssCalibrationSnapshots ss)</span></span>
+<span class="lineno">  399 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">calibrationSnapshot = CalibrationSnapshot</span></span>
+<span class="lineno">  400 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">{ csTimestamp = tiStartTime ti</span></span>
+<span class="lineno">  401 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">, csRunId = tmSessionId (tiMetrics ti) &lt;&gt; &quot;:&quot; &lt;&gt; tmRequestId (tiMetrics ti)</span></span>
+<span class="lineno">  402 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">, csComponents = sigComps</span></span>
+<span class="lineno">  403 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">, csSignal = signal</span></span>
+<span class="lineno">  404 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">, csDecision = calibrationDecision</span></span>
+<span class="lineno">  405 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  406 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Update knowledge tree root from commitment</span></span>
+<span class="lineno">  407 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">treeWithRoot =</span></span>
+<span class="lineno">  408 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">(ssKnowledgeTree ss)</span></span>
+<span class="lineno">  409 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">{ ktRootMode = renderEssenceMode (ecMode commitment)</span></span>
+<span class="lineno">  410 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">, ktRootTrigger = renderCommitmentTrigger (ecTrigger commitment)</span></span>
+<span class="lineno">  411 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  412 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">-- Structural maintenance: prune stale fruits and branches</span></span>
+<span class="lineno">  413 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">currentTurn = ssTurnCount ss + 1</span></span>
+<span class="lineno">  414 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(treePruned, _prunedBranches) =</span></span>
+<span class="lineno">  415 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">pruneBranches currentTurn (-0.5) 3 treeWithRoot</span></span>
+<span class="lineno">  416 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(treeClean, _prunedFruits) =</span></span>
+<span class="lineno">  417 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">pruneFruits currentTurn treePruned</span></span>
+<span class="lineno">  418 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">promotionRule = textShow outcomeFamily</span></span>
+<span class="lineno">  419 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">(treePromoted, promotedFromQuarantine, _rejectedFromQuarantine) =</span></span>
+<span class="lineno">  420 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">promoteFromQuarantine currentTurn 2 promotionRule treeClean</span></span>
+<span class="lineno">  421 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">weights1 = if shouldApplySignal then adaptSalienceWeights signal (ssSalienceWeights ss) else ssSalienceWeights ss</span></span>
+<span class="lineno">  422 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">heuristics1 = if shouldApplySignal then adaptFieldHeuristics signal (ssFieldHeuristics ss) else ssFieldHeuristics ss</span></span>
+<span class="lineno">  423 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">calibrationLog1 =</span></span>
+<span class="lineno">  424 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">if shouldApplySignal</span></span>
+<span class="lineno">  425 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">then appendCalibrationEntries currentTurn (ssCalibrationLog ss)</span></span>
+<span class="lineno">  426 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">[ if weights1 /= ssSalienceWeights ss then Just (ProposalSalienceWeights weights1) else Nothing</span></span>
+<span class="lineno">  427 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">, if heuristics1 /= ssFieldHeuristics ss then Just (ProposalFieldHeuristics heuristics1) else Nothing</span></span>
+<span class="lineno">  428 </span><span class="spaces">                      </span><span class="istickedoff"><span class="nottickedoff">]</span></span>
+<span class="lineno">  429 </span><span class="spaces">                    </span><span class="istickedoff"><span class="nottickedoff">else ssCalibrationLog ss</span></span>
+<span class="lineno">  430 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">tuningRecords = calibrationMutationRecord currentTurn calibrationDecision signal sigComps :</span></span>
+<span class="lineno">  431 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">selfTuningMutationRecords currentTurn signal sigComps weights1 heuristics1 (ssSalienceWeights ss) (ssFieldHeuristics ss)</span></span>
+<span class="lineno">  432 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">treeRecords = knowledgeMaintenanceMutationRecords currentTurn _prunedBranches _prunedFruits</span></span>
+<span class="lineno">  433 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; quarantinePromotionMutationRecords currentTurn promotedFromQuarantine</span></span>
+<span class="lineno">  434 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">in ( weights1</span></span>
+<span class="lineno">  435 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, heuristics1</span></span>
+<span class="lineno">  436 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, treePromoted</span></span>
+<span class="lineno">  437 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, take 100 (calibrationSnapshot : ssCalibrationSnapshots ss)</span></span>
+<span class="lineno">  438 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, calibrationLog1</span></span>
+<span class="lineno">  439 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">, tuningRecords &lt;&gt; treeRecords</span></span>
+<span class="lineno">  440 </span><span class="spaces">               </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  441 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, ssCalibrationSnapshots ss, ssCalibrationLog ss, [])</span>
+<span class="lineno">  442 </span><span class="spaces">      </span><span class="istickedoff">-- WP6.1: endogenous learning diagnostic drive with separate learning pressure.</span>
+<span class="lineno">  443 </span><span class="spaces">      </span><span class="istickedoff">bestTopic = tiBestTopic ti</span>
+<span class="lineno">  444 </span><span class="spaces">      </span><span class="istickedoff">isTopicUnknown = not (T.null bestTopic)</span>
+<span class="lineno">  445 </span><span class="spaces">                         </span><span class="istickedoff">&amp;&amp; not (hasKnownMorphologyForm (ssMorphology ss) bestTopic)</span>
+<span class="lineno">  446 </span><span class="spaces">                         </span><span class="istickedoff">&amp;&amp; not (isTermKnownInKnowledgeTree <span class="nottickedoff">bestTopic</span> nextTree)</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="istickedoff">currentGraftedCount = ktGraftedCount nextTree</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="istickedoff">newLearningNeedState =</span>
+<span class="lineno">  449 </span><span class="spaces">          </span><span class="istickedoff">detectLearningNeedWithPressure</span>
+<span class="lineno">  450 </span><span class="spaces">           </span><span class="istickedoff">defaultLearningPressureConfig</span>
+<span class="lineno">  451 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">(tiConatusEnergy ti)</span></span>
+<span class="lineno">  452 </span><span class="spaces">           </span><span class="istickedoff">(tiField ti)</span>
+<span class="lineno">  453 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">0</span> -- repairCount: historical recovery tracking deferred to Phase 7</span>
+<span class="lineno">  454 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">(length (ssBlockedConcepts ss))</span> -- proxy: blocked concepts indicate substrate gaps</span>
+<span class="lineno">  455 </span><span class="spaces">           </span><span class="istickedoff">(ssTurnCount ss + 1)</span>
+<span class="lineno">  456 </span><span class="spaces">            </span><span class="istickedoff">(ssLearningNeedState ss)</span>
+<span class="lineno">  457 </span><span class="spaces">            </span><span class="istickedoff">isTopicUnknown</span>
+<span class="lineno">  458 </span><span class="spaces">            </span><span class="istickedoff">currentGraftedCount</span>
+<span class="lineno">  459 </span><span class="spaces">      </span><span class="istickedoff">executedOutcome = taExecutedOutcome ta</span>
+<span class="lineno">  460 </span><span class="spaces">      </span><span class="istickedoff">baseNext = ss</span>
+<span class="lineno">  461 </span><span class="spaces">        </span><span class="istickedoff">{ ssDialogue = (ssDialogue ss)</span>
+<span class="lineno">  462 </span><span class="spaces">          </span><span class="istickedoff">{ dsHistory = newHumanHistory</span>
+<span class="lineno">  463 </span><span class="spaces">          </span><span class="istickedoff">, dsActiveScene = tpActiveScene tp</span>
+<span class="lineno">  464 </span><span class="spaces">          </span><span class="istickedoff">, dsLastFamily = outcomeFamily</span>
+<span class="lineno">  465 </span><span class="spaces">          </span><span class="istickedoff">, dsLastTopic = tiBestTopic ti</span>
+<span class="lineno">  466 </span><span class="spaces">          </span><span class="istickedoff">, dsUserState = tiNextUserState ti</span>
+<span class="lineno">  467 </span><span class="spaces">          </span><span class="istickedoff">, dsLastForce = r5Force outcomeVerdict</span>
+<span class="lineno">  468 </span><span class="spaces">          </span><span class="istickedoff">, dsLastLayer = r5Layer outcomeVerdict</span>
+<span class="lineno">  469 </span><span class="spaces">          </span><span class="istickedoff">, dsRecentFamilies = take recentFamiliesLimit (outcomeFamily : ssRecentFamilies ss)</span>
+<span class="lineno">  470 </span><span class="spaces">          </span><span class="istickedoff">, dsRawInputHistory = appendHistoryBounded rawInputHistoryLimit (ssRawInputHistory ss) (ipfRawText (tiFrame ti))</span>
+<span class="lineno">  471 </span><span class="spaces">          </span><span class="istickedoff">, dsTurnCount = ssTurnCount ss + 1</span>
+<span class="lineno">  472 </span><span class="spaces">          </span><span class="istickedoff">, dsConsecutiveReflect = consecReflect</span>
+<span class="lineno">  473 </span><span class="spaces">          </span><span class="istickedoff">, dsLastEmbedding = Just (tiEmbedding ti)</span>
+<span class="lineno">  474 </span><span class="spaces">          </span><span class="istickedoff">, dsLastSalienceBias = salienceHolisticBias turnSalience</span>
+<span class="lineno">  475 </span><span class="spaces">          </span><span class="istickedoff">, dsHolisticStreak = newHolisticStreak</span>
+<span class="lineno">  476 </span><span class="spaces">          </span><span class="istickedoff">, dsRecentNarrativeSuccess = newNarrativeSuccess</span>
+<span class="lineno">  477 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  478 </span><span class="spaces">      </span><span class="istickedoff">, ssIdentity = (ssIdentity ss)</span>
+<span class="lineno">  479 </span><span class="spaces">          </span><span class="istickedoff">{ idsEgo = tpNewEgo tp</span>
+<span class="lineno">  480 </span><span class="spaces">          </span><span class="istickedoff">, idsOrbitalMemory = tpUpdatedOrbital tp</span>
+<span class="lineno">  481 </span><span class="spaces">          </span><span class="istickedoff">, idsLastGuardReport = Just (tpGuardReport tp)</span>
+<span class="lineno">  482 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  483 </span><span class="spaces">      </span><span class="istickedoff">, ssSemantic = (ssSemantic ss)</span>
+<span class="lineno">  484 </span><span class="spaces">          </span><span class="istickedoff">{ semTrace = tiNewTrace ti</span>
+<span class="lineno">  485 </span><span class="spaces">          </span><span class="istickedoff">, semMeaningGraph = newMeaningGraph</span>
+<span class="lineno">  486 </span><span class="spaces">          </span><span class="istickedoff">, semDreamState = newDreamState</span>
+<span class="lineno">  487 </span><span class="spaces">          </span><span class="istickedoff">, semIntuitionState = Just (tsIntuitionState ts)</span>
+<span class="lineno">  488 </span><span class="spaces">          </span><span class="istickedoff">, semKernelPulse = (ssKernelPulse ss) { kpActive = True, kpLastUpdate = ssTurnCount ss + 1 }</span>
+<span class="lineno">  489 </span><span class="spaces">          </span><span class="istickedoff">, semBlockedConcepts =</span>
+<span class="lineno">  490 </span><span class="spaces">              </span><span class="istickedoff">case tiNixStatus ti of</span>
+<span class="lineno">  491 </span><span class="spaces">                </span><span class="istickedoff">Blocked reason -&gt; retainBlockedConcepts reason (ssBlockedConcepts ss)</span>
+<span class="lineno">  492 </span><span class="spaces">                </span><span class="istickedoff">_ -&gt; ssBlockedConcepts ss</span>
+<span class="lineno">  493 </span><span class="spaces">          </span><span class="istickedoff">, semIntuitConfidence = tsIntuitPosterior ts</span>
+<span class="lineno">  494 </span><span class="spaces">          </span><span class="istickedoff">, semSemanticAnchor = tpSemanticAnchor tp</span>
+<span class="lineno">  495 </span><span class="spaces">          </span><span class="istickedoff">, semLastTurnDecision = Just (taDecision ta)</span>
+<span class="lineno">  496 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  497 </span><span class="spaces">      </span><span class="istickedoff">, ssObservability = (ssObservability ss)</span>
+<span class="lineno">  498 </span><span class="spaces">          </span><span class="istickedoff">{ obsNixCache = updatedNixCache</span>
+<span class="lineno">  499 </span><span class="spaces">          </span><span class="istickedoff">, obsTelemetry = (obsTelemetry (ssObservability ss))</span>
+<span class="lineno">  500 </span><span class="spaces">              </span><span class="istickedoff">{ lrtFamily = outcomeFamily</span>
+<span class="lineno">  501 </span><span class="spaces">              </span><span class="istickedoff">, lrtTopic = tiBestTopic ti</span>
+<span class="lineno">  502 </span><span class="spaces">              </span><span class="istickedoff">, lrtApiHealthy = tsApiHealthy ts</span>
+<span class="lineno">  503 </span><span class="spaces">              </span><span class="istickedoff">, lrtGuardStatus = tdGuardStatus (taDecision ta)</span>
+<span class="lineno">  504 </span><span class="spaces">              </span><span class="istickedoff">, lrtSurfaceRoute = taSurfaceProv ta</span>
+<span class="lineno">  505 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  506 </span><span class="spaces">          </span><span class="istickedoff">, obsEmbeddingApiHealthy = tsApiHealthy ts</span>
+<span class="lineno">  507 </span><span class="spaces">          </span><span class="istickedoff">, obsLastLegitimacyScore = tpLegitScore tp</span>
+<span class="lineno">  508 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  509 </span><span class="spaces">      </span><span class="istickedoff">, ssEssence = nextEssence</span>
+<span class="lineno">  510 </span><span class="spaces">      </span><span class="istickedoff">, ssSalienceWeights = adaptedWeights</span>
+<span class="lineno">  511 </span><span class="spaces">      </span><span class="istickedoff">, ssFieldHeuristics = adaptedHeuristics</span>
+<span class="lineno">  512 </span><span class="spaces">      </span><span class="istickedoff">, ssShadowVetoState = tpShadowVetoState tp</span>
+<span class="lineno">  513 </span><span class="spaces">      </span><span class="istickedoff">, ssProvisionalAtoms =</span>
+<span class="lineno">  514 </span><span class="spaces">          </span><span class="istickedoff">let currentTurn = ssTurnCount ss</span>
+<span class="lineno">  515 </span><span class="spaces">              </span><span class="istickedoff">canonicalSet = tiAtomSet ti</span>
+<span class="lineno">  516 </span><span class="spaces">              </span><span class="istickedoff">observed = foldr</span>
+<span class="lineno">  517 </span><span class="spaces">                </span><span class="istickedoff">(\atom acc -&gt; observeNovelAtom (maTag atom) currentTurn acc)</span>
+<span class="lineno">  518 </span><span class="spaces">                </span><span class="istickedoff">(ssProvisionalAtoms ss)</span>
+<span class="lineno">  519 </span><span class="spaces">                </span><span class="istickedoff">(asAtoms canonicalSet)</span>
+<span class="lineno">  520 </span><span class="spaces">              </span><span class="istickedoff">decayed = decayProvisionalAtoms currentTurn observed</span>
+<span class="lineno">  521 </span><span class="spaces">              </span><span class="istickedoff">(remaining, _promoted) = promoteProvisionalAtoms <span class="nottickedoff">currentTurn</span> decayed</span>
+<span class="lineno">  522 </span><span class="spaces">          </span><span class="istickedoff">in take maxProvisionalAtoms (resolveCollisions canonicalSet remaining)</span>
+<span class="lineno">  523 </span><span class="spaces">      </span><span class="istickedoff">, ssLearningNeedState = newLearningNeedState</span>
+<span class="lineno">  524 </span><span class="spaces">       </span><span class="istickedoff">, ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) (tpRmpAfterLegit tp) executedOutcome</span>
+<span class="lineno">  525 </span><span class="spaces">      </span><span class="istickedoff">, ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) executedOutcome</span>
+<span class="lineno">  526 </span><span class="spaces">      </span><span class="istickedoff">, ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) executedOutcome</span>
+<span class="lineno">  527 </span><span class="spaces">      </span><span class="istickedoff">, ssTruthContractStatus = etoTruthContractStatus executedOutcome</span>
+<span class="lineno">  528 </span><span class="spaces">      </span><span class="istickedoff">, ssGuardrailState = ssGuardrailState ss</span>
+<span class="lineno">  529 </span><span class="spaces">        </span><span class="istickedoff">-- ^ WP5: guardrails currently pass through unchanged;</span>
+<span class="lineno">  530 </span><span class="spaces">        </span><span class="istickedoff">--   proposal-submission tracking will be wired when the</span>
+<span class="lineno">  531 </span><span class="spaces">        </span><span class="istickedoff">--   external-tool bridge is integrated.</span>
+<span class="lineno">  532 </span><span class="spaces">      </span><span class="istickedoff">, ssCalibrationLog = nextCalibrationLog</span>
+<span class="lineno">  533 </span><span class="spaces">      </span><span class="istickedoff">, ssKnowledgeTree = nextTree</span>
+<span class="lineno">  534 </span><span class="spaces">        </span><span class="istickedoff">-- ^ Phase 7: rooted knowledge tree.  Root updated from</span>
+<span class="lineno">  535 </span><span class="spaces">        </span><span class="istickedoff">--   committed essence; structural pruning applied each turn.</span>
+<span class="lineno">  536 </span><span class="spaces">      </span><span class="istickedoff">, ssCalibrationSnapshots = calibrationSnapshots</span>
+<span class="lineno">  537 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  538 </span><span class="spaces">      </span><span class="istickedoff">nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext</span>
+<span class="lineno">  539 </span><span class="spaces">      </span><span class="istickedoff">in ( nextWithLog</span>
+<span class="lineno">  540 </span><span class="spaces">    </span><span class="istickedoff">, commitmentTrigger</span>
+<span class="lineno">  541 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  542 </span>
+<span class="lineno">  543 </span>maxProvisionalAtoms :: Int
+<span class="lineno">  544 </span><span class="decl"><span class="istickedoff">maxProvisionalAtoms = 1000</span></span>
+<span class="lineno">  545 </span>
+<span class="lineno">  546 </span>buildTurnProjection
+<span class="lineno">  547 </span>  :: Text
+<span class="lineno">  548 </span>  -&gt; Text
+<span class="lineno">  549 </span>  -&gt; Text
+<span class="lineno">  550 </span>  -&gt; Bool
+<span class="lineno">  551 </span>  -&gt; Bool
+<span class="lineno">  552 </span>  -&gt; SystemState
+<span class="lineno">  553 </span>  -&gt; TurnInput
+<span class="lineno">  554 </span>  -&gt; TurnSignals
+<span class="lineno">  555 </span>  -&gt; TurnPlan
+<span class="lineno">  556 </span>  -&gt; TurnArtifacts
+<span class="lineno">  557 </span>  -&gt; TurnProjection
+<span class="lineno">  558 </span><span class="decl"><span class="istickedoff">buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled nextSs ti ts tp ta =</span>
+<span class="lineno">  559 </span><span class="spaces">  </span><span class="istickedoff">let decision = taDecision ta</span>
+<span class="lineno">  560 </span><span class="spaces">      </span><span class="istickedoff">executedFamily = etoFamily executedOutcome</span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="istickedoff">executedForce = etoForce executedOutcome</span>
+<span class="lineno">  562 </span><span class="spaces">      </span><span class="istickedoff">parserConfidence = ipfConfidence (tiFrame ti)</span>
+<span class="lineno">  563 </span><span class="spaces">      </span><span class="istickedoff">parserErrors = if parserConfidence &lt; parserLowConfidenceThreshold then [<span class="nottickedoff">&quot;low_confidence&quot;</span>] else []</span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="istickedoff">parserBackend = &quot;local_rule_based&quot;</span>
+<span class="lineno">  565 </span><span class="spaces">      </span><span class="istickedoff">parserStatus</span>
+<span class="lineno">  566 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">tiFrame ti == parseProposition (ipfRawText (tiFrame ti))</span> = &quot;ok&quot;</span>
+<span class="lineno">  567 </span><span class="spaces">        </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">&quot;degraded&quot;</span></span>
+<span class="lineno">  568 </span><span class="spaces">      </span><span class="istickedoff">parserDegradationReason</span>
+<span class="lineno">  569 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">parserStatus == &quot;ok&quot;</span> = Nothing</span>
+<span class="lineno">  570 </span><span class="spaces">        </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Just &quot;frame_runtime_mismatch&quot;</span></span>
+<span class="lineno">  571 </span><span class="spaces">      </span><span class="istickedoff">parserLatencyMs = 0</span>
+<span class="lineno">  572 </span><span class="spaces">      </span><span class="istickedoff">scenePressure</span>
+<span class="lineno">  573 </span><span class="spaces">        </span><span class="istickedoff">| asLoad (tiAtomSet ti) &lt;= scenePressureLowThreshold = PressureLow</span>
+<span class="lineno">  574 </span><span class="spaces">        </span><span class="istickedoff">| asLoad (tiAtomSet ti) &lt;= scenePressureMediumThreshold = PressureMedium</span>
+<span class="lineno">  575 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = PressureHigh</span>
+<span class="lineno">  576 </span><span class="spaces">      </span><span class="istickedoff">legitScore = tpLegitScore tp</span>
+<span class="lineno">  577 </span><span class="spaces">      </span><span class="istickedoff">legitimacyStatus</span>
+<span class="lineno">  578 </span><span class="spaces">        </span><span class="istickedoff">| legitScore &gt;= legitimacyPassThreshold = LegitimacyPass</span>
+<span class="lineno">  579 </span><span class="spaces">        </span><span class="istickedoff">| legitScore &gt;= legitimacyRecoveryThreshold = LegitimacyDegraded</span>
+<span class="lineno">  580 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = LegitimacyRecovery</span>
+<span class="lineno">  581 </span><span class="spaces">      </span><span class="istickedoff">legitimacyReason</span>
+<span class="lineno">  582 </span><span class="spaces">        </span><span class="istickedoff">| tpShadowGateTriggered tp = ReasonShadowDivergence</span>
+<span class="lineno">  583 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlyfalse">tpShadowStatus tp == ShadowUnavailable</span> = <span class="nottickedoff">ReasonShadowUnavailable</span></span>
+<span class="lineno">  584 </span><span class="spaces">        </span><span class="istickedoff">| parserConfidence &lt; parserLowConfidenceThreshold = ReasonLowParserConfidence</span>
+<span class="lineno">  585 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ReasonOk</span>
+<span class="lineno">  586 </span><span class="spaces">      </span><span class="istickedoff">ownerFamily = executedFamily</span>
+<span class="lineno">  587 </span><span class="spaces">      </span><span class="istickedoff">ownerForce = executedForce</span>
+<span class="lineno">  588 </span><span class="spaces">      </span><span class="istickedoff">warrantedMode = warrantedForFamily ownerFamily</span>
+<span class="lineno">  589 </span><span class="spaces">      </span><span class="istickedoff">legitimacyOutcome = classifyLegitimacyOutcome legitimacyStatus legitimacyReason warrantedMode (tpShadowStatus tp) (tpShadowDivergenceSeverity tp)</span>
+<span class="lineno">  590 </span><span class="spaces">      </span><span class="istickedoff">requestId = tmRequestId (tiMetrics ti)</span>
+<span class="lineno">  591 </span><span class="spaces">      </span><span class="istickedoff">sessionId = tmSessionId (tiMetrics ti)</span>
+<span class="lineno">  592 </span><span class="spaces">      </span><span class="istickedoff">intuitionHint = <span class="nottickedoff">ifDirective</span> &lt;$&gt; tsFlash ts</span>
+<span class="lineno">  593 </span><span class="spaces">      </span><span class="istickedoff">(recoveryCause, recoveryStrategy, recoveryEvidence) =</span>
+<span class="lineno">  594 </span><span class="spaces">        </span><span class="istickedoff">case taLocalRecoveryCause ta of</span>
+<span class="lineno">  595 </span><span class="spaces">          </span><span class="istickedoff">Just cause -&gt;</span>
+<span class="lineno">  596 </span><span class="spaces">            </span><span class="istickedoff">(Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)</span>
+<span class="lineno">  597 </span><span class="spaces">          </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  598 </span><span class="spaces">            </span><span class="istickedoff">| runtimeMode == &quot;degraded&quot; -&gt;</span>
+<span class="lineno">  599 </span><span class="spaces">                </span><span class="istickedoff">(Nothing, Nothing, [&quot;runtime_mode=degraded&quot;])</span>
+<span class="lineno">  600 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  601 </span><span class="spaces">            </span><span class="istickedoff">(Nothing, Nothing, [])</span>
+<span class="lineno">  602 </span><span class="spaces">      </span><span class="istickedoff">-- Canonical trace Salience.  The Conatus and Field values</span>
+<span class="lineno">  603 </span><span class="spaces">      </span><span class="istickedoff">-- are the pre-turn snapshot (single source of truth from</span>
+<span class="lineno">  604 </span><span class="spaces">      </span><span class="istickedoff">-- 'PrepareStatic') so the trace reflects the actual signals</span>
+<span class="lineno">  605 </span><span class="spaces">      </span><span class="istickedoff">-- that drove the routing decision.</span>
+<span class="lineno">  606 </span><span class="spaces">      </span><span class="istickedoff">traceSalience   = turnInputSalience ti</span>
+<span class="lineno">  607 </span><span class="spaces">      </span><span class="istickedoff">postEssence = ssEssence nextSs</span>
+<span class="lineno">  608 </span><span class="spaces">      </span><span class="istickedoff">perspectiveProjections = buildActivePerspectiveProjections (ssPerspectiveRegistry nextSs)</span>
+<span class="lineno">  609 </span><span class="spaces">      </span><span class="istickedoff">learningVerdict = deriveLearningReplayVerdict nextSs ta</span>
+<span class="lineno">  610 </span><span class="spaces">      </span><span class="istickedoff">(modeTag, committedFlag, angst, triggerTag) = case postEssence of</span>
+<span class="lineno">  611 </span><span class="spaces">        </span><span class="istickedoff">EssenceUncommitted t -&gt;</span>
+<span class="lineno">  612 </span><span class="spaces">          </span><span class="istickedoff">( Just (renderEssenceMode EssenceWitnessing)</span>
+<span class="lineno">  613 </span><span class="spaces">          </span><span class="istickedoff">, Just False</span>
+<span class="lineno">  614 </span><span class="spaces">          </span><span class="istickedoff">, Just (etAngstLevel t)</span>
+<span class="lineno">  615 </span><span class="spaces">          </span><span class="istickedoff">, Nothing</span>
+<span class="lineno">  616 </span><span class="spaces">          </span><span class="istickedoff">)</span>
+<span class="lineno">  617 </span><span class="spaces">        </span><span class="istickedoff">EssenceCommitted t c -&gt;</span>
+<span class="lineno">  618 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">( Just (renderEssenceMode (ecMode c))</span></span>
+<span class="lineno">  619 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, Just True</span></span>
+<span class="lineno">  620 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, Just (etAngstLevel t)</span></span>
+<span class="lineno">  621 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, Just (renderCommitmentTrigger (ecTrigger c))</span></span>
+<span class="lineno">  622 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  623 </span><span class="spaces">      </span><span class="istickedoff">executedOutcome = taExecutedOutcome ta</span>
+<span class="lineno">  624 </span><span class="spaces">      </span><span class="istickedoff">replayTrace =</span>
+<span class="lineno">  625 </span><span class="spaces">        </span><span class="istickedoff">TurnReplayTrace</span>
+<span class="lineno">  626 </span><span class="spaces">          </span><span class="istickedoff">{ trcRequestId = requestId</span>
+<span class="lineno">  627 </span><span class="spaces">          </span><span class="istickedoff">, trcSessionId = sessionId</span>
+<span class="lineno">  628 </span><span class="spaces">          </span><span class="istickedoff">, trcRuntimeMode = runtimeMode</span>
+<span class="lineno">  629 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowPolicy = shadowPolicy</span>
+<span class="lineno">  630 </span><span class="spaces">          </span><span class="istickedoff">, trcLocalRecoveryPolicy = localRecoveryPolicy</span>
+<span class="lineno">  631 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryCause = recoveryCause</span>
+<span class="lineno">  632 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryStrategy = recoveryStrategy</span>
+<span class="lineno">  633 </span><span class="spaces">          </span><span class="istickedoff">, trcRecoveryEvidence = recoveryEvidence</span>
+<span class="lineno">  634 </span><span class="spaces">          </span><span class="istickedoff">, trcSemanticIntrospectionEnabled = semanticIntrospectionEnabled</span>
+<span class="lineno">  635 </span><span class="spaces">          </span><span class="istickedoff">, trcWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled</span>
+<span class="lineno">  636 </span><span class="spaces">          </span><span class="istickedoff">, trcRequestedFamily = tiRecommendedFamily ti</span>
+<span class="lineno">  637 </span><span class="spaces">          </span><span class="istickedoff">, trcStrategyFamily = tpStrategyFamily tp</span>
+<span class="lineno">  638 </span><span class="spaces">          </span><span class="istickedoff">, trcNarrativeHint = tsNarrativeFragment ts</span>
+<span class="lineno">  639 </span><span class="spaces">          </span><span class="istickedoff">, trcIntuitionHint = intuitionHint</span>
+<span class="lineno">  640 </span><span class="spaces">          </span><span class="istickedoff">, trcPreShadowFamily = tpPreShadowFamily tp</span>
+<span class="lineno">  641 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowSnapshotId = tpShadowSnapshotId tp</span>
+<span class="lineno">  642 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowStatus = tpShadowStatus tp</span>
+<span class="lineno">  643 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowDivergenceKind = tpShadowDivergenceKind tp</span>
+<span class="lineno">  644 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowDivergenceSeverity = tpShadowDivergenceSeverity tp</span>
+<span class="lineno">  645 </span><span class="spaces">          </span><span class="istickedoff">, trcShadowResolvedFamily = tpFamily tp</span>
+<span class="lineno">  646 </span><span class="spaces">          </span><span class="istickedoff">, trcFinalFamily = executedFamily</span>
+<span class="lineno">  647 </span><span class="spaces">          </span><span class="istickedoff">, trcFinalForce = executedForce</span>
+<span class="lineno">  648 </span><span class="spaces">          </span><span class="istickedoff">, trcDecisionDisposition = loDisposition legitimacyOutcome</span>
+<span class="lineno">  649 </span><span class="spaces">          </span><span class="istickedoff">, trcLegitimacyReason = legitimacyReason</span>
+<span class="lineno">  650 </span><span class="spaces">           </span><span class="istickedoff">, trcParserConfidence = parserConfidence</span>
+<span class="lineno">  651 </span><span class="spaces">           </span><span class="istickedoff">, trcParserBackend = parserBackend</span>
+<span class="lineno">  652 </span><span class="spaces">           </span><span class="istickedoff">, trcParserStatus = parserStatus</span>
+<span class="lineno">  653 </span><span class="spaces">           </span><span class="istickedoff">, trcParserDegradationReason = parserDegradationReason</span>
+<span class="lineno">  654 </span><span class="spaces">           </span><span class="istickedoff">, trcParserLatencyMs = parserLatencyMs</span>
+<span class="lineno">  655 </span><span class="spaces">           </span><span class="istickedoff">, trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)</span>
+<span class="lineno">  656 </span><span class="spaces">          </span><span class="istickedoff">, trcClaimAst = taClaimAst ta</span>
+<span class="lineno">  657 </span><span class="spaces">          </span><span class="istickedoff">, trcPreSafetyRenderedRaw = taPreSafetyRendered ta</span>
+<span class="lineno">  658 </span><span class="spaces">          </span><span class="istickedoff">, trcRenderedAfterRebind = taRendered ta</span>
+<span class="lineno">  659 </span><span class="spaces">          </span><span class="istickedoff">, trcLinearizationLang = taLinearizationLang ta</span>
+<span class="lineno">  660 </span><span class="spaces">          </span><span class="istickedoff">, trcLinearizationOk = taLinearizationOk ta</span>
+<span class="lineno">  661 </span><span class="spaces">          </span><span class="istickedoff">, trcFallbackReason = taLinearizationFallbackReason ta</span>
+<span class="lineno">  662 </span><span class="spaces">          </span><span class="istickedoff">, trcContractProvenance = Just (etoContractProvenance executedOutcome)</span>
+<span class="lineno">  663 </span><span class="spaces">          </span><span class="istickedoff">, trcSurfaceProvenance = Just (etoSurfaceProvenance executedOutcome)</span>
+<span class="lineno">  664 </span><span class="spaces">          </span><span class="istickedoff">, trcAuthorityClass = Just (etoAuthorityClass executedOutcome)</span>
+<span class="lineno">  665 </span><span class="spaces">          </span><span class="istickedoff">, trcTruthContractStatus = etoTruthContractStatus executedOutcome</span>
+<span class="lineno">  666 </span><span class="spaces">          </span><span class="istickedoff">, trcAssemblyPath = Just (etoAssemblyPath executedOutcome)</span>
+<span class="lineno">  667 </span><span class="spaces">          </span><span class="istickedoff">, trcArtifactManifest = Just (etoArtifactManifest executedOutcome)</span>
+<span class="lineno">  668 </span><span class="spaces">           </span><span class="istickedoff">, trcReplayProvenanceStatus = normalizedReplayProvenanceStatus (replayProvenanceStatusForOutcome executedOutcome) (etoAuthorityClass executedOutcome)</span>
+<span class="lineno">  669 </span><span class="spaces">          </span><span class="istickedoff">, trcDerivationTags = taDerivationTags ta</span>
+<span class="lineno">  670 </span><span class="spaces">           </span><span class="istickedoff">, trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)</span>
+<span class="lineno">  671 </span><span class="spaces">           </span><span class="istickedoff">, trcSalienceHolisticBias = salienceHolisticBias traceSalience</span>
+<span class="lineno">  672 </span><span class="spaces">           </span><span class="istickedoff">, trcSalienceConfidence = salienceConfidence traceSalience</span>
+<span class="lineno">  673 </span><span class="spaces">           </span><span class="istickedoff">, trcDeliberationRule =</span>
+<span class="lineno">  674 </span><span class="spaces">               </span><span class="istickedoff">tpDeliberation tp &gt;&gt;= \d -&gt;</span>
+<span class="lineno">  675 </span><span class="spaces">                 </span><span class="istickedoff">Just (renderReconcileRule (dtRule (delibTrace d)))</span>
+<span class="lineno">  676 </span><span class="spaces">           </span><span class="istickedoff">, trcDeliberationAgreement =</span>
+<span class="lineno">  677 </span><span class="spaces">               </span><span class="istickedoff">tpDeliberation tp &gt;&gt;= \d -&gt;</span>
+<span class="lineno">  678 </span><span class="spaces">                 </span><span class="istickedoff">Just (renderAgreement (dtAgreement (delibTrace d)))</span>
+<span class="lineno">  679 </span><span class="spaces">           </span><span class="istickedoff">, trcDeliberationDivergence =</span>
+<span class="lineno">  680 </span><span class="spaces">               </span><span class="istickedoff">tpDeliberation tp &gt;&gt;= \d -&gt;</span>
+<span class="lineno">  681 </span><span class="spaces">                 </span><span class="istickedoff">Just (dtDivergence (delibTrace d))</span>
+<span class="lineno">  682 </span><span class="spaces">            </span><span class="istickedoff">, trcDeliberationNarrativeTone =</span>
+<span class="lineno">  683 </span><span class="spaces">                </span><span class="istickedoff">tpDeliberation tp &gt;&gt;= \d -&gt;</span>
+<span class="lineno">  684 </span><span class="spaces">                  </span><span class="istickedoff">Just (renderNarrativeTone (planNarrativeTone (delibReconciled d)))</span>
+<span class="lineno">  685 </span><span class="spaces">            </span><span class="istickedoff">, trcEssenceMode = modeTag</span>
+<span class="lineno">  686 </span><span class="spaces">            </span><span class="istickedoff">, trcEssenceCommitted = committedFlag</span>
+<span class="lineno">  687 </span><span class="spaces">            </span><span class="istickedoff">, trcEssenceAngstLevel = angst</span>
+<span class="lineno">  688 </span><span class="spaces">            </span><span class="istickedoff">, trcEssenceTrigger = triggerTag</span>
+<span class="lineno">  689 </span><span class="spaces">            </span><span class="istickedoff">, trcLearningQueryType =</span>
+<span class="lineno">  690 </span><span class="spaces">                </span><span class="istickedoff">case (taExternalQueryResult ta, taExploratoryQueryResult ta) of</span>
+<span class="lineno">  691 </span><span class="spaces">                  </span><span class="istickedoff">(Nothing, Nothing)       -&gt; Nothing</span>
+<span class="lineno">  692 </span><span class="spaces">                  </span><span class="istickedoff">(Just _, Nothing)        -&gt; Just &quot;request_concept&quot;</span>
+<span class="lineno">  693 </span><span class="spaces">                  </span><span class="istickedoff">(Nothing, Just _)        -&gt; Just &quot;exploratory&quot;</span>
+<span class="lineno">  694 </span><span class="spaces">                  </span><span class="istickedoff">(Just _, Just _)         -&gt; <span class="nottickedoff">Just &quot;both&quot;</span></span>
+<span class="lineno">  695 </span><span class="spaces">            </span><span class="istickedoff">, trcExternalTool =</span>
+<span class="lineno">  696 </span><span class="spaces">                </span><span class="istickedoff">case taExternalQueryResult ta of</span>
+<span class="lineno">  697 </span><span class="spaces">                  </span><span class="istickedoff">Just (Right resp) -&gt; Just <span class="nottickedoff">(eqrToolName resp)</span></span>
+<span class="lineno">  698 </span><span class="spaces">                  </span><span class="istickedoff">_ -&gt; case taExploratoryQueryResult ta of</span>
+<span class="lineno">  699 </span><span class="spaces">                         </span><span class="istickedoff">Just (Right resp) -&gt; Just <span class="nottickedoff">(eqrToolName resp)</span></span>
+<span class="lineno">  700 </span><span class="spaces">                         </span><span class="istickedoff">_ -&gt; Nothing</span>
+<span class="lineno">  701 </span><span class="spaces">            </span><span class="istickedoff">, trcLearningValidationStatus = Just (lrvStatus learningVerdict)</span>
+<span class="lineno">  702 </span><span class="spaces">            </span><span class="istickedoff">, trcLearningSandboxResult = lrvSandboxResult learningVerdict</span>
+<span class="lineno">  703 </span><span class="spaces">            </span><span class="istickedoff">, trcLearningGraftTurn = lrvGraftTurn learningVerdict</span>
+<span class="lineno">  704 </span><span class="spaces">            </span><span class="istickedoff">, trcLearningRejectReason = lrvRejectReason learningVerdict</span>
+<span class="lineno">  705 </span><span class="spaces">            </span><span class="istickedoff">, trcSenseAnchor = unSemanticNodeId (svAnchor (rspInputVector (rmpSensePlan (tpRmpAfterLegit tp))))</span>
+<span class="lineno">  706 </span><span class="spaces">            </span><span class="istickedoff">, trcSenseOperator = Just (rspChosenOperator (rmpSensePlan (tpRmpAfterLegit tp)))</span>
+<span class="lineno">  707 </span><span class="spaces">            </span><span class="istickedoff">, trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))</span>
+<span class="lineno">  708 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueFocus = dtCurrentFocus (tiDialogueThread ti)</span>
+<span class="lineno">  709 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueFocusBefore = dtCurrentFocus (tiDialogueThread ti)</span>
+<span class="lineno">  710 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueFocusAfter = dtCurrentFocus (ssDialogueThread nextSs)</span>
+<span class="lineno">  711 </span><span class="spaces">            </span><span class="istickedoff">, trcDialoguePhase = tiDialoguePhase ti</span>
+<span class="lineno">  712 </span><span class="spaces">            </span><span class="istickedoff">, trcDialoguePhaseBefore = tiDialoguePhase ti</span>
+<span class="lineno">  713 </span><span class="spaces">            </span><span class="istickedoff">, trcDialoguePhaseAfter = ssDialoguePhase nextSs</span>
+<span class="lineno">  714 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueCommitmentCount = length (dclItems (tiDialogueCommitmentLedger ti))</span>
+<span class="lineno">  715 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueCommitmentCountBefore = length (dclItems (tiDialogueCommitmentLedger ti))</span>
+<span class="lineno">  716 </span><span class="spaces">            </span><span class="istickedoff">, trcDialogueCommitmentCountAfter = length (dclItems (ssDialogueCommitmentLedger nextSs))</span>
+<span class="lineno">  717 </span><span class="spaces">            </span><span class="istickedoff">, trcMicroPlanMoves = mpRhetoricalMoves (rmpMicroPlan (tpRmpAfterLegit tp))</span>
+<span class="lineno">  718 </span><span class="spaces">            </span><span class="istickedoff">, trcMicroPlanExplicitness = mpExplicitness (rmpMicroPlan (tpRmpAfterLegit tp))</span>
+<span class="lineno">  719 </span><span class="spaces">            </span><span class="istickedoff">, trcPerspectiveProjection =</span>
+<span class="lineno">  720 </span><span class="spaces">                </span><span class="istickedoff">case perspectiveProjections of</span>
+<span class="lineno">  721 </span><span class="spaces">                  </span><span class="istickedoff">projection:_ -&gt; Just projection</span>
+<span class="lineno">  722 </span><span class="spaces">                  </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  723 </span><span class="spaces">            </span><span class="istickedoff">, trcPerspectiveProjections = perspectiveProjections</span>
+<span class="lineno">  724 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  725 </span><span class="spaces">  </span><span class="istickedoff">in TurnProjection</span>
+<span class="lineno">  726 </span><span class="spaces">      </span><span class="istickedoff">{ tqpTurn = ssTurnCount nextSs</span>
+<span class="lineno">  727 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserMode = ParserFrameV1</span>
+<span class="lineno">  728 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserConfidence = parserConfidence</span>
+<span class="lineno">  729 </span><span class="spaces">      </span><span class="istickedoff">, tqpParserErrors = parserErrors</span>
+<span class="lineno">  730 </span><span class="spaces">      </span><span class="istickedoff">, tqpPlannerMode = case tpPrincipledModePair tp of Just _ -&gt; <span class="nottickedoff">PrincipledPlanner</span>; Nothing -&gt; DefaultPlanner</span>
+<span class="lineno">  731 </span><span class="spaces">      </span><span class="istickedoff">, tqpPlannerDecision = executedFamily</span>
+<span class="lineno">  732 </span><span class="spaces">      </span><span class="istickedoff">, tqpAtomRegister = asRegister (tiAtomSet ti)</span>
+<span class="lineno">  733 </span><span class="spaces">      </span><span class="istickedoff">, tqpAtomLoad = asLoad (tiAtomSet ti)</span>
+<span class="lineno">  734 </span><span class="spaces">      </span><span class="istickedoff">, tqpScenePressure = scenePressure</span>
+<span class="lineno">  735 </span><span class="spaces">      </span><span class="istickedoff">, tqpSceneRequest = tiBestTopic ti</span>
+<span class="lineno">  736 </span><span class="spaces">      </span><span class="istickedoff">, tqpSceneStance = usNeedLayer (tiNextUserState ti)</span>
+<span class="lineno">  737 </span><span class="spaces">      </span><span class="istickedoff">, tqpRenderLane = rsMove (tdRenderStrategy decision)</span>
+<span class="lineno">  738 </span><span class="spaces">      </span><span class="istickedoff">, tqpRenderStyle = tdRenderStyle decision</span>
+<span class="lineno">  739 </span><span class="spaces">      </span><span class="istickedoff">, tqpLegitimacyStatus = legitimacyStatus</span>
+<span class="lineno">  740 </span><span class="spaces">      </span><span class="istickedoff">, tqpLegitimacyReason = legitimacyReason</span>
+<span class="lineno">  741 </span><span class="spaces">      </span><span class="istickedoff">, tqpWarrantedMode = warrantedMode</span>
+<span class="lineno">  742 </span><span class="spaces">      </span><span class="istickedoff">, tqpDecisionDisposition = loDisposition legitimacyOutcome</span>
+<span class="lineno">  743 </span><span class="spaces">      </span><span class="istickedoff">, tqpOwnerFamily = ownerFamily</span>
+<span class="lineno">  744 </span><span class="spaces">      </span><span class="istickedoff">, tqpOwnerForce = ownerForce</span>
+<span class="lineno">  745 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowStatus = tpShadowStatus tp</span>
+<span class="lineno">  746 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowSnapshotId = tpShadowSnapshotId tp</span>
+<span class="lineno">  747 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowDivergenceKind = tpShadowDivergenceKind tp</span>
+<span class="lineno">  748 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowFamily = tpShadowFamily tp</span>
+<span class="lineno">  749 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowForce = tpShadowForce tp</span>
+<span class="lineno">  750 </span><span class="spaces">      </span><span class="istickedoff">, tqpShadowMessage = tpShadowMessage tp</span>
+<span class="lineno">  751 </span><span class="spaces">      </span><span class="istickedoff">, tqpReplayTrace = replayTrace</span>
+<span class="lineno">  752 </span><span class="spaces">      </span><span class="istickedoff">, tqpDivergence = tpShadowDivergence tp</span>
+<span class="lineno">  753 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  754 </span>
+<span class="lineno">  755 </span>buildFinalOutput :: Bool -&gt; Maybe TurnReplayTrace -&gt; SystemState -&gt; Guard.GuardSurface -&gt; SystemState -&gt; (Text, Guard.SafetyStatus)
+<span class="lineno">  756 </span><span class="decl"><span class="istickedoff">buildFinalOutput wantIntrospection mReplayTrace ss baseSurface nextSs =</span>
+<span class="lineno">  757 </span><span class="spaces">  </span><span class="istickedoff">let preIntrospectionSurface =</span>
+<span class="lineno">  758 </span><span class="spaces">        </span><span class="istickedoff">if wantIntrospection</span>
+<span class="lineno">  759 </span><span class="spaces">          </span><span class="istickedoff">then</span>
+<span class="lineno">  760 </span><span class="spaces">            </span><span class="istickedoff">let introspectionText = renderSemanticIntrospection nextSs mReplayTrace</span>
+<span class="lineno">  761 </span><span class="spaces">            </span><span class="istickedoff">in baseSurface</span>
+<span class="lineno">  762 </span><span class="spaces">                </span><span class="istickedoff">{ Guard.gsRenderedText = Guard.gsRenderedText baseSurface &lt;&gt; &quot;\n&quot; &lt;&gt; introspectionText</span>
+<span class="lineno">  763 </span><span class="spaces">                </span><span class="istickedoff">, Guard.gsSegments = Guard.gsSegments baseSurface &lt;&gt; [Guard.RenderSegment Guard.SegmentIntrospection introspectionText]</span>
+<span class="lineno">  764 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  765 </span><span class="spaces">          </span><span class="istickedoff">else baseSurface</span>
+<span class="lineno">  766 </span><span class="spaces">      </span><span class="istickedoff">finalSafetyStatus = Guard.postRenderSafetyCheckSurface preIntrospectionSurface (F.toList (ssHistory ss))</span>
+<span class="lineno">  767 </span><span class="spaces">      </span><span class="istickedoff">outputText = safeOutputText preIntrospectionSurface <span class="nottickedoff">baseSurface</span> finalSafetyStatus</span>
+<span class="lineno">  768 </span><span class="spaces">  </span><span class="istickedoff">in (outputText, finalSafetyStatus)</span></span>
+<span class="lineno">  769 </span>
+<span class="lineno">  770 </span>finalizeMetrics :: TurnInput -&gt; TurnArtifacts -&gt; CanonicalMoveFamily -&gt; TurnDecision -&gt; SystemState -&gt; Bool -&gt; Guard.SafetyStatus -&gt; UTCTime -&gt; UTCTime -&gt; TurnMetrics
+<span class="lineno">  771 </span><span class="decl"><span class="istickedoff">finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatus tSave0 tSave1 =</span>
+<span class="lineno">  772 </span><span class="spaces">  </span><span class="istickedoff">let lns = ssLearningNeedState savedSs</span>
+<span class="lineno">  773 </span><span class="spaces">      </span><span class="istickedoff">tree = ssKnowledgeTree savedSs</span>
+<span class="lineno">  774 </span><span class="spaces">      </span><span class="istickedoff">graftsWindow = max 0 (ktGraftedCount tree - lnsWindowGraftBaseline lns)</span>
+<span class="lineno">  775 </span><span class="spaces">      </span><span class="istickedoff">needReason =</span>
+<span class="lineno">  776 </span><span class="spaces">        </span><span class="istickedoff">if lnsCurrentNeed lns == NeedLexiconExtension</span>
+<span class="lineno">  777 </span><span class="spaces">          </span><span class="istickedoff">then &quot;lexicon_pressure:unknown=&quot; &lt;&gt; textShow (lnsUnknownWindowCount lns)</span>
+<span class="lineno">  778 </span><span class="spaces">               </span><span class="istickedoff">&lt;&gt; &quot;:grafts=&quot; &lt;&gt; textShow graftsWindow</span>
+<span class="lineno">  779 </span><span class="spaces">          </span><span class="istickedoff">else renderLearningNeed (lnsCurrentNeed lns)</span>
+<span class="lineno">  780 </span><span class="spaces">      </span><span class="istickedoff">!metrics5 =</span>
+<span class="lineno">  781 </span><span class="spaces">        </span><span class="istickedoff">addPhase (recordPhase &quot;save_state&quot; tSave0 tSave1)</span>
+<span class="lineno">  782 </span><span class="spaces">          </span><span class="istickedoff">$ (taMetrics ta)</span>
+<span class="lineno">  783 </span><span class="spaces">              </span><span class="istickedoff">{ tmTurnCount = ssTurnCount savedSs</span>
+<span class="lineno">  784 </span><span class="spaces">              </span><span class="istickedoff">, tmFamily = textShow outcomeFamily</span>
+<span class="lineno">  785 </span><span class="spaces">              </span><span class="istickedoff">, tmNixStatus = textShow (tdGuardStatus decision)</span>
+<span class="lineno">  786 </span><span class="spaces">              </span><span class="istickedoff">, tmSafetyStatus = textShow finalSafetyStatus</span>
+<span class="lineno">  787 </span><span class="spaces">              </span><span class="istickedoff">, tmApiHealthy = apiHealthy</span>
+<span class="lineno">  788 </span><span class="spaces">              </span><span class="istickedoff">, tmLearningPressureScore = lnsLevel lns</span>
+<span class="lineno">  789 </span><span class="spaces">              </span><span class="istickedoff">, tmUnknownCountWindow = lnsUnknownWindowCount lns</span>
+<span class="lineno">  790 </span><span class="spaces">              </span><span class="istickedoff">, tmGraftsWindow = graftsWindow</span>
+<span class="lineno">  791 </span><span class="spaces">              </span><span class="istickedoff">, tmLexiconNeedTriggerReason = needReason</span>
+<span class="lineno">  792 </span><span class="spaces">              </span><span class="istickedoff">, tmDedupSkipReason = taExternalQuerySkipReason ta</span>
+<span class="lineno">  793 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  794 </span><span class="spaces">      </span><span class="istickedoff">!metricsFinal = addPhase (recordPhase &quot;total&quot; (tiStartTime ti) tSave1) metrics5</span>
+<span class="lineno">  795 </span><span class="spaces">  </span><span class="istickedoff">in metricsFinal</span></span>
+<span class="lineno">  796 </span>
+<span class="lineno">  797 </span>advanceDialogueThreadAfterTurn :: DialogueThread -&gt; ResponseMeaningPlan -&gt; ExecutedTurnOutcome -&gt; DialogueThread
+<span class="lineno">  798 </span><span class="decl"><span class="istickedoff">advanceDialogueThreadAfterTurn thread meaningPlan outcome =</span>
+<span class="lineno">  799 </span><span class="spaces">  </span><span class="istickedoff">let family = etoFamily outcome</span>
+<span class="lineno">  800 </span><span class="spaces">      </span><span class="istickedoff">currentFocus = dtCurrentFocus thread</span>
+<span class="lineno">  801 </span><span class="spaces">      </span><span class="istickedoff">chooseNonEmpty primary fallback = if <span class="tickonlyfalse">T.null primary</span> then <span class="nottickedoff">fallback</span> else primary</span>
+<span class="lineno">  802 </span><span class="spaces">      </span><span class="istickedoff">clarified = case family of</span>
+<span class="lineno">  803 </span><span class="spaces">        </span><span class="istickedoff">CMClarify -&gt; <span class="nottickedoff">currentFocus : dtClarifiedItems thread</span></span>
+<span class="lineno">  804 </span><span class="spaces">        </span><span class="istickedoff">CMGround -&gt; currentFocus : dtClarifiedItems thread</span>
+<span class="lineno">  805 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; dtClarifiedItems thread</span>
+<span class="lineno">  806 </span><span class="spaces">      </span><span class="istickedoff">unresolved = case family of</span>
+<span class="lineno">  807 </span><span class="spaces">        </span><span class="istickedoff">CMRepair -&gt; dtOpenLoops thread</span>
+<span class="lineno">  808 </span><span class="spaces">        </span><span class="istickedoff">CMClarify -&gt; <span class="nottickedoff">dtOpenLoops thread</span></span>
+<span class="lineno">  809 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; filter (/= currentFocus) (dtOpenLoops thread)</span>
+<span class="lineno">  810 </span><span class="spaces">      </span><span class="istickedoff">nextFocus =</span>
+<span class="lineno">  811 </span><span class="spaces">        </span><span class="istickedoff">case family of</span>
+<span class="lineno">  812 </span><span class="spaces">          </span><span class="istickedoff">CMClarify -&gt; <span class="nottickedoff">currentFocus</span></span>
+<span class="lineno">  813 </span><span class="spaces">          </span><span class="istickedoff">CMGround -&gt; currentFocus</span>
+<span class="lineno">  814 </span><span class="spaces">          </span><span class="istickedoff">CMRepair -&gt; currentFocus</span>
+<span class="lineno">  815 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; if <span class="tickonlyfalse">T.null currentFocus</span> then <span class="nottickedoff">dtPhaseScope thread</span> else currentFocus</span>
+<span class="lineno">  816 </span><span class="spaces">      </span><span class="istickedoff">nextScope =</span>
+<span class="lineno">  817 </span><span class="spaces">        </span><span class="istickedoff">case family of</span>
+<span class="lineno">  818 </span><span class="spaces">          </span><span class="istickedoff">CMClarify -&gt; <span class="nottickedoff">nextFocus</span></span>
+<span class="lineno">  819 </span><span class="spaces">          </span><span class="istickedoff">CMGround -&gt; nextFocus</span>
+<span class="lineno">  820 </span><span class="spaces">          </span><span class="istickedoff">CMRepair -&gt; chooseNonEmpty (dtPhaseScope thread) <span class="nottickedoff">nextFocus</span></span>
+<span class="lineno">  821 </span><span class="spaces">          </span><span class="istickedoff">CMConfront -&gt; <span class="nottickedoff">chooseNonEmpty (dtPhaseScope thread) nextFocus</span></span>
+<span class="lineno">  822 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; chooseNonEmpty nextFocus <span class="nottickedoff">(dtPhaseScope thread)</span></span>
+<span class="lineno">  823 </span><span class="spaces">      </span><span class="istickedoff">nextStructuralScope =</span>
+<span class="lineno">  824 </span><span class="spaces">        </span><span class="istickedoff">case etoAuthorityClass outcome of</span>
+<span class="lineno">  825 </span><span class="spaces">          </span><span class="istickedoff">AuthorityCanonical -&gt; rmpScope meaningPlan &lt;|&gt; <span class="nottickedoff">dtStructuralScope thread</span></span>
+<span class="lineno">  826 </span><span class="spaces">          </span><span class="istickedoff">AuthorityAssembled -&gt; <span class="nottickedoff">rmpScope meaningPlan &lt;|&gt; dtStructuralScope thread</span></span>
+<span class="lineno">  827 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; dtStructuralScope thread</span>
+<span class="lineno">  828 </span><span class="spaces">  </span><span class="istickedoff">in thread</span>
+<span class="lineno">  829 </span><span class="spaces">      </span><span class="istickedoff">{ dtCurrentFocus = nextFocus</span>
+<span class="lineno">  830 </span><span class="spaces">      </span><span class="istickedoff">, dtPhaseScope = nextScope</span>
+<span class="lineno">  831 </span><span class="spaces">      </span><span class="istickedoff">, dtClarifiedItems = take 8 clarified</span>
+<span class="lineno">  832 </span><span class="spaces">      </span><span class="istickedoff">, dtOpenLoops = take 8 unresolved</span>
+<span class="lineno">  833 </span><span class="spaces">      </span><span class="istickedoff">, dtResistance = case family of</span>
+<span class="lineno">  834 </span><span class="spaces">          </span><span class="istickedoff">CMRepair -&gt; min 1.0 (dtResistance thread + 0.15)</span>
+<span class="lineno">  835 </span><span class="spaces">          </span><span class="istickedoff">CMGround -&gt; max 0.0 (dtResistance thread - 0.10)</span>
+<span class="lineno">  836 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; dtResistance thread</span>
+<span class="lineno">  837 </span><span class="spaces">      </span><span class="istickedoff">, dtStructuralScope = nextStructuralScope</span>
+<span class="lineno">  838 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  839 </span>
+<span class="lineno">  840 </span>advanceDialogueLedgerAfterTurn :: DialogueCommitmentLedger -&gt; ExecutedTurnOutcome -&gt; DialogueCommitmentLedger
+<span class="lineno">  841 </span><span class="decl"><span class="istickedoff">advanceDialogueLedgerAfterTurn (DialogueCommitmentLedger items) outcome =</span>
+<span class="lineno">  842 </span><span class="spaces">  </span><span class="istickedoff">let family = etoFamily outcome</span>
+<span class="lineno">  843 </span><span class="spaces">      </span><span class="istickedoff">nonAuthoritative = etoAuthorityClass outcome `notElem` [AuthorityCanonical, AuthorityAssembled]</span>
+<span class="lineno">  844 </span><span class="spaces">      </span><span class="istickedoff">rewrite item =</span>
+<span class="lineno">  845 </span><span class="spaces">        </span><span class="istickedoff">if <span class="tickonlyfalse">T.null (dcClaim item)</span></span>
+<span class="lineno">  846 </span><span class="spaces">          </span><span class="istickedoff">then <span class="nottickedoff">item</span></span>
+<span class="lineno">  847 </span><span class="spaces">          </span><span class="istickedoff">else if <span class="tickonlytrue">nonAuthoritative</span></span>
+<span class="lineno">  848 </span><span class="spaces">            </span><span class="istickedoff">then case family of</span>
+<span class="lineno">  849 </span><span class="spaces">              </span><span class="istickedoff">CMRepair -&gt; item { dcStatus = CsSuspended }</span>
+<span class="lineno">  850 </span><span class="spaces">              </span><span class="istickedoff">_ -&gt; item { dcStatus = downgradeCommitmentStatus (dcStatus item) }</span>
+<span class="lineno">  851 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">case family of</span></span>
+<span class="lineno">  852 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">CMClarify -&gt; item { dcStatus = CsUnresolved }</span></span>
+<span class="lineno">  853 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">CMRepair -&gt; item { dcStatus = CsSuspended }</span></span>
+<span class="lineno">  854 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">CMGround -&gt; item { dcStatus = CsAccepted }</span></span>
+<span class="lineno">  855 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">CMConfront -&gt; item { dcStatus = CsContested }</span></span>
+<span class="lineno">  856 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">_ -&gt; item</span></span>
+<span class="lineno">  857 </span><span class="spaces">  </span><span class="istickedoff">in DialogueCommitmentLedger (map rewrite items)</span></span>
+<span class="lineno">  858 </span>
+<span class="lineno">  859 </span>advanceDialoguePhaseAfterTurn :: DialoguePhase -&gt; ExecutedTurnOutcome -&gt; DialoguePhase
+<span class="lineno">  860 </span><span class="decl"><span class="istickedoff">advanceDialoguePhaseAfterTurn prior outcome</span>
+<span class="lineno">  861 </span><span class="spaces">  </span><span class="istickedoff">| etoAuthorityClass outcome `notElem` [AuthorityCanonical, AuthorityAssembled] =</span>
+<span class="lineno">  862 </span><span class="spaces">      </span><span class="istickedoff">case etoFamily outcome of</span>
+<span class="lineno">  863 </span><span class="spaces">        </span><span class="istickedoff">CMRepair -&gt; Repairing</span>
+<span class="lineno">  864 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; prior</span>
+<span class="lineno">  865 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  866 </span><span class="spaces">      </span><span class="istickedoff">case etoFamily outcome of</span>
+<span class="lineno">  867 </span><span class="spaces">        </span><span class="istickedoff">CMRepair -&gt; <span class="nottickedoff">Repairing</span></span>
+<span class="lineno">  868 </span><span class="spaces">        </span><span class="istickedoff">CMClarify -&gt; <span class="nottickedoff">Clarifying</span></span>
+<span class="lineno">  869 </span><span class="spaces">        </span><span class="istickedoff">CMGround -&gt; <span class="nottickedoff">Grounding</span></span>
+<span class="lineno">  870 </span><span class="spaces">        </span><span class="istickedoff">CMNextStep -&gt; <span class="nottickedoff">Advancing</span></span>
+<span class="lineno">  871 </span><span class="spaces">        </span><span class="istickedoff">CMConfront -&gt; <span class="nottickedoff">Contesting</span></span>
+<span class="lineno">  872 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; prior</span></span>
+<span class="lineno">  873 </span>
+<span class="lineno">  874 </span>downgradeCommitmentStatus :: CommitmentStatus -&gt; CommitmentStatus
+<span class="lineno">  875 </span><span class="decl"><span class="istickedoff">downgradeCommitmentStatus status =</span>
+<span class="lineno">  876 </span><span class="spaces">  </span><span class="istickedoff">case status of</span>
+<span class="lineno">  877 </span><span class="spaces">    </span><span class="istickedoff">CsAccepted -&gt; CsUnresolved</span>
+<span class="lineno">  878 </span><span class="spaces">    </span><span class="istickedoff">CsContested -&gt; CsSuspended</span>
+<span class="lineno">  879 </span><span class="spaces">    </span><span class="istickedoff">other -&gt; other</span></span>
+<span class="lineno">  880 </span>
+<span class="lineno">  881 </span>data LearningReplayVerdict = LearningReplayVerdict
+<span class="lineno">  882 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">lrvStatus</span></span></span> :: !Text
+<span class="lineno">  883 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrvSandboxResult</span></span></span> :: !(Maybe Text)
+<span class="lineno">  884 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrvGraftTurn</span></span></span> :: !(Maybe Int)
+<span class="lineno">  885 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">lrvRejectReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">  886 </span>  }
+<span class="lineno">  887 </span>
+<span class="lineno">  888 </span>deriveLearningReplayVerdict :: SystemState -&gt; TurnArtifacts -&gt; LearningReplayVerdict
+<span class="lineno">  889 </span><span class="decl"><span class="istickedoff">deriveLearningReplayVerdict nextSs ta =</span>
+<span class="lineno">  890 </span><span class="spaces">  </span><span class="istickedoff">case firstAttempt of</span>
+<span class="lineno">  891 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; LearningReplayVerdict &quot;not_attempted&quot; Nothing Nothing Nothing</span>
+<span class="lineno">  892 </span><span class="spaces">    </span><span class="istickedoff">Just (Left err) -&gt;</span>
+<span class="lineno">  893 </span><span class="spaces">      </span><span class="istickedoff">LearningReplayVerdict</span>
+<span class="lineno">  894 </span><span class="spaces">        </span><span class="istickedoff">{ lrvStatus = case err of</span>
+<span class="lineno">  895 </span><span class="spaces">            </span><span class="istickedoff">EqeFallback _ -&gt; &quot;fallback_non_authoritative&quot;</span>
+<span class="lineno">  896 </span><span class="spaces">            </span><span class="istickedoff">_ -&gt; &quot;transport_error&quot;</span>
+<span class="lineno">  897 </span><span class="spaces">        </span><span class="istickedoff">, lrvSandboxResult = Nothing</span>
+<span class="lineno">  898 </span><span class="spaces">        </span><span class="istickedoff">, lrvGraftTurn = Nothing</span>
+<span class="lineno">  899 </span><span class="spaces">        </span><span class="istickedoff">, lrvRejectReason = Just (renderExternalQueryError err)</span>
+<span class="lineno">  900 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  901 </span><span class="spaces">    </span><span class="istickedoff">Just (Right _) -&gt;</span>
+<span class="lineno">  902 </span><span class="spaces">      </span><span class="istickedoff">case <span class="nottickedoff">()</span> of</span>
+<span class="lineno">  903 </span><span class="spaces">        </span><span class="istickedoff">_ | <span class="tickonlytrue">not authoritativeTurn</span> -&gt; LearningReplayVerdict &quot;observed_non_authoritative&quot; (firstCauseEvidence &quot;sandbox_accept&quot;) Nothing (Just <span class="nottickedoff">&quot;truth_contract_ceiling_non_authoritative&quot;</span>)</span>
+<span class="lineno">  904 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">any isGraft currentTurnRecords</span> -&gt; <span class="nottickedoff">LearningReplayVerdict &quot;accept&quot; (firstCauseEvidence &quot;sandbox_accept&quot;) (Just currentTurn) Nothing</span></span>
+<span class="lineno">  905 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">any isSandboxReject currentTurnRecords</span> -&gt; <span class="nottickedoff">LearningReplayVerdict &quot;sandbox_reject&quot; (firstMutationEvidence &quot;external_learning:sandbox_reject&quot;) Nothing (firstMutationEvidence &quot;external_learning:sandbox_reject&quot;)</span></span>
+<span class="lineno">  906 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">any isValidationReject currentTurnRecords</span> -&gt; <span class="nottickedoff">LearningReplayVerdict &quot;validation_reject&quot; Nothing Nothing (firstMutationEvidence &quot;external_learning:validation_reject&quot;)</span></span>
+<span class="lineno">  907 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">any isParserReject currentTurnRecords</span> -&gt; <span class="nottickedoff">LearningReplayVerdict &quot;invalid_response&quot; Nothing Nothing (Just &quot;parser_rejected_schema_or_text&quot;)</span></span>
+<span class="lineno">  908 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">LearningReplayVerdict &quot;observed_non_authoritative&quot; Nothing Nothing (Just &quot;learning_outcome_unresolved&quot;)</span></span>
+<span class="lineno">  909 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  910 </span><span class="spaces">    </span><span class="istickedoff">authoritativeTurn = truthContractIsAuthoritative (taTruthContractStatus ta)</span>
+<span class="lineno">  911 </span><span class="spaces">    </span><span class="istickedoff">currentTurn = ssTurnCount nextSs</span>
+<span class="lineno">  912 </span><span class="spaces">    </span><span class="istickedoff">currentTurnRecords = filter ((== currentTurn) . amrTurnId) (ssAdaptiveMutationLog nextSs)</span>
+<span class="lineno">  913 </span><span class="spaces">    </span><span class="istickedoff">firstAttempt = taExternalQueryResult ta &lt;|&gt; taExploratoryQueryResult ta</span>
+<span class="lineno">  914 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isGraft record = amrCause record == &quot;external_learning:graft&quot; &amp;&amp; amrDecision record == AdaptiveAccepted</span></span>
+<span class="lineno">  915 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isSandboxReject record = amrCause record == &quot;external_learning:sandbox_reject&quot;</span></span>
+<span class="lineno">  916 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isValidationReject record = amrCause record == &quot;external_learning:validation_reject&quot;</span></span>
+<span class="lineno">  917 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">isParserReject record = amrCause record == &quot;tool_reliability:rejected&quot; &amp;&amp; any (== &quot;reason=parser_rejected_schema_or_text&quot;) (amrEvidence record)</span></span>
+<span class="lineno">  918 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">firstMutationEvidence cause =</span></span>
+<span class="lineno">  919 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case [ evidence | record &lt;- currentTurnRecords, amrCause record == cause, evidence:_ &lt;- [amrEvidence record] ] of</span></span>
+<span class="lineno">  920 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">value:_ -&gt; Just value</span></span>
+<span class="lineno">  921 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  922 </span><span class="spaces">    </span><span class="istickedoff">firstCauseEvidence reason =</span>
+<span class="lineno">  923 </span><span class="spaces">      </span><span class="istickedoff">case [ <span class="nottickedoff">evidence</span> | record &lt;- currentTurnRecords, any (== (&quot;reason=&quot; &lt;&gt; reason)) (amrEvidence record), evidence:_ &lt;- [amrEvidence record] ] of</span>
+<span class="lineno">  924 </span><span class="spaces">        </span><span class="istickedoff">value:_ -&gt; Just <span class="nottickedoff">value</span></span>
+<span class="lineno">  925 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">  926 </span>
+<span class="lineno">  927 </span>retainBlockedConcepts :: Text -&gt; [Text] -&gt; [Text]
+<span class="lineno">  928 </span><span class="decl"><span class="istickedoff">retainBlockedConcepts latestReason existing =</span>
+<span class="lineno">  929 </span><span class="spaces">  </span><span class="istickedoff">take blockedConceptsRetentionLimit (dedupePreservingOrder (latestReason : existing))</span></span>
+<span class="lineno">  930 </span>
+<span class="lineno">  931 </span>dedupePreservingOrder :: [Text] -&gt; [Text]
+<span class="lineno">  932 </span><span class="decl"><span class="istickedoff">dedupePreservingOrder = go Set.empty</span>
+<span class="lineno">  933 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  934 </span><span class="spaces">    </span><span class="istickedoff">go _ [] = []</span>
+<span class="lineno">  935 </span><span class="spaces">    </span><span class="istickedoff">go seen (value : rest)</span>
+<span class="lineno">  936 </span><span class="spaces">      </span><span class="istickedoff">| value `Set.member` seen = go <span class="nottickedoff">seen</span> rest</span>
+<span class="lineno">  937 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = value : go (Set.insert value seen) rest</span></span>
+
+</pre>
+</body>
+</html>

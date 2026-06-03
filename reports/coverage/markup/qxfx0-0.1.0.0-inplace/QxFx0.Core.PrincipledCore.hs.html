@@ -1,0 +1,170 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies, DeriveAnyClass, OverloadedStrings, DeriveGeneric #-}
+<span class="lineno">    2 </span>{-| Pressure detection and principled response selection for adversarial or corrective turns. -}
+<span class="lineno">    3 </span>module QxFx0.Core.PrincipledCore
+<span class="lineno">    4 </span>  ( PressureType(..)
+<span class="lineno">    5 </span>  , PressureSignal(..)
+<span class="lineno">    6 </span>  , PressureState(..)
+<span class="lineno">    7 </span>  , PrincipledMode(..)
+<span class="lineno">    8 </span>  , detectPressure
+<span class="lineno">    9 </span>  , classifyPressure
+<span class="lineno">   10 </span>  , pressureBandFromState
+<span class="lineno">   11 </span>  , principledMode
+<span class="lineno">   12 </span>  , principledToPromptSection
+<span class="lineno">   13 </span>  , pressureDescription
+<span class="lineno">   14 </span>  , PressureBand(..)
+<span class="lineno">   15 </span>  ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import Data.Text (Text)
+<span class="lineno">   18 </span>import qualified Data.Text as T
+<span class="lineno">   19 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   20 </span>import GHC.Generics (Generic)
+<span class="lineno">   21 </span>import QxFx0.Types (PressureBand(..))
+<span class="lineno">   22 </span>import QxFx0.Semantic.KeywordMatch
+<span class="lineno">   23 </span>  ( tokenizeKeywordText
+<span class="lineno">   24 </span>  , containsAnyKeywordPhrase
+<span class="lineno">   25 </span>  )
+<span class="lineno">   26 </span>import QxFx0.Policy.Contracts
+<span class="lineno">   27 </span>  ( correctionMarkers, authorityMarkers, emotionalMarkers
+<span class="lineno">   28 </span>  , newInfoMarkers, insistenceMarkers
+<span class="lineno">   29 </span>  , holdGroundDirective, openToUpdateDirective, acknowledgeAndHoldDirective
+<span class="lineno">   30 </span>  , principledHeader, newInfoTag, pressureForceLabel
+<span class="lineno">   31 </span>  , pressureTypeText
+<span class="lineno">   32 </span>  )
+<span class="lineno">   33 </span>import QxFx0.Types.Text (fmtPct)
+<span class="lineno">   34 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   35 </span>  ( principledAuthorityPressureStrength
+<span class="lineno">   36 </span>  , principledCorrectionPressureWithNewInfo
+<span class="lineno">   37 </span>  , principledCorrectionPressureWithoutNewInfo
+<span class="lineno">   38 </span>  , principledEmotionalPressureStrength
+<span class="lineno">   39 </span>  , principledInsistencePressureStrength
+<span class="lineno">   40 </span>  , principledRepetitionOverlapThreshold
+<span class="lineno">   41 </span>  )
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>data PressureType
+<span class="lineno">   44 </span>  = DirectCorrection | AuthorityCommand | EmotionalDemand | RepetitiveInsistence
+<span class="lineno">   45 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   46 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>data PressureSignal = PressureSignal
+<span class="lineno">   49 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">psType</span></span></span>       :: PressureType
+<span class="lineno">   50 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">psStrength</span></span></span>   :: Double
+<span class="lineno">   51 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">psHasNewInfo</span></span></span> :: Bool
+<span class="lineno">   52 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   53 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>data PressureState
+<span class="lineno">   56 </span>  = NoPressure
+<span class="lineno">   57 </span>  | ActivePressure
+<span class="lineno">   58 </span>      { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">pstIsRepeated</span></span></span> :: !Bool
+<span class="lineno">   59 </span>      , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">pstStrength</span></span></span>   :: !Double
+<span class="lineno">   60 </span>      }
+<span class="lineno">   61 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   62 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>data PrincipledMode
+<span class="lineno">   65 </span>  = HoldGround | OpenToUpdate | AcknowledgeAndHold
+<span class="lineno">   66 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   67 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>detectPressure :: Text -&gt; [Text] -&gt; Maybe PressureSignal
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">detectPressure raw history =</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">let tokens = tokenizeKeywordText raw</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">hasCorrection  = anyContains tokens correctionMarkers</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">hasAuthority   = anyContains tokens authorityMarkers</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">hasEmotional   = anyContains tokens emotionalMarkers</span>
+<span class="lineno">   75 </span><span class="spaces">      </span><span class="istickedoff">hasInsistence  = anyContains tokens insistenceMarkers</span>
+<span class="lineno">   76 </span><span class="spaces">      </span><span class="istickedoff">hasNewInfo     = anyContains tokens newInfoMarkers</span>
+<span class="lineno">   77 </span><span class="spaces">      </span><span class="istickedoff">isRepetitive = case history of</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">(prev:_) -&gt;</span>
+<span class="lineno">   79 </span><span class="spaces">          </span><span class="istickedoff">let ws1 = tokens</span>
+<span class="lineno">   80 </span><span class="spaces">              </span><span class="istickedoff">ws2 = tokenizeKeywordText prev</span>
+<span class="lineno">   81 </span><span class="spaces">              </span><span class="istickedoff">overlap = length (filter (`elem` ws2) ws1)</span>
+<span class="lineno">   82 </span><span class="spaces">              </span><span class="istickedoff">total   = max 1 (length ws1)</span>
+<span class="lineno">   83 </span><span class="spaces">              </span><span class="istickedoff">overlapRatio :: Double</span>
+<span class="lineno">   84 </span><span class="spaces">              </span><span class="istickedoff">overlapRatio = fromIntegral overlap / fromIntegral total</span>
+<span class="lineno">   85 </span><span class="spaces">          </span><span class="istickedoff">in overlapRatio &gt; principledRepetitionOverlapThreshold &amp;&amp; <span class="nottickedoff">length ws1 &gt; 4</span></span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; False</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">in if hasAuthority</span>
+<span class="lineno">   88 </span><span class="spaces">     </span><span class="istickedoff">then Just $ <span class="nottickedoff">PressureSignal AuthorityCommand principledAuthorityPressureStrength False</span></span>
+<span class="lineno">   89 </span><span class="spaces">     </span><span class="istickedoff">else if hasCorrection</span>
+<span class="lineno">   90 </span><span class="spaces">          </span><span class="istickedoff">then Just $ PressureSignal</span>
+<span class="lineno">   91 </span><span class="spaces">               </span><span class="istickedoff">DirectCorrection</span>
+<span class="lineno">   92 </span><span class="spaces">               </span><span class="istickedoff">( if <span class="tickonlyfalse">hasNewInfo</span></span>
+<span class="lineno">   93 </span><span class="spaces">                   </span><span class="istickedoff">then <span class="nottickedoff">principledCorrectionPressureWithNewInfo</span></span>
+<span class="lineno">   94 </span><span class="spaces">                   </span><span class="istickedoff">else principledCorrectionPressureWithoutNewInfo</span>
+<span class="lineno">   95 </span><span class="spaces">               </span><span class="istickedoff">)</span>
+<span class="lineno">   96 </span><span class="spaces">               </span><span class="istickedoff">hasNewInfo</span>
+<span class="lineno">   97 </span><span class="spaces">          </span><span class="istickedoff">else if hasEmotional</span>
+<span class="lineno">   98 </span><span class="spaces">               </span><span class="istickedoff">then Just $ <span class="nottickedoff">PressureSignal EmotionalDemand principledEmotionalPressureStrength False</span></span>
+<span class="lineno">   99 </span><span class="spaces">               </span><span class="istickedoff">else if <span class="tickonlyfalse">hasInsistence || isRepetitive</span></span>
+<span class="lineno">  100 </span><span class="spaces">                    </span><span class="istickedoff">then <span class="nottickedoff">Just $ PressureSignal RepetitiveInsistence principledInsistencePressureStrength False</span></span>
+<span class="lineno">  101 </span><span class="spaces">                    </span><span class="istickedoff">else Nothing</span></span>
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>anyContains :: [Text] -&gt; [Text] -&gt; Bool
+<span class="lineno">  104 </span><span class="decl"><span class="istickedoff">anyContains haystack needles = containsAnyKeywordPhrase haystack needles</span></span>
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>principledMode :: PressureSignal -&gt; PrincipledMode
+<span class="lineno">  107 </span><span class="decl"><span class="istickedoff">principledMode signal</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">psHasNewInfo signal</span>              = <span class="nottickedoff">OpenToUpdate</span></span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">psType signal == EmotionalDemand</span> = <span class="nottickedoff">AcknowledgeAndHold</span></span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>                        = HoldGround</span></span>
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>classifyPressure :: Maybe PressureSignal -&gt; [Text] -&gt; PressureState
+<span class="lineno">  113 </span><span class="decl"><span class="istickedoff">classifyPressure Nothing _ = NoPressure</span>
+<span class="lineno">  114 </span><span class="spaces"></span><span class="istickedoff">classifyPressure (Just sig) _ =</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">ActivePressure</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">{ pstIsRepeated = psType sig `elem` [RepetitiveInsistence, DirectCorrection]</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">, pstStrength = psStrength sig</span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>pressureBandFromState :: PressureState -&gt; PressureBand
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">pressureBandFromState NoPressure = PressNone</span>
+<span class="lineno">  122 </span><span class="spaces"></span><span class="istickedoff">pressureBandFromState ActivePressure { pstIsRepeated = True } = PressHeavy</span>
+<span class="lineno">  123 </span><span class="spaces"></span><span class="istickedoff">pressureBandFromState ActivePressure {} = <span class="nottickedoff">PressLight</span></span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>principledToPromptSection :: PressureSignal -&gt; PrincipledMode -&gt; Text
+<span class="lineno">  126 </span><span class="decl"><span class="nottickedoff">principledToPromptSection signal mode =</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="nottickedoff">let pTypeText = case lookup (renderPressureType (psType signal)) pressureTypeText of</span>
+<span class="lineno">  128 </span><span class="spaces">                   </span><span class="nottickedoff">Just t -&gt; t; Nothing -&gt; renderPressureType (psType signal)</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="nottickedoff">header = principledHeader &lt;&gt; pTypeText &lt;&gt; &quot;]&quot;</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="nottickedoff">in T.unlines $ [header, &quot;&quot;] ++ modeDirective mode</span></span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>modeDirective :: PrincipledMode -&gt; [Text]
+<span class="lineno">  133 </span><span class="decl"><span class="nottickedoff">modeDirective HoldGround = holdGroundDirective</span>
+<span class="lineno">  134 </span><span class="spaces"></span><span class="nottickedoff">modeDirective OpenToUpdate = openToUpdateDirective</span>
+<span class="lineno">  135 </span><span class="spaces"></span><span class="nottickedoff">modeDirective AcknowledgeAndHold = acknowledgeAndHoldDirective</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>pressureDescription :: PressureSignal -&gt; Text
+<span class="lineno">  138 </span><span class="decl"><span class="nottickedoff">pressureDescription signal =</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="nottickedoff">renderPressureType (psType signal) &lt;&gt;</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="nottickedoff">pressureForceLabel &lt;&gt; fmtPct (psStrength signal) &lt;&gt; &quot;)&quot; &lt;&gt;</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="nottickedoff">if psHasNewInfo signal then newInfoTag else &quot;&quot;</span></span>
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>renderPressureType :: PressureType -&gt; Text
+<span class="lineno">  144 </span><span class="decl"><span class="nottickedoff">renderPressureType DirectCorrection     = &quot;\1087\1088\1103\1084\1072\1103 \1082\1086\1088\1088\1077\1082\1094\1080\1103&quot;</span>
+<span class="lineno">  145 </span><span class="spaces"></span><span class="nottickedoff">renderPressureType AuthorityCommand     = &quot;\1072\1074\1090\1086\1088\1080\1090\1072\1088\1085\1072\1103 \1082\1086\1084\1072\1085\1076\1072&quot;</span>
+<span class="lineno">  146 </span><span class="spaces"></span><span class="nottickedoff">renderPressureType EmotionalDemand      = &quot;\1101\1084\1086\1094\1080\1086\1085\1072\1083\1100\1085\1086\1077 \1076\1072\1074\1083\1077\1085\1080\1077&quot;</span>
+<span class="lineno">  147 </span><span class="spaces"></span><span class="nottickedoff">renderPressureType RepetitiveInsistence = &quot;\1087\1086\1074\1090\1086\1088\1085\1086\1077 \1085\1072\1089\1090\1072\1080\1074\1072\1085\1080\1077&quot;</span></span>
+
+</pre>
+</body>
+</html>

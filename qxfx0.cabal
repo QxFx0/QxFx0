@@ -148,8 +148,11 @@ library
     QxFx0.Bridge.NixCache
     QxFx0.Bridge.SQLite
     QxFx0.Bridge.SQLite.SchemaContract
+    QxFx0.Bridge.SQLite.SchemaContractCheck
+    QxFx0.Bridge.SQLite.SchemaConsistency
     QxFx0.Bridge.NativeSQLite
     QxFx0.Bridge.EmbeddedSQL
+    QxFx0.Bridge.EmbeddedSQLSync
     QxFx0.Bridge.Morphology
     QxFx0.Bridge.AgdaR5
     QxFx0.Bridge.AgdaWitness
@@ -192,6 +195,7 @@ library
      QxFx0.Semantic.SemanticInput
      QxFx0.Core.DialogueThread
      QxFx0.Core.SensePlan
+     QxFx0.Render.Authority
       QxFx0.Render.Dialogue
      QxFx0.Render.Semantic
      QxFx0.Render.Text

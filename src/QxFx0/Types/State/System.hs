@@ -645,10 +645,16 @@ persistedCanonicalState sessionId ss =
   ss
     { ssSessionId = sessionId
     , ssOutputMode = DialogueOutput
+    , ssTruthContractStatus = persistenceCanonicalTruthStatus (ssTruthContractStatus ss)
     , ssPerspectiveRegistry = emptyPerspectiveRegistry
     , ssGovernanceProjection = emptyGovernanceProjection
     , ssGovernanceRuntimeFault = Nothing
     }
+
+persistenceCanonicalTruthStatus :: TruthContractStatus -> TruthContractStatus
+persistenceCanonicalTruthStatus status
+  | status `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = status
+  | otherwise = AssembledSurfacePreserved
 
 runtimeContinuationState :: Text -> SystemState -> SystemState
 runtimeContinuationState sessionId ss =

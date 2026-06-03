@@ -1,0 +1,198 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Routing-phase signal synthesis and preferred-family selection helpers. -}
+<span class="lineno">    4 </span>module QxFx0.Core.TurnRouting.Phase
+<span class="lineno">    5 </span>  ( computeRoutingPhase
+<span class="lineno">    6 </span>  , mergeFamilySignals
+<span class="lineno">    7 </span>  , preferFamily
+<span class="lineno">    8 </span>  , semanticInputFamilyHint
+<span class="lineno">    9 </span>  , strategyFamilyHint
+<span class="lineno">   10 </span>  , identityFamilyHint
+<span class="lineno">   11 </span>  ) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   14 </span>import Data.Text (Text)
+<span class="lineno">   15 </span>import qualified Data.Text as T
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import QxFx0.Core.Ego (updateEgoFromTurn)
+<span class="lineno">   18 </span>import QxFx0.Core.IdentitySignal (IdentitySignal(..), buildIdentitySignalSimple)
+<span class="lineno">   19 </span>import QxFx0.Core.MeaningGraph (defaultStrategy, predictStrategy, toDepthBand)
+<span class="lineno">   20 </span>import QxFx0.Core.PrincipledCore
+<span class="lineno">   21 </span>  ( classifyPressure
+<span class="lineno">   22 </span>  , detectPressure
+<span class="lineno">   23 </span>  , pressureBandFromState
+<span class="lineno">   24 </span>  , principledMode
+<span class="lineno">   25 </span>  )
+<span class="lineno">   26 </span>import QxFx0.Core.R5Dynamics
+<span class="lineno">   27 </span>  ( EncounterMode(..)
+<span class="lineno">   28 </span>  , classifyEncounterModeSimple
+<span class="lineno">   29 </span>  , classifyOrbitalPhaseSimple
+<span class="lineno">   30 </span>  , defaultCoreDirective
+<span class="lineno">   31 </span>  , steerDirectiveWithOrbitalSimple
+<span class="lineno">   32 </span>  , updateOrbitalMemorySimple
+<span class="lineno">   33 </span>  )
+<span class="lineno">   34 </span>import QxFx0.Core.TurnModulation (computeTensionDelta)
+<span class="lineno">   35 </span>import QxFx0.Core.TurnRouting.Types (RoutingPhase(..))
+<span class="lineno">   36 </span>import QxFx0.Semantic.SemanticInput (SemanticInput(..), buildSemanticInputSimple)
+<span class="lineno">   37 </span>import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
+<span class="lineno">   38 </span>import QxFx0.Types
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>computeRoutingPhase :: CanonicalMoveFamily -&gt; InputPropositionFrame -&gt; AtomSet -&gt; UserState
+<span class="lineno">   41 </span>                    -&gt; SystemState -&gt; [Text] -&gt; Text -&gt; RoutingPhase
+<span class="lineno">   42 </span><span class="decl"><span class="istickedoff">computeRoutingPhase recommendedFamily frame atomSet nextUserState systemState history input =</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">let propositionFamily = ipfCanonicalFamily frame</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="istickedoff">familyByParserConfidence =</span>
+<span class="lineno">   45 </span><span class="spaces">        </span><span class="istickedoff">if ipfConfidence frame &gt;= parserHighConfidenceThreshold</span>
+<span class="lineno">   46 </span><span class="spaces">          </span><span class="istickedoff">then propositionFamily</span>
+<span class="lineno">   47 </span><span class="spaces">          </span><span class="istickedoff">else recommendedFamily</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff">semanticInput0 =</span>
+<span class="lineno">   49 </span><span class="spaces">        </span><span class="istickedoff">buildSemanticInputSimple input atomSet frame recommendedFamily (asRegister atomSet) (usNeedLayer nextUserState)</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">semanticFamily = semanticInputFamilyHint semanticInput0</span>
+<span class="lineno">   51 </span><span class="spaces">      </span><span class="istickedoff">familyMerged = mergeFamilySignalsWithFrame recommendedFamily frame familyByParserConfidence semanticFamily</span>
+<span class="lineno">   52 </span><span class="spaces">      </span><span class="istickedoff">parserLocked =</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff">ipfConfidence frame &gt;= parserHighConfidenceThreshold</span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; ipfPropositionType frame /= T.pack &quot;PlainAssert&quot;</span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">pressure = detectPressure input history</span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff">principledModeResult = fmap principledMode pressure</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff">pressureBand = pressureBandFromState (classifyPressure pressure <span class="nottickedoff">history</span>)</span>
+<span class="lineno">   58 </span><span class="spaces">      </span><span class="istickedoff">fromMeaningState = MeaningState ResonanceMed pressureBand (toDepthBand (ssTurnCount systemState))</span>
+<span class="lineno">   59 </span><span class="spaces">      </span><span class="istickedoff">toMeaningState = MeaningState ResonanceMed pressureBand (toDepthBand (ssTurnCount systemState + 1))</span>
+<span class="lineno">   60 </span><span class="spaces">      </span><span class="istickedoff">predictedStrategy = predictStrategy fromMeaningState toMeaningState (ssMeaningGraph systemState)</span>
+<span class="lineno">   61 </span><span class="spaces">      </span><span class="istickedoff">chosenStrategy = fromMaybe (defaultStrategy fromMeaningState) predictedStrategy</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">strategyFamily = strategyFamilyHint chosenStrategy</span>
+<span class="lineno">   63 </span><span class="spaces">      </span><span class="istickedoff">familyAfterStrategy</span>
+<span class="lineno">   64 </span><span class="spaces">        </span><span class="istickedoff">| parserLocked = familyMerged</span>
+<span class="lineno">   65 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = maybe <span class="nottickedoff">familyMerged</span> (`preferFamily` <span class="nottickedoff">familyMerged</span>) strategyFamily</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">preEgo = updateEgoFromTurn (ssEgo systemState) familyAfterStrategy (computeTensionDelta input systemState)</span>
+<span class="lineno">   67 </span><span class="spaces">      </span><span class="istickedoff">prevDirective = steerDirectiveWithOrbitalSimple (ssOrbitalMemory systemState) defaultCoreDirective</span>
+<span class="lineno">   68 </span><span class="spaces">      </span><span class="istickedoff">collapseRisk = egoTension preEgo</span>
+<span class="lineno">   69 </span><span class="spaces">      </span><span class="istickedoff">freezeRisk = 1.0 - egoAgency preEgo</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">orbitalPhase = classifyOrbitalPhaseSimple collapseRisk freezeRisk</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">encounterMode = classifyEncounterModeSimple orbitalPhase (egoTension preEgo)</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">updatedOrbital = updateOrbitalMemorySimple (ssOrbitalMemory systemState) orbitalPhase encounterMode prevDirective</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">identitySignal0 =</span>
+<span class="lineno">   74 </span><span class="spaces">        </span><span class="istickedoff">buildIdentitySignalSimple orbitalPhase encounterMode prevDirective</span>
+<span class="lineno">   75 </span><span class="spaces">          </span><span class="istickedoff">(asRegister atomSet) (usNeedLayer nextUserState) familyAfterStrategy (forceForFamily familyAfterStrategy)</span>
+<span class="lineno">   76 </span><span class="spaces">   </span><span class="istickedoff">in RoutingPhase</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">{ rpFamilyMerged = familyMerged</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">, rpMPressure = pressure</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">, rpPrincipledModeResult = principledModeResult</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">, rpPressureBand = pressureBand</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">, rpFromMs = fromMeaningState</span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">, rpToMs = toMeaningState</span>
+<span class="lineno">   83 </span><span class="spaces">        </span><span class="istickedoff">, rpChosenStrategy = chosenStrategy</span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff">, rpStrategyFamily = strategyFamily</span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff">, rpFamilyAfterStrategy = familyAfterStrategy</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">, rpPreEgo = preEgo</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">, rpPrevDirective = prevDirective</span>
+<span class="lineno">   88 </span><span class="spaces">        </span><span class="istickedoff">, rpOrbitalPhase = orbitalPhase</span>
+<span class="lineno">   89 </span><span class="spaces">        </span><span class="istickedoff">, rpEncounterMode = encounterMode</span>
+<span class="lineno">   90 </span><span class="spaces">        </span><span class="istickedoff">, rpUpdatedOrbital = updatedOrbital</span>
+<span class="lineno">   91 </span><span class="spaces">        </span><span class="istickedoff">, rpIdentitySignal0 = identitySignal0</span>
+<span class="lineno">   92 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>mergeFamilySignals :: CanonicalMoveFamily -&gt; CanonicalMoveFamily -&gt; CanonicalMoveFamily -&gt; CanonicalMoveFamily
+<span class="lineno">   95 </span><span class="decl"><span class="istickedoff">mergeFamilySignals recommended parser semantic</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">| parser /= recommended &amp;&amp; parser /= CMGround = parser</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">| semantic /= recommended &amp;&amp; semantic /= CMGround = semantic</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = recommended</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>mergeFamilySignalsWithFrame :: CanonicalMoveFamily -&gt; InputPropositionFrame -&gt; CanonicalMoveFamily -&gt; CanonicalMoveFamily -&gt; CanonicalMoveFamily
+<span class="lineno">  101 </span><span class="decl"><span class="istickedoff">mergeFamilySignalsWithFrame recommended frame parser semantic</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">| ipfConfidence frame &gt;= parserHighConfidenceThreshold</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">&amp;&amp; ipfPropositionType frame /= T.pack &quot;PlainAssert&quot;</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">&amp;&amp; parser /= recommended = parser</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = mergeFamilySignals recommended parser semantic</span></span>
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>preferFamily :: CanonicalMoveFamily -&gt; CanonicalMoveFamily -&gt; CanonicalMoveFamily
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">preferFamily preferred _ = preferred</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>semanticInputFamilyHint :: SemanticInput -&gt; CanonicalMoveFamily
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">semanticInputFamilyHint semanticInput =</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">let atoms = asAtoms (siAtomSet semanticInput)</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">frame = siPropositionFrame semanticInput</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">recommended = siRecommendedFamily semanticInput</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">rawLower = T.toLower (ipfRawText frame)</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">hasConfrontLexeme = T.pack &quot;противореч&quot; `T.isInfixOf` rawLower</span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="istickedoff">hasAtom p = any (\a -&gt; p (maTag a)) atoms</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">isContact (NeedContact _) = True; isContact _ = False</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">isRepair (Exhaustion _) = True; isRepair (AgencyLost _) = True; isRepair _ = False</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">isConfront (Contradiction _ _) = <span class="nottickedoff">True</span>; isConfront _ = False</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">isDeepen (NeedMeaning _) = <span class="nottickedoff">True</span>; isDeepen (Searching _) = True; isDeepen _ = False</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">isClarify (Verification _) = <span class="nottickedoff">True</span>; isClarify (Doubt _) = <span class="nottickedoff">True</span>; isClarify _ = False</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">isAnchor (Anchoring _) = True; isAnchor (AgencyFound _) = <span class="nottickedoff">True</span>; isAnchor _ = False</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">keepRecommendedOnClarify =</span></span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">not (ipfIsQuestion frame)</span></span>
+<span class="lineno">  126 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">&amp;&amp; recommended `elem` [CMGround, CMDefine, CMDistinguish, CMDescribe, CMPurpose, CMContact, CMDeepen]</span></span>
+<span class="lineno">  127 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">&amp;&amp; ipfPropositionType frame `notElem` map T.pack [&quot;ClarifyQ&quot;, &quot;EpistemicQ&quot;, &quot;RequestQ&quot;]</span></span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">keepRecommendedOnAnchorQuestion =</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">recommended `elem` [CMGround, CMDefine, CMDistinguish, CMDescribe, CMPurpose]</span>
+<span class="lineno">  130 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; <span class="nottickedoff">ipfPropositionType frame `elem` map T.pack</span></span>
+<span class="lineno">  131 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">[ &quot;SelfStateQ&quot;</span></span>
+<span class="lineno">  132 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;SelfKnowledgeQ&quot;</span></span>
+<span class="lineno">  133 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;SystemLogicQ&quot;</span></span>
+<span class="lineno">  134 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;WorldCauseQ&quot;</span></span>
+<span class="lineno">  135 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;OperationalCauseQ&quot;</span></span>
+<span class="lineno">  136 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;ConceptKnowledgeQ&quot;</span></span>
+<span class="lineno">  137 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;PurposeQ&quot;</span></span>
+<span class="lineno">  138 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;DistinctionQ&quot;</span></span>
+<span class="lineno">  139 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">, &quot;ComparisonPlausibilityQ&quot;</span></span>
+<span class="lineno">  140 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">]</span></span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlyfalse">hasConfrontLexeme</span> then <span class="nottickedoff">CMConfront</span></span>
+<span class="lineno">  142 </span><span class="spaces">     </span><span class="istickedoff">else if hasAtom isContact then CMContact</span>
+<span class="lineno">  143 </span><span class="spaces">     </span><span class="istickedoff">else if hasAtom isRepair then CMRepair</span>
+<span class="lineno">  144 </span><span class="spaces">     </span><span class="istickedoff">else if <span class="tickonlyfalse">hasAtom isConfront</span> then <span class="nottickedoff">CMConfront</span></span>
+<span class="lineno">  145 </span><span class="spaces">     </span><span class="istickedoff">else if hasAtom isDeepen then CMDeepen</span>
+<span class="lineno">  146 </span><span class="spaces">     </span><span class="istickedoff">else if <span class="tickonlyfalse">hasAtom isClarify</span></span>
+<span class="lineno">  147 </span><span class="spaces">       </span><span class="istickedoff">then <span class="nottickedoff">if keepRecommendedOnClarify then recommended else CMClarify</span></span>
+<span class="lineno">  148 </span><span class="spaces">     </span><span class="istickedoff">else if hasAtom isAnchor</span>
+<span class="lineno">  149 </span><span class="spaces">       </span><span class="istickedoff">then if <span class="tickonlyfalse">keepRecommendedOnAnchorQuestion</span> then <span class="nottickedoff">recommended</span> else CMAnchor</span>
+<span class="lineno">  150 </span><span class="spaces">     </span><span class="istickedoff">else case (siNeedLayer semanticInput, siRegister semanticInput) of</span>
+<span class="lineno">  151 </span><span class="spaces">       </span><span class="istickedoff">(ContactLayer, _) -&gt; <span class="nottickedoff">CMContact</span></span>
+<span class="lineno">  152 </span><span class="spaces">       </span><span class="istickedoff">(_, Contact) -&gt; <span class="nottickedoff">CMContact</span></span>
+<span class="lineno">  153 </span><span class="spaces">       </span><span class="istickedoff">(_, Exhaust) -&gt; <span class="nottickedoff">CMRepair</span></span>
+<span class="lineno">  154 </span><span class="spaces">       </span><span class="istickedoff">(_, Anchor) -&gt; <span class="nottickedoff">CMAnchor</span></span>
+<span class="lineno">  155 </span><span class="spaces">       </span><span class="istickedoff">(_, Search) -&gt; <span class="nottickedoff">CMDeepen</span></span>
+<span class="lineno">  156 </span><span class="spaces">       </span><span class="istickedoff">_ -&gt; recommended</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>strategyFamilyHint :: ResponseStrategy -&gt; Maybe CanonicalMoveFamily
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">strategyFamilyHint strategy =</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">case rsMove strategy of</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">CounterMove -&gt; Just CMConfront</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">ReframeMove -&gt; <span class="nottickedoff">Just CMClarify</span></span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">QuestionMove -&gt; <span class="nottickedoff">Just CMDeepen</span></span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">ValidateMove -&gt; Just CMContact</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">SilenceMove -&gt; <span class="nottickedoff">Just CMAnchor</span></span></span>
+<span class="lineno">  166 </span>
+<span class="lineno">  167 </span>identityFamilyHint :: IdentitySignal -&gt; Maybe CanonicalMoveFamily
+<span class="lineno">  168 </span><span class="decl"><span class="istickedoff">identityFamilyHint signal =</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">case isEncounterMode signal of</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">EncounterRecovery -&gt; <span class="nottickedoff">Just CMContact</span></span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">EncounterHolding -&gt; <span class="nottickedoff">Just CMAnchor</span></span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">EncounterPressure -&gt; <span class="nottickedoff">Just CMRepair</span></span>
+<span class="lineno">  173 </span><span class="spaces">    </span><span class="istickedoff">EncounterCounterweight -&gt; Just CMClarify</span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="istickedoff">EncounterMirroring -&gt; <span class="nottickedoff">Just CMReflect</span></span>
+<span class="lineno">  175 </span><span class="spaces">    </span><span class="istickedoff">EncounterExploration -&gt; Nothing</span></span>
+
+</pre>
+</body>
+</html>

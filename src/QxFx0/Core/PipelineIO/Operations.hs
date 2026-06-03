@@ -9,6 +9,7 @@ module QxFx0.Core.PipelineIO.Operations
   , shadowPolicyText
   , pipelineLocalRecoveryPolicy
   , localRecoveryPolicyText
+  , scheduleTurnEffects
   , resolveTurnEffect
   , resolveTurnEffects
   , runShadowVerification
@@ -31,6 +32,7 @@ import QxFx0.Core.PipelineIO.Internal
   , ShadowPolicy(..)
   , ShadowResult(..)
   )
+import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -55,6 +57,7 @@ import QxFx0.Types.TurnProjection (TurnProjection)
 
 import Data.Sequence (Seq)
 import Data.Text (Text)
+import Data.List (sortBy)
 
 pipelineRuntimeMode :: PipelineIO -> PipelineRuntimeMode
 pipelineRuntimeMode = pioRuntimeMode
@@ -80,6 +83,18 @@ pipelineLocalRecoveryPolicy = pioLocalRecoveryPolicy
 
 localRecoveryPolicyText :: LocalRecoveryPolicy -> Text
 localRecoveryPolicyText = renderLocalRecoveryPolicy
+
+scheduleTurnEffects :: PipelineIO -> ConatusEnergy -> [(a, TurnEffectRequest)] -> [(a, TurnEffectRequest)]
+scheduleTurnEffects pio conatus requests =
+  map snd (sortBy compareScheduled scoredRequests)
+  where
+    scoredRequests =
+      zipWith
+        (\idx request -> ((pioConatusPrior pio conatus (snd request), idx), request))
+        [(0 :: Int)..]
+        requests
+    compareScheduled ((priority1, idx1), _) ((priority2, idx2), _) =
+      compare priority2 priority1 <> compare idx1 idx2
 
 resolveTurnEffect :: PipelineIO -> TurnEffectRequest -> IO TurnEffectResult
 resolveTurnEffect pio request = pioInterpreter pio request
@@ -135,19 +150,13 @@ runPipelineNixCheck pio _ concept agency tension = do
   result <- resolveTurnEffect pio (TurnReqNixGuard concept agency tension)
   case result of
     TurnResNixGuard nixStatus -> pure nixStatus
-    _ -> pure (Unavailable "unexpected_nix_effect_result")
+    _ -> pure (Blocked "nix_guard_internal_error")
 
 modifyPipelineConsciousLoop :: PipelineIO -> (forall a. (ConsciousnessLoop -> IO (ConsciousnessLoop, a)) -> IO a)
-modifyPipelineConsciousLoop _ f = do
-  let cl = initialLoop
-  (_, result) <- f cl
-  pure result
+modifyPipelineConsciousLoop = pioModifyConsciousLoop
 
 modifyPipelineIntuition :: PipelineIO -> (forall a. (IntuitiveState -> IO (IntuitiveState, a)) -> IO a)
-modifyPipelineIntuition _ f = do
-  let intuitive = defaultIntuitiveState
-  (_, result) <- f intuitive
-  pure result
+modifyPipelineIntuition = pioModifyIntuition
 
 checkPipelineApiHealth :: PipelineIO -> IO Bool
 checkPipelineApiHealth pio = do

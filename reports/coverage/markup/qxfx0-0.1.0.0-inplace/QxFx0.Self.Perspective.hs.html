@@ -1,0 +1,787 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| P4 OpinionCore / PerspectiveOperator pure layer. -}
+<span class="lineno">    5 </span>module QxFx0.Self.Perspective
+<span class="lineno">    6 </span>  ( PerspectiveOperationResult(..)
+<span class="lineno">    7 </span>  , assemblePerspectiveInput
+<span class="lineno">    8 </span>  , opinionCore
+<span class="lineno">    9 </span>  , evaluatePerspectiveAdmissibility
+<span class="lineno">   10 </span>  , decidePerspectivePromotion
+<span class="lineno">   11 </span>  , applyPerspectiveDecision
+<span class="lineno">   12 </span>  , buildPerspectiveProjection
+<span class="lineno">   13 </span>  , buildActivePerspectiveProjections
+<span class="lineno">   14 </span>  , applyPerspectiveOperator
+<span class="lineno">   15 </span>  ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import Data.List (sortOn)
+<span class="lineno">   18 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   19 </span>import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
+<span class="lineno">   20 </span>import Data.Ord (Down(..))
+<span class="lineno">   21 </span>import Data.Text (Text)
+<span class="lineno">   22 </span>import qualified Data.Text as T
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>import QxFx0.Learning.KnowledgeTree
+<span class="lineno">   25 </span>  ( Branch(..)
+<span class="lineno">   26 </span>  , KnowledgeFruit(..)
+<span class="lineno">   27 </span>  , KnowledgeTree(..)
+<span class="lineno">   28 </span>  )
+<span class="lineno">   29 </span>import QxFx0.Learning.DialogueDevelopment
+<span class="lineno">   30 </span>  ( isWeakAcknowledgementText
+<span class="lineno">   31 </span>  , normalizeDialogueText
+<span class="lineno">   32 </span>  )
+<span class="lineno">   33 </span>import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+<span class="lineno">   34 </span>import QxFx0.Self.Field (Field, FieldConfidence(..), fieldConfidence)
+<span class="lineno">   35 </span>import QxFx0.Self.Perspective.Reduce
+<span class="lineno">   36 </span>  ( applyPerspectiveDecision
+<span class="lineno">   37 </span>  , buildActivePerspectiveProjections
+<span class="lineno">   38 </span>  , buildPerspectiveProjection
+<span class="lineno">   39 </span>  )
+<span class="lineno">   40 </span>import QxFx0.Types.Domain
+<span class="lineno">   41 </span>  ( IdentityClaimRef
+<span class="lineno">   42 </span>  )
+<span class="lineno">   43 </span>import QxFx0.Types.State.Identity (idsIdentityClaims)
+<span class="lineno">   44 </span>import QxFx0.Types.State.AdaptiveMutation
+<span class="lineno">   45 </span>  ( AdaptiveDecision(..)
+<span class="lineno">   46 </span>  , AdaptiveMutationKind(..)
+<span class="lineno">   47 </span>  , AdaptiveMutationRecord(..)
+<span class="lineno">   48 </span>  , EvidenceStrength(..)
+<span class="lineno">   49 </span>  )
+<span class="lineno">   50 </span>import QxFx0.Types.State.Governance
+<span class="lineno">   51 </span>  ( GovernanceActor(..)
+<span class="lineno">   52 </span>  , GovernanceRuntimeFault(..)
+<span class="lineno">   53 </span>  , buildPerspectiveGovernanceEvent
+<span class="lineno">   54 </span>  )
+<span class="lineno">   55 </span>import QxFx0.Governance.Replay
+<span class="lineno">   56 </span>  ( rebuildGovernedViews
+<span class="lineno">   57 </span>  , verifyPerspectiveRegistryRebuild
+<span class="lineno">   58 </span>  )
+<span class="lineno">   59 </span>import QxFx0.Types.State.DialogueDevelopment
+<span class="lineno">   60 </span>  ( BeliefPolarity(..)
+<span class="lineno">   61 </span>  , BeliefRecord(..)
+<span class="lineno">   62 </span>  , BeliefStore(..)
+<span class="lineno">   63 </span>  , DialoguePhase(..)
+<span class="lineno">   64 </span>  , DialogueOutcomeKind(..)
+<span class="lineno">   65 </span>  , DialogueOutcomeLearningState(..)
+<span class="lineno">   66 </span>  , DialogueOutcomeSample(..)
+<span class="lineno">   67 </span>  , DialogueThread(..)
+<span class="lineno">   68 </span>  )
+<span class="lineno">   69 </span>import QxFx0.Types.State.Perspective
+<span class="lineno">   70 </span>import QxFx0.Types.State.System
+<span class="lineno">   71 </span>  ( SystemState
+<span class="lineno">   72 </span>  , commitGovernedPerspectiveProjection
+<span class="lineno">   73 </span>  , appendGovernanceEventRecord
+<span class="lineno">   74 </span>  , ssBeliefStore
+<span class="lineno">   75 </span>  , ssDialoguePhase
+<span class="lineno">   76 </span>  , ssDialogueThread
+<span class="lineno">   77 </span>  , ssDialogueOutcomeLearning
+<span class="lineno">   78 </span>  , ssIdentity
+<span class="lineno">   79 </span>  , ssKnowledgeTree
+<span class="lineno">   80 </span>  , ssGovernanceHistory
+<span class="lineno">   81 </span>  , ssGovernanceRuntimeFault
+<span class="lineno">   82 </span>  , ssPerspectiveRegistry
+<span class="lineno">   83 </span>  , ssSessionId
+<span class="lineno">   84 </span>  , ssTurnCount
+<span class="lineno">   85 </span>  )
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>data PerspectiveOperationResult = PerspectiveOperationResult
+<span class="lineno">   88 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porInput</span></span></span> :: !PerspectiveInputBundle
+<span class="lineno">   89 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porCandidate</span></span></span> :: !PerspectiveCandidate
+<span class="lineno">   90 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porAdmissibility</span></span></span> :: !PerspectiveAdmissibility
+<span class="lineno">   91 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porPromotionDecision</span></span></span> :: !PerspectivePromotionDecision
+<span class="lineno">   92 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porRegistry</span></span></span> :: !PerspectiveRegistry
+<span class="lineno">   93 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porProjection</span></span></span> :: !(Maybe PerspectiveProjection)
+<span class="lineno">   94 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">porMutationRecord</span></span></span> :: !AdaptiveMutationRecord
+<span class="lineno">   95 </span>  }
+<span class="lineno">   96 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>assemblePerspectiveInput :: SystemState -&gt; ConatusEnergy -&gt; Bool -&gt; Field -&gt; PerspectiveInputBundle
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">assemblePerspectiveInput ss conatusEnergy conatusGateFired field =</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">let scope = selectPerspectiveScope ss</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">registry = ssPerspectiveRegistry ss</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">normativeProfile = activeNormativeProfile scope registry</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">lineage = lineageForScope scope registry</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">beliefStore = ssBeliefStore ss</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">counterarguments = counterargumentsForScope <span class="nottickedoff">scope</span> beliefStore (ssDialogueOutcomeLearning ss) lineage</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">in PerspectiveInputBundle</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">{ pibScope = scope</span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">, pibEvidence = evidenceForScope scope (ssKnowledgeTree ss) (ssDialogueOutcomeLearning ss)</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">, pibStanceSlice = stanceSliceForScope scope beliefStore</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">, pibIdentitySlice = identitySlice ss</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">, pibConatusSlice = conatusSlice conatusEnergy conatusGateFired field</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">, pibNormativeProfile = normativeProfile</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">, pibCounterarguments = counterarguments</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">, pibRevisionLineage = lineage</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>opinionCore :: PerspectiveInputBundle -&gt; PerspectiveCandidate
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">opinionCore bundle =</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">let evidenceCount = length (pibEvidence bundle)</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">stanceCount = length (pibStanceSlice bundle)</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">counterCount = length (pibCounterarguments bundle)</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">lineage = pibRevisionLineage bundle</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">np = pibNormativeProfile bundle</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">counterPressure = clampUnit (fromIntegral counterCount / 4.0)</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">normativeAlignment = computeNormativeAlignment np counterPressure (pibConatusSlice bundle)</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">internalTension = clampUnit (0.55 * counterPressure + 0.45 * (1.0 - normativeAlignment))</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">supportScore = clampUnit ((fromIntegral evidenceCount * 0.28) + (fromIntegral stanceCount * 0.14))</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">confidence = clampUnit (0.18 + supportScore + (0.25 * normativeAlignment) - (0.35 * counterPressure) - (0.20 * internalTension))</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">orientation = orientationFromScores confidence counterPressure normativeAlignment internalTension</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">supportingClaims = take 8 (map renderEvidenceRef (pibEvidence bundle) &lt;&gt; map renderClaimStanceRef (pibStanceSlice bundle))</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">baseVersion = case lineage of</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">recent:_ -&gt; Just <span class="nottickedoff">(prrToVersion recent)</span></span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">in PerspectiveCandidate</span>
+<span class="lineno">  135 </span><span class="spaces">      </span><span class="istickedoff">{ pcScope = pibScope bundle</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">, pcThesis = thesisForScope (pibScope bundle) orientation supportingClaims</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">, pcOrientation = orientation</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">, pcConfidence = confidence</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">, pcSupportingClaims = supportingClaims</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">, pcCounterargumentPressure = counterPressure</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">, pcNormativeAlignment = normativeAlignment</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">, pcInternalTension = internalTension</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">, pcBaseVersion = baseVersion</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">, pcNormativeProfileVersion = npVersionId np</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>evaluatePerspectiveAdmissibility :: PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; PerspectiveAdmissibility
+<span class="lineno">  148 </span><span class="decl"><span class="istickedoff">evaluatePerspectiveAdmissibility bundle candidate</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">| null (pibEvidence bundle) &amp;&amp; null (pibStanceSlice bundle) =</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">PerspectiveInadmissible &quot;insufficient_evidence&quot;</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">| T.null (isSessionId (pibIdentitySlice bundle)) =</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">PerspectiveInadmissible &quot;identity_violation:empty_session&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">csGateFired (pibConatusSlice bundle) || csEnergy (pibConatusSlice bundle) &lt; 0.0</span> =</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;conatus_violation&quot;</span></span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">pcCounterargumentPressure candidate &gt; 0.74</span> =</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;excessive_counterargument_pressure&quot;</span></span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">npConflictPolicy (pibNormativeProfile bundle) == &quot;invalid&quot;</span> =</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;invalid_normative_conflict&quot;</span></span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">pcNormativeAlignment candidate &lt; 0.25</span> =</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;invalid_normative_conflict&quot;</span></span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">pcConfidence candidate &lt; 0.30</span> =</span>
+<span class="lineno">  162 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;invalid_confidence_geometry&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">length (pcSupportingClaims candidate) &gt; 8</span> =</span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;boundedness_violation:supporting_claims&quot;</span></span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">invalidRevisionStep bundle candidate</span> =</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveInadmissible &quot;invalid_revision_step&quot;</span></span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">pcCounterargumentPressure candidate &gt; 0.45</span> =</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">PerspectiveAdmissibleQuarantined</span></span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">| pcConfidence candidate &gt;= 0.62 &amp;&amp; pcNormativeAlignment candidate &gt;= 0.55 =</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">PerspectiveAdmissibleAccepted</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">PerspectiveAdmissibleObserved</span></span>
+<span class="lineno">  173 </span>
+<span class="lineno">  174 </span>decidePerspectivePromotion :: PerspectiveRegistry -&gt; PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; PerspectiveAdmissibility -&gt; PerspectivePromotionDecision
+<span class="lineno">  175 </span><span class="decl"><span class="istickedoff">decidePerspectivePromotion registry bundle candidate admissibility =</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">case admissibility of</span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveInadmissible _ -&gt; PpdObserveOnly</span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleObserved -&gt; PpdObserveOnly</span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleQuarantined</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">rollbackPressure registry candidate</span> -&gt; PpdRollbackPrior</span>
+<span class="lineno">  181 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">contestedActivePressure registry candidate</span> -&gt; <span class="nottickedoff">PpdSuspendActive</span></span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">PpdQuarantine</span></span>
+<span class="lineno">  183 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleAccepted</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">| weakEvidenceOnly bundle -&gt; PpdObserveOnly</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">rollbackPressure registry candidate</span> -&gt; <span class="nottickedoff">PpdRollbackPrior</span></span>
+<span class="lineno">  186 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">contestedActivePressure registry candidate</span> -&gt; <span class="nottickedoff">PpdSuspendActive</span></span>
+<span class="lineno">  187 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">hasActivePerspective (pcScope candidate) registry</span></span>
+<span class="lineno">  188 </span><span class="spaces">          </span><span class="istickedoff"><span class="tickonlyfalse">&amp;&amp; <span class="nottickedoff">stableCorroboration bundle candidate</span></span> -&gt; <span class="nottickedoff">PpdReviseActive</span></span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">stableCorroboration bundle candidate</span> -&gt; PpdPromoteEndorsed</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">PpdAcceptBounded</span></span></span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>applyPerspectiveOperator :: SystemState -&gt; ConatusEnergy -&gt; Bool -&gt; Field -&gt; SystemState
+<span class="lineno">  193 </span><span class="decl"><span class="istickedoff">applyPerspectiveOperator ss conatusEnergy conatusGateFired field =</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">let bundle = assemblePerspectiveInput ss conatusEnergy conatusGateFired field</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">admissibility = evaluatePerspectiveAdmissibility bundle candidate</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">registry0 = ssPerspectiveRegistry ss</span>
+<span class="lineno">  198 </span><span class="spaces">      </span><span class="istickedoff">decision = decidePerspectivePromotion registry0 bundle candidate admissibility</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="istickedoff">prospectiveRegistry = applyPerspectiveDecision (ssTurnCount ss) registry0 bundle candidate decision</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="istickedoff">prospectiveAdaptiveRecord = perspectiveMutationRecord (ssTurnCount ss) prospectiveRegistry bundle candidate admissibility decision</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="istickedoff">previousEvent = listToMaybe (reverse (ssGovernanceHistory ss))</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="istickedoff">sequenceNo = length (ssGovernanceHistory ss) + 1</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="istickedoff">prospectiveEvent = buildPerspectiveGovernanceEvent</span>
+<span class="lineno">  204 </span><span class="spaces">        </span><span class="istickedoff">ActorRuntime</span>
+<span class="lineno">  205 </span><span class="spaces">        </span><span class="istickedoff">sequenceNo</span>
+<span class="lineno">  206 </span><span class="spaces">        </span><span class="istickedoff">(ssSessionId ss)</span>
+<span class="lineno">  207 </span><span class="spaces">        </span><span class="istickedoff">previousEvent</span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="istickedoff">registry0</span>
+<span class="lineno">  209 </span><span class="spaces">        </span><span class="istickedoff">prospectiveRegistry</span>
+<span class="lineno">  210 </span><span class="spaces">        </span><span class="istickedoff">bundle</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="istickedoff">candidate</span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="istickedoff">admissibility</span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="istickedoff">(Just decision)</span>
+<span class="lineno">  214 </span><span class="spaces">        </span><span class="istickedoff">decision</span>
+<span class="lineno">  215 </span><span class="spaces">        </span><span class="istickedoff">(buildPerspectiveProjection prospectiveRegistry (pcScope candidate))</span>
+<span class="lineno">  216 </span><span class="spaces">   </span><span class="istickedoff">in case appendGovernanceEventRecord prospectiveEvent ss of</span>
+<span class="lineno">  217 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; ss { ssGovernanceRuntimeFault = Just <span class="nottickedoff">(GrfAppendRejected err)</span> }</span>
+<span class="lineno">  218 </span><span class="spaces">        </span><span class="istickedoff">Right ssWithGovernance -&gt;</span>
+<span class="lineno">  219 </span><span class="spaces">           </span><span class="istickedoff">case verifyPerspectiveRegistryRebuild (ssGovernanceHistory ssWithGovernance) prospectiveRegistry of</span>
+<span class="lineno">  220 </span><span class="spaces">              </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  221 </span><span class="spaces">                </span><span class="istickedoff">case rebuildGovernedViews ssWithGovernance of</span>
+<span class="lineno">  222 </span><span class="spaces">                  </span><span class="istickedoff">Right (_, rebuiltProjection) -&gt;</span>
+<span class="lineno">  223 </span><span class="spaces">                    </span><span class="istickedoff">(commitGovernedPerspectiveProjection rebuiltProjection prospectiveAdaptiveRecord ssWithGovernance)</span>
+<span class="lineno">  224 </span><span class="spaces">                      </span><span class="istickedoff">{ ssGovernanceRuntimeFault = Nothing }</span>
+<span class="lineno">  225 </span><span class="spaces">                  </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  226 </span><span class="spaces">                    </span><span class="istickedoff">ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }</span>
+<span class="lineno">  227 </span><span class="spaces">              </span><span class="istickedoff">Left &quot;governance perspective registry rebuild mismatch&quot; -&gt;</span>
+<span class="lineno">  228 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">ss { ssGovernanceRuntimeFault = Just GrfRebuildMismatch }</span></span>
+<span class="lineno">  229 </span><span class="spaces">              </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  230 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }</span></span></span>
+<span class="lineno">  231 </span>
+<span class="lineno">  232 </span>selectPerspectiveScope :: SystemState -&gt; PerspectiveScope
+<span class="lineno">  233 </span><span class="decl"><span class="istickedoff">selectPerspectiveScope ss =</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">let topic = firstNonEmpty</span>
+<span class="lineno">  235 </span><span class="spaces">        </span><span class="istickedoff">[ lastOutcomeTopic (ssDialogueOutcomeLearning ss)</span>
+<span class="lineno">  236 </span><span class="spaces">        </span><span class="istickedoff">, strongestClaimTopic (ssBeliefStore ss)</span>
+<span class="lineno">  237 </span><span class="spaces">        </span><span class="istickedoff">, strongestKnowledgeTopic (ssKnowledgeTree ss)</span>
+<span class="lineno">  238 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  239 </span><span class="spaces">      </span><span class="istickedoff">scopedTopic = clampPerspectiveScopeTopic (ssDialoguePhase ss) (ssDialogueThread ss) (fromMaybe &quot;general&quot; topic)</span>
+<span class="lineno">  240 </span><span class="spaces">      </span><span class="istickedoff">threadScope = dtStructuralScope (ssDialogueThread ss)</span>
+<span class="lineno">  241 </span><span class="spaces">  </span><span class="istickedoff">in case threadScope of</span>
+<span class="lineno">  242 </span><span class="spaces">       </span><span class="istickedoff">Just scope</span>
+<span class="lineno">  243 </span><span class="spaces">         </span><span class="istickedoff">| ssDialoguePhase ss `elem` [Clarifying, Grounding, Repairing, Contesting, Closing] -&gt; scope</span>
+<span class="lineno">  244 </span><span class="spaces">         </span><span class="istickedoff">| normalizeDialogueText (scopeText scope) == normalizeDialogueText scopedTopic -&gt; scope</span>
+<span class="lineno">  245 </span><span class="spaces">       </span><span class="istickedoff">_ -&gt; ScopeTopic scopedTopic</span></span>
+<span class="lineno">  246 </span>
+<span class="lineno">  247 </span>clampPerspectiveScopeTopic :: DialoguePhase -&gt; DialogueThread -&gt; Text -&gt; Text
+<span class="lineno">  248 </span><span class="decl"><span class="istickedoff">clampPerspectiveScopeTopic phase thread proposedTopic =</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">let proposed = normalizeDialogueText proposedTopic</span>
+<span class="lineno">  250 </span><span class="spaces">      </span><span class="istickedoff">currentFocus = normalizeDialogueText (dtCurrentFocus thread)</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">phaseScope = normalizeDialogueText (dtPhaseScope thread)</span>
+<span class="lineno">  252 </span><span class="spaces">      </span><span class="istickedoff">activeScope = firstNonEmpty [structuralScopeTextMaybe (dtStructuralScope thread), nonEmptyMaybe phaseScope, nonEmptyMaybe currentFocus]</span>
+<span class="lineno">  253 </span><span class="spaces">      </span><span class="istickedoff">lockedPhase = phase `elem` [Clarifying, Grounding, Repairing, Contesting, Closing]</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">in case activeScope of</span>
+<span class="lineno">  255 </span><span class="spaces">       </span><span class="istickedoff">Nothing -&gt; if <span class="tickonlyfalse">T.null proposed</span> then <span class="nottickedoff">&quot;general&quot;</span> else proposed</span>
+<span class="lineno">  256 </span><span class="spaces">       </span><span class="istickedoff">Just scope</span>
+<span class="lineno">  257 </span><span class="spaces">         </span><span class="istickedoff">| <span class="tickonlyfalse">T.null proposed</span> -&gt; <span class="nottickedoff">scope</span></span>
+<span class="lineno">  258 </span><span class="spaces">         </span><span class="istickedoff">| <span class="tickonlyfalse">lockedPhase &amp;&amp; <span class="nottickedoff">normalizeDialogueText scope /= normalizeDialogueText proposed</span></span> -&gt; <span class="nottickedoff">scope</span></span>
+<span class="lineno">  259 </span><span class="spaces">         </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt; proposed</span></span>
+<span class="lineno">  260 </span>
+<span class="lineno">  261 </span>nonEmptyMaybe :: Text -&gt; Maybe Text
+<span class="lineno">  262 </span><span class="decl"><span class="istickedoff">nonEmptyMaybe txt</span>
+<span class="lineno">  263 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">T.null txt</span> = Nothing</span>
+<span class="lineno">  264 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Just txt</span></span></span>
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>activeNormativeProfile :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; NormativeProfile
+<span class="lineno">  267 </span><span class="decl"><span class="istickedoff">activeNormativeProfile scope registry =</span>
+<span class="lineno">  268 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup (prActiveNormativeProfileId registry) (prNormativeProfiles registry) of</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">Just profile | normativeProfileApplies scope profile -&gt; profile</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; case filter (normativeProfileApplies scope) (M.elems (prNormativeProfiles registry)) of</span>
+<span class="lineno">  271 </span><span class="spaces">      </span><span class="istickedoff">profile:_ -&gt; profile</span>
+<span class="lineno">  272 </span><span class="spaces">      </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">defaultNormativeProfile</span></span></span>
+<span class="lineno">  273 </span>
+<span class="lineno">  274 </span>lineageForScope :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; [PerspectiveRevisionRecord]
+<span class="lineno">  275 </span><span class="decl"><span class="istickedoff">lineageForScope scope registry =</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup scope (prThreads registry) of</span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; []</span>
+<span class="lineno">  278 </span><span class="spaces">    </span><span class="istickedoff">Just thread -&gt; <span class="nottickedoff">take (prMaxLineageSlice registry) (ptRevisionHistory thread)</span></span></span>
+<span class="lineno">  279 </span>
+<span class="lineno">  280 </span>evidenceForScope :: PerspectiveScope -&gt; KnowledgeTree -&gt; DialogueOutcomeLearningState -&gt; [EvidenceRef]
+<span class="lineno">  281 </span><span class="decl"><span class="istickedoff">evidenceForScope scope tree outcomes =</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="istickedoff">take 12 (knowledgeEvidence scope tree &lt;&gt; dialogueEvidence scope outcomes)</span></span>
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>knowledgeEvidence :: PerspectiveScope -&gt; KnowledgeTree -&gt; [EvidenceRef]
+<span class="lineno">  285 </span><span class="decl"><span class="istickedoff">knowledgeEvidence scope tree =</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">let topic = scopeText scope</span>
+<span class="lineno">  287 </span><span class="spaces">      </span><span class="istickedoff">fruits = concatMap brFruits (concat (M.elems (ktBranches tree)))</span>
+<span class="lineno">  288 </span><span class="spaces">      </span><span class="istickedoff">relevant fruit =</span>
+<span class="lineno">  289 </span><span class="spaces">        </span><span class="istickedoff">kfValidated fruit</span>
+<span class="lineno">  290 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; (T.null topic || topic `T.isInfixOf` normalizeDialogueText (kfWord fruit &lt;&gt; &quot; &quot; &lt;&gt; kfProposition fruit))</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">in map (EvidenceRef . (&quot;knowledge:&quot; &lt;&gt;) . T.take 120 . kfProposition) (filter relevant fruits)</span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>dialogueEvidence :: PerspectiveScope -&gt; DialogueOutcomeLearningState -&gt; [EvidenceRef]
+<span class="lineno">  294 </span><span class="decl"><span class="istickedoff">dialogueEvidence scope outcomes =</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="istickedoff">let topic = scopeText scope</span>
+<span class="lineno">  296 </span><span class="spaces">      </span><span class="istickedoff">relevant sample =</span>
+<span class="lineno">  297 </span><span class="spaces">          </span><span class="istickedoff">dosStrongUpdate sample</span>
+<span class="lineno">  298 </span><span class="spaces">            </span><span class="istickedoff">&amp;&amp; dosKind sample `elem` [DialogueOutcomeSuccess, <span class="nottickedoff">DialogueOutcomeConflict</span>, <span class="nottickedoff">DialogueOutcomeRepeatedQuestion</span>]</span>
+<span class="lineno">  299 </span><span class="spaces">            </span><span class="istickedoff">&amp;&amp; (T.null topic || normalizeDialogueText (dosTopic sample) == topic)</span>
+<span class="lineno">  300 </span><span class="spaces">  </span><span class="istickedoff">in map (EvidenceRef . dialogueEvidenceText) (take 6 (filter relevant (dolRecentOutcomes outcomes)))</span></span>
+<span class="lineno">  301 </span>
+<span class="lineno">  302 </span>stanceSliceForScope :: PerspectiveScope -&gt; BeliefStore -&gt; [ClaimStanceRef]
+<span class="lineno">  303 </span><span class="decl"><span class="istickedoff">stanceSliceForScope scope store =</span>
+<span class="lineno">  304 </span><span class="spaces">  </span><span class="istickedoff">let topic = scopeText scope</span>
+<span class="lineno">  305 </span><span class="spaces">      </span><span class="istickedoff">relevant record =</span>
+<span class="lineno">  306 </span><span class="spaces">          </span><span class="istickedoff">brConfidence record &gt;= 0.45</span>
+<span class="lineno">  307 </span><span class="spaces">            </span><span class="istickedoff">&amp;&amp; brPolarity record `elem` [BeliefAffirmed, BeliefTentative, <span class="nottickedoff">BeliefContested</span>]</span>
+<span class="lineno">  308 </span><span class="spaces">            </span><span class="istickedoff">&amp;&amp; (T.null topic || topic `T.isInfixOf` normalizeDialogueText (brClaim record))</span>
+<span class="lineno">  309 </span><span class="spaces">      </span><span class="istickedoff">scored record = (brConfidence record, record)</span>
+<span class="lineno">  310 </span><span class="spaces">  </span><span class="istickedoff">in map (ClaimStanceRef . stanceRefText) . take 8 . map snd . sortOn (Down . fst) . map scored . filter relevant . M.elems $ bsClaims store</span></span>
+<span class="lineno">  311 </span>
+<span class="lineno">  312 </span>counterargumentsForScope :: PerspectiveScope -&gt; BeliefStore -&gt; DialogueOutcomeLearningState -&gt; [PerspectiveRevisionRecord] -&gt; [CounterargumentRef]
+<span class="lineno">  313 </span><span class="decl"><span class="istickedoff">counterargumentsForScope scope store outcomes lineage =</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">take 8 (stanceCounterarguments <span class="nottickedoff">scope</span> store &lt;&gt; dialogueCounterarguments <span class="nottickedoff">scope</span> outcomes &lt;&gt; lineageCounterarguments lineage)</span></span>
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>stanceCounterarguments :: PerspectiveScope -&gt; BeliefStore -&gt; [CounterargumentRef]
+<span class="lineno">  317 </span><span class="decl"><span class="istickedoff">stanceCounterarguments scope store =</span>
+<span class="lineno">  318 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">topic = scopeText scope</span></span>
+<span class="lineno">  319 </span><span class="spaces">      </span><span class="istickedoff">relevant record =</span>
+<span class="lineno">  320 </span><span class="spaces">        </span><span class="istickedoff">brPolarity record `elem` [BeliefContested, BeliefRejected, BeliefAmbivalent]</span>
+<span class="lineno">  321 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; <span class="nottickedoff">(T.null topic || topic `T.isInfixOf` normalizeDialogueText (brClaim record))</span></span>
+<span class="lineno">  322 </span><span class="spaces">  </span><span class="istickedoff">in map <span class="nottickedoff">(CounterargumentRef . (&quot;stance_counter:&quot; &lt;&gt;) . brClaim)</span> (filter relevant (M.elems (bsClaims store)))</span></span>
+<span class="lineno">  323 </span>
+<span class="lineno">  324 </span>dialogueCounterarguments :: PerspectiveScope -&gt; DialogueOutcomeLearningState -&gt; [CounterargumentRef]
+<span class="lineno">  325 </span><span class="decl"><span class="istickedoff">dialogueCounterarguments scope outcomes =</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">topic = scopeText scope</span></span>
+<span class="lineno">  327 </span><span class="spaces">      </span><span class="istickedoff">relevant sample =</span>
+<span class="lineno">  328 </span><span class="spaces">        </span><span class="istickedoff">dosKind sample == DialogueOutcomeConflict</span>
+<span class="lineno">  329 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; <span class="nottickedoff">(T.null topic || normalizeDialogueText (dosTopic sample) == topic)</span></span>
+<span class="lineno">  330 </span><span class="spaces">  </span><span class="istickedoff">in map <span class="nottickedoff">(CounterargumentRef . (&quot;dialogue_conflict:&quot; &lt;&gt;) . dosTopic)</span> (take 4 (filter relevant (dolRecentOutcomes outcomes)))</span></span>
+<span class="lineno">  331 </span>
+<span class="lineno">  332 </span>lineageCounterarguments :: [PerspectiveRevisionRecord] -&gt; [CounterargumentRef]
+<span class="lineno">  333 </span><span class="decl"><span class="istickedoff">lineageCounterarguments = mapMaybe <span class="nottickedoff">lineageCounterargument</span></span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  335 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">lineageCounterargument record</span></span>
+<span class="lineno">  336 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">| prrCounterargumentDelta record &gt; 0.25 = Just (CounterargumentRef (&quot;revision_pressure:&quot; &lt;&gt; prrTrigger record))</span></span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">| otherwise = Nothing</span></span></span>
+<span class="lineno">  338 </span>
+<span class="lineno">  339 </span>identitySlice :: SystemState -&gt; IdentitySlice
+<span class="lineno">  340 </span><span class="decl"><span class="istickedoff">identitySlice ss =</span>
+<span class="lineno">  341 </span><span class="spaces">  </span><span class="istickedoff">let claims = idsIdentityClaims (ssIdentity ss)</span>
+<span class="lineno">  342 </span><span class="spaces">  </span><span class="istickedoff">in IdentitySlice</span>
+<span class="lineno">  343 </span><span class="spaces">      </span><span class="istickedoff">{ isSessionId = ssSessionId ss</span>
+<span class="lineno">  344 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaims = map renderIdentityClaim claims</span>
+<span class="lineno">  345 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaimCount = length claims</span>
+<span class="lineno">  346 </span><span class="spaces">      </span><span class="istickedoff">, isTurnCount = ssTurnCount ss</span>
+<span class="lineno">  347 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  348 </span>
+<span class="lineno">  349 </span>conatusSlice :: ConatusEnergy -&gt; Bool -&gt; Field -&gt; ConatusSlice
+<span class="lineno">  350 </span><span class="decl"><span class="istickedoff">conatusSlice energy gateFired field =</span>
+<span class="lineno">  351 </span><span class="spaces">  </span><span class="istickedoff">let fieldConf = unFieldConfidence (fieldConfidence field)</span>
+<span class="lineno">  352 </span><span class="spaces">  </span><span class="istickedoff">in ConatusSlice</span>
+<span class="lineno">  353 </span><span class="spaces">      </span><span class="istickedoff">{ csEnergy = ceScalar energy</span>
+<span class="lineno">  354 </span><span class="spaces">      </span><span class="istickedoff">, csGateFired = gateFired</span>
+<span class="lineno">  355 </span><span class="spaces">      </span><span class="istickedoff">, csFieldConfidence = fieldConf</span>
+<span class="lineno">  356 </span><span class="spaces">      </span><span class="istickedoff">, csStability = clampUnit (fieldConf + min 0.25 (max 0.0 (ceScalar energy / 80.0)))</span>
+<span class="lineno">  357 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  358 </span>
+<span class="lineno">  359 </span>invalidRevisionStep :: PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; Bool
+<span class="lineno">  360 </span><span class="decl"><span class="istickedoff">invalidRevisionStep bundle candidate =</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="istickedoff">case (pibRevisionLineage bundle, pcBaseVersion candidate) of</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="istickedoff">([], Nothing) -&gt; False</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">([], Just _) -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  364 </span><span class="spaces">    </span><span class="istickedoff">(recent:_, Just baseVersion) -&gt; <span class="nottickedoff">prrToVersion recent /= baseVersion</span></span>
+<span class="lineno">  365 </span><span class="spaces">    </span><span class="istickedoff">(_:_, Nothing) -&gt; <span class="nottickedoff">True</span></span></span>
+<span class="lineno">  366 </span>
+<span class="lineno">  367 </span>weakEvidenceOnly :: PerspectiveInputBundle -&gt; Bool
+<span class="lineno">  368 </span><span class="decl"><span class="istickedoff">weakEvidenceOnly bundle =</span>
+<span class="lineno">  369 </span><span class="spaces">  </span><span class="istickedoff">null (pibEvidence bundle) || all weakRef (pibEvidence bundle)</span>
+<span class="lineno">  370 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  371 </span><span class="spaces">    </span><span class="istickedoff">weakRef = isWeakAcknowledgementText . renderEvidenceRef</span></span>
+<span class="lineno">  372 </span>
+<span class="lineno">  373 </span>contestedActivePressure :: PerspectiveRegistry -&gt; PerspectiveCandidate -&gt; Bool
+<span class="lineno">  374 </span><span class="decl"><span class="istickedoff">contestedActivePressure registry candidate =</span>
+<span class="lineno">  375 </span><span class="spaces">  </span><span class="istickedoff">hasActivePerspective (pcScope candidate) registry</span>
+<span class="lineno">  376 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; <span class="nottickedoff">pcCounterargumentPressure candidate &gt;= 0.65</span></span></span>
+<span class="lineno">  377 </span>
+<span class="lineno">  378 </span>rollbackPressure :: PerspectiveRegistry -&gt; PerspectiveCandidate -&gt; Bool
+<span class="lineno">  379 </span><span class="decl"><span class="istickedoff">rollbackPressure registry candidate =</span>
+<span class="lineno">  380 </span><span class="spaces">  </span><span class="istickedoff">hasActivePerspective (pcScope candidate) registry</span>
+<span class="lineno">  381 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; hasRollbackCandidate (pcScope candidate) registry</span>
+<span class="lineno">  382 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; pcCounterargumentPressure candidate &gt;= 0.50</span></span>
+<span class="lineno">  383 </span>
+<span class="lineno">  384 </span>hasRollbackCandidate :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; Bool
+<span class="lineno">  385 </span><span class="decl"><span class="istickedoff">hasRollbackCandidate scope registry =</span>
+<span class="lineno">  386 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup scope (prThreads registry) of</span>
+<span class="lineno">  387 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">False</span></span>
+<span class="lineno">  388 </span><span class="spaces">    </span><span class="istickedoff">Just thread -&gt; any (isRollbackCandidate (ptActiveVersion thread)) (ptVersions thread)</span>
+<span class="lineno">  389 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  390 </span><span class="spaces">    </span><span class="istickedoff">isRollbackCandidate activeVersion ep =</span>
+<span class="lineno">  391 </span><span class="spaces">      </span><span class="istickedoff">Just (epVersion ep) /= activeVersion</span>
+<span class="lineno">  392 </span><span class="spaces">        </span><span class="istickedoff">&amp;&amp; epStatus ep `elem` [PerspectiveRevised, <span class="nottickedoff">PerspectiveContested</span>, <span class="nottickedoff">PerspectiveActive</span>]</span></span>
+<span class="lineno">  393 </span>
+<span class="lineno">  394 </span>hasActivePerspective :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; Bool
+<span class="lineno">  395 </span><span class="decl"><span class="istickedoff">hasActivePerspective scope registry =</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup scope (prThreads registry) of</span>
+<span class="lineno">  397 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; False</span>
+<span class="lineno">  398 </span><span class="spaces">    </span><span class="istickedoff">Just thread -&gt; case activeEndorsedPerspective thread of</span>
+<span class="lineno">  399 </span><span class="spaces">      </span><span class="istickedoff">Just ep -&gt; epStatus ep == PerspectiveActive</span>
+<span class="lineno">  400 </span><span class="spaces">      </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  401 </span>
+<span class="lineno">  402 </span>stableCorroboration :: PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; Bool
+<span class="lineno">  403 </span><span class="decl"><span class="istickedoff">stableCorroboration bundle candidate =</span>
+<span class="lineno">  404 </span><span class="spaces">  </span><span class="istickedoff">length (pibEvidence bundle) &gt;= 2</span>
+<span class="lineno">  405 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; pcConfidence candidate &gt;= 0.66</span>
+<span class="lineno">  406 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; pcNormativeAlignment candidate &gt;= 0.55</span>
+<span class="lineno">  407 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; pcInternalTension candidate &lt;= 0.50</span></span>
+<span class="lineno">  408 </span>
+<span class="lineno">  409 </span>upsertThread :: Int -&gt; PerspectiveRegistry -&gt; PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; PerspectivePromotionDecision -&gt; PerspectiveStatus -&gt; Maybe Int -&gt; PerspectiveRegistry
+<span class="lineno">  410 </span><span class="decl"><span class="nottickedoff">upsertThread turn registry bundle candidate decision status endorsedTurn =</span>
+<span class="lineno">  411 </span><span class="spaces">  </span><span class="nottickedoff">let scope = pcScope candidate</span>
+<span class="lineno">  412 </span><span class="spaces">      </span><span class="nottickedoff">oldThread = M.lookup scope (prThreads registry)</span>
+<span class="lineno">  413 </span><span class="spaces">      </span><span class="nottickedoff">perspectiveId = maybe (PerspectiveId (&quot;perspective-&quot; &lt;&gt; T.pack (show (prNextPerspectiveOrdinal registry)))) ptPerspectiveId oldThread</span>
+<span class="lineno">  414 </span><span class="spaces">      </span><span class="nottickedoff">version = PerspectiveVersionId (prNextVersionOrdinal registry)</span>
+<span class="lineno">  415 </span><span class="spaces">      </span><span class="nottickedoff">priorActive = oldThread &gt;&gt;= ptActiveVersion</span>
+<span class="lineno">  416 </span><span class="spaces">      </span><span class="nottickedoff">oldConfidence = maybe 0.0 epConfidence (oldThread &gt;&gt;= activeEndorsedPerspective)</span>
+<span class="lineno">  417 </span><span class="spaces">      </span><span class="nottickedoff">oldNormative = maybe (npVersionId (pibNormativeProfile bundle)) epNormativeProfileVersion (oldThread &gt;&gt;= activeEndorsedPerspective)</span>
+<span class="lineno">  418 </span><span class="spaces">      </span><span class="nottickedoff">endorsed = EndorsedPerspective</span>
+<span class="lineno">  419 </span><span class="spaces">        </span><span class="nottickedoff">{ epId = perspectiveId</span>
+<span class="lineno">  420 </span><span class="spaces">        </span><span class="nottickedoff">, epVersion = version</span>
+<span class="lineno">  421 </span><span class="spaces">        </span><span class="nottickedoff">, epScope = scope</span>
+<span class="lineno">  422 </span><span class="spaces">        </span><span class="nottickedoff">, epThesis = pcThesis candidate</span>
+<span class="lineno">  423 </span><span class="spaces">        </span><span class="nottickedoff">, epOrientation = pcOrientation candidate</span>
+<span class="lineno">  424 </span><span class="spaces">        </span><span class="nottickedoff">, epConfidence = pcConfidence candidate</span>
+<span class="lineno">  425 </span><span class="spaces">        </span><span class="nottickedoff">, epNormativeProfileId = npId (pibNormativeProfile bundle)</span>
+<span class="lineno">  426 </span><span class="spaces">        </span><span class="nottickedoff">, epNormativeProfileVersion = npVersionId (pibNormativeProfile bundle)</span>
+<span class="lineno">  427 </span><span class="spaces">        </span><span class="nottickedoff">, epStatus = status</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="nottickedoff">, epCreatedTurn = turn</span>
+<span class="lineno">  429 </span><span class="spaces">        </span><span class="nottickedoff">, epEndorsedTurn = endorsedTurn</span>
+<span class="lineno">  430 </span><span class="spaces">        </span><span class="nottickedoff">, epSupportingClaims = take 8 (pcSupportingClaims candidate)</span>
+<span class="lineno">  431 </span><span class="spaces">        </span><span class="nottickedoff">, epCounterarguments = take 8 (map renderCounterargumentRef (pibCounterarguments bundle))</span>
+<span class="lineno">  432 </span><span class="spaces">        </span><span class="nottickedoff">}</span>
+<span class="lineno">  433 </span><span class="spaces">      </span><span class="nottickedoff">revision = PerspectiveRevisionRecord</span>
+<span class="lineno">  434 </span><span class="spaces">        </span><span class="nottickedoff">{ prrFromVersion = priorActive</span>
+<span class="lineno">  435 </span><span class="spaces">        </span><span class="nottickedoff">, prrToVersion = version</span>
+<span class="lineno">  436 </span><span class="spaces">        </span><span class="nottickedoff">, prrTrigger = promotionTrigger decision candidate</span>
+<span class="lineno">  437 </span><span class="spaces">        </span><span class="nottickedoff">, prrEvidenceDelta = fromIntegral (length (pibEvidence bundle))</span>
+<span class="lineno">  438 </span><span class="spaces">        </span><span class="nottickedoff">, prrCounterargumentDelta = pcCounterargumentPressure candidate</span>
+<span class="lineno">  439 </span><span class="spaces">        </span><span class="nottickedoff">, prrConfidenceDelta = pcConfidence candidate - oldConfidence</span>
+<span class="lineno">  440 </span><span class="spaces">        </span><span class="nottickedoff">, prrNormativeDelta = fromIntegral (npVersionId (pibNormativeProfile bundle) - oldNormative)</span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="nottickedoff">, prrNormativeProfileVersion = npVersionId (pibNormativeProfile bundle)</span>
+<span class="lineno">  442 </span><span class="spaces">        </span><span class="nottickedoff">, prrDecision = decision</span>
+<span class="lineno">  443 </span><span class="spaces">        </span><span class="nottickedoff">, prrRollbackOf = Nothing</span>
+<span class="lineno">  444 </span><span class="spaces">        </span><span class="nottickedoff">}</span>
+<span class="lineno">  445 </span><span class="spaces">      </span><span class="nottickedoff">oldVersions = maybe [] ptVersions oldThread</span>
+<span class="lineno">  446 </span><span class="spaces">      </span><span class="nottickedoff">oldRevisions = maybe [] ptRevisionHistory oldThread</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="nottickedoff">activeVersion = if status == PerspectiveActive then Just version else priorActive</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="nottickedoff">thread = PerspectiveThread</span>
+<span class="lineno">  449 </span><span class="spaces">        </span><span class="nottickedoff">{ ptPerspectiveId = perspectiveId</span>
+<span class="lineno">  450 </span><span class="spaces">        </span><span class="nottickedoff">, ptScope = scope</span>
+<span class="lineno">  451 </span><span class="spaces">        </span><span class="nottickedoff">, ptActiveVersion = activeVersion</span>
+<span class="lineno">  452 </span><span class="spaces">        </span><span class="nottickedoff">, ptVersions = boundVersions registry (endorsed : markPriorRevised status oldVersions)</span>
+<span class="lineno">  453 </span><span class="spaces">        </span><span class="nottickedoff">, ptRevisionHistory = take (prMaxRevisionsPerScope registry) (revision : oldRevisions)</span>
+<span class="lineno">  454 </span><span class="spaces">        </span><span class="nottickedoff">, ptStatus = status</span>
+<span class="lineno">  455 </span><span class="spaces">        </span><span class="nottickedoff">, ptLastUpdatedTurn = turn</span>
+<span class="lineno">  456 </span><span class="spaces">       </span><span class="nottickedoff">}</span>
+<span class="lineno">  457 </span><span class="spaces">      </span><span class="nottickedoff">threads = enforceRegistryBounds registry (M.insert scope thread (prThreads registry))</span>
+<span class="lineno">  458 </span><span class="spaces">      </span><span class="nottickedoff">nextPerspectiveOrdinal = case oldThread of</span>
+<span class="lineno">  459 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; prNextPerspectiveOrdinal registry + 1</span>
+<span class="lineno">  460 </span><span class="spaces">        </span><span class="nottickedoff">Just _ -&gt; prNextPerspectiveOrdinal registry</span>
+<span class="lineno">  461 </span><span class="spaces">  </span><span class="nottickedoff">in registry</span>
+<span class="lineno">  462 </span><span class="spaces">      </span><span class="nottickedoff">{ prThreads = threads</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="nottickedoff">, prNextPerspectiveOrdinal = nextPerspectiveOrdinal</span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="nottickedoff">, prNextVersionOrdinal = prNextVersionOrdinal registry + 1</span>
+<span class="lineno">  465 </span><span class="spaces">      </span><span class="nottickedoff">, prLastUpdatedTurn = turn</span>
+<span class="lineno">  466 </span><span class="spaces">      </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  467 </span>
+<span class="lineno">  468 </span>suspendActivePerspective :: Int -&gt; PerspectiveRegistry -&gt; PerspectiveCandidate -&gt; PerspectivePromotionDecision -&gt; PerspectiveRegistry
+<span class="lineno">  469 </span><span class="decl"><span class="nottickedoff">suspendActivePerspective turn registry candidate decision =</span>
+<span class="lineno">  470 </span><span class="spaces">  </span><span class="nottickedoff">case M.lookup (pcScope candidate) (prThreads registry) of</span>
+<span class="lineno">  471 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; registry { prLastUpdatedTurn = turn }</span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="nottickedoff">Just thread -&gt;</span>
+<span class="lineno">  473 </span><span class="spaces">      </span><span class="nottickedoff">let revision = PerspectiveRevisionRecord</span>
+<span class="lineno">  474 </span><span class="spaces">            </span><span class="nottickedoff">{ prrFromVersion = ptActiveVersion thread</span>
+<span class="lineno">  475 </span><span class="spaces">            </span><span class="nottickedoff">, prrToVersion = fromMaybe (PerspectiveVersionId (prNextVersionOrdinal registry)) (ptActiveVersion thread)</span>
+<span class="lineno">  476 </span><span class="spaces">            </span><span class="nottickedoff">, prrTrigger = &quot;counterargument_pressure_suspend&quot;</span>
+<span class="lineno">  477 </span><span class="spaces">            </span><span class="nottickedoff">, prrEvidenceDelta = 0.0</span>
+<span class="lineno">  478 </span><span class="spaces">            </span><span class="nottickedoff">, prrCounterargumentDelta = pcCounterargumentPressure candidate</span>
+<span class="lineno">  479 </span><span class="spaces">            </span><span class="nottickedoff">, prrConfidenceDelta = 0.0</span>
+<span class="lineno">  480 </span><span class="spaces">            </span><span class="nottickedoff">, prrNormativeDelta = 0.0</span>
+<span class="lineno">  481 </span><span class="spaces">            </span><span class="nottickedoff">, prrNormativeProfileVersion = pcNormativeProfileVersion candidate</span>
+<span class="lineno">  482 </span><span class="spaces">            </span><span class="nottickedoff">, prrDecision = decision</span>
+<span class="lineno">  483 </span><span class="spaces">            </span><span class="nottickedoff">, prrRollbackOf = Nothing</span>
+<span class="lineno">  484 </span><span class="spaces">            </span><span class="nottickedoff">}</span>
+<span class="lineno">  485 </span><span class="spaces">          </span><span class="nottickedoff">thread' = thread</span>
+<span class="lineno">  486 </span><span class="spaces">            </span><span class="nottickedoff">{ ptActiveVersion = Nothing</span>
+<span class="lineno">  487 </span><span class="spaces">            </span><span class="nottickedoff">, ptVersions = map (setStatusForActive (ptActiveVersion thread) PerspectiveSuspended) (ptVersions thread)</span>
+<span class="lineno">  488 </span><span class="spaces">            </span><span class="nottickedoff">, ptRevisionHistory = take (prMaxRevisionsPerScope registry) (revision : ptRevisionHistory thread)</span>
+<span class="lineno">  489 </span><span class="spaces">            </span><span class="nottickedoff">, ptStatus = PerspectiveSuspended</span>
+<span class="lineno">  490 </span><span class="spaces">            </span><span class="nottickedoff">, ptLastUpdatedTurn = turn</span>
+<span class="lineno">  491 </span><span class="spaces">            </span><span class="nottickedoff">}</span>
+<span class="lineno">  492 </span><span class="spaces">        </span><span class="nottickedoff">in registry</span>
+<span class="lineno">  493 </span><span class="spaces">            </span><span class="nottickedoff">{ prThreads = enforceRegistryBounds registry (M.insert (pcScope candidate) thread' (prThreads registry))</span>
+<span class="lineno">  494 </span><span class="spaces">            </span><span class="nottickedoff">, prLastUpdatedTurn = turn</span>
+<span class="lineno">  495 </span><span class="spaces">            </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  496 </span>
+<span class="lineno">  497 </span>rollbackPriorPerspective :: Int -&gt; PerspectiveRegistry -&gt; PerspectiveCandidate -&gt; PerspectivePromotionDecision -&gt; PerspectiveRegistry
+<span class="lineno">  498 </span><span class="decl"><span class="nottickedoff">rollbackPriorPerspective turn registry candidate decision =</span>
+<span class="lineno">  499 </span><span class="spaces">  </span><span class="nottickedoff">case M.lookup (pcScope candidate) (prThreads registry) of</span>
+<span class="lineno">  500 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; registry { prLastUpdatedTurn = turn }</span>
+<span class="lineno">  501 </span><span class="spaces">    </span><span class="nottickedoff">Just thread -&gt;</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="nottickedoff">let active = ptActiveVersion thread</span>
+<span class="lineno">  503 </span><span class="spaces">          </span><span class="nottickedoff">remaining = filter (isViableRollbackVersion active) (ptVersions thread)</span>
+<span class="lineno">  504 </span><span class="spaces">          </span><span class="nottickedoff">replacement = case remaining of</span>
+<span class="lineno">  505 </span><span class="spaces">            </span><span class="nottickedoff">x:_ -&gt; Just (epVersion x)</span>
+<span class="lineno">  506 </span><span class="spaces">            </span><span class="nottickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  507 </span><span class="spaces">          </span><span class="nottickedoff">revision = PerspectiveRevisionRecord</span>
+<span class="lineno">  508 </span><span class="spaces">            </span><span class="nottickedoff">{ prrFromVersion = active</span>
+<span class="lineno">  509 </span><span class="spaces">            </span><span class="nottickedoff">, prrToVersion = fromMaybe (PerspectiveVersionId (prNextVersionOrdinal registry)) replacement</span>
+<span class="lineno">  510 </span><span class="spaces">            </span><span class="nottickedoff">, prrTrigger = &quot;rollback_prior_promotion&quot;</span>
+<span class="lineno">  511 </span><span class="spaces">            </span><span class="nottickedoff">, prrEvidenceDelta = 0.0</span>
+<span class="lineno">  512 </span><span class="spaces">            </span><span class="nottickedoff">, prrCounterargumentDelta = pcCounterargumentPressure candidate</span>
+<span class="lineno">  513 </span><span class="spaces">            </span><span class="nottickedoff">, prrConfidenceDelta = 0.0</span>
+<span class="lineno">  514 </span><span class="spaces">            </span><span class="nottickedoff">, prrNormativeDelta = 0.0</span>
+<span class="lineno">  515 </span><span class="spaces">            </span><span class="nottickedoff">, prrNormativeProfileVersion = pcNormativeProfileVersion candidate</span>
+<span class="lineno">  516 </span><span class="spaces">            </span><span class="nottickedoff">, prrDecision = decision</span>
+<span class="lineno">  517 </span><span class="spaces">            </span><span class="nottickedoff">, prrRollbackOf = active</span>
+<span class="lineno">  518 </span><span class="spaces">            </span><span class="nottickedoff">}</span>
+<span class="lineno">  519 </span><span class="spaces">          </span><span class="nottickedoff">thread' = thread</span>
+<span class="lineno">  520 </span><span class="spaces">            </span><span class="nottickedoff">{ ptActiveVersion = replacement</span>
+<span class="lineno">  521 </span><span class="spaces">            </span><span class="nottickedoff">, ptVersions = map (statusAfterRollback active replacement) (ptVersions thread)</span>
+<span class="lineno">  522 </span><span class="spaces">            </span><span class="nottickedoff">, ptRevisionHistory = take (prMaxRevisionsPerScope registry) (revision : ptRevisionHistory thread)</span>
+<span class="lineno">  523 </span><span class="spaces">            </span><span class="nottickedoff">, ptStatus = maybe PerspectiveWithdrawn (const PerspectiveActive) replacement</span>
+<span class="lineno">  524 </span><span class="spaces">            </span><span class="nottickedoff">, ptLastUpdatedTurn = turn</span>
+<span class="lineno">  525 </span><span class="spaces">            </span><span class="nottickedoff">}</span>
+<span class="lineno">  526 </span><span class="spaces">      </span><span class="nottickedoff">in registry</span>
+<span class="lineno">  527 </span><span class="spaces">          </span><span class="nottickedoff">{ prThreads = enforceRegistryBounds registry (M.insert (pcScope candidate) thread' (prThreads registry))</span>
+<span class="lineno">  528 </span><span class="spaces">          </span><span class="nottickedoff">, prLastUpdatedTurn = turn</span>
+<span class="lineno">  529 </span><span class="spaces">          </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  530 </span>
+<span class="lineno">  531 </span>perspectiveMutationRecord :: Int -&gt; PerspectiveRegistry -&gt; PerspectiveInputBundle -&gt; PerspectiveCandidate -&gt; PerspectiveAdmissibility -&gt; PerspectivePromotionDecision -&gt; AdaptiveMutationRecord
+<span class="lineno">  532 </span><span class="decl"><span class="istickedoff">perspectiveMutationRecord turn registry bundle candidate admissibility decision = AdaptiveMutationRecord</span>
+<span class="lineno">  533 </span><span class="spaces">  </span><span class="istickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  534 </span><span class="spaces">  </span><span class="istickedoff">, amrKind = MutPerspective</span>
+<span class="lineno">  535 </span><span class="spaces">  </span><span class="istickedoff">, amrCause = &quot;perspective:&quot; &lt;&gt; promotionDecisionText decision &lt;&gt; &quot;:&quot; &lt;&gt; admissibilityText admissibility</span>
+<span class="lineno">  536 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidence = take 8 (map renderEvidenceRef (pibEvidence bundle) &lt;&gt; map renderClaimStanceRef (pibStanceSlice bundle) &lt;&gt; map <span class="nottickedoff">renderCounterargumentRef</span> (pibCounterarguments bundle))</span>
+<span class="lineno">  537 </span><span class="spaces">  </span><span class="istickedoff">, amrEvidenceStrength = evidenceStrengthForPerspective bundle decision</span>
+<span class="lineno">  538 </span><span class="spaces">  </span><span class="istickedoff">, amrConfidence = pcConfidence candidate</span>
+<span class="lineno">  539 </span><span class="spaces">  </span><span class="istickedoff">, amrBoundedDelta = Just (fromIntegral (prMaxRevisionsPerScope registry))</span>
+<span class="lineno">  540 </span><span class="spaces">  </span><span class="istickedoff">, amrDecision = adaptiveDecisionForPromotion decision</span>
+<span class="lineno">  541 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  542 </span>
+<span class="lineno">  543 </span>evidenceStrengthForPerspective :: PerspectiveInputBundle -&gt; PerspectivePromotionDecision -&gt; EvidenceStrength
+<span class="lineno">  544 </span><span class="decl"><span class="istickedoff">evidenceStrengthForPerspective bundle decision</span>
+<span class="lineno">  545 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">weakEvidenceOnly bundle</span> = <span class="nottickedoff">EvidenceWeak</span></span>
+<span class="lineno">  546 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">decision `elem` [PpdPromoteEndorsed, <span class="nottickedoff">PpdReviseActive</span>, <span class="nottickedoff">PpdRollbackPrior</span>]</span> = EvidenceStrong</span>
+<span class="lineno">  547 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">decision `elem` [PpdAcceptBounded, PpdQuarantine, PpdSuspendActive]</span> = <span class="nottickedoff">EvidenceModerate</span></span>
+<span class="lineno">  548 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">EvidenceObservational</span></span></span>
+<span class="lineno">  549 </span>
+<span class="lineno">  550 </span>adaptiveDecisionForPromotion :: PerspectivePromotionDecision -&gt; AdaptiveDecision
+<span class="lineno">  551 </span><span class="decl"><span class="istickedoff">adaptiveDecisionForPromotion decision =</span>
+<span class="lineno">  552 </span><span class="spaces">  </span><span class="istickedoff">case decision of</span>
+<span class="lineno">  553 </span><span class="spaces">    </span><span class="istickedoff">PpdObserveOnly -&gt; <span class="nottickedoff">AdaptiveObserved</span></span>
+<span class="lineno">  554 </span><span class="spaces">    </span><span class="istickedoff">PpdQuarantine -&gt; <span class="nottickedoff">AdaptiveQuarantined</span></span>
+<span class="lineno">  555 </span><span class="spaces">    </span><span class="istickedoff">PpdAcceptBounded -&gt; <span class="nottickedoff">AdaptiveAccepted</span></span>
+<span class="lineno">  556 </span><span class="spaces">    </span><span class="istickedoff">PpdPromoteEndorsed -&gt; AdaptivePromoted</span>
+<span class="lineno">  557 </span><span class="spaces">    </span><span class="istickedoff">PpdReviseActive -&gt; <span class="nottickedoff">AdaptivePromoted</span></span>
+<span class="lineno">  558 </span><span class="spaces">    </span><span class="istickedoff">PpdSuspendActive -&gt; <span class="nottickedoff">AdaptiveQuarantined</span></span>
+<span class="lineno">  559 </span><span class="spaces">    </span><span class="istickedoff">PpdRollbackPrior -&gt; <span class="nottickedoff">AdaptiveRolledBack</span></span></span>
+<span class="lineno">  560 </span>
+<span class="lineno">  561 </span>computeNormativeAlignment :: NormativeProfile -&gt; Double -&gt; ConatusSlice -&gt; Double
+<span class="lineno">  562 </span><span class="decl"><span class="istickedoff">computeNormativeAlignment np counterPressure cs =</span>
+<span class="lineno">  563 </span><span class="spaces">  </span><span class="istickedoff">let safety = M.findWithDefault <span class="nottickedoff">1.0</span> &quot;safety&quot; (npPriorities np)</span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="istickedoff">stability = M.findWithDefault <span class="nottickedoff">0.9</span> &quot;stability&quot; (npPriorities np)</span>
+<span class="lineno">  565 </span><span class="spaces">      </span><span class="istickedoff">counterWeight = M.findWithDefault <span class="nottickedoff">0.7</span> &quot;counterargument&quot; (npPriorities np)</span>
+<span class="lineno">  566 </span><span class="spaces">      </span><span class="istickedoff">conflictPenalty = if npConflictPolicy np == &quot;permissive&quot; then 0.08 else 0.18</span>
+<span class="lineno">  567 </span><span class="spaces">      </span><span class="istickedoff">base = (0.45 * safety) + (0.35 * stability) + (0.20 * csStability cs)</span>
+<span class="lineno">  568 </span><span class="spaces">      </span><span class="istickedoff">penalty = (counterPressure * counterWeight * 0.30) + conflictPenalty</span>
+<span class="lineno">  569 </span><span class="spaces">  </span><span class="istickedoff">in clampUnit (base - penalty)</span></span>
+<span class="lineno">  570 </span>
+<span class="lineno">  571 </span>orientationFromScores :: Double -&gt; Double -&gt; Double -&gt; Double -&gt; Text
+<span class="lineno">  572 </span><span class="decl"><span class="istickedoff">orientationFromScores confidence counterPressure normativeAlignment internalTension</span>
+<span class="lineno">  573 </span><span class="spaces">  </span><span class="istickedoff">| counterPressure &gt;= 0.45 || internalTension &gt;= 0.55 = &quot;contested&quot;</span>
+<span class="lineno">  574 </span><span class="spaces">  </span><span class="istickedoff">| confidence &gt;= 0.72 &amp;&amp; normativeAlignment &gt;= 0.60 = &quot;endorsed&quot;</span>
+<span class="lineno">  575 </span><span class="spaces">  </span><span class="istickedoff">| confidence &gt;= 0.55 = &quot;provisional&quot;</span>
+<span class="lineno">  576 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = &quot;observational&quot;</span></span>
+<span class="lineno">  577 </span>
+<span class="lineno">  578 </span>thesisForScope :: PerspectiveScope -&gt; Text -&gt; [Text] -&gt; Text
+<span class="lineno">  579 </span><span class="decl"><span class="istickedoff">thesisForScope scope orientation claims =</span>
+<span class="lineno">  580 </span><span class="spaces">  </span><span class="istickedoff">let basis = case claims of</span>
+<span class="lineno">  581 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; &quot;available governed evidence&quot;</span>
+<span class="lineno">  582 </span><span class="spaces">        </span><span class="istickedoff">first:_ -&gt; first</span>
+<span class="lineno">  583 </span><span class="spaces">  </span><span class="istickedoff">in &quot;Perspective on &quot; &lt;&gt; renderPerspectiveScope scope &lt;&gt; &quot; is &quot; &lt;&gt; orientation &lt;&gt; &quot; from &quot; &lt;&gt; basis</span></span>
+<span class="lineno">  584 </span>
+<span class="lineno">  585 </span>promotionTrigger :: PerspectivePromotionDecision -&gt; PerspectiveCandidate -&gt; Text
+<span class="lineno">  586 </span><span class="decl"><span class="nottickedoff">promotionTrigger decision candidate =</span>
+<span class="lineno">  587 </span><span class="spaces">  </span><span class="nottickedoff">promotionDecisionText decision &lt;&gt; &quot;:confidence=&quot; &lt;&gt; T.pack (show (pcConfidence candidate))</span></span>
+<span class="lineno">  588 </span>
+<span class="lineno">  589 </span>promotionDecisionText :: PerspectivePromotionDecision -&gt; Text
+<span class="lineno">  590 </span><span class="decl"><span class="istickedoff">promotionDecisionText decision =</span>
+<span class="lineno">  591 </span><span class="spaces">  </span><span class="istickedoff">case decision of</span>
+<span class="lineno">  592 </span><span class="spaces">    </span><span class="istickedoff">PpdObserveOnly -&gt; <span class="nottickedoff">&quot;observe_only&quot;</span></span>
+<span class="lineno">  593 </span><span class="spaces">    </span><span class="istickedoff">PpdQuarantine -&gt; <span class="nottickedoff">&quot;quarantine&quot;</span></span>
+<span class="lineno">  594 </span><span class="spaces">    </span><span class="istickedoff">PpdAcceptBounded -&gt; <span class="nottickedoff">&quot;accept_bounded&quot;</span></span>
+<span class="lineno">  595 </span><span class="spaces">    </span><span class="istickedoff">PpdPromoteEndorsed -&gt; &quot;promote_endorsed&quot;</span>
+<span class="lineno">  596 </span><span class="spaces">    </span><span class="istickedoff">PpdReviseActive -&gt; <span class="nottickedoff">&quot;revise_active&quot;</span></span>
+<span class="lineno">  597 </span><span class="spaces">    </span><span class="istickedoff">PpdSuspendActive -&gt; <span class="nottickedoff">&quot;suspend_active&quot;</span></span>
+<span class="lineno">  598 </span><span class="spaces">    </span><span class="istickedoff">PpdRollbackPrior -&gt; <span class="nottickedoff">&quot;rollback_prior&quot;</span></span></span>
+<span class="lineno">  599 </span>
+<span class="lineno">  600 </span>admissibilityText :: PerspectiveAdmissibility -&gt; Text
+<span class="lineno">  601 </span><span class="decl"><span class="istickedoff">admissibilityText admissibility =</span>
+<span class="lineno">  602 </span><span class="spaces">  </span><span class="istickedoff">case admissibility of</span>
+<span class="lineno">  603 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveInadmissible reason -&gt; <span class="nottickedoff">&quot;inadmissible:&quot; &lt;&gt; reason</span></span>
+<span class="lineno">  604 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleObserved -&gt; <span class="nottickedoff">&quot;admissible_observed&quot;</span></span>
+<span class="lineno">  605 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleQuarantined -&gt; <span class="nottickedoff">&quot;admissible_quarantined&quot;</span></span>
+<span class="lineno">  606 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveAdmissibleAccepted -&gt; &quot;admissible_accepted&quot;</span></span>
+<span class="lineno">  607 </span>
+<span class="lineno">  608 </span>boundVersions :: PerspectiveRegistry -&gt; [EndorsedPerspective] -&gt; [EndorsedPerspective]
+<span class="lineno">  609 </span><span class="decl"><span class="nottickedoff">boundVersions registry versions =</span>
+<span class="lineno">  610 </span><span class="spaces">  </span><span class="nottickedoff">let active = filter ((== PerspectiveActive) . epStatus) versions</span>
+<span class="lineno">  611 </span><span class="spaces">      </span><span class="nottickedoff">inactive = filter ((/= PerspectiveActive) . epStatus) versions</span>
+<span class="lineno">  612 </span><span class="spaces">  </span><span class="nottickedoff">in take (prMaxActivePerScope registry) active &lt;&gt; take (prMaxInactiveVersions registry) inactive</span></span>
+<span class="lineno">  613 </span>
+<span class="lineno">  614 </span>enforceRegistryBounds :: PerspectiveRegistry -&gt; M.Map PerspectiveScope PerspectiveThread -&gt; M.Map PerspectiveScope PerspectiveThread
+<span class="lineno">  615 </span><span class="decl"><span class="nottickedoff">enforceRegistryBounds registry threads =</span>
+<span class="lineno">  616 </span><span class="spaces">  </span><span class="nottickedoff">let activeThreads = filter (hasActiveThread . snd) (M.toList threads)</span>
+<span class="lineno">  617 </span><span class="spaces">      </span><span class="nottickedoff">allowedActiveScopes = map fst . take (prMaxActivePerspectives registry) . sortOn (Down . ptLastUpdatedTurn . snd) $ activeThreads</span>
+<span class="lineno">  618 </span><span class="spaces">  </span><span class="nottickedoff">in M.mapWithKey (enforceActiveScope allowedActiveScopes) threads</span></span>
+<span class="lineno">  619 </span>
+<span class="lineno">  620 </span>hasActiveThread :: PerspectiveThread -&gt; Bool
+<span class="lineno">  621 </span><span class="decl"><span class="nottickedoff">hasActiveThread thread = activeEndorsedPerspective thread /= Nothing</span></span>
+<span class="lineno">  622 </span>
+<span class="lineno">  623 </span>enforceActiveScope :: [PerspectiveScope] -&gt; PerspectiveScope -&gt; PerspectiveThread -&gt; PerspectiveThread
+<span class="lineno">  624 </span><span class="decl"><span class="nottickedoff">enforceActiveScope allowedScopes scope thread</span>
+<span class="lineno">  625 </span><span class="spaces">  </span><span class="nottickedoff">| scope `elem` allowedScopes = thread</span>
+<span class="lineno">  626 </span><span class="spaces">  </span><span class="nottickedoff">| hasActiveThread thread = suspendThreadForActiveCap thread</span>
+<span class="lineno">  627 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = thread</span></span>
+<span class="lineno">  628 </span>
+<span class="lineno">  629 </span>suspendThreadForActiveCap :: PerspectiveThread -&gt; PerspectiveThread
+<span class="lineno">  630 </span><span class="decl"><span class="nottickedoff">suspendThreadForActiveCap thread = thread</span>
+<span class="lineno">  631 </span><span class="spaces">  </span><span class="nottickedoff">{ ptActiveVersion = Nothing</span>
+<span class="lineno">  632 </span><span class="spaces">  </span><span class="nottickedoff">, ptVersions = map (setStatusForActive (ptActiveVersion thread) PerspectiveSuspended) (ptVersions thread)</span>
+<span class="lineno">  633 </span><span class="spaces">  </span><span class="nottickedoff">, ptStatus = PerspectiveSuspended</span>
+<span class="lineno">  634 </span><span class="spaces">  </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  635 </span>
+<span class="lineno">  636 </span>markPriorRevised :: PerspectiveStatus -&gt; [EndorsedPerspective] -&gt; [EndorsedPerspective]
+<span class="lineno">  637 </span><span class="decl"><span class="nottickedoff">markPriorRevised status versions</span>
+<span class="lineno">  638 </span><span class="spaces">  </span><span class="nottickedoff">| status == PerspectiveActive = map reviseActive versions</span>
+<span class="lineno">  639 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = versions</span>
+<span class="lineno">  640 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  641 </span><span class="spaces">    </span><span class="nottickedoff">reviseActive ep</span>
+<span class="lineno">  642 </span><span class="spaces">      </span><span class="nottickedoff">| epStatus ep == PerspectiveActive = ep { epStatus = PerspectiveRevised }</span>
+<span class="lineno">  643 </span><span class="spaces">      </span><span class="nottickedoff">| otherwise = ep</span></span>
+<span class="lineno">  644 </span>
+<span class="lineno">  645 </span>setStatusForActive :: Maybe PerspectiveVersionId -&gt; PerspectiveStatus -&gt; EndorsedPerspective -&gt; EndorsedPerspective
+<span class="lineno">  646 </span><span class="decl"><span class="nottickedoff">setStatusForActive activeVersion status ep</span>
+<span class="lineno">  647 </span><span class="spaces">  </span><span class="nottickedoff">| Just (epVersion ep) == activeVersion = ep { epStatus = status }</span>
+<span class="lineno">  648 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = ep</span></span>
+<span class="lineno">  649 </span>
+<span class="lineno">  650 </span>setStatusForVersion :: Maybe PerspectiveVersionId -&gt; PerspectiveStatus -&gt; EndorsedPerspective -&gt; EndorsedPerspective
+<span class="lineno">  651 </span><span class="decl"><span class="nottickedoff">setStatusForVersion version status ep</span>
+<span class="lineno">  652 </span><span class="spaces">  </span><span class="nottickedoff">| Just (epVersion ep) == version = ep { epStatus = status }</span>
+<span class="lineno">  653 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = ep</span></span>
+<span class="lineno">  654 </span>
+<span class="lineno">  655 </span>statusAfterRollback :: Maybe PerspectiveVersionId -&gt; Maybe PerspectiveVersionId -&gt; EndorsedPerspective -&gt; EndorsedPerspective
+<span class="lineno">  656 </span><span class="decl"><span class="nottickedoff">statusAfterRollback active replacement =</span>
+<span class="lineno">  657 </span><span class="spaces">  </span><span class="nottickedoff">setStatusForVersion replacement PerspectiveActive . setStatusForActive active PerspectiveWithdrawn</span></span>
+<span class="lineno">  658 </span>
+<span class="lineno">  659 </span>isViableRollbackVersion :: Maybe PerspectiveVersionId -&gt; EndorsedPerspective -&gt; Bool
+<span class="lineno">  660 </span><span class="decl"><span class="nottickedoff">isViableRollbackVersion active ep =</span>
+<span class="lineno">  661 </span><span class="spaces">  </span><span class="nottickedoff">Just (epVersion ep) /= active</span>
+<span class="lineno">  662 </span><span class="spaces">    </span><span class="nottickedoff">&amp;&amp; epStatus ep `elem` [PerspectiveRevised, PerspectiveContested, PerspectiveActive]</span></span>
+<span class="lineno">  663 </span>
+<span class="lineno">  664 </span>confidenceBand :: Double -&gt; Text
+<span class="lineno">  665 </span><span class="decl"><span class="nottickedoff">confidenceBand value</span>
+<span class="lineno">  666 </span><span class="spaces">  </span><span class="nottickedoff">| value &gt;= 0.80 = &quot;high&quot;</span>
+<span class="lineno">  667 </span><span class="spaces">  </span><span class="nottickedoff">| value &gt;= 0.60 = &quot;medium&quot;</span>
+<span class="lineno">  668 </span><span class="spaces">  </span><span class="nottickedoff">| value &gt;= 0.40 = &quot;low&quot;</span>
+<span class="lineno">  669 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = &quot;minimal&quot;</span></span>
+<span class="lineno">  670 </span>
+<span class="lineno">  671 </span>cautionLevel :: EndorsedPerspective -&gt; Text
+<span class="lineno">  672 </span><span class="decl"><span class="nottickedoff">cautionLevel ep</span>
+<span class="lineno">  673 </span><span class="spaces">  </span><span class="nottickedoff">| epStatus ep `elem` [PerspectiveContested, PerspectiveSuspended] = &quot;high&quot;</span>
+<span class="lineno">  674 </span><span class="spaces">  </span><span class="nottickedoff">| epConfidence ep &lt; 0.60 = &quot;medium&quot;</span>
+<span class="lineno">  675 </span><span class="spaces">  </span><span class="nottickedoff">| null (epCounterarguments ep) = &quot;low&quot;</span>
+<span class="lineno">  676 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = &quot;medium&quot;</span></span>
+<span class="lineno">  677 </span>
+<span class="lineno">  678 </span>explanationHandle :: EndorsedPerspective -&gt; Text
+<span class="lineno">  679 </span><span class="decl"><span class="nottickedoff">explanationHandle ep =</span>
+<span class="lineno">  680 </span><span class="spaces">  </span><span class="nottickedoff">renderPerspectiveId (epId ep)</span>
+<span class="lineno">  681 </span><span class="spaces">    </span><span class="nottickedoff">&lt;&gt; &quot;:v&quot;</span>
+<span class="lineno">  682 </span><span class="spaces">    </span><span class="nottickedoff">&lt;&gt; T.pack (show (unPerspectiveVersionId (epVersion ep)))</span>
+<span class="lineno">  683 </span><span class="spaces">    </span><span class="nottickedoff">&lt;&gt; &quot;:np&quot;</span>
+<span class="lineno">  684 </span><span class="spaces">    </span><span class="nottickedoff">&lt;&gt; T.pack (show (epNormativeProfileVersion ep))</span></span>
+<span class="lineno">  685 </span>
+<span class="lineno">  686 </span>lastOutcomeTopic :: DialogueOutcomeLearningState -&gt; Maybe Text
+<span class="lineno">  687 </span><span class="decl"><span class="istickedoff">lastOutcomeTopic outcomes =</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="istickedoff">case filter (not . T.null . dosTopic) (dolRecentOutcomes outcomes) of</span>
+<span class="lineno">  689 </span><span class="spaces">    </span><span class="istickedoff">sample:_ -&gt; Just (normalizeDialogueText (dosTopic sample))</span>
+<span class="lineno">  690 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  691 </span>
+<span class="lineno">  692 </span>strongestClaimTopic :: BeliefStore -&gt; Maybe Text
+<span class="lineno">  693 </span><span class="decl"><span class="istickedoff">strongestClaimTopic store =</span>
+<span class="lineno">  694 </span><span class="spaces">  </span><span class="istickedoff">case sortOn <span class="nottickedoff">(Down . brConfidence)</span> (M.elems (bsClaims store)) of</span>
+<span class="lineno">  695 </span><span class="spaces">    </span><span class="istickedoff">record:_ -&gt; <span class="nottickedoff">firstToken (brClaim record)</span></span>
+<span class="lineno">  696 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  697 </span>
+<span class="lineno">  698 </span>strongestKnowledgeTopic :: KnowledgeTree -&gt; Maybe Text
+<span class="lineno">  699 </span><span class="decl"><span class="istickedoff">strongestKnowledgeTopic tree =</span>
+<span class="lineno">  700 </span><span class="spaces">  </span><span class="istickedoff">case filter <span class="nottickedoff">(not . T.null . kfWord)</span> (concatMap <span class="nottickedoff">brFruits</span> (concat (M.elems (ktBranches tree)))) of</span>
+<span class="lineno">  701 </span><span class="spaces">    </span><span class="istickedoff">fruit:_ -&gt; <span class="nottickedoff">Just (normalizeDialogueText (kfWord fruit))</span></span>
+<span class="lineno">  702 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  703 </span>
+<span class="lineno">  704 </span>firstNonEmpty :: [Maybe Text] -&gt; Maybe Text
+<span class="lineno">  705 </span><span class="decl"><span class="istickedoff">firstNonEmpty values =</span>
+<span class="lineno">  706 </span><span class="spaces">  </span><span class="istickedoff">case [value | Just value &lt;- values, <span class="tickonlytrue">not (T.null value)</span>] of</span>
+<span class="lineno">  707 </span><span class="spaces">    </span><span class="istickedoff">value:_ -&gt; Just value</span>
+<span class="lineno">  708 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  709 </span>
+<span class="lineno">  710 </span>firstToken :: Text -&gt; Maybe Text
+<span class="lineno">  711 </span><span class="decl"><span class="nottickedoff">firstToken text =</span>
+<span class="lineno">  712 </span><span class="spaces">  </span><span class="nottickedoff">case T.words (normalizeDialogueText text) of</span>
+<span class="lineno">  713 </span><span class="spaces">    </span><span class="nottickedoff">token:_ -&gt; Just token</span>
+<span class="lineno">  714 </span><span class="spaces">    </span><span class="nottickedoff">[] -&gt; Nothing</span></span>
+<span class="lineno">  715 </span>
+<span class="lineno">  716 </span>scopeText :: PerspectiveScope -&gt; Text
+<span class="lineno">  717 </span><span class="decl"><span class="istickedoff">scopeText scope =</span>
+<span class="lineno">  718 </span><span class="spaces">  </span><span class="istickedoff">case scope of</span>
+<span class="lineno">  719 </span><span class="spaces">    </span><span class="istickedoff">ScopeTopic topic -&gt; normalizeDialogueText topic</span>
+<span class="lineno">  720 </span><span class="spaces">    </span><span class="istickedoff">ScopeTheme theme -&gt; <span class="nottickedoff">normalizeDialogueText theme</span></span>
+<span class="lineno">  721 </span><span class="spaces">    </span><span class="istickedoff">ScopeCluster cluster -&gt; <span class="nottickedoff">normalizeDialogueText cluster</span></span></span>
+<span class="lineno">  722 </span>
+<span class="lineno">  723 </span>normativeProfileApplies :: PerspectiveScope -&gt; NormativeProfile -&gt; Bool
+<span class="lineno">  724 </span><span class="decl"><span class="istickedoff">normativeProfileApplies scope profile =</span>
+<span class="lineno">  725 </span><span class="spaces">  </span><span class="istickedoff">case npActivationScope profile of</span>
+<span class="lineno">  726 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; True</span>
+<span class="lineno">  727 </span><span class="spaces">    </span><span class="istickedoff">Just activationScope -&gt; samePerspectiveScope scope activationScope</span></span>
+<span class="lineno">  728 </span>
+<span class="lineno">  729 </span>samePerspectiveScope :: PerspectiveScope -&gt; PerspectiveScope -&gt; Bool
+<span class="lineno">  730 </span><span class="decl"><span class="istickedoff">samePerspectiveScope left right =</span>
+<span class="lineno">  731 </span><span class="spaces">  </span><span class="istickedoff">case (left, right) of</span>
+<span class="lineno">  732 </span><span class="spaces">    </span><span class="istickedoff">(ScopeTopic a, ScopeTopic b) -&gt; normalizeDialogueText a == normalizeDialogueText b</span>
+<span class="lineno">  733 </span><span class="spaces">    </span><span class="istickedoff">(ScopeTheme a, ScopeTheme b) -&gt; <span class="nottickedoff">normalizeDialogueText a == normalizeDialogueText b</span></span>
+<span class="lineno">  734 </span><span class="spaces">    </span><span class="istickedoff">(ScopeCluster a, ScopeCluster b) -&gt; <span class="nottickedoff">normalizeDialogueText a == normalizeDialogueText b</span></span>
+<span class="lineno">  735 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  736 </span>
+<span class="lineno">  737 </span>structuralScopeTextMaybe :: Maybe PerspectiveScope -&gt; Maybe Text
+<span class="lineno">  738 </span><span class="decl"><span class="istickedoff">structuralScopeTextMaybe Nothing = Nothing</span>
+<span class="lineno">  739 </span><span class="spaces"></span><span class="istickedoff">structuralScopeTextMaybe (Just scope) = Just (scopeText scope)</span></span>
+<span class="lineno">  740 </span>
+<span class="lineno">  741 </span>dialogueEvidenceText :: DialogueOutcomeSample -&gt; Text
+<span class="lineno">  742 </span><span class="decl"><span class="istickedoff">dialogueEvidenceText sample =</span>
+<span class="lineno">  743 </span><span class="spaces">  </span><span class="istickedoff">&quot;dialogue:&quot; &lt;&gt; T.pack (show (dosKind sample)) &lt;&gt; &quot;:&quot; &lt;&gt; dosTopic sample</span></span>
+<span class="lineno">  744 </span>
+<span class="lineno">  745 </span>stanceRefText :: BeliefRecord -&gt; Text
+<span class="lineno">  746 </span><span class="decl"><span class="istickedoff">stanceRefText record =</span>
+<span class="lineno">  747 </span><span class="spaces">  </span><span class="istickedoff">&quot;stance:&quot; &lt;&gt; T.pack (show (brPolarity record)) &lt;&gt; &quot;:&quot; &lt;&gt; brClaim record</span></span>
+<span class="lineno">  748 </span>
+<span class="lineno">  749 </span>renderEvidenceRef :: EvidenceRef -&gt; Text
+<span class="lineno">  750 </span><span class="decl"><span class="istickedoff">renderEvidenceRef (EvidenceRef value) = value</span></span>
+<span class="lineno">  751 </span>
+<span class="lineno">  752 </span>renderClaimStanceRef :: ClaimStanceRef -&gt; Text
+<span class="lineno">  753 </span><span class="decl"><span class="istickedoff">renderClaimStanceRef (ClaimStanceRef value) = value</span></span>
+<span class="lineno">  754 </span>
+<span class="lineno">  755 </span>renderCounterargumentRef :: CounterargumentRef -&gt; Text
+<span class="lineno">  756 </span><span class="decl"><span class="nottickedoff">renderCounterargumentRef (CounterargumentRef value) = value</span></span>
+<span class="lineno">  757 </span>
+<span class="lineno">  758 </span>renderIdentityClaim :: IdentityClaimRef -&gt; Text
+<span class="lineno">  759 </span><span class="decl"><span class="istickedoff">renderIdentityClaim = T.pack . show</span></span>
+<span class="lineno">  760 </span>
+<span class="lineno">  761 </span>clampUnit :: Double -&gt; Double
+<span class="lineno">  762 </span><span class="decl"><span class="istickedoff">clampUnit x</span>
+<span class="lineno">  763 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">isNaN x</span>   = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  764 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = max 0.0 (min 1.0 x)</span></span>
+
+</pre>
+</body>
+</html>

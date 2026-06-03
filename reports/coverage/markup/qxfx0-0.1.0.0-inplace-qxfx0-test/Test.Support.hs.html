@@ -1,0 +1,236 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Support
+<span class="lineno">    4 </span>  ( assertExec
+<span class="lineno">    5 </span>  , queryCount
+<span class="lineno">    6 </span>  , withFakeSouffle
+<span class="lineno">    7 </span>  , withFakeNixInstantiateOk
+<span class="lineno">    8 </span>  , withRuntimeEnv
+<span class="lineno">    9 </span>  , withStrictRuntimeEnv
+<span class="lineno">   10 </span>  , withEnvVar
+<span class="lineno">   11 </span>  , removeIfExists
+<span class="lineno">   12 </span>  , removeDirIfExists
+<span class="lineno">   13 </span>  , testTempDir
+<span class="lineno">   14 </span>  , freshTestPath
+<span class="lineno">   15 </span>  , freshTestDbPath
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import Test.HUnit (assertFailure)
+<span class="lineno">   19 </span>import Control.Exception (bracket_)
+<span class="lineno">   20 </span>import System.Directory
+<span class="lineno">   21 </span>  ( Permissions(..)
+<span class="lineno">   22 </span>  , createDirectoryIfMissing
+<span class="lineno">   23 </span>  , doesDirectoryExist
+<span class="lineno">   24 </span>  , doesFileExist
+<span class="lineno">   25 </span>  , findExecutable
+<span class="lineno">   26 </span>  , getCurrentDirectory
+<span class="lineno">   27 </span>  , getPermissions
+<span class="lineno">   28 </span>  , removeFile
+<span class="lineno">   29 </span>  , removePathForcibly
+<span class="lineno">   30 </span>  , setPermissions
+<span class="lineno">   31 </span>  )
+<span class="lineno">   32 </span>import System.Environment (lookupEnv, setEnv, unsetEnv)
+<span class="lineno">   33 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   34 </span>import Data.Time.Clock.POSIX (getPOSIXTime)
+<span class="lineno">   35 </span>import qualified Data.Text as T
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>import qualified QxFx0.Bridge.AgdaWitness as AW
+<span class="lineno">   38 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   39 </span>import qualified QxFx0.Runtime as Runtime
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>freshTestPath :: FilePath -&gt; IO FilePath
+<span class="lineno">   42 </span><span class="decl"><span class="istickedoff">freshTestPath stem = do</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">tmpDir &lt;- testTempDir</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">ts &lt;- getPOSIXTime</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">let suffix = show (round (ts * 1000000) :: Integer)</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">pure (tmpDir &lt;&gt; &quot;/&quot; &lt;&gt; stem &lt;&gt; &quot;-&quot; &lt;&gt; suffix)</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>freshTestDbPath :: FilePath -&gt; IO FilePath
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">freshTestDbPath = freshTestPath</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>assertExec :: NSQL.Database -&gt; FilePath -&gt; T.Text -&gt; IO ()
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">assertExec db label sql = do</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- NSQL.execSql db sql</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;SQL apply failed for &quot; &lt;&gt; label &lt;&gt; &quot;: &quot; &lt;&gt; T.unpack err)</span></span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>queryCount :: NSQL.Database -&gt; T.Text -&gt; IO Int
+<span class="lineno">   59 </span><span class="decl"><span class="istickedoff">queryCount db sql = do</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">stmtRes &lt;- NSQL.prepare db sql</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- case stmtRes of</span>
+<span class="lineno">   62 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;Prepare failed: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">Right s -&gt; pure s</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">count &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnInt stmt 0 else <span class="nottickedoff">pure 0</span></span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">pure count</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>withFakeSouffle :: IO a -&gt; IO a
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">withFakeSouffle action = do</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">oldPath &lt;- lookupEnv &quot;PATH&quot;</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">binDir &lt;- freshTestPath &quot;qxfx0_fake_souffle_bin&quot;</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">let cleanup = removeDirIfExists binDir</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">scriptPath = binDir &lt;/&gt; &quot;souffle&quot;</span>
+<span class="lineno">   75 </span><span class="spaces">      </span><span class="istickedoff">fakePath = binDir &lt;&gt; maybe <span class="nottickedoff">&quot;&quot;</span> (\p -&gt; &quot;:&quot; &lt;&gt; p) oldPath</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">bracket_ (createDirectoryIfMissing True binDir) cleanup $ do</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">writeFile scriptPath (unlines fakeSouffleScript)</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">perms &lt;- getPermissions scriptPath</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">setPermissions scriptPath perms { executable = True }</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">withEnvVar &quot;PATH&quot; (Just fakePath) action</span>
+<span class="lineno">   81 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">fakeSouffleScript =</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;#!/bin/sh&quot;</span>
+<span class="lineno">   84 </span><span class="spaces">      </span><span class="istickedoff">, &quot;outdir=''&quot;</span>
+<span class="lineno">   85 </span><span class="spaces">      </span><span class="istickedoff">, &quot;dlfile=''&quot;</span>
+<span class="lineno">   86 </span><span class="spaces">      </span><span class="istickedoff">, &quot;while [ \&quot;$#\&quot; -gt 0 ]; do&quot;</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  if [ \&quot;$1\&quot; = \&quot;-D\&quot; ]; then&quot;</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">, &quot;    outdir=\&quot;$2\&quot;&quot;</span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">, &quot;    shift 2&quot;</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  else&quot;</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">, &quot;    dlfile=\&quot;$1\&quot;&quot;</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">, &quot;    shift&quot;</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  fi&quot;</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">, &quot;done&quot;</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">, &quot;if grep -qx 'InputAtom(\&quot;NeedContact\&quot;).' \&quot;$dlfile\&quot;; then&quot;</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  printf 'CMContact\\tIFContact\\tDeclarative\\tContactLayer\\tAlwaysWarranted\\n' &gt; \&quot;$outdir/R5Verdict.csv\&quot;&quot;</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  printf 'requested_family_shift\\tatom_signals_overrode_requested_family\\n' &gt; \&quot;$outdir/ShadowAlert.csv\&quot;&quot;</span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">, &quot;else&quot;</span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  printf 'CMGround\\tIFAssert\\tDeclarative\\tContentLayer\\tAlwaysWarranted\\n' &gt; \&quot;$outdir/R5Verdict.csv\&quot;&quot;</span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">, &quot;  : &gt; \&quot;$outdir/ShadowAlert.csv\&quot;&quot;</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">, &quot;fi&quot;</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  103 </span>
+<span class="lineno">  104 </span>withFakeNixInstantiateOk :: IO a -&gt; IO a
+<span class="lineno">  105 </span><span class="decl"><span class="istickedoff">withFakeNixInstantiateOk action = do</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">oldPath &lt;- lookupEnv &quot;PATH&quot;</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">binDir &lt;- freshTestPath &quot;qxfx0_fake_nix_bin&quot;</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">let cleanup = removeDirIfExists binDir</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">scriptPath = binDir &lt;/&gt; &quot;nix-instantiate&quot;</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">fakePath = binDir &lt;&gt; maybe <span class="nottickedoff">&quot;&quot;</span> (\p -&gt; &quot;:&quot; &lt;&gt; p) oldPath</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">bracket_ (createDirectoryIfMissing True binDir) cleanup $ do</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">writeFile scriptPath (unlines fakeNixScript)</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">perms &lt;- getPermissions scriptPath</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">setPermissions scriptPath perms { executable = True }</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">withEnvVar &quot;PATH&quot; (Just fakePath) action</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">fakeNixScript =</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;#!/bin/sh&quot;</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">, &quot;printf 'true\\n'&quot;</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>testTempDir :: IO FilePath
+<span class="lineno">  123 </span><span class="decl"><span class="istickedoff">testTempDir = do</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">root &lt;- getCurrentDirectory</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">let dir = root &lt;&gt; &quot;/.test-tmp&quot;</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">createDirectoryIfMissing True dir</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">pure dir</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>withRuntimeEnv :: FilePath -&gt; IO a -&gt; IO a
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">withRuntimeEnv dbName action = do</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">root &lt;- getCurrentDirectory</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">dbPath &lt;- freshTestDbPath dbName</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">stateDir &lt;- freshTestPath (dbName &lt;&gt; &quot;.state&quot;)</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">bracket_</span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="istickedoff">(do</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">mapM_ removeIfExists (runtimeArtifacts dbPath)</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">removeDirIfExists stateDir)</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="istickedoff">(do</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">mapM_ removeIfExists (runtimeArtifacts dbPath)</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">removeDirIfExists stateDir)</span>
+<span class="lineno">  141 </span><span class="spaces">    </span><span class="istickedoff">$ withEnvVar &quot;QXFX0_ROOT&quot; (Just root) $</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="istickedoff">withEnvVar &quot;QXFX0_DB&quot; (Just dbPath) $</span>
+<span class="lineno">  143 </span><span class="spaces">          </span><span class="istickedoff">withEnvVar &quot;QXFX0_STATE_DIR&quot; (Just stateDir) $</span>
+<span class="lineno">  144 </span><span class="spaces">            </span><span class="istickedoff">withEnvVar &quot;QXFX0_RUNTIME_MODE&quot; (Just &quot;degraded&quot;) $</span>
+<span class="lineno">  145 </span><span class="spaces">              </span><span class="istickedoff">action</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>withStrictRuntimeEnv :: FilePath -&gt; IO a -&gt; IO a
+<span class="lineno">  148 </span><span class="decl"><span class="istickedoff">withStrictRuntimeEnv dbName action = do</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">root &lt;- getCurrentDirectory</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="istickedoff">dbPath &lt;- freshTestDbPath dbName</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">witnessPath &lt;- freshTestPath (dbName &lt;&gt; &quot;.agda-witness.json&quot;)</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">stateDir &lt;- freshTestPath (dbName &lt;&gt; &quot;.state&quot;)</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">let cleanup = witnessPath : runtimeArtifacts dbPath</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="istickedoff">bracket_</span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">(do</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">mapM_ removeIfExists cleanup</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">removeDirIfExists stateDir)</span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">(do</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">mapM_ removeIfExists cleanup</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff">removeDirIfExists stateDir)</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">$ withFakeSouffle $</span>
+<span class="lineno">  162 </span><span class="spaces">        </span><span class="istickedoff">withFakeNixInstantiateOk $</span>
+<span class="lineno">  163 </span><span class="spaces">          </span><span class="istickedoff">withEnvVar &quot;QXFX0_ROOT&quot; (Just root) $</span>
+<span class="lineno">  164 </span><span class="spaces">            </span><span class="istickedoff">withEnvVar &quot;QXFX0_DB&quot; (Just dbPath) $</span>
+<span class="lineno">  165 </span><span class="spaces">              </span><span class="istickedoff">withEnvVar &quot;QXFX0_STATE_DIR&quot; (Just stateDir) $</span>
+<span class="lineno">  166 </span><span class="spaces">                </span><span class="istickedoff">withEnvVar &quot;QXFX0_RUNTIME_MODE&quot; (Just &quot;strict&quot;) $</span>
+<span class="lineno">  167 </span><span class="spaces">                  </span><span class="istickedoff">withEnvVar &quot;QXFX0_EMBEDDING_BACKEND&quot; (Just &quot;local-deterministic&quot;) $</span>
+<span class="lineno">  168 </span><span class="spaces">                    </span><span class="istickedoff">withEnvVar &quot;EMBEDDING_API_URL&quot; Nothing $</span>
+<span class="lineno">  169 </span><span class="spaces">                      </span><span class="istickedoff">withEnvVar &quot;QXFX0_AGDA_WITNESS&quot; (Just witnessPath) $ do</span>
+<span class="lineno">  170 </span><span class="spaces">                        </span><span class="istickedoff">mAgda &lt;- findExecutable &quot;agda&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">                        </span><span class="istickedoff">case mAgda of</span>
+<span class="lineno">  172 </span><span class="spaces">                          </span><span class="istickedoff">Just _  -&gt; do</span>
+<span class="lineno">  173 </span><span class="spaces">                            </span><span class="istickedoff">_ &lt;- Runtime.writeAgdaWitness</span>
+<span class="lineno">  174 </span><span class="spaces">                            </span><span class="istickedoff">action</span>
+<span class="lineno">  175 </span><span class="spaces">                          </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  176 </span><span class="spaces">                            </span><span class="istickedoff"><span class="nottickedoff">AW.writeStubAgdaWitness witnessPath</span></span>
+<span class="lineno">  177 </span><span class="spaces">                            </span><span class="istickedoff"><span class="nottickedoff">action</span></span></span>
+<span class="lineno">  178 </span>
+<span class="lineno">  179 </span>withEnvVar :: String -&gt; Maybe String -&gt; IO a -&gt; IO a
+<span class="lineno">  180 </span><span class="decl"><span class="istickedoff">withEnvVar key mValue action = do</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">old &lt;- lookupEnv key</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">let apply = case mValue of</span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="istickedoff">Just value -&gt; setEnv key value</span>
+<span class="lineno">  184 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; unsetEnv key</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">restore = case old of</span>
+<span class="lineno">  186 </span><span class="spaces">        </span><span class="istickedoff">Just value -&gt; setEnv key value</span>
+<span class="lineno">  187 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; unsetEnv key</span>
+<span class="lineno">  188 </span><span class="spaces">  </span><span class="istickedoff">bracket_ apply restore action</span></span>
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>removeIfExists :: FilePath -&gt; IO ()
+<span class="lineno">  191 </span><span class="decl"><span class="istickedoff">removeIfExists filePath = do</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">exists &lt;- doesFileExist filePath</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">if exists then removeFile filePath else pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>removeDirIfExists :: FilePath -&gt; IO ()
+<span class="lineno">  196 </span><span class="decl"><span class="istickedoff">removeDirIfExists dirPath = do</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">exists &lt;- doesDirectoryExist dirPath</span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">if exists then removePathForcibly dirPath else pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>withCleanFiles :: [FilePath] -&gt; IO a -&gt; IO a
+<span class="lineno">  201 </span><span class="decl"><span class="nottickedoff">withCleanFiles paths =</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="nottickedoff">bracket_</span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="nottickedoff">(mapM_ removeIfExists paths)</span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="nottickedoff">(mapM_ removeIfExists paths)</span></span>
+<span class="lineno">  205 </span>
+<span class="lineno">  206 </span>runtimeArtifacts :: FilePath -&gt; [FilePath]
+<span class="lineno">  207 </span><span class="decl"><span class="istickedoff">runtimeArtifacts dbPath =</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">[ dbPath</span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">, dbPath &lt;&gt; &quot;-wal&quot;</span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">, dbPath &lt;&gt; &quot;-shm&quot;</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">, dbPath &lt;&gt; &quot;.http-session-tokens.json&quot;</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">, dbPath &lt;&gt; &quot;.http-session-tokens.json.tmp&quot;</span>
+<span class="lineno">  213 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+
+</pre>
+</body>
+</html>

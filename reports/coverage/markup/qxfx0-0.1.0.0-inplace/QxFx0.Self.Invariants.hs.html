@@ -1,0 +1,103 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-|
+<span class="lineno">    4 </span>Module      : QxFx0.Self.Invariants
+<span class="lineno">    5 </span>Description : Pure invariant checks over 'SelfBlanket' snapshots.
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>Two check operators are provided:
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>* 'checkInitialBlanket' for the post-bootstrap state (no previous
+<span class="lineno">   10 </span>  blanket exists yet); and
+<span class="lineno">   11 </span>* 'checkBlanketTransition' for any commit-time transition between
+<span class="lineno">   12 </span>  a previous and a current blanket.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>Both functions are pure and return the (possibly empty) list of
+<span class="lineno">   15 </span>'BlanketViolation' values produced. An empty list means the
+<span class="lineno">   16 </span>invariants hold; a non-empty list is a structural self-identity
+<span class="lineno">   17 </span>failure ('QxFx0.ExceptionPolicy.IdentityRupture').
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>See @docs\/THEORY.md@ §4.1.
+<span class="lineno">   20 </span>-}
+<span class="lineno">   21 </span>module QxFx0.Self.Invariants
+<span class="lineno">   22 </span>  ( checkInitialBlanket
+<span class="lineno">   23 </span>  , checkBlanketTransition
+<span class="lineno">   24 </span>  , renderBlanketViolations
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import Data.Text (Text)
+<span class="lineno">   28 </span>import qualified Data.Text as T
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>import QxFx0.Self.Types
+<span class="lineno">   31 </span>  ( BlanketViolation (..)
+<span class="lineno">   32 </span>  , SelfBlanket (..)
+<span class="lineno">   33 </span>  , renderBlanketViolation
+<span class="lineno">   34 </span>  )
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>-- | Check the invariants that must hold for a freshly bootstrapped
+<span class="lineno">   37 </span>-- system, with no prior 'SelfBlanket' to compare against.
+<span class="lineno">   38 </span>--
+<span class="lineno">   39 </span>-- Currently enforces:
+<span class="lineno">   40 </span>--
+<span class="lineno">   41 </span>-- * 'BlanketEmptySession' — the session identifier must be non-empty
+<span class="lineno">   42 </span>-- * 'BlanketEmptyMorphology' — at least one morphology entry must
+<span class="lineno">   43 </span>--   be loaded
+<span class="lineno">   44 </span>--
+<span class="lineno">   45 </span>-- Returns @[]@ on success.
+<span class="lineno">   46 </span>checkInitialBlanket :: SelfBlanket -&gt; [BlanketViolation]
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">checkInitialBlanket sb =</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">[ BlanketEmptySession    | T.null (sbSessionId sb)              ]</span>
+<span class="lineno">   49 </span><span class="spaces">  </span><span class="istickedoff">&lt;&gt; [ BlanketEmptyMorphology | sbMorphologyTotalSize sb &lt;= 0       ]</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>-- | Check the invariants that must hold across a commit-time
+<span class="lineno">   52 </span>-- transition from a previous 'SelfBlanket' to a current one.
+<span class="lineno">   53 </span>--
+<span class="lineno">   54 </span>-- Currently enforces (in addition to all checks from
+<span class="lineno">   55 </span>-- 'checkInitialBlanket' applied to the current blanket):
+<span class="lineno">   56 </span>--
+<span class="lineno">   57 </span>-- * 'BlanketSessionChanged' — the session identifier must not change
+<span class="lineno">   58 </span>-- * 'BlanketTurnRegressed' — turn count must be non-decreasing
+<span class="lineno">   59 </span>-- * 'BlanketIdentityErased' — identity-claim count must be
+<span class="lineno">   60 </span>--   non-decreasing
+<span class="lineno">   61 </span>--
+<span class="lineno">   62 </span>-- Returns @[]@ on success.
+<span class="lineno">   63 </span>checkBlanketTransition :: SelfBlanket -&gt; SelfBlanket -&gt; [BlanketViolation]
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">checkBlanketTransition prev cur =</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">checkInitialBlanket cur</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; [ BlanketSessionChanged (sbSessionId prev) (sbSessionId cur)</span>
+<span class="lineno">   67 </span><span class="spaces">       </span><span class="istickedoff">| sbSessionId prev /= sbSessionId cur</span>
+<span class="lineno">   68 </span><span class="spaces">       </span><span class="istickedoff">]</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; [ BlanketTurnRegressed (sbTurnCount prev) (sbTurnCount cur)</span>
+<span class="lineno">   70 </span><span class="spaces">       </span><span class="istickedoff">| sbTurnCount cur &lt; sbTurnCount prev</span>
+<span class="lineno">   71 </span><span class="spaces">       </span><span class="istickedoff">]</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; [ BlanketIdentityErased (sbIdentityClaimsCount prev) (sbIdentityClaimsCount cur)</span>
+<span class="lineno">   73 </span><span class="spaces">       </span><span class="istickedoff">| sbIdentityClaimsCount cur &lt; sbIdentityClaimsCount prev</span>
+<span class="lineno">   74 </span><span class="spaces">       </span><span class="istickedoff">]</span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>-- | Render a list of violations to a single semicolon-separated
+<span class="lineno">   77 </span>-- diagnostic line, suitable for an
+<span class="lineno">   78 </span>-- 'QxFx0.ExceptionPolicy.IdentityRupture' payload.
+<span class="lineno">   79 </span>renderBlanketViolations :: [BlanketViolation] -&gt; Text
+<span class="lineno">   80 </span><span class="decl"><span class="istickedoff">renderBlanketViolations = T.intercalate &quot;; &quot; . map renderBlanketViolation</span></span>
+
+</pre>
+</body>
+</html>

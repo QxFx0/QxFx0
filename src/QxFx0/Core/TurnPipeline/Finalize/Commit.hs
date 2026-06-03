@@ -31,6 +31,7 @@ import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(EssenceRupture, IdentityRupture, PersistenceError)
+  , renderQxFx0ExceptionForLog
   , throwQxFx0
   , tryAsync
   )
@@ -39,9 +40,10 @@ import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
 import QxFx0.Types
 import QxFx0.Core.TurnPipeline.Types (RenderedTurn(..))
+import System.IO (hPutStrLn, stderr)
 
-planFinalizeCommit :: Text -> SystemState -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
-planFinalizeCommit sessionId previousState turnSignals turnArtifacts bundle =
+planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
+planFinalizeCommit sessionId previousState turnInput turnSignals turnArtifacts bundle =
   FinalizeCommitPlan
     { fcpResponseObservation =
         ResponseObservation
@@ -50,6 +52,7 @@ planFinalizeCommit sessionId previousState turnSignals turnArtifacts bundle =
           }
     , fcpPreviewConsciousLoop = tsConsciousLoop' turnSignals
     , fcpPreviewIntuition = tsIntuitionState turnSignals
+    , fcpCapturedCurrentTime = tiStartTime turnInput
     , fcpPreviousState = previousState
     , fcpSaveState = fpbNextSs bundle
     , fcpSessionId = sessionId
@@ -61,7 +64,7 @@ planFinalizeCommit sessionId previousState turnSignals turnArtifacts bundle =
 resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
 resolveFinalizeCommit pipelineIO commitPlan = do
   unless (fcpRewireEventsCount commitPlan == 0) $
-    hPutStrLnWarning ("Dream rewiring: " ++ show (fcpRewireEventsCount commitPlan) ++ " edges adjusted")
+    hPutStrLnWarning ("Dream rewiring: " <> T.pack (show (fcpRewireEventsCount commitPlan)) <> " edges adjusted")
 
   -- Phase 1: verify that the prepared next-state preserves the
   -- system's structural self-identity relative to the previous state
@@ -82,7 +85,7 @@ resolveFinalizeCommit pipelineIO commitPlan = do
     Left v   -> throwQxFx0
                   (EssenceRupture ("commit: " <> renderEssenceViolation v))
 
-  saveStart <- resolveCommitCurrentTime pipelineIO
+  let saveStart = fcpCapturedCurrentTime commitPlan
   saveResult <-
     resolveTurnEffect
       pipelineIO
@@ -90,8 +93,12 @@ resolveFinalizeCommit pipelineIO commitPlan = do
   savedState <-
     case saveResult of
       TurnResSaveState (Right savedSystemState) -> pure savedSystemState
-      TurnResSaveState (Left err) -> throwQxFx0 (PersistenceError ("saveStateWithProjection failed: " <> renderPersistenceDiagnostics [err]))
-      _ -> throwQxFx0 (PersistenceError "saveStateWithProjection returned unexpected result")
+      TurnResSaveState (Left err) -> do
+        hPutStrLn stderr $ "[persistence_debug] finalize_save_failed session=" <> T.unpack (fcpSessionId commitPlan) <> " detail=" <> T.unpack (renderPersistenceDiagnostics [err])
+        throwQxFx0 (PersistenceError ("saveStateWithProjection failed: " <> renderPersistenceDiagnostics [err]))
+      _ -> do
+        hPutStrLn stderr $ "[persistence_debug] finalize_save_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
+        throwQxFx0 (PersistenceError "saveStateWithProjection returned unexpected result")
   commitAttempt <-
     tryAsync (attemptCommitRuntimeState pipelineIO commitPlan (fcpPreviewIntuition commitPlan))
   case commitAttempt of
@@ -103,7 +110,7 @@ resolveFinalizeCommit pipelineIO commitPlan = do
         Right () ->
           hPutStrLnWarning
             ("[warn] commit runtime state failed after save; state re-hydrated from persisted snapshot: "
-              <> show commitErr)
+              <> T.pack (show commitErr))
         Left recoveryErr -> do
           projectionsRollbackSucceeded <- attemptRollbackPersistedProjections pipelineIO commitPlan
           unless projectionsRollbackSucceeded $
@@ -129,7 +136,7 @@ resolveFinalizeCommit pipelineIO commitPlan = do
     maybeInjectPostCommitTailException pipelineIO
     _ <- resolveTurnEffect pipelineIO (TurnReqCheckpoint (ssTurnCount savedState))
     pure ()
-  saveEnd <- resolveCommitCurrentTime pipelineIO
+  let saveEnd = fcpCapturedCurrentTime commitPlan
   pure
     FinalizeCommitResults
       { fcrSavedSs = savedState
@@ -164,18 +171,11 @@ resolveFinalizePostCommit metrics =
   runBestEffortPostCommit "metrics_log" $
     logMetrics metrics
 
-resolveCommitCurrentTime :: PipelineIO -> IO UTCTime
-resolveCommitCurrentTime pipelineIO = do
-  result <- resolveTurnEffect pipelineIO TurnReqCurrentTime
-  case result of
-    TurnResCurrentTime currentTime -> pure currentTime
-    _ -> throwQxFx0 (PersistenceError "current time effect returned unexpected result")
-
-runBestEffortPostCommit :: String -> IO a -> IO ()
+runBestEffortPostCommit :: Text -> IO a -> IO ()
 runBestEffortPostCommit label action = do
   result <- tryAsync action
   case result of
-    Left err -> hPutStrLnWarning $ "[warn] post-commit " <> label <> " failed: " <> show err
+    Left err -> hPutStrLnWarning $ "[warn] post-commit " <> label <> " failed: " <> T.pack (show err)
     Right _ -> pure ()
 
 attemptCommitRuntimeState :: PipelineIO -> FinalizeCommitPlan -> IntuitiveState -> IO ()
@@ -189,7 +189,9 @@ attemptCommitRuntimeState pipelineIO commitPlan previewIntuition = do
         (fcpResponseObservation commitPlan))
   case commitResult of
     TurnResCommitRuntimeState -> pure ()
-    _ -> throwQxFx0 (PersistenceError "commit runtime state effect returned unexpected result")
+    _ -> do
+      hPutStrLn stderr $ "[persistence_debug] commit_runtime_state_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
+      throwQxFx0 (PersistenceError "commit runtime state effect returned unexpected result")
 
 recoverRuntimeTurnState :: PipelineIO -> FinalizeCommitPlan -> SystemState -> IO ()
 recoverRuntimeTurnState pipelineIO commitPlan savedState =

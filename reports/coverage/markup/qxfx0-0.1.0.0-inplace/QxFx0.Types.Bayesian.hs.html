@@ -1,0 +1,70 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Bayesian
+<span class="lineno">    7 </span>  ( HiddenBelief(..)
+<span class="lineno">    8 </span>  , BeliefState
+<span class="lineno">    9 </span>  , initialBeliefs
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   13 </span>import Data.Aeson
+<span class="lineno">   14 </span>  ( FromJSON(..)
+<span class="lineno">   15 </span>  , FromJSONKey(..)
+<span class="lineno">   16 </span>  , FromJSONKeyFunction(..)
+<span class="lineno">   17 </span>  , ToJSON(..)
+<span class="lineno">   18 </span>  , ToJSONKey(..)
+<span class="lineno">   19 </span>  , ToJSONKeyFunction(..)
+<span class="lineno">   20 </span>  , genericParseJSON
+<span class="lineno">   21 </span>  , genericToJSON
+<span class="lineno">   22 </span>  , defaultOptions
+<span class="lineno">   23 </span>  , toEncoding
+<span class="lineno">   24 </span>  )
+<span class="lineno">   25 </span>import Data.Map.Strict (Map)
+<span class="lineno">   26 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   27 </span>import GHC.Generics (Generic)
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>data HiddenBelief
+<span class="lineno">   30 </span>  = UserWantsDefine
+<span class="lineno">   31 </span>  | UserWantsCompare
+<span class="lineno">   32 </span>  | UserWantsConfront
+<span class="lineno">   33 </span>  | UserSeeksSupport
+<span class="lineno">   34 </span>  | UserIsConfused
+<span class="lineno">   35 </span>  | UserIsDistressed
+<span class="lineno">   36 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   37 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>instance <span class="decl"><span class="nottickedoff">ToJSONKey HiddenBelief</span></span> where
+<span class="lineno">   40 </span>  <span class="decl"><span class="nottickedoff">toJSONKey = ToJSONKeyValue toJSON toEncoding</span></span>
+<span class="lineno">   41 </span>instance <span class="decl"><span class="nottickedoff">FromJSONKey HiddenBelief</span></span> where
+<span class="lineno">   42 </span>  <span class="decl"><span class="nottickedoff">fromJSONKey = FromJSONKeyValue parseJSON</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>type BeliefState = Map HiddenBelief Double
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>initialBeliefs :: BeliefState
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">initialBeliefs = M.fromList [(b, 1.0 / fromIntegral (length [minBound..maxBound :: HiddenBelief])) | b &lt;- [minBound..maxBound]]</span></span>
+
+</pre>
+</body>
+</html>

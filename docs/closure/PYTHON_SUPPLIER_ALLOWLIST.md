@@ -54,9 +54,9 @@ Each entry is one of:
 
 | Path | Class | Disposition | Replacement / removal criterion |
 |---|---|---|---|
-| `scripts/check_schema_consistency.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- verify-schema` (per `PYTHON_STATUS_LEDGER.md §7`); deadline before P5 Gate P5-1. |
-| `scripts/check_schema_contract.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- verify-contract`; deadline before P5 Gate P5-1. |
-| `scripts/sync_embedded_sql.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- check-embedded-sql`; deadline before P5 Gate P5-1. |
+| `scripts/check_schema_consistency.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- --check-schema-consistency` (per `PYTHON_STATUS_LEDGER.md §7`); deadline before P5 Gate P5-1. |
+| `scripts/check_schema_contract.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- --check-schema-contract`; deadline before P5 Gate P5-1. |
+| `scripts/sync_embedded_sql.py` | `A. canonical-build` | PORT | `cabal run qxfx0-main -- --check-embedded-sql`; deadline before P5 Gate P5-1. |
 | `scripts/http_runtime.py` | `B. canonical-runtime` (legacy) | DELETE | per `PYTHON_STATUS_LEDGER.md §3`; deadline before P5 Gate P5-3. |
 | `services/morphology/server.py` | `B. canonical-runtime` (active) | PORT | `QxFx0.Lexicon.Morphology.Parser`; deadline before P5 Gate P5-2. |
 | `scripts/build_input_lexicon.py` | `C. supplier-build` | KEEP (temporary) or PORT | Haskell IR emitter; deadline before P5 Gate P5-4. |

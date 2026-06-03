@@ -1,0 +1,178 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Narrative interpretation, event accumulation, and prompt-fragment extraction. -}
+<span class="lineno">    5 </span>module QxFx0.Core.Consciousness.Narrative
+<span class="lineno">    6 </span>  ( interpretOutput
+<span class="lineno">    7 </span>  , updateSelfInterpretation
+<span class="lineno">    8 </span>  , consciousnessToNarrative
+<span class="lineno">    9 </span>  , narrativeToPromptFragment
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import Data.Text (Text)
+<span class="lineno">   13 </span>import qualified Data.Text as T
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import QxFx0.Core.Consciousness.Types
+<span class="lineno">   16 </span>import QxFx0.Policy.Consciousness
+<span class="lineno">   17 </span>  ( consciousnessConflictPrefix
+<span class="lineno">   18 </span>  , consciousnessDesiresLabel
+<span class="lineno">   19 </span>  , consciousnessKernelLabel
+<span class="lineno">   20 </span>  , consciousnessLimitLabel
+<span class="lineno">   21 </span>  , consciousnessPromptHeader
+<span class="lineno">   22 </span>  , consciousnessSelfModelLabel
+<span class="lineno">   23 </span>  , consciousnessSkillLabel
+<span class="lineno">   24 </span>  , interpretationEventWhatPrefix
+<span class="lineno">   25 </span>  , interpretationNoDesire
+<span class="lineno">   26 </span>  , interpretWhyDeepPrefix
+<span class="lineno">   27 </span>  , interpretWhyDesiresPrefix
+<span class="lineno">   28 </span>  , interpretWhySkillLabel
+<span class="lineno">   29 </span>  , interpretWhySkillSuffix
+<span class="lineno">   30 </span>  , narrativeActivePrefix
+<span class="lineno">   31 </span>  , narrativeApplySuffix
+<span class="lineno">   32 </span>  , narrativeSearchPrefix
+<span class="lineno">   33 </span>  , observedPatternPrefix
+<span class="lineno">   34 </span>  , focusHumanPrefix
+<span class="lineno">   35 </span>  , skillAffinityMap
+<span class="lineno">   36 </span>  )
+<span class="lineno">   37 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   38 </span>  ( consciousnessDefaultSkillAffinity
+<span class="lineno">   39 </span>  , consciousnessSkillAffinityPatternThreshold
+<span class="lineno">   40 </span>  , consciousnessTrajectoryLimit
+<span class="lineno">   41 </span>  )
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>interpretOutput :: ConsciousnessModel -&gt; KernelOutput -&gt; Text -&gt; ConsciousnessModel
+<span class="lineno">   44 </span><span class="decl"><span class="istickedoff">interpretOutput model output inputText =</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">let consciousState = cmConscious model</span>
+<span class="lineno">   46 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">turn = csTurnCount consciousState + 1</span></span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">event = InterpretationEvent</span></span>
+<span class="lineno">   48 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">{ ieWhat = interpretationEventWhatPrefix &lt;&gt; koSelectedSkill output</span></span>
+<span class="lineno">   49 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, ieWhy = interpretWhy output</span></span>
+<span class="lineno">   50 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, ieDesire = case koActiveDesires output of</span></span>
+<span class="lineno">   51 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">desire : _ -&gt; desire</span></span>
+<span class="lineno">   52 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">[] -&gt; interpretationNoDesire</span></span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, ieTurn = turn</span></span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">newSelfInterpretation = updateSelfInterpretation <span class="nottickedoff">(csSelfInterp consciousState)</span> output <span class="nottickedoff">event</span></span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">newTrajectory = take consciousnessTrajectoryLimit (event : csTrajectory consciousState)</span></span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">newFocus = deriveFocus output inputText</span></span>
+<span class="lineno">   58 </span><span class="spaces">      </span><span class="istickedoff">newConsciousState =</span>
+<span class="lineno">   59 </span><span class="spaces">        </span><span class="istickedoff">consciousState</span>
+<span class="lineno">   60 </span><span class="spaces">          </span><span class="istickedoff">{ csSelfInterp = newSelfInterpretation</span>
+<span class="lineno">   61 </span><span class="spaces">          </span><span class="istickedoff">, csTrajectory = <span class="nottickedoff">newTrajectory</span></span>
+<span class="lineno">   62 </span><span class="spaces">          </span><span class="istickedoff">, csFocus = <span class="nottickedoff">newFocus</span></span>
+<span class="lineno">   63 </span><span class="spaces">          </span><span class="istickedoff">, csTurnCount = <span class="nottickedoff">turn</span></span>
+<span class="lineno">   64 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">   65 </span><span class="spaces">   </span><span class="istickedoff">in model {cmConscious = newConsciousState}</span></span>
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>updateSelfInterpretation :: SelfInterpretation -&gt; KernelOutput -&gt; InterpretationEvent -&gt; SelfInterpretation
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">updateSelfInterpretation selfInterpretation output event =</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">let activeDesireNames = koActiveDesires output</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">newNarrative = buildNarrative output</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">newPattern = case koSelectedSkill output of</span>
+<span class="lineno">   72 </span><span class="spaces">        </span><span class="istickedoff">skill | <span class="tickonlytrue">skillAffinityFromName skill &gt; consciousnessSkillAffinityPatternThreshold</span> -&gt;</span>
+<span class="lineno">   73 </span><span class="spaces">          </span><span class="istickedoff">Just (observedPatternPrefix &lt;&gt; skill)</span>
+<span class="lineno">   74 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   75 </span><span class="spaces">      </span><span class="istickedoff">newPatterns = take 5 $ maybe <span class="nottickedoff">(siObservedPatterns selfInterpretation)</span> (: <span class="nottickedoff">siObservedPatterns selfInterpretation</span>) newPattern</span>
+<span class="lineno">   76 </span><span class="spaces">   </span><span class="istickedoff">in SelfInterpretation</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">{ siCurrentNarrative = newNarrative</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">, siActiveDesires = take 3 activeDesireNames</span>
+<span class="lineno">   79 </span><span class="spaces">        </span><span class="istickedoff">, siObservedPatterns = newPatterns</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">, siConflicts = take 3 (koConflicts output)</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">, siRecentEvents = <span class="nottickedoff">take 5 (event : siRecentEvents selfInterpretation)</span></span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>consciousnessToNarrative :: ConsciousnessModel -&gt; KernelOutput -&gt; ConsciousnessNarrative
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">consciousnessToNarrative model output =</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">let consciousState = cmConscious model</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">selfInterpretation = csSelfInterp consciousState</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">selfModel = ukSelfModel (cmKernel model)</span>
+<span class="lineno">   89 </span><span class="spaces">   </span><span class="istickedoff">in ConsciousnessNarrative</span>
+<span class="lineno">   90 </span><span class="spaces">        </span><span class="istickedoff">{ cnKernelState = siCurrentNarrative selfInterpretation</span>
+<span class="lineno">   91 </span><span class="spaces">        </span><span class="istickedoff">, cnActiveDesires = T.intercalate &quot; / &quot; (siActiveDesires selfInterpretation)</span>
+<span class="lineno">   92 </span><span class="spaces">        </span><span class="istickedoff">, cnSkillInPlay = koSelectedSkill output</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">, cnSelfView = smIdentity selfModel</span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">, cnConflict = case siConflicts selfInterpretation of</span>
+<span class="lineno">   95 </span><span class="spaces">            </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">&quot;&quot;</span></span>
+<span class="lineno">   96 </span><span class="spaces">            </span><span class="istickedoff">conflict : _ -&gt; consciousnessConflictPrefix &lt;&gt; conflict</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff">, cnLimitation = smLimitation selfModel</span>
+<span class="lineno">   98 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>narrativeToPromptFragment :: ConsciousnessNarrative -&gt; Text
+<span class="lineno">  101 </span><span class="decl"><span class="istickedoff">narrativeToPromptFragment narrative = T.unlines $ filter (not . T.null)</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">[ consciousnessPromptHeader</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">, &quot;&quot;</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">, consciousnessKernelLabel &lt;&gt; cnKernelState narrative</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, consciousnessDesiresLabel &lt;&gt; cnActiveDesires narrative</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, consciousnessSkillLabel &lt;&gt; cnSkillInPlay narrative</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, if <span class="tickonlyfalse">T.null (cnConflict narrative)</span> then <span class="nottickedoff">&quot;&quot;</span> else cnConflict narrative</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">, &quot;&quot;</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">, consciousnessSelfModelLabel &lt;&gt; cnSelfView narrative</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">, consciousnessLimitLabel &lt;&gt; cnLimitation narrative</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>interpretWhy :: KernelOutput -&gt; Text
+<span class="lineno">  114 </span><span class="decl"><span class="nottickedoff">interpretWhy output =</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="nottickedoff">let desires = koActiveDesires output</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="nottickedoff">skill = koSelectedSkill output</span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="nottickedoff">deep = trDeepContent (koSearchResult output)</span>
+<span class="lineno">  118 </span><span class="spaces">   </span><span class="nottickedoff">in interpretWhyDesiresPrefix</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; T.intercalate &quot;, &quot; desires</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; &quot;. &quot;</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; interpretWhyDeepPrefix</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; deep</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; &quot;. &quot;</span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; interpretWhySkillLabel</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; skill</span>
+<span class="lineno">  126 </span><span class="spaces">        </span><span class="nottickedoff">&lt;&gt; interpretWhySkillSuffix</span></span>
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>skillAffinityFromName :: Text -&gt; Double
+<span class="lineno">  129 </span><span class="decl"><span class="istickedoff">skillAffinityFromName name = case lookup name skillAffinityMap of</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">Just affinity -&gt; affinity</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">consciousnessDefaultSkillAffinity</span></span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>buildNarrative :: KernelOutput -&gt; Text
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">buildNarrative output =</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">let skill = koSelectedSkill output</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">desires = koActiveDesires output</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">focus = trDeepContent (koSearchResult output)</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">ontologicalQuestion = koOntologicalQuestion output</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">framing = renderConsciousForm (oqForm ontologicalQuestion) &lt;&gt; &quot; / &quot; &lt;&gt; renderReturnMode (oqReturnForm ontologicalQuestion)</span>
+<span class="lineno">  140 </span><span class="spaces">   </span><span class="istickedoff">in narrativeSearchPrefix</span>
+<span class="lineno">  141 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; focus</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;. &quot;</span>
+<span class="lineno">  143 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; framing</span>
+<span class="lineno">  144 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;. &quot;</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; narrativeActivePrefix</span>
+<span class="lineno">  146 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; T.intercalate &quot;, &quot; (take 2 desires)</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;. &quot;</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; consciousnessSkillLabel</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; skill</span>
+<span class="lineno">  150 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; narrativeApplySuffix</span></span>
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>deriveFocus :: KernelOutput -&gt; Text -&gt; Text
+<span class="lineno">  153 </span><span class="decl"><span class="nottickedoff">deriveFocus output inputText</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="nottickedoff">| T.null (koFocusHint output) = focusHumanPrefix &lt;&gt; T.take 30 inputText</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = koFocusHint output</span></span>
+
+</pre>
+</body>
+</html>

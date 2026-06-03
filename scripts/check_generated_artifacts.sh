@@ -6,13 +6,8 @@ MIN_SCORE="${QXFX0_LEXICON_MIN_SCORE:-8.0}"
 
 cd "$ROOT"
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "python3 is required for generated-artifact gate" >&2
-  exit 1
-fi
-
 # 1) Embedded SQL must be generated from canonical spec/sql.
-python3 scripts/sync_embedded_sql.py --check >/dev/null
+cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1
 
 # 2) Lexicon-generated artifacts (JSON/GF/Agda/Haskell) must match SQL source.
 python3 scripts/export_lexicon.py --check --min-score "$MIN_SCORE" >/dev/null

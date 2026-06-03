@@ -1,0 +1,199 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Guardrails
+<span class="lineno">    9 </span>Description : WP5 — Rate limit, circuit breaker, and quarantine.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Prevents runaway learning loops by enforcing:
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>1. Rate limit — max proposals per sliding window.
+<span class="lineno">   14 </span>2. Circuit breaker — cooldown after consecutive rejections.
+<span class="lineno">   15 </span>3. Quarantine — proposals must sit for a minimum number of turns
+<span class="lineno">   16 </span>   before they are eligible for verify / simulate.
+<span class="lineno">   17 </span>-}
+<span class="lineno">   18 </span>module QxFx0.Learning.Guardrails
+<span class="lineno">   19 </span>  ( GuardrailState(..)
+<span class="lineno">   20 </span>  , emptyGuardrailState
+<span class="lineno">   21 </span>  , canSubmitProposal
+<span class="lineno">   22 </span>  , recordProposalSubmission
+<span class="lineno">   23 </span>  , recordRejection
+<span class="lineno">   24 </span>  , recordAcceptance
+<span class="lineno">   25 </span>  , quarantineProposal
+<span class="lineno">   26 </span>  , isQuarantineExpired
+<span class="lineno">   27 </span>  , maxProposalsPerWindow
+<span class="lineno">   28 </span>  , proposalWindowTurns
+<span class="lineno">   29 </span>  , maxConsecutiveRejections
+<span class="lineno">   30 </span>  , cooldownTurns
+<span class="lineno">   31 </span>  , minQuarantineTurns
+<span class="lineno">   32 </span>  , maxQuarantineEntries
+<span class="lineno">   33 </span>  ) where
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   36 </span>import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
+<span class="lineno">   37 </span>import Data.Maybe (isJust)
+<span class="lineno">   38 </span>import Data.Text (Text)
+<span class="lineno">   39 </span>import qualified Data.Text as T
+<span class="lineno">   40 </span>import GHC.Generics (Generic)
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationProposal(..))
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>-- | Guardrail configuration (hard-coded for determinism).
+<span class="lineno">   45 </span>maxProposalsPerWindow :: Int
+<span class="lineno">   46 </span><span class="decl"><span class="istickedoff">maxProposalsPerWindow = 2</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>proposalWindowTurns :: Int
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">proposalWindowTurns = 10</span></span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>maxConsecutiveRejections :: Int
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">maxConsecutiveRejections = 3</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>cooldownTurns :: Int
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">cooldownTurns = 5</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>minQuarantineTurns :: Int
+<span class="lineno">   58 </span><span class="decl"><span class="istickedoff">minQuarantineTurns = 2</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>maxQuarantineEntries :: Int
+<span class="lineno">   61 </span><span class="decl"><span class="istickedoff">maxQuarantineEntries = 500</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>-- | Mutable guardrail counters kept in 'SystemState'.
+<span class="lineno">   64 </span>data GuardrailState = GuardrailState
+<span class="lineno">   65 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">gsLastProposalTurn</span></span></span>      :: !Int
+<span class="lineno">   66 </span>    -- ^ Turn of the most recent proposal submission.
+<span class="lineno">   67 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsProposalsThisWindow</span></span></span>   :: !Int
+<span class="lineno">   68 </span>    -- ^ Count of submissions within the current window.
+<span class="lineno">   69 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsWindowStart</span></span></span>           :: !Int
+<span class="lineno">   70 </span>    -- ^ Turn when the current window began.
+<span class="lineno">   71 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsConsecutiveRejections</span></span></span> :: !Int
+<span class="lineno">   72 </span>    -- ^ How many consecutive proposals were rejected.
+<span class="lineno">   73 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsCooldownExpiry</span></span></span>        :: !Int
+<span class="lineno">   74 </span>    -- ^ Turn after which the circuit breaker re-closes.
+<span class="lineno">   75 </span>    --   0 = no active cooldown.
+<span class="lineno">   76 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsQuarantine</span></span></span>            :: ![(Int, CalibrationId)]
+<span class="lineno">   77 </span>    -- ^ (submittedTurn, proposalId) pairs still in quarantine.
+<span class="lineno">   78 </span>  }
+<span class="lineno">   79 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   80 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON GuardrailState</span></span></span></span></span></span></span></span> where
+<span class="lineno">   83 </span>  <span class="decl"><span class="istickedoff">toJSON s = object</span>
+<span class="lineno">   84 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;lastProposalTurn&quot;      .= gsLastProposalTurn s</span>
+<span class="lineno">   85 </span><span class="spaces">    </span><span class="istickedoff">, &quot;proposalsThisWindow&quot;   .= gsProposalsThisWindow s</span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">, &quot;windowStart&quot;           .= gsWindowStart s</span>
+<span class="lineno">   87 </span><span class="spaces">    </span><span class="istickedoff">, &quot;consecutiveRejections&quot; .= gsConsecutiveRejections s</span>
+<span class="lineno">   88 </span><span class="spaces">    </span><span class="istickedoff">, &quot;cooldownExpiry&quot;        .= gsCooldownExpiry s</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">, &quot;quarantine&quot;            .= gsQuarantine s</span>
+<span class="lineno">   90 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON GuardrailState</span></span></span></span> where
+<span class="lineno">   93 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;GuardrailState&quot;</span> $ \o -&gt;</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="istickedoff">GuardrailState</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .:? &quot;lastProposalTurn&quot;      .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;proposalsThisWindow&quot;   .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;windowStart&quot;           .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;consecutiveRejections&quot; .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;cooldownExpiry&quot;        .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;quarantine&quot;            .!= <span class="nottickedoff">[]</span></span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>emptyGuardrailState :: GuardrailState
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">emptyGuardrailState = GuardrailState</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">{ gsLastProposalTurn      = 0</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">, gsProposalsThisWindow   = 0</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, gsWindowStart           = 0</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, gsConsecutiveRejections = 0</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">, gsCooldownExpiry        = 0</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">, gsQuarantine            = []</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>-- | Predicate: can a new proposal be submitted at the given turn?
+<span class="lineno">  113 </span>canSubmitProposal :: GuardrailState -&gt; Int -&gt; Bool
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">canSubmitProposal gs turn =</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">not (circuitBreakerOpen gs turn) &amp;&amp; not (rateLimitExceeded gs turn)</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>-- | Record a new proposal submission, updating counters and window.
+<span class="lineno">  118 </span>recordProposalSubmission :: GuardrailState -&gt; Int -&gt; CalibrationId -&gt; GuardrailState
+<span class="lineno">  119 </span><span class="decl"><span class="istickedoff">recordProposalSubmission gs turn proposalId =</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">let (newWindowStart, newWindowCount) =</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">if turn - gsWindowStart gs &gt; proposalWindowTurns</span>
+<span class="lineno">  122 </span><span class="spaces">           </span><span class="istickedoff">then (turn, 1)</span>
+<span class="lineno">  123 </span><span class="spaces">           </span><span class="istickedoff">else (gsWindowStart gs, gsProposalsThisWindow gs + 1)</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">quarantine' = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs)</span>
+<span class="lineno">  125 </span><span class="spaces">   </span><span class="istickedoff">in gs</span>
+<span class="lineno">  126 </span><span class="spaces">        </span><span class="istickedoff">{ gsLastProposalTurn    = turn</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">, gsProposalsThisWindow = newWindowCount</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="istickedoff">, gsWindowStart         = newWindowStart</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">, gsQuarantine          = quarantine'</span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>-- | Record a rejection, bumping the consecutive-rejection counter
+<span class="lineno">  133 </span>-- and potentially opening the circuit breaker.
+<span class="lineno">  134 </span>recordRejection :: GuardrailState -&gt; Int -&gt; GuardrailState
+<span class="lineno">  135 </span><span class="decl"><span class="istickedoff">recordRejection gs turn =</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">let newRejections = gsConsecutiveRejections gs + 1</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">newCooldown =</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="istickedoff">if newRejections &gt;= maxConsecutiveRejections</span>
+<span class="lineno">  139 </span><span class="spaces">           </span><span class="istickedoff">then turn + cooldownTurns</span>
+<span class="lineno">  140 </span><span class="spaces">           </span><span class="istickedoff">else gsCooldownExpiry gs</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">in gs { gsConsecutiveRejections = newRejections, gsCooldownExpiry = newCooldown }</span></span>
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>-- | Record an acceptance, resetting the rejection streak.
+<span class="lineno">  144 </span>recordAcceptance :: GuardrailState -&gt; GuardrailState
+<span class="lineno">  145 </span><span class="decl"><span class="istickedoff">recordAcceptance gs = gs { gsConsecutiveRejections = 0 }</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>-- | Add a proposal to quarantine (done automatically by
+<span class="lineno">  148 </span>-- 'recordProposalSubmission').  This function is exposed for
+<span class="lineno">  149 </span>-- re-hydration from persisted state if needed.
+<span class="lineno">  150 </span>quarantineProposal :: GuardrailState -&gt; Int -&gt; CalibrationId -&gt; GuardrailState
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">quarantineProposal gs turn proposalId =</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">gs { gsQuarantine = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs) }</span></span>
+<span class="lineno">  153 </span>
+<span class="lineno">  154 </span>-- | Check whether a specific proposal has completed its quarantine.
+<span class="lineno">  155 </span>isQuarantineExpired :: GuardrailState -&gt; Int -&gt; CalibrationId -&gt; Bool
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">isQuarantineExpired gs turn proposalId =</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">case lookup proposalId (map swap (gsQuarantine gs)) of</span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">Nothing    -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">Just subTurn -&gt; turn - subTurn &gt;= minQuarantineTurns</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">swap (a, b) = (b, a)</span></span>
+<span class="lineno">  162 </span>
+<span class="lineno">  163 </span>pruneQuarantine :: Int -&gt; [(Int, CalibrationId)] -&gt; [(Int, CalibrationId)]
+<span class="lineno">  164 </span><span class="decl"><span class="istickedoff">pruneQuarantine turn =</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">take maxQuarantineEntries</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">. filter (\(submittedTurn, _) -&gt; turn - submittedTurn &lt;= minQuarantineTurns)</span></span>
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>-- Internal helpers
+<span class="lineno">  169 </span>
+<span class="lineno">  170 </span>circuitBreakerOpen :: GuardrailState -&gt; Int -&gt; Bool
+<span class="lineno">  171 </span><span class="decl"><span class="istickedoff">circuitBreakerOpen gs turn = gsCooldownExpiry gs &gt; 0 &amp;&amp; turn &lt;= gsCooldownExpiry gs</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>rateLimitExceeded :: GuardrailState -&gt; Int -&gt; Bool
+<span class="lineno">  174 </span><span class="decl"><span class="istickedoff">rateLimitExceeded gs turn =</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">let inCurrentWindow = turn - gsWindowStart gs &lt;= proposalWindowTurns</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">in inCurrentWindow &amp;&amp; gsProposalsThisWindow gs &gt;= maxProposalsPerWindow</span></span>
+
+</pre>
+</body>
+</html>

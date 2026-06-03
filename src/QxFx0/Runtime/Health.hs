@@ -9,8 +9,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (find)
 import System.Directory (doesDirectoryExist, doesFileExist)
-import System.FilePath (takeDirectory)
-import QxFx0.ExceptionPolicy (tryIO)
+import System.FilePath ((</>), takeDirectory)
+import QxFx0.ExceptionPolicy (tryIO, tryQxFx0)
 import QxFx0.Types.Readiness
   ( AgdaVerificationStatus
   , AgdaVerificationStatus(..)
@@ -32,6 +32,8 @@ import QxFx0.Runtime.Wiring (BackendReadiness(..))
 import QxFx0.Resources
   ( assessResourceReadiness
   , ReadinessStatus(..), ReadinessComponent(..), ReadinessMode(..), computeReadinessMode
+  , resolveResourcePaths
+  , rpResourceDir
   )
 import QxFx0.Runtime.Paths (resolveDbPath)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
@@ -41,7 +43,7 @@ import QxFx0.Bridge.SQLite.SchemaContract
   , checkSchemaContract
   , renderSchemaContractResult
   )
-import QxFx0.Lexicon.GfMap (GfMapLoadStatus(..), gfMapLoadStatus)
+import QxFx0.Lexicon.GfMap (GfMapLoadStatus(..), loadGfMapStatusFromPath)
 
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON)
@@ -65,6 +67,7 @@ data SystemHealth = SystemHealth
   , shEmbeddingExplicit :: !Bool
   , shEmbeddingBackend :: !Text
   , shEmbeddingQuality :: !Text
+  , shEmbeddingIssues :: ![Text]
   , shMorphBackend :: !Text
   , shMorphBackendLocal :: !Bool
   , shDecisionPathLocalOnly :: !Bool
@@ -115,6 +118,7 @@ backendProbeFailedReadiness = BackendReadiness
   , brEmbeddingExplicit = False
   , brEmbeddingBackend = "unknown"
   , brEmbeddingQuality = "unknown"
+  , brEmbeddingIssues = ["backend_probe_failed"]
   , brNixOperational = False
   , brNixIssues = ["backend_probe_failed"]
   , brDatalogReady = False
@@ -127,10 +131,10 @@ backendProbeFailedReadiness = BackendReadiness
 mkSystemHealth :: RuntimeMode -> FilePath -> ReadinessStatus -> BackendReadiness -> IO SystemHealth
 mkSystemHealth runtimeMode dbPath readiness backend = do
   morphBackend <- resolveMorphBackend
+  gfHealth <- loadRuntimeGfMapHealth
   let readinessMode = computeReadinessMode readiness
       componentOk rc = maybe False (\(_, ok, _) -> ok) (find (\(c, _, _) -> c == rc) (rsComponents readiness))
       morpOk = componentOk RcMorphology
-      gfHealth = gfMapHealthFromStatus gfMapLoadStatus
       gfOk = ghOk gfHealth
       nixPolicyPresent = componentOk RcNixPolicy
       nixOk = nixPolicyPresent && brNixOperational backend
@@ -195,6 +199,7 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shEmbeddingExplicit = brEmbeddingExplicit backend
     , shEmbeddingBackend = brEmbeddingBackend backend
     , shEmbeddingQuality = brEmbeddingQuality backend
+    , shEmbeddingIssues = brEmbeddingIssues backend
     , shMorphBackend = morphBackendText
     , shMorphBackendLocal = morphBackendLocal
     , shDecisionPathLocalOnly = decisionPathLocalOnly
@@ -211,6 +216,15 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shSchemaReason = schemaReason
     , shReadinessMode = readinessText
     }
+
+loadRuntimeGfMapHealth :: IO GfMapHealth
+loadRuntimeGfMapHealth = do
+  pathsResult <- tryQxFx0 resolveResourcePaths
+  case pathsResult of
+    Left _ -> pure (GfMapHealth False "failed" 0 (Just "resource_root_unavailable"))
+    Right paths -> do
+      status <- loadGfMapStatusFromPath (rpResourceDir paths </> "spec" </> "gf" </> "lexicon_funmap.tsv")
+      pure (gfMapHealthFromStatus status)
 
 gfMapHealthFromStatus :: GfMapLoadStatus -> GfMapHealth
 gfMapHealthFromStatus status =

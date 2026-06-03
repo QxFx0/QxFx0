@@ -1,0 +1,295 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.SelfPerspective
+<span class="lineno">    4 </span>  ( selfPerspectiveTests
+<span class="lineno">    5 </span>  ) where
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>import Data.Aeson (decode)
+<span class="lineno">    8 </span>import qualified Data.ByteString.Lazy.Char8 as BL8
+<span class="lineno">    9 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   10 </span>import qualified Data.Text as T
+<span class="lineno">   11 </span>import Test.HUnit
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+<span class="lineno">   14 </span>import QxFx0.Self.Field (emptyField)
+<span class="lineno">   15 </span>import QxFx0.Self.Perspective
+<span class="lineno">   16 </span>  ( applyPerspectiveDecision
+<span class="lineno">   17 </span>  , assemblePerspectiveInput
+<span class="lineno">   18 </span>  , buildPerspectiveProjection
+<span class="lineno">   19 </span>  , decidePerspectivePromotion
+<span class="lineno">   20 </span>  , evaluatePerspectiveAdmissibility
+<span class="lineno">   21 </span>  , opinionCore
+<span class="lineno">   22 </span>  )
+<span class="lineno">   23 </span>import QxFx0.Types.State
+<span class="lineno">   24 </span>  ( AdaptiveDecision(..)
+<span class="lineno">   25 </span>  , AdaptiveDecisionRecord(..)
+<span class="lineno">   26 </span>  , AdaptiveMutationKind(..)
+<span class="lineno">   27 </span>  , ClaimStanceRef(..)
+<span class="lineno">   28 </span>  , ConatusSlice(..)
+<span class="lineno">   29 </span>  , CounterargumentRef(..)
+<span class="lineno">   30 </span>  , DialogueOutcomeKind(..)
+<span class="lineno">   31 </span>  , DialogueOutcomeLearningState(..)
+<span class="lineno">   32 </span>  , DialogueOutcomeSample(..)
+<span class="lineno">   33 </span>  , EvidenceRef(..)
+<span class="lineno">   34 </span>  , EvidenceStrength(..)
+<span class="lineno">   35 </span>  , IdentitySlice(..)
+<span class="lineno">   36 </span>  , NormativeProfile(..)
+<span class="lineno">   37 </span>  , NormativeProfileId(..)
+<span class="lineno">   38 </span>  , PerspectiveAdmissibility(..)
+<span class="lineno">   39 </span>  , PerspectiveCandidate(..)
+<span class="lineno">   40 </span>  , PerspectiveInputBundle(..)
+<span class="lineno">   41 </span>  , PerspectiveProjection(..)
+<span class="lineno">   42 </span>  , PerspectivePromotionDecision(..)
+<span class="lineno">   43 </span>  , PerspectiveRegistry(..)
+<span class="lineno">   44 </span>  , PerspectiveRevisionRecord
+<span class="lineno">   45 </span>  , PerspectiveScope(..)
+<span class="lineno">   46 </span>  , PerspectiveThread(..)
+<span class="lineno">   47 </span>  , SystemState(..)
+<span class="lineno">   48 </span>  , defaultNormativeProfile
+<span class="lineno">   49 </span>  , defaultPerspectiveRegistry
+<span class="lineno">   50 </span>  , emptyDialogueOutcomeLearningState
+<span class="lineno">   51 </span>  , emptySystemState
+<span class="lineno">   52 </span>  )
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>selfPerspectiveTests :: [Test]
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">selfPerspectiveTests =</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;SelfPerspective rejects insufficient evidence&quot;</span> testPerspectiveAdmissibilityRejectsInsufficientEvidence</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective rejects empty identity session&quot;</span> testPerspectiveAdmissibilityRejectsEmptySession</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective promotion requires strong stability&quot;</span> testPerspectivePromotionRequiresStabilityAndStrongEvidence</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective activation scope selects matching profile&quot;</span> testPerspectiveActivationScopeSelectsMatchingNormativeProfile</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective duplicate threads fail decode&quot;</span> testPerspectiveRegistryRejectsDuplicateThreads</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective rollback restores prior projection&quot;</span> testPerspectiveRollbackRestoresPriorProjection</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective projection is explainable and safe&quot;</span> testPerspectiveProjectionIsExplainableAndSafe</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;SelfPerspective candidate is NaN-safe&quot;</span> testPerspectiveCandidateIsNaNSafe</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>testPerspectiveAdmissibilityRejectsInsufficientEvidence :: Test
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">testPerspectiveAdmissibilityRejectsInsufficientEvidence = TestCase $ do</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle [] [] [] defaultNormativeProfile []</span>
+<span class="lineno">   69 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">candidate = opinionCore bundle</span></span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;candidate without evidence must be inadmissible&quot;</span></span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">(PerspectiveInadmissible &quot;insufficient_evidence&quot;)</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">(evaluatePerspectiveAdmissibility bundle <span class="nottickedoff">candidate</span>)</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>testPerspectiveAdmissibilityRejectsEmptySession :: Test
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">testPerspectiveAdmissibilityRejectsEmptySession = TestCase $ do</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">let bundle0 = mkPerspectiveBundle [<span class="nottickedoff">EvidenceRef &quot;knowledge:x&quot;</span>] [] [] defaultNormativeProfile []</span>
+<span class="lineno">   77 </span><span class="spaces">      </span><span class="istickedoff">bundle = bundle0</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">{ pibIdentitySlice = (pibIdentitySlice bundle0) { isSessionId = &quot;&quot; } }</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">candidate = opinionCore bundle</span></span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;empty session id must fail perspective admissibility&quot;</span></span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">(PerspectiveInadmissible &quot;identity_violation:empty_session&quot;)</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">(evaluatePerspectiveAdmissibility bundle <span class="nottickedoff">candidate</span>)</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>testPerspectivePromotionRequiresStabilityAndStrongEvidence :: Test
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">testPerspectivePromotionRequiresStabilityAndStrongEvidence = TestCase $ do</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">let weakBundle = mkPerspectiveBundle [EvidenceRef &quot;thanks_ack&quot;] [] [] defaultNormativeProfile []</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">weakCandidate = opinionCore weakBundle</span></span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">stableBundle = mkPerspectiveBundle</span>
+<span class="lineno">   89 </span><span class="spaces">        </span><span class="istickedoff">[ EvidenceRef &quot;knowledge:freedom is bounded agency&quot;</span>
+<span class="lineno">   90 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">EvidenceRef &quot;dialogue:DialogueOutcomeSuccess:freedom&quot;</span></span>
+<span class="lineno">   91 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">   92 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">ClaimStanceRef &quot;stance:BeliefAffirmed:freedom requires responsibility&quot;</span>]</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">defaultNormativeProfile</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">stableCandidate = opinionCore stableBundle</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">registry = defaultPerspectiveRegistry</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;weak evidence can be admissible but must not promote&quot;</span></span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="istickedoff">PpdObserveOnly</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">(decidePerspectivePromotion <span class="nottickedoff">registry</span> weakBundle <span class="nottickedoff">weakCandidate</span> PerspectiveAdmissibleAccepted)</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;stable corroborated candidate can be promoted&quot;</span></span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="istickedoff">PpdPromoteEndorsed</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">(decidePerspectivePromotion registry stableBundle stableCandidate (evaluatePerspectiveAdmissibility stableBundle stableCandidate))</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>testPerspectiveActivationScopeSelectsMatchingNormativeProfile :: Test
+<span class="lineno">  106 </span><span class="decl"><span class="istickedoff">testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">let defaultScoped = defaultNormativeProfile</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">{ npVersionId = 1</span>
+<span class="lineno">  109 </span><span class="spaces">        </span><span class="istickedoff">, npActivationScope = Just (ScopeTopic &quot;other&quot;)</span>
+<span class="lineno">  110 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">freedomProfile = defaultNormativeProfile</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">{ npId = NormativeProfileId &quot;freedom-profile&quot;</span>
+<span class="lineno">  113 </span><span class="spaces">        </span><span class="istickedoff">, npVersionId = 7</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="istickedoff">, npActivationScope = Just (ScopeTopic &quot;freedom&quot;)</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">registry = defaultPerspectiveRegistry</span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff">{ prNormativeProfiles = M.fromList [(npId defaultScoped, defaultScoped), (npId freedomProfile, freedomProfile)]</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="istickedoff">, prActiveNormativeProfileId = npId defaultScoped</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">outcome = emptyDialogueOutcomeLearningState</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">{ dolRecentOutcomes = [mkDialogueOutcomeSample 1 DialogueOutcomeSuccess &quot;freedom&quot;]</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">ss = emptySystemState</span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="istickedoff">{ ssSessionId = &quot;test-session&quot;</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="istickedoff">, ssPerspectiveRegistry = registry</span>
+<span class="lineno">  126 </span><span class="spaces">        </span><span class="istickedoff">, ssDialogueOutcomeLearning = outcome</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)) False emptyField</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;matching activation scope must select the scoped profile&quot;</span></span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff">7 (pcNormativeProfileVersion candidate)</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>testPerspectiveRegistryRejectsDuplicateThreads :: Test
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">testPerspectiveRegistryRejectsDuplicateThreads = TestCase $ do</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">let duplicateJson = BL8.pack</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">&quot;{\&quot;threads\&quot;:[{\&quot;ptPerspectiveId\&quot;:\&quot;p1\&quot;,\&quot;ptScope\&quot;:{\&quot;tag\&quot;:\&quot;ScopeTopic\&quot;,\&quot;contents\&quot;:\&quot;freedom\&quot;},\&quot;ptActiveVersion\&quot;:null,\&quot;ptVersions\&quot;:[],\&quot;ptRevisionHistory\&quot;:[],\&quot;ptStatus\&quot;:\&quot;PerspectiveSuspended\&quot;,\&quot;ptLastUpdatedTurn\&quot;:1},{\&quot;ptPerspectiveId\&quot;:\&quot;p2\&quot;,\&quot;ptScope\&quot;:{\&quot;tag\&quot;:\&quot;ScopeTopic\&quot;,\&quot;contents\&quot;:\&quot;freedom\&quot;},\&quot;ptActiveVersion\&quot;:null,\&quot;ptVersions\&quot;:[],\&quot;ptRevisionHistory\&quot;:[],\&quot;ptStatus\&quot;:\&quot;PerspectiveSuspended\&quot;,\&quot;ptLastUpdatedTurn\&quot;:2}],\&quot;normativeProfiles\&quot;:[],\&quot;activeNormativeProfileId\&quot;:\&quot;default\&quot;}&quot;</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">decoded = decode duplicateJson :: Maybe PerspectiveRegistry</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;duplicate scope threads must not decode by overwriting&quot;</span></span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">Nothing decoded</span></span>
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>testPerspectiveRollbackRestoresPriorProjection :: Test
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">testPerspectiveRollbackRestoresPriorProjection = TestCase $ do</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle</span>
+<span class="lineno">  144 </span><span class="spaces">        </span><span class="istickedoff">[EvidenceRef &quot;knowledge:freedom is bounded agency&quot;, <span class="nottickedoff">EvidenceRef &quot;dialogue:DialogueOutcomeSuccess:freedom&quot;</span>]</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">ClaimStanceRef &quot;stance:BeliefAffirmed:freedom requires responsibility&quot;</span>]</span>
+<span class="lineno">  146 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">defaultNormativeProfile</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">registry1 = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed</span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">bundle2 = bundle { pibRevisionLineage = maybe <span class="nottickedoff">[]</span> ptRevisionHistory (M.lookup (pibScope bundle) (prThreads registry1)) }</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">candidate2 = (opinionCore bundle2) { pcThesis = &quot;revision one&quot; }</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">registry2 = applyPerspectiveDecision 2 registry1 bundle2 candidate2 PpdReviseActive</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">rollbackBundle = bundle2 { pibCounterarguments = [<span class="nottickedoff">CounterargumentRef &quot;counter:a&quot;</span>, <span class="nottickedoff">CounterargumentRef &quot;counter:b&quot;</span>] }</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">rollbackCandidate = (opinionCore rollbackBundle) { pcCounterargumentPressure = 0.50 }</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">decision = decidePerspectivePromotion registry2 <span class="nottickedoff">rollbackBundle</span> rollbackCandidate PerspectiveAdmissibleQuarantined</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">registry3 = applyPerspectiveDecision 3 registry2 <span class="nottickedoff">rollbackBundle</span> rollbackCandidate decision</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;rollback must be reachable from promotion policy&quot;</span></span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">PpdRollbackPrior decision</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">case buildPerspectiveProjection registry3 (pibScope bundle) of</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">assertFailure &quot;expected restored prior projection&quot;</span></span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">Just projection -&gt; assertBool <span class="nottickedoff">&quot;rollback must not expose withdrawn active version&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">(ppSummary projection /= &quot;revision one&quot;)</span></span>
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>testPerspectiveProjectionIsExplainableAndSafe :: Test
+<span class="lineno">  166 </span><span class="decl"><span class="istickedoff">testPerspectiveProjectionIsExplainableAndSafe = TestCase $ do</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle</span>
+<span class="lineno">  168 </span><span class="spaces">        </span><span class="istickedoff">[ EvidenceRef &quot;knowledge:freedom is bounded agency&quot;</span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">EvidenceRef &quot;dialogue:DialogueOutcomeSuccess:freedom&quot;</span></span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  171 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">ClaimStanceRef &quot;stance:BeliefAffirmed:freedom requires responsibility&quot;</span>]</span>
+<span class="lineno">  172 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">CounterargumentRef &quot;counter:freedom can conflict with safety&quot;</span>]</span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff">defaultNormativeProfile</span>
+<span class="lineno">  174 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff">registry = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="istickedoff">case buildPerspectiveProjection registry (pibScope bundle) of</span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">assertFailure &quot;expected safe perspective projection&quot;</span></span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">Just projection -&gt; do</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection exposes profile provenance&quot;</span></span>
+<span class="lineno">  181 </span><span class="spaces">        </span><span class="istickedoff">1 (ppNormativeProfileVersion projection)</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;projection exposes explanation handle&quot;</span></span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="istickedoff">(not (T.null (ppExplanationHandle projection)))</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection keeps counterarguments as counts only&quot;</span></span>
+<span class="lineno">  185 </span><span class="spaces">        </span><span class="istickedoff">1 (ppCounterargumentCount projection)</span></span>
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>-- | Regression lock G1: 'opinionCore' must not propagate NaN or
+<span class="lineno">  188 </span>-- Infinity from a degenerate 'ConatusSlice' into the candidate's
+<span class="lineno">  189 </span>-- confidence, counterargument pressure, normative alignment, or
+<span class="lineno">  190 </span>-- internal tension surfaces.  The NaN-safe 'clampUnit' in
+<span class="lineno">  191 </span>-- &quot;QxFx0.Self.Perspective&quot; guarantees a finite candidate at the
+<span class="lineno">  192 </span>-- perspective-evaluation boundary.
+<span class="lineno">  193 </span>testPerspectiveCandidateIsNaNSafe :: Test
+<span class="lineno">  194 </span><span class="decl"><span class="istickedoff">testPerspectiveCandidateIsNaNSafe = TestCase $ do</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">let bundle0 = mkPerspectiveBundle</span>
+<span class="lineno">  196 </span><span class="spaces">        </span><span class="istickedoff">[EvidenceRef &quot;knowledge:freedom is bounded agency&quot;]</span>
+<span class="lineno">  197 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">ClaimStanceRef &quot;stance:BeliefAffirmed:freedom requires responsibility&quot;</span>]</span>
+<span class="lineno">  198 </span><span class="spaces">        </span><span class="istickedoff">[<span class="nottickedoff">CounterargumentRef &quot;counter:contested&quot;</span>]</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="istickedoff">defaultNormativeProfile</span>
+<span class="lineno">  200 </span><span class="spaces">        </span><span class="istickedoff">[]</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="istickedoff">bundle = bundle0</span>
+<span class="lineno">  202 </span><span class="spaces">        </span><span class="istickedoff">{ pibConatusSlice = (pibConatusSlice bundle0)</span>
+<span class="lineno">  203 </span><span class="spaces">            </span><span class="istickedoff">{ csEnergy          = 0/0</span>
+<span class="lineno">  204 </span><span class="spaces">            </span><span class="istickedoff">, csFieldConfidence = 1/0</span>
+<span class="lineno">  205 </span><span class="spaces">            </span><span class="istickedoff">, csStability       = (-1)/0</span>
+<span class="lineno">  206 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  207 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">candidate = opinionCore bundle</span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;candidate confidence must not be NaN under non-finite Conatus slice&quot;</span></span>
+<span class="lineno">  210 </span><span class="spaces">    </span><span class="istickedoff">(not (isNaN (pcConfidence candidate)))</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;candidate confidence must not be Infinity under non-finite Conatus slice&quot;</span></span>
+<span class="lineno">  212 </span><span class="spaces">    </span><span class="istickedoff">(not (isInfinite (pcConfidence candidate)))</span>
+<span class="lineno">  213 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;candidate counterargument pressure must remain finite&quot;</span></span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">(not (isNaN (pcCounterargumentPressure candidate)) &amp;&amp; not (isInfinite (pcCounterargumentPressure candidate)))</span>
+<span class="lineno">  215 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;candidate normative alignment must remain finite&quot;</span></span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff">(not (isNaN (pcNormativeAlignment candidate)) &amp;&amp; not (isInfinite (pcNormativeAlignment candidate)))</span>
+<span class="lineno">  217 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;candidate internal tension must remain finite&quot;</span></span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">(not (isNaN (pcInternalTension candidate)) &amp;&amp; not (isInfinite (pcInternalTension candidate)))</span>
+<span class="lineno">  219 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;all candidate scores must stay bounded to the unit interval&quot;</span></span>
+<span class="lineno">  220 </span><span class="spaces">    </span><span class="istickedoff">( pcConfidence candidate              &gt;= 0.0 &amp;&amp; pcConfidence candidate              &lt;= 1.0</span>
+<span class="lineno">  221 </span><span class="spaces">   </span><span class="istickedoff">&amp;&amp; pcCounterargumentPressure candidate &gt;= 0.0 &amp;&amp; pcCounterargumentPressure candidate &lt;= 1.0</span>
+<span class="lineno">  222 </span><span class="spaces">   </span><span class="istickedoff">&amp;&amp; pcNormativeAlignment candidate      &gt;= 0.0 &amp;&amp; pcNormativeAlignment candidate      &lt;= 1.0</span>
+<span class="lineno">  223 </span><span class="spaces">   </span><span class="istickedoff">&amp;&amp; pcInternalTension candidate         &gt;= 0.0 &amp;&amp; pcInternalTension candidate         &lt;= 1.0</span>
+<span class="lineno">  224 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  225 </span>
+<span class="lineno">  226 </span>mkPerspectiveBundle
+<span class="lineno">  227 </span>  :: [EvidenceRef]
+<span class="lineno">  228 </span>  -&gt; [ClaimStanceRef]
+<span class="lineno">  229 </span>  -&gt; [CounterargumentRef]
+<span class="lineno">  230 </span>  -&gt; NormativeProfile
+<span class="lineno">  231 </span>  -&gt; [PerspectiveRevisionRecord]
+<span class="lineno">  232 </span>  -&gt; PerspectiveInputBundle
+<span class="lineno">  233 </span><span class="decl"><span class="istickedoff">mkPerspectiveBundle evidence stance counterarguments profile lineage = PerspectiveInputBundle</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">{ pibScope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  235 </span><span class="spaces">  </span><span class="istickedoff">, pibEvidence = evidence</span>
+<span class="lineno">  236 </span><span class="spaces">  </span><span class="istickedoff">, pibStanceSlice = stance</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">, pibIdentitySlice = IdentitySlice</span>
+<span class="lineno">  238 </span><span class="spaces">      </span><span class="istickedoff">{ isSessionId = &quot;test-session&quot;</span>
+<span class="lineno">  239 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaims = []</span>
+<span class="lineno">  240 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaimCount = 0</span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff">, isTurnCount = 1</span>
+<span class="lineno">  242 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">, pibConatusSlice = ConatusSlice</span>
+<span class="lineno">  244 </span><span class="spaces">      </span><span class="istickedoff">{ csEnergy = 10.0</span>
+<span class="lineno">  245 </span><span class="spaces">      </span><span class="istickedoff">, csGateFired = False</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">, csFieldConfidence = 1.0</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">, csStability = 1.0</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">, pibNormativeProfile = profile</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">, pibCounterarguments = counterarguments</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">, pibRevisionLineage = lineage</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  253 </span>
+<span class="lineno">  254 </span>mkDialogueOutcomeSample :: Int -&gt; DialogueOutcomeKind -&gt; T.Text -&gt; DialogueOutcomeSample
+<span class="lineno">  255 </span><span class="decl"><span class="istickedoff">mkDialogueOutcomeSample turn kind topic = DialogueOutcomeSample</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">{ dosTurn = turn</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">, dosKind = kind</span>
+<span class="lineno">  258 </span><span class="spaces">  </span><span class="istickedoff">, dosTopic = topic</span>
+<span class="lineno">  259 </span><span class="spaces">  </span><span class="istickedoff">, dosSignals = [<span class="nottickedoff">&quot;test&quot;</span>]</span>
+<span class="lineno">  260 </span><span class="spaces">  </span><span class="istickedoff">, dosEvidenceStrength = EvidenceStrong</span>
+<span class="lineno">  261 </span><span class="spaces">  </span><span class="istickedoff">, dosStrongUpdate = True</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">, dosDecisionRecord = AdaptiveDecisionRecord</span>
+<span class="lineno">  263 </span><span class="spaces">      </span><span class="istickedoff">{ adrTurn = turn</span>
+<span class="lineno">  264 </span><span class="spaces">      </span><span class="istickedoff">, adrCause = &quot;test&quot;</span>
+<span class="lineno">  265 </span><span class="spaces">      </span><span class="istickedoff">, adrEvidence = [<span class="nottickedoff">&quot;test&quot;</span>]</span>
+<span class="lineno">  266 </span><span class="spaces">      </span><span class="istickedoff">, adrConfidence = 0.8</span>
+<span class="lineno">  267 </span><span class="spaces">      </span><span class="istickedoff">, adrBoundedDelta = [<span class="nottickedoff">&quot;recent_outcomes&lt;=12&quot;</span>]</span>
+<span class="lineno">  268 </span><span class="spaces">      </span><span class="istickedoff">, adrDecision = AdaptiveAccepted</span>
+<span class="lineno">  269 </span><span class="spaces">      </span><span class="istickedoff">, adrTargets = [<span class="nottickedoff">MutDialogueOutcome</span>]</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="istickedoff">, adrMutationRecords = []</span>
+<span class="lineno">  271 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  272 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

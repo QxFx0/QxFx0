@@ -1,37 +1,30 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-|
-Syntactic parser bridge: call Python spaCy parser for Russian input when
-available; otherwise use a rule-based Haskell fallback.
+Local deterministic syntactic parser for Russian input.
 
-Thin IO wrapper.  The spaCy path runs scripts/parse_input.py; the fallback
-performs whitespace tokenisation, simple POS guessing, and naive dependency
-attachment so downstream semantic slots still function without Python.
+The production parser path is rule-based and checkout-independent. It performs
+whitespace tokenisation, simple POS guessing, and naive dependency attachment
+so downstream semantic slots remain deterministic and available without Python.
 -}
 module QxFx0.Semantic.Input.Parse
   ( ParsedInput(..)
   , ParsedToken(..)
   , parseInput
-  , parseInputOrFallback
   , emptyParsedInput
   , ruleBasedParse
   ) where
 
 import Control.DeepSeq (NFData)
-import Control.Exception (IOException, catch)
-import Data.Aeson (FromJSON(..), eitherDecodeStrict)
+import Data.Aeson (FromJSON(..))
 import Data.Char (isPunctuation)
 import Data.List (findIndex)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
-import System.Process (readProcess)
 
 import QxFx0.Types.SemanticConfig (SemanticConfig(..))
 
@@ -57,32 +50,11 @@ data ParsedInput = ParsedInput
   deriving anyclass (NFData, FromJSON)
 
 --------------------------------------------------------------------------------
--- IO entry points
+-- IO entry point
 --------------------------------------------------------------------------------
 
-{-| Try spaCy first; on any failure (missing python3, missing spacy, bad JSON,
-   script error) fall back to the rule-based parser.  This makes the Python
-   dependency truly optional. -}
-parseInput :: SemanticConfig -> Text -> IO (Maybe ParsedInput)
-parseInput cfg raw =
-  (trySpacy raw >>= \case
-     Just pi -> pure (Just pi)
-     Nothing -> pure (Just (ruleBasedParse cfg raw)))
-  `catch` \(_ :: IOException) -> pure (Just (ruleBasedParse cfg raw))
-
-trySpacy :: Text -> IO (Maybe ParsedInput)
-trySpacy raw = do
-  let script = "scripts/parse_input.py"
-  result <- readProcess "python3" [script] (T.unpack raw)
-  pure $ case eitherDecodeStrict (TE.encodeUtf8 (T.pack result)) of
-    Right pi -> Just pi
-    Left  _  -> Nothing
-
-{-| Convenience wrapper that always yields a 'ParsedInput' (spaCy or fallback). -}
-parseInputOrFallback :: SemanticConfig -> Text -> IO ParsedInput
-parseInputOrFallback cfg raw = do
-  mParsed <- parseInput cfg raw
-  pure $ fromMaybe (ruleBasedParse cfg raw) mParsed
+parseInput :: SemanticConfig -> Text -> IO ParsedInput
+parseInput cfg raw = pure (ruleBasedParse cfg raw)
 
 emptyParsedInput :: Text -> ParsedInput
 emptyParsedInput raw = ParsedInput [] 0 raw
@@ -91,27 +63,35 @@ emptyParsedInput raw = ParsedInput [] 0 raw
 -- Rule-based fallback parser
 --------------------------------------------------------------------------------
 
-{-| Fast, deterministic rule-based parser for Russian text.  Good enough to
-   keep downstream semantic slots (subject, object, negation, verb, agreement)
-   functional when spaCy is unavailable. -}
+{-| Fast, deterministic rule-based parser for Russian text. Keeps downstream
+   semantic slots (subject, object, negation, verb, agreement) functional in
+   the supported local-only production parser contour. -}
 ruleBasedParse :: SemanticConfig -> Text -> ParsedInput
 ruleBasedParse cfg raw =
   let tokens = tokenizeRussian raw
       indexed = zip [0..] tokens
-      rootIdx = fromMaybe 0 (findIndex (isVerbLike cfg . T.toLower . snd) indexed)
-      negWords = scParseParticles cfg  -- "не" lives in particles for the rule parser
-      mkToken (idx, word) =
-        let lemma = T.toLower word
-            pos   = guessPos cfg lemma
-            (dep, headIdx)
-              | idx == rootIdx            = ("ROOT", idx)
-              | lemma `elem` negWords     = ("advmod", rootIdx)
-              | isPronoun cfg lemma       = ("nsubj",  rootIdx)
-              | pos == "NOUN"             = ("obj",    rootIdx)
-              | pos == "ADJ"              = ("amod",   rootIdx)
-              | otherwise                 = ("dep",    rootIdx)
-        in ParsedToken idx word lemma pos dep headIdx
-  in ParsedInput (map mkToken indexed) rootIdx raw
+  in case indexed of
+       [] -> emptyParsedInput raw
+       _ ->
+         let rootIdx = fromMaybe 0 (findIndex (isVerbLike cfg . T.toLower . snd) indexed)
+             hasVerbRoot = any (isVerbLike cfg . T.toLower . snd) indexed
+             negWords = scParseParticles cfg
+             standaloneParticles = ["да", "нет", "ок", "угу", "ага"]
+             mkToken (idx, word) =
+               let lemma = T.toLower word
+                   pos   = if not hasVerbRoot && (lemma `elem` negWords || lemma `elem` standaloneParticles)
+                             then "PART"
+                             else guessPos cfg lemma
+                   (dep, headIdx)
+                     | idx == rootIdx && hasVerbRoot = ("ROOT", idx)
+                     | idx == rootIdx = ("dep", idx)
+                     | lemma `elem` negWords = ("advmod", rootIdx)
+                     | isPronoun cfg lemma = ("nsubj", rootIdx)
+                     | pos == "NOUN" = ("obj", rootIdx)
+                     | pos == "ADJ" = ("amod", rootIdx)
+                     | otherwise = ("dep", rootIdx)
+               in ParsedToken idx word lemma pos dep headIdx
+         in ParsedInput (map mkToken indexed) rootIdx raw
 
 tokenizeRussian :: Text -> [Text]
 tokenizeRussian raw =

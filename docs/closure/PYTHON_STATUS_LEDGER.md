@@ -140,11 +140,11 @@ logic is in the Haskell code already (the schema sources are in
 existing types.
 
 Replacement pattern:
-1. Add a `cabal run qxfx0-main -- verify-schema` subcommand that
-   invokes the same checks via the Haskell-typed schema.
-2. Add a `cabal run qxfx0-main -- verify-contract` subcommand.
-3. Add a `cabal run qxfx0-main -- check-embedded-sql` subcommand.
-4. Update `scripts/check_architecture.sh` to invoke the Haskell
+1. Add a `cabal run qxfx0-main -- --check-schema-consistency`
+   subcommand that invokes the same checks via the Haskell-typed schema.
+2. Add a `cabal run qxfx0-main -- --check-schema-contract` subcommand.
+3. Add a `cabal run qxfx0-main -- --check-embedded-sql` subcommand.
+4. Update authority-bearing shell gates to invoke the Haskell
    commands.
 5. Delete the `.py` files; update CI to require zero `python3`
    invocations on the canonical path (`grep -r "python3" scripts/`
@@ -205,9 +205,9 @@ that lands at Gate P5-4.
 
 | Python script | Haskell command | Module | Notes |
 |---|---|---|---|
-| `check_schema_consistency.py` | `cabal run qxfx0-main -- verify-schema` | `QxFx0.Internal.Schema.Verify` | new module |
-| `check_schema_contract.py` | `cabal run qxfx0-main -- verify-contract` | `QxFx0.Internal.Schema.Verify` | same module |
-| `sync_embedded_sql.py --check` | `cabal run qxfx0-main -- check-embedded-sql` | `QxFx0.Internal.SQL.Check` | new module |
+| `check_schema_consistency.py` | `cabal run qxfx0-main -- --check-schema-consistency` | `QxFx0.Bridge.SQLite.SchemaConsistency` | landed in working tree |
+| `check_schema_contract.py` | `cabal run qxfx0-main -- --check-schema-contract` | `QxFx0.Bridge.SQLite.SchemaContractCheck` | landed in working tree |
+| `sync_embedded_sql.py --check` | `cabal run qxfx0-main -- --check-embedded-sql` | `QxFx0.Bridge.EmbeddedSQLSync` | landed in working tree |
 | `services/morphology/server.py` (HTTP) | `QxFx0.Lexicon.Morphology.Parser` (in-process) | new module | per §5.2 |
 
 The exact module paths are TBD and require a small Package 5

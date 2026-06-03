@@ -1,0 +1,76 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-|
+<span class="lineno">    4 </span>Module      : QxFx0.Self.Blanket
+<span class="lineno">    5 </span>Description : Computation of 'SelfBlanket' snapshots from 'SystemState'.
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>Pure projection from the runtime 'SystemState' to its structural
+<span class="lineno">    8 </span>self-identity snapshot. This is the only sanctioned way to obtain
+<span class="lineno">    9 </span>a 'SelfBlanket'; do not construct values directly outside this
+<span class="lineno">   10 </span>module unless writing tests.
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>See @docs\/THEORY.md@ §4.1 and 'QxFx0.Self.Types'.
+<span class="lineno">   13 </span>-}
+<span class="lineno">   14 </span>module QxFx0.Self.Blanket
+<span class="lineno">   15 </span>  ( computeSelfBlanket
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import QxFx0.Self.Types (SelfBlanket (..))
+<span class="lineno">   21 </span>import QxFx0.Types
+<span class="lineno">   22 </span>  ( MorphologyData (..)
+<span class="lineno">   23 </span>  , SystemState
+<span class="lineno">   24 </span>  , idsIdentityClaims
+<span class="lineno">   25 </span>  , ssIdentity
+<span class="lineno">   26 </span>  , ssMorphology
+<span class="lineno">   27 </span>  , ssSessionId
+<span class="lineno">   28 </span>  , ssTurnCount
+<span class="lineno">   29 </span>  )
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>-- | Project a 'SystemState' onto its structural self-identity
+<span class="lineno">   32 </span>-- snapshot. Pure and total. The result depends only on the four
+<span class="lineno">   33 </span>-- fields that participate in the structural invariants
+<span class="lineno">   34 </span>-- ('QxFx0.Self.Types.SelfBlanket') and is otherwise independent
+<span class="lineno">   35 </span>-- of dialogue history, embeddings, observability, or recovery
+<span class="lineno">   36 </span>-- traces.
+<span class="lineno">   37 </span>computeSelfBlanket :: SystemState -&gt; SelfBlanket
+<span class="lineno">   38 </span><span class="decl"><span class="istickedoff">computeSelfBlanket ss = SelfBlanket</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">{ sbSessionId           = ssSessionId ss</span>
+<span class="lineno">   40 </span><span class="spaces">  </span><span class="istickedoff">, sbMorphologyTotalSize = morphologyTotalSize (ssMorphology ss)</span>
+<span class="lineno">   41 </span><span class="spaces">  </span><span class="istickedoff">, sbIdentityClaimsCount = length (idsIdentityClaims (ssIdentity ss))</span>
+<span class="lineno">   42 </span><span class="spaces">  </span><span class="istickedoff">, sbTurnCount           = ssTurnCount ss</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>-- | Sum of entry counts across all morphology dictionaries.
+<span class="lineno">   46 </span>-- A 'MorphologyData' with zero total entries cannot drive
+<span class="lineno">   47 </span>-- generation and so cannot represent /this system/.
+<span class="lineno">   48 </span>morphologyTotalSize :: MorphologyData -&gt; Int
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">morphologyTotalSize md =</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">Map.size (mdPrepositional md)</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">+ Map.size (mdGenitive md)</span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">+ Map.size (mdNominative md)</span>
+<span class="lineno">   53 </span><span class="spaces">    </span><span class="istickedoff">+ Map.size (mdFormsBySurface md)</span></span>
+
+</pre>
+</body>
+</html>

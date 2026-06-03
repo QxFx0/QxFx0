@@ -33,6 +33,7 @@ data PrepareTimeline = PrepareTimeline
 
 data PrepareEffectResults = PrepareEffectResults
   { perTimeline :: !PrepareTimeline
+  , perTurnCurrentTime :: !UTCTime
   , perEmbeddingResult :: !EmbeddingResult
   , perNixStatus :: !NixGuardStatus
   , perConsciousLoop :: !ConsciousnessLoop

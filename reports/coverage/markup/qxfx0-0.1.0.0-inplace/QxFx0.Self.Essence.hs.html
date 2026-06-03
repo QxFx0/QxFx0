@@ -1,0 +1,592 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    5 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    6 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    7 </span>{- |
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>Phase 9 essence selection infrastructure.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Reads the system's deliberation history and accumulates an
+<span class="lineno">   12 </span>'EssenceTrajectory' from which a later 'commit' will produce an
+<span class="lineno">   13 </span>irrevocable 'EssenceCommitment'. Pure and total.
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>See @docs\/adr\/0012-essence-commitment.md@ for the architecture
+<span class="lineno">   16 </span>and @docs\/phase-9-essence-implementation-spec.md@ for the
+<span class="lineno">   17 </span>contract that produced this module.
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>This module is /not/ a model of phenomenal selfhood. It is a
+<span class="lineno">   20 </span>structural accumulator over the right- and left-hemispheric
+<span class="lineno">   21 </span>verdicts already produced by 'QxFx0.Self.Deliberation'. The
+<span class="lineno">   22 </span>forcing dynamics (Phase 10) live behind a feature flag; until
+<span class="lineno">   23 </span>then, every essence remains 'EssenceUncommitted'.
+<span class="lineno">   24 </span>-}
+<span class="lineno">   25 </span>module QxFx0.Self.Essence
+<span class="lineno">   26 </span>  ( -- * Carriers
+<span class="lineno">   27 </span>    Essence (..)
+<span class="lineno">   28 </span>  , EssenceTrajectory (..)
+<span class="lineno">   29 </span>  , EssenceWitness (..)
+<span class="lineno">   30 </span>  , FieldSignature (..)
+<span class="lineno">   31 </span>  , FieldBand (..)
+<span class="lineno">   32 </span>  , ValenceBand (..)
+<span class="lineno">   33 </span>  , TrajectoryHash (..)
+<span class="lineno">   34 </span>    -- * Modes and triggers
+<span class="lineno">   35 </span>  , EssenceMode (..)
+<span class="lineno">   36 </span>  , CommitmentTrigger (..)
+<span class="lineno">   37 </span>  , EssenceCommitment (..)
+<span class="lineno">   38 </span>    -- * Violations and validation (Phase 10)
+<span class="lineno">   39 </span>  , EssenceViolation (..)
+<span class="lineno">   40 </span>  , validatePlan
+<span class="lineno">   41 </span>  , renderEssenceViolation
+<span class="lineno">   42 </span>  , admissibleFamilies
+<span class="lineno">   43 </span>  , admissibleTones
+<span class="lineno">   44 </span>  , admissibleStyles
+<span class="lineno">   45 </span>    -- * Modulation
+<span class="lineno">   46 </span>  , EssenceModulation (..)
+<span class="lineno">   47 </span>  , defaultEssenceModulation
+<span class="lineno">   48 </span>  , phase9EssenceModulation
+<span class="lineno">   49 </span>    -- * Pure morphisms
+<span class="lineno">   50 </span>  , emptyEssence
+<span class="lineno">   51 </span>  , emptyTrajectory
+<span class="lineno">   52 </span>  , witness
+<span class="lineno">   53 </span>  , shouldCommit
+<span class="lineno">   54 </span>  , extractMode
+<span class="lineno">   55 </span>  , commit
+<span class="lineno">   56 </span>    -- * Renderers (snake_case, JSON-schema-stable)
+<span class="lineno">   57 </span>  , renderEssenceMode
+<span class="lineno">   58 </span>  , renderCommitmentTrigger
+<span class="lineno">   59 </span>    -- * Field signature
+<span class="lineno">   60 </span>  , fieldSignature
+<span class="lineno">   61 </span>  ) where
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   64 </span>import qualified Crypto.Hash.SHA256 as SHA256
+<span class="lineno">   65 </span>import Data.Aeson (FromJSON(..), ToJSON, Value(..), encode)
+<span class="lineno">   66 </span>import Data.Aeson.Types (typeMismatch)
+<span class="lineno">   67 </span>import qualified Data.ByteString as BS
+<span class="lineno">   68 </span>import Data.Foldable (foldl', toList)
+<span class="lineno">   69 </span>import Data.Sequence (Seq)
+<span class="lineno">   70 </span>import qualified Data.Sequence as Seq
+<span class="lineno">   71 </span>import Data.Set (Set)
+<span class="lineno">   72 </span>import qualified Data.Set as Set
+<span class="lineno">   73 </span>import Data.Text (Text)
+<span class="lineno">   74 </span>import qualified Data.Text as T
+<span class="lineno">   75 </span>import GHC.Generics (Generic)
+<span class="lineno">   76 </span>import Numeric (showHex)
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>import QxFx0.Self.Conatus (ConatusEnergy (..))
+<span class="lineno">   79 </span>import QxFx0.Self.Deliberation
+<span class="lineno">   80 </span>  ( Agreement (..)
+<span class="lineno">   81 </span>  , Deliberation (..)
+<span class="lineno">   82 </span>  , DeliberationTrace (..)
+<span class="lineno">   83 </span>  , NarrativeTone (..)
+<span class="lineno">   84 </span>  , Plan (..)
+<span class="lineno">   85 </span>  , ReconcileRule (..)
+<span class="lineno">   86 </span>  )
+<span class="lineno">   87 </span>import QxFx0.Self.Field
+<span class="lineno">   88 </span>  ( Atmosphere (..)
+<span class="lineno">   89 </span>  , Consolidation (..)
+<span class="lineno">   90 </span>  , Counterfactual (..)
+<span class="lineno">   91 </span>  , Field (..)
+<span class="lineno">   92 </span>  , FieldConfidence (..)
+<span class="lineno">   93 </span>  , Resonance (..)
+<span class="lineno">   94 </span>  )
+<span class="lineno">   95 </span>import QxFx0.Self.Salience (SalienceDriver (..))
+<span class="lineno">   96 </span>import QxFx0.Types.Decision.Enums.Render (RenderStyle (..))
+<span class="lineno">   97 </span>import QxFx0.Types.Domain (CanonicalMoveFamily (..))
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  100 </span>-- Carriers
+<span class="lineno">  101 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>data Essence
+<span class="lineno">  104 </span>  = EssenceUncommitted !EssenceTrajectory
+<span class="lineno">  105 </span>  | EssenceCommitted   !EssenceTrajectory !EssenceCommitment
+<span class="lineno">  106 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  107 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>data EssenceTrajectory = EssenceTrajectory
+<span class="lineno">  110 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">etWitnesses</span></span></span>    :: !(Seq EssenceWitness)
+<span class="lineno">  111 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etAngstLevel</span></span></span>   :: !Double
+<span class="lineno">  112 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etConatusFloor</span></span></span> :: !Double
+<span class="lineno">  113 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etCapacity</span></span></span>     :: !Int
+<span class="lineno">  114 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  115 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>data EssenceWitness = EssenceWitness
+<span class="lineno">  118 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ewTurnOrdinal</span></span></span>     :: !Int
+<span class="lineno">  119 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ewSalienceDriver</span></span></span>  :: !SalienceDriver
+<span class="lineno">  120 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ewReconcileRule</span></span></span>   :: !ReconcileRule
+<span class="lineno">  121 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ewAgreement</span></span></span>       :: !Agreement
+<span class="lineno">  122 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ewDivergence</span></span></span>      :: !Double
+<span class="lineno">  123 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ewConatusScalar</span></span></span>   :: !Double
+<span class="lineno">  124 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ewFieldSignature</span></span></span>  :: !FieldSignature
+<span class="lineno">  125 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  126 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  129 </span>-- Field signature
+<span class="lineno">  130 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>data FieldSignature = FieldSignature
+<span class="lineno">  133 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">fsResonance</span></span></span>      :: !FieldBand
+<span class="lineno">  134 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fsArousal</span></span></span>        :: !FieldBand
+<span class="lineno">  135 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fsValence</span></span></span>        :: !ValenceBand
+<span class="lineno">  136 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fsConsolidation</span></span></span>  :: !FieldBand
+<span class="lineno">  137 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fsCounterfactual</span></span></span> :: !FieldBand
+<span class="lineno">  138 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  139 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>data FieldBand
+<span class="lineno">  142 </span>  = BandLow
+<span class="lineno">  143 </span>  | BandMid
+<span class="lineno">  144 </span>  | BandHigh
+<span class="lineno">  145 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  146 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>data ValenceBand
+<span class="lineno">  149 </span>  = ValenceNegative
+<span class="lineno">  150 </span>  | ValenceNeutral
+<span class="lineno">  151 </span>  | ValencePositive
+<span class="lineno">  152 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  153 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>-- | Coarse hash of a 'Field' into a 'FieldSignature' for
+<span class="lineno">  156 </span>-- trajectory storage. Components in [0, 1] bucket at
+<span class="lineno">  157 </span>-- @bandLow / bandHigh@; valence in [-1, 1] buckets at
+<span class="lineno">  158 </span>-- @valenceLowEdge / valenceHighEdge@.
+<span class="lineno">  159 </span>fieldSignature :: EssenceModulation -&gt; Field -&gt; FieldSignature
+<span class="lineno">  160 </span><span class="decl"><span class="istickedoff">fieldSignature em f = FieldSignature</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">{ fsResonance      = bucketUnit (emBandLowEdge em) (emBandHighEdge em) (unResonance       (fieldResonance      f))</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">, fsArousal        = bucketUnit (emBandLowEdge em) (emBandHighEdge em) (atmosphereArousal (fieldAtmosphere     f))</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">, fsValence        = bucketValence (emValenceLowEdge em) (emValenceHighEdge em) (atmosphereValence (fieldAtmosphere f))</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">, fsConsolidation  = bucketUnit (emBandLowEdge em) (emBandHighEdge em) (unConsolidation   (fieldConsolidation  f))</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">, fsCounterfactual = bucketUnit (emBandLowEdge em) (emBandHighEdge em) (unCounterfactual  (fieldCounterfactual f))</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">}</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">bucketUnit lo hi x</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">| x &lt; lo    = BandLow</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">| x &gt; hi    = BandHigh</span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = BandMid</span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">bucketValence lo hi x</span>
+<span class="lineno">  173 </span><span class="spaces">      </span><span class="istickedoff">| x &lt; lo    = ValenceNegative</span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff">| x &gt; hi    = ValencePositive</span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ValenceNeutral</span></span>
+<span class="lineno">  176 </span>
+<span class="lineno">  177 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  178 </span>-- Modes and triggers
+<span class="lineno">  179 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  180 </span>
+<span class="lineno">  181 </span>data EssenceMode
+<span class="lineno">  182 </span>  = EssenceWitnessing      -- pre-commitment, runtime-visible
+<span class="lineno">  183 </span>  | EssenceContemplative
+<span class="lineno">  184 </span>  | EssenceDialogical
+<span class="lineno">  185 </span>  | EssenceIntegrative
+<span class="lineno">  186 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  187 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>data CommitmentTrigger
+<span class="lineno">  190 </span>  = TriggerAngstThreshold
+<span class="lineno">  191 </span>  | TriggerConatusErosion
+<span class="lineno">  192 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  193 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>newtype TrajectoryHash = TrajectoryHash { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unTrajectoryHash</span></span></span> :: Text }
+<span class="lineno">  196 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  197 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON TrajectoryHash</span></span></span></span> where
+<span class="lineno">  200 </span>  <span class="decl"><span class="istickedoff">parseJSON value =</span>
+<span class="lineno">  201 </span><span class="spaces">    </span><span class="istickedoff">case value of</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="istickedoff">String txt -&gt; <span class="nottickedoff">pure (TrajectoryHash txt)</span></span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="istickedoff">Number n -&gt;</span>
+<span class="lineno">  204 </span><span class="spaces">        </span><span class="istickedoff">let rounded = round n :: Integer</span>
+<span class="lineno">  205 </span><span class="spaces">        </span><span class="istickedoff">in if <span class="tickonlytrue">fromInteger rounded == n</span></span>
+<span class="lineno">  206 </span><span class="spaces">             </span><span class="istickedoff">then pure (TrajectoryHash (T.pack (show rounded)))</span>
+<span class="lineno">  207 </span><span class="spaces">             </span><span class="istickedoff">else <span class="nottickedoff">pure (TrajectoryHash (T.pack (show (realToFrac n :: Double))))</span></span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">typeMismatch &quot;TrajectoryHash&quot; value</span></span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>data EssenceCommitment = EssenceCommitment
+<span class="lineno">  211 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ecMode</span></span></span>         :: !EssenceMode
+<span class="lineno">  212 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ecTrigger</span></span></span>      :: !CommitmentTrigger
+<span class="lineno">  213 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ecCommittedAt</span></span></span>  :: !Int                -- turn ordinal
+<span class="lineno">  214 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ecWitnessHash</span></span></span>  :: !TrajectoryHash
+<span class="lineno">  215 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  216 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  219 </span>-- Modulation
+<span class="lineno">  220 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>data EssenceModulation = EssenceModulation
+<span class="lineno">  223 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">emAngstCommitmentThreshold</span></span></span>     :: !Double  -- [0, 1]
+<span class="lineno">  224 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emAngstAccrualRate</span></span></span>             :: !Double  -- per qualifying turn
+<span class="lineno">  225 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emAngstDecayRate</span></span></span>               :: !Double  -- per agreement turn
+<span class="lineno">  226 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emAngstAccrualDivergenceFloor</span></span></span>  :: !Double  -- below floor no accrual
+<span class="lineno">  227 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emConatusFloorWindow</span></span></span>           :: !Int     -- turns of sub-floor
+<span class="lineno">  228 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emConatusStructuralFloor</span></span></span>       :: !Double  -- below which we count
+<span class="lineno">  229 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emTrajectoryCapacity</span></span></span>           :: !Int     -- ring-buffer length
+<span class="lineno">  230 </span>    -- field-band bucketing knobs
+<span class="lineno">  231 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emBandLowEdge</span></span></span>                  :: !Double  -- below = BandLow
+<span class="lineno">  232 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emBandHighEdge</span></span></span>                 :: !Double  -- above = BandHigh
+<span class="lineno">  233 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emValenceLowEdge</span></span></span>               :: !Double  -- below = ValenceNegative
+<span class="lineno">  234 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emValenceHighEdge</span></span></span>              :: !Double  -- above = ValencePositive
+<span class="lineno">  235 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  236 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>-- | Original Phase 9 defaults, kept for backward-compat regression
+<span class="lineno">  239 </span>-- locks.  Note: @emConatusStructuralFloor = 0.5@ was a unit-mismatch
+<span class="lineno">  240 </span>-- error (calibrated against @arbitraryUnitDouble@ generators in
+<span class="lineno">  241 </span>-- 'Test.Suite.SelfEssence', not the production runtime where
+<span class="lineno">  242 </span>-- 'ceScalar' lives in log-scale [~5, ~20+]).  See ADR-0012 §15.1.
+<span class="lineno">  243 </span>phase9EssenceModulation :: EssenceModulation
+<span class="lineno">  244 </span><span class="decl"><span class="istickedoff">phase9EssenceModulation = EssenceModulation</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">{ emAngstCommitmentThreshold    = 0.75</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">, emAngstAccrualRate            = 0.05</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">, emAngstDecayRate              = 0.02</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="istickedoff">, emAngstAccrualDivergenceFloor = 0.5</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">, emConatusFloorWindow          = 8</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">, emConatusStructuralFloor      = 0.5</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">, emTrajectoryCapacity          = 32</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">, emBandLowEdge                 = 0.33</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="istickedoff">, emBandHighEdge                = 0.67</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">, emValenceLowEdge              = -0.33</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">, emValenceHighEdge             = 0.33</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  257 </span>
+<span class="lineno">  258 </span>-- | Calibrated defaults (post-Phase 10 §4).
+<span class="lineno">  259 </span>--
+<span class="lineno">  260 </span>-- * @emConatusStructuralFloor@ raised from 0.5 to 7.0 to match the
+<span class="lineno">  261 </span>--   production codomain of 'computeConatusEnergy' (log-scale
+<span class="lineno">  262 </span>--   unbounded, healthy range ~14-15).  See ADR-0012 §15.1.
+<span class="lineno">  263 </span>-- * Angst-side parameters remain at Phase 9 values because the
+<span class="lineno">  264 </span>--   synthetic long-session corpus could not reliably produce
+<span class="lineno">  265 </span>--   'RuleHolisticAdvantage' / 'RuleFormalAdvantage' with
+<span class="lineno">  266 </span>--   sufficient divergence.  Calibration deferred.  See ADR-0012 §15.2.
+<span class="lineno">  267 </span>defaultEssenceModulation :: EssenceModulation
+<span class="lineno">  268 </span><span class="decl"><span class="istickedoff">defaultEssenceModulation = phase9EssenceModulation</span>
+<span class="lineno">  269 </span><span class="spaces">  </span><span class="istickedoff">{ emConatusStructuralFloor = 7.0 }</span></span>
+<span class="lineno">  270 </span>
+<span class="lineno">  271 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  272 </span>-- Constructors
+<span class="lineno">  273 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  274 </span>
+<span class="lineno">  275 </span>-- | The carrier-empty value. Used in 'Bootstrap' and in any test
+<span class="lineno">  276 </span>-- harness that hand-builds a 'SystemState'.
+<span class="lineno">  277 </span>emptyEssence :: Essence
+<span class="lineno">  278 </span><span class="decl"><span class="istickedoff">emptyEssence = EssenceUncommitted emptyTrajectory</span></span>
+<span class="lineno">  279 </span>
+<span class="lineno">  280 </span>-- | The carrier-empty trajectory. @etAngstLevel = 0@,
+<span class="lineno">  281 </span>-- @etConatusFloor = 1@ (so the floor only descends with witnessed
+<span class="lineno">  282 </span>-- evidence), capacity from 'defaultEssenceModulation'.
+<span class="lineno">  283 </span>emptyTrajectory :: EssenceTrajectory
+<span class="lineno">  284 </span><span class="decl"><span class="istickedoff">emptyTrajectory = EssenceTrajectory</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="istickedoff">{ etWitnesses    = Seq.empty</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">, etAngstLevel   = 0.0</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">, etConatusFloor = 1.0</span>
+<span class="lineno">  288 </span><span class="spaces">  </span><span class="istickedoff">, etCapacity     = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  290 </span>
+<span class="lineno">  291 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  292 </span>-- Pure morphisms
+<span class="lineno">  293 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  294 </span>
+<span class="lineno">  295 </span>-- | Ingest one turn's deliberation into the trajectory.
+<span class="lineno">  296 </span>--
+<span class="lineno">  297 </span>-- Effects:
+<span class="lineno">  298 </span>--
+<span class="lineno">  299 </span>-- 1. Append a new 'EssenceWitness' to 'etWitnesses', truncating
+<span class="lineno">  300 </span>--    the front to keep length ≤ 'etCapacity'.
+<span class="lineno">  301 </span>-- 2. Update 'etAngstLevel':
+<span class="lineno">  302 </span>--      * RuleConatusOverride       → no change.
+<span class="lineno">  303 </span>--      * FullAgreement, divergence 0 → decay by 'emAngstDecayRate'.
+<span class="lineno">  304 </span>--      * RuleHolisticAdvantage/RuleFormalAdvantage with
+<span class="lineno">  305 </span>--        divergence ≥ 'emAngstAccrualDivergenceFloor'
+<span class="lineno">  306 </span>--                              → accrue by 'emAngstAccrualRate'.
+<span class="lineno">  307 </span>--      * otherwise (RuleSalienceLead, RuleTiedFallback,
+<span class="lineno">  308 </span>--        sub-floor divergence)
+<span class="lineno">  309 </span>--                              → no change.
+<span class="lineno">  310 </span>--    Clamp to @[0, 1]@.
+<span class="lineno">  311 </span>-- 3. Update 'etConatusFloor' to @min etConatusFloor ceScalar@.
+<span class="lineno">  312 </span>witness
+<span class="lineno">  313 </span>  :: EssenceModulation
+<span class="lineno">  314 </span>  -&gt; Int          -- turn ordinal
+<span class="lineno">  315 </span>  -&gt; ConatusEnergy
+<span class="lineno">  316 </span>  -&gt; Field
+<span class="lineno">  317 </span>  -&gt; Deliberation
+<span class="lineno">  318 </span>  -&gt; EssenceTrajectory
+<span class="lineno">  319 </span>  -&gt; EssenceTrajectory
+<span class="lineno">  320 </span><span class="decl"><span class="istickedoff">witness em turnOrdinal ce field deliberation traj =</span>
+<span class="lineno">  321 </span><span class="spaces">  </span><span class="istickedoff">let sig     = fieldSignature em field</span>
+<span class="lineno">  322 </span><span class="spaces">      </span><span class="istickedoff">witness_ = EssenceWitness</span>
+<span class="lineno">  323 </span><span class="spaces">        </span><span class="istickedoff">{ ewTurnOrdinal     = turnOrdinal</span>
+<span class="lineno">  324 </span><span class="spaces">        </span><span class="istickedoff">, ewSalienceDriver  = dtSalienceDriver (delibTrace deliberation)</span>
+<span class="lineno">  325 </span><span class="spaces">        </span><span class="istickedoff">, ewReconcileRule   = dtRule (delibTrace deliberation)</span>
+<span class="lineno">  326 </span><span class="spaces">        </span><span class="istickedoff">, ewAgreement       = dtAgreement (delibTrace deliberation)</span>
+<span class="lineno">  327 </span><span class="spaces">        </span><span class="istickedoff">, ewDivergence      = dtDivergence (delibTrace deliberation)</span>
+<span class="lineno">  328 </span><span class="spaces">        </span><span class="istickedoff">, ewConatusScalar   = ceScalar ce</span>
+<span class="lineno">  329 </span><span class="spaces">        </span><span class="istickedoff">, ewFieldSignature  = sig</span>
+<span class="lineno">  330 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  331 </span><span class="spaces">      </span><span class="istickedoff">newWitnesses = trimSeq (etCapacity traj) (etWitnesses traj Seq.|&gt; witness_)</span>
+<span class="lineno">  332 </span><span class="spaces">      </span><span class="istickedoff">newAngst = clampUnit $ case dtRule (delibTrace deliberation) of</span>
+<span class="lineno">  333 </span><span class="spaces">        </span><span class="istickedoff">RuleConatusOverride -&gt; etAngstLevel traj</span>
+<span class="lineno">  334 </span><span class="spaces">        </span><span class="istickedoff">RuleAgreement</span>
+<span class="lineno">  335 </span><span class="spaces">          </span><span class="istickedoff">| dtDivergence (delibTrace deliberation) == 0.0</span>
+<span class="lineno">  336 </span><span class="spaces">          </span><span class="istickedoff">-&gt; max 0.0 (etAngstLevel traj - emAngstDecayRate em)</span>
+<span class="lineno">  337 </span><span class="spaces">        </span><span class="istickedoff">RuleHolisticAdvantage</span>
+<span class="lineno">  338 </span><span class="spaces">          </span><span class="istickedoff">| dtDivergence (delibTrace deliberation) &gt;= emAngstAccrualDivergenceFloor em</span>
+<span class="lineno">  339 </span><span class="spaces">          </span><span class="istickedoff">-&gt; min 1.0 (etAngstLevel traj + emAngstAccrualRate em)</span>
+<span class="lineno">  340 </span><span class="spaces">        </span><span class="istickedoff">RuleFormalAdvantage</span>
+<span class="lineno">  341 </span><span class="spaces">          </span><span class="istickedoff">| dtDivergence (delibTrace deliberation) &gt;= emAngstAccrualDivergenceFloor em</span>
+<span class="lineno">  342 </span><span class="spaces">          </span><span class="istickedoff">-&gt; min 1.0 (etAngstLevel traj + emAngstAccrualRate em)</span>
+<span class="lineno">  343 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; etAngstLevel traj</span>
+<span class="lineno">  344 </span><span class="spaces">      </span><span class="istickedoff">newFloor = min (etConatusFloor traj) (ceScalar ce)</span>
+<span class="lineno">  345 </span><span class="spaces">  </span><span class="istickedoff">in traj</span>
+<span class="lineno">  346 </span><span class="spaces">       </span><span class="istickedoff">{ etWitnesses    = newWitnesses</span>
+<span class="lineno">  347 </span><span class="spaces">       </span><span class="istickedoff">, etAngstLevel   = newAngst</span>
+<span class="lineno">  348 </span><span class="spaces">       </span><span class="istickedoff">, etConatusFloor = newFloor</span>
+<span class="lineno">  349 </span><span class="spaces">       </span><span class="istickedoff">}</span>
+<span class="lineno">  350 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  351 </span><span class="spaces">    </span><span class="istickedoff">trimSeq cap sq</span>
+<span class="lineno">  352 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">Seq.length sq &gt; cap</span> = <span class="nottickedoff">case Seq.viewl sq of</span></span>
+<span class="lineno">  353 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Seq.EmptyL  -&gt; sq</span></span>
+<span class="lineno">  354 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(_ Seq.:&lt; rest) -&gt; trimSeq cap rest</span></span>
+<span class="lineno">  355 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = sq</span></span>
+<span class="lineno">  356 </span>
+<span class="lineno">  357 </span>-- | Returns 'Just' when the trajectory has crossed a commitment
+<span class="lineno">  358 </span>-- threshold. Priority: 'TriggerAngstThreshold' over
+<span class="lineno">  359 </span>-- 'TriggerConatusErosion' (see §0 Q2 of the spec).
+<span class="lineno">  360 </span>--
+<span class="lineno">  361 </span>-- Conatus erosion triggers when *every one* of the last
+<span class="lineno">  362 </span>-- 'emConatusFloorWindow' witnessed turns has 'ewConatusScalar'
+<span class="lineno">  363 </span>-- below 'emConatusStructuralFloor' (true sliding window, Phase 10).
+<span class="lineno">  364 </span>-- The 'etConatusFloor' field is retained for diagnostics and trace
+<span class="lineno">  365 </span>-- but is no longer the trigger signal.
+<span class="lineno">  366 </span>shouldCommit :: EssenceModulation -&gt; EssenceTrajectory -&gt; Maybe CommitmentTrigger
+<span class="lineno">  367 </span><span class="decl"><span class="istickedoff">shouldCommit em traj =</span>
+<span class="lineno">  368 </span><span class="spaces">  </span><span class="istickedoff">let angstFires = etAngstLevel traj &gt;= emAngstCommitmentThreshold em</span>
+<span class="lineno">  369 </span><span class="spaces">      </span><span class="istickedoff">window     = emConatusFloorWindow em</span>
+<span class="lineno">  370 </span><span class="spaces">      </span><span class="istickedoff">ws         = etWitnesses traj</span>
+<span class="lineno">  371 </span><span class="spaces">      </span><span class="istickedoff">lastN      = Seq.drop (max 0 (Seq.length ws - window)) ws</span>
+<span class="lineno">  372 </span><span class="spaces">      </span><span class="istickedoff">enoughWits = Seq.length lastN &gt;= window</span>
+<span class="lineno">  373 </span><span class="spaces">      </span><span class="istickedoff">allSubFloor =</span>
+<span class="lineno">  374 </span><span class="spaces">        </span><span class="istickedoff">enoughWits</span>
+<span class="lineno">  375 </span><span class="spaces">          </span><span class="istickedoff">&amp;&amp; all (\w -&gt; ewConatusScalar w &lt; emConatusStructuralFloor em) lastN</span>
+<span class="lineno">  376 </span><span class="spaces">  </span><span class="istickedoff">in case (angstFires, allSubFloor) of</span>
+<span class="lineno">  377 </span><span class="spaces">       </span><span class="istickedoff">(True,  _)    -&gt; Just TriggerAngstThreshold</span>
+<span class="lineno">  378 </span><span class="spaces">       </span><span class="istickedoff">(False, True) -&gt; Just TriggerConatusErosion</span>
+<span class="lineno">  379 </span><span class="spaces">       </span><span class="istickedoff">_             -&gt; Nothing</span></span>
+<span class="lineno">  380 </span>
+<span class="lineno">  381 </span>-- | Deterministic mode extraction.  Never returns
+<span class="lineno">  382 </span>-- 'EssenceWitnessing'.  Selection rule:
+<span class="lineno">  383 </span>--
+<span class="lineno">  384 </span>-- @
+<span class="lineno">  385 </span>--   let n = length etWitnesses
+<span class="lineno">  386 </span>--       aRate = #{Agreement = FullAgreement} / n
+<span class="lineno">  387 </span>--       hRate = #{ReconcileRule = RuleHolisticAdvantage} / n
+<span class="lineno">  388 </span>--       fRate = #{ReconcileRule = RuleFormalAdvantage}   / n
+<span class="lineno">  389 </span>--   in case maxBy snd
+<span class="lineno">  390 </span>--        [(EssenceIntegrative,   aRate)
+<span class="lineno">  391 </span>--        ,(EssenceDialogical,    hRate)
+<span class="lineno">  392 </span>--        ,(EssenceContemplative, fRate)] of
+<span class="lineno">  393 </span>--        (m, r) | r &gt; 0     -&gt; m
+<span class="lineno">  394 </span>--               | otherwise -&gt; EssenceContemplative   -- tie-break
+<span class="lineno">  395 </span>-- @
+<span class="lineno">  396 </span>--
+<span class="lineno">  397 </span>-- The tie-break is 'EssenceContemplative' because, in the absence
+<span class="lineno">  398 </span>-- of any signal, the formal hemisphere is the safer default
+<span class="lineno">  399 </span>-- (lower behavioural divergence post-commit).
+<span class="lineno">  400 </span>extractMode :: EssenceTrajectory -&gt; EssenceMode
+<span class="lineno">  401 </span><span class="decl"><span class="istickedoff">extractMode traj =</span>
+<span class="lineno">  402 </span><span class="spaces">  </span><span class="istickedoff">let ws = etWitnesses traj</span>
+<span class="lineno">  403 </span><span class="spaces">      </span><span class="istickedoff">n  = fromIntegral (Seq.length ws) :: Double</span>
+<span class="lineno">  404 </span><span class="spaces">      </span><span class="istickedoff">counts = foldl' tally (0, 0, 0) ws</span>
+<span class="lineno">  405 </span><span class="spaces">      </span><span class="istickedoff">(aCount, hCount, fCount) = counts</span>
+<span class="lineno">  406 </span><span class="spaces">      </span><span class="istickedoff">aRate = if n &gt; 0 then fromIntegral aCount / n else 0.0</span>
+<span class="lineno">  407 </span><span class="spaces">      </span><span class="istickedoff">hRate = if n &gt; 0 then fromIntegral hCount / n else 0.0</span>
+<span class="lineno">  408 </span><span class="spaces">      </span><span class="istickedoff">fRate = if n &gt; 0 then fromIntegral fCount / n else 0.0</span>
+<span class="lineno">  409 </span><span class="spaces">      </span><span class="istickedoff">candidates =</span>
+<span class="lineno">  410 </span><span class="spaces">        </span><span class="istickedoff">[ (EssenceIntegrative,   aRate)</span>
+<span class="lineno">  411 </span><span class="spaces">        </span><span class="istickedoff">, (EssenceDialogical,    hRate)</span>
+<span class="lineno">  412 </span><span class="spaces">        </span><span class="istickedoff">, (EssenceContemplative, fRate)</span>
+<span class="lineno">  413 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  414 </span><span class="spaces">      </span><span class="istickedoff">(bestMode, bestRate) = maximumBySnd candidates</span>
+<span class="lineno">  415 </span><span class="spaces">  </span><span class="istickedoff">in if bestRate &gt; 0.0 then bestMode else EssenceContemplative</span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">tally (a, h, f) w =</span>
+<span class="lineno">  418 </span><span class="spaces">      </span><span class="istickedoff">case (ewAgreement w, ewReconcileRule w) of</span>
+<span class="lineno">  419 </span><span class="spaces">        </span><span class="istickedoff">(Agree, _)            -&gt; (a + 1, h, f)</span>
+<span class="lineno">  420 </span><span class="spaces">        </span><span class="istickedoff">(_, RuleHolisticAdvantage) -&gt; (a, h + 1, f)</span>
+<span class="lineno">  421 </span><span class="spaces">        </span><span class="istickedoff">(_, RuleFormalAdvantage)   -&gt; (a, h, f + 1)</span>
+<span class="lineno">  422 </span><span class="spaces">        </span><span class="istickedoff">_                   -&gt; (a, h, f)</span>
+<span class="lineno">  423 </span><span class="spaces">    </span><span class="istickedoff">maximumBySnd [] = <span class="nottickedoff">(EssenceContemplative, 0.0)</span></span>
+<span class="lineno">  424 </span><span class="spaces">    </span><span class="istickedoff">maximumBySnd (x:xs) = foldl' pick x xs</span>
+<span class="lineno">  425 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  426 </span><span class="spaces">        </span><span class="istickedoff">pick acc@(_, va) y@(_, vb) = if vb &gt; va then y else acc</span></span>
+<span class="lineno">  427 </span>
+<span class="lineno">  428 </span>-- | Construct the commitment.  Total over trajectories that have
+<span class="lineno">  429 </span>-- passed 'shouldCommit'; technically total over all trajectories
+<span class="lineno">  430 </span>-- but used only when 'shouldCommit' returned 'Just'.  The hash is
+<span class="lineno">  431 </span>-- a simple structural fold over the 'etWitnesses' sequence —
+<span class="lineno">  432 </span>-- enough to detect tampering across replay, not a cryptographic
+<span class="lineno">  433 </span>-- guarantee.
+<span class="lineno">  434 </span>commit
+<span class="lineno">  435 </span>  :: Int                -- current turn ordinal
+<span class="lineno">  436 </span>  -&gt; CommitmentTrigger
+<span class="lineno">  437 </span>  -&gt; EssenceTrajectory
+<span class="lineno">  438 </span>  -&gt; EssenceCommitment
+<span class="lineno">  439 </span><span class="decl"><span class="istickedoff">commit turnOrdinal trigger traj =</span>
+<span class="lineno">  440 </span><span class="spaces">  </span><span class="istickedoff">EssenceCommitment</span>
+<span class="lineno">  441 </span><span class="spaces">    </span><span class="istickedoff">{ ecMode        = extractMode traj</span>
+<span class="lineno">  442 </span><span class="spaces">    </span><span class="istickedoff">, ecTrigger     = trigger</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="istickedoff">, ecCommittedAt = turnOrdinal</span>
+<span class="lineno">  444 </span><span class="spaces">    </span><span class="istickedoff">, ecWitnessHash = TrajectoryHash (sha256Witnesses (toList (etWitnesses traj)))</span>
+<span class="lineno">  445 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  446 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  447 </span><span class="spaces">    </span><span class="istickedoff">sha256Witnesses witnesses =</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="istickedoff">&quot;sha256:&quot; &lt;&gt; T.pack (concatMap byteToHex (BS.unpack (SHA256.hashlazy (encode witnesses))))</span>
+<span class="lineno">  449 </span><span class="spaces">    </span><span class="istickedoff">byteToHex byte =</span>
+<span class="lineno">  450 </span><span class="spaces">      </span><span class="istickedoff">let raw = showHex byte &quot;&quot;</span>
+<span class="lineno">  451 </span><span class="spaces">      </span><span class="istickedoff">in case raw of</span>
+<span class="lineno">  452 </span><span class="spaces">           </span><span class="istickedoff">[single] -&gt; ['0', single]</span>
+<span class="lineno">  453 </span><span class="spaces">           </span><span class="istickedoff">other -&gt; other</span></span>
+<span class="lineno">  454 </span>
+<span class="lineno">  455 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  456 </span>-- Post-commitment validation (Phase 10)
+<span class="lineno">  457 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  458 </span>
+<span class="lineno">  459 </span>-- | A commitment violation.  Priority order: family → tone → style;
+<span class="lineno">  460 </span>-- the first mismatch is the one reported.
+<span class="lineno">  461 </span>data EssenceViolation
+<span class="lineno">  462 </span>  = ViolationFamilyMismatch !EssenceMode !CanonicalMoveFamily
+<span class="lineno">  463 </span>  | ViolationToneMismatch   !EssenceMode !NarrativeTone
+<span class="lineno">  464 </span>  | ViolationStyleMismatch  !EssenceMode !RenderStyle
+<span class="lineno">  465 </span>  | ViolationMissingDeliberation !EssenceMode
+<span class="lineno">  466 </span>    -- ^ A committed essence cannot be validated without a reconciled
+<span class="lineno">  467 </span>    --   plan. Missing deliberation is therefore a fail-closed state,
+<span class="lineno">  468 </span>    --   not an implicit validation pass.
+<span class="lineno">  469 </span>  | ViolationRefusedCommitment !CommitmentTrigger
+<span class="lineno">  470 </span>    -- ^ WP1 (contour closure): 'shouldCommit' fired with this trigger,
+<span class="lineno">  471 </span>    --   but the resulting state remained 'EssenceUncommitted'.
+<span class="lineno">  472 </span>    --   This is a structural inconsistency, not a content mismatch.
+<span class="lineno">  473 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  474 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  475 </span>
+<span class="lineno">  476 </span>-- | Snake_case JSON-schema-stable summary of a violation.
+<span class="lineno">  477 </span>renderEssenceViolation :: EssenceViolation -&gt; Text
+<span class="lineno">  478 </span><span class="decl"><span class="istickedoff">renderEssenceViolation = \case</span>
+<span class="lineno">  479 </span><span class="spaces">  </span><span class="istickedoff">ViolationFamilyMismatch m f -&gt;</span>
+<span class="lineno">  480 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">&quot;family_mismatch:&quot; &lt;&gt; renderEssenceMode m &lt;&gt; &quot;:&quot; &lt;&gt; T.pack (show f)</span></span>
+<span class="lineno">  481 </span><span class="spaces">  </span><span class="istickedoff">ViolationToneMismatch m t -&gt;</span>
+<span class="lineno">  482 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">&quot;tone_mismatch:&quot; &lt;&gt; renderEssenceMode m &lt;&gt; &quot;:&quot; &lt;&gt; T.pack (show t)</span></span>
+<span class="lineno">  483 </span><span class="spaces">  </span><span class="istickedoff">ViolationStyleMismatch m s -&gt;</span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">&quot;style_mismatch:&quot; &lt;&gt; renderEssenceMode m &lt;&gt; &quot;:&quot; &lt;&gt; T.pack (show s)</span></span>
+<span class="lineno">  485 </span><span class="spaces">  </span><span class="istickedoff">ViolationMissingDeliberation m -&gt;</span>
+<span class="lineno">  486 </span><span class="spaces">    </span><span class="istickedoff">&quot;missing_deliberation:&quot; &lt;&gt; renderEssenceMode m</span>
+<span class="lineno">  487 </span><span class="spaces">  </span><span class="istickedoff">ViolationRefusedCommitment trigger -&gt;</span>
+<span class="lineno">  488 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">&quot;refused_commitment:&quot; &lt;&gt; renderCommitmentTrigger trigger</span></span></span>
+<span class="lineno">  489 </span>
+<span class="lineno">  490 </span>-- | Admissible 'CanonicalMoveFamily' sets per committed mode.
+<span class="lineno">  491 </span>-- 'CMRepair' is admissible in every mode (recovery is orthogonal
+<span class="lineno">  492 </span>-- to essence).
+<span class="lineno">  493 </span>admissibleFamilies :: EssenceMode -&gt; Set CanonicalMoveFamily
+<span class="lineno">  494 </span><span class="decl"><span class="istickedoff">admissibleFamilies = \case</span>
+<span class="lineno">  495 </span><span class="spaces">  </span><span class="istickedoff">EssenceContemplative -&gt;</span>
+<span class="lineno">  496 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [CMDescribe, CMHypothesis, CMPurpose, CMRepair]</span>
+<span class="lineno">  497 </span><span class="spaces">  </span><span class="istickedoff">EssenceDialogical    -&gt;</span>
+<span class="lineno">  498 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [CMContact, CMDeepen, CMRepair, CMReflect]</span>
+<span class="lineno">  499 </span><span class="spaces">  </span><span class="istickedoff">EssenceIntegrative   -&gt; Set.fromList [minBound .. maxBound]</span>
+<span class="lineno">  500 </span><span class="spaces">  </span><span class="istickedoff">EssenceWitnessing    -&gt; <span class="nottickedoff">Set.fromList [minBound .. maxBound]</span></span></span>
+<span class="lineno">  501 </span>
+<span class="lineno">  502 </span>-- | Admissible 'NarrativeTone' sets per committed mode.
+<span class="lineno">  503 </span>-- 'NarrativeNeutral' is admissible in every mode (tonal neutrality
+<span class="lineno">  504 </span>-- is never an essence violation).
+<span class="lineno">  505 </span>admissibleTones :: EssenceMode -&gt; Set NarrativeTone
+<span class="lineno">  506 </span><span class="decl"><span class="istickedoff">admissibleTones = \case</span>
+<span class="lineno">  507 </span><span class="spaces">  </span><span class="istickedoff">EssenceContemplative -&gt;</span>
+<span class="lineno">  508 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [NarrativeNeutral, NarrativeTerse]</span>
+<span class="lineno">  509 </span><span class="spaces">  </span><span class="istickedoff">EssenceDialogical    -&gt;</span>
+<span class="lineno">  510 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [NarrativeNeutral, NarrativeWarm]</span>
+<span class="lineno">  511 </span><span class="spaces">  </span><span class="istickedoff">EssenceIntegrative   -&gt;</span>
+<span class="lineno">  512 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [NarrativeNeutral, NarrativeWarm, NarrativeFormal,</span>
+<span class="lineno">  513 </span><span class="spaces">                  </span><span class="istickedoff">NarrativeTerse, NarrativeRecovery]</span>
+<span class="lineno">  514 </span><span class="spaces">  </span><span class="istickedoff">EssenceWitnessing    -&gt;</span>
+<span class="lineno">  515 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">Set.fromList [NarrativeNeutral, NarrativeWarm, NarrativeFormal,</span></span>
+<span class="lineno">  516 </span><span class="spaces">                  </span><span class="istickedoff"><span class="nottickedoff">NarrativeTerse, NarrativeRecovery]</span></span></span>
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>-- | Admissible 'RenderStyle' sets per committed mode.
+<span class="lineno">  519 </span>-- Contemplative excludes &quot;warm&quot; styles; Dialogical excludes
+<span class="lineno">  520 </span>-- &quot;recovery&quot; styles.  Integrative / Witnessing admit all.
+<span class="lineno">  521 </span>admissibleStyles :: EssenceMode -&gt; Set RenderStyle
+<span class="lineno">  522 </span><span class="decl"><span class="istickedoff">admissibleStyles = \case</span>
+<span class="lineno">  523 </span><span class="spaces">  </span><span class="istickedoff">EssenceContemplative -&gt;</span>
+<span class="lineno">  524 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [StyleFormal, StyleDirect, StylePoetic,</span>
+<span class="lineno">  525 </span><span class="spaces">                  </span><span class="istickedoff">StyleClinical, StyleCautious, StyleRecovery,</span>
+<span class="lineno">  526 </span><span class="spaces">                  </span><span class="istickedoff">StyleStandard]</span>
+<span class="lineno">  527 </span><span class="spaces">  </span><span class="istickedoff">EssenceDialogical    -&gt;</span>
+<span class="lineno">  528 </span><span class="spaces">    </span><span class="istickedoff">Set.fromList [StyleFormal, StyleWarm, StyleDirect, StylePoetic,</span>
+<span class="lineno">  529 </span><span class="spaces">                  </span><span class="istickedoff">StyleClinical, StyleCautious, StyleStandard]</span>
+<span class="lineno">  530 </span><span class="spaces">  </span><span class="istickedoff">EssenceIntegrative   -&gt; Set.fromList [minBound .. maxBound]</span>
+<span class="lineno">  531 </span><span class="spaces">  </span><span class="istickedoff">EssenceWitnessing    -&gt; <span class="nottickedoff">Set.fromList [minBound .. maxBound]</span></span></span>
+<span class="lineno">  532 </span>
+<span class="lineno">  533 </span>-- | Validate a reconciled 'Plan' against a committed essence.
+<span class="lineno">  534 </span>-- Priority order: family → tone → style; first mismatch wins.
+<span class="lineno">  535 </span>validatePlan :: EssenceCommitment -&gt; Plan -&gt; Either EssenceViolation Plan
+<span class="lineno">  536 </span><span class="decl"><span class="istickedoff">validatePlan c p</span>
+<span class="lineno">  537 </span><span class="spaces">  </span><span class="istickedoff">| not (planFamily        p `Set.member` admissibleFamilies (ecMode c))</span>
+<span class="lineno">  538 </span><span class="spaces">      </span><span class="istickedoff">= Left (ViolationFamilyMismatch (ecMode c) (planFamily p))</span>
+<span class="lineno">  539 </span><span class="spaces">  </span><span class="istickedoff">| not (planNarrativeTone p `Set.member` admissibleTones    (ecMode c))</span>
+<span class="lineno">  540 </span><span class="spaces">      </span><span class="istickedoff">= Left <span class="nottickedoff">(ViolationToneMismatch  (ecMode c) (planNarrativeTone p))</span></span>
+<span class="lineno">  541 </span><span class="spaces">  </span><span class="istickedoff">| not (planRenderStyle   p `Set.member` admissibleStyles   (ecMode c))</span>
+<span class="lineno">  542 </span><span class="spaces">      </span><span class="istickedoff">= Left <span class="nottickedoff">(ViolationStyleMismatch (ecMode c) (planRenderStyle p))</span></span>
+<span class="lineno">  543 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Right <span class="nottickedoff">p</span></span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  546 </span>-- Renderers
+<span class="lineno">  547 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  548 </span>
+<span class="lineno">  549 </span>-- | Snake_case JSON-schema-stable tag for 'EssenceMode'.
+<span class="lineno">  550 </span>-- Stable across builds; any change is a breaking schema change.
+<span class="lineno">  551 </span>renderEssenceMode :: EssenceMode -&gt; Text
+<span class="lineno">  552 </span><span class="decl"><span class="istickedoff">renderEssenceMode = \case</span>
+<span class="lineno">  553 </span><span class="spaces">  </span><span class="istickedoff">EssenceWitnessing    -&gt; &quot;witnessing&quot;</span>
+<span class="lineno">  554 </span><span class="spaces">  </span><span class="istickedoff">EssenceContemplative -&gt; &quot;contemplative&quot;</span>
+<span class="lineno">  555 </span><span class="spaces">  </span><span class="istickedoff">EssenceDialogical    -&gt; <span class="nottickedoff">&quot;dialogical&quot;</span></span>
+<span class="lineno">  556 </span><span class="spaces">  </span><span class="istickedoff">EssenceIntegrative   -&gt; <span class="nottickedoff">&quot;integrative&quot;</span></span></span>
+<span class="lineno">  557 </span>
+<span class="lineno">  558 </span>-- | Snake_case JSON-schema-stable tag for 'CommitmentTrigger'.
+<span class="lineno">  559 </span>renderCommitmentTrigger :: CommitmentTrigger -&gt; Text
+<span class="lineno">  560 </span><span class="decl"><span class="nottickedoff">renderCommitmentTrigger = \case</span>
+<span class="lineno">  561 </span><span class="spaces">  </span><span class="nottickedoff">TriggerAngstThreshold -&gt; &quot;angst_threshold&quot;</span>
+<span class="lineno">  562 </span><span class="spaces">  </span><span class="nottickedoff">TriggerConatusErosion -&gt; &quot;conatus_erosion&quot;</span></span>
+<span class="lineno">  563 </span>
+<span class="lineno">  564 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  565 </span>-- Internal helpers
+<span class="lineno">  566 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  567 </span>
+<span class="lineno">  568 </span>clampUnit :: Double -&gt; Double
+<span class="lineno">  569 </span><span class="decl"><span class="istickedoff">clampUnit = max 0.0 . min 1.0</span></span>
+
+</pre>
+</body>
+</html>

@@ -101,11 +101,12 @@ import QxFx0.Types.State.Perspective
   )
 import QxFx0.Types.State
   ( emptySystemState
-  , ssAdaptiveMutationLog
-  , ssGovernanceHistory
-  , ssGovernanceRuntimeFault
-  , ssPerspectiveRegistry
-  , ssFieldHeuristics
+    , ssAdaptiveMutationLog
+    , ssGovernanceHistory
+    , ssGovernanceProjection
+    , ssGovernanceRuntimeFault
+    , ssPerspectiveRegistry
+    , ssFieldHeuristics
   , ssTruthContractStatus
   )
 import QxFx0.Types.State.Governance (EpistemicStatus(..))
@@ -132,7 +133,8 @@ p5GovernanceTests =
   , TestLabel "P5 lifecycle-sensitive ref validation follows deny/promote/rollback contracts" testLifecycleSensitiveRefValidation
   , TestLabel "P5 denied perspective event is replay-visible without endorsing state" testDeniedPathReplay
   , TestLabel "P5 rollback path is replay-visible and restores prior projection" testRollbackPathReplay
-  , TestLabel "P5 typed non-perspective paths replay without creating competing perspective truth" testTypedNonPerspectiveReplay
+  , TestLabel "P5 typed non-perspective paths remain replay-visible in projection refs" testTypedNonPerspectiveReplayPreservesProjection
+  , TestLabel "P5 perspective replay rejects envelope payload decision mismatch" testPerspectiveReplayRejectsDecisionMismatch
   , TestLabel "P5 governance summary exposes operator-visible evidence" testGovernanceSummaryVisibility
   , TestLabel "P5 governance fingerprint canonicalizes history" testGovernanceFingerprintCanonicalizesHistory
   , TestLabel "P5 replay proof exposes canonical provenance trail" testReplayProofExposesCanonicalProvenance
@@ -445,8 +447,8 @@ testRollbackPathReplay = TestCase $ do
   rebuilt <- assertRight (rebuildGovernedPerspectiveState [event1, event2, event3])
   assertEqual "rollback replay matches direct registry" registry3 rebuilt
 
-testTypedNonPerspectiveReplay :: Test
-testTypedNonPerspectiveReplay = TestCase $ do
+testTypedNonPerspectiveReplayPreservesProjection :: Test
+testTypedNonPerspectiveReplayPreservesProjection = TestCase $ do
   let (event1, registry1) = promotionEvent 1 Nothing
   freeze <- assertRight (normalizeGovernanceEventChecked (linkEvent event1 freezeEventTemplate))
   carry <- assertRight (normalizeGovernanceEventChecked (linkEvent freeze carryEventTemplate))
@@ -454,9 +456,6 @@ testTypedNonPerspectiveReplay = TestCase $ do
   capability <- assertRight (normalizeGovernanceEventChecked (linkEvent claim capabilityEventTemplate))
   normative <- assertRight (normalizeGovernanceEventChecked (linkEvent capability normativeRevisionEventTemplate))
   projection <- assertRight (rebuildGovernanceProjection [event1, freeze, carry, claim, capability, normative])
-  assertEqual "non-perspective typed events do not create competing perspective truth"
-    registry1
-    (gpPerspectiveRegistry projection)
   assertEqual "all governed events remain replay-visible in projection refs"
     [ SubjectPerspective (PerspectiveId "perspective-1")
     , SubjectFreeze FreezeGlobal
@@ -466,6 +465,9 @@ testTypedNonPerspectiveReplay = TestCase $ do
     , SubjectNormativeProfile "default"
     ]
     (map gprSubject (gpGovernedRefs projection))
+  assertEqual "perspective registry should stay unchanged by foreign payloads"
+    registry1
+    (gpPerspectiveRegistry projection)
   mapM_
     (\(label, event) -> assertEqual label (Right ()) (validateGovernanceEventContract event))
     [ ("freeze event validates as typed payload", freeze)
@@ -475,13 +477,45 @@ testTypedNonPerspectiveReplay = TestCase $ do
     , ("normative revision event validates as typed payload", normative)
     ]
 
+testPerspectiveReplayRejectsDecisionMismatch :: Test
+testPerspectiveReplayRejectsDecisionMismatch = TestCase $ do
+  let (event1, registry1) = promotionEvent 1 Nothing
+      bundle = mkPerspectiveBundleWithThesis 2 "mismatch"
+      candidate = opinionCore bundle
+      registry2 = applyPerspectiveDecision 2 registry1 bundle candidate PpdPromoteEndorsed
+      event2 = buildPerspectiveGovernanceEvent
+        ActorRuntime
+        2
+        "session-p5"
+        (Just event1)
+        registry1
+        registry2
+        bundle
+        candidate
+        PerspectiveAdmissibleAccepted
+        (Just PpdPromoteEndorsed)
+        PpdPromoteEndorsed
+        (buildPerspectiveProjection registry2 (pibScope bundle))
+      mismatched = event2
+        { geEnvelope = (geEnvelope event2)
+            { geeDecision = GovSuspend
+            , geeResolvedDecision = Just GovSuspend
+            , geeEventHash = Nothing
+            , geePayloadHash = Nothing
+            }
+        }
+  assertLeft "perspective replay must reject envelope/payload decision mismatch"
+    (rebuildGovernedPerspectiveState [event1, mismatched])
+
 testGovernanceSummaryVisibility :: Test
 testGovernanceSummaryVisibility = TestCase $ do
   let (event1, registry1) = promotionEvent 1 Nothing
   freeze <- assertRight (normalizeGovernanceEventChecked (linkEvent event1 freezeEventTemplate))
+  projection <- assertRight (rebuildGovernanceProjection [event1, freeze])
   let ss = emptySystemState
         { ssGovernanceHistory = [event1, freeze]
         , ssPerspectiveRegistry = registry1
+        , ssGovernanceProjection = projection
         , ssTruthContractStatus = CanonicalSurfacePreserved
         }
       summary = governanceSummaryLines ss
@@ -498,9 +532,9 @@ testGovernanceSummaryVisibility = TestCase $ do
   assertLinePresent "summary exposes governance runtime fault status" "governance_runtime_fault: none" summary
   assertLinePresent "summary exposes latest governed subject" "latest_governed_subject: SubjectFreeze FreezeGlobal" summary
   assertLinePresent "summary exposes latest governance reason tag" "latest_governance_reason_tag: freeze:entry" summary
-  assertLinePresent "summary exposes salience/field contract status" "salience_field_contract_status: persisted_observable_non_governing" summary
-  assertLinePresent "summary exposes plan narrative tone contract status" "plan_narrative_tone_contract_status: bounded_causal_contour" summary
-  assertLinePresent "summary exposes bayesian contract status" "bayesian_contract_status: bounded_causal_contour" summary
+  assertLinePresent "summary exposes salience/field contract status" "salience_field_contract_status: persisted_governing_default" summary
+  assertLinePresent "summary exposes plan narrative tone contract status" "plan_narrative_tone_contract_status: bounded_causal_contour_policy" summary
+  assertLinePresent "summary exposes bayesian contract status" "bayesian_contract_status: bounded_causal_contour_runtime_authoritative" summary
 
 testReplayProofExposesCanonicalProvenance :: Test
 testReplayProofExposesCanonicalProvenance = TestCase $ do
@@ -521,13 +555,21 @@ testGovernanceFingerprintCanonicalizesHistory :: Test
 testGovernanceFingerprintCanonicalizesHistory = TestCase $ do
   let (event1, registry1) = promotionEvent 1 Nothing
       (event2, _) = revisionEvent 2 (Just event1) registry1
+      projection1 = case rebuildGovernanceProjection [event1, event2] of
+        Right value -> value
+        Left err -> error (T.unpack err)
+      projection2 = case rebuildGovernanceProjection [event2, event1] of
+        Right value -> value
+        Left err -> error (T.unpack err)
       summaryForward = governanceSummaryLines emptySystemState
         { ssGovernanceHistory = [event1, event2]
         , ssPerspectiveRegistry = registry1
+        , ssGovernanceProjection = projection1
         }
       summaryShuffled = governanceSummaryLines emptySystemState
         { ssGovernanceHistory = [event2, event1]
         , ssPerspectiveRegistry = registry1
+        , ssGovernanceProjection = projection2
         }
       fingerprint lines' = case [ value | line <- lines', Just value <- [T.stripPrefix "governance_fingerprint: " line] ] of
         value:_ -> value
@@ -542,8 +584,8 @@ testPreparePathUsesDefaultFieldHeuristics = TestCase $ do
         { ssFieldHeuristics = defaultFieldHeuristics { fhDefaultNarrativeRate = 0.99 }
         }
       plan = buildPrepareEffectPlan ss "что такое свобода" (UTCTime (fromGregorian 2026 1 1) 0)
-  assertEqual "prepare path should still thread default field heuristics for now"
-    defaultFieldHeuristics
+  assertEqual "prepare path should thread persisted field heuristics"
+    (ssFieldHeuristics ss)
     (psFieldHeuristics (pepStatic plan))
 
 testDenyFirstPermissions :: Test

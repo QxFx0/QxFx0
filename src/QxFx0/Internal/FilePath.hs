@@ -2,11 +2,14 @@ module QxFx0.Internal.FilePath
   ( isPathWithin
   ) where
 
-import System.FilePath (normalise, splitDirectories)
 import Data.List (isPrefixOf)
+import System.Directory (canonicalizePath)
+import System.FilePath (splitDirectories, addTrailingPathSeparator)
 
-isPathWithin :: FilePath -> FilePath -> Bool
-isPathWithin root candidate =
-  let rootParts = splitDirectories (normalise root)
-      pathParts = splitDirectories (normalise candidate)
-  in rootParts `isPrefixOf` pathParts
+isPathWithin :: FilePath -> FilePath -> IO Bool
+isPathWithin root candidate = do
+  canonicalRoot <- canonicalizePath root
+  canonicalCandidate <- canonicalizePath candidate
+  let rootParts = splitDirectories (addTrailingPathSeparator canonicalRoot)
+      pathParts = splitDirectories canonicalCandidate
+  pure (rootParts `isPrefixOf` pathParts)

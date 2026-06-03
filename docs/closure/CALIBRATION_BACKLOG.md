@@ -9,7 +9,7 @@
   - `docs/closure/SELF_LAYER_STATUS.md` (Package 10)
   - `docs/closure/BOUNDED_LEARNING_DESIGN.md` (Package 8)
   - `docs/closure/METACOGNITION_LOOP_DESIGN.md` (Package 9)
-  - `docs/closure/adr-0013-role-split.md` (Package 1)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (Package 1)
 
 ## 0. Why this backlog exists
 

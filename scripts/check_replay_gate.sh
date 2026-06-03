@@ -68,12 +68,12 @@ echo "  reading triage from $TRIAGE"
 #
 # The 6 canonical contours are:
 #
-#   * Conatus     (QxFx0.Self.Conatus)            GAP
-#   * Field       (QxFx0.Self.Field)              GAP
+#   * Conatus     (QxFx0.Self.Conatus)            OK
+#   * Field       (QxFx0.Self.Field)              OK
 #   * Salience    (QxFx0.Self.Salience)           OK
 #   * Deliberation (QxFx0.Self.Deliberation)      OK
 #   * Essence     (QxFx0.Self.Essence)            OK
-#   * Identity    (QxFx0.Types.State.Identity)    GAP
+#   * Identity    (QxFx0.Types.State.Identity)    OK
 #
 # Essence was added 2026-05-19 with the Phase 9-10
 # landing (4 trc* fields).
@@ -88,12 +88,7 @@ declare -A CANONICAL_SOURCES=(
 )
 
 declare -A TRC_FIELDS=(
-  # Conatus: trcConatusEnergy is per
-  # TRACE_SCHEMA.md §2; not yet landed in
-  # TurnReplayTrace (Package 3 work).
   ["Conatus"]="trcConatusEnergy"
-  # Field: trcField is per TRACE_SCHEMA.md §3;
-  # not yet landed in TurnReplayTrace.
   ["Field"]="trcField"
   # Salience: trcSalienceDriver is the actual
   # landed field (Phase 5.5e; TRACE_SCHEMA.md §4).
@@ -106,20 +101,7 @@ declare -A TRC_FIELDS=(
   # landed fields (Phase 9-10, 2026-05-19;
   # TRACE_SCHEMA.md §6).
   ["Essence"]="trcEssenceMode"
-  # Identity: trcIdentityClaims is per
-  # TRACE_SCHEMA.md §7; not yet landed in
-  # TurnReplayTrace.
   ["Identity"]="trcIdentityClaims"
-)
-
-# Track which fields are "expected but missing" — a
-# Package 3 work item, not a script violation. Each
-# entry points to a TRACE_SCHEMA.md section that
-# documents what the field should look like.
-declare -A EXPECTED_MISSING=(
-  ["Conatus"]="true|TRACE_SCHEMA.md §2"
-  ["Field"]="true|TRACE_SCHEMA.md §3"
-  ["Identity"]="true|TRACE_SCHEMA.md §7"
 )
 
 # Static check: P1 — every canonical contour's
@@ -203,14 +185,8 @@ done
 # Static check: P4 — every canonical contour has a
 # named 'trc*' field in 'TurnReplayTrace'.
 # 
-# Note: as of 2026-06-02, three of the five canonical
-# contours (Conatus, Field, Identity) do NOT yet have
-# their expected trc* fields in TurnReplayTrace. The
-# fields are listed in REPLAY_GATE_TRIAGE.md §1 but
-# the actual code change is Package 3 work. The
-# script reports this as a GAP, not a violation; the
-# next contributor closes the gap by adding the
-# fields to TurnProjection.hs.
+# Note: every canonical contour is expected to have its
+# representative `trc*` field landed in `TurnReplayTrace`.
 echo "  [P4] every canonical contour has a named trc* field"
 TURN_PROJECTION="$ROOT/src/QxFx0/Types/TurnProjection.hs"
 if [ ! -f "$TURN_PROJECTION" ]; then
@@ -221,18 +197,7 @@ else
     if rg -q "^\s*,?\s*${field} *::" "$TURN_PROJECTION"; then
       echo "       OK $contour ($field)"
     else
-      # Distinguish "expected but missing" (Package 3
-      # work) from "should exist but doesn't" (bug).
-      # The EXPECTED_MISSING value is "true|<doc-ref>"
-      # — the doc-ref is shown to the reader so the
-      # GAP is actionable, not just informational.
-      missing_entry="${EXPECTED_MISSING[$contour]:-false}"
-      if [ "$missing_entry" = "false" ]; then
-        fail_violation "P4: $contour: field '$field' not found in TurnReplayTrace"
-      else
-        doc_ref="${missing_entry#true|}"
-        echo "       GAP $contour ($field) — Package 3 work item; see $doc_ref"
-      fi
+      fail_violation "P4: $contour: field '$field' not found in TurnReplayTrace"
     fi
   done
 fi

@@ -1,0 +1,588 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.TrainingCycle
+<span class="lineno">    9 </span>Description : Phase 10 — Offline training cycle: extract traces,
+<span class="lineno">   10 </span>  generate bounded calibration candidates, evaluate offline,
+<span class="lineno">   11 </span>  promote non-regressing winners, rollback-ready.
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>This module implements the first real training cycle for QxFx0.
+<span class="lineno">   14 </span>It is pure and offline: no live-turn state is mutated.
+<span class="lineno">   15 </span>The cycle:
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>1. Extracts a training dataset from 'SystemState' history
+<span class="lineno">   18 </span>   ('CalibrationSnapshot's, 'KnowledgeTree' health, need trends).
+<span class="lineno">   19 </span>2. Generates a bounded pool of 'CalibrationCandidate's by
+<span class="lineno">   20 </span>   perturbing 'SalienceWeights' and 'FieldHeuristics'.
+<span class="lineno">   21 </span>3. Evaluates each candidate against the dataset using proxy
+<span class="lineno">   22 </span>   metrics (conatus trend, uncertainty, repair-loop frequency,
+<span class="lineno">   23 </span>   reject-rate deltas).
+<span class="lineno">   24 </span>4. Accepts only non-regressing candidates; the best is promoted
+<span class="lineno">   25 </span>   with a 'CalibrationId' and rollback linkage.
+<span class="lineno">   26 </span>5. Emits a 'TrainingCycleOutcome' with full telemetry.
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>All evaluation is fail-closed: any dubious candidate is rejected
+<span class="lineno">   29 </span>with a typed 'TrainingRejectReason'.
+<span class="lineno">   30 </span>-}
+<span class="lineno">   31 </span>module QxFx0.Learning.TrainingCycle
+<span class="lineno">   32 </span>  ( -- * Dataset
+<span class="lineno">   33 </span>    TrainingTrace(..)
+<span class="lineno">   34 </span>  , TrainingDataset(..)
+<span class="lineno">   35 </span>  , DatasetStats(..)
+<span class="lineno">   36 </span>  , extractTrainingDataset
+<span class="lineno">   37 </span>    -- * Candidate generation
+<span class="lineno">   38 </span>  , CalibrationCandidate(..)
+<span class="lineno">   39 </span>  , CandidateType(..)
+<span class="lineno">   40 </span>  , generateCandidates
+<span class="lineno">   41 </span>  , defaultTrainingSignals
+<span class="lineno">   42 </span>    -- * Offline evaluation
+<span class="lineno">   43 </span>  , CandidateEvaluation(..)
+<span class="lineno">   44 </span>  , EvaluationMetrics(..)
+<span class="lineno">   45 </span>  , TrainingRejectReason(..)
+<span class="lineno">   46 </span>  , CandidateVerdict(..)
+<span class="lineno">   47 </span>  , evaluateCandidate
+<span class="lineno">   48 </span>  , evaluateAllCandidates
+<span class="lineno">   49 </span>    -- * Promotion / rollback
+<span class="lineno">   50 </span>  , TrainingCycleOutcome(..)
+<span class="lineno">   51 </span>  , TrainingCycleConfig(..)
+<span class="lineno">   52 </span>  , defaultTrainingCycleConfig
+<span class="lineno">   53 </span>  , runTrainingCycle
+<span class="lineno">   54 </span>  , promoteCandidate
+<span class="lineno">   55 </span>  , rollbackTrainingCycle
+<span class="lineno">   56 </span>  , renderTrainingRejectReason
+<span class="lineno">   57 </span>  ) where
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   60 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   61 </span>import Data.List (sortOn)
+<span class="lineno">   62 </span>import Data.Maybe (catMaybes)
+<span class="lineno">   63 </span>import Data.Text (Text)
+<span class="lineno">   64 </span>import qualified Data.Text as T
+<span class="lineno">   65 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   66 </span>import GHC.Generics (Generic)
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>import QxFx0.Learning.Calibration
+<span class="lineno">   69 </span>  ( CalibrationId(..)
+<span class="lineno">   70 </span>  , CalibrationEntry(..)
+<span class="lineno">   71 </span>  , CalibrationLog(..)
+<span class="lineno">   72 </span>  , CalibrationProposal(..)
+<span class="lineno">   73 </span>  , CalibrationStatus(..)
+<span class="lineno">   74 </span>  , acceptProposal
+<span class="lineno">   75 </span>  , emptyCalibrationLog
+<span class="lineno">   76 </span>  )
+<span class="lineno">   77 </span>import QxFx0.Learning.KnowledgeTree (KnowledgeTree, branchHealthTrend)
+<span class="lineno">   78 </span>import QxFx0.Learning.Need (LearningNeedState(..), NeedTrend(..), lnsHistory)
+<span class="lineno">   79 </span>import QxFx0.Learning.Signal
+<span class="lineno">   80 </span>  ( CalibrationDecision(..)
+<span class="lineno">   81 </span>  , CalibrationSignal(..)
+<span class="lineno">   82 </span>  , CalibrationSnapshot(..)
+<span class="lineno">   83 </span>  , SignalComponents(..)
+<span class="lineno">   84 </span>  , computeCalibrationSignal
+<span class="lineno">   85 </span>  , emptySignalComponents
+<span class="lineno">   86 </span>  )
+<span class="lineno">   87 </span>import QxFx0.Self.Field
+<span class="lineno">   88 </span>  ( FieldHeuristics(..)
+<span class="lineno">   89 </span>  , adaptFieldHeuristics
+<span class="lineno">   90 </span>  , defaultFieldHeuristics
+<span class="lineno">   91 </span>  )
+<span class="lineno">   92 </span>import QxFx0.Self.Salience
+<span class="lineno">   93 </span>  ( SalienceWeights(..)
+<span class="lineno">   94 </span>  , adaptSalienceWeights
+<span class="lineno">   95 </span>  , defaultSalienceWeights
+<span class="lineno">   96 </span>  )
+<span class="lineno">   97 </span>import QxFx0.Types.State.System (SystemState(..), ssCalibrationSnapshots, ssKnowledgeTree, ssLearningNeedState)
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  100 </span>-- Training dataset
+<span class="lineno">  101 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>-- | A single trace extracted from system-state history.
+<span class="lineno">  104 </span>data TrainingTrace = TrainingTrace
+<span class="lineno">  105 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ttTurn</span></span></span>            :: !Int
+<span class="lineno">  106 </span>    -- ^ Turn number.
+<span class="lineno">  107 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ttSignalComponents</span></span></span> :: !SignalComponents
+<span class="lineno">  108 </span>    -- ^ Four feature values that fed the signal at this turn.
+<span class="lineno">  109 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ttSignal</span></span></span>          :: !Double
+<span class="lineno">  110 </span>    -- ^ Final clamped signal value.
+<span class="lineno">  111 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ttDecision</span></span></span>        :: !CalibrationDecision
+<span class="lineno">  112 </span>    -- ^ Decision taken by the pipeline.
+<span class="lineno">  113 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ttNeedLevel</span></span></span>       :: !Double
+<span class="lineno">  114 </span>    -- ^ Learning-need level at this turn.
+<span class="lineno">  115 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ttTreeHealth</span></span></span>      :: !Double
+<span class="lineno">  116 </span>    -- ^ Knowledge-tree health proxy at this turn.
+<span class="lineno">  117 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ttRepairLoopCount</span></span></span> :: !Int
+<span class="lineno">  118 </span>    -- ^ Repair-loop count in the recent window.
+<span class="lineno">  119 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  120 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>-- | Normalised training dataset split into train/eval subsets.
+<span class="lineno">  123 </span>data TrainingDataset = TrainingDataset
+<span class="lineno">  124 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tdTraces</span></span></span> :: ![TrainingTrace]
+<span class="lineno">  125 </span>    -- ^ All traces, chronological order (oldest first).
+<span class="lineno">  126 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdTrain</span></span></span>  :: ![TrainingTrace]
+<span class="lineno">  127 </span>    -- ^ Training subset (~70 % of traces).
+<span class="lineno">  128 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdEval</span></span></span>   :: ![TrainingTrace]
+<span class="lineno">  129 </span>    -- ^ Evaluation subset (~30 % of traces).
+<span class="lineno">  130 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tdStats</span></span></span>  :: !DatasetStats
+<span class="lineno">  131 </span>    -- ^ Aggregated statistics.
+<span class="lineno">  132 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  133 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  134 </span>
+<span class="lineno">  135 </span>-- | Aggregate statistics for a dataset.
+<span class="lineno">  136 </span>data DatasetStats = DatasetStats
+<span class="lineno">  137 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">dsTotalTurns</span></span></span>          :: !Int
+<span class="lineno">  138 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dsAcceptedProposals</span></span></span>   :: !Int
+<span class="lineno">  139 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dsRejectedProposals</span></span></span>   :: !Int
+<span class="lineno">  140 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">dsTransportErrors</span></span></span>     :: !Int
+<span class="lineno">  141 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">dsFallbackHeavySessions</span></span></span> :: !Int
+<span class="lineno">  142 </span>    -- ^ Sessions where &gt;50 % of turns used recovery or fallback.
+<span class="lineno">  143 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  144 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>-- | Extract a 'TrainingDataset' from a 'SystemState'.
+<span class="lineno">  147 </span>--
+<span class="lineno">  148 </span>-- Uses 'ssCalibrationSnapshots' as the primary trace source.
+<span class="lineno">  149 </span>-- If fewer than 5 snapshots exist, returns an empty dataset
+<span class="lineno">  150 </span>-- (the training cycle needs minimal history to be meaningful).
+<span class="lineno">  151 </span>extractTrainingDataset :: SystemState -&gt; TrainingDataset
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">extractTrainingDataset ss =</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">let snaps = ssCalibrationSnapshots ss</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">needState = ssLearningNeedState ss</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">tree = ssKnowledgeTree ss</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">traces = catMaybes (map (snapshotToTrace needState tree) snaps)</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">total = length traces</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">trainEnd = (total * 7) `div` 10</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">(train, eval) = splitAt trainEnd traces</span>
+<span class="lineno">  160 </span><span class="spaces">      </span><span class="istickedoff">stats = computeDatasetStats traces</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlyfalse">total &lt; 5</span></span>
+<span class="lineno">  162 </span><span class="spaces">       </span><span class="istickedoff">then <span class="nottickedoff">TrainingDataset [] [] [] (DatasetStats 0 0 0 0 0)</span></span>
+<span class="lineno">  163 </span><span class="spaces">       </span><span class="istickedoff">else TrainingDataset traces train eval stats</span></span>
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>snapshotToTrace :: LearningNeedState -&gt; KnowledgeTree -&gt; CalibrationSnapshot -&gt; Maybe TrainingTrace
+<span class="lineno">  166 </span><span class="decl"><span class="istickedoff">snapshotToTrace needState tree snap =</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">let comps = csComponents snap</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">health = branchHealthTrend tree</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">-- Repair-loop proxy: count of recent high-need turns.</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">recentLevels = map <span class="nottickedoff">snd</span> (take 5 (reverse (lnsHistory needState)))</span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">loopCount = length (filter <span class="nottickedoff">(&gt; 0.6)</span> recentLevels)</span>
+<span class="lineno">  172 </span><span class="spaces">  </span><span class="istickedoff">in Just TrainingTrace</span>
+<span class="lineno">  173 </span><span class="spaces">       </span><span class="istickedoff">{ ttTurn            = fromIntegral (T.length (csRunId snap))  -- proxy; real turn not in snapshot</span>
+<span class="lineno">  174 </span><span class="spaces">       </span><span class="istickedoff">, ttSignalComponents = comps</span>
+<span class="lineno">  175 </span><span class="spaces">       </span><span class="istickedoff">, ttSignal          = csSignal snap</span>
+<span class="lineno">  176 </span><span class="spaces">       </span><span class="istickedoff">, ttDecision        = csDecision snap</span>
+<span class="lineno">  177 </span><span class="spaces">       </span><span class="istickedoff">, ttNeedLevel       = 0.0  -- not directly available in snapshot; filled from needState below</span>
+<span class="lineno">  178 </span><span class="spaces">       </span><span class="istickedoff">, ttTreeHealth      = health</span>
+<span class="lineno">  179 </span><span class="spaces">       </span><span class="istickedoff">, ttRepairLoopCount = loopCount</span>
+<span class="lineno">  180 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>-- | Override need levels from the need-state history when available.
+<span class="lineno">  183 </span>-- Snapshots don't carry turn numbers, so we zip by position.
+<span class="lineno">  184 </span>mergeNeedLevels :: LearningNeedState -&gt; [TrainingTrace] -&gt; [TrainingTrace]
+<span class="lineno">  185 </span><span class="decl"><span class="nottickedoff">mergeNeedLevels needState traces =</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="nottickedoff">let hist = lnsHistory needState</span>
+<span class="lineno">  187 </span><span class="spaces">      </span><span class="nottickedoff">histLen = length hist</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="nottickedoff">go [] _ = []</span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="nottickedoff">go ts [] = ts</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="nottickedoff">go (t : ts) ((_, lvl) : ls) = t { ttNeedLevel = lvl } : go ts ls</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="nottickedoff">in if null hist then traces else go traces (reverse hist)</span></span>
+<span class="lineno">  192 </span>
+<span class="lineno">  193 </span>computeDatasetStats :: [TrainingTrace] -&gt; DatasetStats
+<span class="lineno">  194 </span><span class="decl"><span class="istickedoff">computeDatasetStats traces =</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">let total = length traces</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">accepted = length (filter (\t -&gt; ttDecision t == CdApplySignal) traces)</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">rejected = length (filter (\t -&gt; ttDecision t `elem` [CdHoldLowConfidence, CdHoldGuardrails]) traces)</span>
+<span class="lineno">  198 </span><span class="spaces">      </span><span class="istickedoff">errors = length (filter (\t -&gt; abs (ttSignal t) &lt; 0.01 &amp;&amp; ttDecision t == CdHoldNoNeed) traces)</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="istickedoff">-- Fallback-heavy proxy: turns where signal was near-zero but decision was not CdHoldNoNeed</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="istickedoff">fallback = length (filter (\t -&gt; abs (ttSignal t) &lt; 0.05 &amp;&amp; ttDecision t /= CdHoldNoNeed) traces)</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="istickedoff">fallbackSessions = if <span class="tickonlyfalse">total &gt; 0 &amp;&amp; (fromIntegral fallback / fromIntegral total :: Double) &gt; 0.5</span> then <span class="nottickedoff">1</span> else 0</span>
+<span class="lineno">  202 </span><span class="spaces">  </span><span class="istickedoff">in DatasetStats total accepted rejected errors fallbackSessions</span></span>
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  205 </span>-- Candidate generation (bounded)
+<span class="lineno">  206 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  207 </span>
+<span class="lineno">  208 </span>-- | Which tunable parameter set the candidate perturbs.
+<span class="lineno">  209 </span>data CandidateType
+<span class="lineno">  210 </span>  = CandidateSalience
+<span class="lineno">  211 </span>  | CandidateField
+<span class="lineno">  212 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  213 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  214 </span>
+<span class="lineno">  215 </span>-- | A calibration candidate with full provenance.
+<span class="lineno">  216 </span>data CalibrationCandidate = CalibrationCandidate
+<span class="lineno">  217 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ccId</span></span></span>               :: !CalibrationId
+<span class="lineno">  218 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ccType</span></span></span>             :: !CandidateType
+<span class="lineno">  219 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ccSalienceWeights</span></span></span>  :: !(Maybe SalienceWeights)
+<span class="lineno">  220 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ccFieldHeuristics</span></span></span>  :: !(Maybe FieldHeuristics)
+<span class="lineno">  221 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ccSourceRunId</span></span></span>      :: !Text
+<span class="lineno">  222 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ccGenerationSignal</span></span></span> :: !Double
+<span class="lineno">  223 </span>    -- ^ The adaptation signal used to produce this candidate.
+<span class="lineno">  224 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ccTimestamp</span></span></span>        :: !UTCTime
+<span class="lineno">  225 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  226 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  227 </span>
+<span class="lineno">  228 </span>-- | Default perturbation signals.  Seven values give 14 candidates
+<span class="lineno">  229 </span>-- total (7 salience + 7 field), well inside the 10–30 bound.
+<span class="lineno">  230 </span>defaultTrainingSignals :: [Double]
+<span class="lineno">  231 </span><span class="decl"><span class="istickedoff">defaultTrainingSignals = [-0.30, -0.20, -0.10, 0.10, 0.20, 0.30]</span></span>
+<span class="lineno">  232 </span>
+<span class="lineno">  233 </span>-- | Generate a bounded pool of calibration candidates.
+<span class="lineno">  234 </span>--
+<span class="lineno">  235 </span>-- Each signal value produces one 'SalienceWeights' candidate and one
+<span class="lineno">  236 </span>-- 'FieldHeuristics' candidate by applying the existing bounded
+<span class="lineno">  237 </span>-- adaptation functions 'adaptSalienceWeights' / 'adaptFieldHeuristics'.
+<span class="lineno">  238 </span>generateCandidates
+<span class="lineno">  239 </span>  :: CalibrationId     -- ^ starting version id
+<span class="lineno">  240 </span>  -&gt; [Double]          -- ^ perturbation signals
+<span class="lineno">  241 </span>  -&gt; Text              -- ^ source run id
+<span class="lineno">  242 </span>  -&gt; UTCTime           -- ^ generation timestamp
+<span class="lineno">  243 </span>  -&gt; [CalibrationCandidate]
+<span class="lineno">  244 </span><span class="decl"><span class="istickedoff">generateCandidates startId signals runId tstamp =</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">let salienceBase = defaultSalienceWeights</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">fieldBase  = defaultFieldHeuristics</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">go _ [] = []</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">go cid (s : ss) =</span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="istickedoff">mkSalience cid s : mkField (CalibrationId (unCalibrationId cid + 1)) s</span>
+<span class="lineno">  250 </span><span class="spaces">        </span><span class="istickedoff">: go (CalibrationId (unCalibrationId cid + 2)) ss</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">mkSalience cid s = CalibrationCandidate</span>
+<span class="lineno">  252 </span><span class="spaces">        </span><span class="istickedoff">{ ccId = cid</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="istickedoff">, ccType = CandidateSalience</span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="istickedoff">, ccSalienceWeights = Just (adaptSalienceWeights s salienceBase)</span>
+<span class="lineno">  255 </span><span class="spaces">        </span><span class="istickedoff">, ccFieldHeuristics = Nothing</span>
+<span class="lineno">  256 </span><span class="spaces">        </span><span class="istickedoff">, ccSourceRunId = runId</span>
+<span class="lineno">  257 </span><span class="spaces">        </span><span class="istickedoff">, ccGenerationSignal = s</span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="istickedoff">, ccTimestamp = tstamp</span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  260 </span><span class="spaces">      </span><span class="istickedoff">mkField cid s = CalibrationCandidate</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="istickedoff">{ ccId = cid</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="istickedoff">, ccType = CandidateField</span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="istickedoff">, ccSalienceWeights = Nothing</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">, ccFieldHeuristics = Just (adaptFieldHeuristics s fieldBase)</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">, ccSourceRunId = runId</span>
+<span class="lineno">  266 </span><span class="spaces">        </span><span class="istickedoff">, ccGenerationSignal = s</span>
+<span class="lineno">  267 </span><span class="spaces">        </span><span class="istickedoff">, ccTimestamp = tstamp</span>
+<span class="lineno">  268 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  269 </span><span class="spaces">  </span><span class="istickedoff">in go startId signals</span></span>
+<span class="lineno">  270 </span>
+<span class="lineno">  271 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  272 </span>-- Offline evaluation (proxy metrics)
+<span class="lineno">  273 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  274 </span>
+<span class="lineno">  275 </span>-- | Verdict for a single candidate.
+<span class="lineno">  276 </span>data CandidateVerdict
+<span class="lineno">  277 </span>  = CandidateAccept
+<span class="lineno">  278 </span>  | CandidateReject
+<span class="lineno">  279 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  280 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  281 </span>
+<span class="lineno">  282 </span>-- | Typed reject reason for telemetry and audit.
+<span class="lineno">  283 </span>data TrainingRejectReason
+<span class="lineno">  284 </span>  = TrRegressionConatus
+<span class="lineno">  285 </span>    -- ^ Projected conatus trend worse than baseline.
+<span class="lineno">  286 </span>  | TrRegressionUncertainty
+<span class="lineno">  287 </span>    -- ^ Projected uncertainty (oscillation) higher than baseline.
+<span class="lineno">  288 </span>  | TrRegressionRepair
+<span class="lineno">  289 </span>    -- ^ Estimated repair-loop frequency would increase.
+<span class="lineno">  290 </span>  | TrRegressionRejectRate
+<span class="lineno">  291 </span>    -- ^ Estimated reject rate would increase.
+<span class="lineno">  292 </span>  | TrUnstableVariance
+<span class="lineno">  293 </span>    -- ^ Metrics show high variance across the eval window.
+<span class="lineno">  294 </span>  | TrInsufficientSignal
+<span class="lineno">  295 </span>    -- ^ Dataset too small or too weak to justify adaptation.
+<span class="lineno">  296 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  297 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  298 </span>
+<span class="lineno">  299 </span>-- | Proxy metrics comparing candidate vs baseline on the eval subset.
+<span class="lineno">  300 </span>data EvaluationMetrics = EvaluationMetrics
+<span class="lineno">  301 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">emConatusTrendDelta</span></span></span>    :: !Double
+<span class="lineno">  302 </span>    -- ^ Negative = candidate improves conatus trend (need rising less fast).
+<span class="lineno">  303 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emUncertaintyDelta</span></span></span>     :: !Double
+<span class="lineno">  304 </span>    -- ^ Negative = candidate reduces need-level oscillation.
+<span class="lineno">  305 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emRepairLoopFreqDelta</span></span></span>  :: !Double
+<span class="lineno">  306 </span>    -- ^ Negative = candidate reduces estimated repair-loop frequency.
+<span class="lineno">  307 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emRejectRateDelta</span></span></span>      :: !Double
+<span class="lineno">  308 </span>    -- ^ Negative = candidate reduces estimated calibration reject rate.
+<span class="lineno">  309 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">emNetScore</span></span></span>             :: !Double
+<span class="lineno">  310 </span>    -- ^ Weighted composite: higher = better.
+<span class="lineno">  311 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  312 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  313 </span>
+<span class="lineno">  314 </span>-- | Full evaluation result for one candidate.
+<span class="lineno">  315 </span>data CandidateEvaluation = CandidateEvaluation
+<span class="lineno">  316 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceCandidate</span></span></span>    :: !CalibrationCandidate
+<span class="lineno">  317 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceMetrics</span></span></span>      :: !EvaluationMetrics
+<span class="lineno">  318 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceVerdict</span></span></span>      :: !CandidateVerdict
+<span class="lineno">  319 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ceRejectReason</span></span></span> :: !(Maybe TrainingRejectReason)
+<span class="lineno">  320 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  321 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  322 </span>
+<span class="lineno">  323 </span>-- | Evaluate a single candidate against a 'TrainingDataset'.
+<span class="lineno">  324 </span>--
+<span class="lineno">  325 </span>-- This is a lightweight proxy evaluation: it does NOT replay full
+<span class="lineno">  326 </span>-- turns. Instead it projects the candidate's parameter changes onto
+<span class="lineno">  327 </span>-- the historical 'TrainingTrace' window and computes delta metrics.
+<span class="lineno">  328 </span>evaluateCandidate :: TrainingDataset -&gt; CalibrationCandidate -&gt; CandidateEvaluation
+<span class="lineno">  329 </span><span class="decl"><span class="istickedoff">evaluateCandidate dataset candidate =</span>
+<span class="lineno">  330 </span><span class="spaces">  </span><span class="istickedoff">let evalTraces = tdEval dataset</span>
+<span class="lineno">  331 </span><span class="spaces">      </span><span class="istickedoff">baselineMetrics = computeBaselineMetrics evalTraces</span>
+<span class="lineno">  332 </span><span class="spaces">      </span><span class="istickedoff">candidateMetrics = computeCandidateMetrics candidate evalTraces</span>
+<span class="lineno">  333 </span><span class="spaces">      </span><span class="istickedoff">deltas = computeDeltas baselineMetrics candidateMetrics</span>
+<span class="lineno">  334 </span><span class="spaces">      </span><span class="istickedoff">-- Acceptance policy (fail-closed)</span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">(verdict, mReason) = applyAcceptancePolicy deltas evalTraces</span>
+<span class="lineno">  336 </span><span class="spaces">  </span><span class="istickedoff">in CandidateEvaluation</span>
+<span class="lineno">  337 </span><span class="spaces">       </span><span class="istickedoff">{ ceCandidate = candidate</span>
+<span class="lineno">  338 </span><span class="spaces">       </span><span class="istickedoff">, ceMetrics = deltas</span>
+<span class="lineno">  339 </span><span class="spaces">       </span><span class="istickedoff">, ceVerdict = verdict</span>
+<span class="lineno">  340 </span><span class="spaces">       </span><span class="istickedoff">, ceRejectReason = mReason</span>
+<span class="lineno">  341 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  342 </span>
+<span class="lineno">  343 </span>-- | Baseline metrics from the eval subset using current defaults.
+<span class="lineno">  344 </span>computeBaselineMetrics :: [TrainingTrace] -&gt; (Double, Double, Double, Double)
+<span class="lineno">  345 </span><span class="decl"><span class="istickedoff">computeBaselineMetrics traces =</span>
+<span class="lineno">  346 </span><span class="spaces">  </span><span class="istickedoff">let conatusTrend = slopeOfNeedLevels traces</span>
+<span class="lineno">  347 </span><span class="spaces">      </span><span class="istickedoff">uncertainty  = oscillationOfNeedLevels traces</span>
+<span class="lineno">  348 </span><span class="spaces">      </span><span class="istickedoff">repairFreq   = repairLoopProxy traces</span>
+<span class="lineno">  349 </span><span class="spaces">      </span><span class="istickedoff">rejectRate   = rejectRateProxy traces</span>
+<span class="lineno">  350 </span><span class="spaces">  </span><span class="istickedoff">in (conatusTrend, uncertainty, repairFreq, rejectRate)</span></span>
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>computeCandidateMetrics :: CalibrationCandidate -&gt; [TrainingTrace] -&gt; (Double, Double, Double, Double)
+<span class="lineno">  353 </span><span class="decl"><span class="istickedoff">computeCandidateMetrics candidate traces =</span>
+<span class="lineno">  354 </span><span class="spaces">  </span><span class="istickedoff">-- Proxy: apply candidate's conservatism factor to historical traces</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="istickedoff">-- and recompute the metrics.</span>
+<span class="lineno">  356 </span><span class="spaces">  </span><span class="istickedoff">let factor = candidateConservatism candidate</span>
+<span class="lineno">  357 </span><span class="spaces">      </span><span class="istickedoff">-- Adjust each trace's need level by the conservatism factor</span>
+<span class="lineno">  358 </span><span class="spaces">      </span><span class="istickedoff">-- (conservative candidate damps rising needs, amplifies falling needs)</span>
+<span class="lineno">  359 </span><span class="spaces">      </span><span class="istickedoff">adjusted = map (adjustTrace factor) traces</span>
+<span class="lineno">  360 </span><span class="spaces">  </span><span class="istickedoff">in computeBaselineMetrics adjusted</span></span>
+<span class="lineno">  361 </span>
+<span class="lineno">  362 </span>-- | Conservatism factor: &gt; 0 means more conservative, &lt; 0 means more aggressive.
+<span class="lineno">  363 </span>candidateConservatism :: CalibrationCandidate -&gt; Double
+<span class="lineno">  364 </span><span class="decl"><span class="istickedoff">candidateConservatism c = case ccType c of</span>
+<span class="lineno">  365 </span><span class="spaces">  </span><span class="istickedoff">CandidateSalience -&gt;</span>
+<span class="lineno">  366 </span><span class="spaces">    </span><span class="istickedoff">case ccSalienceWeights c of</span>
+<span class="lineno">  367 </span><span class="spaces">      </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  368 </span><span class="spaces">      </span><span class="istickedoff">Just w  -&gt;</span>
+<span class="lineno">  369 </span><span class="spaces">        </span><span class="istickedoff">-- Higher field-confidence weight and lower counterfactual = more conservative</span>
+<span class="lineno">  370 </span><span class="spaces">        </span><span class="istickedoff">(weightFieldConfidence w - weightFieldConfidence defaultSalienceWeights)</span>
+<span class="lineno">  371 </span><span class="spaces">        </span><span class="istickedoff">- (weightCounterfactual w - weightCounterfactual defaultSalienceWeights)</span>
+<span class="lineno">  372 </span><span class="spaces">  </span><span class="istickedoff">CandidateField -&gt;</span>
+<span class="lineno">  373 </span><span class="spaces">    </span><span class="istickedoff">case ccFieldHeuristics c of</span>
+<span class="lineno">  374 </span><span class="spaces">      </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  375 </span><span class="spaces">      </span><span class="istickedoff">Just fh -&gt;</span>
+<span class="lineno">  376 </span><span class="spaces">        </span><span class="istickedoff">-- Lower streak boost = more conservative = positive factor</span>
+<span class="lineno">  377 </span><span class="spaces">        </span><span class="istickedoff">let defBoost = fhHolisticStreakBoostRate defaultFieldHeuristics</span>
+<span class="lineno">  378 </span><span class="spaces">            </span><span class="istickedoff">candBoost = fhHolisticStreakBoostRate fh</span>
+<span class="lineno">  379 </span><span class="spaces">        </span><span class="istickedoff">in defBoost - candBoost</span></span>
+<span class="lineno">  380 </span>
+<span class="lineno">  381 </span>-- | Adjust a trace's need level by the candidate's conservatism factor.
+<span class="lineno">  382 </span>-- Conservative candidates damp positive trends and amplify negative trends.
+<span class="lineno">  383 </span>adjustTrace :: Double -&gt; TrainingTrace -&gt; TrainingTrace
+<span class="lineno">  384 </span><span class="decl"><span class="istickedoff">adjustTrace factor t =</span>
+<span class="lineno">  385 </span><span class="spaces">  </span><span class="istickedoff">let lvl = ttNeedLevel t</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">-- Damp the level toward stability based on conservatism</span>
+<span class="lineno">  387 </span><span class="spaces">      </span><span class="istickedoff">adjusted = if lvl &gt; 0.5</span>
+<span class="lineno">  388 </span><span class="spaces">                   </span><span class="istickedoff">then max 0.0 (lvl - factor * 0.1)  -- conservative: reduce high need</span>
+<span class="lineno">  389 </span><span class="spaces">                   </span><span class="istickedoff">else min 1.0 (lvl + factor * 0.05) -- conservative: boost low need slightly</span>
+<span class="lineno">  390 </span><span class="spaces">  </span><span class="istickedoff">in t { ttNeedLevel = adjusted }</span></span>
+<span class="lineno">  391 </span>
+<span class="lineno">  392 </span>-- | Compute metric deltas: candidate minus baseline.
+<span class="lineno">  393 </span>-- Negative delta = improvement (candidate is better).
+<span class="lineno">  394 </span>computeDeltas :: (Double, Double, Double, Double) -&gt; (Double, Double, Double, Double) -&gt; EvaluationMetrics
+<span class="lineno">  395 </span><span class="decl"><span class="istickedoff">computeDeltas (bCon, bUnc, bRep, bRej) (cCon, cUnc, cRep, cRej) =</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">let dCon = cCon - bCon</span>
+<span class="lineno">  397 </span><span class="spaces">      </span><span class="istickedoff">dUnc = cUnc - bUnc</span>
+<span class="lineno">  398 </span><span class="spaces">      </span><span class="istickedoff">dRep = cRep - bRep</span>
+<span class="lineno">  399 </span><span class="spaces">      </span><span class="istickedoff">dRej = cRej - bRej</span>
+<span class="lineno">  400 </span><span class="spaces">      </span><span class="istickedoff">-- Net score: weighted composite (higher = better)</span>
+<span class="lineno">  401 </span><span class="spaces">      </span><span class="istickedoff">net = negate (0.35 * dCon + 0.25 * dUnc + 0.25 * dRep + 0.15 * dRej)</span>
+<span class="lineno">  402 </span><span class="spaces">  </span><span class="istickedoff">in EvaluationMetrics dCon dUnc dRep dRej net</span></span>
+<span class="lineno">  403 </span>
+<span class="lineno">  404 </span>-- | Acceptance policy (fail-closed).
+<span class="lineno">  405 </span>applyAcceptancePolicy :: EvaluationMetrics -&gt; [TrainingTrace] -&gt; (CandidateVerdict, Maybe TrainingRejectReason)
+<span class="lineno">  406 </span><span class="decl"><span class="istickedoff">applyAcceptancePolicy metrics traces</span>
+<span class="lineno">  407 </span><span class="spaces">  </span><span class="istickedoff">-- Insufficient signal: need at least 3 eval traces.</span>
+<span class="lineno">  408 </span><span class="spaces">  </span><span class="istickedoff">| length traces &lt; 3 =</span>
+<span class="lineno">  409 </span><span class="spaces">      </span><span class="istickedoff">(CandidateReject, Just <span class="nottickedoff">TrInsufficientSignal</span>)</span>
+<span class="lineno">  410 </span><span class="spaces">  </span><span class="istickedoff">-- Strict non-regression: conatus must not regress.</span>
+<span class="lineno">  411 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">emConatusTrendDelta metrics &gt; 0.05</span> =</span>
+<span class="lineno">  412 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(CandidateReject, Just TrRegressionConatus)</span></span>
+<span class="lineno">  413 </span><span class="spaces">  </span><span class="istickedoff">-- Uncertainty must not increase significantly.</span>
+<span class="lineno">  414 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">emUncertaintyDelta metrics &gt; 0.05</span> =</span>
+<span class="lineno">  415 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(CandidateReject, Just TrRegressionUncertainty)</span></span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">-- Repair-loop frequency must not increase.</span>
+<span class="lineno">  417 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">emRepairLoopFreqDelta metrics &gt; 0.05</span> =</span>
+<span class="lineno">  418 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(CandidateReject, Just TrRegressionRepair)</span></span>
+<span class="lineno">  419 </span><span class="spaces">  </span><span class="istickedoff">-- Reject rate must not increase.</span>
+<span class="lineno">  420 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">emRejectRateDelta metrics &gt; 0.05</span> =</span>
+<span class="lineno">  421 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(CandidateReject, Just TrRegressionRejectRate)</span></span>
+<span class="lineno">  422 </span><span class="spaces">  </span><span class="istickedoff">-- Unstable variance: if all deltas are near-zero but net score is also near-zero,</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">-- the candidate is effectively a no-op with noise.</span>
+<span class="lineno">  424 </span><span class="spaces">  </span><span class="istickedoff">| abs (emNetScore metrics) &lt; 0.001 =</span>
+<span class="lineno">  425 </span><span class="spaces">      </span><span class="istickedoff">(CandidateReject, Just <span class="nottickedoff">TrInsufficientSignal</span>)</span>
+<span class="lineno">  426 </span><span class="spaces">  </span><span class="istickedoff">-- Otherwise accept.</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  428 </span><span class="spaces">      </span><span class="istickedoff">(CandidateAccept, Nothing)</span></span>
+<span class="lineno">  429 </span>
+<span class="lineno">  430 </span>-- | Slope of need levels over the trace window (last 3 points).
+<span class="lineno">  431 </span>slopeOfNeedLevels :: [TrainingTrace] -&gt; Double
+<span class="lineno">  432 </span><span class="decl"><span class="istickedoff">slopeOfNeedLevels traces =</span>
+<span class="lineno">  433 </span><span class="spaces">  </span><span class="istickedoff">let levels = map ttNeedLevel traces</span>
+<span class="lineno">  434 </span><span class="spaces">      </span><span class="istickedoff">recent = take 3 (reverse levels)</span>
+<span class="lineno">  435 </span><span class="spaces">  </span><span class="istickedoff">in case recent of</span>
+<span class="lineno">  436 </span><span class="spaces">       </span><span class="istickedoff">(y2 : y1 : y0 : _) -&gt; ((y2 - y1) + (y1 - y0)) / 2.0</span>
+<span class="lineno">  437 </span><span class="spaces">       </span><span class="istickedoff">_ -&gt; 0.0</span></span>
+<span class="lineno">  438 </span>
+<span class="lineno">  439 </span>-- | Oscillation amplitude (max - min) over the trace window.
+<span class="lineno">  440 </span>oscillationOfNeedLevels :: [TrainingTrace] -&gt; Double
+<span class="lineno">  441 </span><span class="decl"><span class="istickedoff">oscillationOfNeedLevels traces =</span>
+<span class="lineno">  442 </span><span class="spaces">  </span><span class="istickedoff">let levels = map ttNeedLevel traces</span>
+<span class="lineno">  443 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlyfalse">null levels</span> then <span class="nottickedoff">0.0</span> else maximum levels - minimum levels</span></span>
+<span class="lineno">  444 </span>
+<span class="lineno">  445 </span>-- | Proxy for repair-loop frequency: fraction of traces with repair-loop count &gt; 0.
+<span class="lineno">  446 </span>repairLoopProxy :: [TrainingTrace] -&gt; Double
+<span class="lineno">  447 </span><span class="decl"><span class="istickedoff">repairLoopProxy traces =</span>
+<span class="lineno">  448 </span><span class="spaces">  </span><span class="istickedoff">let total = fromIntegral (max 1 (length traces))</span>
+<span class="lineno">  449 </span><span class="spaces">      </span><span class="istickedoff">loops = fromIntegral (length (filter (\t -&gt; ttRepairLoopCount t &gt; 0) traces))</span>
+<span class="lineno">  450 </span><span class="spaces">  </span><span class="istickedoff">in loops / total</span></span>
+<span class="lineno">  451 </span>
+<span class="lineno">  452 </span>-- | Proxy for reject rate: fraction of traces with non-ApplySignal decisions.
+<span class="lineno">  453 </span>rejectRateProxy :: [TrainingTrace] -&gt; Double
+<span class="lineno">  454 </span><span class="decl"><span class="istickedoff">rejectRateProxy traces =</span>
+<span class="lineno">  455 </span><span class="spaces">  </span><span class="istickedoff">let total = fromIntegral (max 1 (length traces))</span>
+<span class="lineno">  456 </span><span class="spaces">      </span><span class="istickedoff">rejects = fromIntegral (length (filter (\t -&gt; ttDecision t /= CdApplySignal) traces))</span>
+<span class="lineno">  457 </span><span class="spaces">  </span><span class="istickedoff">in rejects / total</span></span>
+<span class="lineno">  458 </span>
+<span class="lineno">  459 </span>-- | Evaluate all candidates, returning them sorted by net score (best first).
+<span class="lineno">  460 </span>evaluateAllCandidates :: TrainingDataset -&gt; [CalibrationCandidate] -&gt; [CandidateEvaluation]
+<span class="lineno">  461 </span><span class="decl"><span class="istickedoff">evaluateAllCandidates dataset candidates =</span>
+<span class="lineno">  462 </span><span class="spaces">  </span><span class="istickedoff">let evals = map (evaluateCandidate dataset) candidates</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="istickedoff">accepted = filter (\e -&gt; ceVerdict e == CandidateAccept) evals</span>
+<span class="lineno">  464 </span><span class="spaces">  </span><span class="istickedoff">in sortOn <span class="nottickedoff">(negate . emNetScore . ceMetrics)</span> accepted ++ filter (\e -&gt; ceVerdict e == CandidateReject) evals</span></span>
+<span class="lineno">  465 </span>
+<span class="lineno">  466 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  467 </span>-- Promotion / rollback
+<span class="lineno">  468 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  469 </span>
+<span class="lineno">  470 </span>-- | Configuration for a training cycle.
+<span class="lineno">  471 </span>data TrainingCycleConfig = TrainingCycleConfig
+<span class="lineno">  472 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tccCycleId</span></span></span>       :: !Text
+<span class="lineno">  473 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tccStartVersion</span></span></span>  :: !CalibrationId
+<span class="lineno">  474 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tccSignals</span></span></span>       :: ![Double]
+<span class="lineno">  475 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tccMinEvalTraces</span></span></span> :: !Int
+<span class="lineno">  476 </span>    -- ^ Minimum eval traces required (default 3).
+<span class="lineno">  477 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  478 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  479 </span>
+<span class="lineno">  480 </span>defaultTrainingCycleConfig :: Text -&gt; CalibrationId -&gt; TrainingCycleConfig
+<span class="lineno">  481 </span><span class="decl"><span class="istickedoff">defaultTrainingCycleConfig cycleId startId = TrainingCycleConfig</span>
+<span class="lineno">  482 </span><span class="spaces">  </span><span class="istickedoff">{ tccCycleId       = cycleId</span>
+<span class="lineno">  483 </span><span class="spaces">  </span><span class="istickedoff">, tccStartVersion  = startId</span>
+<span class="lineno">  484 </span><span class="spaces">  </span><span class="istickedoff">, tccSignals       = defaultTrainingSignals</span>
+<span class="lineno">  485 </span><span class="spaces">  </span><span class="istickedoff">, tccMinEvalTraces = 3</span>
+<span class="lineno">  486 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  487 </span>
+<span class="lineno">  488 </span>-- | Outcome of a complete offline training cycle.
+<span class="lineno">  489 </span>data TrainingCycleOutcome = TrainingCycleOutcome
+<span class="lineno">  490 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tcoCycleId</span></span></span>           :: !Text
+<span class="lineno">  491 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tcoDatasetStats</span></span></span>      :: !DatasetStats
+<span class="lineno">  492 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tcoCandidates</span></span></span>        :: ![CandidateEvaluation]
+<span class="lineno">  493 </span>    -- ^ All evaluated candidates, best first.
+<span class="lineno">  494 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tcoPromotedCandidate</span></span></span> :: !(Maybe CalibrationCandidate)
+<span class="lineno">  495 </span>    -- ^ The single best accepted candidate, if any.
+<span class="lineno">  496 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tcoPreviousVersion</span></span></span>   :: !(Maybe CalibrationId)
+<span class="lineno">  497 </span>    -- ^ Version ID that was current before promotion.
+<span class="lineno">  498 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">tcoRollbackEntry</span></span></span>     :: !(Maybe CalibrationEntry)
+<span class="lineno">  499 </span>    -- ^ Populated if a rollback was simulated (test-only).
+<span class="lineno">  500 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  501 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  502 </span>
+<span class="lineno">  503 </span>-- | Run the full offline training cycle.
+<span class="lineno">  504 </span>--
+<span class="lineno">  505 </span>-- Pure function: takes 'SystemState' (for history) and config,
+<span class="lineno">  506 </span>-- returns 'TrainingCycleOutcome'.  Does NOT mutate any live state.
+<span class="lineno">  507 </span>runTrainingCycle :: SystemState -&gt; TrainingCycleConfig -&gt; UTCTime -&gt; TrainingCycleOutcome
+<span class="lineno">  508 </span><span class="decl"><span class="istickedoff">runTrainingCycle ss cfg tstamp =</span>
+<span class="lineno">  509 </span><span class="spaces">  </span><span class="istickedoff">let dataset = extractTrainingDataset ss</span>
+<span class="lineno">  510 </span><span class="spaces">      </span><span class="istickedoff">candidates = generateCandidates (tccStartVersion cfg) (tccSignals cfg) (tccCycleId cfg) tstamp</span>
+<span class="lineno">  511 </span><span class="spaces">      </span><span class="istickedoff">evaluations = evaluateAllCandidates dataset candidates</span>
+<span class="lineno">  512 </span><span class="spaces">      </span><span class="istickedoff">promoted = case filter (\e -&gt; ceVerdict e == CandidateAccept) evaluations of</span>
+<span class="lineno">  513 </span><span class="spaces">                   </span><span class="istickedoff">(best : _) -&gt; <span class="nottickedoff">Just (ceCandidate best)</span></span>
+<span class="lineno">  514 </span><span class="spaces">                   </span><span class="istickedoff">_          -&gt; Nothing</span>
+<span class="lineno">  515 </span><span class="spaces">  </span><span class="istickedoff">in TrainingCycleOutcome</span>
+<span class="lineno">  516 </span><span class="spaces">       </span><span class="istickedoff">{ tcoCycleId           = tccCycleId cfg</span>
+<span class="lineno">  517 </span><span class="spaces">       </span><span class="istickedoff">, tcoDatasetStats      = tdStats dataset</span>
+<span class="lineno">  518 </span><span class="spaces">       </span><span class="istickedoff">, tcoCandidates        = evaluations</span>
+<span class="lineno">  519 </span><span class="spaces">       </span><span class="istickedoff">, tcoPromotedCandidate = promoted</span>
+<span class="lineno">  520 </span><span class="spaces">       </span><span class="istickedoff">, tcoPreviousVersion   = Just (tccStartVersion cfg)</span>
+<span class="lineno">  521 </span><span class="spaces">       </span><span class="istickedoff">, tcoRollbackEntry   = Nothing</span>
+<span class="lineno">  522 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  523 </span>
+<span class="lineno">  524 </span>-- | Promote an accepted candidate into the calibration log.
+<span class="lineno">  525 </span>-- Returns the new calibration entry and the next version ID.
+<span class="lineno">  526 </span>promoteCandidate
+<span class="lineno">  527 </span>  :: CalibrationId        -- ^ next available version id
+<span class="lineno">  528 </span>  -&gt; CalibrationCandidate
+<span class="lineno">  529 </span>  -&gt; Int                  -- ^ current turn
+<span class="lineno">  530 </span>  -&gt; Maybe CalibrationId  -- ^ previous version for rollback
+<span class="lineno">  531 </span>  -&gt; Either Text (CalibrationEntry, CalibrationId)
+<span class="lineno">  532 </span><span class="decl"><span class="istickedoff">promoteCandidate nextId cand turn prevId =</span>
+<span class="lineno">  533 </span><span class="spaces">  </span><span class="istickedoff">let proposal = case ccType cand of</span>
+<span class="lineno">  534 </span><span class="spaces">        </span><span class="istickedoff">CandidateSalience -&gt;</span>
+<span class="lineno">  535 </span><span class="spaces">          </span><span class="istickedoff">case ccSalienceWeights cand of</span>
+<span class="lineno">  536 </span><span class="spaces">            </span><span class="istickedoff">Just w  -&gt; Right (ProposalSalienceWeights w)</span>
+<span class="lineno">  537 </span><span class="spaces">            </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">Left &quot;training-cycle promotion missing salience weights&quot;</span></span>
+<span class="lineno">  538 </span><span class="spaces">        </span><span class="istickedoff">CandidateField -&gt;</span>
+<span class="lineno">  539 </span><span class="spaces">          </span><span class="istickedoff">case ccFieldHeuristics cand of</span>
+<span class="lineno">  540 </span><span class="spaces">            </span><span class="istickedoff">Just fh -&gt; <span class="nottickedoff">Right (ProposalFieldHeuristics fh)</span></span>
+<span class="lineno">  541 </span><span class="spaces">            </span><span class="istickedoff">Nothing -&gt; Left &quot;training-cycle promotion missing field heuristics&quot;</span>
+<span class="lineno">  542 </span><span class="spaces">  </span><span class="istickedoff">in fmap (\resolvedProposal -&gt; acceptProposal nextId resolvedProposal turn prevId) proposal</span></span>
+<span class="lineno">  543 </span>
+<span class="lineno">  544 </span>-- | Rollback a promoted training-cycle candidate.
+<span class="lineno">  545 </span>-- Returns the rolled-back entry and the previous version ID that is
+<span class="lineno">  546 </span>-- now current, if the promoted entry had a 'prevId'.
+<span class="lineno">  547 </span>rollbackTrainingCycle :: CalibrationEntry -&gt; Int -&gt; Maybe (CalibrationEntry, CalibrationId)
+<span class="lineno">  548 </span><span class="decl"><span class="istickedoff">rollbackTrainingCycle entry turn =</span>
+<span class="lineno">  549 </span><span class="spaces">  </span><span class="istickedoff">case cePrevId entry of</span>
+<span class="lineno">  550 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  551 </span><span class="spaces">    </span><span class="istickedoff">Just prevId -&gt;</span>
+<span class="lineno">  552 </span><span class="spaces">      </span><span class="istickedoff">let rolled = entry { ceStatus = RolledBack, ceDecidedTurn = Just turn }</span>
+<span class="lineno">  553 </span><span class="spaces">      </span><span class="istickedoff">in Just (rolled, prevId)</span></span>
+<span class="lineno">  554 </span>
+<span class="lineno">  555 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  556 </span>-- Render helpers for telemetry
+<span class="lineno">  557 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  558 </span>
+<span class="lineno">  559 </span>renderTrainingRejectReason :: TrainingRejectReason -&gt; Text
+<span class="lineno">  560 </span><span class="decl"><span class="istickedoff">renderTrainingRejectReason TrRegressionConatus     = &quot;regression_conatus&quot;</span>
+<span class="lineno">  561 </span><span class="spaces"></span><span class="istickedoff">renderTrainingRejectReason TrRegressionUncertainty = &quot;regression_uncertainty&quot;</span>
+<span class="lineno">  562 </span><span class="spaces"></span><span class="istickedoff">renderTrainingRejectReason TrRegressionRepair      = &quot;regression_repair&quot;</span>
+<span class="lineno">  563 </span><span class="spaces"></span><span class="istickedoff">renderTrainingRejectReason TrRegressionRejectRate  = &quot;regression_reject_rate&quot;</span>
+<span class="lineno">  564 </span><span class="spaces"></span><span class="istickedoff">renderTrainingRejectReason TrUnstableVariance      = &quot;unstable_variance&quot;</span>
+<span class="lineno">  565 </span><span class="spaces"></span><span class="istickedoff">renderTrainingRejectReason TrInsufficientSignal    = &quot;insufficient_signal&quot;</span></span>
+
+</pre>
+</body>
+</html>

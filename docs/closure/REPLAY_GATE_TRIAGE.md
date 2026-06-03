@@ -2,7 +2,7 @@
 
 - **Status**: Active (closure-phase follow-up F-13, Package 3
   acceptance criteria §9)
-- **Date**: 2026-06-02 (rev. 2 — aligned with actual code state)
+- **Date**: 2026-06-02 (rev. 3 — trace-gap closure wired in working tree)
 - **Refines**: `docs/closure/REPLAY_GATE_SPEC.md` §3
 - **Related**:
   - `docs/closure/AUTHORITY_MAP.md` §3 (per-module role map)
@@ -10,6 +10,23 @@
   - `docs/closure/SYSTEM_STATE_AUTHORITY.md` (P1 per-field table)
   - `docs/closure/TRACE_SCHEMA.md` (the schema reference, post-rev. 2)
   - `docs/closure/CONTOUR_INDEX.md` (the contour index, post-rev. 2)
+
+## rev. 3 (2026-06-02) — trace-gap closure in working tree
+
+`TurnReplayTrace` now carries the representative
+fields for the 3 previously missing canonical
+contours:
+
+- `trcConatusEnergy`, `trcConatusGateFired`
+- `trcField`
+- `trcIdentityClaims`
+
+The static `check_replay_gate.sh` gate no longer
+treats these as expected gaps; absence is now a
+direct violation. This moves Conatus, Field, and
+Identity from `needs-work` to `passing` in the
+working tree. Full landing still depends on
+build/test/CI.
 
 ## rev. 2 (2026-06-02) — alignment pass
 
@@ -79,8 +96,8 @@ authority-bearing `ss*` field (per `SYSTEM_STATE_AUTHORITY.md`).
 | Contour | Source | Authority-bearing `ss*` | Replay trace fields (actual) |
 |---|---|---|---|
 | Semantic commitments | `ssSemanticAnchor` (P2 promoted), `Core.MeaningGraph` | `ssSemanticAnchor` (P2 promotion target) | (none in type yet; rev. 1 had `trcSemanticCommitment`, `trcSemanticJustification`) |
-| Conatus | `Self.Conatus` | none (computes from `ss*`) | **GAP**: `trcConatusEnergy`, `trcConatusGradient`, `trcConatusGateFired` not in type |
-| Field | `Self.Field` | none (computes from `ss*`) | **GAP**: `trcField`, `trcFieldConfidence` not in type |
+| Conatus | `Self.Conatus` | none (computes from `ss*`) | OK: `trcConatusEnergy`, `trcConatusGateFired` |
+| Field | `Self.Field` | none (computes from `ss*`) | OK: `trcField` |
 | Salience | `Self.Salience` | `ssAdaptiveMutationLog` (gated) | OK: `trcSalienceDriver`, `trcSalienceHolisticBias`, `trcSalienceConfidence` (Phase 5.5e) |
 | Deliberation | `Self.Deliberation` | `ssTone`, `ssFamily` (gated by `familyDivergenceEnabled`) | OK: `trcDeliberationRule`, `trcDeliberationAgreement`, `trcDeliberationDivergence`, `trcDeliberationNarrativeTone` (Phase 8 Package B) |
 | Essence | `Self.Essence` (flag-off) | `ssEssence` (flag-off) | OK: `trcEssenceMode`, `trcEssenceCommitted`, `trcEssenceAngstLevel`, `trcEssenceTrigger` (Phase 9-10) |
@@ -89,7 +106,7 @@ authority-bearing `ss*` field (per `SYSTEM_STATE_AUTHORITY.md`).
 | Learning | `Learning.*` (flag-off) | `ssLearningWeights`, `ssAdaptiveMutationLog` | OK: `trcLearningQueryType`, `trcExternalTool`, `trcLearningValidationStatus`, `trcLearningSandboxResult`, `trcLearningGraftTurn`, `trcLearningRejectReason` |
 | Calibration | `Learning.Calibration` (flag-off) | `ssCalibrationLog`, `ssCalibrationSnapshots` | (none — only via snapshot) |
 | Metacognition | `Policy.Metacognition` (flag-off) | `ssMetacognitionLog` | (none) |
-| Identity | `ssIdentityClaims` | `ssIdentityClaims` | **GAP**: `trcIdentityClaims` not in type |
+| Identity | `ssIdentityClaims` | `ssIdentityClaims` | OK: `trcIdentityClaims` |
 | AuthoritySurface (GF) | `Render.Authority` (stub) | none (post-P4) | (none — stub returns Nothing) |
 
 The **canonical contours** are: Conatus, Field, Salience,
@@ -121,38 +138,27 @@ Each contour is classified as one of:
 - **deferred** — the contour is flag-off and the closure plan
   explicitly defers the gate until the flag is flipped.
 
-### 2.1 Conatus — needs-work (rev. 2)
+### 2.1 Conatus — passing (rev. 3)
 
-- **P1 (serializable)**: GAP. The 3 expected
-  `trcConatus*` fields are not in `TurnReplayTrace`
-  (verified 2026-06-02). `ConatusEnergy` itself is
-  Show-deriving; the gate field
-  `trcConatusGateFired :: Bool` would be
-  Show-deriving. **Work**: add the 3 fields per
-  `TRACE_SCHEMA.md §2`.
+- **P1 (serializable)**: OK. `ConatusEnergy` and the
+  gate flag are in `TurnReplayTrace`.
 - **P2 (replayable)**: OK. `computeConatusEnergy` is
   pure; replays from the same `SelfBlanket` produce
   the same energy.
 - **P3 (reconstructable)**: OK. The snapshot is the
   `SelfBlanket` itself; reconstruction is total.
-- **P4 (trace-explainable)**: GAP. The trace does not
-  currently explain *why* the Conatus gate fired.
-  **Work**: add `trcConatusEnergy` and
-  `trcConatusGateFired` per `TRACE_SCHEMA.md §2`.
+- **P4 (trace-explainable)**: OK. `trcConatusEnergy`
+  and `trcConatusGateFired` expose the gate inputs.
 
-### 2.2 Field — needs-work (rev. 2)
+### 2.2 Field — passing (rev. 3)
 
-- **P1**: GAP. The 2 expected `trcField*` fields are
-  not in `TurnReplayTrace` (verified 2026-06-02).
-  `Field` itself is Show-deriving. **Work**: add
-  `trcField` and `trcFieldConfidence` per
-  `TRACE_SCHEMA.md §3`.
+- **P1**: OK. `Field` is serializable and `trcField`
+  is present in `TurnReplayTrace`.
 - **P2**: OK. `Self.Field.compute` is pure.
 - **P3**: OK. Snapshot is the `Field` Σ-type itself;
   reconstruction is total.
-- **P4**: GAP. The trace does not currently expose
-  the Field's 5 components. **Work**: add `trcField`
-  per `TRACE_SCHEMA.md §3`.
+- **P4**: OK. `trcField` exposes the 5-field input to
+  salience and downstream replay.
 
 ### 2.3 Salience — passing (rev. 2)
 
@@ -194,19 +200,15 @@ Each contour is classified as one of:
   is at its documented off-state
   (`Cascade.hs:74` literal `= False`).
 
-### 2.5 Identity — needs-work (rev. 2)
+### 2.5 Identity — passing (rev. 3)
 
-- **P1**: GAP. The expected `trcIdentityClaim(s)`
-  field is not in `TurnReplayTrace` (verified
-  2026-06-02). The source data
-  (`ssIdentityClaims :: SystemState -> [IdentityClaimRef]`)
-  is available. **Work**: add `trcIdentityClaims`
-  per `TRACE_SCHEMA.md §7`.
+- **P1**: OK. `trcIdentityClaims` is present in the
+  replay trace.
 - **P2**: OK. `IdentityGuard` is pure.
 - **P3**: OK. Snapshot is the `ssIdentityClaims` list;
   reconstruction is total (the field is append-only).
-- **P4**: GAP. The trace does not currently expose
-  the active identity claims. **Work**: same as P1.
+- **P4**: OK. The trace exposes the active identity
+  claim set for the turn.
 
 ### 2.6 Essence — deferred (rev. 2: fields landed, flag-off)
 

@@ -1,0 +1,870 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Bridge.ExternalLLM
+<span class="lineno">    9 </span>Description : WP2 — External LLM transport (Mock + Mistral).
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Two transports:
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>1. 'MockTransport' — deterministic, pure, always succeeds or fails based
+<span class="lineno">   14 </span>   on a static table.  Used for unit tests and offline replay.
+<span class="lineno">   15 </span>2. 'MistralTransport' — real HTTP to the Mistral API, guarded by env
+<span class="lineno">   16 </span>   vars and feature-flagged.  Never selected when 'QXFX0_LLM_TRANSPORT'
+<span class="lineno">   17 </span>   is not set to @&quot;mistral&quot;@.
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>Fail-closed: any network/auth/rate-limit error returns a typed
+<span class="lineno">   20 </span>'ExternalQueryError' and does NOT throw.  The learning loop decides
+<span class="lineno">   21 </span>whether to retry, fallback, or reject.
+<span class="lineno">   22 </span>-}
+<span class="lineno">   23 </span>module QxFx0.Bridge.ExternalLLM
+<span class="lineno">   24 </span>  ( LLMTransport(..)
+<span class="lineno">   25 </span>  , MockTable
+<span class="lineno">   26 </span>  , buildTransportFromEnv
+<span class="lineno">   27 </span>  , buildTransportFromEnvWithManager
+<span class="lineno">   28 </span>  , buildTransportFromConfig
+<span class="lineno">   29 </span>  , buildTransportFromConfigWithManager
+<span class="lineno">   30 </span>  , queryExternalTool
+<span class="lineno">   31 </span>  , queryExternalToolWithConfig
+<span class="lineno">   32 </span>  , defaultExternalQueryConfig
+<span class="lineno">   33 </span>  , llmEndpointAllowlist
+<span class="lineno">   34 </span>  , llmMaxQueryChars
+<span class="lineno">   35 </span>  , llmMaxRequestBytes
+<span class="lineno">   36 </span>  , llmUntrustedHostOverrideWarningTag
+<span class="lineno">   37 </span>  , transportTimeoutMs
+<span class="lineno">   38 </span>  , validateEndpointUrl
+<span class="lineno">   39 </span>  , validateEndpointUrlWithContext
+<span class="lineno">   40 </span>  , extractStructured
+<span class="lineno">   41 </span>  , decodeLlmBodyLimited
+<span class="lineno">   42 </span>  , redactUpstreamError
+<span class="lineno">   43 </span>  , classifyHttpException
+<span class="lineno">   44 </span>  , classifyBodyReadFailure
+<span class="lineno">   45 </span>  ) where
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>import Control.Applicative ((&lt;|&gt;))
+<span class="lineno">   48 </span>import Control.Exception (try)
+<span class="lineno">   49 </span>import Data.Aeson (FromJSON(..), ToJSON, decodeStrict, encode, object, (.=))
+<span class="lineno">   50 </span>import Data.Aeson.Types (withObject, (.:), (.:?))
+<span class="lineno">   51 </span>import qualified Data.ByteString as BS
+<span class="lineno">   52 </span>import qualified Data.ByteString.Lazy as LBS
+<span class="lineno">   53 </span>import Data.Char (isSpace)
+<span class="lineno">   54 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   55 </span>import Data.Text (Text)
+<span class="lineno">   56 </span>import qualified Data.Text as T
+<span class="lineno">   57 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   58 </span>import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+<span class="lineno">   59 </span>import GHC.Generics (Generic)
+<span class="lineno">   60 </span>import Network.HTTP.Client
+<span class="lineno">   61 </span>  ( BodyReader
+<span class="lineno">   62 </span>  , HttpException(..)
+<span class="lineno">   63 </span>  , HttpExceptionContent(..)
+<span class="lineno">   64 </span>  , Manager
+<span class="lineno">   65 </span>  , Request
+<span class="lineno">   66 </span>  , RequestBody(..)
+<span class="lineno">   67 </span>  , brRead
+<span class="lineno">   68 </span>  , checkResponse
+<span class="lineno">   69 </span>  , method
+<span class="lineno">   70 </span>  , parseRequest
+<span class="lineno">   71 </span>  , requestBody
+<span class="lineno">   72 </span>  , requestHeaders
+<span class="lineno">   73 </span>  , responseTimeout
+<span class="lineno">   74 </span>  , responseTimeoutMicro
+<span class="lineno">   75 </span>  , responseBody
+<span class="lineno">   76 </span>  , responseStatus
+<span class="lineno">   77 </span>  , withResponse
+<span class="lineno">   78 </span>  )
+<span class="lineno">   79 </span>import Network.HTTP.Client.TLS (newTlsManager)
+<span class="lineno">   80 </span>import Network.HTTP.Types.Status (Status, statusCode)
+<span class="lineno">   81 </span>import Network.URI (URI(..), URIAuth(..), parseURI)
+<span class="lineno">   82 </span>import System.Environment (lookupEnv)
+<span class="lineno">   83 </span>import System.IO (hPutStrLn, stderr)
+<span class="lineno">   84 </span>import Text.Read (readMaybe)
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>import QxFx0.Learning.Need (LearningNeed(..))
+<span class="lineno">   87 </span>import QxFx0.Learning.Tool (ExternalTool(..), etName)
+<span class="lineno">   88 </span>import QxFx0.Types.ExternalQuery
+<span class="lineno">   89 </span>  ( ExternalQueryError(..)
+<span class="lineno">   90 </span>  , ExternalQueryResponse(..)
+<span class="lineno">   91 </span>  , ExternalQueryConfig(..)
+<span class="lineno">   92 </span>  , TransportFallbackReason(..)
+<span class="lineno">   93 </span>  )
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>-- | Transport abstraction: carries a 'Manager' for real HTTP and a
+<span class="lineno">   96 </span>-- static map for mock.
+<span class="lineno">   97 </span>data LLMTransport
+<span class="lineno">   98 </span>  = MockTransport !MockTable !(Maybe ExternalQueryConfig)
+<span class="lineno">   99 </span>    -- ^ Mock table plus optional config that led to fallback.
+<span class="lineno">  100 </span>  | MistralTransport !Manager !MistralConfig
+<span class="lineno">  101 </span>  | FireworksTransport !Manager !FireworksConfig
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show LLMTransport</span></span></span></span> where
+<span class="lineno">  104 </span>  <span class="decl"><span class="nottickedoff">show (MockTransport _ mcfg) =</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="nottickedoff">&quot;MockTransport(&quot; ++ maybe &quot;no_config&quot; show mcfg ++ &quot;)&quot;</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="nottickedoff">show (MistralTransport _ cfg) =</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="nottickedoff">&quot;MistralTransport(apiKey=&lt;REDACTED&gt;,model=&quot; ++ show (mcModel cfg) ++ &quot;)&quot;</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="nottickedoff">show (FireworksTransport _ cfg) =</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="nottickedoff">&quot;FireworksTransport(apiKey=&lt;REDACTED&gt;,model=&quot; ++ show (fcModel cfg) ++ &quot;)&quot;</span></span>
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>-- | Static lookup table for mock responses.
+<span class="lineno">  112 </span>-- Key: (toolName, needTag, queryPrefix) -&gt; response body.
+<span class="lineno">  113 </span>type MockTable = [(Text, Text, Text, Either ExternalQueryError Text)]
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>-- | Mistral API configuration from env vars.
+<span class="lineno">  116 </span>data MistralConfig = MistralConfig
+<span class="lineno">  117 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mcApiKey</span></span></span>    :: !Text
+<span class="lineno">  118 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mcModel</span></span></span>     :: !Text
+<span class="lineno">  119 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mcEndpoint</span></span></span>  :: !Text
+<span class="lineno">  120 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mcTimeoutMs</span></span></span> :: !Int
+<span class="lineno">  121 </span>  }
+<span class="lineno">  122 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  123 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>-- | Fireworks API configuration from env vars.
+<span class="lineno">  126 </span>-- Fireworks uses an OpenAI-compatible schema, so the HTTP body and
+<span class="lineno">  127 </span>-- response shape are identical to Mistral.  Only the endpoint and
+<span class="lineno">  128 </span>-- env-var prefix differ.
+<span class="lineno">  129 </span>data FireworksConfig = FireworksConfig
+<span class="lineno">  130 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fcApiKey</span></span></span>    :: !Text
+<span class="lineno">  131 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fcModel</span></span></span>     :: !Text
+<span class="lineno">  132 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fcEndpoint</span></span></span>  :: !Text
+<span class="lineno">  133 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fcTimeoutMs</span></span></span> :: !Int
+<span class="lineno">  134 </span>  }
+<span class="lineno">  135 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  136 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>-- | Official LLM API endpoint allowlist.
+<span class="lineno">  139 </span>-- Any endpoint not on this list is rejected unless the operator sets
+<span class="lineno">  140 </span>-- @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@ and either enters an explicit
+<span class="lineno">  141 </span>-- dev/test mode or supplies the second confirmation flag documented in
+<span class="lineno">  142 </span>-- 'validateEndpointUrlWithContext'.
+<span class="lineno">  143 </span>llmEndpointAllowlist :: [Text]
+<span class="lineno">  144 </span><span class="decl"><span class="istickedoff">llmEndpointAllowlist =</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;api.mistral.ai&quot;</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">, &quot;api.fireworks.ai&quot;</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>llmUntrustedHostOverrideWarningTag :: Text
+<span class="lineno">  150 </span><span class="decl"><span class="istickedoff">llmUntrustedHostOverrideWarningTag = &quot;llm_untrusted_host_override_allowed&quot;</span></span>
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>llmDefaultTimeoutMs :: Int
+<span class="lineno">  153 </span><span class="decl"><span class="istickedoff">llmDefaultTimeoutMs = 30000</span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>llmMinTimeoutMs :: Int
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">llmMinTimeoutMs = 1000</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>llmMaxTimeoutMs :: Int
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">llmMaxTimeoutMs = 30000</span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>llmMaxQueryChars :: Int
+<span class="lineno">  162 </span><span class="decl"><span class="istickedoff">llmMaxQueryChars = 4096</span></span>
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>llmMaxRequestBytes :: Int
+<span class="lineno">  165 </span><span class="decl"><span class="istickedoff">llmMaxRequestBytes = 16384</span></span>
+<span class="lineno">  166 </span>
+<span class="lineno">  167 </span>llmMaxResponseBytes :: Int
+<span class="lineno">  168 </span><span class="decl"><span class="nottickedoff">llmMaxResponseBytes = 65536</span></span>
+<span class="lineno">  169 </span>
+<span class="lineno">  170 </span>llmRawBodyTelemetryChars :: Int
+<span class="lineno">  171 </span><span class="decl"><span class="nottickedoff">llmRawBodyTelemetryChars = 4096</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>-- | Validate an endpoint URL using the strict default policy.
+<span class="lineno">  174 </span>--
+<span class="lineno">  175 </span>-- Rules (fail-closed):
+<span class="lineno">  176 </span>--   1. Scheme must be @https://@.
+<span class="lineno">  177 </span>--   2. Host must be in 'llmEndpointAllowlist'.
+<span class="lineno">  178 </span>--   3. A single untrusted-host override is not sufficient by itself.
+<span class="lineno">  179 </span>--      Use 'validateEndpointUrlWithContext' with dev/test or double opt-in
+<span class="lineno">  180 </span>--      context when this is intentional.
+<span class="lineno">  181 </span>--   3. Empty or malformed URI is rejected.
+<span class="lineno">  182 </span>--
+<span class="lineno">  183 </span>-- Returns 'Right ()' when allowed, 'Left reason' when blocked.
+<span class="lineno">  184 </span>validateEndpointUrl :: Text -&gt; Maybe Text -&gt; Either TransportFallbackReason ()
+<span class="lineno">  185 </span><span class="decl"><span class="istickedoff">validateEndpointUrl endpoint mAllowOverride =</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">() &lt;$ validateEndpointUrlWithContext endpoint mAllowOverride Nothing Nothing</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>-- | Validate an endpoint URL with explicit override context.
+<span class="lineno">  189 </span>--
+<span class="lineno">  190 </span>-- Parameters after the endpoint are:
+<span class="lineno">  191 </span>--
+<span class="lineno">  192 </span>-- * @QXFX0_LLM_ALLOW_UNTRUSTED_HOST@ value.
+<span class="lineno">  193 </span>-- * dev/test mode marker, for example @QXFX0_TEST_MODE=1@ or
+<span class="lineno">  194 </span>--   @QXFX0_LLM_DEV_MODE=1@.
+<span class="lineno">  195 </span>-- * double-confirmation marker, currently
+<span class="lineno">  196 </span>--   @QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM=1@.
+<span class="lineno">  197 </span>--
+<span class="lineno">  198 </span>-- A successful untrusted-host override returns the warning tag that must be
+<span class="lineno">  199 </span>-- emitted to logs/trace before a bearer token is sent to that host.
+<span class="lineno">  200 </span>validateEndpointUrlWithContext
+<span class="lineno">  201 </span>  :: Text
+<span class="lineno">  202 </span>  -&gt; Maybe Text
+<span class="lineno">  203 </span>  -&gt; Maybe Text
+<span class="lineno">  204 </span>  -&gt; Maybe Text
+<span class="lineno">  205 </span>  -&gt; Either TransportFallbackReason (Maybe Text)
+<span class="lineno">  206 </span><span class="decl"><span class="istickedoff">validateEndpointUrlWithContext endpoint mAllowOverride mDevOrTestMode mDoubleConfirm =</span>
+<span class="lineno">  207 </span><span class="spaces">  </span><span class="istickedoff">let stripped = T.strip endpoint</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">in if T.null stripped</span>
+<span class="lineno">  209 </span><span class="spaces">       </span><span class="istickedoff">then Left TfrUnsafeEndpoint</span>
+<span class="lineno">  210 </span><span class="spaces">       </span><span class="istickedoff">else case parseEndpointHost stripped of</span>
+<span class="lineno">  211 </span><span class="spaces">              </span><span class="istickedoff">Nothing -&gt; Left TfrUnsafeEndpoint</span>
+<span class="lineno">  212 </span><span class="spaces">              </span><span class="istickedoff">Just host -&gt;</span>
+<span class="lineno">  213 </span><span class="spaces">                </span><span class="istickedoff">if host `elem` llmEndpointAllowlist</span>
+<span class="lineno">  214 </span><span class="spaces">                  </span><span class="istickedoff">then Right Nothing</span>
+<span class="lineno">  215 </span><span class="spaces">                  </span><span class="istickedoff">else if mAllowOverride == Just &quot;1&quot;</span>
+<span class="lineno">  216 </span><span class="spaces">                         </span><span class="istickedoff">then if isTruthy mDevOrTestMode || isTruthy mDoubleConfirm</span>
+<span class="lineno">  217 </span><span class="spaces">                                </span><span class="istickedoff">then Right (Just llmUntrustedHostOverrideWarningTag)</span>
+<span class="lineno">  218 </span><span class="spaces">                                </span><span class="istickedoff">else Left TfrUntrustedOverrideRejected</span>
+<span class="lineno">  219 </span><span class="spaces">                         </span><span class="istickedoff">else Left TfrBlockedHost</span></span>
+<span class="lineno">  220 </span>
+<span class="lineno">  221 </span>parseEndpointHost :: Text -&gt; Maybe Text
+<span class="lineno">  222 </span><span class="decl"><span class="istickedoff">parseEndpointHost endpoint = do</span>
+<span class="lineno">  223 </span><span class="spaces">  </span><span class="istickedoff">uri &lt;- parseURI (T.unpack endpoint)</span>
+<span class="lineno">  224 </span><span class="spaces">  </span><span class="istickedoff">auth &lt;- uriAuthority uri</span>
+<span class="lineno">  225 </span><span class="spaces">  </span><span class="istickedoff">let scheme = T.toLower (T.pack (uriScheme uri))</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">rawHost = uriRegName auth</span>
+<span class="lineno">  227 </span><span class="spaces">      </span><span class="istickedoff">rawPort = uriPort auth</span>
+<span class="lineno">  228 </span><span class="spaces">      </span><span class="istickedoff">portAllowed = null rawPort || rawPort == &quot;:443&quot;</span>
+<span class="lineno">  229 </span><span class="spaces">  </span><span class="istickedoff">if scheme == &quot;https:&quot; &amp;&amp; null (uriUserInfo auth) &amp;&amp; not (null rawHost) &amp;&amp; portAllowed</span>
+<span class="lineno">  230 </span><span class="spaces">    </span><span class="istickedoff">then Just (T.toLower (T.pack rawHost))</span>
+<span class="lineno">  231 </span><span class="spaces">    </span><span class="istickedoff">else Nothing</span></span>
+<span class="lineno">  232 </span>
+<span class="lineno">  233 </span>endpointHost :: Text -&gt; Text
+<span class="lineno">  234 </span><span class="decl"><span class="istickedoff">endpointHost rawEndpoint =</span>
+<span class="lineno">  235 </span><span class="spaces">  </span><span class="istickedoff">fromMaybe <span class="nottickedoff">&quot;invalid_endpoint&quot;</span> (parseEndpointHost (T.strip rawEndpoint))</span></span>
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>isTruthy :: Maybe Text -&gt; Bool
+<span class="lineno">  238 </span><span class="decl"><span class="istickedoff">isTruthy raw =</span>
+<span class="lineno">  239 </span><span class="spaces">  </span><span class="istickedoff">case T.toLower . T.strip &lt;$&gt; raw of</span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;1&quot; -&gt; True</span>
+<span class="lineno">  241 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;true&quot; -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  242 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;yes&quot; -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  243 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;on&quot; -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;dev&quot; -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  245 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;test&quot; -&gt; True</span>
+<span class="lineno">  246 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; False</span></span>
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>-- | Default safe configuration when no env vars are present.
+<span class="lineno">  249 </span>defaultExternalQueryConfig :: ExternalQueryConfig
+<span class="lineno">  250 </span><span class="decl"><span class="istickedoff">defaultExternalQueryConfig = ExternalQueryConfig</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">{ eqcTransportMode  = &quot;disabled&quot;</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">, eqcApiKey         = Nothing</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="istickedoff">, eqcModel          = &quot;mistral-small-latest&quot;</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">, eqcEndpoint       = &quot;https://api.mistral.ai/v1/chat/completions&quot;</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">, eqcTimeoutMs      = llmDefaultTimeoutMs</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">, eqcFallbackReason = Just TfrEnvNotSet</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>transportTimeoutMs :: LLMTransport -&gt; Maybe Int
+<span class="lineno">  260 </span><span class="decl"><span class="istickedoff">transportTimeoutMs transport =</span>
+<span class="lineno">  261 </span><span class="spaces">  </span><span class="istickedoff">case transport of</span>
+<span class="lineno">  262 </span><span class="spaces">    </span><span class="istickedoff">MockTransport _ mCfg -&gt; <span class="nottickedoff">eqcTimeoutMs &lt;$&gt; mCfg</span></span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="istickedoff">MistralTransport _ cfg -&gt; Just (mcTimeoutMs cfg)</span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="istickedoff">FireworksTransport _ cfg -&gt; Just (fcTimeoutMs cfg)</span></span>
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>-- | Build transport from environment.
+<span class="lineno">  267 </span>--
+<span class="lineno">  268 </span>-- Env vars:
+<span class="lineno">  269 </span>--   QXFX0_LLM_TRANSPORT=mock|mistral|fireworks  (default: disabled/non-authoritative)
+<span class="lineno">  270 </span>--   QXFX0_MISTRAL_API_KEY                       (required for mistral)
+<span class="lineno">  271 </span>--   QXFX0_MISTRAL_MODEL                         (default: &quot;mistral-small-latest&quot;)
+<span class="lineno">  272 </span>--   QXFX0_MISTRAL_ENDPOINT                      (default: &quot;https://api.mistral.ai/v1/chat/completions&quot;)
+<span class="lineno">  273 </span>--   QXFX0_FIREWORKS_API_KEY                     (required for fireworks)
+<span class="lineno">  274 </span>--   QXFX0_FIREWORKS_MODEL                       (default: &quot;accounts/fireworks/models/glm-5p1&quot;)
+<span class="lineno">  275 </span>--   QXFX0_FIREWORKS_ENDPOINT                    (default: &quot;https://api.fireworks.ai/inference/v1/chat/completions&quot;)
+<span class="lineno">  276 </span>--
+<span class="lineno">  277 </span>-- Fail-closed: any missing required config falls back to mock with an
+<span class="lineno">  278 </span>-- explicit 'TransportFallbackReason' in the returned 'ExternalQueryConfig'.
+<span class="lineno">  279 </span>buildTransportFromEnv :: IO LLMTransport
+<span class="lineno">  280 </span><span class="decl"><span class="nottickedoff">buildTransportFromEnv = do</span>
+<span class="lineno">  281 </span><span class="spaces">  </span><span class="nottickedoff">cfg &lt;- resolveTransportConfigFromEnv</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="nottickedoff">buildTransportFromValidatedConfig cfg</span></span>
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>buildTransportFromEnvWithManager :: Manager -&gt; IO LLMTransport
+<span class="lineno">  285 </span><span class="decl"><span class="istickedoff">buildTransportFromEnvWithManager mgr = do</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">cfg &lt;- resolveTransportConfigFromEnv</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">buildTransportFromValidatedConfigWithManager mgr cfg</span></span>
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>resolveTransportConfigFromEnv :: IO ExternalQueryConfig
+<span class="lineno">  290 </span><span class="decl"><span class="istickedoff">resolveTransportConfigFromEnv = do</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">mTransport &lt;- lookupEnv &quot;QXFX0_LLM_TRANSPORT&quot;</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="istickedoff">let mode = fromMaybe &quot;disabled&quot; mTransport</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="istickedoff">case mode of</span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="istickedoff">&quot;mock&quot; -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  295 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;mock&quot;</span></span>
+<span class="lineno">  296 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just TfrExplicitMock</span></span>
+<span class="lineno">  297 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="istickedoff">&quot;mistral&quot; -&gt; do</span>
+<span class="lineno">  299 </span><span class="spaces">      </span><span class="istickedoff">mKey &lt;- lookupEnv &quot;QXFX0_MISTRAL_API_KEY&quot;</span>
+<span class="lineno">  300 </span><span class="spaces">      </span><span class="istickedoff">overrideContext &lt;- readOverrideContext</span>
+<span class="lineno">  301 </span><span class="spaces">      </span><span class="istickedoff">timeoutMs &lt;- readTransportTimeoutMs [&quot;QXFX0_MISTRAL_TIMEOUT_MS&quot;, <span class="nottickedoff">&quot;QXFX0_LLM_TIMEOUT_MS&quot;</span>]</span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="istickedoff">case fmap (T.strip . T.pack) mKey of</span>
+<span class="lineno">  303 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  304 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;mistral&quot;</span></span>
+<span class="lineno">  305 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  306 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just TfrKeyMissing</span></span>
+<span class="lineno">  307 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  308 </span><span class="spaces">        </span><span class="istickedoff">Just key | <span class="tickonlyfalse">T.null key</span> -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  309 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;mistral&quot;</span></span>
+<span class="lineno">  310 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  311 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just TfrKeyMissing</span></span>
+<span class="lineno">  312 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  313 </span><span class="spaces">        </span><span class="istickedoff">Just key -&gt; do</span>
+<span class="lineno">  314 </span><span class="spaces">          </span><span class="istickedoff">model    &lt;- fmap (T.pack . fromMaybe &quot;mistral-small-latest&quot;) (lookupEnv &quot;QXFX0_MISTRAL_MODEL&quot;)</span>
+<span class="lineno">  315 </span><span class="spaces">          </span><span class="istickedoff">endpoint &lt;- fmap (T.pack . fromMaybe &quot;https://api.mistral.ai/v1/chat/completions&quot;) (lookupEnv &quot;QXFX0_MISTRAL_ENDPOINT&quot;)</span>
+<span class="lineno">  316 </span><span class="spaces">          </span><span class="istickedoff">case validateEndpointWithOverrideContext endpoint <span class="nottickedoff">overrideContext</span> of</span>
+<span class="lineno">  317 </span><span class="spaces">            </span><span class="istickedoff">Left reason -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  318 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;mistral&quot;</span></span>
+<span class="lineno">  319 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcApiKey = Nothing</span></span>
+<span class="lineno">  320 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcModel = model</span></span>
+<span class="lineno">  321 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcEndpoint = endpoint</span></span>
+<span class="lineno">  322 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  323 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just reason</span></span>
+<span class="lineno">  324 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  325 </span><span class="spaces">            </span><span class="istickedoff">Right mWarningTag -&gt; do</span>
+<span class="lineno">  326 </span><span class="spaces">              </span><span class="istickedoff">emitOverrideWarning <span class="nottickedoff">endpoint</span> mWarningTag</span>
+<span class="lineno">  327 </span><span class="spaces">              </span><span class="istickedoff">pure $ ExternalQueryConfig</span>
+<span class="lineno">  328 </span><span class="spaces">                </span><span class="istickedoff">{ eqcTransportMode = &quot;mistral&quot;</span>
+<span class="lineno">  329 </span><span class="spaces">                </span><span class="istickedoff">, eqcApiKey = Just key</span>
+<span class="lineno">  330 </span><span class="spaces">                </span><span class="istickedoff">, eqcModel = model</span>
+<span class="lineno">  331 </span><span class="spaces">                </span><span class="istickedoff">, eqcEndpoint = endpoint</span>
+<span class="lineno">  332 </span><span class="spaces">                </span><span class="istickedoff">, eqcTimeoutMs = timeoutMs</span>
+<span class="lineno">  333 </span><span class="spaces">                </span><span class="istickedoff">, eqcFallbackReason = Nothing</span>
+<span class="lineno">  334 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  335 </span><span class="spaces">    </span><span class="istickedoff">&quot;fireworks&quot; -&gt; do</span>
+<span class="lineno">  336 </span><span class="spaces">      </span><span class="istickedoff">mKey &lt;- lookupEnv &quot;QXFX0_FIREWORKS_API_KEY&quot;</span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff">overrideContext &lt;- readOverrideContext</span>
+<span class="lineno">  338 </span><span class="spaces">      </span><span class="istickedoff">timeoutMs &lt;- readTransportTimeoutMs [&quot;QXFX0_FIREWORKS_TIMEOUT_MS&quot;, &quot;QXFX0_LLM_TIMEOUT_MS&quot;]</span>
+<span class="lineno">  339 </span><span class="spaces">      </span><span class="istickedoff">case fmap (T.strip . T.pack) mKey of</span>
+<span class="lineno">  340 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  341 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;fireworks&quot;</span></span>
+<span class="lineno">  342 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  343 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just TfrKeyMissing</span></span>
+<span class="lineno">  344 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  345 </span><span class="spaces">        </span><span class="istickedoff">Just key | <span class="tickonlyfalse">T.null key</span> -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  346 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;fireworks&quot;</span></span>
+<span class="lineno">  347 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  348 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just TfrKeyMissing</span></span>
+<span class="lineno">  349 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  350 </span><span class="spaces">        </span><span class="istickedoff">Just key -&gt; do</span>
+<span class="lineno">  351 </span><span class="spaces">          </span><span class="istickedoff">model    &lt;- fmap (T.pack . fromMaybe &quot;accounts/fireworks/models/glm-5p1&quot;) (lookupEnv &quot;QXFX0_FIREWORKS_MODEL&quot;)</span>
+<span class="lineno">  352 </span><span class="spaces">          </span><span class="istickedoff">endpoint &lt;- fmap (T.pack . fromMaybe &quot;https://api.fireworks.ai/inference/v1/chat/completions&quot;) (lookupEnv &quot;QXFX0_FIREWORKS_ENDPOINT&quot;)</span>
+<span class="lineno">  353 </span><span class="spaces">          </span><span class="istickedoff">case validateEndpointWithOverrideContext endpoint overrideContext of</span>
+<span class="lineno">  354 </span><span class="spaces">            </span><span class="istickedoff">Left reason -&gt; <span class="nottickedoff">pure $ defaultExternalQueryConfig</span></span>
+<span class="lineno">  355 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">{ eqcTransportMode = &quot;fireworks&quot;</span></span>
+<span class="lineno">  356 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcApiKey = Nothing</span></span>
+<span class="lineno">  357 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcModel = model</span></span>
+<span class="lineno">  358 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcEndpoint = endpoint</span></span>
+<span class="lineno">  359 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcTimeoutMs = timeoutMs</span></span>
+<span class="lineno">  360 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">, eqcFallbackReason = Just reason</span></span>
+<span class="lineno">  361 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  362 </span><span class="spaces">            </span><span class="istickedoff">Right mWarningTag -&gt; do</span>
+<span class="lineno">  363 </span><span class="spaces">              </span><span class="istickedoff">emitOverrideWarning endpoint mWarningTag</span>
+<span class="lineno">  364 </span><span class="spaces">              </span><span class="istickedoff">pure $ ExternalQueryConfig</span>
+<span class="lineno">  365 </span><span class="spaces">                </span><span class="istickedoff">{ eqcTransportMode = &quot;fireworks&quot;</span>
+<span class="lineno">  366 </span><span class="spaces">                </span><span class="istickedoff">, eqcApiKey = Just key</span>
+<span class="lineno">  367 </span><span class="spaces">                </span><span class="istickedoff">, eqcModel = model</span>
+<span class="lineno">  368 </span><span class="spaces">                </span><span class="istickedoff">, eqcEndpoint = endpoint</span>
+<span class="lineno">  369 </span><span class="spaces">                </span><span class="istickedoff">, eqcTimeoutMs = timeoutMs</span>
+<span class="lineno">  370 </span><span class="spaces">                </span><span class="istickedoff">, eqcFallbackReason = Nothing</span>
+<span class="lineno">  371 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  372 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure $ defaultExternalQueryConfig</span>
+<span class="lineno">  373 </span><span class="spaces">           </span><span class="istickedoff">{ eqcTransportMode = T.pack mode</span>
+<span class="lineno">  374 </span><span class="spaces">           </span><span class="istickedoff">, eqcFallbackReason = Just TfrEnvNotSet</span>
+<span class="lineno">  375 </span><span class="spaces">           </span><span class="istickedoff">}</span></span>
+<span class="lineno">  376 </span>
+<span class="lineno">  377 </span>data OverrideContext = OverrideContext
+<span class="lineno">  378 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ocAllowUntrusted</span></span></span> :: !(Maybe Text)
+<span class="lineno">  379 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ocDevOrTestMode</span></span></span> :: !(Maybe Text)
+<span class="lineno">  380 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ocDoubleConfirm</span></span></span> :: !(Maybe Text)
+<span class="lineno">  381 </span>  }
+<span class="lineno">  382 </span>
+<span class="lineno">  383 </span>readOverrideContext :: IO OverrideContext
+<span class="lineno">  384 </span><span class="decl"><span class="istickedoff">readOverrideContext = do</span>
+<span class="lineno">  385 </span><span class="spaces">  </span><span class="istickedoff">mAllowUntrusted &lt;- fmap (fmap T.pack) (lookupEnv &quot;QXFX0_LLM_ALLOW_UNTRUSTED_HOST&quot;)</span>
+<span class="lineno">  386 </span><span class="spaces">  </span><span class="istickedoff">mTestMode &lt;- fmap (fmap <span class="nottickedoff">T.pack</span>) (lookupEnv &quot;QXFX0_TEST_MODE&quot;)</span>
+<span class="lineno">  387 </span><span class="spaces">  </span><span class="istickedoff">mDevMode &lt;- fmap (fmap <span class="nottickedoff">T.pack</span>) (lookupEnv &quot;QXFX0_LLM_DEV_MODE&quot;)</span>
+<span class="lineno">  388 </span><span class="spaces">  </span><span class="istickedoff">mDoubleConfirm &lt;- fmap (fmap T.pack) (lookupEnv &quot;QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM&quot;)</span>
+<span class="lineno">  389 </span><span class="spaces">  </span><span class="istickedoff">let mDevOrTest = firstTruthy [mTestMode, mDevMode]</span>
+<span class="lineno">  390 </span><span class="spaces">  </span><span class="istickedoff">pure OverrideContext</span>
+<span class="lineno">  391 </span><span class="spaces">    </span><span class="istickedoff">{ ocAllowUntrusted = mAllowUntrusted</span>
+<span class="lineno">  392 </span><span class="spaces">    </span><span class="istickedoff">, ocDevOrTestMode = mDevOrTest</span>
+<span class="lineno">  393 </span><span class="spaces">    </span><span class="istickedoff">, ocDoubleConfirm = mDoubleConfirm</span>
+<span class="lineno">  394 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  395 </span>
+<span class="lineno">  396 </span>validateEndpointWithOverrideContext :: Text -&gt; OverrideContext -&gt; Either TransportFallbackReason (Maybe Text)
+<span class="lineno">  397 </span><span class="decl"><span class="istickedoff">validateEndpointWithOverrideContext endpoint ctx =</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">validateEndpointUrlWithContext endpoint (ocAllowUntrusted ctx) (ocDevOrTestMode ctx) (ocDoubleConfirm ctx)</span></span>
+<span class="lineno">  399 </span>
+<span class="lineno">  400 </span>firstTruthy :: [Maybe Text] -&gt; Maybe Text
+<span class="lineno">  401 </span><span class="decl"><span class="istickedoff">firstTruthy [] = Nothing</span>
+<span class="lineno">  402 </span><span class="spaces"></span><span class="istickedoff">firstTruthy (x:xs)</span>
+<span class="lineno">  403 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">isTruthy x</span> = <span class="nottickedoff">x</span></span>
+<span class="lineno">  404 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = firstTruthy xs</span></span>
+<span class="lineno">  405 </span>
+<span class="lineno">  406 </span>readTransportTimeoutMs :: [String] -&gt; IO Int
+<span class="lineno">  407 </span><span class="decl"><span class="istickedoff">readTransportTimeoutMs names = do</span>
+<span class="lineno">  408 </span><span class="spaces">  </span><span class="istickedoff">raw &lt;- firstPresentEnv names</span>
+<span class="lineno">  409 </span><span class="spaces">  </span><span class="istickedoff">pure (sanitizeTimeoutMs raw)</span></span>
+<span class="lineno">  410 </span>
+<span class="lineno">  411 </span>firstPresentEnv :: [String] -&gt; IO (Maybe String)
+<span class="lineno">  412 </span><span class="decl"><span class="istickedoff">firstPresentEnv [] = pure Nothing</span>
+<span class="lineno">  413 </span><span class="spaces"></span><span class="istickedoff">firstPresentEnv (name:rest) = do</span>
+<span class="lineno">  414 </span><span class="spaces">  </span><span class="istickedoff">value &lt;- lookupEnv name</span>
+<span class="lineno">  415 </span><span class="spaces">  </span><span class="istickedoff">case value of</span>
+<span class="lineno">  416 </span><span class="spaces">    </span><span class="istickedoff">Just raw | <span class="tickonlytrue">not (null raw)</span> -&gt; pure (Just raw)</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; firstPresentEnv rest</span></span>
+<span class="lineno">  418 </span>
+<span class="lineno">  419 </span>sanitizeTimeoutMs :: Maybe String -&gt; Int
+<span class="lineno">  420 </span><span class="decl"><span class="istickedoff">sanitizeTimeoutMs raw =</span>
+<span class="lineno">  421 </span><span class="spaces">  </span><span class="istickedoff">let parsed = fromMaybe llmDefaultTimeoutMs (raw &gt;&gt;= readMaybe)</span>
+<span class="lineno">  422 </span><span class="spaces">  </span><span class="istickedoff">in max llmMinTimeoutMs (min llmMaxTimeoutMs parsed)</span></span>
+<span class="lineno">  423 </span>
+<span class="lineno">  424 </span>emitOverrideWarning :: Text -&gt; Maybe Text -&gt; IO ()
+<span class="lineno">  425 </span><span class="decl"><span class="istickedoff">emitOverrideWarning _ Nothing = pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  426 </span><span class="spaces"></span><span class="istickedoff">emitOverrideWarning endpoint (Just tag) =</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="istickedoff">hPutStrLn stderr $ T.unpack $ T.concat</span>
+<span class="lineno">  428 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;[security_warning] tag=&quot;</span>
+<span class="lineno">  429 </span><span class="spaces">    </span><span class="istickedoff">, tag</span>
+<span class="lineno">  430 </span><span class="spaces">    </span><span class="istickedoff">, &quot; endpoint_host=&quot;</span>
+<span class="lineno">  431 </span><span class="spaces">    </span><span class="istickedoff">, endpointHost (T.strip endpoint)</span>
+<span class="lineno">  432 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  433 </span>
+<span class="lineno">  434 </span>buildTransportFromValidatedConfig :: ExternalQueryConfig -&gt; IO LLMTransport
+<span class="lineno">  435 </span><span class="decl"><span class="nottickedoff">buildTransportFromValidatedConfig cfg =</span>
+<span class="lineno">  436 </span><span class="spaces">  </span><span class="nottickedoff">case eqcFallbackReason cfg of</span>
+<span class="lineno">  437 </span><span class="spaces">    </span><span class="nottickedoff">Just reason -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span>
+<span class="lineno">  438 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt;</span>
+<span class="lineno">  439 </span><span class="spaces">      </span><span class="nottickedoff">case eqcApiKey cfg of</span>
+<span class="lineno">  440 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))</span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="nottickedoff">Just _ -&gt; do</span>
+<span class="lineno">  442 </span><span class="spaces">          </span><span class="nottickedoff">mgr &lt;- newTlsManager</span>
+<span class="lineno">  443 </span><span class="spaces">          </span><span class="nottickedoff">buildTransportFromValidatedConfigWithManager mgr cfg</span></span>
+<span class="lineno">  444 </span>
+<span class="lineno">  445 </span>buildTransportFromValidatedConfigWithManager :: Manager -&gt; ExternalQueryConfig -&gt; IO LLMTransport
+<span class="lineno">  446 </span><span class="decl"><span class="istickedoff">buildTransportFromValidatedConfigWithManager mgr cfg =</span>
+<span class="lineno">  447 </span><span class="spaces">  </span><span class="istickedoff">case eqcFallbackReason cfg of</span>
+<span class="lineno">  448 </span><span class="spaces">    </span><span class="istickedoff">Just reason -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span>
+<span class="lineno">  449 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  450 </span><span class="spaces">      </span><span class="istickedoff">case eqcApiKey cfg of</span>
+<span class="lineno">  451 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))</span></span>
+<span class="lineno">  452 </span><span class="spaces">        </span><span class="istickedoff">Just key -&gt; pure (realTransportForKey mgr cfg key)</span></span>
+<span class="lineno">  453 </span>
+<span class="lineno">  454 </span>realTransportForKey :: Manager -&gt; ExternalQueryConfig -&gt; Text -&gt; LLMTransport
+<span class="lineno">  455 </span><span class="decl"><span class="istickedoff">realTransportForKey mgr cfg key =</span>
+<span class="lineno">  456 </span><span class="spaces">  </span><span class="istickedoff">if eqcTransportMode cfg == &quot;fireworks&quot;</span>
+<span class="lineno">  457 </span><span class="spaces">    </span><span class="istickedoff">then FireworksTransport mgr FireworksConfig</span>
+<span class="lineno">  458 </span><span class="spaces">      </span><span class="istickedoff">{ fcApiKey = key</span>
+<span class="lineno">  459 </span><span class="spaces">      </span><span class="istickedoff">, fcModel = eqcModel cfg</span>
+<span class="lineno">  460 </span><span class="spaces">      </span><span class="istickedoff">, fcEndpoint = eqcEndpoint cfg</span>
+<span class="lineno">  461 </span><span class="spaces">      </span><span class="istickedoff">, fcTimeoutMs = eqcTimeoutMs cfg</span>
+<span class="lineno">  462 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  463 </span><span class="spaces">    </span><span class="istickedoff">else MistralTransport mgr MistralConfig</span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">{ mcApiKey = key</span>
+<span class="lineno">  465 </span><span class="spaces">      </span><span class="istickedoff">, mcModel = eqcModel cfg</span>
+<span class="lineno">  466 </span><span class="spaces">      </span><span class="istickedoff">, mcEndpoint = eqcEndpoint cfg</span>
+<span class="lineno">  467 </span><span class="spaces">      </span><span class="istickedoff">, mcTimeoutMs = eqcTimeoutMs cfg</span>
+<span class="lineno">  468 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  469 </span>
+<span class="lineno">  470 </span>-- | Build transport from an explicit configuration record.
+<span class="lineno">  471 </span>-- Useful for tests and for deterministic fallback paths.
+<span class="lineno">  472 </span>buildTransportFromConfig :: ExternalQueryConfig -&gt; IO LLMTransport
+<span class="lineno">  473 </span><span class="decl"><span class="istickedoff">buildTransportFromConfig cfg =</span>
+<span class="lineno">  474 </span><span class="spaces">  </span><span class="istickedoff">case eqcFallbackReason cfg of</span>
+<span class="lineno">  475 </span><span class="spaces">    </span><span class="istickedoff">Just reason -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span>
+<span class="lineno">  476 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  477 </span><span class="spaces">      </span><span class="istickedoff">case eqcApiKey cfg of</span>
+<span class="lineno">  478 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))</span>
+<span class="lineno">  479 </span><span class="spaces">        </span><span class="istickedoff">Just _ -&gt;</span>
+<span class="lineno">  480 </span><span class="spaces">          </span><span class="istickedoff">case validateEndpointUrl (eqcEndpoint cfg) <span class="nottickedoff">Nothing</span> of</span>
+<span class="lineno">  481 </span><span class="spaces">            </span><span class="istickedoff">Left reason -&gt;</span>
+<span class="lineno">  482 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span></span>
+<span class="lineno">  483 </span><span class="spaces">            </span><span class="istickedoff">Right () -&gt; do</span>
+<span class="lineno">  484 </span><span class="spaces">              </span><span class="istickedoff">mgr &lt;- newTlsManager</span>
+<span class="lineno">  485 </span><span class="spaces">              </span><span class="istickedoff">buildTransportFromValidatedConfigWithManager mgr cfg</span></span>
+<span class="lineno">  486 </span>
+<span class="lineno">  487 </span>buildTransportFromConfigWithManager :: Manager -&gt; ExternalQueryConfig -&gt; IO LLMTransport
+<span class="lineno">  488 </span><span class="decl"><span class="nottickedoff">buildTransportFromConfigWithManager mgr cfg =</span>
+<span class="lineno">  489 </span><span class="spaces">  </span><span class="nottickedoff">case eqcFallbackReason cfg of</span>
+<span class="lineno">  490 </span><span class="spaces">    </span><span class="nottickedoff">Just reason -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt;</span>
+<span class="lineno">  492 </span><span class="spaces">      </span><span class="nottickedoff">case eqcApiKey cfg of</span>
+<span class="lineno">  493 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; pure (MockTransport defaultMockTable (Just cfg { eqcFallbackReason = Just TfrKeyMissing }))</span>
+<span class="lineno">  494 </span><span class="spaces">        </span><span class="nottickedoff">Just key -&gt;</span>
+<span class="lineno">  495 </span><span class="spaces">          </span><span class="nottickedoff">case validateEndpointUrl (eqcEndpoint cfg) Nothing of</span>
+<span class="lineno">  496 </span><span class="spaces">            </span><span class="nottickedoff">Left reason -&gt;</span>
+<span class="lineno">  497 </span><span class="spaces">              </span><span class="nottickedoff">pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))</span>
+<span class="lineno">  498 </span><span class="spaces">            </span><span class="nottickedoff">Right () -&gt; pure (realTransportForKey mgr cfg key)</span></span>
+<span class="lineno">  499 </span>
+<span class="lineno">  500 </span>-- | Default mock table with a handful of deterministic responses.
+<span class="lineno">  501 </span>-- Extend this in tests by passing a custom table to 'MockTransport'.
+<span class="lineno">  502 </span>defaultMockTable :: MockTable
+<span class="lineno">  503 </span><span class="decl"><span class="istickedoff">defaultMockTable =</span>
+<span class="lineno">  504 </span><span class="spaces">  </span><span class="istickedoff">[ ( &quot;llm-augment&quot;</span>
+<span class="lineno">  505 </span><span class="spaces">    </span><span class="istickedoff">, &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  506 </span><span class="spaces">    </span><span class="istickedoff">, &quot;что&quot;</span>
+<span class="lineno">  507 </span><span class="spaces">    </span><span class="istickedoff">, Right <span class="nottickedoff">mockDefinitionPositive</span></span>
+<span class="lineno">  508 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  509 </span><span class="spaces">  </span><span class="istickedoff">, ( &quot;llm-augment&quot;</span>
+<span class="lineno">  510 </span><span class="spaces">    </span><span class="istickedoff">, &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  511 </span><span class="spaces">    </span><span class="istickedoff">, &quot;тема&quot;</span>
+<span class="lineno">  512 </span><span class="spaces">    </span><span class="istickedoff">, Right mockDefinitionPositive</span>
+<span class="lineno">  513 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  514 </span><span class="spaces">  </span><span class="istickedoff">, ( &quot;llm-augment&quot;</span>
+<span class="lineno">  515 </span><span class="spaces">    </span><span class="istickedoff">, &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  516 </span><span class="spaces">    </span><span class="istickedoff">, &quot;как&quot;</span>
+<span class="lineno">  517 </span><span class="spaces">    </span><span class="istickedoff">, <span class="nottickedoff">Right mockDeclensionPositive</span></span>
+<span class="lineno">  518 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  519 </span><span class="spaces">  </span><span class="istickedoff">, ( &quot;llm-augment&quot;</span>
+<span class="lineno">  520 </span><span class="spaces">    </span><span class="istickedoff">, &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  521 </span><span class="spaces">    </span><span class="istickedoff">, &quot;Explore&quot;</span>
+<span class="lineno">  522 </span><span class="spaces">    </span><span class="istickedoff">, Right mockDefinitionPositive</span>
+<span class="lineno">  523 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  524 </span><span class="spaces">  </span><span class="istickedoff">, ( &quot;llm-augment&quot;</span>
+<span class="lineno">  525 </span><span class="spaces">    </span><span class="istickedoff">, &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  526 </span><span class="spaces">    </span><span class="istickedoff">, &quot;fail&quot;</span>
+<span class="lineno">  527 </span><span class="spaces">    </span><span class="istickedoff">, Left (EqeServerError &quot;mock_injected_failure&quot;)</span>
+<span class="lineno">  528 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  529 </span><span class="spaces">  </span><span class="istickedoff">]</span>
+<span class="lineno">  530 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  531 </span><span class="spaces">    </span><span class="istickedoff">mockDefinitionPositive =</span>
+<span class="lineno">  532 </span><span class="spaces">      </span><span class="istickedoff">&quot;{\&quot;proposition\&quot;:\&quot;свобода — способность действовать по своей воле\&quot;,\&quot;source\&quot;:\&quot;llm\&quot;,\&quot;validated\&quot;:true,\&quot;conatusDelta\&quot;:0.3,\&quot;predictiveDelta\&quot;:0.2,\&quot;word\&quot;:\&quot;свобода\&quot;,\&quot;definition\&quot;:\&quot;способность действовать по своей воле\&quot;,\&quot;morphology\&quot;:{\&quot;gender\&quot;:\&quot;feminine\&quot;,\&quot;declension\&quot;:\&quot;first\&quot;}}&quot;</span>
+<span class="lineno">  533 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">mockDeclensionPositive =</span></span>
+<span class="lineno">  534 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&quot;{\&quot;proposition\&quot;:\&quot;склонение слова 'книга'\&quot;,\&quot;source\&quot;:\&quot;llm\&quot;,\&quot;validated\&quot;:true,\&quot;conatusDelta\&quot;:0.2,\&quot;predictiveDelta\&quot;:0.1,\&quot;word\&quot;:\&quot;книга\&quot;,\&quot;definition\&quot;:\&quot;печатное издание\&quot;,\&quot;morphology\&quot;:{\&quot;gender\&quot;:\&quot;feminine\&quot;,\&quot;declension\&quot;:\&quot;first\&quot;,\&quot;cases\&quot;:{\&quot;nom\&quot;:\&quot;книга\&quot;,\&quot;gen\&quot;:\&quot;книги\&quot;,\&quot;dat\&quot;:\&quot;книге\&quot;,\&quot;acc\&quot;:\&quot;книгу\&quot;,\&quot;ins\&quot;:\&quot;книгой\&quot;,\&quot;pre\&quot;:\&quot;книге\&quot;}}}&quot;</span></span></span>
+<span class="lineno">  535 </span>
+<span class="lineno">  536 </span>-- | Execute a query against the chosen transport.
+<span class="lineno">  537 </span>--
+<span class="lineno">  538 </span>-- Returns 'Either ExternalQueryError ExternalQueryResponse' so the
+<span class="lineno">  539 </span>-- caller (learning loop) can decide what to do next.
+<span class="lineno">  540 </span>queryExternalTool
+<span class="lineno">  541 </span>  :: LLMTransport
+<span class="lineno">  542 </span>  -&gt; ExternalTool
+<span class="lineno">  543 </span>  -&gt; LearningNeed
+<span class="lineno">  544 </span>  -&gt; Text        -- ^ user query / prompt
+<span class="lineno">  545 </span>  -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  546 </span><span class="decl"><span class="istickedoff">queryExternalTool transport tool need query =</span>
+<span class="lineno">  547 </span><span class="spaces">  </span><span class="istickedoff">let queryChars = T.length query</span>
+<span class="lineno">  548 </span><span class="spaces">  </span><span class="istickedoff">in if queryChars &gt; llmMaxQueryChars</span>
+<span class="lineno">  549 </span><span class="spaces">       </span><span class="istickedoff">then pure (Left (queryTooLarge queryChars llmMaxQueryChars))</span>
+<span class="lineno">  550 </span><span class="spaces">       </span><span class="istickedoff">else case transport of</span>
+<span class="lineno">  551 </span><span class="spaces">         </span><span class="istickedoff">MockTransport table mCfg  -&gt;</span>
+<span class="lineno">  552 </span><span class="spaces">           </span><span class="istickedoff">case mCfg &gt;&gt;= eqcFallbackReason of</span>
+<span class="lineno">  553 </span><span class="spaces">             </span><span class="istickedoff">Just reason | reason /= TfrExplicitMock -&gt; pure (Left (EqeFallback reason))</span>
+<span class="lineno">  554 </span><span class="spaces">             </span><span class="istickedoff">_ -&gt; mockQuery table tool need query</span>
+<span class="lineno">  555 </span><span class="spaces">         </span><span class="istickedoff">MistralTransport mgr cfg  -&gt; mistralQuery <span class="nottickedoff">mgr</span> cfg <span class="nottickedoff">tool</span> <span class="nottickedoff">need</span> query</span>
+<span class="lineno">  556 </span><span class="spaces">         </span><span class="istickedoff">FireworksTransport mgr cfg -&gt; <span class="nottickedoff">fireworksQuery mgr cfg tool need query</span></span></span>
+<span class="lineno">  557 </span>
+<span class="lineno">  558 </span>-- | Execute a query with explicit config (for tests and telemetry).
+<span class="lineno">  559 </span>queryExternalToolWithConfig
+<span class="lineno">  560 </span>  :: ExternalQueryConfig
+<span class="lineno">  561 </span>  -&gt; ExternalTool
+<span class="lineno">  562 </span>  -&gt; LearningNeed
+<span class="lineno">  563 </span>  -&gt; Text
+<span class="lineno">  564 </span>  -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  565 </span><span class="decl"><span class="istickedoff">queryExternalToolWithConfig cfg tool need query = do</span>
+<span class="lineno">  566 </span><span class="spaces">  </span><span class="istickedoff">transport &lt;- buildTransportFromConfig cfg</span>
+<span class="lineno">  567 </span><span class="spaces">  </span><span class="istickedoff">queryExternalTool transport <span class="nottickedoff">tool</span> <span class="nottickedoff">need</span> query</span></span>
+<span class="lineno">  568 </span>
+<span class="lineno">  569 </span>-- | Deterministic mock query.
+<span class="lineno">  570 </span>mockQuery :: MockTable -&gt; ExternalTool -&gt; LearningNeed -&gt; Text -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  571 </span><span class="decl"><span class="istickedoff">mockQuery table tool need query = do</span>
+<span class="lineno">  572 </span><span class="spaces">  </span><span class="istickedoff">let needTag = renderNeedTag need</span>
+<span class="lineno">  573 </span><span class="spaces">      </span><span class="istickedoff">qPrefix = T.takeWhile (not . isSpace) (T.strip query)</span>
+<span class="lineno">  574 </span><span class="spaces">      </span><span class="istickedoff">match = mockTableLookup (etName tool, needTag, qPrefix) table</span>
+<span class="lineno">  575 </span><span class="spaces">            </span><span class="istickedoff">&lt;|&gt; <span class="nottickedoff">mockTableLookup (etName tool, needTag, &quot;&quot;) table</span></span>
+<span class="lineno">  576 </span><span class="spaces">            </span><span class="istickedoff">&lt;|&gt; <span class="nottickedoff">mockTableLookup (etName tool, &quot;&quot;, qPrefix) table</span></span>
+<span class="lineno">  577 </span><span class="spaces">  </span><span class="istickedoff">pure $ case match of</span>
+<span class="lineno">  578 </span><span class="spaces">    </span><span class="istickedoff">Just (Right body) -&gt;</span>
+<span class="lineno">  579 </span><span class="spaces">      </span><span class="istickedoff">Right ExternalQueryResponse</span>
+<span class="lineno">  580 </span><span class="spaces">        </span><span class="istickedoff">{ eqrRawBody    = body</span>
+<span class="lineno">  581 </span><span class="spaces">        </span><span class="istickedoff">, eqrStructured = body</span>
+<span class="lineno">  582 </span><span class="spaces">        </span><span class="istickedoff">, eqrToolName   = etName tool</span>
+<span class="lineno">  583 </span><span class="spaces">        </span><span class="istickedoff">, eqrLatencyMs  = 0</span>
+<span class="lineno">  584 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  585 </span><span class="spaces">    </span><span class="istickedoff">Just (Left err) -&gt;</span>
+<span class="lineno">  586 </span><span class="spaces">      </span><span class="istickedoff">Left err</span>
+<span class="lineno">  587 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  588 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">Left (EqeNetworkUnavailable &quot;mock_no_matching_response&quot;)</span></span></span>
+<span class="lineno">  589 </span>
+<span class="lineno">  590 </span>renderNeedTag :: LearningNeed -&gt; Text
+<span class="lineno">  591 </span><span class="decl"><span class="istickedoff">renderNeedTag NeedSalienceCalibration = <span class="nottickedoff">&quot;NeedSalienceCalibration&quot;</span></span>
+<span class="lineno">  592 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedKeywordEnrichment   = <span class="nottickedoff">&quot;NeedKeywordEnrichment&quot;</span></span>
+<span class="lineno">  593 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedLexiconExtension      = &quot;NeedLexiconExtension&quot;</span>
+<span class="lineno">  594 </span><span class="spaces"></span><span class="istickedoff">renderNeedTag NeedNone                  = <span class="nottickedoff">&quot;NeedNone&quot;</span></span></span>
+<span class="lineno">  595 </span>
+<span class="lineno">  596 </span>-- | Real Mistral HTTP query.
+<span class="lineno">  597 </span>-- Fail-closed: any exception or non-2xx status is mapped to a typed
+<span class="lineno">  598 </span>-- 'ExternalQueryError'.  Never returns a silent accept.
+<span class="lineno">  599 </span>mistralQuery :: Manager -&gt; MistralConfig -&gt; ExternalTool -&gt; LearningNeed -&gt; Text -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  600 </span><span class="decl"><span class="istickedoff">mistralQuery mgr cfg tool _need query =</span>
+<span class="lineno">  601 </span><span class="spaces">  </span><span class="istickedoff">chatCompletionQuery <span class="nottickedoff">mgr</span> <span class="nottickedoff">&quot;mistral&quot;</span> (mcEndpoint cfg) (mcModel cfg) <span class="nottickedoff">(mcApiKey cfg)</span> <span class="nottickedoff">(mcTimeoutMs cfg)</span> <span class="nottickedoff">tool</span> query</span></span>
+<span class="lineno">  602 </span>
+<span class="lineno">  603 </span>-- | Real Fireworks HTTP query.
+<span class="lineno">  604 </span>-- Fireworks uses the same OpenAI-compatible chat-completion schema as
+<span class="lineno">  605 </span>-- Mistral, so the request body and response unwrapping are identical.
+<span class="lineno">  606 </span>-- Only the endpoint and auth header differ.
+<span class="lineno">  607 </span>fireworksQuery :: Manager -&gt; FireworksConfig -&gt; ExternalTool -&gt; LearningNeed -&gt; Text -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  608 </span><span class="decl"><span class="nottickedoff">fireworksQuery mgr cfg tool _need query =</span>
+<span class="lineno">  609 </span><span class="spaces">  </span><span class="nottickedoff">chatCompletionQuery mgr &quot;fireworks&quot; (fcEndpoint cfg) (fcModel cfg) (fcApiKey cfg) (fcTimeoutMs cfg) tool query</span></span>
+<span class="lineno">  610 </span>
+<span class="lineno">  611 </span>chatCompletionQuery
+<span class="lineno">  612 </span>  :: Manager
+<span class="lineno">  613 </span>  -&gt; Text
+<span class="lineno">  614 </span>  -&gt; Text
+<span class="lineno">  615 </span>  -&gt; Text
+<span class="lineno">  616 </span>  -&gt; Text
+<span class="lineno">  617 </span>  -&gt; Int
+<span class="lineno">  618 </span>  -&gt; ExternalTool
+<span class="lineno">  619 </span>  -&gt; Text
+<span class="lineno">  620 </span>  -&gt; IO (Either ExternalQueryError ExternalQueryResponse)
+<span class="lineno">  621 </span><span class="decl"><span class="istickedoff">chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs tool query = do</span>
+<span class="lineno">  622 </span><span class="spaces">  </span><span class="istickedoff">requestResult &lt;- buildChatRequest endpoint model <span class="nottickedoff">apiKey</span> <span class="nottickedoff">timeoutMs</span> query</span>
+<span class="lineno">  623 </span><span class="spaces">  </span><span class="istickedoff">case requestResult of</span>
+<span class="lineno">  624 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; pure (Left err)</span>
+<span class="lineno">  625 </span><span class="spaces">    </span><span class="istickedoff">Right req -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  626 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">start &lt;- getCurrentTime</span></span>
+<span class="lineno">  627 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">httpResult &lt;- runChatHttp mgr req</span></span>
+<span class="lineno">  628 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">end &lt;- getCurrentTime</span></span>
+<span class="lineno">  629 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">let latencyMs = elapsedMs start end</span></span>
+<span class="lineno">  630 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (handleChatHttpResult tool latencyMs httpResult)</span></span></span>
+<span class="lineno">  631 </span>
+<span class="lineno">  632 </span>buildChatRequest :: Text -&gt; Text -&gt; Text -&gt; Int -&gt; Text -&gt; IO (Either ExternalQueryError Request)
+<span class="lineno">  633 </span><span class="decl"><span class="istickedoff">buildChatRequest endpoint model apiKey timeoutMs query = do</span>
+<span class="lineno">  634 </span><span class="spaces">  </span><span class="istickedoff">parsed &lt;- try (parseRequest (T.unpack endpoint)) :: IO (Either HttpException Request)</span>
+<span class="lineno">  635 </span><span class="spaces">  </span><span class="istickedoff">pure $ case parsed of</span>
+<span class="lineno">  636 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">Left (classifyHttpException err)</span></span>
+<span class="lineno">  637 </span><span class="spaces">    </span><span class="istickedoff">Right req0 -&gt;</span>
+<span class="lineno">  638 </span><span class="spaces">      </span><span class="istickedoff">let payload = encode $ object</span>
+<span class="lineno">  639 </span><span class="spaces">            </span><span class="istickedoff">[ &quot;model&quot; .= model</span>
+<span class="lineno">  640 </span><span class="spaces">            </span><span class="istickedoff">, &quot;messages&quot; .= [object [&quot;role&quot; .= (&quot;user&quot; :: Text), &quot;content&quot; .= query]]</span>
+<span class="lineno">  641 </span><span class="spaces">            </span><span class="istickedoff">]</span>
+<span class="lineno">  642 </span><span class="spaces">          </span><span class="istickedoff">payloadBytes = fromIntegral (LBS.length payload)</span>
+<span class="lineno">  643 </span><span class="spaces">      </span><span class="istickedoff">in if <span class="tickonlytrue">payloadBytes &gt; llmMaxRequestBytes</span></span>
+<span class="lineno">  644 </span><span class="spaces">           </span><span class="istickedoff">then Left (requestBodyTooLarge payloadBytes llmMaxRequestBytes)</span>
+<span class="lineno">  645 </span><span class="spaces">           </span><span class="istickedoff">else <span class="nottickedoff">Right req0</span></span>
+<span class="lineno">  646 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">{ method = &quot;POST&quot;</span></span>
+<span class="lineno">  647 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">, requestHeaders =</span></span>
+<span class="lineno">  648 </span><span class="spaces">                 </span><span class="istickedoff"><span class="nottickedoff">[ (&quot;Authorization&quot;, TE.encodeUtf8 (T.concat [&quot;Bearer &quot;, apiKey]))</span></span>
+<span class="lineno">  649 </span><span class="spaces">                 </span><span class="istickedoff"><span class="nottickedoff">, (&quot;Content-Type&quot;, &quot;application/json&quot;)</span></span>
+<span class="lineno">  650 </span><span class="spaces">                 </span><span class="istickedoff"><span class="nottickedoff">]</span></span>
+<span class="lineno">  651 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">, requestBody = RequestBodyLBS payload</span></span>
+<span class="lineno">  652 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">, responseTimeout = responseTimeoutMicro (timeoutMicroseconds timeoutMs)</span></span>
+<span class="lineno">  653 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">, checkResponse = \_ _ -&gt; pure ()</span></span>
+<span class="lineno">  654 </span><span class="spaces">             </span><span class="istickedoff"><span class="nottickedoff">}</span></span></span>
+<span class="lineno">  655 </span>
+<span class="lineno">  656 </span>runChatHttp :: Manager -&gt; Request -&gt; IO (Either HttpException (Status, Either ExternalQueryError BS.ByteString))
+<span class="lineno">  657 </span><span class="decl"><span class="nottickedoff">runChatHttp mgr req =</span>
+<span class="lineno">  658 </span><span class="spaces">  </span><span class="nottickedoff">try (withResponse req mgr $ \resp -&gt; do</span>
+<span class="lineno">  659 </span><span class="spaces">    </span><span class="nottickedoff">bodyResult &lt;- readResponseBodyLimited llmMaxResponseBytes (responseBody resp)</span>
+<span class="lineno">  660 </span><span class="spaces">    </span><span class="nottickedoff">pure (responseStatus resp, bodyResult))</span></span>
+<span class="lineno">  661 </span>
+<span class="lineno">  662 </span>handleChatHttpResult
+<span class="lineno">  663 </span>  :: ExternalTool
+<span class="lineno">  664 </span>  -&gt; Int
+<span class="lineno">  665 </span>  -&gt; Either HttpException (Status, Either ExternalQueryError BS.ByteString)
+<span class="lineno">  666 </span>  -&gt; Either ExternalQueryError ExternalQueryResponse
+<span class="lineno">  667 </span><span class="decl"><span class="nottickedoff">handleChatHttpResult tool latencyMs httpResult =</span>
+<span class="lineno">  668 </span><span class="spaces">  </span><span class="nottickedoff">case httpResult of</span>
+<span class="lineno">  669 </span><span class="spaces">    </span><span class="nottickedoff">Left err -&gt; Left (classifyHttpException err)</span>
+<span class="lineno">  670 </span><span class="spaces">    </span><span class="nottickedoff">Right (status, bodyResult) -&gt;</span>
+<span class="lineno">  671 </span><span class="spaces">      </span><span class="nottickedoff">case bodyResult of</span>
+<span class="lineno">  672 </span><span class="spaces">        </span><span class="nottickedoff">Left err -&gt; Left (classifyBodyReadFailure (statusCode status) err)</span>
+<span class="lineno">  673 </span><span class="spaces">        </span><span class="nottickedoff">Right rawBody -&gt;</span>
+<span class="lineno">  674 </span><span class="spaces">          </span><span class="nottickedoff">case decodeLlmBodyLimited llmMaxResponseBytes rawBody of</span>
+<span class="lineno">  675 </span><span class="spaces">            </span><span class="nottickedoff">Left err -&gt; Left err</span>
+<span class="lineno">  676 </span><span class="spaces">            </span><span class="nottickedoff">Right body -&gt; responseFromStatus status body</span>
+<span class="lineno">  677 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  678 </span><span class="spaces">    </span><span class="nottickedoff">responseFromStatus status body =</span>
+<span class="lineno">  679 </span><span class="spaces">      </span><span class="nottickedoff">let code = statusCode status</span>
+<span class="lineno">  680 </span><span class="spaces">          </span><span class="nottickedoff">diag = redactUpstreamError code body</span>
+<span class="lineno">  681 </span><span class="spaces">      </span><span class="nottickedoff">in if code &gt;= 200 &amp;&amp; code &lt; 300</span>
+<span class="lineno">  682 </span><span class="spaces">           </span><span class="nottickedoff">then if T.null (T.strip body)</span>
+<span class="lineno">  683 </span><span class="spaces">                  </span><span class="nottickedoff">then Left EqeEmptyResponse</span>
+<span class="lineno">  684 </span><span class="spaces">                  </span><span class="nottickedoff">else Right ExternalQueryResponse</span>
+<span class="lineno">  685 </span><span class="spaces">                         </span><span class="nottickedoff">{ eqrRawBody = T.take llmRawBodyTelemetryChars body</span>
+<span class="lineno">  686 </span><span class="spaces">                         </span><span class="nottickedoff">, eqrStructured = extractStructured body</span>
+<span class="lineno">  687 </span><span class="spaces">                         </span><span class="nottickedoff">, eqrToolName = etName tool</span>
+<span class="lineno">  688 </span><span class="spaces">                         </span><span class="nottickedoff">, eqrLatencyMs = latencyMs</span>
+<span class="lineno">  689 </span><span class="spaces">                         </span><span class="nottickedoff">}</span>
+<span class="lineno">  690 </span><span class="spaces">           </span><span class="nottickedoff">else case code of</span>
+<span class="lineno">  691 </span><span class="spaces">             </span><span class="nottickedoff">_ -&gt; Left (classifyHttpStatusError code diag)</span></span>
+<span class="lineno">  692 </span>
+<span class="lineno">  693 </span>classifyBodyReadFailure :: Int -&gt; ExternalQueryError -&gt; ExternalQueryError
+<span class="lineno">  694 </span><span class="decl"><span class="istickedoff">classifyBodyReadFailure code err =</span>
+<span class="lineno">  695 </span><span class="spaces">  </span><span class="istickedoff">classifyHttpStatusError code $ T.concat</span>
+<span class="lineno">  696 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;upstream_status=&quot;</span>
+<span class="lineno">  697 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show code)</span>
+<span class="lineno">  698 </span><span class="spaces">    </span><span class="istickedoff">, &quot;:body_redacted:&quot;</span>
+<span class="lineno">  699 </span><span class="spaces">    </span><span class="istickedoff">, bodyReadFailureTag err</span>
+<span class="lineno">  700 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  701 </span>
+<span class="lineno">  702 </span>classifyHttpStatusError :: Int -&gt; Text -&gt; ExternalQueryError
+<span class="lineno">  703 </span><span class="decl"><span class="istickedoff">classifyHttpStatusError code diag =</span>
+<span class="lineno">  704 </span><span class="spaces">  </span><span class="istickedoff">case code of</span>
+<span class="lineno">  705 </span><span class="spaces">    </span><span class="istickedoff">401 -&gt; <span class="nottickedoff">EqeAuthFailure diag</span></span>
+<span class="lineno">  706 </span><span class="spaces">    </span><span class="istickedoff">403 -&gt; <span class="nottickedoff">EqeAuthFailure diag</span></span>
+<span class="lineno">  707 </span><span class="spaces">    </span><span class="istickedoff">429 -&gt; EqeRateLimited diag</span>
+<span class="lineno">  708 </span><span class="spaces">    </span><span class="istickedoff">_ | <span class="nottickedoff">code &gt;= 500 &amp;&amp; code &lt; 600</span> -&gt; <span class="nottickedoff">EqeServerError diag</span></span>
+<span class="lineno">  709 </span><span class="spaces">    </span><span class="istickedoff">_ | <span class="nottickedoff">code &gt;= 400 &amp;&amp; code &lt; 500</span> -&gt; <span class="nottickedoff">EqeInvalidResponse diag</span></span>
+<span class="lineno">  710 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">EqeInvalidResponse diag</span></span></span>
+<span class="lineno">  711 </span>
+<span class="lineno">  712 </span>bodyReadFailureTag :: ExternalQueryError -&gt; Text
+<span class="lineno">  713 </span><span class="decl"><span class="istickedoff">bodyReadFailureTag (EqeInvalidResponse msg) = msg</span>
+<span class="lineno">  714 </span><span class="spaces"></span><span class="istickedoff">bodyReadFailureTag EqeEmptyResponse = <span class="nottickedoff">&quot;empty_response&quot;</span></span>
+<span class="lineno">  715 </span><span class="spaces"></span><span class="istickedoff">bodyReadFailureTag other = <span class="nottickedoff">T.pack (show other)</span></span></span>
+<span class="lineno">  716 </span>
+<span class="lineno">  717 </span>readResponseBodyLimited :: Int -&gt; BodyReader -&gt; IO (Either ExternalQueryError BS.ByteString)
+<span class="lineno">  718 </span><span class="decl"><span class="nottickedoff">readResponseBodyLimited maxBytes reader = go 0 []</span>
+<span class="lineno">  719 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  720 </span><span class="spaces">    </span><span class="nottickedoff">go total chunks = do</span>
+<span class="lineno">  721 </span><span class="spaces">      </span><span class="nottickedoff">chunk &lt;- brRead reader</span>
+<span class="lineno">  722 </span><span class="spaces">      </span><span class="nottickedoff">if BS.null chunk</span>
+<span class="lineno">  723 </span><span class="spaces">        </span><span class="nottickedoff">then pure (Right (BS.concat (reverse chunks)))</span>
+<span class="lineno">  724 </span><span class="spaces">        </span><span class="nottickedoff">else do</span>
+<span class="lineno">  725 </span><span class="spaces">          </span><span class="nottickedoff">let total' = total + BS.length chunk</span>
+<span class="lineno">  726 </span><span class="spaces">          </span><span class="nottickedoff">if total' &gt; maxBytes</span>
+<span class="lineno">  727 </span><span class="spaces">            </span><span class="nottickedoff">then pure (Left (responseTooLarge total' maxBytes))</span>
+<span class="lineno">  728 </span><span class="spaces">            </span><span class="nottickedoff">else go total' (chunk : chunks)</span></span>
+<span class="lineno">  729 </span>
+<span class="lineno">  730 </span>decodeLlmBodyLimited :: Int -&gt; BS.ByteString -&gt; Either ExternalQueryError Text
+<span class="lineno">  731 </span><span class="decl"><span class="istickedoff">decodeLlmBodyLimited maxBytes raw</span>
+<span class="lineno">  732 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">BS.length raw &gt; maxBytes</span> = Left (responseTooLarge (BS.length raw) maxBytes)</span>
+<span class="lineno">  733 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> =</span>
+<span class="lineno">  734 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case TE.decodeUtf8' raw of</span></span>
+<span class="lineno">  735 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Left _ -&gt; Left (EqeInvalidResponse &quot;invalid_utf8_response&quot;)</span></span>
+<span class="lineno">  736 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Right text -&gt; Right text</span></span></span>
+<span class="lineno">  737 </span>
+<span class="lineno">  738 </span>responseTooLarge :: Int -&gt; Int -&gt; ExternalQueryError
+<span class="lineno">  739 </span><span class="decl"><span class="istickedoff">responseTooLarge actual maxBytes =</span>
+<span class="lineno">  740 </span><span class="spaces">  </span><span class="istickedoff">EqeInvalidResponse $ T.concat</span>
+<span class="lineno">  741 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;response_too_large:max_bytes=&quot;</span>
+<span class="lineno">  742 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show maxBytes)</span>
+<span class="lineno">  743 </span><span class="spaces">    </span><span class="istickedoff">, &quot;:actual_bytes=&quot;</span>
+<span class="lineno">  744 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show actual)</span>
+<span class="lineno">  745 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  746 </span>
+<span class="lineno">  747 </span>queryTooLarge :: Int -&gt; Int -&gt; ExternalQueryError
+<span class="lineno">  748 </span><span class="decl"><span class="istickedoff">queryTooLarge actual maxChars =</span>
+<span class="lineno">  749 </span><span class="spaces">  </span><span class="istickedoff">EqeInvalidResponse $ T.concat</span>
+<span class="lineno">  750 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;query_too_large:max_chars=&quot;</span>
+<span class="lineno">  751 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show maxChars)</span>
+<span class="lineno">  752 </span><span class="spaces">    </span><span class="istickedoff">, &quot;:actual_chars=&quot;</span>
+<span class="lineno">  753 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show actual)</span>
+<span class="lineno">  754 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  755 </span>
+<span class="lineno">  756 </span>requestBodyTooLarge :: Int -&gt; Int -&gt; ExternalQueryError
+<span class="lineno">  757 </span><span class="decl"><span class="istickedoff">requestBodyTooLarge actual maxBytes =</span>
+<span class="lineno">  758 </span><span class="spaces">  </span><span class="istickedoff">EqeInvalidResponse $ T.concat</span>
+<span class="lineno">  759 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;request_too_large:max_bytes=&quot;</span>
+<span class="lineno">  760 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show maxBytes)</span>
+<span class="lineno">  761 </span><span class="spaces">    </span><span class="istickedoff">, &quot;:actual_bytes=&quot;</span>
+<span class="lineno">  762 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show actual)</span>
+<span class="lineno">  763 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  764 </span>
+<span class="lineno">  765 </span>redactUpstreamError :: Int -&gt; Text -&gt; Text
+<span class="lineno">  766 </span><span class="decl"><span class="istickedoff">redactUpstreamError code body =</span>
+<span class="lineno">  767 </span><span class="spaces">  </span><span class="istickedoff">T.concat</span>
+<span class="lineno">  768 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;upstream_status=&quot;</span>
+<span class="lineno">  769 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show code)</span>
+<span class="lineno">  770 </span><span class="spaces">    </span><span class="istickedoff">, &quot;:body_redacted:body_chars=&quot;</span>
+<span class="lineno">  771 </span><span class="spaces">    </span><span class="istickedoff">, T.pack (show (T.length body))</span>
+<span class="lineno">  772 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  773 </span>
+<span class="lineno">  774 </span>classifyHttpException :: HttpException -&gt; ExternalQueryError
+<span class="lineno">  775 </span><span class="decl"><span class="istickedoff">classifyHttpException err =</span>
+<span class="lineno">  776 </span><span class="spaces">  </span><span class="istickedoff">case err of</span>
+<span class="lineno">  777 </span><span class="spaces">    </span><span class="istickedoff">InvalidUrlException _ _ -&gt; <span class="nottickedoff">EqeInvalidResponse &quot;invalid_url&quot;</span></span>
+<span class="lineno">  778 </span><span class="spaces">    </span><span class="istickedoff">HttpExceptionRequest _ ResponseTimeout -&gt; EqeTimeout &quot;response_timeout&quot;</span>
+<span class="lineno">  779 </span><span class="spaces">    </span><span class="istickedoff">HttpExceptionRequest _ ConnectionTimeout -&gt; <span class="nottickedoff">EqeTimeout &quot;connection_timeout&quot;</span></span>
+<span class="lineno">  780 </span><span class="spaces">    </span><span class="istickedoff">HttpExceptionRequest _ content -&gt; <span class="nottickedoff">EqeNetworkUnavailable (httpExceptionContentTag content)</span></span></span>
+<span class="lineno">  781 </span>
+<span class="lineno">  782 </span>httpExceptionContentTag :: HttpExceptionContent -&gt; Text
+<span class="lineno">  783 </span><span class="decl"><span class="nottickedoff">httpExceptionContentTag content =</span>
+<span class="lineno">  784 </span><span class="spaces">  </span><span class="nottickedoff">&quot;http_exception:&quot; &lt;&gt; T.take 80 (T.takeWhile (\c -&gt; c /= ' ' &amp;&amp; c /= '\n') (T.pack (show content)))</span></span>
+<span class="lineno">  785 </span>
+<span class="lineno">  786 </span>timeoutMicroseconds :: Int -&gt; Int
+<span class="lineno">  787 </span><span class="decl"><span class="nottickedoff">timeoutMicroseconds timeoutMs = max 1 timeoutMs * 1000</span></span>
+<span class="lineno">  788 </span>
+<span class="lineno">  789 </span>elapsedMs :: UTCTime -&gt; UTCTime -&gt; Int
+<span class="lineno">  790 </span><span class="decl"><span class="nottickedoff">elapsedMs start end = floor ((realToFrac (diffUTCTime end start) :: Double) * 1000.0)</span></span>
+<span class="lineno">  791 </span>
+<span class="lineno">  792 </span>-- | OpenAI-compatible chat-completion response envelope.
+<span class="lineno">  793 </span>-- Used to unwrap the assistant message content.
+<span class="lineno">  794 </span>data ChatCompletionResponse = ChatCompletionResponse
+<span class="lineno">  795 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ccrChoices</span></span></span> :: ![ChatCompletionChoice]
+<span class="lineno">  796 </span>  }
+<span class="lineno">  797 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  798 </span>
+<span class="lineno">  799 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ChatCompletionResponse</span></span></span></span> where
+<span class="lineno">  800 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;ChatCompletionResponse&quot;</span> $ \o -&gt;</span>
+<span class="lineno">  801 </span><span class="spaces">    </span><span class="istickedoff">ChatCompletionResponse &lt;$&gt; o .: &quot;choices&quot;</span></span>
+<span class="lineno">  802 </span>
+<span class="lineno">  803 </span>data ChatCompletionChoice = ChatCompletionChoice
+<span class="lineno">  804 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">cccMessage</span></span></span> :: !ChatCompletionMessage
+<span class="lineno">  805 </span>  }
+<span class="lineno">  806 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  807 </span>
+<span class="lineno">  808 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON ChatCompletionChoice</span></span></span></span> where
+<span class="lineno">  809 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;ChatCompletionChoice&quot;</span> $ \o -&gt;</span>
+<span class="lineno">  810 </span><span class="spaces">    </span><span class="istickedoff">ChatCompletionChoice &lt;$&gt; o .: &quot;message&quot;</span></span>
+<span class="lineno">  811 </span>
+<span class="lineno">  812 </span>data ChatCompletionMessage = ChatCompletionMessage
+<span class="lineno">  813 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ccmContent</span></span></span> :: !(Maybe Text)
+<span class="lineno">  814 </span>  }
+<span class="lineno">  815 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  816 </span>
+<span class="lineno">  817 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON ChatCompletionMessage</span></span></span></span> where
+<span class="lineno">  818 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;ChatCompletionMessage&quot;</span> $ \o -&gt;</span>
+<span class="lineno">  819 </span><span class="spaces">    </span><span class="istickedoff">ChatCompletionMessage &lt;$&gt; o .:? &quot;content&quot;</span></span>
+<span class="lineno">  820 </span>
+<span class="lineno">  821 </span>-- | Extract structured payload from a Mistral / Fireworks chat-completion
+<span class="lineno">  822 </span>-- response using a typed JSON decoder.
+<span class="lineno">  823 </span>--
+<span class="lineno">  824 </span>-- 1. Decode the body as an OpenAI-compatible 'ChatCompletionResponse'.
+<span class="lineno">  825 </span>-- 2. If successful, return the first choice's message content.
+<span class="lineno">  826 </span>-- 3. If decoding fails OR the content is empty/Null, return the raw
+<span class="lineno">  827 </span>--    body so downstream parsers can attempt direct JSON or legacy text.
+<span class="lineno">  828 </span>extractStructured :: Text -&gt; Text
+<span class="lineno">  829 </span><span class="decl"><span class="istickedoff">extractStructured body =</span>
+<span class="lineno">  830 </span><span class="spaces">  </span><span class="istickedoff">case decodeStrict (TE.encodeUtf8 body) :: Maybe ChatCompletionResponse of</span>
+<span class="lineno">  831 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; body</span>
+<span class="lineno">  832 </span><span class="spaces">    </span><span class="istickedoff">Just ccr -&gt;</span>
+<span class="lineno">  833 </span><span class="spaces">      </span><span class="istickedoff">case ccrChoices ccr of</span>
+<span class="lineno">  834 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; body</span>
+<span class="lineno">  835 </span><span class="spaces">        </span><span class="istickedoff">(choice : _) -&gt;</span>
+<span class="lineno">  836 </span><span class="spaces">          </span><span class="istickedoff">case ccmContent (cccMessage choice) of</span>
+<span class="lineno">  837 </span><span class="spaces">            </span><span class="istickedoff">Nothing  -&gt; body</span>
+<span class="lineno">  838 </span><span class="spaces">            </span><span class="istickedoff">Just &quot;&quot;  -&gt; <span class="nottickedoff">body</span></span>
+<span class="lineno">  839 </span><span class="spaces">            </span><span class="istickedoff">Just txt -&gt; txt</span></span>
+<span class="lineno">  840 </span>
+<span class="lineno">  841 </span>-- Helpers
+<span class="lineno">  842 </span>
+<span class="lineno">  843 </span>mockTableLookup :: (Text, Text, Text) -&gt; MockTable -&gt; Maybe (Either ExternalQueryError Text)
+<span class="lineno">  844 </span><span class="decl"><span class="istickedoff">mockTableLookup _ [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  845 </span><span class="spaces"></span><span class="istickedoff">mockTableLookup key ((a,b,c,d):rest)</span>
+<span class="lineno">  846 </span><span class="spaces">  </span><span class="istickedoff">| key == (a,b,c)  = Just d</span>
+<span class="lineno">  847 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = mockTableLookup key rest</span></span>
+
+</pre>
+</body>
+</html>

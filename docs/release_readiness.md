@@ -13,20 +13,20 @@ It focuses on production behavior, not only local green tests.
 All items below are required for `open_public`.
 
 1. Build/Test Gates
-- `cabal test qxfx0-test -v0` passes with `Failures: 0`.
-- `bash scripts/verify.sh` passes.
-- `bash scripts/release-smoke.sh` passes.
+- `QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh` yields `CONTRACT_VERDICT: PROD_GO`.
+- For public/open release contour, `QXFX0_CONTRACT_PROFILE=extended bash scripts/ci_gate_contract.sh` yields `CONTRACT_VERDICT: FULL_SCIENTIFIC_GO`.
+- `bash scripts/verify.sh` and `cabal test qxfx0-test -v0` remain strong supplemental evidence, but the tiered contract verdicts are canonical.
 
 2. Runtime/Environment Gates
 - Strict runtime readiness is green in target environment:
   - `cabal run -v0 qxfx0-main -- --runtime-ready`
   - status must be `ok` in production profile.
-- If strict is unavailable, release is limited to `closed_beta` with explicit degraded policy.
+- If strict is unavailable, release is limited to `closed_beta` with explicit degraded policy; `open_public` requires the extended contract contour.
 
 3. Dialogue Quality Gates (Russian)
 - Run fixed eval set of 500 prompts + regression pack from real logs:
-  - `reports/dialogue_eval_500_prompts.tsv`
-  - `reports/dialogue_eval_regression_prompts.tsv`
+  - `reports/dialogue_eval_500_prompts.tsv` when present, otherwise bundled fallback prompts
+  - `reports/dialogue_eval_regression_prompts.tsv` when present, otherwise bundled fallback prompts
   - one-shot gate: `bash scripts/run_release_dialogue_gate.sh`
 - `intent_fit_rate >= 0.85`.
 - `fallback_or_template_drift_rate <= 0.05`.
@@ -69,16 +69,18 @@ Release decision:
 ## Execution Steps
 1. Freeze commit hash and environment profile.
 2. Run hard gates in order:
-   - `cabal test qxfx0-test -v0`
+   - `QXFX0_CONTRACT_PROFILE=core bash scripts/ci_gate_contract.sh`
+   - `QXFX0_CONTRACT_PROFILE=extended bash scripts/ci_gate_contract.sh` for open/public release
    - `bash scripts/verify.sh`
-   - `bash scripts/release-smoke.sh`
+   - `cabal test qxfx0-test -v0`
 3. Run 500-prompt eval and fill report template.
 4. Hold Go/No-Go review with evidence links.
 5. If `GO`, tag release and publish notes with known limitations.
 
 ## Required Evidence Bundle
-- test logs (`cabal test`, `verify`, `release-smoke`)
+- contract logs (`ci_gate_contract.sh` core and, when applicable, extended)
+- supplemental test logs (`cabal test`, `verify`, `release-smoke`)
 - runtime readiness output
-- filled `reports/dialogue_eval_200_template.md`
+- generated dialogue-eval summary report from the gate run
 - issue list for all non-zero defects
 - final verdict: `GO` or `NO-GO` with timestamp and owner

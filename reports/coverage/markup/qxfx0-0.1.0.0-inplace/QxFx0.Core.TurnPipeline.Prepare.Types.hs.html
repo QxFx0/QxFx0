@@ -1,0 +1,75 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Prepared effect outputs and per-stage timestamps for prepare pipeline observability. -}
+<span class="lineno">    4 </span>module QxFx0.Core.TurnPipeline.Prepare.Types
+<span class="lineno">    5 </span>  ( PrepareTimeline(..)
+<span class="lineno">    6 </span>  , PrepareEffectResults(..)
+<span class="lineno">    7 </span>  , TimedResult(..)
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import QxFx0.Types
+<span class="lineno">   11 </span>import QxFx0.Core.Consciousness (ConsciousnessNarrative)
+<span class="lineno">   12 </span>import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
+<span class="lineno">   13 </span>import QxFx0.Types.Intuition (IntuitiveFlash)
+<span class="lineno">   14 </span>import QxFx0.Semantic.Embedding (EmbeddingResult)
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>import Data.Text (Text)
+<span class="lineno">   17 </span>import Data.Time.Clock (UTCTime)
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>data PrepareTimeline = PrepareTimeline
+<span class="lineno">   20 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlStartTime</span></span></span> :: !UTCTime
+<span class="lineno">   21 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlPrepareStaticDone</span></span></span> :: !UTCTime
+<span class="lineno">   22 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlEmbeddingStart</span></span></span> :: !UTCTime
+<span class="lineno">   23 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlEmbeddingDone</span></span></span> :: !UTCTime
+<span class="lineno">   24 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlNixStart</span></span></span> :: !UTCTime
+<span class="lineno">   25 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlNixDone</span></span></span> :: !UTCTime
+<span class="lineno">   26 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlConsciousnessStart</span></span></span> :: !UTCTime
+<span class="lineno">   27 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlConsciousnessDone</span></span></span> :: !UTCTime
+<span class="lineno">   28 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlIntuitionStart</span></span></span> :: !UTCTime
+<span class="lineno">   29 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlIntuitionDone</span></span></span> :: !UTCTime
+<span class="lineno">   30 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlApiHealthStart</span></span></span> :: !UTCTime
+<span class="lineno">   31 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ptlApiHealthDone</span></span></span> :: !UTCTime
+<span class="lineno">   32 </span>  }
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>data PrepareEffectResults = PrepareEffectResults
+<span class="lineno">   35 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">perTimeline</span></span></span> :: !PrepareTimeline
+<span class="lineno">   36 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perTurnCurrentTime</span></span></span> :: !UTCTime
+<span class="lineno">   37 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perEmbeddingResult</span></span></span> :: !EmbeddingResult
+<span class="lineno">   38 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perNixStatus</span></span></span> :: !NixGuardStatus
+<span class="lineno">   39 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perConsciousLoop</span></span></span> :: !ConsciousnessLoop
+<span class="lineno">   40 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perCurrentNarrative</span></span></span> :: !(Maybe ConsciousnessNarrative)
+<span class="lineno">   41 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perNarrativeFragment</span></span></span> :: !(Maybe Text)
+<span class="lineno">   42 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perFlash</span></span></span> :: !(Maybe IntuitiveFlash)
+<span class="lineno">   43 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perIntuitPosterior</span></span></span> :: !Double
+<span class="lineno">   44 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perIntuitionState</span></span></span> :: !IntuitiveState
+<span class="lineno">   45 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">perApiHealthy</span></span></span> :: !Bool
+<span class="lineno">   46 </span>  }
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>data TimedResult a = TimedResult
+<span class="lineno">   49 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">trStarted</span></span></span> :: !UTCTime
+<span class="lineno">   50 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trEnded</span></span></span> :: !UTCTime
+<span class="lineno">   51 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">trValue</span></span></span> :: !a
+<span class="lineno">   52 </span>  }
+
+</pre>
+</body>
+</html>

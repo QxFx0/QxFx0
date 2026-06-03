@@ -1,0 +1,134 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Recovery
+<span class="lineno">    7 </span>  ( LocalRecoveryPolicy(..)
+<span class="lineno">    8 </span>  , LocalRecoveryCause(..)
+<span class="lineno">    9 </span>  , LocalRecoveryStrategy(..)
+<span class="lineno">   10 </span>  , renderLocalRecoveryPolicy
+<span class="lineno">   11 </span>  , renderLocalRecoveryCause
+<span class="lineno">   12 </span>  , renderLocalRecoveryStrategy
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import Data.Aeson (FromJSON, ToJSON(..))
+<span class="lineno">   16 </span>import Data.Text (Text)
+<span class="lineno">   17 </span>import GHC.Generics (Generic)
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>data LocalRecoveryPolicy
+<span class="lineno">   20 </span>  = LocalRecoveryEnabled
+<span class="lineno">   21 </span>  | LocalRecoveryDisabled
+<span class="lineno">   22 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   23 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>data LocalRecoveryCause
+<span class="lineno">   26 </span>  = RecoveryLowLegitimacy
+<span class="lineno">   27 </span>  | RecoveryParserLowConfidence
+<span class="lineno">   28 </span>  | RecoveryShadowUnavailable
+<span class="lineno">   29 </span>  | RecoveryShadowDivergence
+<span class="lineno">   30 </span>  | RecoveryRenderBlocked
+<span class="lineno">   31 </span>  | RecoveryUnknownTopic
+<span class="lineno">   32 </span>  | RecoveryRuntimeDegraded
+<span class="lineno">   33 </span>  | RecoveryLearningNeed
+<span class="lineno">   34 </span>  | RecoveryConatusGate
+<span class="lineno">   35 </span>    -- ^ Phase 2.5 (M2d): the runtime Conatus energy dropped
+<span class="lineno">   36 </span>    --   below 'conatusGateThreshold' indicating structural risk.
+<span class="lineno">   37 </span>    --   Triggered exclusively by
+<span class="lineno">   38 </span>    --   'QxFx0.Self.Salience.conatusGateFires' in
+<span class="lineno">   39 </span>    --   'QxFx0.Core.TurnPipeline.Route.Render.buildLocalRecoveryPlan'.
+<span class="lineno">   40 </span>    --   Distinct from 'RecoveryRuntimeDegraded' (which means
+<span class="lineno">   41 </span>    --   the runtime mode itself is degraded for environmental
+<span class="lineno">   42 </span>    --   reasons, e.g. shadow unavailability, partial DB).
+<span class="lineno">   43 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   44 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LocalRecoveryCause</span></span></span></span></span></span></span></span> where
+<span class="lineno">   47 </span>  <span class="decl"><span class="istickedoff">toJSON = toJSON . renderLocalRecoveryCause</span></span>
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>data LocalRecoveryStrategy
+<span class="lineno">   50 </span>  = StrategyAskClarification
+<span class="lineno">   51 </span>  | StrategyNarrowScope
+<span class="lineno">   52 </span>  | StrategyDefineKnownTerms
+<span class="lineno">   53 </span>  | StrategyDistinguishCandidates
+<span class="lineno">   54 </span>  | StrategyExposeUncertainty
+<span class="lineno">   55 </span>  | StrategySafeRecovery
+<span class="lineno">   56 </span>  | StrategyMorphologyExpansion
+<span class="lineno">   57 </span>    -- ^ WP1 (GAP1): Conatus-gradient recovery — morphology component
+<span class="lineno">   58 </span>    --   (∂m) is dominant; system should expand morphological substrate.
+<span class="lineno">   59 </span>  | StrategyIdentityReinforcement
+<span class="lineno">   60 </span>    -- ^ WP1 (GAP1): Conatus-gradient recovery — identity component
+<span class="lineno">   61 </span>    --   (∂c) is dominant; system should reinforce identity claims.
+<span class="lineno">   62 </span>  | StrategyTemporalDeepening
+<span class="lineno">   63 </span>    -- ^ WP1 (GAP1): Conatus-gradient recovery — temporal component
+<span class="lineno">   64 </span>    --   (∂t) is dominant; system should deepen temporal continuity.
+<span class="lineno">   65 </span>  | StrategyRequestCalibration
+<span class="lineno">   66 </span>    -- ^ WP3: learning-driven recovery — salience weights need
+<span class="lineno">   67 </span>    --   empirical calibration; system requests external calibration data.
+<span class="lineno">   68 </span>  | StrategyRequestRule
+<span class="lineno">   69 </span>    -- ^ WP3: learning-driven recovery — routing or deliberation
+<span class="lineno">   70 </span>    --   rule is insufficient; system requests a validated rule update.
+<span class="lineno">   71 </span>  | StrategyRequestConcept
+<span class="lineno">   72 </span>    -- ^ WP3: learning-driven recovery — concept / keyword gap
+<span class="lineno">   73 </span>    --   is persistent; system requests an external concept addition.
+<span class="lineno">   74 </span>  | StrategyExternalDialogue
+<span class="lineno">   75 </span>    -- ^ Phase 9: autonomous exploratory learning — system initiates
+<span class="lineno">   76 </span>    --   an external dialogue query to acquire new knowledge.
+<span class="lineno">   77 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   78 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON LocalRecoveryStrategy</span></span></span></span></span></span></span></span> where
+<span class="lineno">   81 </span>  <span class="decl"><span class="istickedoff">toJSON = toJSON . renderLocalRecoveryStrategy</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>renderLocalRecoveryPolicy :: LocalRecoveryPolicy -&gt; Text
+<span class="lineno">   84 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryPolicy LocalRecoveryEnabled = &quot;enabled&quot;</span>
+<span class="lineno">   85 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryPolicy LocalRecoveryDisabled = <span class="nottickedoff">&quot;disabled&quot;</span></span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>renderLocalRecoveryCause :: LocalRecoveryCause -&gt; Text
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryCause RecoveryLowLegitimacy = <span class="nottickedoff">&quot;low_legitimacy&quot;</span></span>
+<span class="lineno">   89 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryParserLowConfidence = <span class="nottickedoff">&quot;parser_low_confidence&quot;</span></span>
+<span class="lineno">   90 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryShadowUnavailable = <span class="nottickedoff">&quot;shadow_unavailable&quot;</span></span>
+<span class="lineno">   91 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryShadowDivergence = &quot;shadow_divergence&quot;</span>
+<span class="lineno">   92 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryRenderBlocked = <span class="nottickedoff">&quot;render_blocked&quot;</span></span>
+<span class="lineno">   93 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryUnknownTopic = &quot;unknown_topic&quot;</span>
+<span class="lineno">   94 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryRuntimeDegraded = &quot;runtime_degraded&quot;</span>
+<span class="lineno">   95 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryLearningNeed = &quot;learning_need&quot;</span>
+<span class="lineno">   96 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryCause RecoveryConatusGate = &quot;conatus_gate&quot;</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>renderLocalRecoveryStrategy :: LocalRecoveryStrategy -&gt; Text
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">renderLocalRecoveryStrategy StrategyAskClarification = <span class="nottickedoff">&quot;ask_clarification&quot;</span></span>
+<span class="lineno">  100 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyNarrowScope = &quot;narrow_scope&quot;</span>
+<span class="lineno">  101 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyDefineKnownTerms = &quot;define_known_terms&quot;</span>
+<span class="lineno">  102 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyDistinguishCandidates = <span class="nottickedoff">&quot;distinguish_candidates&quot;</span></span>
+<span class="lineno">  103 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyExposeUncertainty = <span class="nottickedoff">&quot;expose_uncertainty&quot;</span></span>
+<span class="lineno">  104 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategySafeRecovery = <span class="nottickedoff">&quot;safe_recovery&quot;</span></span>
+<span class="lineno">  105 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyMorphologyExpansion = &quot;morphology_expansion&quot;</span>
+<span class="lineno">  106 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyIdentityReinforcement = <span class="nottickedoff">&quot;identity_reinforcement&quot;</span></span>
+<span class="lineno">  107 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyTemporalDeepening = <span class="nottickedoff">&quot;temporal_deepening&quot;</span></span>
+<span class="lineno">  108 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyRequestCalibration = &quot;request_calibration&quot;</span>
+<span class="lineno">  109 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyRequestRule = <span class="nottickedoff">&quot;request_rule&quot;</span></span>
+<span class="lineno">  110 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyRequestConcept = &quot;request_concept&quot;</span>
+<span class="lineno">  111 </span><span class="spaces"></span><span class="istickedoff">renderLocalRecoveryStrategy StrategyExternalDialogue = <span class="nottickedoff">&quot;external_dialogue&quot;</span></span></span>
+
+</pre>
+</body>
+</html>

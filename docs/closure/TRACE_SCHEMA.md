@@ -1,10 +1,10 @@
 # Trace Schema Reference
 
-**Status:** drafted 2026-06-02 (post-§11 follow-up pass)
+**Status:** drafted 2026-06-02 (post-§11 follow-up pass; rev. 3 trace-gap closure wired)
 **Module:** `QxFx0.Types.TurnProjection.TurnReplayTrace`
 **Enforced by:** `scripts/check_replay_gate.sh` (static),
                  `test/Test/Suite/ReplayGate.hs` (dynamic)
-**Total `trc*` fields:** 90 (as of Phase 5.5e + Phase 8 + Phase 9-10)
+**Total `trc*` fields:** 94 (as of Phase 5.5e + Phase 8 + Phase 9-10 + Package 3 trace-gap closure)
 
 This document is the **single source of truth** for what
 each `trc*` field in `TurnReplayTrace` means, where it
@@ -32,36 +32,33 @@ A **canonical contour** is a unit of the
 replay/P1-P4 discipline. Six contours are currently
 canonical. The discipline says: **every canonical
 contour must have at least one `trc*` field in
-`TurnReplayTrace`.** Three of the six contours do
-not yet have their fields landed; these are the
-3 GAPs reported by `check_replay_gate.sh`.
+`TurnReplayTrace`.** In the current working tree,
+all six canonical contours have their representative
+trace field landed.
 
 | # | Contour | trc\* fields | Status | § |
 |---|---------|--------------|--------|---|
-| 1 | **Conatus** | (none) | GAP | §2 |
-| 2 | **Field** | (none) | GAP | §3 |
+| 1 | **Conatus** | 2 | OK | §2 |
+| 2 | **Field** | 1 | OK | §3 |
 | 3 | **Salience** | 3 | OK (Phase 5.5e) | §4 |
 | 4 | **Deliberation** | 4 | OK (Phase 8 Package B) | §5 |
 | 5 | **Essence** | 4 | OK (Phase 9-10, 2026-05-19) | §6 |
-| 6 | **Identity** | (none) | GAP | §7 |
+| 6 | **Identity** | 1 | OK | §7 |
 
-The P4 check in `check_replay_gate.sh` reports:
-
-- **OK Salience, Deliberation, Essence** (5 fields)
-- **GAP Conatus, Field, Identity** (0 fields)
+The P4 check in `check_replay_gate.sh` now expects all
+6 canonical contours to be present in the type.
 
 `Essence` was added to the canonical contour list
 on 2026-05-19 with the Phase 9-10 landing. It is
 the most recent addition.
 
-The script's `EXPECTED_MISSING` table (see
-`scripts/check_replay_gate.sh §1`) names the 3
-GAPs. Closing a GAP is **Package 3 work** per
-`docs/closure/REPLAY_GATE_TRIAGE.md §3`.
+The earlier `EXPECTED_MISSING` table has been removed
+from `check_replay_gate.sh`; missing canonical fields are
+now treated as direct violations.
 
 ---
 
-## 2. Conatus (GAP)
+## 2. Conatus (OK)
 
 **Module:** `QxFx0.Self.Conatus` (Phase 1-2)
 **Compute sites:** `QxFx0.Core.TurnPipeline.Prepare.Build`
@@ -70,7 +67,7 @@ GAPs. Closing a GAP is **Package 3 work** per
   (per ADR-0012 §15.1)
 **Calibration:** `emConatusStructuralFloor` 0.5 → 7.0
 
-### Expected fields (not yet landed)
+### Landed fields
 
 The two values that `PrepareStatic` already computes
 for the rest of the pipeline are:
@@ -99,37 +96,30 @@ In `QxFx0.Core.TurnPipeline.Finalize.Projection`
 , trcConatusGateFired = tiConatusGateFired ti
 ```
 
-### Why the GAP is a real GAP
+### Why this field matters
 
-The discipline of P1-P4 says: a contour that affects
-the canonical decision must be visible in the
-replay trace. Conatus affects the salience
-controller (the gate), which affects routing, which
-is the canonical decision. Without a `trc*` field,
-a replay cannot explain *why* salience fired or
-didn't fire on this turn. This is a real
-observability hole.
+Conatus affects the salience controller (the gate),
+which affects routing, which is the canonical
+decision. `trcConatusEnergy` and
+`trcConatusGateFired` close that observability path.
 
-### What closes the GAP
+### P1-P4 status
 
-Add the two fields to `TurnReplayTrace` and the
-two lines to the constructor in
-`Projection.hs:142-199`. Also update the two test
-call sites in
-`test/Test/Suite/RuntimeInfrastructure.hs:1500,1978`.
-
-**Effort:** S (one source change in two files).
+- P1 (serializable): OK
+- P2 (compute pure): OK
+- P3 (snapshot type): OK
+- P4 (trc* field): OK
 
 ---
 
-## 3. Field (GAP)
+## 3. Field (OK)
 
 **Module:** `QxFx0.Self.Field` (Phase 4, ADR-0009)
 **Compute sites:** `QxFx0.Core.TurnPipeline.Prepare.Build`
   (computes `tiField` from `FieldHeuristics`)
 **Type:** record with 5 components (see ADR-0009 §4)
 
-### Expected field (not yet landed)
+### Landed field
 
 The `Field` record is a single value (not a list
 or option). A single `trc*` field suffices:
@@ -149,23 +139,19 @@ trcField :: !Field
 , trcField = tiField ti
 ```
 
-### Why the GAP is a real GAP
+### Why this field matters
 
 Field is the right-hemispheric input to salience
-(see Phase 5 / Phase 5.5d). Without a `trc*`
-field, a replay cannot explain the salience
-controller's *atmosphere* and *consolidation*
-inputs. This is the same observability hole as
-Conatus.
+(see Phase 5 / Phase 5.5d). `trcField` makes the
+salience controller's atmosphere, consolidation and
+counterfactual inputs replay-visible.
 
-### What closes the GAP
+### P1-P4 status
 
-Add `trcField` to `TurnReplayTrace` and one line
-to the constructor in
-`Projection.hs:142-199`. Also update the two test
-call sites.
-
-**Effort:** S.
+- P1 (serializable): OK
+- P2 (compute pure): OK
+- P3 (snapshot type): OK
+- P4 (trc* field): OK
 
 ---
 
@@ -315,14 +301,14 @@ constructor at `Projection.hs:196-199`.
 
 ---
 
-## 7. Identity (GAP)
+## 7. Identity (OK)
 
 **Module:** `QxFx0.Types.State.Identity` (the
   `IdentityState` slice of `SystemState`)
 **Source:** `idsIdentityClaims :: ![IdentityClaimRef]`
   on `ssIdentity :: SystemState -> IdentityState`
 
-### Expected field (not yet landed)
+### Landed field
 
 ```
 trcIdentityClaims :: ![IdentityClaimRef]
@@ -341,28 +327,25 @@ trcIdentityClaims :: ![IdentityClaimRef]
 (or equivalently
 `idsIdentityClaims (ssIdentity nextSs)`.)
 
-### Why the GAP is a real GAP
+### Why this field matters
 
 Identity claims are the substrate for self-reference.
-Without a `trc*` field, a replay cannot explain
-which identity claims were active when the system
-responded. This is the third observability hole.
+`trcIdentityClaims` makes the active identity-claim
+set visible at the replay boundary.
 
-### What closes the GAP
+### P1-P4 status
 
-Add `trcIdentityClaims` to `TurnReplayTrace` and
-one line to the constructor in
-`Projection.hs:142-199`. Also update the two test
-call sites.
-
-**Effort:** S.
+- P1 (serializable): OK
+- P2 (compute pure): OK
+- P3 (snapshot type): OK
+- P4 (trc* field): OK
 
 ---
 
 ## 8. Other trc\* fields (non-canonical)
 
-The remaining 76 `trc*` fields (90 - 5 - 4 - 0
-= 81, accounting for the 3 GAPs) belong to
+The remaining 79 `trc*` fields (94 total - 15 canonical)
+belong to
 non-canonical concerns: identity header, runtime
 mode, shadow policy, recovery, final decision,
 parser, claim/render, truth/authority/surface,

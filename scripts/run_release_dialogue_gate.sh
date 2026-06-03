@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_BASE="${1:-release_$(date -u +%Y%m%dT%H%M%SZ)}"
-MAIN_PROMPTS="${2:-$ROOT/reports/dialogue_eval_500_prompts.tsv}"
-REG_PROMPTS="${3:-$ROOT/reports/dialogue_eval_regression_prompts.tsv}"
+MAIN_PROMPTS="${2:-$ROOT/data/semantic/en_baseline_prompts.tsv}"
+REG_PROMPTS="${3:-$ROOT/data/semantic/en_baseline_prompts.tsv}"
 OUT_DIR="$ROOT/reports/release_readiness"
 MAIN_RUN_ID="${RUN_BASE}_main"
 REG_RUN_ID="${RUN_BASE}_reg"

@@ -11,13 +11,18 @@ module CLI.Turn
   ) where
 
 import CLI.Protocol (RuntimeOutputMode(..))
+import Control.Exception (throwIO)
 import Data.Aeson (ToJSON(..), object, (.=), Value, Key)
 import Data.Text (Text)
+import qualified Data.Text as T
 import QxFx0.Render.Text (textShow)
 import GHC.Generics (Generic)
+import System.Environment (lookupEnv)
+import System.IO (hPutStrLn, stderr)
 
 import qualified QxFx0.Runtime as Runtime
 import QxFx0.Core.IdentityGuard (IdentityGuardReport(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), tryQxFx0)
 import QxFx0.Types.Decision (IdentitySignalSnapshot(..), SemanticAnchor(..), TurnDecision(..), renderStyleText, DialogueOutputMode(..), dominantChannelText)
 import QxFx0.Types.State
 
@@ -78,10 +83,37 @@ backwardCompatAliases r =
   ]
 
 runTurnJson :: Text -> RuntimeOutputMode -> Text -> IO TurnJsonResponse
-runTurnJson sessionId mode inputText =
-  Runtime.withBootstrappedSession True sessionId $ \session0 -> do
-    (_, response) <- runTurnJsonInSession session0 mode inputText
-    pure response
+runTurnJson sessionId mode inputText = do
+  result <- tryQxFx0 $
+    Runtime.withBootstrappedSession True sessionId $ \session0 -> do
+      (_, response) <- runTurnJsonInSession session0 mode inputText
+      pure response
+  case result of
+    Right response -> pure response
+    Left err -> do
+      emitCliDebug err
+      throwIO err
+
+emitCliDebug :: QxFx0Exception -> IO ()
+emitCliDebug err = do
+  mFlag <- lookupEnv "QXFX0_DEBUG_RAW_ERRORS"
+  case fmap (T.toLower . T.strip . T.pack) mFlag of
+    Just "1" -> hPutStrLn stderr ("[cli_debug] " <> rawQxFx0Exception err)
+    Just "true" -> hPutStrLn stderr ("[cli_debug] " <> rawQxFx0Exception err)
+    _ -> pure ()
+
+rawQxFx0Exception :: QxFx0Exception -> String
+rawQxFx0Exception err =
+  case err of
+    PersistenceError msg -> "PersistenceError: " <> T.unpack msg
+    PersistenceTxError stage msg -> "PersistenceTxError(stage=" <> show stage <> "): " <> T.unpack msg
+    SQLiteError msg -> "SQLiteError: " <> T.unpack msg
+    RuntimeInitError msg -> "RuntimeInitError: " <> T.unpack msg
+    EmbeddingError msg -> "EmbeddingError: " <> T.unpack msg
+    ThresholdParseError msg -> "ThresholdParseError: " <> T.unpack msg
+    AgdaGateError msg -> "AgdaGateError: " <> T.unpack msg
+    IdentityRupture msg -> "IdentityRupture: " <> T.unpack msg
+    EssenceRupture msg -> "EssenceRupture: " <> T.unpack msg
 
 runTurnJsonInSession :: Runtime.Session -> RuntimeOutputMode -> Text -> IO (Runtime.Session, TurnJsonResponse)
 runTurnJsonInSession session0 mode inputText = do

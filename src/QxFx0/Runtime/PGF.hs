@@ -16,7 +16,7 @@ module QxFx0.Runtime.PGF
   , linearizeDialogAtomsGfLang
   ) where
 
-import Control.Exception (try, SomeException)
+import Control.Exception (try, IOException)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -93,7 +93,7 @@ linearizeExpr mPgfPath lang expr = do
               let raw = T.pack (PGF.linearize concr pgfExpr)
               in pure (Right raw)
       case result of
-        Left (e :: SomeException) -> pure (Left ("pgf_exception:" <> T.pack (show e)))
+        Left (e :: IOException) -> pure (Left ("pgf_exception:" <> T.pack (show e)))
         Right r -> pure r
 
 fallbackSurface :: ClaimAst -> Either Text Text

@@ -12,7 +12,7 @@
   - `docs/closure/COGNITIVE_MEMORY_DESIGN.md` (Package 7)
   - `docs/closure/METACOGNITION_LOOP_DESIGN.md` (Package 9)
   - `docs/closure/CALIBRATION_BACKLOG.md` (Package 11)
-  - `docs/closure/adr-0013-role-split.md` (Package 1)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (Package 1)
 
 ## 0. Why this design exists
 
@@ -233,7 +233,7 @@ empirical tuning.
   off (per `AUTHORITY_MAP.md`). Learning does not consume LLM
   outputs; this is the "fail-closed" part of the discipline.
 - **Cross-session learning.** Deferred per
-  `docs/adr/proposed/0013-cross-session-essence-persistence.md`.
+  `docs/adr/proposed/0041-cross-session-essence-persistence.md`.
   In-session only.
 - **Multi-target atomic updates.** A single `LearningUpdate`
   targets one `LearningTarget`. Atomic multi-target updates are

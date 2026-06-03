@@ -1,0 +1,470 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-|
+<span class="lineno">    5 </span>Module      : Test.Suite.SelfEssence
+<span class="lineno">    6 </span>Description : Property and unit tests for the Phase-9 essence
+<span class="lineno">    7 </span>              selection infrastructure.
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>Verifies, by QuickCheck and HUnit, the laws asserted in
+<span class="lineno">   10 </span>@docs/adr/0012-essence-commitment.md@ §9:
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>  * 'extractMode' is deterministic and never returns
+<span class="lineno">   13 </span>    'EssenceWitnessing';
+<span class="lineno">   14 </span>  * angst decays under 'FullAgreement' with zero divergence;
+<span class="lineno">   15 </span>  * angst accrues under hemispheric advantage with sufficient
+<span class="lineno">   16 </span>    divergence;
+<span class="lineno">   17 </span>  * 'shouldCommit' is monotone once fired (vacuously true for
+<span class="lineno">   18 </span>    most random trajectories under default thresholds);
+<span class="lineno">   19 </span>  * trigger priority: 'TriggerAngstThreshold' beats
+<span class="lineno">   20 </span>    'TriggerConatusErosion' when both fire simultaneously;
+<span class="lineno">   21 </span>  * 'emptyEssence' has the expected structural shape;
+<span class="lineno">   22 </span>  * 'fieldSignature' is total on every well-formed 'Field'.
+<span class="lineno">   23 </span>-}
+<span class="lineno">   24 </span>module Test.Suite.SelfEssence
+<span class="lineno">   25 </span>  ( selfEssenceTests
+<span class="lineno">   26 </span>  ) where
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>import Test.HUnit (Test (..), assertBool, assertEqual, assertFailure)
+<span class="lineno">   29 </span>import Test.QuickCheck
+<span class="lineno">   30 </span>  ( Gen
+<span class="lineno">   31 </span>  , Property
+<span class="lineno">   32 </span>  , arbitrary
+<span class="lineno">   33 </span>  , choose
+<span class="lineno">   34 </span>  , checkCoverage
+<span class="lineno">   35 </span>  , cover
+<span class="lineno">   36 </span>  , elements
+<span class="lineno">   37 </span>  , forAll
+<span class="lineno">   38 </span>  , listOf
+<span class="lineno">   39 </span>  , maxSuccess
+<span class="lineno">   40 </span>  , quickCheckWithResult
+<span class="lineno">   41 </span>  , stdArgs
+<span class="lineno">   42 </span>  , vectorOf
+<span class="lineno">   43 </span>  , (==&gt;)
+<span class="lineno">   44 </span>  , property
+<span class="lineno">   45 </span>  )
+<span class="lineno">   46 </span>import Test.QuickCheck.Test (isSuccess)
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>import qualified Data.Sequence as Seq
+<span class="lineno">   49 </span>import Data.Text (Text)
+<span class="lineno">   50 </span>import qualified Data.Text as T
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+<span class="lineno">   53 </span>import QxFx0.Self.Deliberation
+<span class="lineno">   54 </span>  ( Agreement (..)
+<span class="lineno">   55 </span>  , Deliberation (..)
+<span class="lineno">   56 </span>  , DeliberationTrace (..)
+<span class="lineno">   57 </span>  , NarrativeTone (..)
+<span class="lineno">   58 </span>  , Plan (..)
+<span class="lineno">   59 </span>  , ReconcileRule (..)
+<span class="lineno">   60 </span>  , defaultPlan
+<span class="lineno">   61 </span>  , defaultDeliberation
+<span class="lineno">   62 </span>  )
+<span class="lineno">   63 </span>import QxFx0.Self.Essence
+<span class="lineno">   64 </span>import QxFx0.Self.Field
+<span class="lineno">   65 </span>  ( Field (..)
+<span class="lineno">   66 </span>  , emptyField
+<span class="lineno">   67 </span>  , mkAtmosphere
+<span class="lineno">   68 </span>  , mkConsolidation
+<span class="lineno">   69 </span>  , mkCounterfactual
+<span class="lineno">   70 </span>  , mkFieldConfidence
+<span class="lineno">   71 </span>  , mkResonance
+<span class="lineno">   72 </span>  )
+<span class="lineno">   73 </span>import QxFx0.Self.Salience (SalienceDriver (..))
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   76 </span>-- Test-suite entry point
+<span class="lineno">   77 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   78 </span>
+<span class="lineno">   79 </span>selfEssenceTests :: [Test]
+<span class="lineno">   80 </span><span class="decl"><span class="istickedoff">selfEssenceTests =</span>
+<span class="lineno">   81 </span><span class="spaces">  </span><span class="istickedoff">[ -- E1 — extractMode determinism + non-Witnessing</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">TestLabel <span class="nottickedoff">&quot;extractMode is deterministic and never returns EssenceWitnessing&quot;</span> $</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;extractMode deterministic / non-witnessing&quot;</span></span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff">propExtractModeDeterministic</span>
+<span class="lineno">   85 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">-- E2 — angst decays under FullAgreement</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;angst decays under FullAgreement with zero divergence&quot;</span> $</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;angst decay under agreement&quot;</span></span>
+<span class="lineno">   89 </span><span class="spaces">        </span><span class="istickedoff">propAngstDecaysUnderAgreement</span>
+<span class="lineno">   90 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">-- E3 — angst accrues under hemispheric advantage with divergence</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;angst accrues under hemispheric advantage with divergence&quot;</span> $</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;angst accrues under advantage&quot;</span></span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">propAngstAccruesUnderDivergence</span>
+<span class="lineno">   95 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">-- E4 — shouldCommit monotone (mostly vacuous under defaults)</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;shouldCommit is monotone once fired after boundary-aware trigger coverage&quot;</span> $</span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;shouldCommit monotone&quot;</span></span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">propShouldCommitMonotone</span>
+<span class="lineno">  100 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">-- E5 — trigger priority: angst beats Conatus</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;trigger priority: Angst beats Conatus when both fire&quot;</span> $</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;trigger priority Angst &gt; Conatus&quot;</span></span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="istickedoff">propTriggerPriorityAngst</span>
+<span class="lineno">  105 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">-- Unit — emptyEssence shape</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;emptyEssence has expected shape&quot;</span> $</span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">TestCase testEmptyEssenceShape</span>
+<span class="lineno">  109 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">-- Unit — fieldSignature totality</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;fieldSignature is total on emptyField&quot;</span> $</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">TestCase testFieldSignatureTotal</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;shouldCommit fires on angst threshold boundary&quot;</span> $</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">TestCase testShouldCommitAngstBoundary</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;shouldCommit fires on conatus erosion window boundary&quot;</span> $</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">TestCase testShouldCommitConatusWindowBoundary</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;shouldCommit remains fired after an additional witness&quot;</span> $</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">TestCase testShouldCommitRemainsFiredAfterWitness</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  122 </span>-- QuickCheck plumbing
+<span class="lineno">  123 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>quickCheckProperty :: String -&gt; Property -&gt; Test
+<span class="lineno">  126 </span><span class="decl"><span class="istickedoff">quickCheckProperty label prop = TestCase $ do</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- quickCheckWithResult stdArgs { maxSuccess = 200 } prop</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">isSuccess result</span></span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">then pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">assertFailure (&quot;Property failed: &quot; ++ label)</span></span></span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  133 </span>-- Generators
+<span class="lineno">  134 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>arbitraryUnitDouble :: Gen Double
+<span class="lineno">  137 </span><span class="decl"><span class="istickedoff">arbitraryUnitDouble = choose (0.0, 1.0)</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>arbitrarySignedDouble :: Gen Double
+<span class="lineno">  140 </span><span class="decl"><span class="istickedoff">arbitrarySignedDouble = choose (-1.0, 1.0)</span></span>
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>arbitraryField :: Gen Field
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">arbitraryField = do</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">r  &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">v  &lt;- arbitrarySignedDouble</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">ar &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">c  &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">cf &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">pure $ Field</span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="istickedoff">{ fieldResonance      = mkResonance r</span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="istickedoff">, fieldAtmosphere     = mkAtmosphere v ar</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="istickedoff">, fieldConfidence     = mkFieldConfidence c</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff">, fieldConsolidation  = mkConsolidation cf</span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">, fieldCounterfactual = mkCounterfactual cf</span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>arbitrarySalienceDriver :: Gen SalienceDriver
+<span class="lineno">  158 </span><span class="decl"><span class="istickedoff">arbitrarySalienceDriver = elements</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="istickedoff">[ DrivenByResonance</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByAtmosphere</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByConsolidation</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByCounterfactual</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByFieldConfidence</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByConatusGate</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">, DrivenByDefault</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>arbitraryReconcileRule :: Gen ReconcileRule
+<span class="lineno">  169 </span><span class="decl"><span class="istickedoff">arbitraryReconcileRule = elements</span>
+<span class="lineno">  170 </span><span class="spaces">  </span><span class="istickedoff">[ RuleAgreement</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">, RuleConatusOverride</span>
+<span class="lineno">  172 </span><span class="spaces">  </span><span class="istickedoff">, RuleSalienceLead</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">, RuleHolisticAdvantage</span>
+<span class="lineno">  174 </span><span class="spaces">  </span><span class="istickedoff">, RuleFormalAdvantage</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">, RuleTiedFallback</span>
+<span class="lineno">  176 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  177 </span>
+<span class="lineno">  178 </span>arbitraryAgreement :: Gen Agreement
+<span class="lineno">  179 </span><span class="decl"><span class="istickedoff">arbitraryAgreement = elements</span>
+<span class="lineno">  180 </span><span class="spaces">  </span><span class="istickedoff">[ Agree</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">, DivergeOnFamily</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">, DivergeOnStyle</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="istickedoff">, DivergeOnRecovery</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">, DivergeOnTone</span>
+<span class="lineno">  185 </span><span class="spaces">  </span><span class="istickedoff">, DivergeMultiple</span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>arbitraryDeliberation :: Gen Deliberation
+<span class="lineno">  189 </span><span class="decl"><span class="istickedoff">arbitraryDeliberation = do</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">rule     &lt;- arbitraryReconcileRule</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">agr      &lt;- arbitraryAgreement</span>
+<span class="lineno">  192 </span><span class="spaces">  </span><span class="istickedoff">divg     &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">driver   &lt;- arbitrarySalienceDriver</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">hPlan    &lt;- arbitraryPlan</span>
+<span class="lineno">  195 </span><span class="spaces">  </span><span class="istickedoff">fPlan    &lt;- arbitraryPlan</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">rPlan    &lt;- arbitraryPlan</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="istickedoff">pure $ Deliberation</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">{ delibHolistic   = hPlan</span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="istickedoff">, delibFormal     = fPlan</span>
+<span class="lineno">  200 </span><span class="spaces">    </span><span class="istickedoff">, delibReconciled = rPlan</span>
+<span class="lineno">  201 </span><span class="spaces">    </span><span class="istickedoff">, delibTrace      = DeliberationTrace</span>
+<span class="lineno">  202 </span><span class="spaces">        </span><span class="istickedoff">{ dtAgreement      = agr</span>
+<span class="lineno">  203 </span><span class="spaces">        </span><span class="istickedoff">, dtDivergence     = divg</span>
+<span class="lineno">  204 </span><span class="spaces">        </span><span class="istickedoff">, dtRule           = rule</span>
+<span class="lineno">  205 </span><span class="spaces">        </span><span class="istickedoff">, dtSalienceDriver = driver</span>
+<span class="lineno">  206 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  208 </span>
+<span class="lineno">  209 </span>arbitraryPlan :: Gen Plan
+<span class="lineno">  210 </span><span class="decl"><span class="istickedoff">arbitraryPlan = do</span>
+<span class="lineno">  211 </span><span class="spaces">  </span><span class="istickedoff">conf &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">pure $ defaultPlan { planConfidence = conf }</span></span>
+<span class="lineno">  213 </span>
+<span class="lineno">  214 </span>arbitraryConatusEnergy :: Gen ConatusEnergy
+<span class="lineno">  215 </span><span class="decl"><span class="istickedoff">arbitraryConatusEnergy = do</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="istickedoff">s &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  217 </span><span class="spaces">  </span><span class="istickedoff">pure $ ConatusEnergy</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">{ ceScalar     = s</span>
+<span class="lineno">  219 </span><span class="spaces">    </span><span class="istickedoff">, ceComponents = ConatusComponents 0 0 0 0</span>
+<span class="lineno">  220 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>arbitraryEssenceWitness :: Gen EssenceWitness
+<span class="lineno">  223 </span><span class="decl"><span class="istickedoff">arbitraryEssenceWitness = do</span>
+<span class="lineno">  224 </span><span class="spaces">  </span><span class="istickedoff">turnOrd   &lt;- choose (1, 1000)</span>
+<span class="lineno">  225 </span><span class="spaces">  </span><span class="istickedoff">driver    &lt;- arbitrarySalienceDriver</span>
+<span class="lineno">  226 </span><span class="spaces">  </span><span class="istickedoff">rule      &lt;- arbitraryReconcileRule</span>
+<span class="lineno">  227 </span><span class="spaces">  </span><span class="istickedoff">agr       &lt;- arbitraryAgreement</span>
+<span class="lineno">  228 </span><span class="spaces">  </span><span class="istickedoff">divg      &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  229 </span><span class="spaces">  </span><span class="istickedoff">cscalar   &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  230 </span><span class="spaces">  </span><span class="istickedoff">sig       &lt;- fieldSignature defaultEssenceModulation &lt;$&gt; arbitraryField</span>
+<span class="lineno">  231 </span><span class="spaces">  </span><span class="istickedoff">pure $ EssenceWitness</span>
+<span class="lineno">  232 </span><span class="spaces">    </span><span class="istickedoff">{ ewTurnOrdinal     = turnOrd</span>
+<span class="lineno">  233 </span><span class="spaces">    </span><span class="istickedoff">, ewSalienceDriver  = driver</span>
+<span class="lineno">  234 </span><span class="spaces">    </span><span class="istickedoff">, ewReconcileRule   = rule</span>
+<span class="lineno">  235 </span><span class="spaces">    </span><span class="istickedoff">, ewAgreement       = agr</span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">, ewDivergence      = divg</span>
+<span class="lineno">  237 </span><span class="spaces">    </span><span class="istickedoff">, ewConatusScalar   = cscalar</span>
+<span class="lineno">  238 </span><span class="spaces">    </span><span class="istickedoff">, ewFieldSignature  = sig</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>arbitraryEssenceTrajectory :: Gen EssenceTrajectory
+<span class="lineno">  242 </span><span class="decl"><span class="istickedoff">arbitraryEssenceTrajectory = do</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">n        &lt;- choose (0, 12)</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">witnesses &lt;- vectorOf n arbitraryEssenceWitness</span>
+<span class="lineno">  245 </span><span class="spaces">  </span><span class="istickedoff">angst    &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">floor_   &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">pure $ EssenceTrajectory</span>
+<span class="lineno">  248 </span><span class="spaces">    </span><span class="istickedoff">{ etWitnesses    = Seq.fromList witnesses</span>
+<span class="lineno">  249 </span><span class="spaces">    </span><span class="istickedoff">, etAngstLevel   = angst</span>
+<span class="lineno">  250 </span><span class="spaces">    </span><span class="istickedoff">, etConatusFloor = floor_</span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">, etCapacity     = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  252 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  253 </span>
+<span class="lineno">  254 </span>arbitraryTriggeredTrajectory :: Gen EssenceTrajectory
+<span class="lineno">  255 </span><span class="decl"><span class="istickedoff">arbitraryTriggeredTrajectory = do</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">trigger &lt;- elements [TriggerAngstThreshold, TriggerConatusErosion]</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">case trigger of</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">TriggerAngstThreshold -&gt; do</span>
+<span class="lineno">  259 </span><span class="spaces">      </span><span class="istickedoff">let window = emConatusFloorWindow defaultEssenceModulation</span>
+<span class="lineno">  260 </span><span class="spaces">      </span><span class="istickedoff">witnessCount &lt;- choose (window, window + 4)</span>
+<span class="lineno">  261 </span><span class="spaces">      </span><span class="istickedoff">witnesses &lt;- vectorOf witnessCount <span class="nottickedoff">arbitraryEssenceWitness</span></span>
+<span class="lineno">  262 </span><span class="spaces">      </span><span class="istickedoff">floor_ &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  263 </span><span class="spaces">      </span><span class="istickedoff">pure EssenceTrajectory</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses = Seq.fromList witnesses</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation</span>
+<span class="lineno">  266 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = floor_</span>
+<span class="lineno">  267 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  268 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">TriggerConatusErosion -&gt; do</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="istickedoff">let window = emConatusFloorWindow defaultEssenceModulation</span>
+<span class="lineno">  271 </span><span class="spaces">          </span><span class="istickedoff">lowConatus = max 0.0 (emConatusStructuralFloor defaultEssenceModulation - 0.1)</span>
+<span class="lineno">  272 </span><span class="spaces">          </span><span class="istickedoff">mkLowWitness n = (emptyWitness n) { ewConatusScalar = lowConatus }</span>
+<span class="lineno">  273 </span><span class="spaces">      </span><span class="istickedoff">angst &lt;- choose (0.0, emAngstCommitmentThreshold defaultEssenceModulation - 0.05)</span>
+<span class="lineno">  274 </span><span class="spaces">      </span><span class="istickedoff">pure EssenceTrajectory</span>
+<span class="lineno">  275 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses = Seq.fromList (map mkLowWitness [1 .. window])</span>
+<span class="lineno">  276 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel = angst</span>
+<span class="lineno">  277 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = lowConatus</span>
+<span class="lineno">  278 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  279 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">  280 </span>
+<span class="lineno">  281 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  282 </span>-- Properties
+<span class="lineno">  283 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  284 </span>
+<span class="lineno">  285 </span>-- | E1 — extractMode determinism + non-Witnessing.
+<span class="lineno">  286 </span>propExtractModeDeterministic :: Property
+<span class="lineno">  287 </span><span class="decl"><span class="istickedoff">propExtractModeDeterministic =</span>
+<span class="lineno">  288 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryEssenceTrajectory $ \t -&gt;</span>
+<span class="lineno">  289 </span><span class="spaces">    </span><span class="istickedoff">let m1 = extractMode t</span>
+<span class="lineno">  290 </span><span class="spaces">        </span><span class="istickedoff">m2 = extractMode t</span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="istickedoff">in m1 == m2 &amp;&amp; m1 /= EssenceWitnessing</span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>-- | E2 — angst decays under FullAgreement with zero divergence.
+<span class="lineno">  294 </span>propAngstDecaysUnderAgreement :: Property
+<span class="lineno">  295 </span><span class="decl"><span class="istickedoff">propAngstDecaysUnderAgreement =</span>
+<span class="lineno">  296 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryEssenceTrajectory $ \traj -&gt;</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="istickedoff">forAll <span class="nottickedoff">arbitraryField</span> $ \fd -&gt;</span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="istickedoff">forAll arbitraryConatusEnergy $ \ce -&gt;</span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="istickedoff">let deliberation = (defaultDeliberation :: Deliberation)</span>
+<span class="lineno">  300 </span><span class="spaces">          </span><span class="istickedoff">{ delibTrace = (delibTrace defaultDeliberation)</span>
+<span class="lineno">  301 </span><span class="spaces">              </span><span class="istickedoff">{ dtAgreement  = Agree</span>
+<span class="lineno">  302 </span><span class="spaces">              </span><span class="istickedoff">, dtDivergence = 0.0</span>
+<span class="lineno">  303 </span><span class="spaces">              </span><span class="istickedoff">, dtRule       = RuleAgreement</span>
+<span class="lineno">  304 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  305 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="istickedoff">traj' = witness defaultEssenceModulation <span class="nottickedoff">1</span> ce <span class="nottickedoff">fd</span> deliberation traj</span>
+<span class="lineno">  307 </span><span class="spaces">        </span><span class="istickedoff">a0 = etAngstLevel traj</span>
+<span class="lineno">  308 </span><span class="spaces">        </span><span class="istickedoff">a1 = etAngstLevel traj'</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="istickedoff">in a1 &lt;= a0 || <span class="nottickedoff">a1 == 0.0</span></span></span>
+<span class="lineno">  310 </span>
+<span class="lineno">  311 </span>-- | E3 — angst accrues under hemispheric advantage with divergence.
+<span class="lineno">  312 </span>propAngstAccruesUnderDivergence :: Property
+<span class="lineno">  313 </span><span class="decl"><span class="istickedoff">propAngstAccruesUnderDivergence =</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryEssenceTrajectory $ \traj -&gt;</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">etAngstLevel traj &lt; 1.0 ==&gt;  -- only meaningful when there is room to accrue</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="istickedoff">forAll <span class="nottickedoff">arbitraryField</span> $ \fd -&gt;</span>
+<span class="lineno">  317 </span><span class="spaces">    </span><span class="istickedoff">forAll arbitraryConatusEnergy $ \ce -&gt;</span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="istickedoff">forAll (choose (0.5, 1.0)) $ \divg -&gt;</span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="istickedoff">forAll (elements [RuleHolisticAdvantage, RuleFormalAdvantage]) $ \rule -&gt;</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="istickedoff">let deliberation = (defaultDeliberation :: Deliberation)</span>
+<span class="lineno">  321 </span><span class="spaces">          </span><span class="istickedoff">{ delibTrace = (delibTrace defaultDeliberation)</span>
+<span class="lineno">  322 </span><span class="spaces">              </span><span class="istickedoff">{ dtDivergence = divg</span>
+<span class="lineno">  323 </span><span class="spaces">              </span><span class="istickedoff">, dtRule       = rule</span>
+<span class="lineno">  324 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  325 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  326 </span><span class="spaces">        </span><span class="istickedoff">traj' = witness defaultEssenceModulation <span class="nottickedoff">1</span> ce <span class="nottickedoff">fd</span> deliberation traj</span>
+<span class="lineno">  327 </span><span class="spaces">        </span><span class="istickedoff">a0 = etAngstLevel traj</span>
+<span class="lineno">  328 </span><span class="spaces">        </span><span class="istickedoff">a1 = etAngstLevel traj'</span>
+<span class="lineno">  329 </span><span class="spaces">    </span><span class="istickedoff">in a1 &gt;= a0 || <span class="nottickedoff">a1 == 1.0</span></span></span>
+<span class="lineno">  330 </span>
+<span class="lineno">  331 </span>-- | E4 — shouldCommit monotone once fired.
+<span class="lineno">  332 </span>-- Vacuously true for most random trajectories because default
+<span class="lineno">  333 </span>-- thresholds (0.75 angst, 8 witnesses) are rarely hit.
+<span class="lineno">  334 </span>propShouldCommitMonotone :: Property
+<span class="lineno">  335 </span><span class="decl"><span class="istickedoff">propShouldCommitMonotone =</span>
+<span class="lineno">  336 </span><span class="spaces">  </span><span class="istickedoff">checkCoverage $</span>
+<span class="lineno">  337 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryTriggeredTrajectory $ \traj -&gt;</span>
+<span class="lineno">  338 </span><span class="spaces">    </span><span class="istickedoff">forAll arbitraryField $ \fd -&gt;</span>
+<span class="lineno">  339 </span><span class="spaces">    </span><span class="istickedoff">forAll arbitraryConatusEnergy $ \ce -&gt;</span>
+<span class="lineno">  340 </span><span class="spaces">    </span><span class="istickedoff">forAll arbitraryDeliberation $ \delib -&gt;</span>
+<span class="lineno">  341 </span><span class="spaces">    </span><span class="istickedoff">let m0 = shouldCommit defaultEssenceModulation traj</span>
+<span class="lineno">  342 </span><span class="spaces">        </span><span class="istickedoff">traj' = witness defaultEssenceModulation 1 ce fd delib traj</span>
+<span class="lineno">  343 </span><span class="spaces">        </span><span class="istickedoff">m1 = shouldCommit defaultEssenceModulation traj'</span>
+<span class="lineno">  344 </span><span class="spaces">        </span><span class="istickedoff">firedByAngst = m0 == Just TriggerAngstThreshold</span>
+<span class="lineno">  345 </span><span class="spaces">        </span><span class="istickedoff">firedByConatus = m0 == Just TriggerConatusErosion</span>
+<span class="lineno">  346 </span><span class="spaces">    </span><span class="istickedoff">in cover 40 firedByAngst &quot;angst-triggered&quot;</span>
+<span class="lineno">  347 </span><span class="spaces">       </span><span class="istickedoff">. cover 40 firedByConatus &quot;conatus-triggered&quot;</span>
+<span class="lineno">  348 </span><span class="spaces">       </span><span class="istickedoff">$ case m1 of</span>
+<span class="lineno">  349 </span><span class="spaces">           </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">False</span></span>
+<span class="lineno">  350 </span><span class="spaces">           </span><span class="istickedoff">Just _ -&gt; True</span></span>
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>-- | E5 — trigger priority: Angst beats Conatus when both fire.
+<span class="lineno">  353 </span>propTriggerPriorityAngst :: Property
+<span class="lineno">  354 </span><span class="decl"><span class="istickedoff">propTriggerPriorityAngst =</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="istickedoff">let traj = EssenceTrajectory</span>
+<span class="lineno">  356 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses    = Seq.fromList (replicate 8 <span class="nottickedoff">(emptyWitness 1)</span>)</span>
+<span class="lineno">  357 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel   = 0.80</span>
+<span class="lineno">  358 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = 0.40</span>
+<span class="lineno">  359 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity     = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  360 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="istickedoff">in property (shouldCommit defaultEssenceModulation traj == Just TriggerAngstThreshold)</span></span>
+<span class="lineno">  362 </span>
+<span class="lineno">  363 </span>emptyWitness :: Int -&gt; EssenceWitness
+<span class="lineno">  364 </span><span class="decl"><span class="istickedoff">emptyWitness n = EssenceWitness</span>
+<span class="lineno">  365 </span><span class="spaces">  </span><span class="istickedoff">{ ewTurnOrdinal     = n</span>
+<span class="lineno">  366 </span><span class="spaces">  </span><span class="istickedoff">, ewSalienceDriver  = DrivenByDefault</span>
+<span class="lineno">  367 </span><span class="spaces">  </span><span class="istickedoff">, ewReconcileRule   = RuleSalienceLead</span>
+<span class="lineno">  368 </span><span class="spaces">  </span><span class="istickedoff">, ewAgreement       = Agree</span>
+<span class="lineno">  369 </span><span class="spaces">  </span><span class="istickedoff">, ewDivergence      = 0.0</span>
+<span class="lineno">  370 </span><span class="spaces">  </span><span class="istickedoff">, ewConatusScalar   = 1.0</span>
+<span class="lineno">  371 </span><span class="spaces">  </span><span class="istickedoff">, ewFieldSignature  = fieldSignature defaultEssenceModulation emptyField</span>
+<span class="lineno">  372 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  373 </span>
+<span class="lineno">  374 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  375 </span>-- Unit tests
+<span class="lineno">  376 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  377 </span>
+<span class="lineno">  378 </span>testEmptyEssenceShape :: IO ()
+<span class="lineno">  379 </span><span class="decl"><span class="istickedoff">testEmptyEssenceShape = do</span>
+<span class="lineno">  380 </span><span class="spaces">  </span><span class="istickedoff">let e = emptyEssence</span>
+<span class="lineno">  381 </span><span class="spaces">  </span><span class="istickedoff">case e of</span>
+<span class="lineno">  382 </span><span class="spaces">    </span><span class="istickedoff">EssenceUncommitted t -&gt; do</span>
+<span class="lineno">  383 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;emptyEssence witnesses&quot;</span> Seq.empty (etWitnesses t)</span>
+<span class="lineno">  384 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;emptyEssence angst&quot;</span> 0.0 (etAngstLevel t)</span>
+<span class="lineno">  385 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;emptyEssence floor&quot;</span> 1.0 (etConatusFloor t)</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;emptyEssence capacity&quot;</span></span>
+<span class="lineno">  387 </span><span class="spaces">        </span><span class="istickedoff">(emTrajectoryCapacity defaultEssenceModulation)</span>
+<span class="lineno">  388 </span><span class="spaces">        </span><span class="istickedoff">(etCapacity t)</span>
+<span class="lineno">  389 </span><span class="spaces">    </span><span class="istickedoff">EssenceCommitted _ _ -&gt;</span>
+<span class="lineno">  390 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">assertBool &quot;emptyEssence should be Uncommitted&quot; False</span></span></span>
+<span class="lineno">  391 </span>
+<span class="lineno">  392 </span>testFieldSignatureTotal :: IO ()
+<span class="lineno">  393 </span><span class="decl"><span class="istickedoff">testFieldSignatureTotal = do</span>
+<span class="lineno">  394 </span><span class="spaces">  </span><span class="istickedoff">let sig = fieldSignature defaultEssenceModulation emptyField</span>
+<span class="lineno">  395 </span><span class="spaces">  </span><span class="istickedoff">-- Totality: no exception, and all bands are valid inhabitants.</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;resonance band valid&quot;</span> (isValidFieldBand (fsResonance sig))</span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;arousal band valid&quot;</span>   (isValidFieldBand (fsArousal sig))</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;valence band valid&quot;</span>   (isValidValenceBand (fsValence sig))</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;consolidation band valid&quot;</span> (isValidFieldBand (fsConsolidation sig))</span>
+<span class="lineno">  400 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;counterfactual band valid&quot;</span> (isValidFieldBand (fsCounterfactual sig))</span></span>
+<span class="lineno">  401 </span>
+<span class="lineno">  402 </span>isValidFieldBand :: FieldBand -&gt; Bool
+<span class="lineno">  403 </span><span class="decl"><span class="istickedoff">isValidFieldBand b = b `elem` [BandLow, <span class="nottickedoff">BandMid</span>, <span class="nottickedoff">BandHigh</span>]</span></span>
+<span class="lineno">  404 </span>
+<span class="lineno">  405 </span>isValidValenceBand :: ValenceBand -&gt; Bool
+<span class="lineno">  406 </span><span class="decl"><span class="istickedoff">isValidValenceBand b = b `elem` [ValenceNegative, ValenceNeutral, <span class="nottickedoff">ValencePositive</span>]</span></span>
+<span class="lineno">  407 </span>
+<span class="lineno">  408 </span>testShouldCommitAngstBoundary :: IO ()
+<span class="lineno">  409 </span><span class="decl"><span class="istickedoff">testShouldCommitAngstBoundary = do</span>
+<span class="lineno">  410 </span><span class="spaces">  </span><span class="istickedoff">let window = emConatusFloorWindow defaultEssenceModulation</span>
+<span class="lineno">  411 </span><span class="spaces">      </span><span class="istickedoff">traj = EssenceTrajectory</span>
+<span class="lineno">  412 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses = Seq.fromList (replicate window <span class="nottickedoff">(emptyWitness 1)</span>)</span>
+<span class="lineno">  413 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation</span>
+<span class="lineno">  414 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = 1.0</span>
+<span class="lineno">  415 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  416 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  417 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;angst threshold should fire commitment&quot;</span></span>
+<span class="lineno">  418 </span><span class="spaces">    </span><span class="istickedoff">(Just TriggerAngstThreshold)</span>
+<span class="lineno">  419 </span><span class="spaces">    </span><span class="istickedoff">(shouldCommit defaultEssenceModulation traj)</span></span>
+<span class="lineno">  420 </span>
+<span class="lineno">  421 </span>testShouldCommitConatusWindowBoundary :: IO ()
+<span class="lineno">  422 </span><span class="decl"><span class="istickedoff">testShouldCommitConatusWindowBoundary = do</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">let window = emConatusFloorWindow defaultEssenceModulation</span>
+<span class="lineno">  424 </span><span class="spaces">      </span><span class="istickedoff">lowConatus = max 0.0 (emConatusStructuralFloor defaultEssenceModulation - 0.1)</span>
+<span class="lineno">  425 </span><span class="spaces">      </span><span class="istickedoff">traj = EssenceTrajectory</span>
+<span class="lineno">  426 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses = Seq.fromList [ (emptyWitness n) { ewConatusScalar = lowConatus } | n &lt;- [1 .. window] ]</span>
+<span class="lineno">  427 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation - 0.05</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = lowConatus</span>
+<span class="lineno">  429 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  430 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  431 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;sub-floor window should fire conatus erosion commitment&quot;</span></span>
+<span class="lineno">  432 </span><span class="spaces">    </span><span class="istickedoff">(Just TriggerConatusErosion)</span>
+<span class="lineno">  433 </span><span class="spaces">    </span><span class="istickedoff">(shouldCommit defaultEssenceModulation traj)</span></span>
+<span class="lineno">  434 </span>
+<span class="lineno">  435 </span>testShouldCommitRemainsFiredAfterWitness :: IO ()
+<span class="lineno">  436 </span><span class="decl"><span class="istickedoff">testShouldCommitRemainsFiredAfterWitness = do</span>
+<span class="lineno">  437 </span><span class="spaces">  </span><span class="istickedoff">let traj = EssenceTrajectory</span>
+<span class="lineno">  438 </span><span class="spaces">        </span><span class="istickedoff">{ etWitnesses = Seq.fromList (replicate 8 <span class="nottickedoff">(emptyWitness 1)</span>)</span>
+<span class="lineno">  439 </span><span class="spaces">        </span><span class="istickedoff">, etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation</span>
+<span class="lineno">  440 </span><span class="spaces">        </span><span class="istickedoff">, etConatusFloor = 1.0</span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="istickedoff">, etCapacity = emTrajectoryCapacity defaultEssenceModulation</span>
+<span class="lineno">  442 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  443 </span><span class="spaces">      </span><span class="istickedoff">traj' = witness <span class="nottickedoff">defaultEssenceModulation</span> <span class="nottickedoff">9</span> (ConatusEnergy 0.9 (ConatusComponents 0 0 0 0)) <span class="nottickedoff">emptyField</span> defaultDeliberation traj</span>
+<span class="lineno">  444 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;fired commitment should remain fired after another witness&quot;</span></span>
+<span class="lineno">  445 </span><span class="spaces">    </span><span class="istickedoff">(case shouldCommit defaultEssenceModulation traj' of</span>
+<span class="lineno">  446 </span><span class="spaces">       </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">False</span></span>
+<span class="lineno">  447 </span><span class="spaces">       </span><span class="istickedoff">Just _ -&gt; True)</span></span>
+
+</pre>
+</body>
+</html>

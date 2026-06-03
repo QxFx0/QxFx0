@@ -12,6 +12,7 @@ module QxFx0.Bridge.NativeSQLite
   , stepRow
   , bindText
   , bindInt
+  , bindInt64
   , bindDouble
   , columnText
   , columnInt
@@ -25,10 +26,10 @@ module QxFx0.Bridge.NativeSQLite
   ) where
 
 import Control.Exception (finally)
+import Data.Int (Int64)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Text.Encoding.Error (lenientDecode)
 import qualified Data.ByteString as BS
 import Foreign hiding (void)
 import Foreign.C.Types (CInt(..), CDouble(..))
@@ -56,11 +57,14 @@ foreign import ccall unsafe "sqlite3_step"
 foreign import ccall unsafe "sqlite3_finalize"
   c_sqlite3_finalize :: Statement -> IO CInt
 
-foreign import ccall unsafe "sqlite3_bind_text"
-  c_sqlite3_bind_text :: Statement -> CInt -> CString -> CInt -> Ptr () -> IO CInt
+foreign import ccall unsafe "qxfx0_sqlite3_bind_text_transient"
+  c_qxfx0_sqlite3_bind_text_transient :: Statement -> CInt -> CString -> CInt -> IO CInt
 
 foreign import ccall unsafe "sqlite3_bind_int"
   c_sqlite3_bind_int :: Statement -> CInt -> CInt -> IO CInt
+
+foreign import ccall unsafe "sqlite3_bind_int64"
+  c_sqlite3_bind_int64 :: Statement -> CInt -> Int64 -> IO CInt
 
 foreign import ccall unsafe "sqlite3_bind_double"
   c_sqlite3_bind_double :: Statement -> CInt -> CDouble -> IO CInt
@@ -86,8 +90,18 @@ foreign import ccall unsafe "sqlite3_exec"
 foreign import ccall unsafe "sqlite3_errmsg"
   c_sqlite3_errmsg :: Database -> IO CString
 
-sqliteTransient :: Ptr ()
-sqliteTransient = nullPtr `plusPtr` (-1)
+sqliteTransient :: FunPtr (Ptr () -> IO ())
+sqliteTransient = nullFunPtr
+{-# NOINLINE sqliteTransient #-}
+
+maxSQLiteTextBytes :: Int
+maxSQLiteTextBytes = fromIntegral (maxBound :: CInt)
+
+maxSQLiteInt :: Int
+maxSQLiteInt = fromIntegral (maxBound :: CInt)
+
+minSQLiteInt :: Int
+minSQLiteInt = fromIntegral (minBound :: CInt)
 
 sqlOk, sqlRow, sqlDone :: CInt
 sqlOk   = 0
@@ -114,16 +128,19 @@ close db = do
 
 prepare :: Database -> Text -> IO (Either Text Statement)
 prepare db sql = alloca $ \ppStmt -> alloca $ \ppTail -> do
-  let sqlBs = TE.encodeUtf8 sql
-  rc <- BS.useAsCString sqlBs $ \cSql ->
-    c_sqlite3_prepare_v2 db cSql (-1) ppStmt ppTail
-  if rc == sqlOk
-    then do stmt <- peek ppStmt
-            if stmt == nullPtr
-              then return (Left "sqlite3_prepare_v2 returned null statement")
-              else return (Right stmt)
-    else do errMsg <- getErrMsg db
-            return (Left $ "prepare failed: " <> errMsg)
+  if T.any (== '\0') sql
+    then pure (Left "prepare failed: embedded_nul")
+    else do
+      let sqlBs = TE.encodeUtf8 sql
+      rc <- BS.useAsCString sqlBs $ \cSql ->
+        c_sqlite3_prepare_v2 db cSql (-1) ppStmt ppTail
+      if rc == sqlOk
+        then do stmt <- peek ppStmt
+                if stmt == nullPtr
+                  then return (Left "sqlite3_prepare_v2 returned null statement")
+                  else return (Right stmt)
+        else do errMsg <- getErrMsg db
+                return (Left $ "prepare failed: " <> errMsg)
 
 getErrMsg :: Database -> IO Text
 getErrMsg db = do
@@ -155,18 +172,31 @@ stepRow stmt = do
 bindText :: Statement -> CInt -> Text -> IO (Either Text ())
 bindText stmt idx val = do
   let bs = TE.encodeUtf8 val
-  rc <- BS.useAsCString bs $ \cStr ->
-    c_sqlite3_bind_text stmt idx cStr (fromIntegral (BS.length bs)) sqliteTransient
-  if rc == sqlOk
-    then return (Right ())
-    else return (Left $ "bindText failed: " <> T.pack (show rc))
+  if BS.length bs > maxSQLiteTextBytes
+    then pure (Left ("bindText failed: value_too_large bytes=" <> T.pack (show (BS.length bs))))
+    else do
+      rc <- BS.useAsCString bs $ \cStr ->
+        c_qxfx0_sqlite3_bind_text_transient stmt idx cStr (fromIntegral (BS.length bs))
+      if rc == sqlOk
+        then pure (Right ())
+        else pure (Left $ "bindText failed: " <> T.pack (show rc))
 
 bindInt :: Statement -> CInt -> Int -> IO (Either Text ())
-bindInt stmt idx val = do
-  rc <- c_sqlite3_bind_int stmt idx (fromIntegral val)
+bindInt stmt idx val
+  | val < minSQLiteInt || val > maxSQLiteInt =
+      pure (Left ("bindInt failed: value_out_of_range " <> T.pack (show val)))
+  | otherwise = do
+      rc <- c_sqlite3_bind_int stmt idx (fromIntegral val)
+      if rc == sqlOk
+        then pure (Right ())
+        else pure (Left $ "bindInt failed: " <> T.pack (show rc))
+
+bindInt64 :: Statement -> CInt -> Int64 -> IO (Either Text ())
+bindInt64 stmt idx val = do
+  rc <- c_sqlite3_bind_int64 stmt idx val
   if rc == sqlOk
-    then return (Right ())
-    else return (Left $ "bindInt failed: " <> T.pack (show rc))
+    then pure (Right ())
+    else pure (Left $ "bindInt64 failed: " <> T.pack (show rc))
 
 bindDouble :: Statement -> CInt -> Double -> IO (Either Text ())
 bindDouble stmt idx val = do
@@ -182,8 +212,11 @@ columnText stmt idx = do
     then return ""
     else do
       cLen <- c_sqlite3_column_bytes stmt idx
-      bs <- BS.packCStringLen (cStr, fromIntegral cLen)
-      return (TE.decodeUtf8With lenientDecode bs)
+      if cLen < 0
+        then throwQxFx0 (SQLiteError ("columnText failed: negative_length " <> T.pack (show cLen)))
+        else do
+          bs <- BS.packCStringLen (cStr, fromIntegral cLen)
+          pure (TE.decodeUtf8 bs)
 
 columnInt :: Statement -> CInt -> IO Int
 columnInt stmt idx = fromIntegral <$> c_sqlite3_column_int stmt idx
@@ -205,13 +238,16 @@ finalize stmt = do
 
 execSql :: Database -> Text -> IO (Either Text ())
 execSql db sql = do
-  let sqlBs = TE.encodeUtf8 sql
-  rc <- BS.useAsCString sqlBs $ \cSql ->
-    c_sqlite3_exec db cSql nullPtr nullPtr nullPtr
-  if rc == sqlOk
-    then return (Right ())
-    else do errMsg <- getErrMsg db
-            return (Left $ "exec failed: " <> errMsg)
+  if T.any (== '\0') sql
+    then pure (Left "exec failed: embedded_nul")
+    else do
+      let sqlBs = TE.encodeUtf8 sql
+      rc <- BS.useAsCString sqlBs $ \cSql ->
+        c_sqlite3_exec db cSql nullPtr nullPtr nullPtr
+      if rc == sqlOk
+        then return (Right ())
+        else do errMsg <- getErrMsg db
+                return (Left $ "exec failed: " <> errMsg)
 
 withStatement :: Database -> Text -> (Statement -> IO a) -> IO (Either Text a)
 withStatement db sql action = do

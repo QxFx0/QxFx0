@@ -230,26 +230,26 @@ else
 fi
 
 # ── Gate 6: Embedded SQL sync ───────────────────────────────────────────
-if (cd "$ROOT" && python3 scripts/sync_embedded_sql.py --check >/dev/null 2>&1); then
-  log_gate "sync_embedded_sql.py" "0" "PASS" "EmbeddedSQL.hs in sync"
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1); then
+  log_gate "check_embedded_sql.hs" "0" "PASS" "EmbeddedSQL.hs in sync"
 else
-  log_gate "sync_embedded_sql.py" "$?" "FAIL" "EmbeddedSQL.hs drifted"
+  log_gate "check_embedded_sql.hs" "$?" "FAIL" "EmbeddedSQL.hs drifted"
   fail_contract "Gate 6 (embedded SQL sync)"
 fi
 
 # ── Gate 7: Schema consistency ────────────────────────────────────────
-if (cd "$ROOT" && python3 scripts/check_schema_consistency.py >/dev/null 2>&1); then
-  log_gate "check_schema_consistency.py" "0" "PASS" "cumulative migrations match schema"
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-schema-consistency >/dev/null 2>&1); then
+  log_gate "check_schema_consistency.hs" "0" "PASS" "cumulative migrations match schema"
 else
-  log_gate "check_schema_consistency.py" "$?" "FAIL" "schema drift detected"
+  log_gate "check_schema_consistency.hs" "$?" "FAIL" "schema drift detected"
   fail_contract "Gate 7 (schema consistency)"
 fi
 
 # ── Gate 8: Schema contract ─────────────────────────────────────────────
-if (cd "$ROOT" && python3 scripts/check_schema_contract.py >/dev/null 2>&1); then
-  log_gate "check_schema_contract.py" "0" "PASS" "runtime contract manifest valid"
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-schema-contract >/dev/null 2>&1); then
+  log_gate "check_schema_contract.hs" "0" "PASS" "runtime contract manifest valid"
 else
-  log_gate "check_schema_contract.py" "$?" "FAIL" "contract manifest drift"
+  log_gate "check_schema_contract.hs" "$?" "FAIL" "contract manifest drift"
   fail_contract "Gate 8 (schema contract)"
 fi
 

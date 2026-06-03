@@ -29,6 +29,7 @@ module QxFx0.Learning.Guardrails
   , maxConsecutiveRejections
   , cooldownTurns
   , minQuarantineTurns
+  , maxQuarantineEntries
   ) where
 
 import Control.DeepSeq (NFData)
@@ -55,6 +56,9 @@ cooldownTurns = 5
 
 minQuarantineTurns :: Int
 minQuarantineTurns = 2
+
+maxQuarantineEntries :: Int
+maxQuarantineEntries = 500
 
 -- | Mutable guardrail counters kept in 'SystemState'.
 data GuardrailState = GuardrailState
@@ -117,12 +121,13 @@ recordProposalSubmission gs turn proposalId =
         if turn - gsWindowStart gs > proposalWindowTurns
            then (turn, 1)
            else (gsWindowStart gs, gsProposalsThisWindow gs + 1)
-  in gs
-       { gsLastProposalTurn    = turn
-       , gsProposalsThisWindow = newWindowCount
-       , gsWindowStart         = newWindowStart
-       , gsQuarantine          = (turn, proposalId) : gsQuarantine gs
-       }
+      quarantine' = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs)
+   in gs
+        { gsLastProposalTurn    = turn
+        , gsProposalsThisWindow = newWindowCount
+        , gsWindowStart         = newWindowStart
+        , gsQuarantine          = quarantine'
+        }
 
 -- | Record a rejection, bumping the consecutive-rejection counter
 -- and potentially opening the circuit breaker.
@@ -144,16 +149,21 @@ recordAcceptance gs = gs { gsConsecutiveRejections = 0 }
 -- re-hydration from persisted state if needed.
 quarantineProposal :: GuardrailState -> Int -> CalibrationId -> GuardrailState
 quarantineProposal gs turn proposalId =
-  gs { gsQuarantine = (turn, proposalId) : gsQuarantine gs }
+  gs { gsQuarantine = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs) }
 
 -- | Check whether a specific proposal has completed its quarantine.
 isQuarantineExpired :: GuardrailState -> Int -> CalibrationId -> Bool
 isQuarantineExpired gs turn proposalId =
   case lookup proposalId (map swap (gsQuarantine gs)) of
-    Nothing    -> False
+    Nothing    -> True
     Just subTurn -> turn - subTurn >= minQuarantineTurns
   where
     swap (a, b) = (b, a)
+
+pruneQuarantine :: Int -> [(Int, CalibrationId)] -> [(Int, CalibrationId)]
+pruneQuarantine turn =
+  take maxQuarantineEntries
+    . filter (\(submittedTurn, _) -> turn - submittedTurn <= minQuarantineTurns)
 
 -- Internal helpers
 

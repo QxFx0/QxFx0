@@ -1,0 +1,1140 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-| P5 governance event spine: append-only typed canonical history atoms. -}
+<span class="lineno">    8 </span>module QxFx0.Types.State.Governance
+<span class="lineno">    9 </span>  ( GovernanceEventId(..)
+<span class="lineno">   10 </span>  , GovernanceActor(..)
+<span class="lineno">   11 </span>  , GovernedSubject(..)
+<span class="lineno">   12 </span>  , GovernanceDecision(..)
+<span class="lineno">   13 </span>  , GovernanceLifecycleStatus(..)
+<span class="lineno">   14 </span>  , GovernanceReason(..)
+<span class="lineno">   15 </span>  , ProjectionVersion(..)
+<span class="lineno">   16 </span>  , ReducerVersion(..)
+<span class="lineno">   17 </span>  , EvaluatorVersion(..)
+<span class="lineno">   18 </span>  , FreezeScope(..)
+<span class="lineno">   19 </span>  , GovernanceRef(..)
+<span class="lineno">   20 </span>  , ConfidenceBand(..)
+<span class="lineno">   21 </span>  , ConfidenceSnapshot(..)
+<span class="lineno">   22 </span>  , CapabilityEvidence(..)
+<span class="lineno">   23 </span>  , CapabilityEntry(..)
+<span class="lineno">   24 </span>  , CapabilityModel(..)
+<span class="lineno">   25 </span>  , DriftSignal(..)
+<span class="lineno">   26 </span>  , MetaEvaluationSignal(..)
+<span class="lineno">   27 </span>  , BudgetWindow(..)
+<span class="lineno">   28 </span>  , StaleStatus(..)
+<span class="lineno">   29 </span>  , ProjectionMeta(..)
+<span class="lineno">   30 </span>  , RollbackPlan(..)
+<span class="lineno">   31 </span>  , GovernancePermission(..)
+<span class="lineno">   32 </span>  , GovernanceDataClass(..)
+<span class="lineno">   33 </span>  , EpistemicStatus(..)
+<span class="lineno">   34 </span>  , epistemicStatusClass
+<span class="lineno">   35 </span>  , renderEpistemicStatus
+<span class="lineno">   36 </span>  , GovernedProjectionRef(..)
+<span class="lineno">   37 </span>  , GovernanceProvenanceLink(..)
+<span class="lineno">   38 </span>  , GovernanceProjection(..)
+<span class="lineno">   39 </span>  , GovernanceRuntimeFault(..)
+<span class="lineno">   40 </span>  , GovernanceSchemaEvolutionContract(..)
+<span class="lineno">   41 </span>  , GovernanceReplayOrderingContract(..)
+<span class="lineno">   42 </span>  , GovernanceArchiveContract(..)
+<span class="lineno">   43 </span>  , PerspectivePayload(..)
+<span class="lineno">   44 </span>  , ClaimStancePayload(..)
+<span class="lineno">   45 </span>  , CapabilityPayload(..)
+<span class="lineno">   46 </span>  , FreezePayload(..)
+<span class="lineno">   47 </span>  , CarryPayload(..)
+<span class="lineno">   48 </span>  , NormativeRevisionPayload(..)
+<span class="lineno">   49 </span>  , GovernancePayload(..)
+<span class="lineno">   50 </span>  , GovernanceEventEnvelope(..)
+<span class="lineno">   51 </span>  , GovernanceEvent(..)
+<span class="lineno">   52 </span>  , currentGovernanceSchemaVersion
+<span class="lineno">   53 </span>  , currentGovernancePayloadVersion
+<span class="lineno">   54 </span>  , currentProjectionVersion
+<span class="lineno">   55 </span>  , currentReducerVersion
+<span class="lineno">   56 </span>  , currentEvaluatorVersion
+<span class="lineno">   57 </span>  , buildPerspectiveGovernanceEvent
+<span class="lineno">   58 </span>  , appendGovernanceEventToHistory
+<span class="lineno">   59 </span>  , canonicalizeGovernanceHistory
+<span class="lineno">   60 </span>  , normalizeGovernanceEventChecked
+<span class="lineno">   61 </span>  , validateGovernanceEventContract
+<span class="lineno">   62 </span>  , governancePermission
+<span class="lineno">   63 </span>  , governancePermissionAllowed
+<span class="lineno">   64 </span>  , supportedGovernedSubject
+<span class="lineno">   65 </span>  , governanceProjectionChecksum
+<span class="lineno">   66 </span>  , governanceProvenanceTrail
+<span class="lineno">   67 </span>  , defaultGovernanceSchemaEvolutionContract
+<span class="lineno">   68 </span>  , defaultGovernanceReplayOrderingContract
+<span class="lineno">   69 </span>  , defaultGovernanceArchiveContract
+<span class="lineno">   70 </span>  , governanceDeterminismBoundary
+<span class="lineno">   71 </span>  , governanceDecisionFromPerspectivePromotion
+<span class="lineno">   72 </span>  , governanceEventIdText
+<span class="lineno">   73 </span>  , governanceEventHashText
+<span class="lineno">   74 </span>  , governanceEventPayloadHashText
+<span class="lineno">   75 </span>  , governanceHistoryFingerprint
+<span class="lineno">   76 </span>  ) where
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   79 </span>import qualified Crypto.Hash.SHA256 as SHA256
+<span class="lineno">   80 </span>import Data.Bits (xor)
+<span class="lineno">   81 </span>import Data.Aeson (FromJSON, ToJSON, encode)
+<span class="lineno">   82 </span>import qualified Data.ByteString as BS
+<span class="lineno">   83 </span>import qualified Data.ByteString.Lazy.Char8 as BL8
+<span class="lineno">   84 </span>import Data.Function (on)
+<span class="lineno">   85 </span>import Data.List (groupBy, sortOn)
+<span class="lineno">   86 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   87 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   88 </span>import Data.Text (Text)
+<span class="lineno">   89 </span>import qualified Data.Text as T
+<span class="lineno">   90 </span>import Data.Word (Word64)
+<span class="lineno">   91 </span>import GHC.Generics (Generic)
+<span class="lineno">   92 </span>import Numeric (showHex)
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>import QxFx0.Types.State.Perspective
+<span class="lineno">   95 </span>  ( EndorsedPerspective(..)
+<span class="lineno">   96 </span>  , PerspectiveAdmissibility(..)
+<span class="lineno">   97 </span>  , PerspectiveCandidate(..)
+<span class="lineno">   98 </span>  , IdentitySlice(..)
+<span class="lineno">   99 </span>  , PerspectiveId(..)
+<span class="lineno">  100 </span>  , PerspectiveInputBundle(..)
+<span class="lineno">  101 </span>  , PerspectiveProjection
+<span class="lineno">  102 </span>  , PerspectivePromotionDecision(..)
+<span class="lineno">  103 </span>  , PerspectiveRegistry(..)
+<span class="lineno">  104 </span>  , PerspectiveScope
+<span class="lineno">  105 </span>  , PerspectiveStatus(..)
+<span class="lineno">  106 </span>  , PerspectiveThread(..)
+<span class="lineno">  107 </span>  , PerspectiveVersionId(..)
+<span class="lineno">  108 </span>  , latestEndorsedPerspective
+<span class="lineno">  109 </span>  , renderPerspectiveScope
+<span class="lineno">  110 </span>  )
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>newtype GovernanceEventId = GovernanceEventId { <span class="istickedoff"><span class="decl"><span class="istickedoff">unGovernanceEventId</span></span></span> :: Text }
+<span class="lineno">  113 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  114 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>data GovernanceHashScheme
+<span class="lineno">  117 </span>  = GovernanceHashLegacyFNV
+<span class="lineno">  118 </span>  | GovernanceHashSha256
+<span class="lineno">  119 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>data GovernanceActor
+<span class="lineno">  122 </span>  = ActorRuntime
+<span class="lineno">  123 </span>  | ActorOperator
+<span class="lineno">  124 </span>  | ActorOfflineGovernance
+<span class="lineno">  125 </span>  | ActorReplayRebuild
+<span class="lineno">  126 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  127 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>data FreezeScope
+<span class="lineno">  130 </span>  = FreezeGlobal
+<span class="lineno">  131 </span>  | FreezePerspectiveScope Text
+<span class="lineno">  132 </span>  | FreezeContour Text
+<span class="lineno">  133 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  134 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>data GovernedSubject
+<span class="lineno">  137 </span>  = SubjectPerspective PerspectiveId
+<span class="lineno">  138 </span>  | SubjectClaimStance Text
+<span class="lineno">  139 </span>  | SubjectCapability Text
+<span class="lineno">  140 </span>  | SubjectCrossSessionCarry Text
+<span class="lineno">  141 </span>  | SubjectFreeze FreezeScope
+<span class="lineno">  142 </span>  | SubjectNormativeProfile Text
+<span class="lineno">  143 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  144 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>data GovernanceDecision
+<span class="lineno">  147 </span>  = GovObserveOnly
+<span class="lineno">  148 </span>  | GovQuarantine
+<span class="lineno">  149 </span>  | GovAcceptBounded
+<span class="lineno">  150 </span>  | GovPromote
+<span class="lineno">  151 </span>  | GovFreeze
+<span class="lineno">  152 </span>  | GovSuspend
+<span class="lineno">  153 </span>  | GovRollback
+<span class="lineno">  154 </span>  | GovDeny
+<span class="lineno">  155 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  156 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>data GovernanceLifecycleStatus
+<span class="lineno">  159 </span>  = GlsIntent
+<span class="lineno">  160 </span>  | GlsEvaluated
+<span class="lineno">  161 </span>  | GlsCommitted
+<span class="lineno">  162 </span>  | GlsDenied
+<span class="lineno">  163 </span>  | GlsRolledBack
+<span class="lineno">  164 </span>  | GlsArchived
+<span class="lineno">  165 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  166 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>data GovernanceReason = GovernanceReason
+<span class="lineno">  169 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">grTag</span></span></span> :: !Text
+<span class="lineno">  170 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grDetails</span></span></span> :: ![Text]
+<span class="lineno">  171 </span>  }
+<span class="lineno">  172 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  173 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>newtype ProjectionVersion = ProjectionVersion { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unProjectionVersion</span></span></span> :: Int }
+<span class="lineno">  176 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  177 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  178 </span>
+<span class="lineno">  179 </span>newtype ReducerVersion = ReducerVersion { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unReducerVersion</span></span></span> :: Int }
+<span class="lineno">  180 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  181 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  182 </span>
+<span class="lineno">  183 </span>newtype EvaluatorVersion = EvaluatorVersion { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unEvaluatorVersion</span></span></span> :: Int }
+<span class="lineno">  184 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  185 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>data GovernanceRef
+<span class="lineno">  188 </span>  = GovRefEvent GovernanceEventId
+<span class="lineno">  189 </span>  | GovRefPerspective PerspectiveId
+<span class="lineno">  190 </span>  | GovRefClaim Text
+<span class="lineno">  191 </span>  | GovRefCapability Text
+<span class="lineno">  192 </span>  | GovRefSnapshot Text
+<span class="lineno">  193 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  194 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  195 </span>
+<span class="lineno">  196 </span>data ConfidenceBand
+<span class="lineno">  197 </span>  = CbVeryLow
+<span class="lineno">  198 </span>  | CbLow
+<span class="lineno">  199 </span>  | CbMedium
+<span class="lineno">  200 </span>  | CbHigh
+<span class="lineno">  201 </span>  | CbVeryHigh
+<span class="lineno">  202 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  203 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  204 </span>
+<span class="lineno">  205 </span>data ConfidenceSnapshot = ConfidenceSnapshot
+<span class="lineno">  206 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csEvidence</span></span></span> :: !Double
+<span class="lineno">  207 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csStance</span></span></span> :: !Double
+<span class="lineno">  208 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csPerspective</span></span></span> :: !Double
+<span class="lineno">  209 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csCapability</span></span></span> :: !Double
+<span class="lineno">  210 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csAction</span></span></span> :: !Double
+<span class="lineno">  211 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csGovernance</span></span></span> :: !Double
+<span class="lineno">  212 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">csBand</span></span></span> :: !ConfidenceBand
+<span class="lineno">  213 </span>  }
+<span class="lineno">  214 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  215 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  216 </span>
+<span class="lineno">  217 </span>data CapabilityEntry = CapabilityEntry
+<span class="lineno">  218 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmeScope</span></span></span> :: !Text
+<span class="lineno">  219 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmeOperation</span></span></span> :: !Text
+<span class="lineno">  220 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmeMode</span></span></span> :: !Text
+<span class="lineno">  221 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmeConfidence</span></span></span> :: !Double
+<span class="lineno">  222 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmeEvidence</span></span></span> :: !CapabilityEvidence
+<span class="lineno">  223 </span>  }
+<span class="lineno">  224 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  225 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  226 </span>
+<span class="lineno">  227 </span>data CapabilityModel = CapabilityModel
+<span class="lineno">  228 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmVersion</span></span></span> :: !Int
+<span class="lineno">  229 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cmEntries</span></span></span> :: ![CapabilityEntry]
+<span class="lineno">  230 </span>  }
+<span class="lineno">  231 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  232 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>data DriftSignal = DriftSignal
+<span class="lineno">  235 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">dsTag</span></span></span> :: !Text
+<span class="lineno">  236 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">dsSeverity</span></span></span> :: !Double
+<span class="lineno">  237 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">dsEvidence</span></span></span> :: ![Text]
+<span class="lineno">  238 </span>  }
+<span class="lineno">  239 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  240 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  241 </span>
+<span class="lineno">  242 </span>data MetaEvaluationSignal = MetaEvaluationSignal
+<span class="lineno">  243 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mesSignals</span></span></span> :: ![DriftSignal]
+<span class="lineno">  244 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mesMismatches</span></span></span> :: ![Text]
+<span class="lineno">  245 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">mesInstabilityScore</span></span></span> :: !Double
+<span class="lineno">  246 </span>  }
+<span class="lineno">  247 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  248 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  249 </span>
+<span class="lineno">  250 </span>data BudgetWindow = BudgetWindow
+<span class="lineno">  251 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">bwSize</span></span></span> :: !Int
+<span class="lineno">  252 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">bwMaxPromotions</span></span></span> :: !Int
+<span class="lineno">  253 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">bwMaxRevisions</span></span></span> :: !Int
+<span class="lineno">  254 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">bwMaxRollbacks</span></span></span> :: !Int
+<span class="lineno">  255 </span>  }
+<span class="lineno">  256 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  257 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>data StaleStatus
+<span class="lineno">  260 </span>  = StaleFresh
+<span class="lineno">  261 </span>  | StaleCooling
+<span class="lineno">  262 </span>  | StaleSuspended
+<span class="lineno">  263 </span>  | StaleExpired
+<span class="lineno">  264 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  265 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  266 </span>
+<span class="lineno">  267 </span>data ProjectionMeta = ProjectionMeta
+<span class="lineno">  268 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">pmProjectionVersion</span></span></span> :: !ProjectionVersion
+<span class="lineno">  269 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">pmReducerVersion</span></span></span> :: !ReducerVersion
+<span class="lineno">  270 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">pmSnapshotTurn</span></span></span> :: !(Maybe Int)
+<span class="lineno">  271 </span>  }
+<span class="lineno">  272 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  273 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  274 </span>
+<span class="lineno">  275 </span>data RollbackPlan = RollbackPlan
+<span class="lineno">  276 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rpTargetEvent</span></span></span> :: !GovernanceEventId
+<span class="lineno">  277 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rpReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  278 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rpScope</span></span></span> :: !FreezeScope
+<span class="lineno">  279 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rpAllowedByPolicy</span></span></span> :: !Bool
+<span class="lineno">  280 </span>  }
+<span class="lineno">  281 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  282 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>data GovernancePermission
+<span class="lineno">  285 </span>  = GovernanceAllowed
+<span class="lineno">  286 </span>  | GovernanceDenied Text
+<span class="lineno">  287 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  288 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>data GovernanceDataClass
+<span class="lineno">  291 </span>  = GdcCanonical
+<span class="lineno">  292 </span>  | GdcDerived
+<span class="lineno">  293 </span>  | GdcObservational
+<span class="lineno">  294 </span>  | GdcDiagnostic
+<span class="lineno">  295 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  296 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  297 </span>
+<span class="lineno">  298 </span>data EpistemicStatus
+<span class="lineno">  299 </span>  = EpstAuthoritative
+<span class="lineno">  300 </span>  | EpstAdvisory
+<span class="lineno">  301 </span>  | EpstDegraded
+<span class="lineno">  302 </span>  | EpstFallback
+<span class="lineno">  303 </span>  | EpstObservationalOnly
+<span class="lineno">  304 </span>  | EpstNonAuthoritative
+<span class="lineno">  305 </span>  | EpstNonDriving
+<span class="lineno">  306 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  307 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  308 </span>
+<span class="lineno">  309 </span>epistemicStatusClass :: EpistemicStatus -&gt; GovernanceDataClass
+<span class="lineno">  310 </span><span class="decl"><span class="nottickedoff">epistemicStatusClass EpstAuthoritative = GdcCanonical</span>
+<span class="lineno">  311 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstAdvisory = GdcDerived</span>
+<span class="lineno">  312 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstDegraded = GdcDerived</span>
+<span class="lineno">  313 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstFallback = GdcObservational</span>
+<span class="lineno">  314 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstObservationalOnly = GdcObservational</span>
+<span class="lineno">  315 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstNonAuthoritative = GdcDiagnostic</span>
+<span class="lineno">  316 </span><span class="spaces"></span><span class="nottickedoff">epistemicStatusClass EpstNonDriving = GdcDiagnostic</span></span>
+<span class="lineno">  317 </span>
+<span class="lineno">  318 </span>renderEpistemicStatus :: EpistemicStatus -&gt; Text
+<span class="lineno">  319 </span><span class="decl"><span class="istickedoff">renderEpistemicStatus EpstAuthoritative = &quot;authoritative&quot;</span>
+<span class="lineno">  320 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstAdvisory = <span class="nottickedoff">&quot;advisory&quot;</span></span>
+<span class="lineno">  321 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstDegraded = <span class="nottickedoff">&quot;degraded&quot;</span></span>
+<span class="lineno">  322 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstFallback = <span class="nottickedoff">&quot;fallback&quot;</span></span>
+<span class="lineno">  323 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstObservationalOnly = <span class="nottickedoff">&quot;observational_only&quot;</span></span>
+<span class="lineno">  324 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstNonAuthoritative = <span class="nottickedoff">&quot;non_authoritative&quot;</span></span>
+<span class="lineno">  325 </span><span class="spaces"></span><span class="istickedoff">renderEpistemicStatus EpstNonDriving = <span class="nottickedoff">&quot;non_driving&quot;</span></span></span>
+<span class="lineno">  326 </span>
+<span class="lineno">  327 </span>data GovernanceProjection = GovernanceProjection
+<span class="lineno">  328 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">gpMeta</span></span></span> :: !ProjectionMeta
+<span class="lineno">  329 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gpPerspectiveRegistry</span></span></span> :: !PerspectiveRegistry
+<span class="lineno">  330 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gpActivePerspectiveProjections</span></span></span> :: ![PerspectiveProjection]
+<span class="lineno">  331 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gpGovernedRefs</span></span></span> :: ![GovernedProjectionRef]
+<span class="lineno">  332 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gpProjectionChecksum</span></span></span> :: !Text
+<span class="lineno">  333 </span>  }
+<span class="lineno">  334 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  335 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  336 </span>
+<span class="lineno">  337 </span>data GovernanceRuntimeFault
+<span class="lineno">  338 </span>  = GrfAppendRejected !Text
+<span class="lineno">  339 </span>  | GrfRebuildUnavailable !Text
+<span class="lineno">  340 </span>  | GrfRebuildMismatch
+<span class="lineno">  341 </span>  | GrfRecoveredCorruptBootstrap !Text
+<span class="lineno">  342 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  343 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>data GovernedProjectionRef = GovernedProjectionRef
+<span class="lineno">  346 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gprEventId</span></span></span> :: !GovernanceEventId
+<span class="lineno">  347 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gprSubject</span></span></span> :: !GovernedSubject
+<span class="lineno">  348 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gprDecision</span></span></span> :: !GovernanceDecision
+<span class="lineno">  349 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gprLifecycleStatus</span></span></span> :: !GovernanceLifecycleStatus
+<span class="lineno">  350 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gprEffectRef</span></span></span> :: !(Maybe GovernanceRef)
+<span class="lineno">  351 </span>  }
+<span class="lineno">  352 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  353 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  354 </span>
+<span class="lineno">  355 </span>data GovernanceProvenanceLink = GovernanceProvenanceLink
+<span class="lineno">  356 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">gplEventId</span></span></span> :: !GovernanceEventId
+<span class="lineno">  357 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gplSubject</span></span></span> :: !GovernedSubject
+<span class="lineno">  358 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gplParentRefs</span></span></span> :: ![GovernanceEventId]
+<span class="lineno">  359 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gplReasonTag</span></span></span> :: !Text
+<span class="lineno">  360 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gplEffectRef</span></span></span> :: !(Maybe GovernanceRef)
+<span class="lineno">  361 </span>  }
+<span class="lineno">  362 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  363 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  364 </span>
+<span class="lineno">  365 </span>data GovernanceSchemaEvolutionContract = GovernanceSchemaEvolutionContract
+<span class="lineno">  366 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gsecSchemaVersionPolicy</span></span></span> :: !Text
+<span class="lineno">  367 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gsecPayloadVersionPolicy</span></span></span> :: !Text
+<span class="lineno">  368 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gsecBackwardCompatibilityRules</span></span></span> :: ![Text]
+<span class="lineno">  369 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gsecMigrationRules</span></span></span> :: ![Text]
+<span class="lineno">  370 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gsecOldVersionReplaySemantics</span></span></span> :: !Text
+<span class="lineno">  371 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gsecUnsupportedVersionHandling</span></span></span> :: !Text
+<span class="lineno">  372 </span>  }
+<span class="lineno">  373 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  374 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  375 </span>
+<span class="lineno">  376 </span>data GovernanceReplayOrderingContract = GovernanceReplayOrderingContract
+<span class="lineno">  377 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">grocCausalOrdering</span></span></span> :: !Text
+<span class="lineno">  378 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">grocPartitionSemantics</span></span></span> :: !Text
+<span class="lineno">  379 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grocTotalOrderTieBreakRule</span></span></span> :: !Text
+<span class="lineno">  380 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">grocReducerIdempotence</span></span></span> :: !Text
+<span class="lineno">  381 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">grocMergeSemantics</span></span></span> :: !Text
+<span class="lineno">  382 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">grocConflictHandling</span></span></span> :: !Text
+<span class="lineno">  383 </span>  }
+<span class="lineno">  384 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  385 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  386 </span>
+<span class="lineno">  387 </span>data GovernanceArchiveContract = GovernanceArchiveContract
+<span class="lineno">  388 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">gacCanonicalHistoryCompactionAllowed</span></span></span> :: !Bool
+<span class="lineno">  389 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gacCompactionTargets</span></span></span> :: ![Text]
+<span class="lineno">  390 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">gacArchiveRule</span></span></span> :: !Text
+<span class="lineno">  391 </span>  }
+<span class="lineno">  392 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  393 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  394 </span>
+<span class="lineno">  395 </span>data PerspectivePayload = PerspectivePayload
+<span class="lineno">  396 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ppPerspectiveId</span></span></span> :: !PerspectiveId
+<span class="lineno">  397 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPerspectiveScope</span></span></span> :: !PerspectiveScope
+<span class="lineno">  398 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPerspectiveVersion</span></span></span> :: !(Maybe PerspectiveVersionId)
+<span class="lineno">  399 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPerspectiveStatus</span></span></span> :: !PerspectiveStatus
+<span class="lineno">  400 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ppPerspectiveInput</span></span></span> :: !PerspectiveInputBundle
+<span class="lineno">  401 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ppPerspectiveCandidate</span></span></span> :: !PerspectiveCandidate
+<span class="lineno">  402 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPerspectiveAdmissibility</span></span></span> :: !PerspectiveAdmissibility
+<span class="lineno">  403 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppRequestedDecision</span></span></span> :: !(Maybe PerspectivePromotionDecision)
+<span class="lineno">  404 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ppResolvedDecision</span></span></span> :: !PerspectivePromotionDecision
+<span class="lineno">  405 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ppPerspectiveProjection</span></span></span> :: !(Maybe PerspectiveProjection)
+<span class="lineno">  406 </span>  }
+<span class="lineno">  407 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  408 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  409 </span>
+<span class="lineno">  410 </span>data ClaimStancePayload = ClaimStancePayload
+<span class="lineno">  411 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">cspClaimRef</span></span></span> :: !Text
+<span class="lineno">  412 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cspBefore</span></span></span> :: !(Maybe Text)
+<span class="lineno">  413 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cspAfter</span></span></span> :: !(Maybe Text)
+<span class="lineno">  414 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cspReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  415 </span>  }
+<span class="lineno">  416 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  417 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  418 </span>
+<span class="lineno">  419 </span>data CapabilityEvidence = CapabilityEvidence
+<span class="lineno">  420 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceObservedFailures</span></span></span> :: !Int
+<span class="lineno">  421 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceSandboxFailures</span></span></span> :: !Int
+<span class="lineno">  422 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceFreezeCount</span></span></span> :: !Int
+<span class="lineno">  423 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceRollbackCount</span></span></span> :: !Int
+<span class="lineno">  424 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">ceDegradedCount</span></span></span> :: !Int
+<span class="lineno">  425 </span>  }
+<span class="lineno">  426 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  427 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  428 </span>
+<span class="lineno">  429 </span>data CapabilityPayload = CapabilityPayload
+<span class="lineno">  430 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">cpCapabilityRef</span></span></span> :: !Text
+<span class="lineno">  431 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpScope</span></span></span> :: !Text
+<span class="lineno">  432 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpOperation</span></span></span> :: !Text
+<span class="lineno">  433 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpMode</span></span></span> :: !Text
+<span class="lineno">  434 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpBeforeConfidence</span></span></span> :: !(Maybe Double)
+<span class="lineno">  435 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpAfterConfidence</span></span></span> :: !Double
+<span class="lineno">  436 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpEvidence</span></span></span> :: !CapabilityEvidence
+<span class="lineno">  437 </span>  }
+<span class="lineno">  438 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  439 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  440 </span>
+<span class="lineno">  441 </span>data FreezePayload = FreezePayload
+<span class="lineno">  442 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">fpScope</span></span></span> :: !FreezeScope
+<span class="lineno">  443 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fpEntryReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  444 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fpReleaseConditions</span></span></span> :: ![Text]
+<span class="lineno">  445 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fpCooldownTurns</span></span></span> :: !Int
+<span class="lineno">  446 </span>  }
+<span class="lineno">  447 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  448 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  449 </span>
+<span class="lineno">  450 </span>data CarryPayload = CarryPayload
+<span class="lineno">  451 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">cpCarryKey</span></span></span> :: !Text
+<span class="lineno">  452 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpSourceSession</span></span></span> :: !(Maybe Text)
+<span class="lineno">  453 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpTargetSession</span></span></span> :: !(Maybe Text)
+<span class="lineno">  454 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">cpEligibilityReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  455 </span>  }
+<span class="lineno">  456 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  457 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  458 </span>
+<span class="lineno">  459 </span>data NormativeRevisionPayload = NormativeRevisionPayload
+<span class="lineno">  460 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">nrpProfileId</span></span></span> :: !Text
+<span class="lineno">  461 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">nrpVersionId</span></span></span> :: !Int
+<span class="lineno">  462 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">nrpRevisionPolicy</span></span></span> :: !Text
+<span class="lineno">  463 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">nrpAuditReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  464 </span>  }
+<span class="lineno">  465 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  466 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  467 </span>
+<span class="lineno">  468 </span>data GovernancePayload
+<span class="lineno">  469 </span>  = GpPerspective PerspectivePayload
+<span class="lineno">  470 </span>  | GpClaimStance ClaimStancePayload
+<span class="lineno">  471 </span>  | GpCapability CapabilityPayload
+<span class="lineno">  472 </span>  | GpFreeze FreezePayload
+<span class="lineno">  473 </span>  | GpCarry CarryPayload
+<span class="lineno">  474 </span>  | GpNormativeRevision NormativeRevisionPayload
+<span class="lineno">  475 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  476 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  477 </span>
+<span class="lineno">  478 </span>data GovernanceEventEnvelope = GovernanceEventEnvelope
+<span class="lineno">  479 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">geeId</span></span></span> :: !GovernanceEventId
+<span class="lineno">  480 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeSchemaVersion</span></span></span> :: !Int
+<span class="lineno">  481 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geePayloadVersion</span></span></span> :: !Int
+<span class="lineno">  482 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeLifecycleStatus</span></span></span> :: !GovernanceLifecycleStatus
+<span class="lineno">  483 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeSubject</span></span></span> :: !GovernedSubject
+<span class="lineno">  484 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeActor</span></span></span> :: !GovernanceActor
+<span class="lineno">  485 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeTurnId</span></span></span> :: !(Maybe Int)
+<span class="lineno">  486 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeSessionId</span></span></span> :: !(Maybe Text)
+<span class="lineno">  487 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeStreamId</span></span></span> :: !Text
+<span class="lineno">  488 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geePartitionId</span></span></span> :: !Text
+<span class="lineno">  489 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeSequenceNo</span></span></span> :: !Int
+<span class="lineno">  490 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeParentRefs</span></span></span> :: ![GovernanceEventId]
+<span class="lineno">  491 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeDecision</span></span></span> :: !GovernanceDecision
+<span class="lineno">  492 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeRequestedDecision</span></span></span> :: !(Maybe GovernanceDecision)
+<span class="lineno">  493 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeResolvedDecision</span></span></span> :: !(Maybe GovernanceDecision)
+<span class="lineno">  494 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeReason</span></span></span> :: !GovernanceReason
+<span class="lineno">  495 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeNormativeProfileVersion</span></span></span> :: !(Maybe Int)
+<span class="lineno">  496 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeProjectionVersion</span></span></span> :: !ProjectionVersion
+<span class="lineno">  497 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeReducerVersion</span></span></span> :: !ReducerVersion
+<span class="lineno">  498 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeNormativeEvaluatorVersion</span></span></span> :: !EvaluatorVersion
+<span class="lineno">  499 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeConfidenceAlgebraVersion</span></span></span> :: !EvaluatorVersion
+<span class="lineno">  500 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeCapabilityEvaluatorVersion</span></span></span> :: !EvaluatorVersion
+<span class="lineno">  501 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeSandboxVersion</span></span></span> :: !EvaluatorVersion
+<span class="lineno">  502 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeRollbackLink</span></span></span> :: !(Maybe GovernanceEventId)
+<span class="lineno">  503 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeBeforeRef</span></span></span> :: !(Maybe GovernanceRef)
+<span class="lineno">  504 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeAfterRef</span></span></span> :: !(Maybe GovernanceRef)
+<span class="lineno">  505 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeEffectRef</span></span></span> :: !(Maybe GovernanceRef)
+<span class="lineno">  506 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geeEventHash</span></span></span> :: !(Maybe Text)
+<span class="lineno">  507 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geePrevHash</span></span></span> :: !(Maybe Text)
+<span class="lineno">  508 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">geePayloadHash</span></span></span> :: !(Maybe Text)
+<span class="lineno">  509 </span>  }
+<span class="lineno">  510 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  511 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  512 </span>
+<span class="lineno">  513 </span>data GovernanceEvent = GovernanceEvent
+<span class="lineno">  514 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">geEnvelope</span></span></span> :: !GovernanceEventEnvelope
+<span class="lineno">  515 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">gePayload</span></span></span> :: !GovernancePayload
+<span class="lineno">  516 </span>  }
+<span class="lineno">  517 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  518 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  519 </span>
+<span class="lineno">  520 </span>currentGovernanceSchemaVersion :: Int
+<span class="lineno">  521 </span><span class="decl"><span class="istickedoff">currentGovernanceSchemaVersion = 1</span></span>
+<span class="lineno">  522 </span>
+<span class="lineno">  523 </span>currentGovernancePayloadVersion :: Int
+<span class="lineno">  524 </span><span class="decl"><span class="istickedoff">currentGovernancePayloadVersion = 1</span></span>
+<span class="lineno">  525 </span>
+<span class="lineno">  526 </span>currentProjectionVersion :: ProjectionVersion
+<span class="lineno">  527 </span><span class="decl"><span class="istickedoff">currentProjectionVersion = ProjectionVersion 1</span></span>
+<span class="lineno">  528 </span>
+<span class="lineno">  529 </span>currentReducerVersion :: ReducerVersion
+<span class="lineno">  530 </span><span class="decl"><span class="istickedoff">currentReducerVersion = ReducerVersion 1</span></span>
+<span class="lineno">  531 </span>
+<span class="lineno">  532 </span>currentEvaluatorVersion :: EvaluatorVersion
+<span class="lineno">  533 </span><span class="decl"><span class="istickedoff">currentEvaluatorVersion = EvaluatorVersion 1</span></span>
+<span class="lineno">  534 </span>
+<span class="lineno">  535 </span>defaultGovernanceSchemaEvolutionContract :: GovernanceSchemaEvolutionContract
+<span class="lineno">  536 </span><span class="decl"><span class="istickedoff">defaultGovernanceSchemaEvolutionContract = GovernanceSchemaEvolutionContract</span>
+<span class="lineno">  537 </span><span class="spaces">  </span><span class="istickedoff">{ gsecSchemaVersionPolicy = &quot;major-only&quot;</span>
+<span class="lineno">  538 </span><span class="spaces">  </span><span class="istickedoff">, gsecPayloadVersionPolicy = &quot;major-only&quot;</span>
+<span class="lineno">  539 </span><span class="spaces">  </span><span class="istickedoff">, gsecBackwardCompatibilityRules = [<span class="nottickedoff">&quot;older payloads must normalize or fail closed&quot;</span>]</span>
+<span class="lineno">  540 </span><span class="spaces">  </span><span class="istickedoff">, gsecMigrationRules = [<span class="nottickedoff">&quot;new schema versions require explicit migration logic&quot;</span>]</span>
+<span class="lineno">  541 </span><span class="spaces">  </span><span class="istickedoff">, gsecOldVersionReplaySemantics = &quot;replay via canonical normalization before reduction&quot;</span>
+<span class="lineno">  542 </span><span class="spaces">  </span><span class="istickedoff">, gsecUnsupportedVersionHandling = &quot;reject with explicit error&quot;</span>
+<span class="lineno">  543 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>defaultGovernanceReplayOrderingContract :: GovernanceReplayOrderingContract
+<span class="lineno">  546 </span><span class="decl"><span class="istickedoff">defaultGovernanceReplayOrderingContract = GovernanceReplayOrderingContract</span>
+<span class="lineno">  547 </span><span class="spaces">  </span><span class="istickedoff">{ grocCausalOrdering = &quot;event parent hash chain followed by sequence order&quot;</span>
+<span class="lineno">  548 </span><span class="spaces">  </span><span class="istickedoff">, grocPartitionSemantics = &quot;per-partition stream events preserve stream identity&quot;</span>
+<span class="lineno">  549 </span><span class="spaces">  </span><span class="istickedoff">, grocTotalOrderTieBreakRule = &quot;sequence_no, partition_id, event_id&quot;</span>
+<span class="lineno">  550 </span><span class="spaces">  </span><span class="istickedoff">, grocReducerIdempotence = &quot;duplicate ids must be semantically identical&quot;</span>
+<span class="lineno">  551 </span><span class="spaces">  </span><span class="istickedoff">, grocMergeSemantics = &quot;canonical sort then deterministic fold&quot;</span>
+<span class="lineno">  552 </span><span class="spaces">  </span><span class="istickedoff">, grocConflictHandling = &quot;conflicting duplicates are rejected&quot;</span>
+<span class="lineno">  553 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  554 </span>
+<span class="lineno">  555 </span>defaultGovernanceArchiveContract :: GovernanceArchiveContract
+<span class="lineno">  556 </span><span class="decl"><span class="istickedoff">defaultGovernanceArchiveContract = GovernanceArchiveContract</span>
+<span class="lineno">  557 </span><span class="spaces">  </span><span class="istickedoff">{ gacCanonicalHistoryCompactionAllowed = False</span>
+<span class="lineno">  558 </span><span class="spaces">  </span><span class="istickedoff">, gacCompactionTargets = [<span class="nottickedoff">&quot;snapshots&quot;</span>, <span class="nottickedoff">&quot;projections&quot;</span>, <span class="nottickedoff">&quot;caches&quot;</span>, <span class="nottickedoff">&quot;derived_views&quot;</span>]</span>
+<span class="lineno">  559 </span><span class="spaces">  </span><span class="istickedoff">, gacArchiveRule = &quot;canonical history is append-only and must remain semantically intact&quot;</span>
+<span class="lineno">  560 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  561 </span>
+<span class="lineno">  562 </span>governanceDeterminismBoundary :: [(Text, GovernanceDataClass)]
+<span class="lineno">  563 </span><span class="decl"><span class="istickedoff">governanceDeterminismBoundary =</span>
+<span class="lineno">  564 </span><span class="spaces">  </span><span class="istickedoff">[ (&quot;canonical_history&quot;, GdcCanonical)</span>
+<span class="lineno">  565 </span><span class="spaces">  </span><span class="istickedoff">, <span class="nottickedoff">(&quot;derived_views&quot;, GdcDerived)</span></span>
+<span class="lineno">  566 </span><span class="spaces">  </span><span class="istickedoff">, <span class="nottickedoff">(&quot;observational_trace&quot;, GdcObservational)</span></span>
+<span class="lineno">  567 </span><span class="spaces">  </span><span class="istickedoff">, <span class="nottickedoff">(&quot;diagnostic_trace&quot;, GdcDiagnostic)</span></span>
+<span class="lineno">  568 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  569 </span>
+<span class="lineno">  570 </span>buildPerspectiveGovernanceEvent
+<span class="lineno">  571 </span>  :: GovernanceActor
+<span class="lineno">  572 </span>  -&gt; Int
+<span class="lineno">  573 </span>  -&gt; Text
+<span class="lineno">  574 </span>  -&gt; Maybe GovernanceEvent
+<span class="lineno">  575 </span>  -&gt; PerspectiveRegistry
+<span class="lineno">  576 </span>  -&gt; PerspectiveRegistry
+<span class="lineno">  577 </span>  -&gt; PerspectiveInputBundle
+<span class="lineno">  578 </span>  -&gt; PerspectiveCandidate
+<span class="lineno">  579 </span>  -&gt; PerspectiveAdmissibility
+<span class="lineno">  580 </span>  -&gt; Maybe PerspectivePromotionDecision
+<span class="lineno">  581 </span>  -&gt; PerspectivePromotionDecision
+<span class="lineno">  582 </span>  -&gt; Maybe PerspectiveProjection
+<span class="lineno">  583 </span>  -&gt; GovernanceEvent
+<span class="lineno">  584 </span><span class="decl"><span class="istickedoff">buildPerspectiveGovernanceEvent actor sequenceNo sessionId previousEvent beforeRegistry afterRegistry bundle candidate admissibility requestedDecision resolvedDecision projection =</span>
+<span class="lineno">  585 </span><span class="spaces">  </span><span class="istickedoff">normalizeGovernanceEvent rawEvent</span>
+<span class="lineno">  586 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  587 </span><span class="spaces">    </span><span class="istickedoff">turnId = isTurnCount (pibIdentitySlice bundle)</span>
+<span class="lineno">  588 </span><span class="spaces">    </span><span class="istickedoff">scope = pcScope candidate</span>
+<span class="lineno">  589 </span><span class="spaces">    </span><span class="istickedoff">(perspectiveId, perspectiveVersion, perspectiveStatus) = perspectiveIdentityForScope sequenceNo sessionId scope afterRegistry</span>
+<span class="lineno">  590 </span><span class="spaces">    </span><span class="istickedoff">requestedGov = governanceDecisionFromPerspectivePromotion &lt;$&gt; requestedDecision</span>
+<span class="lineno">  591 </span><span class="spaces">    </span><span class="istickedoff">resolvedGov = governanceDecisionFromPerspectiveOutcome admissibility resolvedDecision</span>
+<span class="lineno">  592 </span><span class="spaces">    </span><span class="istickedoff">previousHash = previousEvent &gt;&gt;= geeEventHash . geEnvelope</span>
+<span class="lineno">  593 </span><span class="spaces">    </span><span class="istickedoff">previousId = geeId . geEnvelope &lt;$&gt; previousEvent</span>
+<span class="lineno">  594 </span><span class="spaces">    </span><span class="istickedoff">payload = GpPerspective PerspectivePayload</span>
+<span class="lineno">  595 </span><span class="spaces">      </span><span class="istickedoff">{ ppPerspectiveId = perspectiveId</span>
+<span class="lineno">  596 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveScope = scope</span>
+<span class="lineno">  597 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveVersion = perspectiveVersion</span>
+<span class="lineno">  598 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveStatus = perspectiveStatus</span>
+<span class="lineno">  599 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveInput = bundle</span>
+<span class="lineno">  600 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveCandidate = candidate</span>
+<span class="lineno">  601 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveAdmissibility = admissibility</span>
+<span class="lineno">  602 </span><span class="spaces">      </span><span class="istickedoff">, ppRequestedDecision = requestedDecision</span>
+<span class="lineno">  603 </span><span class="spaces">      </span><span class="istickedoff">, ppResolvedDecision = resolvedDecision</span>
+<span class="lineno">  604 </span><span class="spaces">      </span><span class="istickedoff">, ppPerspectiveProjection = projection</span>
+<span class="lineno">  605 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  606 </span><span class="spaces">    </span><span class="istickedoff">eventId = GovernanceEventId</span>
+<span class="lineno">  607 </span><span class="spaces">      </span><span class="istickedoff">( T.intercalate &quot;:&quot;</span>
+<span class="lineno">  608 </span><span class="spaces">          </span><span class="istickedoff">[ &quot;gov&quot;</span>
+<span class="lineno">  609 </span><span class="spaces">          </span><span class="istickedoff">, safeEventText sessionId</span>
+<span class="lineno">  610 </span><span class="spaces">          </span><span class="istickedoff">, &quot;turn&quot; &lt;&gt; T.pack (show turnId)</span>
+<span class="lineno">  611 </span><span class="spaces">          </span><span class="istickedoff">, &quot;seq&quot; &lt;&gt; T.pack (show sequenceNo)</span>
+<span class="lineno">  612 </span><span class="spaces">          </span><span class="istickedoff">, safeEventText (renderPerspectiveScope scope)</span>
+<span class="lineno">  613 </span><span class="spaces">          </span><span class="istickedoff">, safeEventText (T.pack (show resolvedGov))</span>
+<span class="lineno">  614 </span><span class="spaces">          </span><span class="istickedoff">]</span>
+<span class="lineno">  615 </span><span class="spaces">      </span><span class="istickedoff">)</span>
+<span class="lineno">  616 </span><span class="spaces">    </span><span class="istickedoff">envelope = GovernanceEventEnvelope</span>
+<span class="lineno">  617 </span><span class="spaces">      </span><span class="istickedoff">{ geeId = eventId</span>
+<span class="lineno">  618 </span><span class="spaces">      </span><span class="istickedoff">, geeSchemaVersion = currentGovernanceSchemaVersion</span>
+<span class="lineno">  619 </span><span class="spaces">      </span><span class="istickedoff">, geePayloadVersion = currentGovernancePayloadVersion</span>
+<span class="lineno">  620 </span><span class="spaces">      </span><span class="istickedoff">, geeLifecycleStatus = lifecycleForPerspective admissibility resolvedDecision</span>
+<span class="lineno">  621 </span><span class="spaces">      </span><span class="istickedoff">, geeSubject = SubjectPerspective perspectiveId</span>
+<span class="lineno">  622 </span><span class="spaces">      </span><span class="istickedoff">, geeActor = actor</span>
+<span class="lineno">  623 </span><span class="spaces">      </span><span class="istickedoff">, geeTurnId = Just turnId</span>
+<span class="lineno">  624 </span><span class="spaces">      </span><span class="istickedoff">, geeSessionId = if T.null sessionId then Nothing else Just sessionId</span>
+<span class="lineno">  625 </span><span class="spaces">      </span><span class="istickedoff">, geeStreamId = &quot;governance:&quot; &lt;&gt; if T.null sessionId then &quot;anonymous&quot; else sessionId</span>
+<span class="lineno">  626 </span><span class="spaces">      </span><span class="istickedoff">, geePartitionId = &quot;perspective&quot;</span>
+<span class="lineno">  627 </span><span class="spaces">      </span><span class="istickedoff">, geeSequenceNo = sequenceNo</span>
+<span class="lineno">  628 </span><span class="spaces">      </span><span class="istickedoff">, geeParentRefs = maybe [] pure previousId</span>
+<span class="lineno">  629 </span><span class="spaces">      </span><span class="istickedoff">, geeDecision = resolvedGov</span>
+<span class="lineno">  630 </span><span class="spaces">      </span><span class="istickedoff">, geeRequestedDecision = requestedGov</span>
+<span class="lineno">  631 </span><span class="spaces">      </span><span class="istickedoff">, geeResolvedDecision = Just resolvedGov</span>
+<span class="lineno">  632 </span><span class="spaces">      </span><span class="istickedoff">, geeReason = perspectiveGovernanceReason scope admissibility candidate resolvedGov</span>
+<span class="lineno">  633 </span><span class="spaces">      </span><span class="istickedoff">, geeNormativeProfileVersion = Just (pcNormativeProfileVersion candidate)</span>
+<span class="lineno">  634 </span><span class="spaces">      </span><span class="istickedoff">, geeProjectionVersion = currentProjectionVersion</span>
+<span class="lineno">  635 </span><span class="spaces">      </span><span class="istickedoff">, geeReducerVersion = currentReducerVersion</span>
+<span class="lineno">  636 </span><span class="spaces">      </span><span class="istickedoff">, geeNormativeEvaluatorVersion = currentEvaluatorVersion</span>
+<span class="lineno">  637 </span><span class="spaces">      </span><span class="istickedoff">, geeConfidenceAlgebraVersion = currentEvaluatorVersion</span>
+<span class="lineno">  638 </span><span class="spaces">      </span><span class="istickedoff">, geeCapabilityEvaluatorVersion = currentEvaluatorVersion</span>
+<span class="lineno">  639 </span><span class="spaces">      </span><span class="istickedoff">, geeSandboxVersion = currentEvaluatorVersion</span>
+<span class="lineno">  640 </span><span class="spaces">      </span><span class="istickedoff">, geeRollbackLink = if resolvedDecision == PpdRollbackPrior then previousId else Nothing</span>
+<span class="lineno">  641 </span><span class="spaces">      </span><span class="istickedoff">, geeBeforeRef = Just (GovRefSnapshot (&quot;perspective-registry:&quot; &lt;&gt; perspectiveRegistryHash beforeRegistry))</span>
+<span class="lineno">  642 </span><span class="spaces">      </span><span class="istickedoff">, geeAfterRef = Just (GovRefSnapshot (&quot;perspective-registry:&quot; &lt;&gt; perspectiveRegistryHash afterRegistry))</span>
+<span class="lineno">  643 </span><span class="spaces">      </span><span class="istickedoff">, geeEffectRef = Just (GovRefPerspective perspectiveId)</span>
+<span class="lineno">  644 </span><span class="spaces">      </span><span class="istickedoff">, geeEventHash = Nothing</span>
+<span class="lineno">  645 </span><span class="spaces">      </span><span class="istickedoff">, geePrevHash = previousHash</span>
+<span class="lineno">  646 </span><span class="spaces">      </span><span class="istickedoff">, geePayloadHash = Nothing</span>
+<span class="lineno">  647 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  648 </span><span class="spaces">    </span><span class="istickedoff">rawEvent = GovernanceEvent envelope payload</span></span>
+<span class="lineno">  649 </span>
+<span class="lineno">  650 </span>appendGovernanceEventToHistory :: GovernanceEvent -&gt; [GovernanceEvent] -&gt; Either Text [GovernanceEvent]
+<span class="lineno">  651 </span><span class="decl"><span class="istickedoff">appendGovernanceEventToHistory event history = do</span>
+<span class="lineno">  652 </span><span class="spaces">  </span><span class="istickedoff">normalized &lt;- normalizeGovernanceEventChecked event</span>
+<span class="lineno">  653 </span><span class="spaces">  </span><span class="istickedoff">let eventId = geeId (geEnvelope normalized)</span>
+<span class="lineno">  654 </span><span class="spaces">      </span><span class="istickedoff">sameId existing = geeId (geEnvelope existing) == eventId</span>
+<span class="lineno">  655 </span><span class="spaces">  </span><span class="istickedoff">normalizedHistory &lt;- traverse normalizeGovernanceEventChecked history</span>
+<span class="lineno">  656 </span><span class="spaces">  </span><span class="istickedoff">validateGovernanceHashChain normalizedHistory</span>
+<span class="lineno">  657 </span><span class="spaces">  </span><span class="istickedoff">case filter sameId normalizedHistory of</span>
+<span class="lineno">  658 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; do</span>
+<span class="lineno">  659 </span><span class="spaces">      </span><span class="istickedoff">validateGovernanceAppend normalized normalizedHistory</span>
+<span class="lineno">  660 </span><span class="spaces">      </span><span class="istickedoff">pure (history &lt;&gt; [normalized])</span>
+<span class="lineno">  661 </span><span class="spaces">    </span><span class="istickedoff">existing:_</span>
+<span class="lineno">  662 </span><span class="spaces">      </span><span class="istickedoff">| existing == normalized -&gt; pure history</span>
+<span class="lineno">  663 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt; Left <span class="nottickedoff">(&quot;duplicate governance event id with conflicting semantics: &quot; &lt;&gt; governanceEventIdText eventId)</span></span></span>
+<span class="lineno">  664 </span>
+<span class="lineno">  665 </span>canonicalizeGovernanceHistory :: [GovernanceEvent] -&gt; Either Text [GovernanceEvent]
+<span class="lineno">  666 </span><span class="decl"><span class="istickedoff">canonicalizeGovernanceHistory events = do</span>
+<span class="lineno">  667 </span><span class="spaces">  </span><span class="istickedoff">normalized &lt;- traverse normalizeGovernanceEventChecked events</span>
+<span class="lineno">  668 </span><span class="spaces">  </span><span class="istickedoff">let groups = groupBy ((==) `on` (geeId . geEnvelope)) (sortOn (geeId . geEnvelope) normalized)</span>
+<span class="lineno">  669 </span><span class="spaces">  </span><span class="istickedoff">deduped &lt;- traverse dedupeGovernanceGroup groups</span>
+<span class="lineno">  670 </span><span class="spaces">  </span><span class="istickedoff">let ordered = sortOn governanceOrderKey deduped</span>
+<span class="lineno">  671 </span><span class="spaces">  </span><span class="istickedoff">validateGovernanceHashChain ordered</span>
+<span class="lineno">  672 </span><span class="spaces">  </span><span class="istickedoff">pure ordered</span></span>
+<span class="lineno">  673 </span>
+<span class="lineno">  674 </span>normalizeGovernanceEventChecked :: GovernanceEvent -&gt; Either Text GovernanceEvent
+<span class="lineno">  675 </span><span class="decl"><span class="istickedoff">normalizeGovernanceEventChecked event = do</span>
+<span class="lineno">  676 </span><span class="spaces">  </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  677 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">geeSchemaVersion envelope /= currentGovernanceSchemaVersion</span></span>
+<span class="lineno">  678 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">Left (&quot;unsupported governance schema version: &quot; &lt;&gt; T.pack (show (geeSchemaVersion envelope)))</span></span>
+<span class="lineno">  679 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  680 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">geePayloadVersion envelope /= currentGovernancePayloadVersion</span></span>
+<span class="lineno">  681 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">Left (&quot;unsupported governance payload version: &quot; &lt;&gt; T.pack (show (geePayloadVersion envelope)))</span></span>
+<span class="lineno">  682 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  683 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">geeSequenceNo envelope &lt;= 0</span></span>
+<span class="lineno">  684 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">Left (&quot;invalid governance sequence number: &quot; &lt;&gt; T.pack (show (geeSequenceNo envelope)))</span></span>
+<span class="lineno">  685 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  686 </span><span class="spaces">  </span><span class="istickedoff">let scheme = detectGovernanceHashScheme envelope</span>
+<span class="lineno">  687 </span><span class="spaces">      </span><span class="istickedoff">normalized = normalizeGovernanceEventWith scheme event</span>
+<span class="lineno">  688 </span><span class="spaces">      </span><span class="istickedoff">normalizedEnvelope = geEnvelope normalized</span>
+<span class="lineno">  689 </span><span class="spaces">  </span><span class="istickedoff">case geePayloadHash envelope of</span>
+<span class="lineno">  690 </span><span class="spaces">    </span><span class="istickedoff">Just payloadHash | <span class="tickonlyfalse">payloadHash /= fromMaybe <span class="nottickedoff">&quot;&quot;</span> (geePayloadHash normalizedEnvelope)</span> -&gt;</span>
+<span class="lineno">  691 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">Left (&quot;governance payload hash mismatch: &quot; &lt;&gt; governanceEventIdText (geeId envelope))</span></span>
+<span class="lineno">  692 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  693 </span><span class="spaces">  </span><span class="istickedoff">case geeEventHash envelope of</span>
+<span class="lineno">  694 </span><span class="spaces">    </span><span class="istickedoff">Just eventHash | <span class="tickonlyfalse">eventHash /= fromMaybe <span class="nottickedoff">&quot;&quot;</span> (geeEventHash normalizedEnvelope)</span> -&gt;</span>
+<span class="lineno">  695 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">Left (&quot;governance event hash mismatch: &quot; &lt;&gt; governanceEventIdText (geeId envelope))</span></span>
+<span class="lineno">  696 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  697 </span><span class="spaces">  </span><span class="istickedoff">validateGovernanceEventContract normalized</span>
+<span class="lineno">  698 </span><span class="spaces">  </span><span class="istickedoff">pure normalized</span></span>
+<span class="lineno">  699 </span>
+<span class="lineno">  700 </span>validateGovernanceEventContract :: GovernanceEvent -&gt; Either Text ()
+<span class="lineno">  701 </span><span class="decl"><span class="istickedoff">validateGovernanceEventContract event = do</span>
+<span class="lineno">  702 </span><span class="spaces">  </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  703 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">eventId = geeId envelope</span></span>
+<span class="lineno">  704 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">failWith reason = Left (reason &lt;&gt; &quot;: &quot; &lt;&gt; governanceEventIdText eventId)</span></span>
+<span class="lineno">  705 </span><span class="spaces">  </span><span class="istickedoff">validateGovernanceRefs event</span>
+<span class="lineno">  706 </span><span class="spaces">  </span><span class="istickedoff">case geeResolvedDecision envelope of</span>
+<span class="lineno">  707 </span><span class="spaces">    </span><span class="istickedoff">Just resolved | <span class="tickonlyfalse">resolved /= geeDecision envelope</span> -&gt;</span>
+<span class="lineno">  708 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">failWith &quot;resolved decision must equal canonical decision&quot;</span></span>
+<span class="lineno">  709 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  710 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">payloadSubject event /= geeSubject envelope</span></span>
+<span class="lineno">  711 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">failWith &quot;governance subject does not match typed payload&quot;</span></span>
+<span class="lineno">  712 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  713 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">supportedGovernedSubject <span class="nottickedoff">(geeSubject envelope)</span></span></span>
+<span class="lineno">  714 </span><span class="spaces">    </span><span class="istickedoff">then pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  715 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">failWith &quot;governed subject family is declared but not yet canonically replay-supported&quot;</span></span>
+<span class="lineno">  716 </span><span class="spaces">  </span><span class="istickedoff">case governancePermission (geeActor envelope) (geeSubject envelope) (geeDecision envelope) of</span>
+<span class="lineno">  717 </span><span class="spaces">    </span><span class="istickedoff">GovernanceAllowed -&gt; pure ()</span>
+<span class="lineno">  718 </span><span class="spaces">    </span><span class="istickedoff">GovernanceDenied reason -&gt; <span class="nottickedoff">failWith (&quot;governance permission denied: &quot; &lt;&gt; reason)</span></span></span>
+<span class="lineno">  719 </span>
+<span class="lineno">  720 </span>data GovernanceRefRequirement
+<span class="lineno">  721 </span>  = RefRequired
+<span class="lineno">  722 </span>  | RefOptional
+<span class="lineno">  723 </span>  | RefForbidden
+<span class="lineno">  724 </span>
+<span class="lineno">  725 </span>data GovernanceRefsContract = GovernanceRefsContract
+<span class="lineno">  726 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">grcBeforeRef</span></span></span> :: !GovernanceRefRequirement
+<span class="lineno">  727 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grcAfterRef</span></span></span> :: !GovernanceRefRequirement
+<span class="lineno">  728 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grcEffectRef</span></span></span> :: !GovernanceRefRequirement
+<span class="lineno">  729 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grcRollbackLink</span></span></span> :: !GovernanceRefRequirement
+<span class="lineno">  730 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">grcResolvedDecision</span></span></span> :: !GovernanceRefRequirement
+<span class="lineno">  731 </span>  }
+<span class="lineno">  732 </span>
+<span class="lineno">  733 </span>validateGovernanceRefs :: GovernanceEvent -&gt; Either Text ()
+<span class="lineno">  734 </span><span class="decl"><span class="istickedoff">validateGovernanceRefs event = do</span>
+<span class="lineno">  735 </span><span class="spaces">  </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  736 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">eventId = governanceEventIdText (geeId envelope)</span></span>
+<span class="lineno">  737 </span><span class="spaces">      </span><span class="istickedoff">contract = requiredRefsForEvent event</span>
+<span class="lineno">  738 </span><span class="spaces">      </span><span class="istickedoff">failWith reason = Left <span class="nottickedoff">(reason &lt;&gt; &quot;: &quot; &lt;&gt; eventId)</span></span>
+<span class="lineno">  739 </span><span class="spaces">  </span><span class="istickedoff">validateRefField <span class="nottickedoff">failWith</span> <span class="nottickedoff">&quot;before_ref&quot;</span> (grcBeforeRef contract) (geeBeforeRef envelope)</span>
+<span class="lineno">  740 </span><span class="spaces">  </span><span class="istickedoff">validateRefField failWith <span class="nottickedoff">&quot;after_ref&quot;</span> (grcAfterRef contract) (geeAfterRef envelope)</span>
+<span class="lineno">  741 </span><span class="spaces">  </span><span class="istickedoff">validateRefField failWith <span class="nottickedoff">&quot;effect_ref&quot;</span> (grcEffectRef contract) (geeEffectRef envelope)</span>
+<span class="lineno">  742 </span><span class="spaces">  </span><span class="istickedoff">validateRefField failWith <span class="nottickedoff">&quot;rollback_link&quot;</span> (grcRollbackLink contract) (geeRollbackLink envelope)</span>
+<span class="lineno">  743 </span><span class="spaces">  </span><span class="istickedoff">validateRefField failWith <span class="nottickedoff">&quot;resolved decision&quot;</span> (grcResolvedDecision contract) (geeResolvedDecision envelope)</span></span>
+<span class="lineno">  744 </span>
+<span class="lineno">  745 </span>requiredRefsForEvent :: GovernanceEvent -&gt; GovernanceRefsContract
+<span class="lineno">  746 </span><span class="decl"><span class="istickedoff">requiredRefsForEvent event =</span>
+<span class="lineno">  747 </span><span class="spaces">  </span><span class="istickedoff">subjectRefContract (geeSubject envelope) (geeLifecycleStatus envelope) (geeDecision envelope)</span>
+<span class="lineno">  748 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  749 </span><span class="spaces">    </span><span class="istickedoff">envelope = geEnvelope event</span></span>
+<span class="lineno">  750 </span>
+<span class="lineno">  751 </span>subjectRefContract :: GovernedSubject -&gt; GovernanceLifecycleStatus -&gt; GovernanceDecision -&gt; GovernanceRefsContract
+<span class="lineno">  752 </span><span class="decl"><span class="istickedoff">subjectRefContract subject lifecycle decision =</span>
+<span class="lineno">  753 </span><span class="spaces">  </span><span class="istickedoff">case subject of</span>
+<span class="lineno">  754 </span><span class="spaces">    </span><span class="istickedoff">SubjectPerspective _ -&gt; lifecycleRefContract lifecycle decision</span>
+<span class="lineno">  755 </span><span class="spaces">    </span><span class="istickedoff">SubjectFreeze _ -&gt; lifecycleRefContract lifecycle decision</span>
+<span class="lineno">  756 </span><span class="spaces">    </span><span class="istickedoff">SubjectClaimStance _ -&gt; lifecycleRefContract lifecycle decision</span>
+<span class="lineno">  757 </span><span class="spaces">    </span><span class="istickedoff">SubjectCapability _ -&gt; lifecycleRefContract lifecycle decision</span>
+<span class="lineno">  758 </span><span class="spaces">    </span><span class="istickedoff">SubjectCrossSessionCarry _ -&gt; lifecycleRefContract lifecycle decision</span>
+<span class="lineno">  759 </span><span class="spaces">    </span><span class="istickedoff">SubjectNormativeProfile _ -&gt; lifecycleRefContract lifecycle decision</span></span>
+<span class="lineno">  760 </span>
+<span class="lineno">  761 </span>lifecycleRefContract :: GovernanceLifecycleStatus -&gt; GovernanceDecision -&gt; GovernanceRefsContract
+<span class="lineno">  762 </span><span class="decl"><span class="istickedoff">lifecycleRefContract lifecycle decision = GovernanceRefsContract</span>
+<span class="lineno">  763 </span><span class="spaces">  </span><span class="istickedoff">{ grcBeforeRef = RefRequired</span>
+<span class="lineno">  764 </span><span class="spaces">  </span><span class="istickedoff">, grcAfterRef = afterEffectRefRequirement lifecycle decision</span>
+<span class="lineno">  765 </span><span class="spaces">  </span><span class="istickedoff">, grcEffectRef = afterEffectRefRequirement lifecycle decision</span>
+<span class="lineno">  766 </span><span class="spaces">  </span><span class="istickedoff">, grcRollbackLink = if decision == GovRollback || lifecycle == GlsRolledBack then RefRequired else RefOptional</span>
+<span class="lineno">  767 </span><span class="spaces">  </span><span class="istickedoff">, grcResolvedDecision = RefRequired</span>
+<span class="lineno">  768 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  769 </span>
+<span class="lineno">  770 </span>afterEffectRefRequirement :: GovernanceLifecycleStatus -&gt; GovernanceDecision -&gt; GovernanceRefRequirement
+<span class="lineno">  771 </span><span class="decl"><span class="istickedoff">afterEffectRefRequirement lifecycle decision</span>
+<span class="lineno">  772 </span><span class="spaces">  </span><span class="istickedoff">| decision == GovDeny = RefOptional</span>
+<span class="lineno">  773 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  774 </span><span class="spaces">      </span><span class="istickedoff">case lifecycle of</span>
+<span class="lineno">  775 </span><span class="spaces">        </span><span class="istickedoff">GlsEvaluated -&gt; RefRequired</span>
+<span class="lineno">  776 </span><span class="spaces">        </span><span class="istickedoff">GlsCommitted -&gt; RefRequired</span>
+<span class="lineno">  777 </span><span class="spaces">        </span><span class="istickedoff">GlsRolledBack -&gt; RefRequired</span>
+<span class="lineno">  778 </span><span class="spaces">        </span><span class="istickedoff">GlsDenied -&gt; <span class="nottickedoff">RefOptional</span></span>
+<span class="lineno">  779 </span><span class="spaces">        </span><span class="istickedoff">GlsIntent -&gt; <span class="nottickedoff">RefOptional</span></span>
+<span class="lineno">  780 </span><span class="spaces">        </span><span class="istickedoff">GlsArchived -&gt; <span class="nottickedoff">RefOptional</span></span></span>
+<span class="lineno">  781 </span>
+<span class="lineno">  782 </span>validateRefField :: (Text -&gt; Either Text ()) -&gt; Text -&gt; GovernanceRefRequirement -&gt; Maybe a -&gt; Either Text ()
+<span class="lineno">  783 </span><span class="decl"><span class="istickedoff">validateRefField failWith label requirement value =</span>
+<span class="lineno">  784 </span><span class="spaces">  </span><span class="istickedoff">case (requirement, value) of</span>
+<span class="lineno">  785 </span><span class="spaces">    </span><span class="istickedoff">(RefRequired, Nothing) -&gt; failWith <span class="nottickedoff">(&quot;governance event missing &quot; &lt;&gt; label)</span></span>
+<span class="lineno">  786 </span><span class="spaces">    </span><span class="istickedoff">(RefForbidden, Just _) -&gt; <span class="nottickedoff">failWith (&quot;governance event unexpected &quot; &lt;&gt; label)</span></span>
+<span class="lineno">  787 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  788 </span>
+<span class="lineno">  789 </span>governancePermission :: GovernanceActor -&gt; GovernedSubject -&gt; GovernanceDecision -&gt; GovernancePermission
+<span class="lineno">  790 </span><span class="decl"><span class="istickedoff">governancePermission actor subject decision =</span>
+<span class="lineno">  791 </span><span class="spaces">  </span><span class="istickedoff">case (actor, subject, decision) of</span>
+<span class="lineno">  792 </span><span class="spaces">    </span><span class="istickedoff">(ActorReplayRebuild, _, _) -&gt; GovernanceDenied &quot;replay actor is read-only&quot;</span>
+<span class="lineno">  793 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectNormativeProfile _, _) -&gt; GovernanceDenied &quot;runtime cannot revise normative profile&quot;</span>
+<span class="lineno">  794 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectFreeze _, GovFreeze) -&gt; <span class="nottickedoff">GovernanceDenied &quot;runtime cannot freeze governed subjects&quot;</span></span>
+<span class="lineno">  795 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectFreeze _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceDenied &quot;runtime cannot govern freeze release&quot;</span></span>
+<span class="lineno">  796 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCrossSessionCarry _, GovPromote) -&gt; GovernanceDenied &quot;runtime cannot promote cross-session carry&quot;</span>
+<span class="lineno">  797 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCapability _, GovPromote) -&gt; GovernanceDenied &quot;runtime cannot promote capability updates&quot;</span>
+<span class="lineno">  798 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovObserveOnly) -&gt; GovernanceAllowed</span>
+<span class="lineno">  799 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  800 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovAcceptBounded) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  801 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovPromote) -&gt; GovernanceAllowed</span>
+<span class="lineno">  802 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovSuspend) -&gt; GovernanceAllowed</span>
+<span class="lineno">  803 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovRollback) -&gt; GovernanceAllowed</span>
+<span class="lineno">  804 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectPerspective _, GovDeny) -&gt; GovernanceAllowed</span>
+<span class="lineno">  805 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectClaimStance _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  806 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectClaimStance _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  807 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectClaimStance _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  808 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCapability _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  809 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCapability _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  810 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCapability _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  811 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCrossSessionCarry _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  812 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCrossSessionCarry _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  813 </span><span class="spaces">    </span><span class="istickedoff">(ActorRuntime, SubjectCrossSessionCarry _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  814 </span><span class="spaces">    </span><span class="istickedoff">(actor', subject', decision')</span>
+<span class="lineno">  815 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">actor' == ActorOperator || <span class="nottickedoff">actor' == ActorOfflineGovernance</span></span> -&gt;</span>
+<span class="lineno">  816 </span><span class="spaces">          </span><span class="istickedoff">privilegedGovernancePermission subject' decision'</span>
+<span class="lineno">  817 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">GovernanceDenied &quot;action not explicitly allowed&quot;</span></span></span>
+<span class="lineno">  818 </span>
+<span class="lineno">  819 </span>privilegedGovernancePermission :: GovernedSubject -&gt; GovernanceDecision -&gt; GovernancePermission
+<span class="lineno">  820 </span><span class="decl"><span class="istickedoff">privilegedGovernancePermission subject decision =</span>
+<span class="lineno">  821 </span><span class="spaces">  </span><span class="istickedoff">case (subject, decision) of</span>
+<span class="lineno">  822 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  823 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  824 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovAcceptBounded) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  825 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovPromote) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  826 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  827 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  828 </span><span class="spaces">    </span><span class="istickedoff">(SubjectPerspective _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  829 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  830 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  831 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovPromote) -&gt; GovernanceAllowed</span>
+<span class="lineno">  832 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  833 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  834 </span><span class="spaces">    </span><span class="istickedoff">(SubjectClaimStance _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  835 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  836 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  837 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovPromote) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  838 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovSuspend) -&gt; GovernanceAllowed</span>
+<span class="lineno">  839 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  840 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCapability _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  841 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  842 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  843 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovPromote) -&gt; GovernanceAllowed</span>
+<span class="lineno">  844 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  845 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  846 </span><span class="spaces">    </span><span class="istickedoff">(SubjectCrossSessionCarry _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  847 </span><span class="spaces">    </span><span class="istickedoff">(SubjectFreeze _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  848 </span><span class="spaces">    </span><span class="istickedoff">(SubjectFreeze _, GovFreeze) -&gt; GovernanceAllowed</span>
+<span class="lineno">  849 </span><span class="spaces">    </span><span class="istickedoff">(SubjectFreeze _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  850 </span><span class="spaces">    </span><span class="istickedoff">(SubjectFreeze _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  851 </span><span class="spaces">    </span><span class="istickedoff">(SubjectFreeze _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  852 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovObserveOnly) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  853 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovQuarantine) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  854 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovPromote) -&gt; GovernanceAllowed</span>
+<span class="lineno">  855 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovSuspend) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  856 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovRollback) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  857 </span><span class="spaces">    </span><span class="istickedoff">(SubjectNormativeProfile _, GovDeny) -&gt; <span class="nottickedoff">GovernanceAllowed</span></span>
+<span class="lineno">  858 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; GovernanceDenied &quot;privileged action not explicitly allowed&quot;</span></span>
+<span class="lineno">  859 </span>
+<span class="lineno">  860 </span>governancePermissionAllowed :: GovernanceActor -&gt; GovernedSubject -&gt; GovernanceDecision -&gt; Bool
+<span class="lineno">  861 </span><span class="decl"><span class="nottickedoff">governancePermissionAllowed actor subject decision =</span>
+<span class="lineno">  862 </span><span class="spaces">  </span><span class="nottickedoff">case governancePermission actor subject decision of</span>
+<span class="lineno">  863 </span><span class="spaces">    </span><span class="nottickedoff">GovernanceAllowed -&gt; True</span>
+<span class="lineno">  864 </span><span class="spaces">    </span><span class="nottickedoff">GovernanceDenied _ -&gt; False</span></span>
+<span class="lineno">  865 </span>
+<span class="lineno">  866 </span>supportedGovernedSubject :: GovernedSubject -&gt; Bool
+<span class="lineno">  867 </span><span class="decl"><span class="istickedoff">supportedGovernedSubject _ = True</span></span>
+<span class="lineno">  868 </span>
+<span class="lineno">  869 </span>governanceProjectionChecksum :: ProjectionMeta -&gt; PerspectiveRegistry -&gt; [PerspectiveProjection] -&gt; [GovernedProjectionRef] -&gt; Text
+<span class="lineno">  870 </span><span class="decl"><span class="istickedoff">governanceProjectionChecksum meta registry projections governedRefs =</span>
+<span class="lineno">  871 </span><span class="spaces">  </span><span class="istickedoff">hashString</span>
+<span class="lineno">  872 </span><span class="spaces">    </span><span class="istickedoff">( BL8.unpack (encode meta)</span>
+<span class="lineno">  873 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;|&quot; &lt;&gt; BL8.unpack (encode registry)</span>
+<span class="lineno">  874 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;|&quot; &lt;&gt; BL8.unpack (encode projections)</span>
+<span class="lineno">  875 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; &quot;|&quot; &lt;&gt; BL8.unpack (encode governedRefs)</span>
+<span class="lineno">  876 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  877 </span>
+<span class="lineno">  878 </span>governanceProvenanceTrail :: [GovernanceEvent] -&gt; Either Text [GovernanceProvenanceLink]
+<span class="lineno">  879 </span><span class="decl"><span class="istickedoff">governanceProvenanceTrail events = do</span>
+<span class="lineno">  880 </span><span class="spaces">  </span><span class="istickedoff">ordered &lt;- canonicalizeGovernanceHistory events</span>
+<span class="lineno">  881 </span><span class="spaces">  </span><span class="istickedoff">pure (map provenanceLink ordered)</span>
+<span class="lineno">  882 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  883 </span><span class="spaces">    </span><span class="istickedoff">provenanceLink event =</span>
+<span class="lineno">  884 </span><span class="spaces">      </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  885 </span><span class="spaces">      </span><span class="istickedoff">in GovernanceProvenanceLink</span>
+<span class="lineno">  886 </span><span class="spaces">           </span><span class="istickedoff">{ gplEventId = geeId envelope</span>
+<span class="lineno">  887 </span><span class="spaces">           </span><span class="istickedoff">, gplSubject = geeSubject envelope</span>
+<span class="lineno">  888 </span><span class="spaces">           </span><span class="istickedoff">, gplParentRefs = geeParentRefs envelope</span>
+<span class="lineno">  889 </span><span class="spaces">           </span><span class="istickedoff">, gplReasonTag = grTag (geeReason envelope)</span>
+<span class="lineno">  890 </span><span class="spaces">           </span><span class="istickedoff">, gplEffectRef = geeEffectRef envelope</span>
+<span class="lineno">  891 </span><span class="spaces">           </span><span class="istickedoff">}</span></span>
+<span class="lineno">  892 </span>
+<span class="lineno">  893 </span>payloadSubject :: GovernanceEvent -&gt; GovernedSubject
+<span class="lineno">  894 </span><span class="decl"><span class="istickedoff">payloadSubject event =</span>
+<span class="lineno">  895 </span><span class="spaces">  </span><span class="istickedoff">case gePayload event of</span>
+<span class="lineno">  896 </span><span class="spaces">    </span><span class="istickedoff">GpPerspective payload -&gt; SubjectPerspective (ppPerspectiveId payload)</span>
+<span class="lineno">  897 </span><span class="spaces">    </span><span class="istickedoff">GpClaimStance payload -&gt; SubjectClaimStance (cspClaimRef payload)</span>
+<span class="lineno">  898 </span><span class="spaces">    </span><span class="istickedoff">GpCapability payload -&gt; SubjectCapability (cpCapabilityRef payload)</span>
+<span class="lineno">  899 </span><span class="spaces">    </span><span class="istickedoff">GpFreeze payload -&gt; SubjectFreeze (fpScope payload)</span>
+<span class="lineno">  900 </span><span class="spaces">    </span><span class="istickedoff">GpCarry payload -&gt; SubjectCrossSessionCarry (cpCarryKey payload)</span>
+<span class="lineno">  901 </span><span class="spaces">    </span><span class="istickedoff">GpNormativeRevision payload -&gt; SubjectNormativeProfile (nrpProfileId payload)</span></span>
+<span class="lineno">  902 </span>
+<span class="lineno">  903 </span>normalizeGovernanceEvent :: GovernanceEvent -&gt; GovernanceEvent
+<span class="lineno">  904 </span><span class="decl"><span class="istickedoff">normalizeGovernanceEvent = normalizeGovernanceEventWith GovernanceHashSha256</span></span>
+<span class="lineno">  905 </span>
+<span class="lineno">  906 </span>normalizeGovernanceEventWith :: GovernanceHashScheme -&gt; GovernanceEvent -&gt; GovernanceEvent
+<span class="lineno">  907 </span><span class="decl"><span class="istickedoff">normalizeGovernanceEventWith scheme event =</span>
+<span class="lineno">  908 </span><span class="spaces">  </span><span class="istickedoff">event { geEnvelope = envelope { geePayloadHash = Just payloadHash, geeEventHash = Just eventHash } }</span>
+<span class="lineno">  909 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  910 </span><span class="spaces">    </span><span class="istickedoff">envelope = geEnvelope event</span>
+<span class="lineno">  911 </span><span class="spaces">    </span><span class="istickedoff">payloadHash = governanceEventPayloadHashTextWith scheme event</span>
+<span class="lineno">  912 </span><span class="spaces">    </span><span class="istickedoff">eventHash = governanceEventHashTextWith scheme event payloadHash</span></span>
+<span class="lineno">  913 </span>
+<span class="lineno">  914 </span>detectGovernanceHashScheme :: GovernanceEventEnvelope -&gt; GovernanceHashScheme
+<span class="lineno">  915 </span><span class="decl"><span class="istickedoff">detectGovernanceHashScheme envelope =</span>
+<span class="lineno">  916 </span><span class="spaces">  </span><span class="istickedoff">fromMaybe <span class="nottickedoff">GovernanceHashSha256</span></span>
+<span class="lineno">  917 </span><span class="spaces">    </span><span class="istickedoff">( (geePayloadHash envelope &gt;&gt;= hashSchemeFromText)</span>
+<span class="lineno">  918 </span><span class="spaces">      </span><span class="istickedoff">&lt;|&gt; (geeEventHash envelope &gt;&gt;= <span class="nottickedoff">hashSchemeFromText</span>)</span>
+<span class="lineno">  919 </span><span class="spaces">      </span><span class="istickedoff">&lt;|&gt; (geePrevHash envelope &gt;&gt;= hashSchemeFromText)</span>
+<span class="lineno">  920 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  921 </span>
+<span class="lineno">  922 </span>governanceDecisionFromPerspectivePromotion :: PerspectivePromotionDecision -&gt; GovernanceDecision
+<span class="lineno">  923 </span><span class="decl"><span class="istickedoff">governanceDecisionFromPerspectivePromotion decision =</span>
+<span class="lineno">  924 </span><span class="spaces">  </span><span class="istickedoff">case decision of</span>
+<span class="lineno">  925 </span><span class="spaces">    </span><span class="istickedoff">PpdObserveOnly -&gt; GovObserveOnly</span>
+<span class="lineno">  926 </span><span class="spaces">    </span><span class="istickedoff">PpdQuarantine -&gt; <span class="nottickedoff">GovQuarantine</span></span>
+<span class="lineno">  927 </span><span class="spaces">    </span><span class="istickedoff">PpdAcceptBounded -&gt; <span class="nottickedoff">GovAcceptBounded</span></span>
+<span class="lineno">  928 </span><span class="spaces">    </span><span class="istickedoff">PpdPromoteEndorsed -&gt; GovPromote</span>
+<span class="lineno">  929 </span><span class="spaces">    </span><span class="istickedoff">PpdReviseActive -&gt; GovPromote</span>
+<span class="lineno">  930 </span><span class="spaces">    </span><span class="istickedoff">PpdSuspendActive -&gt; <span class="nottickedoff">GovSuspend</span></span>
+<span class="lineno">  931 </span><span class="spaces">    </span><span class="istickedoff">PpdRollbackPrior -&gt; GovRollback</span></span>
+<span class="lineno">  932 </span>
+<span class="lineno">  933 </span>governanceDecisionFromPerspectiveOutcome :: PerspectiveAdmissibility -&gt; PerspectivePromotionDecision -&gt; GovernanceDecision
+<span class="lineno">  934 </span><span class="decl"><span class="istickedoff">governanceDecisionFromPerspectiveOutcome admissibility decision =</span>
+<span class="lineno">  935 </span><span class="spaces">  </span><span class="istickedoff">case admissibility of</span>
+<span class="lineno">  936 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveInadmissible _ -&gt; GovDeny</span>
+<span class="lineno">  937 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; governanceDecisionFromPerspectivePromotion decision</span></span>
+<span class="lineno">  938 </span>
+<span class="lineno">  939 </span>governanceEventIdText :: GovernanceEventId -&gt; Text
+<span class="lineno">  940 </span><span class="decl"><span class="istickedoff">governanceEventIdText = unGovernanceEventId</span></span>
+<span class="lineno">  941 </span>
+<span class="lineno">  942 </span>governanceEventPayloadHashText :: GovernanceEvent -&gt; Text
+<span class="lineno">  943 </span><span class="decl"><span class="nottickedoff">governanceEventPayloadHashText = governanceEventPayloadHashTextWith GovernanceHashSha256</span></span>
+<span class="lineno">  944 </span>
+<span class="lineno">  945 </span>governanceEventPayloadHashTextWith :: GovernanceHashScheme -&gt; GovernanceEvent -&gt; Text
+<span class="lineno">  946 </span><span class="decl"><span class="istickedoff">governanceEventPayloadHashTextWith scheme = hashStringWith scheme . BL8.unpack . encode . gePayload</span></span>
+<span class="lineno">  947 </span>
+<span class="lineno">  948 </span>governanceEventHashText :: GovernanceEvent -&gt; Text -&gt; Text
+<span class="lineno">  949 </span><span class="decl"><span class="nottickedoff">governanceEventHashText = governanceEventHashTextWith GovernanceHashSha256</span></span>
+<span class="lineno">  950 </span>
+<span class="lineno">  951 </span>governanceEventHashTextWith :: GovernanceHashScheme -&gt; GovernanceEvent -&gt; Text -&gt; Text
+<span class="lineno">  952 </span><span class="decl"><span class="istickedoff">governanceEventHashTextWith scheme event payloadHash =</span>
+<span class="lineno">  953 </span><span class="spaces">  </span><span class="istickedoff">hashStringWith scheme (T.unpack (governanceEnvelopeCoreText (geEnvelope event) payloadHash))</span></span>
+<span class="lineno">  954 </span>
+<span class="lineno">  955 </span>governanceHistoryFingerprint :: [GovernanceEvent] -&gt; Text
+<span class="lineno">  956 </span><span class="decl"><span class="istickedoff">governanceHistoryFingerprint events =</span>
+<span class="lineno">  957 </span><span class="spaces">  </span><span class="istickedoff">case canonicalizeGovernanceHistory events of</span>
+<span class="lineno">  958 </span><span class="spaces">    </span><span class="istickedoff">Right ordered -&gt;</span>
+<span class="lineno">  959 </span><span class="spaces">      </span><span class="istickedoff">hashString (T.unpack (T.intercalate &quot;|&quot; (map (fromMaybe <span class="nottickedoff">&quot;&quot;</span> . geeEventHash . geEnvelope) ordered)))</span>
+<span class="lineno">  960 </span><span class="spaces">    </span><span class="istickedoff">Left _ -&gt;</span>
+<span class="lineno">  961 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&quot;invalid:&quot; &lt;&gt; hashString (T.unpack (T.intercalate &quot;|&quot; (map (fromMaybe &quot;&quot; . geeEventHash . geEnvelope . normalizeGovernanceEvent) events)))</span></span></span>
+<span class="lineno">  962 </span>
+<span class="lineno">  963 </span>perspectiveRegistryHash :: PerspectiveRegistry -&gt; Text
+<span class="lineno">  964 </span><span class="decl"><span class="istickedoff">perspectiveRegistryHash = hashString . BL8.unpack . encode</span></span>
+<span class="lineno">  965 </span>
+<span class="lineno">  966 </span>perspectiveIdentityForScope :: Int -&gt; Text -&gt; PerspectiveScope -&gt; PerspectiveRegistry -&gt; (PerspectiveId, Maybe PerspectiveVersionId, PerspectiveStatus)
+<span class="lineno">  967 </span><span class="decl"><span class="istickedoff">perspectiveIdentityForScope sequenceNo sessionId scope registry =</span>
+<span class="lineno">  968 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup scope (prThreads registry) of</span>
+<span class="lineno">  969 </span><span class="spaces">    </span><span class="istickedoff">Just thread -&gt;</span>
+<span class="lineno">  970 </span><span class="spaces">      </span><span class="istickedoff">( ptPerspectiveId thread</span>
+<span class="lineno">  971 </span><span class="spaces">      </span><span class="istickedoff">, ptActiveVersion thread &lt;|&gt; <span class="nottickedoff">(epVersion &lt;$&gt; latestEndorsedPerspective thread)</span></span>
+<span class="lineno">  972 </span><span class="spaces">      </span><span class="istickedoff">, ptStatus thread</span>
+<span class="lineno">  973 </span><span class="spaces">      </span><span class="istickedoff">)</span>
+<span class="lineno">  974 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  975 </span><span class="spaces">      </span><span class="istickedoff">( PerspectiveId (&quot;pending:&quot; &lt;&gt; safeEventText sessionId &lt;&gt; &quot;:&quot; &lt;&gt; T.pack (show sequenceNo) &lt;&gt; &quot;:&quot; &lt;&gt; renderPerspectiveScope scope)</span>
+<span class="lineno">  976 </span><span class="spaces">      </span><span class="istickedoff">, Nothing</span>
+<span class="lineno">  977 </span><span class="spaces">      </span><span class="istickedoff">, PerspectiveContested</span>
+<span class="lineno">  978 </span><span class="spaces">      </span><span class="istickedoff">)</span></span>
+<span class="lineno">  979 </span>
+<span class="lineno">  980 </span>lifecycleForPerspective :: PerspectiveAdmissibility -&gt; PerspectivePromotionDecision -&gt; GovernanceLifecycleStatus
+<span class="lineno">  981 </span><span class="decl"><span class="istickedoff">lifecycleForPerspective admissibility decision =</span>
+<span class="lineno">  982 </span><span class="spaces">  </span><span class="istickedoff">case admissibility of</span>
+<span class="lineno">  983 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveInadmissible _ -&gt; GlsDenied</span>
+<span class="lineno">  984 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; case decision of</span>
+<span class="lineno">  985 </span><span class="spaces">      </span><span class="istickedoff">PpdObserveOnly -&gt; GlsEvaluated</span>
+<span class="lineno">  986 </span><span class="spaces">      </span><span class="istickedoff">PpdRollbackPrior -&gt; GlsRolledBack</span>
+<span class="lineno">  987 </span><span class="spaces">      </span><span class="istickedoff">_ -&gt; GlsCommitted</span></span>
+<span class="lineno">  988 </span>
+<span class="lineno">  989 </span>perspectiveGovernanceReason :: PerspectiveScope -&gt; PerspectiveAdmissibility -&gt; PerspectiveCandidate -&gt; GovernanceDecision -&gt; GovernanceReason
+<span class="lineno">  990 </span><span class="decl"><span class="istickedoff">perspectiveGovernanceReason scope admissibility candidate decision = GovernanceReason</span>
+<span class="lineno">  991 </span><span class="spaces">  </span><span class="istickedoff">{ grTag = &quot;perspective:&quot; &lt;&gt; T.pack (show decision)</span>
+<span class="lineno">  992 </span><span class="spaces">  </span><span class="istickedoff">, grDetails =</span>
+<span class="lineno">  993 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;scope=&quot; &lt;&gt; renderPerspectiveScope scope</span>
+<span class="lineno">  994 </span><span class="spaces">      </span><span class="istickedoff">, &quot;admissibility=&quot; &lt;&gt; T.pack (show admissibility)</span>
+<span class="lineno">  995 </span><span class="spaces">      </span><span class="istickedoff">, &quot;confidence=&quot; &lt;&gt; T.pack (show (pcConfidence candidate))</span>
+<span class="lineno">  996 </span><span class="spaces">      </span><span class="istickedoff">, &quot;counterargument_pressure=&quot; &lt;&gt; T.pack (show (pcCounterargumentPressure candidate))</span>
+<span class="lineno">  997 </span><span class="spaces">      </span><span class="istickedoff">, &quot;normative_alignment=&quot; &lt;&gt; T.pack (show (pcNormativeAlignment candidate))</span>
+<span class="lineno">  998 </span><span class="spaces">      </span><span class="istickedoff">, &quot;internal_tension=&quot; &lt;&gt; T.pack (show (pcInternalTension candidate))</span>
+<span class="lineno">  999 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno"> 1000 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno"> 1001 </span>
+<span class="lineno"> 1002 </span>governanceEnvelopeCoreText :: GovernanceEventEnvelope -&gt; Text -&gt; Text
+<span class="lineno"> 1003 </span><span class="decl"><span class="istickedoff">governanceEnvelopeCoreText envelope payloadHash = T.intercalate &quot;|&quot;</span>
+<span class="lineno"> 1004 </span><span class="spaces">  </span><span class="istickedoff">[ governanceEventIdText (geeId envelope)</span>
+<span class="lineno"> 1005 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeSchemaVersion envelope))</span>
+<span class="lineno"> 1006 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geePayloadVersion envelope))</span>
+<span class="lineno"> 1007 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeLifecycleStatus envelope))</span>
+<span class="lineno"> 1008 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeSubject envelope))</span>
+<span class="lineno"> 1009 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeActor envelope))</span>
+<span class="lineno"> 1010 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeTurnId envelope))</span>
+<span class="lineno"> 1011 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeSessionId envelope))</span>
+<span class="lineno"> 1012 </span><span class="spaces">  </span><span class="istickedoff">, geeStreamId envelope</span>
+<span class="lineno"> 1013 </span><span class="spaces">  </span><span class="istickedoff">, geePartitionId envelope</span>
+<span class="lineno"> 1014 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeSequenceNo envelope))</span>
+<span class="lineno"> 1015 </span><span class="spaces">  </span><span class="istickedoff">, T.intercalate <span class="nottickedoff">&quot;,&quot;</span> (map governanceEventIdText (geeParentRefs envelope))</span>
+<span class="lineno"> 1016 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeDecision envelope))</span>
+<span class="lineno"> 1017 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeRequestedDecision envelope))</span>
+<span class="lineno"> 1018 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeResolvedDecision envelope))</span>
+<span class="lineno"> 1019 </span><span class="spaces">  </span><span class="istickedoff">, grTag (geeReason envelope)</span>
+<span class="lineno"> 1020 </span><span class="spaces">  </span><span class="istickedoff">, T.intercalate &quot;,&quot; (grDetails (geeReason envelope))</span>
+<span class="lineno"> 1021 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeNormativeProfileVersion envelope))</span>
+<span class="lineno"> 1022 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeProjectionVersion envelope))</span>
+<span class="lineno"> 1023 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeReducerVersion envelope))</span>
+<span class="lineno"> 1024 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeNormativeEvaluatorVersion envelope))</span>
+<span class="lineno"> 1025 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeConfidenceAlgebraVersion envelope))</span>
+<span class="lineno"> 1026 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeCapabilityEvaluatorVersion envelope))</span>
+<span class="lineno"> 1027 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeSandboxVersion envelope))</span>
+<span class="lineno"> 1028 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeRollbackLink envelope))</span>
+<span class="lineno"> 1029 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeBeforeRef envelope))</span>
+<span class="lineno"> 1030 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeAfterRef envelope))</span>
+<span class="lineno"> 1031 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geeEffectRef envelope))</span>
+<span class="lineno"> 1032 </span><span class="spaces">  </span><span class="istickedoff">, T.pack (show (geePrevHash envelope))</span>
+<span class="lineno"> 1033 </span><span class="spaces">  </span><span class="istickedoff">, payloadHash</span>
+<span class="lineno"> 1034 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno"> 1035 </span>
+<span class="lineno"> 1036 </span>governanceOrderKey :: GovernanceEvent -&gt; (Int, Text, Text)
+<span class="lineno"> 1037 </span><span class="decl"><span class="istickedoff">governanceOrderKey event =</span>
+<span class="lineno"> 1038 </span><span class="spaces">  </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno"> 1039 </span><span class="spaces">  </span><span class="istickedoff">in (geeSequenceNo envelope, <span class="nottickedoff">geePartitionId envelope</span>, <span class="nottickedoff">governanceEventIdText (geeId envelope)</span>)</span></span>
+<span class="lineno"> 1040 </span>
+<span class="lineno"> 1041 </span>dedupeGovernanceGroup :: [GovernanceEvent] -&gt; Either Text GovernanceEvent
+<span class="lineno"> 1042 </span><span class="decl"><span class="istickedoff">dedupeGovernanceGroup [] = <span class="nottickedoff">Left &quot;empty governance duplicate group&quot;</span></span>
+<span class="lineno"> 1043 </span><span class="spaces"></span><span class="istickedoff">dedupeGovernanceGroup (event:rest)</span>
+<span class="lineno"> 1044 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">all <span class="nottickedoff">(== event)</span> rest</span> = pure event</span>
+<span class="lineno"> 1045 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Left (&quot;duplicate governance event id with conflicting semantics: &quot; &lt;&gt; governanceEventIdText (geeId (geEnvelope event)))</span></span></span>
+<span class="lineno"> 1046 </span>
+<span class="lineno"> 1047 </span>validateGovernanceHashChain :: [GovernanceEvent] -&gt; Either Text ()
+<span class="lineno"> 1048 </span><span class="decl"><span class="istickedoff">validateGovernanceHashChain = go Nothing</span>
+<span class="lineno"> 1049 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno"> 1050 </span><span class="spaces">    </span><span class="istickedoff">go _ [] = pure <span class="nottickedoff">()</span></span>
+<span class="lineno"> 1051 </span><span class="spaces">    </span><span class="istickedoff">go expectedPrev (event:rest) = do</span>
+<span class="lineno"> 1052 </span><span class="spaces">      </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno"> 1053 </span><span class="spaces">      </span><span class="istickedoff">if geePrevHash envelope /= expectedPrev</span>
+<span class="lineno"> 1054 </span><span class="spaces">        </span><span class="istickedoff">then Left <span class="nottickedoff">(&quot;governance hash chain mismatch: &quot; &lt;&gt; governanceEventIdText (geeId envelope))</span></span>
+<span class="lineno"> 1055 </span><span class="spaces">        </span><span class="istickedoff">else go (geeEventHash envelope) rest</span></span>
+<span class="lineno"> 1056 </span>
+<span class="lineno"> 1057 </span>validateGovernanceAppend :: GovernanceEvent -&gt; [GovernanceEvent] -&gt; Either Text ()
+<span class="lineno"> 1058 </span><span class="decl"><span class="istickedoff">validateGovernanceAppend event history = do</span>
+<span class="lineno"> 1059 </span><span class="spaces">  </span><span class="istickedoff">validateGovernanceHashChain history</span>
+<span class="lineno"> 1060 </span><span class="spaces">  </span><span class="istickedoff">case history of</span>
+<span class="lineno"> 1061 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt;</span>
+<span class="lineno"> 1062 </span><span class="spaces">      </span><span class="istickedoff">if geePrevHash envelope == Nothing</span>
+<span class="lineno"> 1063 </span><span class="spaces">        </span><span class="istickedoff">then pure <span class="nottickedoff">()</span></span>
+<span class="lineno"> 1064 </span><span class="spaces">        </span><span class="istickedoff">else Left <span class="nottickedoff">(&quot;first governance event must not carry prev_hash: &quot; &lt;&gt; eventId)</span></span>
+<span class="lineno"> 1065 </span><span class="spaces">    </span><span class="istickedoff">previous : rest -&gt; do</span>
+<span class="lineno"> 1066 </span><span class="spaces">      </span><span class="istickedoff">let previousEvent = foldl <span class="nottickedoff">(\_ current -&gt; current)</span> previous rest</span>
+<span class="lineno"> 1067 </span><span class="spaces">          </span><span class="istickedoff">previousEnvelope = geEnvelope previousEvent</span>
+<span class="lineno"> 1068 </span><span class="spaces">      </span><span class="istickedoff">if geeSequenceNo envelope &gt; geeSequenceNo previousEnvelope</span>
+<span class="lineno"> 1069 </span><span class="spaces">        </span><span class="istickedoff">then pure <span class="nottickedoff">()</span></span>
+<span class="lineno"> 1070 </span><span class="spaces">        </span><span class="istickedoff">else Left <span class="nottickedoff">(&quot;governance sequence must increase on append: &quot; &lt;&gt; eventId)</span></span>
+<span class="lineno"> 1071 </span><span class="spaces">      </span><span class="istickedoff">if <span class="tickonlyfalse">geePrevHash envelope == geeEventHash previousEnvelope</span></span>
+<span class="lineno"> 1072 </span><span class="spaces">        </span><span class="istickedoff">then <span class="nottickedoff">pure ()</span></span>
+<span class="lineno"> 1073 </span><span class="spaces">        </span><span class="istickedoff">else Left <span class="nottickedoff">(&quot;governance append prev_hash mismatch: &quot; &lt;&gt; eventId)</span></span>
+<span class="lineno"> 1074 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno"> 1075 </span><span class="spaces">    </span><span class="istickedoff">envelope = geEnvelope event</span>
+<span class="lineno"> 1076 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">eventId = governanceEventIdText (geeId envelope)</span></span></span>
+<span class="lineno"> 1077 </span>
+<span class="lineno"> 1078 </span>safeEventText :: Text -&gt; Text
+<span class="lineno"> 1079 </span><span class="decl"><span class="istickedoff">safeEventText = T.map safeChar</span>
+<span class="lineno"> 1080 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno"> 1081 </span><span class="spaces">    </span><span class="istickedoff">safeChar ch</span>
+<span class="lineno"> 1082 </span><span class="spaces">      </span><span class="istickedoff">| ch == ':' || ch == '|' || ch == '/' || ch == '\\' || ch == ' ' = '_'</span>
+<span class="lineno"> 1083 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ch</span></span>
+<span class="lineno"> 1084 </span>
+<span class="lineno"> 1085 </span>hashString :: String -&gt; Text
+<span class="lineno"> 1086 </span><span class="decl"><span class="istickedoff">hashString = hashStringWith GovernanceHashSha256</span></span>
+<span class="lineno"> 1087 </span>
+<span class="lineno"> 1088 </span>hashStringWith :: GovernanceHashScheme -&gt; String -&gt; Text
+<span class="lineno"> 1089 </span><span class="decl"><span class="istickedoff">hashStringWith scheme input = case scheme of</span>
+<span class="lineno"> 1090 </span><span class="spaces">  </span><span class="istickedoff">GovernanceHashLegacyFNV -&gt; <span class="nottickedoff">legacyFNV input</span></span>
+<span class="lineno"> 1091 </span><span class="spaces">  </span><span class="istickedoff">GovernanceHashSha256 -&gt; &quot;sha256:&quot; &lt;&gt; sha256Hex (SHA256.hashlazy (BL8.pack input))</span>
+<span class="lineno"> 1092 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno"> 1093 </span><span class="spaces">    </span><span class="istickedoff">sha256Hex = T.pack . concatMap byteToHex . BS.unpack</span>
+<span class="lineno"> 1094 </span><span class="spaces">    </span><span class="istickedoff">byteToHex byte =</span>
+<span class="lineno"> 1095 </span><span class="spaces">      </span><span class="istickedoff">let raw = showHex byte &quot;&quot;</span>
+<span class="lineno"> 1096 </span><span class="spaces">      </span><span class="istickedoff">in case raw of</span>
+<span class="lineno"> 1097 </span><span class="spaces">           </span><span class="istickedoff">[single] -&gt; ['0', single]</span>
+<span class="lineno"> 1098 </span><span class="spaces">           </span><span class="istickedoff">other -&gt; other</span></span>
+<span class="lineno"> 1099 </span>
+<span class="lineno"> 1100 </span>legacyFNV :: String -&gt; Text
+<span class="lineno"> 1101 </span><span class="decl"><span class="nottickedoff">legacyFNV input = T.pack (&quot;fnv1a64:&quot; &lt;&gt; showHex (foldl fnvStep fnvOffset input) &quot;&quot;)</span>
+<span class="lineno"> 1102 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno"> 1103 </span><span class="spaces">    </span><span class="nottickedoff">fnvOffset :: Word64</span>
+<span class="lineno"> 1104 </span><span class="spaces">    </span><span class="nottickedoff">fnvOffset = 14695981039346656037</span>
+<span class="lineno"> 1105 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno"> 1106 </span><span class="spaces">    </span><span class="nottickedoff">fnvStep :: Word64 -&gt; Char -&gt; Word64</span>
+<span class="lineno"> 1107 </span><span class="spaces">    </span><span class="nottickedoff">fnvStep h ch = (h `xor` fromIntegral (fromEnum ch)) * 1099511628211</span></span>
+<span class="lineno"> 1108 </span>
+<span class="lineno"> 1109 </span>hashSchemeFromText :: Text -&gt; Maybe GovernanceHashScheme
+<span class="lineno"> 1110 </span><span class="decl"><span class="istickedoff">hashSchemeFromText value</span>
+<span class="lineno"> 1111 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">&quot;fnv1a64:&quot; `T.isPrefixOf` value</span> = <span class="nottickedoff">Just GovernanceHashLegacyFNV</span></span>
+<span class="lineno"> 1112 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">&quot;sha256:&quot; `T.isPrefixOf` value</span> = Just GovernanceHashSha256</span>
+<span class="lineno"> 1113 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno"> 1114 </span>
+<span class="lineno"> 1115 </span>(&lt;|&gt;) :: Maybe a -&gt; Maybe a -&gt; Maybe a
+<span class="lineno"> 1116 </span><span class="decl"><span class="istickedoff">Just a &lt;|&gt; _ = Just a</span>
+<span class="lineno"> 1117 </span><span class="spaces"></span><span class="istickedoff">Nothing &lt;|&gt; b = b</span></span>
+
+</pre>
+</body>
+</html>

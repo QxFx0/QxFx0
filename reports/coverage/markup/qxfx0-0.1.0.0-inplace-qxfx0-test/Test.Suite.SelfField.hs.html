@@ -1,0 +1,577 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-|
+<span class="lineno">    5 </span>Module      : Test.Suite.SelfField
+<span class="lineno">    6 </span>Description : Property tests for the Phase-4 right-hemispheric Field components.
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>Verifies, by QuickCheck, the laws asserted in
+<span class="lineno">    9 </span>@docs\/adr\/0009-right-hemisphere-field.md@ §6 step 3:
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>  * every smart constructor ('mkResonance', 'mkAtmosphere',
+<span class="lineno">   12 </span>    'mkFieldConfidence', 'mkConsolidation', 'mkCounterfactual')
+<span class="lineno">   13 </span>    clamps its input to the documented range;
+<span class="lineno">   14 </span>  * per-component combinators respect their stated algebraic laws
+<span class="lineno">   15 </span>    (commutativity, associativity, idempotence, identity);
+<span class="lineno">   16 </span>  * 'emptyField' is the identity of @combineField CombineMaxima@
+<span class="lineno">   17 </span>    and of @combineField CombineAccumulate@ (where it makes sense);
+<span class="lineno">   18 </span>  * 'deriveFieldConfidence' is monotone in the agreement between
+<span class="lineno">   19 </span>    its components — equal-valued fields receive the maximum
+<span class="lineno">   20 </span>    confidence;
+<span class="lineno">   21 </span>  * a smoke test that the Phase-4 'Field' continues to compose
+<span class="lineno">   22 </span>    with the Phase-3 'Holistic' \/ 'Formal' adjunction.
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>The Phase-3 acceptance criteria from ADR-0008 §10 continue to be
+<span class="lineno">   25 </span>verified by @Test.Suite.SelfAdjunction@ against the substantive
+<span class="lineno">   26 </span>'Field' (the generator there now draws every component from its
+<span class="lineno">   27 </span>smart constructor); this module is responsible only for the laws
+<span class="lineno">   28 </span>specific to 'Field'.
+<span class="lineno">   29 </span>-}
+<span class="lineno">   30 </span>module Test.Suite.SelfField
+<span class="lineno">   31 </span>  ( selfFieldTests
+<span class="lineno">   32 </span>  ) where
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>import Test.HUnit (Test (..), assertBool, assertFailure)
+<span class="lineno">   35 </span>import Test.QuickCheck
+<span class="lineno">   36 </span>  ( Gen
+<span class="lineno">   37 </span>  , Property
+<span class="lineno">   38 </span>  , arbitrary
+<span class="lineno">   39 </span>  , choose
+<span class="lineno">   40 </span>  , forAll
+<span class="lineno">   41 </span>  , maxSuccess
+<span class="lineno">   42 </span>  , quickCheckWithResult
+<span class="lineno">   43 </span>  , stdArgs
+<span class="lineno">   44 </span>  )
+<span class="lineno">   45 </span>import Test.QuickCheck.Test (isSuccess)
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>import QxFx0.Self.Adjunction
+<span class="lineno">   48 </span>  ( Adjunction (..)
+<span class="lineno">   49 </span>  , Holistic (..)
+<span class="lineno">   50 </span>  , Formal   (..)
+<span class="lineno">   51 </span>  , probe
+<span class="lineno">   52 </span>  )
+<span class="lineno">   53 </span>import QxFx0.Self.Field
+<span class="lineno">   54 </span>  ( Atmosphere (..)
+<span class="lineno">   55 </span>  , CombineMode (..)
+<span class="lineno">   56 </span>  , Consolidation (..)
+<span class="lineno">   57 </span>  , Counterfactual (..)
+<span class="lineno">   58 </span>  , Field (..)
+<span class="lineno">   59 </span>  , FieldConfidence (..)
+<span class="lineno">   60 </span>  , Resonance (..)
+<span class="lineno">   61 </span>  , combineConsolidation
+<span class="lineno">   62 </span>  , combineCounterfactual
+<span class="lineno">   63 </span>  , combineField
+<span class="lineno">   64 </span>  , combineFieldConfidence
+<span class="lineno">   65 </span>  , combineResonance
+<span class="lineno">   66 </span>  , deriveFieldConfidence
+<span class="lineno">   67 </span>  , emptyField
+<span class="lineno">   68 </span>  , mkAtmosphere
+<span class="lineno">   69 </span>  , mkConsolidation
+<span class="lineno">   70 </span>  , mkCounterfactual
+<span class="lineno">   71 </span>  , mkFieldConfidence
+<span class="lineno">   72 </span>  , mkResonance
+<span class="lineno">   73 </span>  , FieldHeuristics(..)
+<span class="lineno">   74 </span>  , defaultFieldHeuristics
+<span class="lineno">   75 </span>  , computeConsolidation
+<span class="lineno">   76 </span>  , computeCounterfactual
+<span class="lineno">   77 </span>  , computeAtmosphere
+<span class="lineno">   78 </span>  , adaptFieldHeuristics
+<span class="lineno">   79 </span>  )
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   82 </span>-- Test-suite entry point
+<span class="lineno">   83 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>selfFieldTests :: [Test]
+<span class="lineno">   86 </span><span class="decl"><span class="istickedoff">selfFieldTests =</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">[ -- Smart-constructor clamping</span>
+<span class="lineno">   88 </span><span class="spaces">    </span><span class="istickedoff">TestLabel <span class="nottickedoff">&quot;mkResonance clamps to [0,1]&quot;</span> $</span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;mkResonance clamps&quot;</span> propMkResonanceClamps</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;mkAtmosphere clamps valence to [-1,1] and arousal to [0,1]&quot;</span> $</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;mkAtmosphere clamps&quot;</span> propMkAtmosphereClamps</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;mkFieldConfidence clamps to [0,1]&quot;</span> $</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;mkFieldConfidence clamps&quot;</span> propMkFieldConfidenceClamps</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;mkConsolidation clamps to [0,1]&quot;</span> $</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;mkConsolidation clamps&quot;</span> propMkConsolidationClamps</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;mkCounterfactual clamps to [0,1]&quot;</span> $</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;mkCounterfactual clamps&quot;</span> propMkCounterfactualClamps</span>
+<span class="lineno">   98 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">-- Per-component combinator laws</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineResonance is commutative&quot;</span> $</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineResonance commutative&quot;</span> propCombineResonanceCommutative</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineResonance is associative&quot;</span> $</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineResonance associative&quot;</span> propCombineResonanceAssociative</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineResonance is idempotent&quot;</span> $</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineResonance idempotent&quot;</span> propCombineResonanceIdempotent</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineFieldConfidence is commutative&quot;</span> $</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineFieldConfidence commutative&quot;</span> propCombineFieldConfidenceCommutative</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineFieldConfidence is associative&quot;</span> $</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineFieldConfidence associative&quot;</span> propCombineFieldConfidenceAssociative</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineConsolidation is commutative&quot;</span> $</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineConsolidation commutative&quot;</span> propCombineConsolidationCommutative</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineConsolidation has identity Consolidation 0&quot;</span> $</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineConsolidation identity&quot;</span> propCombineConsolidationIdentity</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineConsolidation result is bounded by 1.0&quot;</span> $</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineConsolidation bounded&quot;</span> propCombineConsolidationBounded</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineCounterfactual is commutative&quot;</span> $</span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineCounterfactual commutative&quot;</span> propCombineCounterfactualCommutative</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineCounterfactual is associative&quot;</span> $</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineCounterfactual associative&quot;</span> propCombineCounterfactualAssociative</span>
+<span class="lineno">  120 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">-- Field-level combinators</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineField CombineMaxima is commutative&quot;</span> $</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineField CombineMaxima commutative&quot;</span> propCombineMaximaCommutative</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineField CombineAverage is commutative&quot;</span> $</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineField CombineAverage commutative&quot;</span> propCombineAverageCommutative</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineField CombineAccumulate non-confidence components are commutative&quot;</span> $</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;combineField CombineAccumulate non-conf commutative&quot;</span> propCombineAccumulateNonConfCommutative</span>
+<span class="lineno">  128 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">-- emptyField identity</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;combineField CombineMaxima with emptyField preserves non-confidence components&quot;</span> $</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;emptyField is right-identity for non-conf maxima&quot;</span></span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">propEmptyFieldIdentityForMaxima</span>
+<span class="lineno">  133 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">-- deriveFieldConfidence monotonicity / boundary cases</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;deriveFieldConfidence on uniform field gives confidence 1.0&quot;</span> $</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;uniform field has max confidence&quot;</span> propUniformFieldMaxConfidence</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;deriveFieldConfidence is in [0,1] for any well-formed field&quot;</span> $</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;deriveFieldConfidence in [0,1]&quot;</span> propDeriveFieldConfidenceInRange</span>
+<span class="lineno">  139 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">-- Adjunction smoke test</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Field round-trips through Holistic / Formal (smoke)&quot;</span> $</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;Adjunction smoke&quot;</span> propAdjunctionSmoke</span>
+<span class="lineno">  143 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">-- Phase-7 heuristic lifeness gates</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;computeConsolidation is in [0,1]&quot;</span> $</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;computeConsolidation in range&quot;</span> propComputeConsolidationInRange</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;computeCounterfactual is in [0,1]&quot;</span> $</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;computeCounterfactual in range&quot;</span> propComputeCounterfactualInRange</span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;computeAtmosphere valence is in [-1,1]&quot;</span> $</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;computeAtmosphere valence in range&quot;</span> propComputeAtmosphereValenceInRange</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;computeAtmosphere arousal is in [0,1]&quot;</span> $</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;computeAtmosphere arousal in range&quot;</span> propComputeAtmosphereArousalInRange</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;sameTopic boosts consolidation&quot;</span> $</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;sameTopic boosts consolidation&quot;</span> propSameTopicBoostsConsolidation</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;streak boosts counterfactual&quot;</span> $</span>
+<span class="lineno">  156 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;streak boosts counterfactual&quot;</span> propStreakBoostsCounterfactual</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;higher legitimacy raises valence&quot;</span> $</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;higher legitimacy raises valence&quot;</span> propHighLegitimacyRaisesValence</span>
+<span class="lineno">  159 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="istickedoff">-- Phase 6.7: heuristics override honored</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;overridden FieldHeuristics changes computeAtmosphere&quot;</span> $</span>
+<span class="lineno">  162 </span><span class="spaces">      </span><span class="istickedoff">TestCase testHeuristicsOverrideHonored</span>
+<span class="lineno">  163 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">-- Phase-B bounded post-commitment adaptation</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;adaptFieldHeuristics signal=0 is identity&quot;</span> $</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;adapt identity&quot;</span> propAdaptFieldHeuristicsIdentity</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;adaptFieldHeuristics clamps adapted doubles to [0,1]&quot;</span> $</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;adapt clamp&quot;</span> propAdaptFieldHeuristicsClamp</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;adaptFieldHeuristics anti-drift keeps doubles within ±0.5 of default&quot;</span> $</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">quickCheckProperty <span class="nottickedoff">&quot;adapt anti-drift&quot;</span> propAdaptFieldHeuristicsAntiDrift</span>
+<span class="lineno">  171 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  174 </span>-- QuickCheck plumbing
+<span class="lineno">  175 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  176 </span>
+<span class="lineno">  177 </span>quickCheckProperty :: String -&gt; Property -&gt; Test
+<span class="lineno">  178 </span><span class="decl"><span class="istickedoff">quickCheckProperty label prop = TestCase $ do</span>
+<span class="lineno">  179 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- quickCheckWithResult stdArgs { maxSuccess = 200 } prop</span>
+<span class="lineno">  180 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlytrue">isSuccess result</span></span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="istickedoff">then pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="istickedoff">else <span class="nottickedoff">assertFailure (&quot;Property failed: &quot; ++ label)</span></span></span>
+<span class="lineno">  183 </span>
+<span class="lineno">  184 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  185 </span>-- Generators
+<span class="lineno">  186 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>-- | Wide range to exercise clamping; not restricted to [0, 1].
+<span class="lineno">  189 </span>arbitraryWideDouble :: Gen Double
+<span class="lineno">  190 </span><span class="decl"><span class="istickedoff">arbitraryWideDouble = choose (-100.0, 100.0)</span></span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>arbitraryUnitDouble :: Gen Double
+<span class="lineno">  193 </span><span class="decl"><span class="istickedoff">arbitraryUnitDouble = choose (0.0, 1.0)</span></span>
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>arbitraryValenceDouble :: Gen Double
+<span class="lineno">  196 </span><span class="decl"><span class="istickedoff">arbitraryValenceDouble = choose (-1.0, 1.0)</span></span>
+<span class="lineno">  197 </span>
+<span class="lineno">  198 </span>arbitraryResonance :: Gen Resonance
+<span class="lineno">  199 </span><span class="decl"><span class="istickedoff">arbitraryResonance = mkResonance &lt;$&gt; arbitraryUnitDouble</span></span>
+<span class="lineno">  200 </span>
+<span class="lineno">  201 </span>arbitraryFieldConfidence :: Gen FieldConfidence
+<span class="lineno">  202 </span><span class="decl"><span class="istickedoff">arbitraryFieldConfidence = mkFieldConfidence &lt;$&gt; arbitraryUnitDouble</span></span>
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>arbitraryConsolidation :: Gen Consolidation
+<span class="lineno">  205 </span><span class="decl"><span class="istickedoff">arbitraryConsolidation = mkConsolidation &lt;$&gt; arbitraryUnitDouble</span></span>
+<span class="lineno">  206 </span>
+<span class="lineno">  207 </span>arbitraryCounterfactual :: Gen Counterfactual
+<span class="lineno">  208 </span><span class="decl"><span class="istickedoff">arbitraryCounterfactual = mkCounterfactual &lt;$&gt; arbitraryUnitDouble</span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>arbitraryAtmosphere :: Gen Atmosphere
+<span class="lineno">  211 </span><span class="decl"><span class="nottickedoff">arbitraryAtmosphere =</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="nottickedoff">mkAtmosphere &lt;$&gt; arbitraryValenceDouble &lt;*&gt; arbitraryUnitDouble</span></span>
+<span class="lineno">  213 </span>
+<span class="lineno">  214 </span>arbitraryField :: Gen Field
+<span class="lineno">  215 </span><span class="decl"><span class="istickedoff">arbitraryField = do</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="istickedoff">r  &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  217 </span><span class="spaces">  </span><span class="istickedoff">v  &lt;- arbitraryValenceDouble</span>
+<span class="lineno">  218 </span><span class="spaces">  </span><span class="istickedoff">ar &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  219 </span><span class="spaces">  </span><span class="istickedoff">c  &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">cf &lt;- arbitraryUnitDouble</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">let scaffold =</span>
+<span class="lineno">  222 </span><span class="spaces">        </span><span class="istickedoff">Field</span>
+<span class="lineno">  223 </span><span class="spaces">          </span><span class="istickedoff">{ fieldResonance      = mkResonance r</span>
+<span class="lineno">  224 </span><span class="spaces">          </span><span class="istickedoff">, fieldAtmosphere     = mkAtmosphere v ar</span>
+<span class="lineno">  225 </span><span class="spaces">          </span><span class="istickedoff">, fieldConfidence     = mkFieldConfidence 1.0</span>
+<span class="lineno">  226 </span><span class="spaces">          </span><span class="istickedoff">, fieldConsolidation  = mkConsolidation c</span>
+<span class="lineno">  227 </span><span class="spaces">          </span><span class="istickedoff">, fieldCounterfactual = mkCounterfactual cf</span>
+<span class="lineno">  228 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  229 </span><span class="spaces">  </span><span class="istickedoff">pure scaffold { fieldConfidence = deriveFieldConfidence scaffold }</span></span>
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  232 </span>-- Smart-constructor clamping properties
+<span class="lineno">  233 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  234 </span>
+<span class="lineno">  235 </span>propMkResonanceClamps :: Property
+<span class="lineno">  236 </span><span class="decl"><span class="istickedoff">propMkResonanceClamps =</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \x -&gt;</span>
+<span class="lineno">  238 </span><span class="spaces">    </span><span class="istickedoff">let Resonance r = mkResonance x</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="istickedoff">in r &gt;= 0.0 &amp;&amp; r &lt;= 1.0</span></span>
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>propMkAtmosphereClamps :: Property
+<span class="lineno">  242 </span><span class="decl"><span class="istickedoff">propMkAtmosphereClamps =</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \v -&gt;</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \a -&gt;</span>
+<span class="lineno">  245 </span><span class="spaces">    </span><span class="istickedoff">let Atmosphere v' a' = mkAtmosphere v a</span>
+<span class="lineno">  246 </span><span class="spaces">    </span><span class="istickedoff">in v' &gt;= -1.0 &amp;&amp; v' &lt;= 1.0 &amp;&amp; a' &gt;= 0.0 &amp;&amp; a' &lt;= 1.0</span></span>
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>propMkFieldConfidenceClamps :: Property
+<span class="lineno">  249 </span><span class="decl"><span class="istickedoff">propMkFieldConfidenceClamps =</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \x -&gt;</span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">let FieldConfidence c = mkFieldConfidence x</span>
+<span class="lineno">  252 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0</span></span>
+<span class="lineno">  253 </span>
+<span class="lineno">  254 </span>propMkConsolidationClamps :: Property
+<span class="lineno">  255 </span><span class="decl"><span class="istickedoff">propMkConsolidationClamps =</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \x -&gt;</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">let Consolidation c = mkConsolidation x</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0</span></span>
+<span class="lineno">  259 </span>
+<span class="lineno">  260 </span>propMkCounterfactualClamps :: Property
+<span class="lineno">  261 </span><span class="decl"><span class="istickedoff">propMkCounterfactualClamps =</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \x -&gt;</span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="istickedoff">let Counterfactual c = mkCounterfactual x</span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0</span></span>
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  267 </span>-- Per-component combinator laws
+<span class="lineno">  268 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>propCombineResonanceCommutative :: Property
+<span class="lineno">  271 </span><span class="decl"><span class="istickedoff">propCombineResonanceCommutative =</span>
+<span class="lineno">  272 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \a -&gt;</span>
+<span class="lineno">  273 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \b -&gt;</span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="istickedoff">combineResonance a b == combineResonance b a</span></span>
+<span class="lineno">  275 </span>
+<span class="lineno">  276 </span>propCombineResonanceAssociative :: Property
+<span class="lineno">  277 </span><span class="decl"><span class="istickedoff">propCombineResonanceAssociative =</span>
+<span class="lineno">  278 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \a -&gt;</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \b -&gt;</span>
+<span class="lineno">  280 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \c -&gt;</span>
+<span class="lineno">  281 </span><span class="spaces">    </span><span class="istickedoff">combineResonance a (combineResonance b c)</span>
+<span class="lineno">  282 </span><span class="spaces">      </span><span class="istickedoff">== combineResonance (combineResonance a b) c</span></span>
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>propCombineResonanceIdempotent :: Property
+<span class="lineno">  285 </span><span class="decl"><span class="istickedoff">propCombineResonanceIdempotent =</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryResonance $ \a -&gt;</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="istickedoff">combineResonance a a == a</span></span>
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>propCombineFieldConfidenceCommutative :: Property
+<span class="lineno">  290 </span><span class="decl"><span class="istickedoff">propCombineFieldConfidenceCommutative =</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldConfidence $ \a -&gt;</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldConfidence $ \b -&gt;</span>
+<span class="lineno">  293 </span><span class="spaces">    </span><span class="istickedoff">combineFieldConfidence a b == combineFieldConfidence b a</span></span>
+<span class="lineno">  294 </span>
+<span class="lineno">  295 </span>propCombineFieldConfidenceAssociative :: Property
+<span class="lineno">  296 </span><span class="decl"><span class="istickedoff">propCombineFieldConfidenceAssociative =</span>
+<span class="lineno">  297 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldConfidence $ \a -&gt;</span>
+<span class="lineno">  298 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldConfidence $ \b -&gt;</span>
+<span class="lineno">  299 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldConfidence $ \c -&gt;</span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="istickedoff">combineFieldConfidence a (combineFieldConfidence b c)</span>
+<span class="lineno">  301 </span><span class="spaces">      </span><span class="istickedoff">== combineFieldConfidence (combineFieldConfidence a b) c</span></span>
+<span class="lineno">  302 </span>
+<span class="lineno">  303 </span>propCombineConsolidationCommutative :: Property
+<span class="lineno">  304 </span><span class="decl"><span class="istickedoff">propCombineConsolidationCommutative =</span>
+<span class="lineno">  305 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryConsolidation $ \a -&gt;</span>
+<span class="lineno">  306 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryConsolidation $ \b -&gt;</span>
+<span class="lineno">  307 </span><span class="spaces">    </span><span class="istickedoff">combineConsolidation a b == combineConsolidation b a</span></span>
+<span class="lineno">  308 </span>
+<span class="lineno">  309 </span>-- | Consolidation 0 is the identity element.
+<span class="lineno">  310 </span>propCombineConsolidationIdentity :: Property
+<span class="lineno">  311 </span><span class="decl"><span class="istickedoff">propCombineConsolidationIdentity =</span>
+<span class="lineno">  312 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryConsolidation $ \a -&gt;</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="istickedoff">combineConsolidation a (Consolidation 0.0) == a</span>
+<span class="lineno">  314 </span><span class="spaces">      </span><span class="istickedoff">&amp;&amp; combineConsolidation (Consolidation 0.0) a == a</span></span>
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>-- | The clipped-additive monoid is bounded by 1.0.
+<span class="lineno">  317 </span>propCombineConsolidationBounded :: Property
+<span class="lineno">  318 </span><span class="decl"><span class="istickedoff">propCombineConsolidationBounded =</span>
+<span class="lineno">  319 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryConsolidation $ \a -&gt;</span>
+<span class="lineno">  320 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryConsolidation $ \b -&gt;</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="istickedoff">let Consolidation c = combineConsolidation a b</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">in c &lt;= 1.0 + 1e-12</span></span>
+<span class="lineno">  323 </span>
+<span class="lineno">  324 </span>propCombineCounterfactualCommutative :: Property
+<span class="lineno">  325 </span><span class="decl"><span class="istickedoff">propCombineCounterfactualCommutative =</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryCounterfactual $ \a -&gt;</span>
+<span class="lineno">  327 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryCounterfactual $ \b -&gt;</span>
+<span class="lineno">  328 </span><span class="spaces">    </span><span class="istickedoff">combineCounterfactual a b == combineCounterfactual b a</span></span>
+<span class="lineno">  329 </span>
+<span class="lineno">  330 </span>propCombineCounterfactualAssociative :: Property
+<span class="lineno">  331 </span><span class="decl"><span class="istickedoff">propCombineCounterfactualAssociative =</span>
+<span class="lineno">  332 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryCounterfactual $ \a -&gt;</span>
+<span class="lineno">  333 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryCounterfactual $ \b -&gt;</span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryCounterfactual $ \c -&gt;</span>
+<span class="lineno">  335 </span><span class="spaces">    </span><span class="istickedoff">combineCounterfactual a (combineCounterfactual b c)</span>
+<span class="lineno">  336 </span><span class="spaces">      </span><span class="istickedoff">== combineCounterfactual (combineCounterfactual a b) c</span></span>
+<span class="lineno">  337 </span>
+<span class="lineno">  338 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  339 </span>-- Field-level combinator commutativity
+<span class="lineno">  340 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  341 </span>
+<span class="lineno">  342 </span>-- | Strict structural equality is sufficient for commutativity:
+<span class="lineno">  343 </span>-- max, min, average and weighted-average with weight 0.5 are all
+<span class="lineno">  344 </span>-- commutative on Double, and the construction of 'Field' preserves
+<span class="lineno">  345 </span>-- this pointwise.
+<span class="lineno">  346 </span>propCombineMaximaCommutative :: Property
+<span class="lineno">  347 </span><span class="decl"><span class="istickedoff">propCombineMaximaCommutative =</span>
+<span class="lineno">  348 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f1 -&gt;</span>
+<span class="lineno">  349 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f2 -&gt;</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="istickedoff">combineField CombineMaxima f1 f2 == combineField CombineMaxima f2 f1</span></span>
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>propCombineAverageCommutative :: Property
+<span class="lineno">  353 </span><span class="decl"><span class="istickedoff">propCombineAverageCommutative =</span>
+<span class="lineno">  354 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f1 -&gt;</span>
+<span class="lineno">  355 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f2 -&gt;</span>
+<span class="lineno">  356 </span><span class="spaces">    </span><span class="istickedoff">combineField CombineAverage f1 f2 == combineField CombineAverage f2 f1</span></span>
+<span class="lineno">  357 </span>
+<span class="lineno">  358 </span>-- | All non-confidence components of CombineAccumulate are
+<span class="lineno">  359 </span>-- commutative ('combineConsolidation' is commutative because
+<span class="lineno">  360 </span>-- addition is). 'combineFieldConfidence' is also commutative
+<span class="lineno">  361 </span>-- ('min'). Hence the whole field combine is commutative.
+<span class="lineno">  362 </span>propCombineAccumulateNonConfCommutative :: Property
+<span class="lineno">  363 </span><span class="decl"><span class="istickedoff">propCombineAccumulateNonConfCommutative =</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f1 -&gt;</span>
+<span class="lineno">  365 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f2 -&gt;</span>
+<span class="lineno">  366 </span><span class="spaces">    </span><span class="istickedoff">combineField CombineAccumulate f1 f2 == combineField CombineAccumulate f2 f1</span></span>
+<span class="lineno">  367 </span>
+<span class="lineno">  368 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  369 </span>-- emptyField identity
+<span class="lineno">  370 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  371 </span>
+<span class="lineno">  372 </span>-- | For 'CombineMaxima', the four non-confidence components of
+<span class="lineno">  373 </span>-- 'emptyField' are zero (or identity-shaped for 'Atmosphere'),
+<span class="lineno">  374 </span>-- and combining with them leaves the other field's non-confidence
+<span class="lineno">  375 </span>-- components untouched. We check that explicitly per component.
+<span class="lineno">  376 </span>--
+<span class="lineno">  377 </span>-- 'fieldConfidence' is not preserved because 'emptyField' has
+<span class="lineno">  378 </span>-- 'FieldConfidence 1.0' and the combine takes 'min'; that is the
+<span class="lineno">  379 </span>-- documented behaviour and we simply do not assert on it.
+<span class="lineno">  380 </span>propEmptyFieldIdentityForMaxima :: Property
+<span class="lineno">  381 </span><span class="decl"><span class="istickedoff">propEmptyFieldIdentityForMaxima =</span>
+<span class="lineno">  382 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f -&gt;</span>
+<span class="lineno">  383 </span><span class="spaces">    </span><span class="istickedoff">let merged = combineField CombineMaxima f emptyField</span>
+<span class="lineno">  384 </span><span class="spaces">    </span><span class="istickedoff">in fieldResonance     merged == fieldResonance     f</span>
+<span class="lineno">  385 </span><span class="spaces">       </span><span class="istickedoff">&amp;&amp; fieldConsolidation  merged == fieldConsolidation  f</span>
+<span class="lineno">  386 </span><span class="spaces">       </span><span class="istickedoff">&amp;&amp; fieldCounterfactual merged == fieldCounterfactual f</span>
+<span class="lineno">  387 </span><span class="spaces">       </span><span class="istickedoff">&amp;&amp; atmosphereValence (fieldAtmosphere merged)</span>
+<span class="lineno">  388 </span><span class="spaces">            </span><span class="istickedoff">== 0.5 * atmosphereValence (fieldAtmosphere f)</span>
+<span class="lineno">  389 </span><span class="spaces">       </span><span class="istickedoff">&amp;&amp; atmosphereArousal (fieldAtmosphere merged)</span>
+<span class="lineno">  390 </span><span class="spaces">            </span><span class="istickedoff">== 0.5 * atmosphereArousal (fieldAtmosphere f)</span></span>
+<span class="lineno">  391 </span>
+<span class="lineno">  392 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  393 </span>-- deriveFieldConfidence boundary cases
+<span class="lineno">  394 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  395 </span>
+<span class="lineno">  396 </span>-- | A field whose four scalarised components are all equal is
+<span class="lineno">  397 </span>-- maximally coherent and should receive 'FieldConfidence 1.0'.
+<span class="lineno">  398 </span>propUniformFieldMaxConfidence :: Property
+<span class="lineno">  399 </span><span class="decl"><span class="istickedoff">propUniformFieldMaxConfidence =</span>
+<span class="lineno">  400 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryUnitDouble $ \x -&gt;</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">let scaffold =</span>
+<span class="lineno">  402 </span><span class="spaces">          </span><span class="istickedoff">Field</span>
+<span class="lineno">  403 </span><span class="spaces">            </span><span class="istickedoff">{ fieldResonance      = mkResonance x</span>
+<span class="lineno">  404 </span><span class="spaces">            </span><span class="istickedoff">, fieldAtmosphere     = mkAtmosphere 0.0 x</span>
+<span class="lineno">  405 </span><span class="spaces">            </span><span class="istickedoff">, fieldConfidence     = mkFieldConfidence 1.0</span>
+<span class="lineno">  406 </span><span class="spaces">            </span><span class="istickedoff">, fieldConsolidation  = mkConsolidation x</span>
+<span class="lineno">  407 </span><span class="spaces">            </span><span class="istickedoff">, fieldCounterfactual = mkCounterfactual x</span>
+<span class="lineno">  408 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  409 </span><span class="spaces">        </span><span class="istickedoff">FieldConfidence c = deriveFieldConfidence scaffold</span>
+<span class="lineno">  410 </span><span class="spaces">    </span><span class="istickedoff">in abs (c - 1.0) &lt; 1e-9</span></span>
+<span class="lineno">  411 </span>
+<span class="lineno">  412 </span>-- | The derivation always lands in [0, 1].
+<span class="lineno">  413 </span>propDeriveFieldConfidenceInRange :: Property
+<span class="lineno">  414 </span><span class="decl"><span class="istickedoff">propDeriveFieldConfidenceInRange =</span>
+<span class="lineno">  415 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \f -&gt;</span>
+<span class="lineno">  416 </span><span class="spaces">    </span><span class="istickedoff">let FieldConfidence c = deriveFieldConfidence f</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0 + 1e-12</span></span>
+<span class="lineno">  418 </span>
+<span class="lineno">  419 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  420 </span>-- Adjunction smoke test
+<span class="lineno">  421 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  422 </span>
+<span class="lineno">  423 </span>-- | Sanity check that the Phase-3 'Holistic' \/ 'Formal'
+<span class="lineno">  424 </span>-- adjunction continues to compose against the substantive 'Field'.
+<span class="lineno">  425 </span>-- We exercise 'unit' followed by 'counit' on a Holistic value and
+<span class="lineno">  426 </span>-- expect to get back the original.
+<span class="lineno">  427 </span>propAdjunctionSmoke :: Property
+<span class="lineno">  428 </span><span class="decl"><span class="istickedoff">propAdjunctionSmoke =</span>
+<span class="lineno">  429 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryField $ \fd -&gt;</span>
+<span class="lineno">  430 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (-100, 100 :: Int)) $ \a -&gt;</span>
+<span class="lineno">  431 </span><span class="spaces">    </span><span class="istickedoff">let h        = Holistic (a, fd)</span>
+<span class="lineno">  432 </span><span class="spaces">        </span><span class="istickedoff">rebuilt  = counit (fmap unit h)</span>
+<span class="lineno">  433 </span><span class="spaces">    </span><span class="istickedoff">in h == rebuilt</span></span>
+<span class="lineno">  434 </span>
+<span class="lineno">  435 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  436 </span>-- Phase-7 heuristic lifeness gates
+<span class="lineno">  437 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  438 </span>
+<span class="lineno">  439 </span>propComputeConsolidationInRange :: Property
+<span class="lineno">  440 </span><span class="decl"><span class="istickedoff">propComputeConsolidationInRange =</span>
+<span class="lineno">  441 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitrary $ \recentSuccess -&gt;</span>
+<span class="lineno">  442 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (False, True)) $ \sameTopic -&gt;</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="istickedoff">let Consolidation c = computeConsolidation defaultFieldHeuristics (recentSuccess :: [Bool]) sameTopic</span>
+<span class="lineno">  444 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0</span></span>
+<span class="lineno">  445 </span>
+<span class="lineno">  446 </span>propComputeCounterfactualInRange :: Property
+<span class="lineno">  447 </span><span class="decl"><span class="istickedoff">propComputeCounterfactualInRange =</span>
+<span class="lineno">  448 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitrary $ \weights -&gt;</span>
+<span class="lineno">  449 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (0, 100 :: Int)) $ \streak -&gt;</span>
+<span class="lineno">  450 </span><span class="spaces">    </span><span class="istickedoff">let Counterfactual c = computeCounterfactual defaultFieldHeuristics (weights :: [Double]) streak</span>
+<span class="lineno">  451 </span><span class="spaces">    </span><span class="istickedoff">in c &gt;= 0.0 &amp;&amp; c &lt;= 1.0</span></span>
+<span class="lineno">  452 </span>
+<span class="lineno">  453 </span>propComputeAtmosphereValenceInRange :: Property
+<span class="lineno">  454 </span><span class="decl"><span class="istickedoff">propComputeAtmosphereValenceInRange =</span>
+<span class="lineno">  455 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoAgency -&gt;</span>
+<span class="lineno">  456 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoTension -&gt;</span>
+<span class="lineno">  457 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \legitScore -&gt;</span>
+<span class="lineno">  458 </span><span class="spaces">    </span><span class="istickedoff">let Atmosphere v _ = computeAtmosphere defaultFieldHeuristics egoAgency egoTension legitScore</span>
+<span class="lineno">  459 </span><span class="spaces">    </span><span class="istickedoff">in v &gt;= -1.0 &amp;&amp; v &lt;= 1.0</span></span>
+<span class="lineno">  460 </span>
+<span class="lineno">  461 </span>propComputeAtmosphereArousalInRange :: Property
+<span class="lineno">  462 </span><span class="decl"><span class="istickedoff">propComputeAtmosphereArousalInRange =</span>
+<span class="lineno">  463 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoAgency -&gt;</span>
+<span class="lineno">  464 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoTension -&gt;</span>
+<span class="lineno">  465 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \legitScore -&gt;</span>
+<span class="lineno">  466 </span><span class="spaces">    </span><span class="istickedoff">let Atmosphere _ a = computeAtmosphere defaultFieldHeuristics egoAgency egoTension legitScore</span>
+<span class="lineno">  467 </span><span class="spaces">    </span><span class="istickedoff">in a &gt;= 0.0 &amp;&amp; a &lt;= 1.0</span></span>
+<span class="lineno">  468 </span>
+<span class="lineno">  469 </span>propSameTopicBoostsConsolidation :: Property
+<span class="lineno">  470 </span><span class="decl"><span class="istickedoff">propSameTopicBoostsConsolidation =</span>
+<span class="lineno">  471 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitrary $ \recentSuccess -&gt;</span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="istickedoff">let off = computeConsolidation defaultFieldHeuristics (recentSuccess :: [Bool]) False</span>
+<span class="lineno">  473 </span><span class="spaces">        </span><span class="istickedoff">on  = computeConsolidation defaultFieldHeuristics recentSuccess True</span>
+<span class="lineno">  474 </span><span class="spaces">    </span><span class="istickedoff">in unConsolidation on &gt;= unConsolidation off</span></span>
+<span class="lineno">  475 </span>
+<span class="lineno">  476 </span>propStreakBoostsCounterfactual :: Property
+<span class="lineno">  477 </span><span class="decl"><span class="istickedoff">propStreakBoostsCounterfactual =</span>
+<span class="lineno">  478 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitrary $ \weights -&gt;</span>
+<span class="lineno">  479 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (0, 50 :: Int)) $ \low -&gt;</span>
+<span class="lineno">  480 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (low, 100 :: Int)) $ \high -&gt;</span>
+<span class="lineno">  481 </span><span class="spaces">    </span><span class="istickedoff">let lowCF  = computeCounterfactual defaultFieldHeuristics (weights :: [Double]) low</span>
+<span class="lineno">  482 </span><span class="spaces">        </span><span class="istickedoff">highCF = computeCounterfactual defaultFieldHeuristics weights high</span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="istickedoff">in unCounterfactual highCF &gt;= unCounterfactual lowCF</span></span>
+<span class="lineno">  484 </span>
+<span class="lineno">  485 </span>propHighLegitimacyRaisesValence :: Property
+<span class="lineno">  486 </span><span class="decl"><span class="istickedoff">propHighLegitimacyRaisesValence =</span>
+<span class="lineno">  487 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoAgency -&gt;</span>
+<span class="lineno">  488 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \egoTension -&gt;</span>
+<span class="lineno">  489 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryWideDouble $ \lowLegit -&gt;</span>
+<span class="lineno">  490 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (lowLegit, 100.0)) $ \highLegit -&gt;</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="istickedoff">let lowAtm  = computeAtmosphere defaultFieldHeuristics egoAgency egoTension lowLegit</span>
+<span class="lineno">  492 </span><span class="spaces">        </span><span class="istickedoff">highAtm = computeAtmosphere defaultFieldHeuristics egoAgency egoTension highLegit</span>
+<span class="lineno">  493 </span><span class="spaces">    </span><span class="istickedoff">in atmosphereValence highAtm &gt;= atmosphereValence lowAtm</span></span>
+<span class="lineno">  494 </span>
+<span class="lineno">  495 </span>-- | Phase 6.7: verify that a non-default heuristic parameter
+<span class="lineno">  496 </span>-- actually changes the compute function output.  If this test
+<span class="lineno">  497 </span>-- fails, the plumbing is broken (the override is not reaching
+<span class="lineno">  498 </span>-- the compute site).
+<span class="lineno">  499 </span>testHeuristicsOverrideHonored :: IO ()
+<span class="lineno">  500 </span><span class="decl"><span class="istickedoff">testHeuristicsOverrideHonored = do</span>
+<span class="lineno">  501 </span><span class="spaces">  </span><span class="istickedoff">let defaultAtm = computeAtmosphere defaultFieldHeuristics 0.5 0.5 0.8</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff">tweaked    = defaultFieldHeuristics { fhLegitimacyBonusScale = 0.99 }</span>
+<span class="lineno">  503 </span><span class="spaces">      </span><span class="istickedoff">tweakedAtm = computeAtmosphere tweaked 0.5 0.5 0.8</span>
+<span class="lineno">  504 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;override must change valence&quot;</span></span>
+<span class="lineno">  505 </span><span class="spaces">    </span><span class="istickedoff">(atmosphereValence tweakedAtm /= atmosphereValence defaultAtm)</span></span>
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  508 </span>-- Phase-B bounded post-commitment adaptation
+<span class="lineno">  509 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  510 </span>
+<span class="lineno">  511 </span>arbitraryFieldHeuristics :: Gen FieldHeuristics
+<span class="lineno">  512 </span><span class="decl"><span class="istickedoff">arbitraryFieldHeuristics = do</span>
+<span class="lineno">  513 </span><span class="spaces">  </span><span class="istickedoff">nw   &lt;- choose (1, 20)</span>
+<span class="lineno">  514 </span><span class="spaces">  </span><span class="istickedoff">dnr  &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  515 </span><span class="spaces">  </span><span class="istickedoff">tsb  &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  516 </span><span class="spaces">  </span><span class="istickedoff">ee   &lt;- choose (1e-12, 1e-6)</span>
+<span class="lineno">  517 </span><span class="spaces">  </span><span class="istickedoff">hsbr &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  518 </span><span class="spaces">  </span><span class="istickedoff">hsbc &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  519 </span><span class="spaces">  </span><span class="istickedoff">lm   &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  520 </span><span class="spaces">  </span><span class="istickedoff">lbs  &lt;- choose (0.0, 1.0)</span>
+<span class="lineno">  521 </span><span class="spaces">  </span><span class="istickedoff">pure $ FieldHeuristics nw dnr tsb ee hsbr hsbc lm lbs</span></span>
+<span class="lineno">  522 </span>
+<span class="lineno">  523 </span>propAdaptFieldHeuristicsIdentity :: Property
+<span class="lineno">  524 </span><span class="decl"><span class="istickedoff">propAdaptFieldHeuristicsIdentity =</span>
+<span class="lineno">  525 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldHeuristics $ \fh -&gt;</span>
+<span class="lineno">  526 </span><span class="spaces">    </span><span class="istickedoff">adaptFieldHeuristics 0.0 fh == fh</span></span>
+<span class="lineno">  527 </span>
+<span class="lineno">  528 </span>propAdaptFieldHeuristicsClamp :: Property
+<span class="lineno">  529 </span><span class="decl"><span class="istickedoff">propAdaptFieldHeuristicsClamp =</span>
+<span class="lineno">  530 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldHeuristics $ \fh -&gt;</span>
+<span class="lineno">  531 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (-10.0, 10.0)) $ \signal -&gt;</span>
+<span class="lineno">  532 </span><span class="spaces">    </span><span class="istickedoff">let adapted = adaptFieldHeuristics signal fh</span>
+<span class="lineno">  533 </span><span class="spaces">    </span><span class="istickedoff">in all (\x -&gt; x &gt;= 0.0 &amp;&amp; x &lt;= 1.0)</span>
+<span class="lineno">  534 </span><span class="spaces">         </span><span class="istickedoff">[ fhDefaultNarrativeRate adapted</span>
+<span class="lineno">  535 </span><span class="spaces">         </span><span class="istickedoff">, fhTopicStabilityBoost adapted</span>
+<span class="lineno">  536 </span><span class="spaces">         </span><span class="istickedoff">, fhHolisticStreakBoostRate adapted</span>
+<span class="lineno">  537 </span><span class="spaces">         </span><span class="istickedoff">, fhHolisticStreakBoostCap adapted</span>
+<span class="lineno">  538 </span><span class="spaces">         </span><span class="istickedoff">, fhLegitimacyMidpoint adapted</span>
+<span class="lineno">  539 </span><span class="spaces">         </span><span class="istickedoff">, fhLegitimacyBonusScale adapted</span>
+<span class="lineno">  540 </span><span class="spaces">         </span><span class="istickedoff">]</span></span>
+<span class="lineno">  541 </span>
+<span class="lineno">  542 </span>propAdaptFieldHeuristicsAntiDrift :: Property
+<span class="lineno">  543 </span><span class="decl"><span class="istickedoff">propAdaptFieldHeuristicsAntiDrift =</span>
+<span class="lineno">  544 </span><span class="spaces">  </span><span class="istickedoff">forAll arbitraryFieldHeuristics $ \fh -&gt;</span>
+<span class="lineno">  545 </span><span class="spaces">  </span><span class="istickedoff">forAll (choose (-10.0, 10.0)) $ \signal -&gt;</span>
+<span class="lineno">  546 </span><span class="spaces">    </span><span class="istickedoff">let adapted = adaptFieldHeuristics signal fh</span>
+<span class="lineno">  547 </span><span class="spaces">        </span><span class="istickedoff">def = defaultFieldHeuristics</span>
+<span class="lineno">  548 </span><span class="spaces">        </span><span class="istickedoff">withinDrift x target = abs (x - target) &lt;= 0.5 + 1e-12</span>
+<span class="lineno">  549 </span><span class="spaces">    </span><span class="istickedoff">in withinDrift (fhDefaultNarrativeRate adapted)    (fhDefaultNarrativeRate def)</span>
+<span class="lineno">  550 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; withinDrift (fhTopicStabilityBoost adapted)     (fhTopicStabilityBoost def)</span>
+<span class="lineno">  551 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; withinDrift (fhHolisticStreakBoostRate adapted) (fhHolisticStreakBoostRate def)</span>
+<span class="lineno">  552 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; withinDrift (fhHolisticStreakBoostCap adapted)  (fhHolisticStreakBoostCap def)</span>
+<span class="lineno">  553 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; withinDrift (fhLegitimacyMidpoint adapted)      (fhLegitimacyMidpoint def)</span>
+<span class="lineno">  554 </span><span class="spaces">    </span><span class="istickedoff">&amp;&amp; withinDrift (fhLegitimacyBonusScale adapted)    (fhLegitimacyBonusScale def)</span></span>
+
+</pre>
+</body>
+</html>

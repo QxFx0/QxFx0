@@ -198,8 +198,9 @@ path with Haskell; allowlist the rest.
 - `PYTHON_STATUS_LEDGER.md` (closure-phase update of the
   2026-05-26 ledger; per-file authority classification A–F;
   per-gate replacement plan).
-- New Haskell commands: `verify-schema`, `verify-contract`,
-  `check-embedded-sql`, `QxFx0.Lexicon.Morphology.Parser`.
+- New Haskell commands: `--check-schema-consistency`,
+  `--check-schema-contract`, `--check-embedded-sql`,
+  `QxFx0.Lexicon.Morphology.Parser`.
 
 **Acceptance criteria**:
 - [ ] The three `A. canonical-build` scripts replaced by

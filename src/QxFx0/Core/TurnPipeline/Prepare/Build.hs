@@ -70,7 +70,7 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       nixAvailable = case nixStatus of Unavailable _ -> False; _ -> True
       isNixBlocked = case nixStatus of Blocked _ -> True; _ -> False
    in TurnInput
-      { tiStartTime = psCurrentTime prepareStatic
+      { tiStartTime = perTurnCurrentTime effectResults
       , tiEmbedding = emb
       , tiEmbeddingSource = erSource embResult
       , tiEmbeddingQuality = embQuality

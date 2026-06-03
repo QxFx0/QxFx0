@@ -61,8 +61,11 @@ module QxFx0.Self.Essence
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Foldable (foldl')
+import qualified Crypto.Hash.SHA256 as SHA256
+import Data.Aeson (FromJSON(..), ToJSON, Value(..), encode)
+import Data.Aeson.Types (typeMismatch)
+import qualified Data.ByteString as BS
+import Data.Foldable (foldl', toList)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
@@ -70,6 +73,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Numeric (showHex)
 
 import QxFx0.Self.Conatus (ConatusEnergy (..))
 import QxFx0.Self.Deliberation
@@ -188,9 +192,20 @@ data CommitmentTrigger
   deriving stock (Eq, Show, Bounded, Enum, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
-newtype TrajectoryHash = TrajectoryHash { unTrajectoryHash :: Int }
+newtype TrajectoryHash = TrajectoryHash { unTrajectoryHash :: Text }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData, ToJSON)
+
+instance FromJSON TrajectoryHash where
+  parseJSON value =
+    case value of
+      String txt -> pure (TrajectoryHash txt)
+      Number n ->
+        let rounded = round n :: Integer
+        in if fromInteger rounded == n
+             then pure (TrajectoryHash (T.pack (show rounded)))
+             else pure (TrajectoryHash (T.pack (show (realToFrac n :: Double))))
+      _ -> typeMismatch "TrajectoryHash" value
 
 data EssenceCommitment = EssenceCommitment
   { ecMode         :: !EssenceMode
@@ -426,15 +441,16 @@ commit turnOrdinal trigger traj =
     { ecMode        = extractMode traj
     , ecTrigger     = trigger
     , ecCommittedAt = turnOrdinal
-    , ecWitnessHash = TrajectoryHash (foldl' hashWitness 0 (etWitnesses traj))
+    , ecWitnessHash = TrajectoryHash (sha256Witnesses (toList (etWitnesses traj)))
     }
   where
-    hashWitness acc w =
-      acc + ewTurnOrdinal w * 31
-          + fromEnum (ewSalienceDriver w) * 17
-          + fromEnum (ewReconcileRule w) * 13
-          + fromEnum (ewAgreement w) * 11
-          + round (ewDivergence w * 100)
+    sha256Witnesses witnesses =
+      "sha256:" <> T.pack (concatMap byteToHex (BS.unpack (SHA256.hashlazy (encode witnesses))))
+    byteToHex byte =
+      let raw = showHex byte ""
+      in case raw of
+           [single] -> ['0', single]
+           other -> other
 
 -- ---------------------------------------------------------------------------
 -- Post-commitment validation (Phase 10)

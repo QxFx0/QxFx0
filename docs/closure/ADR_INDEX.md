@@ -179,8 +179,8 @@ in §16 to resolve 3 collisions).
 
 ### 3.12 Closure plan (role split + promotion + demotion)
 
-- **0013** (proposed, self-core-role-split) — Self/Core Role Split (the central closure decision)
-- **0018** (proposed, promote-essence-commitment) — Promote Essence Commitment
+- **0034** (proposed, self-core-role-split) — Self/Core Role Split (the central closure decision)
+- **0036** (proposed, promote-essence-commitment) — Promote Essence Commitment
 - **0019** (proposed, promote-family-divergence) — Promote Family Divergence
 - **0020** (proposed, promote-perspective-operator) — Promote Perspective Operator
 - **0021** (proposed, promote-external-llm-transport) — Promote External LLM Transport
@@ -189,11 +189,11 @@ in §16 to resolve 3 collisions).
 
 ### 3.13 Future work (triage stubs)
 
-- **0013** (proposed, cross-session-essence-persistence)
+- **0041** (proposed, cross-session-essence-persistence)
 - **0014** (proposed, multiple-essences-per-session)
 - **0015** (proposed, external-essence-summons)
 - **0016** (proposed, essence-aware-conatus-weights)
-- **0017** (proposed, domain-reasoning-packs)
+- **0035** (proposed, domain-reasoning-packs)
 
 These 5 are **triage stubs**: short notes that
 flag a future-work item. They are not
@@ -226,13 +226,13 @@ The 7 rules are enforced by:
 | R3 | `check_architecture.sh` [19] | `Test.Suite.ObserverDiscipline` | `AUTHORITY_MAP.md §3.3` | green (rev. 2) |
 | R4 | `check_architecture.sh` [18] | `Test.Suite.RenderDialogueCoverage` | `GF_AUTHORITY_SUBSET.md §2` | green |
 | R5 | `check_architecture.sh` [15] | `Test.Suite.RenderAuthorityStub` | `ADR-0021`, `AUTHORITY_MAP.md §6` | green |
-| R6 | (no CI) | `Test.Suite.SelfEssenceCommit`, `Test.Suite.SelfEssence` | `SELF_LAYER_STATUS.md §2`, `PROMOTION_PLAYBOOK.md §3` | yellow (CI) |
+| R6 | `check_architecture.sh` [20] | `Test.Suite.SelfEssenceCommit`, `Test.Suite.SelfEssence`, `Test.Suite.PromotionFlagDiscipline` | `SELF_LAYER_STATUS.md §2`, `PROMOTION_PLAYBOOK.md §3` | green |
 | R7 | `check_architecture.sh` [16] + `check_generated_artifacts.sh` | `Test.Suite.RegenerableDerived` | `AUTHORITY_MAP.md §3.5` | green (rev. 2) |
 
 See `docs/closure/ENFORCEMENT_MATRIX.md` for
 the full matrix.
 
-### 4.2 The 5 promotion ADRs (0018-0022 proposed)
+### 4.2 The 5 promotion ADRs (0036, 0019-0022 proposed)
 
 Each promotion ADR follows the 4-gate discipline
 in `docs/closure/PROMOTION_PLAYBOOK.md`:
@@ -244,7 +244,7 @@ in `docs/closure/PROMOTION_PLAYBOOK.md`:
 
 The 5 promotion ADRs are:
 
-- **0018** (proposed) — Promote Essence Commitment (essence-commitment-enabled flag)
+- **0036** (proposed) — Promote Essence Commitment (essence-commitment-enabled flag)
 - **0019** (proposed) — Promote Family Divergence (`familyDivergenceEnabled` flag at `Cascade.hs:74`; **first candidate** per playbook)
 - **0020** (proposed) — Promote Perspective Operator (`QXFX0_PERSPECTIVE_OPERATOR_ENABLED` flag, **not yet in code** per AGENTS.md P4)
 - **0021** (proposed) — Promote External LLM Transport (`QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED` flag)

@@ -1,0 +1,104 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module QxFx0.Semantic.Input.Classify
+<span class="lineno">    5 </span>  ( classifyWordUnits
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Data.List (findIndex)
+<span class="lineno">    9 </span>import Data.Text (Text)
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import QxFx0.Semantic.Input.Lexicon
+<span class="lineno">   12 </span>  ( discourseFunctionsForToken
+<span class="lineno">   13 </span>  , guessMorphFeatures
+<span class="lineno">   14 </span>  , guessPartOfSpeech
+<span class="lineno">   15 </span>  , isFunctionWord
+<span class="lineno">   16 </span>  , lemmaForToken
+<span class="lineno">   17 </span>  , semanticClassesForLemmaAndPos
+<span class="lineno">   18 </span>  )
+<span class="lineno">   19 </span>import QxFx0.Semantic.Input.Model
+<span class="lineno">   20 </span>import QxFx0.Semantic.Input.Normalize (NormalizedInput(..))
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>classifyWordUnits :: NormalizedInput -&gt; [WordMeaningUnit]
+<span class="lineno">   23 </span><span class="decl"><span class="istickedoff">classifyWordUnits normalizedInput =</span>
+<span class="lineno">   24 </span><span class="spaces">  </span><span class="istickedoff">assignSyntacticRoles (map classifyToken (niTokens normalizedInput))</span></span>
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>classifyToken :: Text -&gt; WordMeaningUnit
+<span class="lineno">   27 </span><span class="decl"><span class="istickedoff">classifyToken token =</span>
+<span class="lineno">   28 </span><span class="spaces">  </span><span class="istickedoff">let lemma = lemmaForToken token</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">pos = guessPartOfSpeech token</span>
+<span class="lineno">   30 </span><span class="spaces">      </span><span class="istickedoff">morphFeatures = guessMorphFeatures token</span>
+<span class="lineno">   31 </span><span class="spaces">      </span><span class="istickedoff">semanticClasses = semanticClassesForLemmaAndPos token lemma pos</span>
+<span class="lineno">   32 </span><span class="spaces">      </span><span class="istickedoff">discourseFunctions = discourseFunctionsForToken token</span>
+<span class="lineno">   33 </span><span class="spaces">      </span><span class="istickedoff">confidence</span>
+<span class="lineno">   34 </span><span class="spaces">        </span><span class="istickedoff">| pos == PosUnknown = 0.35</span>
+<span class="lineno">   35 </span><span class="spaces">        </span><span class="istickedoff">| isFunctionWord token = 0.7</span>
+<span class="lineno">   36 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = 0.82</span>
+<span class="lineno">   37 </span><span class="spaces">      </span><span class="istickedoff">ambiguityCandidates =</span>
+<span class="lineno">   38 </span><span class="spaces">        </span><span class="istickedoff">case pos of</span>
+<span class="lineno">   39 </span><span class="spaces">          </span><span class="istickedoff">PosUnknown -&gt; [<span class="nottickedoff">token</span>]</span>
+<span class="lineno">   40 </span><span class="spaces">          </span><span class="istickedoff">PosAdverb -&gt; [<span class="nottickedoff">token</span>, <span class="nottickedoff">lemma</span>]</span>
+<span class="lineno">   41 </span><span class="spaces">          </span><span class="istickedoff">PosAdjective -&gt; [<span class="nottickedoff">token</span>, <span class="nottickedoff">lemma</span>]</span>
+<span class="lineno">   42 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt; [<span class="nottickedoff">lemma</span>]</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">in WordMeaningUnit</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="istickedoff">{ wmuSurfaceForm = token</span>
+<span class="lineno">   45 </span><span class="spaces">      </span><span class="istickedoff">, wmuLemma = lemma</span>
+<span class="lineno">   46 </span><span class="spaces">      </span><span class="istickedoff">, wmuPartOfSpeech = pos</span>
+<span class="lineno">   47 </span><span class="spaces">      </span><span class="istickedoff">, wmuMorphFeatures = morphFeatures</span>
+<span class="lineno">   48 </span><span class="spaces">      </span><span class="istickedoff">, wmuSyntacticRole = SynUnknown</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">, wmuSemanticClasses = semanticClasses</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">, wmuDiscourseFunctions = discourseFunctions</span>
+<span class="lineno">   51 </span><span class="spaces">      </span><span class="istickedoff">, wmuAmbiguityCandidates = ambiguityCandidates</span>
+<span class="lineno">   52 </span><span class="spaces">      </span><span class="istickedoff">, wmuConfidence = confidence</span>
+<span class="lineno">   53 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>assignSyntacticRoles :: [WordMeaningUnit] -&gt; [WordMeaningUnit]
+<span class="lineno">   56 </span><span class="decl"><span class="istickedoff">assignSyntacticRoles units =</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">zipWith assign [0 ..] units</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">rootIndex = findRootIndex units</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">assign idx unit =</span>
+<span class="lineno">   61 </span><span class="spaces">      </span><span class="istickedoff">unit {wmuSyntacticRole = inferRole rootIndex idx unit}</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>inferRole :: Int -&gt; Int -&gt; WordMeaningUnit -&gt; InputSyntacticRole
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">inferRole rootIndex idx unit</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">| idx == rootIndex = SynRoot</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">| wmuPartOfSpeech unit == PosVerb = SynPredicate</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">| idx &lt; rootIndex &amp;&amp; wmuPartOfSpeech unit `elem` [PosNoun, PosPronoun, PosNumeral] = SynSubject</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">| idx &gt; rootIndex &amp;&amp; wmuPartOfSpeech unit `elem` [PosNoun, PosPronoun, PosNumeral] = SynObject</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">| wmuPartOfSpeech unit == PosAdjective = SynAttribute</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="istickedoff">| wmuPartOfSpeech unit `elem` [PosAdverb, PosPreposition] = SynCircumstance</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">| wmuPartOfSpeech unit `elem` [PosConjunction, PosParticle, PosInterjection] = SynMarker</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = SynUnknown</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>findRootIndex :: [WordMeaningUnit] -&gt; Int
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">findRootIndex units =</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">case findIndex ((== PosVerb) . wmuPartOfSpeech) units of</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">Just idx -&gt; idx</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">case findIndex (\u -&gt; wmuPartOfSpeech u `elem` [PosNoun, PosPronoun]) units of</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">Just idx -&gt; idx</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; 0</span></span>
+
+</pre>
+</body>
+</html>

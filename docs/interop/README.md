@@ -13,16 +13,39 @@ operators, and audit consumers.  It covers three contracts:
 For normative architecture decisions, see the ADR series in
 `docs/adr/`.  For implementation specs, see `docs/phase-*-spec.md`.
 
+The canonical runtime/deployment contract source for the current hardening
+milestone is `docs/runtime_deployment_contract.md`.
+Worker-protocol details live in `docs/worker_protocol_v1.md`.
+Resource policy details live in `docs/resource_contract_matrix.md`.
+
 ---
 
-## 1. Trace JSON schema
+## 1. Machine-readable contracts
+
+QxFx0 exposes multiple JSON families. They are related, but they are not
+the same contract and must not be conflated.
+
+1. `TurnReplayTrace`
+   Stored in `turn_quality.replay_trace_json`. This is the canonical
+   per-turn audit/replay envelope.
+2. CLI/worker turn JSON
+   Returned by CLI `--json` and HTTP `/turn`. This is an operator/integrator
+   response envelope that includes rendered output plus selected runtime
+   diagnostics (`TurnJsonResponse` / worker turn payload).
+3. health/state JSON
+   Returned by worker `health` / `state` paths and HTTP readiness surfaces.
+   These are operational status contracts, not replay envelopes.
+
+The rest of this section documents only the canonical replay trace.
+
+## 1.1 Trace JSON schema
 
 The canonical per-turn trace is a JSON object produced by
 `TurnReplayTrace` (`src/QxFx0/Types/TurnProjection.hs`).  It is stored
-in `turn_quality.replay_trace_json` and returned by the CLI `--json`
-flag and the HTTP `/turn` endpoint.
+in `turn_quality.replay_trace_json`. It is not the same payload as the
+CLI `--json` or HTTP `/turn` response.
 
-### 1.1 Top-level envelope (always present)
+### 1.1.1 Top-level envelope (always present)
 
 | Field | JSON type | Semantics |
 |-------|-----------|-----------|
@@ -43,7 +66,7 @@ flag and the HTTP `/turn` endpoint.
 | `trcLinearizationOk` | boolean | Whether GF linearization succeeded. |
 | `trcFallbackReason` | string or `null` | Why a fallback renderer was used. |
 
-### 1.2 Routing & salience (Phases 5.5e, 8)
+### 1.1.2 Routing & salience (Phases 5.5e, 8)
 
 | Field | JSON type | Semantics |
 |-------|-----------|-----------|
@@ -55,7 +78,7 @@ flag and the HTTP `/turn` endpoint.
 | `trcDeliberationDivergence` | number or `null` | Count of differing axes / 4, in [0, 1]. |
 | `trcDeliberationNarrativeTone` | string or `null` | `NarrativeTone` tag rendered from the reconciled plan. |
 
-### 1.3 Essence layer (Phases 9–10)
+### 1.1.3 Essence layer (Phases 9–10)
 
 | Field | JSON type | Semantics |
 |-------|-----------|-----------|
@@ -64,7 +87,7 @@ flag and the HTTP `/turn` endpoint.
 | `trcEssenceAngstLevel` | number or `null` | `etAngstLevel` in [0, 1] of the post-turn trajectory. |
 | `trcEssenceTrigger` | string or `null` | `"angst_threshold"` or `"conatus_erosion"` on the commitment turn; otherwise `null`. |
 
-### 1.4 Shadow & divergence
+### 1.1.4 Shadow & divergence
 
 | Field | JSON type | Semantics |
 |-------|-----------|-----------|
@@ -78,7 +101,7 @@ flag and the HTTP `/turn` endpoint.
 | `trcDecisionDisposition` | string | `"advisory"`, `"deny"`, `"permit"`, `"repair"`. |
 | `trcLegitimacyReason` | string | `"reason_ok"`, `"reason_low_parser_confidence"`, etc. |
 
-### 1.5 Stability guarantees
+### 1.1.5 Stability guarantees
 
 - Field names are **additive-only** — new fields may appear in future
   phases, but existing field names are never renamed or removed without
@@ -167,13 +190,14 @@ the HTTP sidecar) and never reloaded without a restart.
 
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
-| `QXFX0_RUNTIME_MODE` | enum | `degraded` | `strict` requires all infra (Nix, Agda, soufflé, spaCy); `degraded` skips unavailable subsystems gracefully. |
-| `QXFX0_DB` | path | `.state/qxfx0.db` | SQLite database path. Created automatically if missing. |
+| `QXFX0_RUNTIME_MODE` | enum | `degraded` | `strict` requires the strict local runtime contour (DB/schema/GF/local embedding and configured local infra); `degraded` relaxes optional subsystems explicitly. |
+| `QXFX0_DB` | path | `.state/qxfx0.db` | Canonical SQLite database path. Created automatically if missing. |
+| `QXFX0_DB_PATH` | path | deprecated alias | Temporary compatibility alias for `QXFX0_DB`. Prefer `QXFX0_DB` in new deployments. |
 | `QXFX0_ROOT` | path | project checkout root | Used to resolve `spec/`, `migrations/`, and generated-artifact paths. |
 | `QXFX0_STATE_DIR` | path | `$QXFX0_ROOT/.state` | Directory for Agda witness JSON, HTTP PID files, etc. |
 | `QXFX0_SESSION_ID` | string | (none) | If set, the CLI `--session` default. |
-| `QXFX0_MAX_SESSION_LOCKS` | integer | 8 | Maximum concurrent session locks before backpressure. |
-| `QXFX0_SESSION_LOCK` | boolean | `0` | Set to `1` to enable session locking. |
+| `QXFX0_MAX_SESSION_LOCKS` | integer | 4096 | Maximum tracked session locks before overflow sharding/backpressure. |
+| `QXFX0_SESSION_LOCK` | boolean | `1` | Session locking is enabled by default. Set to `0`/`off` only for debug or test scenarios. |
 
 ### 3.2 HTTP sidecar (`http_runtime.py`)
 
@@ -184,7 +208,7 @@ the HTTP sidecar) and never reloaded without a restart.
 | `QXFX0_ALLOW_NON_LOOPBACK_HTTP` | boolean | `0` | Set to `1` to allow binding to `0.0.0.0` or external interfaces. |
 | `QXFX0_HTTP_RUNTIME` | path | auto-resolved | Explicit path to `scripts/http_runtime.py`. |
 | `QXFX0_API_KEY` | string | `""` | Bearer token for `/turn` and `/health`. Empty = no auth. |
-| `QXFX0_WORKERS` | integer | `0` | Number of background worker processes (`0` = synchronous). |
+| `QXFX0_WORKERS` | integer | legacy/ignored | Deprecated legacy knob. The sidecar logs `legacy_workers_ignored` and does not vary worker pool width from this variable. |
 | `QXFX0_WORKER_TIMEOUT_SECONDS` | float | `12.0` | Per-turn worker timeout. |
 | `QXFX0_MAX_SESSIONS` | integer | `128` | Maximum active HTTP sessions. |
 | `QXFX0_SESSION_TTL_SECONDS` | float | `900.0` | Session idle timeout. |
@@ -198,7 +222,8 @@ the HTTP sidecar) and never reloaded without a restart.
 
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
-| `QXFX0_EMBEDDING_BACKEND` | enum | `local-deterministic` | `local-deterministic` (hash-based, no network) or `remote-http` (calls external embedding API). |
+| `QXFX0_EMBEDDING_BACKEND` | enum | `local-deterministic` | `local-deterministic` (hash-based, no network) or `remote-http` (calls external embedding API). `remote-http` is authoritative only when explicitly set and paired with a valid reachable remote URL; invalid or unhealthy remote config is reported as not-ready and does not silently switch modes. |
+| `EMBEDDING_API_URL` | URL | unset | Optional remote embedding endpoint. This variable alone never enables remote mode; it is consulted only when `QXFX0_EMBEDDING_BACKEND=remote-http`. Accepted values are `https://...` or loopback `http://127.0.0.1/...`, `http://localhost/...`, `http://[::1]/...`. |
 | `QXFX0_MORPH_BACKEND` | enum | (platform default) | Morphology provider: `local`, `remote`, etc. |
 
 ### 3.4 Grammatical Framework (GF)
@@ -236,11 +261,11 @@ the HTTP sidecar) and never reloaded without a restart.
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
 | `QXFX0_REQUIRE_STRICT_RUNTIME` | boolean | `0` | `verify.sh` step 5: fail if strict runtime cannot initialise. |
-| `QXFX0_STRICT_EMBEDDING_BACKEND` | enum | `local-deterministic` | Embedding backend enforced in strict mode. |
+| `QXFX0_STRICT_EMBEDDING_BACKEND` | enum | `local-deterministic` | Embedding backend injected by verification/release scripts for strict probes. The runtime itself reads `QXFX0_EMBEDDING_BACKEND`; this variable is script-facing policy, not a second runtime selector. |
 | `QXFX0_ENFORCE_STRICT_GF_GATE` | boolean | `0` | Require GF compiler present in generated-artifact gate. |
 | `QXFX0_ENFORCE_HADDOCK_GATE` | boolean | `1` | Require every module to have a Haddock header. |
 | `QXFX0_ENABLE_COVERAGE_GATE` | boolean | `1` | Run HPC coverage gate (currently SKIP in low-RAM environments). |
-| `QXFX0_RUN_SLOW_TESTS` | enum | `auto` | `0`/`1`/`auto` — whether `verify.sh` runs `qxfx0-test-slow`. `auto` checks spaCy availability. |
+| `QXFX0_RUN_SLOW_TESTS` | enum | `auto` | `0`/`1`/`auto` — whether verification/release scripts run `qxfx0-test-slow`. `1` is explicit opt-in; `auto` remains conservative and may skip outside the extended profile. |
 | `QXFX0_SKIP_AGDA` | boolean | `0` | Skip Agda type-check in `verify.sh` (use when Agda is not installed). |
 | `QXFX0_REQUIRE_AGDA` | boolean | `1` | `release-smoke.sh`: treat missing Agda as FAIL rather than SKIP. |
 | `QXFX0_RELEASE_SMOKE_MODE` | enum | `strict` | `strict` = no skips allowed; `degraded-local` = infra skips become WARN. |
@@ -252,7 +277,7 @@ the HTTP sidecar) and never reloaded without a restart.
 
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
-| `QXFX0_ESSENCE_COMMITMENT_ENABLED` | boolean | `0` | **Default-off** feature flag. When `1`, `shouldCommit` may fire and `validatePlan` guards post-commitment plans. Flip only after corpus replay confirms zero `EssenceRupture` events. |
+| `QXFX0_ESSENCE_COMMITMENT_ENABLED` | boolean | ignored | Legacy/deprecated variable. Essence commitment is now law-driven at runtime; this variable no longer governs production behavior and remains only as historical/test documentation residue until removed. |
 
 ### 3.10 Test-only variables (never used in production)
 

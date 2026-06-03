@@ -1,0 +1,162 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Types.ExternalQuery
+<span class="lineno">    9 </span>Description : Types for external tool query transport (Phase 8).
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Typed error taxonomy and response envelope for LLM / mentor / script
+<span class="lineno">   12 </span>queries.  Kept pure and serialisable so the sandbox gate can replay
+<span class="lineno">   13 </span>responses deterministically.
+<span class="lineno">   14 </span>-}
+<span class="lineno">   15 </span>module QxFx0.Types.ExternalQuery
+<span class="lineno">   16 </span>  ( ExternalQueryError(..)
+<span class="lineno">   17 </span>  , ExternalQueryResponse(..)
+<span class="lineno">   18 </span>  , ExternalQueryConfig(..)
+<span class="lineno">   19 </span>  , TransportFallbackReason(..)
+<span class="lineno">   20 </span>  , renderExternalQueryError
+<span class="lineno">   21 </span>  , renderFallbackReason
+<span class="lineno">   22 </span>  ) where
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   25 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   26 </span>import Data.Text (Text)
+<span class="lineno">   27 </span>import qualified Data.Text as T
+<span class="lineno">   28 </span>import GHC.Generics (Generic)
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>-- | Typed error taxonomy for external query failures.
+<span class="lineno">   31 </span>--
+<span class="lineno">   32 </span>-- Network and transport errors are distinguished from content-level
+<span class="lineno">   33 </span>-- errors so the learning loop can decide whether to retry, fallback,
+<span class="lineno">   34 </span>-- or reject.
+<span class="lineno">   35 </span>data ExternalQueryError
+<span class="lineno">   36 </span>  = EqeNetworkUnavailable !Text
+<span class="lineno">   37 </span>    -- ^ DNS timeout, TLS failure, or no route to host.
+<span class="lineno">   38 </span>  | EqeAuthFailure !Text
+<span class="lineno">   39 </span>    -- ^ 401 / 403 or missing API key.
+<span class="lineno">   40 </span>  | EqeRateLimited !Text
+<span class="lineno">   41 </span>    -- ^ 429 or quota exceeded; back-off recommended.
+<span class="lineno">   42 </span>  | EqeServerError !Text
+<span class="lineno">   43 </span>    -- ^ 5xx from upstream.
+<span class="lineno">   44 </span>  | EqeTimeout !Text
+<span class="lineno">   45 </span>    -- ^ In-application deadline exceeded.
+<span class="lineno">   46 </span>  | EqeInvalidResponse !Text
+<span class="lineno">   47 </span>    -- ^ Response body is not valid JSON / schema.
+<span class="lineno">   48 </span>  | EqeFallback !TransportFallbackReason
+<span class="lineno">   49 </span>    -- ^ The runtime intentionally fell back instead of attempting an
+<span class="lineno">   50 </span>    --   authoritative upstream query. This is non-authoritative and
+<span class="lineno">   51 </span>    --   must not be treated as learning success.
+<span class="lineno">   52 </span>  | EqeEmptyResponse
+<span class="lineno">   53 </span>    -- ^ Response body is empty after trimming.
+<span class="lineno">   54 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   55 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>-- | Normalised response from an external tool.
+<span class="lineno">   58 </span>--
+<span class="lineno">   59 </span>-- The raw body is kept for telemetry / debugging, but the
+<span class="lineno">   60 </span>-- 'eqrStructured' field is what the validator and parser consume.
+<span class="lineno">   61 </span>data ExternalQueryResponse = ExternalQueryResponse
+<span class="lineno">   62 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">eqrRawBody</span></span></span>      :: !Text
+<span class="lineno">   63 </span>    -- ^ Original response body (truncated at 4 KiB by transport).
+<span class="lineno">   64 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqrStructured</span></span></span>   :: !Text
+<span class="lineno">   65 </span>    -- ^ Extracted structured payload (JSON schema or constrained text).
+<span class="lineno">   66 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eqrToolName</span></span></span>     :: !Text
+<span class="lineno">   67 </span>    -- ^ Canonical tool identifier for reliability tracking.
+<span class="lineno">   68 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">eqrLatencyMs</span></span></span>    :: !Int
+<span class="lineno">   69 </span>    -- ^ Round-trip latency in milliseconds (for telemetry).
+<span class="lineno">   70 </span>  }
+<span class="lineno">   71 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   72 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>-- | Explicit configuration contract for external query transport.
+<span class="lineno">   75 </span>-- All fields are optional with safe defaults; the builder in
+<span class="lineno">   76 </span>-- 'Bridge.ExternalLLM' fills them from env vars.
+<span class="lineno">   77 </span>data ExternalQueryConfig = ExternalQueryConfig
+<span class="lineno">   78 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcTransportMode</span></span></span>   :: !Text
+<span class="lineno">   79 </span>    -- ^ &quot;mock&quot; | &quot;mistral&quot;
+<span class="lineno">   80 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcApiKey</span></span></span>          :: !(Maybe Text)
+<span class="lineno">   81 </span>    -- ^ Redacted in 'Show' / logs.
+<span class="lineno">   82 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcModel</span></span></span>           :: !Text
+<span class="lineno">   83 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcEndpoint</span></span></span>        :: !Text
+<span class="lineno">   84 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcTimeoutMs</span></span></span>       :: !Int
+<span class="lineno">   85 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">eqcFallbackReason</span></span></span>  :: !(Maybe TransportFallbackReason)
+<span class="lineno">   86 </span>    -- ^ If transport fell back to mock, why.
+<span class="lineno">   87 </span>  }
+<span class="lineno">   88 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   89 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show ExternalQueryConfig</span></span></span></span> where
+<span class="lineno">   92 </span>  <span class="decl"><span class="istickedoff">show cfg =</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">&quot;ExternalQueryConfig { transportMode=&quot; ++ show (eqcTransportMode cfg)</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="istickedoff">++ &quot;, apiKey=&lt;REDACTED&gt;&quot;</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">++ &quot;, model=&quot; ++ show (eqcModel cfg)</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">++ &quot;, endpoint=&quot; ++ show (eqcEndpoint cfg)</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">++ &quot;, timeoutMs=&quot; ++ show (eqcTimeoutMs cfg)</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="istickedoff">++ &quot;, fallbackReason=&quot; ++ show (eqcFallbackReason cfg)</span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="istickedoff">++ &quot; }&quot;</span></span>
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>-- | Why the transport fell back to mock instead of using the real
+<span class="lineno">  102 </span>-- Mistral API.  Used for telemetry and operator diagnosis.
+<span class="lineno">  103 </span>data TransportFallbackReason
+<span class="lineno">  104 </span>  = TfrEnvNotSet
+<span class="lineno">  105 </span>    -- ^ QXFX0_LLM_TRANSPORT is not &quot;mistral&quot;.
+<span class="lineno">  106 </span>  | TfrKeyMissing
+<span class="lineno">  107 </span>    -- ^ QXFX0_MISTRAL_API_KEY is absent or empty.
+<span class="lineno">  108 </span>  | TfrExplicitMock
+<span class="lineno">  109 </span>    -- ^ User explicitly requested mock mode.
+<span class="lineno">  110 </span>  | TfrUnsafeEndpoint
+<span class="lineno">  111 </span>    -- ^ Endpoint does not use HTTPS.
+<span class="lineno">  112 </span>  | TfrBlockedHost
+<span class="lineno">  113 </span>    -- ^ Endpoint host is not in the official allowlist and untrusted-host
+<span class="lineno">  114 </span>    -- override is not enabled.
+<span class="lineno">  115 </span>  | TfrUntrustedOverrideRejected
+<span class="lineno">  116 </span>    -- ^ Untrusted-host override was requested but the runtime was not in an
+<span class="lineno">  117 </span>    -- explicit dev/test or double-confirmed mode.
+<span class="lineno">  118 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  119 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  120 </span>
+<span class="lineno">  121 </span>renderFallbackReason :: TransportFallbackReason -&gt; Text
+<span class="lineno">  122 </span><span class="decl"><span class="istickedoff">renderFallbackReason TfrEnvNotSet    = &quot;env_not_set&quot;</span>
+<span class="lineno">  123 </span><span class="spaces"></span><span class="istickedoff">renderFallbackReason TfrKeyMissing = &quot;key_missing&quot;</span>
+<span class="lineno">  124 </span><span class="spaces"></span><span class="istickedoff">renderFallbackReason TfrExplicitMock = <span class="nottickedoff">&quot;explicit_mock&quot;</span></span>
+<span class="lineno">  125 </span><span class="spaces"></span><span class="istickedoff">renderFallbackReason TfrUnsafeEndpoint = <span class="nottickedoff">&quot;unsafe_endpoint&quot;</span></span>
+<span class="lineno">  126 </span><span class="spaces"></span><span class="istickedoff">renderFallbackReason TfrBlockedHost = <span class="nottickedoff">&quot;blocked_host&quot;</span></span>
+<span class="lineno">  127 </span><span class="spaces"></span><span class="istickedoff">renderFallbackReason TfrUntrustedOverrideRejected = <span class="nottickedoff">&quot;untrusted_override_rejected&quot;</span></span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>renderExternalQueryError :: ExternalQueryError -&gt; Text
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">renderExternalQueryError err =</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">case err of</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">EqeNetworkUnavailable t -&gt; <span class="nottickedoff">T.concat [&quot;network_unavailable:&quot;, t]</span></span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">EqeAuthFailure t        -&gt; <span class="nottickedoff">T.concat [&quot;auth_failure:&quot;, t]</span></span>
+<span class="lineno">  134 </span><span class="spaces">    </span><span class="istickedoff">EqeRateLimited t        -&gt; <span class="nottickedoff">T.concat [&quot;rate_limited:&quot;, t]</span></span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="istickedoff">EqeServerError t        -&gt; <span class="nottickedoff">T.concat [&quot;server_error:&quot;, t]</span></span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="istickedoff">EqeTimeout t            -&gt; <span class="nottickedoff">T.concat [&quot;timeout:&quot;, t]</span></span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">EqeInvalidResponse t      -&gt; <span class="nottickedoff">T.concat [&quot;invalid_response:&quot;, t]</span></span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="istickedoff">EqeFallback reason      -&gt; T.concat [&quot;fallback:&quot;, renderFallbackReason reason]</span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">EqeEmptyResponse        -&gt; <span class="nottickedoff">&quot;empty_response&quot;</span></span></span>
+
+</pre>
+</body>
+</html>

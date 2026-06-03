@@ -8,6 +8,8 @@ module Test.Suite.SemanticCorpus
 import Control.Monad (forM_, unless, when)
 import Data.Aeson (FromJSON(..), eitherDecodeStrict', withObject, (.:))
 import Data.Char (isAlphaNum)
+import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -18,7 +20,7 @@ import Test.HUnit
 import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.Semantic.Logic (runSemanticLogic)
 import QxFx0.Semantic.MeaningAtoms (collectAtoms)
-import QxFx0.Semantic.Proposition (parseProposition)
+import QxFx0.Semantic.Proposition (PropositionType(..), detectKeywordFallbackType, parseProposition)
 import QxFx0.Types (ClusterDef(..), NixGuardStatus(..), ipfCanonicalFamily, ipfFocusEntity, ipfFocusNominative)
 
 data SemanticCorpusCase = SemanticCorpusCase
@@ -53,6 +55,7 @@ semanticCorpusTests =
   [ TestLabel "semantic corpus file has expected shape" (TestCase testSemanticCorpusShape)
   , TestLabel "semantic corpus P0/P1 pure invariants hold" (TestCase testSemanticCorpusPureInvariants)
   , TestLabel "semantic corpus NixGuard degradation is not semantic repair" (TestCase testNixGuardCorpusDiagnostics)
+  , TestLabel "detectKeywordFallbackType matcher inventory has breadth" (TestCase testFallbackMatcherInventoryHasBreadth)
   ]
 
 testSemanticCorpusShape :: Assertion
@@ -90,6 +93,38 @@ testSemanticCorpusPureInvariants = do
       assertBool
         (caseLabel c <> " canonical family must stay in expected routing band; actual=" <> T.unpack canonicalFamily)
         (canonicalFamily `elem` sccExpectedFamilyAnyOf c)
+
+-- | Regression lock for ADR-0030 §5.1.  A previously shipped bug
+-- truncated 'detectKeywordFallbackType' to only 3 of 31 matchers
+-- (generative\/contemplative\/exploratory), so 28 categories of input
+-- silently fell through.  This test exercises 8 single-token inputs
+-- whose target matchers are NOT among the three that survived the
+-- truncation; if the fallback chain regresses to that state, every
+-- one of these inputs returns 'Nothing' and the breadth assertion
+-- fails decisively.
+testFallbackMatcherInventoryHasBreadth :: Assertion
+testFallbackMatcherInventoryHasBreadth = do
+  let inputs :: [[Text]]
+      inputs =
+        [ ["definition"]      -- DefinitionalQ
+        , ["distinguish"]     -- DistinctionQ
+        , ["entails"]         -- GroundQ
+        , ["why"]             -- PurposeQ
+        , ["suppose"]         -- HypotheticalQ
+        , ["confused"]        -- RepairSignal
+        , ["counterexample"]  -- ConfrontQ
+        , ["truth"]           -- EpistemicQ
+        ]
+      results = mapMaybe detectKeywordFallbackType inputs
+      distinct = Set.size (Set.fromList results)
+  assertBool
+    ( "detectKeywordFallbackType matcher inventory regressed; expected at "
+   ++ "least 4 distinct PropositionType results across 8 fallback-targeted "
+   ++ "single-token inputs but got " ++ show distinct
+   ++ " (results=" ++ show results ++ "). "
+   ++ "See ADR-0030 §5.1 regression."
+    )
+    (distinct >= 4)
 
 testNixGuardCorpusDiagnostics :: Assertion
 testNixGuardCorpusDiagnostics = do

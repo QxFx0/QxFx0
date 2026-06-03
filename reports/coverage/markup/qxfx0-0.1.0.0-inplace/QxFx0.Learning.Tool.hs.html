@@ -1,0 +1,216 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Learning.Tool
+<span class="lineno">    9 </span>Description : WP2 — External tool awareness and selection.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Defines typed profiles for external knowledge sources (LLM, human mentor,
+<span class="lineno">   12 </span>local calibration script) and a pure selection function that maps a
+<span class="lineno">   13 </span>'LearningNeed' to the most appropriate available tool based on domain
+<span class="lineno">   14 </span>match and reliability weighting.
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>No runtime code is auto-patched by a tool; only validated config/rules
+<span class="lineno">   17 </span>may be updated through the closed loop (WP4).
+<span class="lineno">   18 </span>-}
+<span class="lineno">   19 </span>module QxFx0.Learning.Tool
+<span class="lineno">   20 </span>  ( ToolDomain(..)
+<span class="lineno">   21 </span>  , ExternalTool(..)
+<span class="lineno">   22 </span>  , selectTool
+<span class="lineno">   23 </span>  , selectToolWithReliability
+<span class="lineno">   24 </span>  , updateToolReliability
+<span class="lineno">   25 </span>  , renderTool
+<span class="lineno">   26 </span>  , defaultAvailableTools
+<span class="lineno">   27 </span>  ) where
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   30 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">   31 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   32 </span>import Data.Text (Text)
+<span class="lineno">   33 </span>import qualified Data.Text as T
+<span class="lineno">   34 </span>import GHC.Generics (Generic)
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>import QxFx0.Learning.Need (LearningNeed(..))
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>-- | Domain of expertise an external tool can cover.
+<span class="lineno">   39 </span>data ToolDomain
+<span class="lineno">   40 </span>  = DomainSalience
+<span class="lineno">   41 </span>    -- ^ Tool can provide salience-weight calibration data.
+<span class="lineno">   42 </span>  | DomainKeyword
+<span class="lineno">   43 </span>    -- ^ Tool can supply keyword / ontology coverage.
+<span class="lineno">   44 </span>  | DomainLexicon
+<span class="lineno">   45 </span>    -- ^ Tool can extend morphology or lexicon entries.
+<span class="lineno">   46 </span>  | DomainGeneral
+<span class="lineno">   47 </span>    -- ^ General-purpose reasoning (fallback, lower priority).
+<span class="lineno">   48 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   49 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>-- | Typed profile of an external knowledge source.
+<span class="lineno">   52 </span>data ExternalTool = ExternalTool
+<span class="lineno">   53 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">etName</span></span></span>        :: !Text
+<span class="lineno">   54 </span>    -- ^ Human-readable identifier (e.g. &quot;local-calibration-script&quot;).
+<span class="lineno">   55 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etDomain</span></span></span>      :: !ToolDomain
+<span class="lineno">   56 </span>    -- ^ Primary domain this tool covers.
+<span class="lineno">   57 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etReliability</span></span></span> :: !Double
+<span class="lineno">   58 </span>    -- ^ Historical reliability in [0, 1].  Higher = more trustworthy.
+<span class="lineno">   59 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">etValidatable</span></span></span> :: !Bool
+<span class="lineno">   60 </span>    -- ^ Whether outputs from this tool can be run through the
+<span class="lineno">   61 </span>    --   verify→simulate gate (WP4).  Non-validatable tools are
+<span class="lineno">   62 </span>    --   rejected unless no validatable alternative exists.
+<span class="lineno">   63 </span>  }
+<span class="lineno">   64 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   65 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>-- | Map a 'LearningNeed' to the 'ToolDomain' it requires.
+<span class="lineno">   68 </span>needDomain :: LearningNeed -&gt; Maybe ToolDomain
+<span class="lineno">   69 </span><span class="decl"><span class="istickedoff">needDomain NeedSalienceCalibration = Just DomainSalience</span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="istickedoff">needDomain NeedKeywordEnrichment   = Just DomainKeyword</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="istickedoff">needDomain NeedLexiconExtension    = Just DomainLexicon</span>
+<span class="lineno">   72 </span><span class="spaces"></span><span class="istickedoff">needDomain NeedNone                = Nothing</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>-- | Select the best external tool for a given 'LearningNeed'.
+<span class="lineno">   75 </span>--
+<span class="lineno">   76 </span>-- Rules:
+<span class="lineno">   77 </span>-- 1. If 'NeedNone', no tool is selected.
+<span class="lineno">   78 </span>-- 2. Filter tools whose domain matches the need.
+<span class="lineno">   79 </span>-- 3. Prefer 'etValidatable = True'; if none, fall back to the
+<span class="lineno">   80 </span>--    highest-reliability non-validatable tool.
+<span class="lineno">   81 </span>-- 4. Among the candidate set, pick the one with highest
+<span class="lineno">   82 </span>--    'etReliability'.  Ties are broken by declaration order
+<span class="lineno">   83 </span>--    (stable, deterministic).
+<span class="lineno">   84 </span>selectTool :: LearningNeed -&gt; [ExternalTool] -&gt; Maybe ExternalTool
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">selectTool need tools = do</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">domain &lt;- needDomain need</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">let matching = filter ((== domain) . etDomain) tools</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">if null matching</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">then do</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">-- Fallback: if no domain-specific tool, try DomainGeneral</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">let general = filter ((== DomainGeneral) . etDomain) tools</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">pickBest general</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">else pickBest matching</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">pickBest candidates</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">| null candidates = Nothing</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>       =</span>
+<span class="lineno">   98 </span><span class="spaces">          </span><span class="istickedoff">let validatable = filter etValidatable candidates</span>
+<span class="lineno">   99 </span><span class="spaces">              </span><span class="istickedoff">pool = if <span class="tickonlyfalse">null validatable</span> then <span class="nottickedoff">candidates</span> else validatable</span>
+<span class="lineno">  100 </span><span class="spaces">          </span><span class="istickedoff">in maximumByReliability pool</span>
+<span class="lineno">  101 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  102 </span><span class="spaces">    </span><span class="istickedoff">-- | Total: returns 'Nothing' only for an empty list.</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="istickedoff">maximumByReliability :: [ExternalTool] -&gt; Maybe ExternalTool</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">maximumByReliability [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">maximumByReliability (x:xs) = Just (go x xs)</span>
+<span class="lineno">  106 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  107 </span><span class="spaces">        </span><span class="istickedoff">go best [] = best</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">go best (y:ys)</span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">| etReliability y &gt; etReliability best = go y ys</span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>                            = go best ys</span></span>
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>-- | WP5: variant of 'selectTool' that overlays dynamic reliability
+<span class="lineno">  113 </span>-- from a runtime-maintained map.  If a tool's name is present in the
+<span class="lineno">  114 </span>-- map, the map value overrides 'etReliability' for selection
+<span class="lineno">  115 </span>-- purposes only; the static profile is not mutated.
+<span class="lineno">  116 </span>selectToolWithReliability
+<span class="lineno">  117 </span>  :: LearningNeed
+<span class="lineno">  118 </span>  -&gt; M.Map Text Double   -- ^ dynamic reliability overrides
+<span class="lineno">  119 </span>  -&gt; [ExternalTool]
+<span class="lineno">  120 </span>  -&gt; Maybe ExternalTool
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">selectToolWithReliability need relMap tools =</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">let tools' = map (\t -&gt; case M.lookup (etName t) relMap of</span>
+<span class="lineno">  123 </span><span class="spaces">                            </span><span class="istickedoff">Just r  -&gt; t { etReliability = clamp01 r }</span>
+<span class="lineno">  124 </span><span class="spaces">                            </span><span class="istickedoff">Nothing -&gt; t)</span>
+<span class="lineno">  125 </span><span class="spaces">                 </span><span class="istickedoff">tools</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">in selectTool need tools'</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">clamp01 x = max 0.0 (min 1.0 x)</span></span>
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>-- | WP5: update tool reliability after an outcome.
+<span class="lineno">  131 </span>--
+<span class="lineno">  132 </span>-- * Acceptance → +0.05 (capped at 1.0)
+<span class="lineno">  133 </span>-- * Rejection  → -0.10 (floored at 0.0)
+<span class="lineno">  134 </span>--
+<span class="lineno">  135 </span>-- These deltas are chosen so that 3 consecutive rejections drop a
+<span class="lineno">  136 </span>-- perfectly reliable tool below 0.7, making it less attractive than
+<span class="lineno">  137 </span>-- a fresh alternative.
+<span class="lineno">  138 </span>updateToolReliability :: Text -&gt; Bool -&gt; M.Map Text Double -&gt; M.Map Text Double
+<span class="lineno">  139 </span><span class="decl"><span class="istickedoff">updateToolReliability toolName accepted relMap =</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">let current = M.findWithDefault 0.5 toolName relMap</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">delta = if accepted then 0.05 else (-0.10)</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">updated = clamp01 (current + delta)</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">in M.insert toolName updated relMap</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">clamp01 x = max 0.0 (min 1.0 x)</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>-- | Render an 'ExternalTool' to a short telemetry tag.
+<span class="lineno">  148 </span>renderTool :: ExternalTool -&gt; Text
+<span class="lineno">  149 </span><span class="decl"><span class="nottickedoff">renderTool t = T.concat</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="nottickedoff">[ etName t</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="nottickedoff">, &quot;|domain=&quot;</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="nottickedoff">, renderDomain (etDomain t)</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="nottickedoff">, &quot;|reliability=&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="nottickedoff">, T.pack (show (etReliability t))</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="nottickedoff">, &quot;|validatable=&quot;</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="nottickedoff">, if etValidatable t then &quot;1&quot; else &quot;0&quot;</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>renderDomain :: ToolDomain -&gt; Text
+<span class="lineno">  160 </span><span class="decl"><span class="nottickedoff">renderDomain DomainSalience = &quot;salience&quot;</span>
+<span class="lineno">  161 </span><span class="spaces"></span><span class="nottickedoff">renderDomain DomainKeyword    = &quot;keyword&quot;</span>
+<span class="lineno">  162 </span><span class="spaces"></span><span class="nottickedoff">renderDomain DomainLexicon    = &quot;lexicon&quot;</span>
+<span class="lineno">  163 </span><span class="spaces"></span><span class="nottickedoff">renderDomain DomainGeneral    = &quot;general&quot;</span></span>
+<span class="lineno">  164 </span>
+<span class="lineno">  165 </span>-- | Default set of external tools registered in the system.
+<span class="lineno">  166 </span>-- These are static profiles; runtime does not mutate this list.
+<span class="lineno">  167 </span>defaultAvailableTools :: [ExternalTool]
+<span class="lineno">  168 </span><span class="decl"><span class="istickedoff">defaultAvailableTools =</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">[ ExternalTool</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">{ etName        = &quot;local-calibration-script&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">, etDomain      = DomainSalience</span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">, etReliability = 0.95</span>
+<span class="lineno">  173 </span><span class="spaces">      </span><span class="istickedoff">, etValidatable = True</span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">, ExternalTool</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff">{ etName        = &quot;human-mentor&quot;</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff">, etDomain      = DomainKeyword</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="istickedoff">, etReliability = 0.90</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff">, etValidatable = False</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  181 </span><span class="spaces">  </span><span class="istickedoff">, ExternalTool</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">{ etName        = &quot;llm-augment&quot;</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="istickedoff">, etDomain      = DomainLexicon</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">, etReliability = 0.70</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">, etValidatable = True</span>
+<span class="lineno">  186 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  187 </span><span class="spaces">  </span><span class="istickedoff">, ExternalTool</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="istickedoff">{ etName        = &quot;llm-general&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="istickedoff">, etDomain      = DomainGeneral</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="istickedoff">, etReliability = 0.60</span>
+<span class="lineno">  191 </span><span class="spaces">      </span><span class="istickedoff">, etValidatable = False</span>
+<span class="lineno">  192 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  193 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+
+</pre>
+</body>
+</html>

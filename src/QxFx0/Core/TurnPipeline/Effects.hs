@@ -35,7 +35,6 @@ import QxFx0.Self.Field
   , emptyField
   , mkResonance
   , deriveFieldConfidence
-  , defaultFieldHeuristics
   , computeConsolidation
   , computeCounterfactual
   , computeAtmosphere
@@ -185,6 +184,7 @@ data PrepareEffectRequest
 
 data PrepareEffectPlan = PrepareEffectPlan
   { pepStatic :: !PrepareStatic
+  , pepCapturedCurrentTime :: !UTCTime
   , pepEmbeddingRequest :: !PrepareEffectRequest
   , pepNixGuardRequest :: !PrepareEffectRequest
   , pepConsciousnessRequest :: !PrepareEffectRequest
@@ -238,7 +238,7 @@ buildPrepareEffectPlan ss input currentTime =
       -- Phase 7: populate four of five Field components via
       -- the calibrated 'FieldHeuristics' compute functions.
       -- 'fieldConfidence' is derived below.
-      fieldHeuristics = defaultFieldHeuristics
+      fieldHeuristics = ssFieldHeuristics ss
       preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
         , fieldAtmosphere     = computeAtmosphere fieldHeuristics
@@ -284,6 +284,7 @@ buildPrepareEffectPlan ss input currentTime =
       }
   in PrepareEffectPlan
       { pepStatic = static
+      , pepCapturedCurrentTime = currentTime
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
       , pepConsciousnessRequest =

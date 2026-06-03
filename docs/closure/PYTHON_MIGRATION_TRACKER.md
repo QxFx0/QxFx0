@@ -46,9 +46,9 @@ wave are:
 
 | Script | Closure class | Status | Replacement target |
 |---|---|---|---|
-| `scripts/check_schema_consistency.py` | A. canonical-build | PENDING | Haskell verify/contract command (TBD; see ledger §7) |
-| `scripts/check_schema_contract.py` | A. canonical-build | PENDING | Same command as above (likely combined) |
-| `scripts/sync_embedded_sql.py` | A. canonical-build | PENDING | Haskell generator + `--check` mode |
+| `scripts/check_schema_consistency.py` | A. canonical-build | IN-FLIGHT | `cabal run qxfx0-main -- --check-schema-consistency` wired in working tree; deletion pending build/test/CI |
+| `scripts/check_schema_contract.py` | A. canonical-build | IN-FLIGHT | `cabal run qxfx0-main -- --check-schema-contract` wired in working tree; deletion pending build/test/CI |
+| `scripts/sync_embedded_sql.py` | A. canonical-build | IN-FLIGHT | `cabal run qxfx0-main -- --check-embedded-sql` and `--sync-embedded-sql` wired in working tree; deletion pending build/test/CI |
 | `scripts/http_runtime.py` | B. canonical-runtime (legacy) | PENDING | Confirmed not invoked after Gate P5-1; file deleted |
 | `services/morphology/server.py` | B. canonical-runtime (ACTIVE) | PENDING | Haskell morphology parser (`QxFx0.Lexicon.Morphology.Parser`) |
 
@@ -131,20 +131,20 @@ The summary status as of 2026-06-02:
 
 | Class | Total | PENDING | IN-FLIGHT | REPLACED | DELETED | KEEP |
 |---|---|---|---|---|---|---|
-| A. canonical-build | 3 | 3 | 0 | 0 | 0 | 0 |
+| A. canonical-build | 3 | 0 | 3 | 0 | 0 | 0 |
 | B. canonical-runtime | 2 | 2 | 0 | 0 | 0 | 0 |
 | C. supplier-build | 17 | 17 | 0 | 0 | 0 | 0 |
 | D. eval-only | 10 | 10 | 0 | 0 | 0 | 0 |
 | E. test-only | 2 | 2 | 0 | 0 | 0 | 0 |
 | F. dead | 0 | 0 | 0 | 0 | 0 | 0 |
-| **Total** | **34** | **34** | **0** | **0** | **0** | **0** |
+| **Total** | **34** | **31** | **3** | **0** | **0** | **0** |
 
 (The total is 34, not 31, because the ledger
 counts `services/morphology/server.py` and 2
 `test/test_import_*.py` files; this tracker
 includes them for completeness.)
 
-**0/34 scripts are migrated as of 2026-06-02.**
+**0/34 scripts are fully migrated as of 2026-06-02, 3 are now in-flight in the working tree.**
 The closure plan's "Python free" goal is the work
 list above.
 
@@ -198,7 +198,7 @@ The discipline of this tracker is:
 - **The CI enforces the migration.** A Python
   script in the authority path is a violation
   (per `check_architecture.sh` rules [3] and [4]
-  + the new rules [13]–[19] for the role split).
+  + the new rules [13]–[20] for the role split).
   The `KEEP` outcome requires a supplier-only
   retention justification in
   `PYTHON_SUPPLIER_ALLOWLIST.md`.
@@ -215,11 +215,10 @@ with codebase access:
 
 1. Reads `PYTHON_STATUS_LEDGER.md §7` (the
    proposed Haskell surface).
-2. Lands the Haskell commands in `app/CLI/`.
-3. Updates `check_architecture.sh` [10] to call
-   the Haskell command.
-4. Verifies the Haskell command is in CI.
-5. Deletes the 3 Python scripts.
+2. Verifies the Haskell commands already wired in `app/CLI/` and
+   the gate-script rewiring compile and pass CI.
+3. Deletes the 3 Python scripts.
+4. Regenerates this tracker and the ledger.
 
 The total estimate is **M** (1 week) for a
 contributor with codebase access.

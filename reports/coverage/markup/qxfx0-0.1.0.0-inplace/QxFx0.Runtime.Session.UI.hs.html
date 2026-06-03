@@ -1,0 +1,469 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Human-facing session help and compact state summaries. -}
+<span class="lineno">    4 </span>module QxFx0.Runtime.Session.UI
+<span class="lineno">    5 </span>  ( printHelp
+<span class="lineno">    6 </span>  , printStateSummary
+<span class="lineno">    7 </span>  , governanceSummaryLines
+<span class="lineno">    8 </span>  , governanceAuthorityStatus
+<span class="lineno">    9 </span>  ) where
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import Control.Exception (SomeException, finally, try)
+<span class="lineno">   12 </span>import qualified Data.Aeson as Aeson
+<span class="lineno">   13 </span>import qualified Data.Aeson.Key as K
+<span class="lineno">   14 </span>import qualified Data.Aeson.KeyMap as KM
+<span class="lineno">   15 </span>import qualified Data.ByteString.Lazy as BL
+<span class="lineno">   16 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   17 </span>import qualified Data.Set as S
+<span class="lineno">   18 </span>import qualified Data.Vector as V
+<span class="lineno">   19 </span>import Data.Text (Text)
+<span class="lineno">   20 </span>import qualified Data.Text as T
+<span class="lineno">   21 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   22 </span>import qualified Data.Text.IO as T
+<span class="lineno">   23 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   24 </span>import QxFx0.Core.MeaningGraph (graphStats)
+<span class="lineno">   25 </span>import QxFx0.Governance.Replay (rebuildGovernedViews)
+<span class="lineno">   26 </span>import QxFx0.Runtime.Session.Types
+<span class="lineno">   27 </span>  ( Session(..)
+<span class="lineno">   28 </span>  , StateOrigin(..)
+<span class="lineno">   29 </span>  , renderRuntimeOutputMode
+<span class="lineno">   30 </span>  )
+<span class="lineno">   31 </span>import QxFx0.Runtime.Wiring (withRuntimeDb)
+<span class="lineno">   32 </span>import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
+<span class="lineno">   33 </span>import QxFx0.Self.Field (defaultFieldHeuristics)
+<span class="lineno">   34 </span>import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), renderEssenceMode)
+<span class="lineno">   35 </span>import QxFx0.Self.Perspective.Reduce (buildActivePerspectiveProjections)
+<span class="lineno">   36 </span>import QxFx0.Self.Salience (defaultSalienceWeights)
+<span class="lineno">   37 </span>import QxFx0.Types.Domain (atCurrentLoad)
+<span class="lineno">   38 </span>import QxFx0.Types.Domain.R5 (R5CoreProfile(..), R5PolicyProfile(..), defaultR5CoreProfile, defaultR5PolicyProfile)
+<span class="lineno">   39 </span>import QxFx0.Types.Observability (KernelPulse(..))
+<span class="lineno">   40 </span>import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
+<span class="lineno">   41 </span>import QxFx0.Types.State.Governance
+<span class="lineno">   42 </span>  ( GovernanceDecision(..)
+<span class="lineno">   43 </span>  , GovernanceEvent(..)
+<span class="lineno">   44 </span>  , GovernanceEventEnvelope(..)
+<span class="lineno">   45 </span>  , GovernanceProjection(..)
+<span class="lineno">   46 </span>  , GovernanceLifecycleStatus(..)
+<span class="lineno">   47 </span>  , GovernanceProvenanceLink(..)
+<span class="lineno">   48 </span>  , GovernedSubject(..)
+<span class="lineno">   49 </span>  , EpistemicStatus(..)
+<span class="lineno">   50 </span>  , renderEpistemicStatus
+<span class="lineno">   51 </span>  , governanceProvenanceTrail
+<span class="lineno">   52 </span>  , governanceHistoryFingerprint
+<span class="lineno">   53 </span>  )
+<span class="lineno">   54 </span>import QxFx0.Types.State
+<span class="lineno">   55 </span>  ( EgoState(..)
+<span class="lineno">   56 </span>  , PerspectiveRegistry(..)
+<span class="lineno">   57 </span>  , SystemState(..)
+<span class="lineno">   58 </span>  , ssGovernanceHistory
+<span class="lineno">   59 </span>  , ssGovernanceProjection
+<span class="lineno">   60 </span>  , ssGovernanceRuntimeFault
+<span class="lineno">   61 </span>  , ssPerspectiveRegistry
+<span class="lineno">   62 </span>  , ssEgo
+<span class="lineno">   63 </span>  , ssEssence
+<span class="lineno">   64 </span>  , ssFieldHeuristics
+<span class="lineno">   65 </span>  , ssKernelPulse
+<span class="lineno">   66 </span>  , ssLastFamily
+<span class="lineno">   67 </span>  , ssLastTopic
+<span class="lineno">   68 </span>  , ssMeaningGraph
+<span class="lineno">   69 </span>  , ssSalienceWeights
+<span class="lineno">   70 </span>  , ssTrace
+<span class="lineno">   71 </span>  , ssTruthContractStatus
+<span class="lineno">   72 </span>  , ssDialoguePhase
+<span class="lineno">   73 </span>  , ssTurnCount
+<span class="lineno">   74 </span>  )
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>data ReplayTraceSummary = ReplayTraceSummary
+<span class="lineno">   77 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsRecoveryCause</span></span></span> :: !(Maybe Text)
+<span class="lineno">   78 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsRecoveryStrategy</span></span></span> :: !(Maybe Text)
+<span class="lineno">   79 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsRecoveryEvidence</span></span></span> :: ![Text]
+<span class="lineno">   80 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsShadowSeverity</span></span></span> :: !(Maybe Text)
+<span class="lineno">   81 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsLearningValidationStatus</span></span></span> :: !(Maybe Text)
+<span class="lineno">   82 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsFallbackReason</span></span></span> :: !(Maybe Text)
+<span class="lineno">   83 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsAuthorityClass</span></span></span> :: !(Maybe Text)
+<span class="lineno">   84 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsTruthContractStatus</span></span></span> :: !(Maybe Text)
+<span class="lineno">   85 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsAssemblyPath</span></span></span> :: !(Maybe Text)
+<span class="lineno">   86 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsReplayProvenanceStatus</span></span></span> :: !(Maybe Text)
+<span class="lineno">   87 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsSurfaceProvenance</span></span></span> :: !(Maybe Text)
+<span class="lineno">   88 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsContractProvenance</span></span></span> :: !(Maybe Text)
+<span class="lineno">   89 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsDerivationTags</span></span></span> :: ![Text]
+<span class="lineno">   90 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rtsLoadStatus</span></span></span> :: !Text
+<span class="lineno">   91 </span>  }
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>data ReplayTraceLoad
+<span class="lineno">   94 </span>  = ReplayTraceMissing
+<span class="lineno">   95 </span>  | ReplayTraceDbError !Text
+<span class="lineno">   96 </span>  | ReplayTraceDecodeError !Text
+<span class="lineno">   97 </span>  | ReplayTraceSchemaError !Text
+<span class="lineno">   98 </span>  | ReplayTraceLoaded !ReplayTraceSummary
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>replayTraceLoadStatus :: ReplayTraceLoad -&gt; Text
+<span class="lineno">  101 </span><span class="decl"><span class="nottickedoff">replayTraceLoadStatus traceLoad =</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="nottickedoff">case traceLoad of</span>
+<span class="lineno">  103 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceMissing -&gt; &quot;missing&quot;</span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceDbError reason -&gt; &quot;db_error:&quot; &lt;&gt; reason</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceDecodeError reason -&gt; &quot;decode_error:&quot; &lt;&gt; reason</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceSchemaError reason -&gt; &quot;schema_error:&quot; &lt;&gt; reason</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceLoaded summary -&gt; rtsLoadStatus summary</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>replayTraceSummaryMaybe :: ReplayTraceLoad -&gt; Maybe ReplayTraceSummary
+<span class="lineno">  110 </span><span class="decl"><span class="nottickedoff">replayTraceSummaryMaybe traceLoad =</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="nottickedoff">case traceLoad of</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="nottickedoff">ReplayTraceLoaded summary -&gt; Just summary</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>printHelp :: IO ()
+<span class="lineno">  116 </span><span class="decl"><span class="nottickedoff">printHelp = do</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;Interactive commands:&quot;</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  :help      show commands&quot;</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  :state     show compact runtime state&quot;</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  :dialogue  natural dialogue output&quot;</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  :semantic  semantic introspection output&quot;</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  :quit      save state and exit&quot;</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;&quot;</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;Environment:&quot;</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_SESSION_ID    session identifier&quot;</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_DB            database path&quot;</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_DB_PATH       deprecated alias for QXFX0_DB&quot;</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_ROOT          project root&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_RUNTIME_MODE  strict(default)|degraded(test harness only)&quot;</span>
+<span class="lineno">  130 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_EMBEDDING_BACKEND  local-deterministic|remote-http&quot;</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="nottickedoff">T.putStrLn &quot;  QXFX0_SESSION_LOCK  on(default)|off(debug/test only)&quot;</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>printStateSummary :: Session -&gt; IO ()
+<span class="lineno">  134 </span><span class="decl"><span class="nottickedoff">printStateSummary session = stateSummaryLines session &gt;&gt;= mapM_ T.putStrLn</span></span>
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>governanceSummaryLines :: SystemState -&gt; [Text]
+<span class="lineno">  137 </span><span class="decl"><span class="istickedoff">governanceSummaryLines ss =</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">let history = ssGovernanceHistory ss</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="istickedoff">liveProjection = ssGovernanceProjection ss</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">liveRegistry = ssPerspectiveRegistry ss</span></span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">rebuildResult = rebuildGovernedViews ss</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">latestProvenance = latestGovernanceProvenance history</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">(rebuildStatus, summaryProjection, staleCount) =</span>
+<span class="lineno">  144 </span><span class="spaces">        </span><span class="istickedoff">case rebuildResult of</span>
+<span class="lineno">  145 </span><span class="spaces">          </span><span class="istickedoff">Right (rebuiltRegistry, rebuiltProjection)</span>
+<span class="lineno">  146 </span><span class="spaces">            </span><span class="istickedoff">| <span class="tickonlytrue">rebuiltProjection == liveProjection</span> -&gt; (&quot;ok&quot;, rebuiltProjection, 0)</span>
+<span class="lineno">  147 </span><span class="spaces">            </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt;</span>
+<span class="lineno">  148 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">( &quot;mismatch&quot;</span></span>
+<span class="lineno">  149 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">, rebuiltProjection</span></span>
+<span class="lineno">  150 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">, registryDifferenceCount liveRegistry rebuiltRegistry</span></span>
+<span class="lineno">  151 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  152 </span><span class="spaces">          </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">(&quot;unavailable&quot;, liveProjection, M.size (prThreads liveRegistry))</span></span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">in</span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;governance_events_count: &quot; &lt;&gt; renderValue (length history)</span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_fingerprint: &quot; &lt;&gt; governanceHistoryFingerprint history</span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_rebuild_status: &quot; &lt;&gt; rebuildStatus</span>
+<span class="lineno">  157 </span><span class="spaces">    </span><span class="istickedoff">, &quot;active_perspectives_count: &quot; &lt;&gt; renderValue (length (gpActivePerspectiveProjections summaryProjection))</span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governed_refs_count: &quot; &lt;&gt; renderValue (length (gpGovernedRefs summaryProjection))</span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_denied_count: &quot; &lt;&gt; renderValue (countGovernanceLifecycle GlsDenied history)</span>
+<span class="lineno">  160 </span><span class="spaces">     </span><span class="istickedoff">, &quot;governance_rollback_count: &quot; &lt;&gt; renderValue (countGovernanceLifecycle GlsRolledBack history)</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_stale_count: &quot; &lt;&gt; renderValue staleCount</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_freeze_status: &quot; &lt;&gt; governanceFreezeStatus history</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_authority_status: &quot; &lt;&gt; renderEpistemicStatus (governanceAuthorityStatus ss rebuildStatus)</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">, &quot;governance_runtime_fault: &quot; &lt;&gt; maybe &quot;none&quot; <span class="nottickedoff">(T.pack . show)</span> (ssGovernanceRuntimeFault ss)</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">, &quot;latest_governed_subject: &quot; &lt;&gt; maybe <span class="nottickedoff">&quot;n/a&quot;</span> snd latestProvenance</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">, &quot;latest_governance_reason_tag: &quot; &lt;&gt; maybe <span class="nottickedoff">&quot;n/a&quot;</span> fst latestProvenance</span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">, &quot;salience_field_contract_status: &quot; &lt;&gt; salienceFieldContractStatus ss</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">, &quot;plan_narrative_tone_contract_status: &quot; &lt;&gt; planNarrativeToneContractStatus ss</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">, &quot;bayesian_contract_status: &quot; &lt;&gt; bayesianContractStatus ss</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  171 </span>
+<span class="lineno">  172 </span>stateSummaryLines :: Session -&gt; IO [Text]
+<span class="lineno">  173 </span><span class="decl"><span class="nottickedoff">stateSummaryLines session = do</span>
+<span class="lineno">  174 </span><span class="spaces">  </span><span class="nottickedoff">traceLoad &lt;- loadLatestReplayTrace session</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="nottickedoff">let ss = sessSystemState session</span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="nottickedoff">latestTrace = replayTraceSummaryMaybe traceLoad</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="nottickedoff">renderValue :: Show a =&gt; a -&gt; Text</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="nottickedoff">renderValue = T.pack . show</span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="nottickedoff">essenceModeTag =</span>
+<span class="lineno">  180 </span><span class="spaces">        </span><span class="nottickedoff">case ssEssence ss of</span>
+<span class="lineno">  181 </span><span class="spaces">          </span><span class="nottickedoff">EssenceUncommitted _ -&gt; &quot;uncommitted&quot;</span>
+<span class="lineno">  182 </span><span class="spaces">          </span><span class="nottickedoff">EssenceCommitted _ c -&gt; &quot;committed:&quot; &lt;&gt; renderEssenceMode (ecMode c)</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="nottickedoff">recoveryCauseTag = maybe &quot;n/a&quot; id (rtsRecoveryCause =&lt;&lt; latestTrace)</span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="nottickedoff">recoveryStrategyTag = maybe &quot;n/a&quot; id (rtsRecoveryStrategy =&lt;&lt; latestTrace)</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="nottickedoff">shadowSeverityTag =</span>
+<span class="lineno">  186 </span><span class="spaces">        </span><span class="nottickedoff">case rtsShadowSeverity =&lt;&lt; latestTrace of</span>
+<span class="lineno">  187 </span><span class="spaces">          </span><span class="nottickedoff">Just raw -&gt; raw</span>
+<span class="lineno">  188 </span><span class="spaces">          </span><span class="nottickedoff">Nothing -&gt; &quot;n/a&quot;</span>
+<span class="lineno">  189 </span><span class="spaces">      </span><span class="nottickedoff">gradientTag = maybe &quot;n/a&quot; renderGradientTag (latestTrace &gt;&gt;= (parseGradientFromEvidence . rtsRecoveryEvidence))</span>
+<span class="lineno">  190 </span><span class="spaces">      </span><span class="nottickedoff">truthContractTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsTruthContractStatus)</span>
+<span class="lineno">  191 </span><span class="spaces">      </span><span class="nottickedoff">authorityClassTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsAuthorityClass)</span>
+<span class="lineno">  192 </span><span class="spaces">      </span><span class="nottickedoff">assemblyPathTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsAssemblyPath)</span>
+<span class="lineno">  193 </span><span class="spaces">      </span><span class="nottickedoff">replayProvenanceTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsReplayProvenanceStatus)</span>
+<span class="lineno">  194 </span><span class="spaces">      </span><span class="nottickedoff">surfaceProvenanceTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsSurfaceProvenance)</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="nottickedoff">contractProvenanceTag = maybe &quot;n/a&quot; id (latestTrace &gt;&gt;= rtsContractProvenance)</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="nottickedoff">replayTraceLoadTag = replayTraceLoadStatus traceLoad</span>
+<span class="lineno">  197 </span><span class="spaces">  </span><span class="nottickedoff">pure</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="nottickedoff">$ [ &quot;STATE_BEGIN&quot;</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;session_id: &quot; &lt;&gt; sessSessionId session</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;state_origin: &quot; &lt;&gt; renderStateOrigin (sessStateOrigin session)</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;turns: &quot; &lt;&gt; renderValue (ssTurnCount ss)</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;output_mode: &quot; &lt;&gt; renderRuntimeOutputMode (sessOutputMode session)</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;atom_trace_ema: &quot; &lt;&gt; renderValue (atCurrentLoad (ssTrace ss))</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;last_family: &quot; &lt;&gt; renderValue (ssLastFamily ss)</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;last_topic: &quot; &lt;&gt; ssLastTopic ss</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;ego_agency: &quot; &lt;&gt; renderValue (egoAgency (ssEgo ss))</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;ego_tension: &quot; &lt;&gt; renderValue (egoTension (ssEgo ss))</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;meaning_graph: &quot; &lt;&gt; graphStats (ssMeaningGraph ss)</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;kernel_pulse: &quot; &lt;&gt; renderValue (kpActive (ssKernelPulse ss))</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;essence_mode: &quot; &lt;&gt; essenceModeTag</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;recovery_cause: &quot; &lt;&gt; recoveryCauseTag</span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;shadow_severity: &quot; &lt;&gt; shadowSeverityTag</span>
+<span class="lineno">  213 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;gradient(m,c,t): &quot; &lt;&gt; gradientTag</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;strategy: &quot; &lt;&gt; recoveryStrategyTag</span>
+<span class="lineno">  215 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;learning_authority_status: &quot; &lt;&gt; renderEpistemicStatus (learningAuthorityStatus latestTrace)</span>
+<span class="lineno">  216 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;gf_lexical_authority_status: &quot; &lt;&gt; renderEpistemicStatus (gfLexicalAuthorityStatus latestTrace)</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;formal_contour_status: &quot; &lt;&gt; renderEpistemicStatus (formalContourStatus latestTrace)</span>
+<span class="lineno">  218 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;truth_contract: &quot; &lt;&gt; truthContractTag</span>
+<span class="lineno">  219 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;authority_class: &quot; &lt;&gt; authorityClassTag</span>
+<span class="lineno">  220 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;assembly_path: &quot; &lt;&gt; assemblyPathTag</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;replay_provenance_status: &quot; &lt;&gt; replayProvenanceTag</span>
+<span class="lineno">  222 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;surface_provenance: &quot; &lt;&gt; surfaceProvenanceTag</span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;contract_provenance: &quot; &lt;&gt; contractProvenanceTag</span>
+<span class="lineno">  224 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;replay_trace_load_status: &quot; &lt;&gt; replayTraceLoadTag</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;r5_core_version: &quot; &lt;&gt; renderValue (r5cVersionId defaultR5CoreProfile)</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;r5_policy_version: &quot; &lt;&gt; renderValue (r5pVersionId defaultR5PolicyProfile)</span>
+<span class="lineno">  227 </span><span class="spaces">      </span><span class="nottickedoff">, &quot;r5_policy_authority_status: &quot; &lt;&gt; renderEpistemicStatus r5PolicyAuthorityStatus</span>
+<span class="lineno">  228 </span><span class="spaces">      </span><span class="nottickedoff">] ++ governanceSummaryLines ss ++ [&quot;STATE_END&quot;]</span></span>
+<span class="lineno">  229 </span>
+<span class="lineno">  230 </span>renderStateOrigin :: StateOrigin -&gt; Text
+<span class="lineno">  231 </span><span class="decl"><span class="nottickedoff">renderStateOrigin FreshOrigin = &quot;fresh&quot;</span>
+<span class="lineno">  232 </span><span class="spaces"></span><span class="nottickedoff">renderStateOrigin RestoredOrigin = &quot;restored&quot;</span>
+<span class="lineno">  233 </span><span class="spaces"></span><span class="nottickedoff">renderStateOrigin RecoveredCorruptOrigin = &quot;recovered_corrupt&quot;</span></span>
+<span class="lineno">  234 </span>
+<span class="lineno">  235 </span>salienceFieldContractStatus :: SystemState -&gt; Text
+<span class="lineno">  236 </span><span class="decl"><span class="istickedoff">salienceFieldContractStatus ss</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">ssSalienceWeights ss == defaultSalienceWeights &amp;&amp; ssFieldHeuristics ss == defaultFieldHeuristics</span> = &quot;persisted_governing_default&quot;</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">&quot;persisted_governing_runtime_tuned&quot;</span></span></span>
+<span class="lineno">  239 </span>
+<span class="lineno">  240 </span>planNarrativeToneContractStatus :: SystemState -&gt; Text
+<span class="lineno">  241 </span><span class="decl"><span class="istickedoff">planNarrativeToneContractStatus ss</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">ssDialoguePhase ss `elem` [Clarifying, Repairing, Contesting]</span> = <span class="nottickedoff">&quot;bounded_causal_contour_runtime_locked&quot;</span></span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = &quot;bounded_causal_contour_policy&quot;</span></span>
+<span class="lineno">  244 </span>
+<span class="lineno">  245 </span>bayesianContractStatus :: SystemState -&gt; Text
+<span class="lineno">  246 </span><span class="decl"><span class="istickedoff">bayesianContractStatus ss</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">truthContractIsAuthoritative (ssTruthContractStatus ss)</span> = &quot;bounded_causal_contour_runtime_authoritative&quot;</span>
+<span class="lineno">  248 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">&quot;bounded_causal_contour_runtime_capped&quot;</span></span></span>
+<span class="lineno">  249 </span>
+<span class="lineno">  250 </span>countGovernanceLifecycle :: GovernanceLifecycleStatus -&gt; [GovernanceEvent] -&gt; Int
+<span class="lineno">  251 </span><span class="decl"><span class="istickedoff">countGovernanceLifecycle lifecycle = length . filter ((== lifecycle) . geeLifecycleStatus . geEnvelope)</span></span>
+<span class="lineno">  252 </span>
+<span class="lineno">  253 </span>registryDifferenceCount :: PerspectiveRegistry -&gt; PerspectiveRegistry -&gt; Int
+<span class="lineno">  254 </span><span class="decl"><span class="nottickedoff">registryDifferenceCount live rebuilt =</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="nottickedoff">let liveThreads = prThreads live</span>
+<span class="lineno">  256 </span><span class="spaces">      </span><span class="nottickedoff">rebuiltThreads = prThreads rebuilt</span>
+<span class="lineno">  257 </span><span class="spaces">      </span><span class="nottickedoff">scopes = S.union (M.keysSet liveThreads) (M.keysSet rebuiltThreads)</span>
+<span class="lineno">  258 </span><span class="spaces">  </span><span class="nottickedoff">in length [ () | scope &lt;- S.toList scopes, M.lookup scope liveThreads /= M.lookup scope rebuiltThreads ]</span></span>
+<span class="lineno">  259 </span>
+<span class="lineno">  260 </span>governanceFreezeStatus :: [GovernanceEvent] -&gt; Text
+<span class="lineno">  261 </span><span class="decl"><span class="istickedoff">governanceFreezeStatus history =</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">case [ event | event &lt;- reverse history, <span class="tickonlytrue">isFreezeEvent event</span> ] of</span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">&quot;none&quot;</span></span>
+<span class="lineno">  264 </span><span class="spaces">    </span><span class="istickedoff">event:_ -&gt;</span>
+<span class="lineno">  265 </span><span class="spaces">      </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  266 </span><span class="spaces">      </span><span class="istickedoff">in case (geeLifecycleStatus envelope, geeDecision envelope) of</span>
+<span class="lineno">  267 </span><span class="spaces">           </span><span class="istickedoff">(GlsDenied, _) -&gt; <span class="nottickedoff">&quot;denied&quot;</span></span>
+<span class="lineno">  268 </span><span class="spaces">           </span><span class="istickedoff">(GlsRolledBack, _) -&gt; <span class="nottickedoff">&quot;released&quot;</span></span>
+<span class="lineno">  269 </span><span class="spaces">           </span><span class="istickedoff">(_, GovFreeze) -&gt; &quot;frozen&quot;</span>
+<span class="lineno">  270 </span><span class="spaces">           </span><span class="istickedoff">(_, GovSuspend) -&gt; <span class="nottickedoff">&quot;released&quot;</span></span>
+<span class="lineno">  271 </span><span class="spaces">           </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">&quot;active&quot;</span></span></span>
+<span class="lineno">  272 </span>
+<span class="lineno">  273 </span>latestGovernanceProvenance :: [GovernanceEvent] -&gt; Maybe (Text, Text)
+<span class="lineno">  274 </span><span class="decl"><span class="istickedoff">latestGovernanceProvenance history =</span>
+<span class="lineno">  275 </span><span class="spaces">  </span><span class="istickedoff">case governanceProvenanceTrail history of</span>
+<span class="lineno">  276 </span><span class="spaces">    </span><span class="istickedoff">Right trail -&gt; case reverse trail of</span>
+<span class="lineno">  277 </span><span class="spaces">      </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  278 </span><span class="spaces">      </span><span class="istickedoff">link:_ -&gt; Just (gplReasonTag link, renderGovernedSubject (gplSubject link))</span>
+<span class="lineno">  279 </span><span class="spaces">    </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">  280 </span>
+<span class="lineno">  281 </span>renderGovernedSubject :: GovernedSubject -&gt; Text
+<span class="lineno">  282 </span><span class="decl"><span class="istickedoff">renderGovernedSubject = T.pack . show</span></span>
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>governanceAuthorityStatus :: SystemState -&gt; Text -&gt; EpistemicStatus
+<span class="lineno">  285 </span><span class="decl"><span class="istickedoff">governanceAuthorityStatus ss rebuildStatus =</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">case (truthContractIsAuthoritative (ssTruthContractStatus ss), ssGovernanceRuntimeFault ss, rebuildStatus) of</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="istickedoff">(False, _, _) -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  288 </span><span class="spaces">    </span><span class="istickedoff">(True, Just _, _) -&gt; <span class="nottickedoff">EpstNonAuthoritative</span></span>
+<span class="lineno">  289 </span><span class="spaces">    </span><span class="istickedoff">(True, Nothing, &quot;ok&quot;) -&gt; EpstAuthoritative</span>
+<span class="lineno">  290 </span><span class="spaces">    </span><span class="istickedoff">(True, Nothing, &quot;mismatch&quot;) -&gt; <span class="nottickedoff">EpstDegraded</span></span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="istickedoff">(True, Nothing, _) -&gt; <span class="nottickedoff">EpstAdvisory</span></span></span>
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>learningAuthorityStatus :: Maybe ReplayTraceSummary -&gt; EpistemicStatus
+<span class="lineno">  294 </span><span class="decl"><span class="nottickedoff">learningAuthorityStatus latestTrace =</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="nottickedoff">case latestTrace &gt;&gt;= rtsLearningValidationStatus of</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; EpstObservationalOnly</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;accept&quot; -&gt; EpstAuthoritative</span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;not_attempted&quot; -&gt; EpstObservationalOnly</span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="nottickedoff">Just _ -&gt; EpstNonAuthoritative</span></span>
+<span class="lineno">  300 </span>
+<span class="lineno">  301 </span>gfLexicalAuthorityStatus :: Maybe ReplayTraceSummary -&gt; EpistemicStatus
+<span class="lineno">  302 </span><span class="decl"><span class="nottickedoff">gfLexicalAuthorityStatus latestTrace =</span>
+<span class="lineno">  303 </span><span class="spaces">  </span><span class="nottickedoff">case latestTrace &gt;&gt;= rtsReplayProvenanceStatus of</span>
+<span class="lineno">  304 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;ReplayProvenanceLegacyIncomplete&quot; -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  305 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; case latestTrace &gt;&gt;= rtsTruthContractStatus of</span>
+<span class="lineno">  306 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;CanonicalSurfacePreserved&quot; -&gt; EpstAuthoritative</span>
+<span class="lineno">  307 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;AssembledSurfacePreserved&quot; -&gt; EpstAdvisory</span>
+<span class="lineno">  308 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;CompatibilityShimSurface&quot; -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  309 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;DefaultedSurface&quot; -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  310 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;GeneratedArtifactSurface&quot; -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  311 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;LegacyIncompleteSurface&quot; -&gt; EpstNonAuthoritative</span>
+<span class="lineno">  312 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;ExplicitFallbackSurface&quot; -&gt; EpstFallback</span>
+<span class="lineno">  313 </span><span class="spaces">      </span><span class="nottickedoff">Just &quot;NonExpansiveRecoverySurface&quot; -&gt; EpstDegraded</span>
+<span class="lineno">  314 </span><span class="spaces">      </span><span class="nottickedoff">_ -&gt; case latestTrace &gt;&gt;= rtsFallbackReason of</span>
+<span class="lineno">  315 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; EpstAdvisory</span>
+<span class="lineno">  316 </span><span class="spaces">        </span><span class="nottickedoff">Just reason</span>
+<span class="lineno">  317 </span><span class="spaces">          </span><span class="nottickedoff">| &quot;gf_&quot; `T.isPrefixOf` reason -&gt; EpstFallback</span>
+<span class="lineno">  318 </span><span class="spaces">          </span><span class="nottickedoff">| &quot;en_unstructured_fallback&quot; `T.isPrefixOf` reason -&gt; EpstFallback</span>
+<span class="lineno">  319 </span><span class="spaces">          </span><span class="nottickedoff">| &quot;ru_unstructured_fallback&quot; `T.isPrefixOf` reason -&gt; EpstFallback</span>
+<span class="lineno">  320 </span><span class="spaces">          </span><span class="nottickedoff">| otherwise -&gt; EpstAdvisory</span></span>
+<span class="lineno">  321 </span>
+<span class="lineno">  322 </span>formalContourStatus :: Maybe ReplayTraceSummary -&gt; EpistemicStatus
+<span class="lineno">  323 </span><span class="decl"><span class="nottickedoff">formalContourStatus latestTrace =</span>
+<span class="lineno">  324 </span><span class="spaces">  </span><span class="nottickedoff">case latestTrace &gt;&gt;= rtsShadowSeverity of</span>
+<span class="lineno">  325 </span><span class="spaces">    </span><span class="nottickedoff">Nothing -&gt; EpstObservationalOnly</span>
+<span class="lineno">  326 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;ShadowSeverityClean&quot; -&gt; EpstAuthoritative</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;ShadowSeverityAdvisory&quot; -&gt; EpstAdvisory</span>
+<span class="lineno">  328 </span><span class="spaces">    </span><span class="nottickedoff">Just &quot;ShadowSeverityUnavailable&quot; -&gt; EpstDegraded</span>
+<span class="lineno">  329 </span><span class="spaces">    </span><span class="nottickedoff">Just _ -&gt; EpstDegraded</span></span>
+<span class="lineno">  330 </span>
+<span class="lineno">  331 </span>r5PolicyAuthorityStatus :: EpistemicStatus
+<span class="lineno">  332 </span><span class="decl"><span class="nottickedoff">r5PolicyAuthorityStatus =</span>
+<span class="lineno">  333 </span><span class="spaces">  </span><span class="nottickedoff">case r5pStrictnessMode defaultR5PolicyProfile of</span>
+<span class="lineno">  334 </span><span class="spaces">    </span><span class="nottickedoff">&quot;binding_in_strict_only&quot; -&gt; EpstAdvisory</span>
+<span class="lineno">  335 </span><span class="spaces">    </span><span class="nottickedoff">&quot;strict_enforced&quot; -&gt; EpstAuthoritative</span>
+<span class="lineno">  336 </span><span class="spaces">    </span><span class="nottickedoff">&quot;degraded&quot; -&gt; EpstDegraded</span>
+<span class="lineno">  337 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; EpstAdvisory</span></span>
+<span class="lineno">  338 </span>
+<span class="lineno">  339 </span>isFreezeEvent :: GovernanceEvent -&gt; Bool
+<span class="lineno">  340 </span><span class="decl"><span class="istickedoff">isFreezeEvent event =</span>
+<span class="lineno">  341 </span><span class="spaces">  </span><span class="istickedoff">case geeSubject (geEnvelope event) of</span>
+<span class="lineno">  342 </span><span class="spaces">    </span><span class="istickedoff">SubjectFreeze _ -&gt; True</span>
+<span class="lineno">  343 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">False</span></span></span>
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>renderValue :: Show a =&gt; a -&gt; Text
+<span class="lineno">  346 </span><span class="decl"><span class="istickedoff">renderValue = T.pack . show</span></span>
+<span class="lineno">  347 </span>
+<span class="lineno">  348 </span>loadLatestReplayTrace :: Session -&gt; IO ReplayTraceLoad
+<span class="lineno">  349 </span><span class="decl"><span class="nottickedoff">loadLatestReplayTrace session = do</span>
+<span class="lineno">  350 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- try $ withRuntimeDb (sessRuntime session) $ \db -&gt; do</span>
+<span class="lineno">  351 </span><span class="spaces">    </span><span class="nottickedoff">let sql = &quot;SELECT replay_trace_json FROM turn_quality WHERE session_id = ? ORDER BY turn DESC LIMIT 1&quot;</span>
+<span class="lineno">  352 </span><span class="spaces">    </span><span class="nottickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  353 </span><span class="spaces">    </span><span class="nottickedoff">case mStmt of</span>
+<span class="lineno">  354 </span><span class="spaces">      </span><span class="nottickedoff">Left err -&gt; pure (ReplayTraceDbError (&quot;prepare_failed:&quot; &lt;&gt; err))</span>
+<span class="lineno">  355 </span><span class="spaces">      </span><span class="nottickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  356 </span><span class="spaces">        </span><span class="nottickedoff">result' &lt;- (</span>
+<span class="lineno">  357 </span><span class="spaces">          </span><span class="nottickedoff">do</span>
+<span class="lineno">  358 </span><span class="spaces">            </span><span class="nottickedoff">_ &lt;- NSQL.bindText stmt 1 (sessSessionId session)</span>
+<span class="lineno">  359 </span><span class="spaces">            </span><span class="nottickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  360 </span><span class="spaces">            </span><span class="nottickedoff">if not hasRow</span>
+<span class="lineno">  361 </span><span class="spaces">              </span><span class="nottickedoff">then pure ReplayTraceMissing</span>
+<span class="lineno">  362 </span><span class="spaces">              </span><span class="nottickedoff">else do</span>
+<span class="lineno">  363 </span><span class="spaces">                </span><span class="nottickedoff">payload &lt;- NSQL.columnText stmt 0</span>
+<span class="lineno">  364 </span><span class="spaces">                </span><span class="nottickedoff">pure (decodeReplayTraceSummary payload)</span>
+<span class="lineno">  365 </span><span class="spaces">          </span><span class="nottickedoff">) `finally` finalizeQuietly stmt</span>
+<span class="lineno">  366 </span><span class="spaces">        </span><span class="nottickedoff">pure result'</span>
+<span class="lineno">  367 </span><span class="spaces">  </span><span class="nottickedoff">pure (either (ReplayTraceDbError . T.pack . show) id (result :: Either SomeException ReplayTraceLoad))</span>
+<span class="lineno">  368 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  369 </span><span class="spaces">    </span><span class="nottickedoff">decodeReplayTraceSummary :: Text -&gt; ReplayTraceLoad</span>
+<span class="lineno">  370 </span><span class="spaces">    </span><span class="nottickedoff">decodeReplayTraceSummary payload =</span>
+<span class="lineno">  371 </span><span class="spaces">      </span><span class="nottickedoff">case Aeson.decode (BL.fromStrict (TE.encodeUtf8 payload)) :: Maybe Aeson.Value of</span>
+<span class="lineno">  372 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.Object obj) -&gt;</span>
+<span class="lineno">  373 </span><span class="spaces">          </span><span class="nottickedoff">let recoveryCause = decodeScalarField &quot;trcRecoveryCause&quot; obj</span>
+<span class="lineno">  374 </span><span class="spaces">              </span><span class="nottickedoff">recoveryStrategy = decodeScalarField &quot;trcRecoveryStrategy&quot; obj</span>
+<span class="lineno">  375 </span><span class="spaces">              </span><span class="nottickedoff">shadowSeverity = decodeScalarField &quot;trcShadowDivergenceSeverity&quot; obj</span>
+<span class="lineno">  376 </span><span class="spaces">              </span><span class="nottickedoff">evidence = decodeStringArrayField &quot;trcRecoveryEvidence&quot; obj</span>
+<span class="lineno">  377 </span><span class="spaces">              </span><span class="nottickedoff">learningValidationStatus = decodeScalarField &quot;trcLearningValidationStatus&quot; obj</span>
+<span class="lineno">  378 </span><span class="spaces">              </span><span class="nottickedoff">fallbackReason = decodeScalarField &quot;trcFallbackReason&quot; obj</span>
+<span class="lineno">  379 </span><span class="spaces">              </span><span class="nottickedoff">authorityClass = decodeScalarField &quot;trcAuthorityClass&quot; obj</span>
+<span class="lineno">  380 </span><span class="spaces">              </span><span class="nottickedoff">truthContractStatus = decodeScalarField &quot;trcTruthContractStatus&quot; obj</span>
+<span class="lineno">  381 </span><span class="spaces">              </span><span class="nottickedoff">assemblyPath = decodeScalarField &quot;trcAssemblyPath&quot; obj</span>
+<span class="lineno">  382 </span><span class="spaces">              </span><span class="nottickedoff">replayProvenanceStatus =</span>
+<span class="lineno">  383 </span><span class="spaces">                </span><span class="nottickedoff">case decodeScalarField &quot;trcReplayProvenanceStatus&quot; obj of</span>
+<span class="lineno">  384 </span><span class="spaces">                  </span><span class="nottickedoff">Just value -&gt; Just value</span>
+<span class="lineno">  385 </span><span class="spaces">                  </span><span class="nottickedoff">Nothing -&gt; Just &quot;ReplayProvenanceLegacyIncomplete&quot;</span>
+<span class="lineno">  386 </span><span class="spaces">              </span><span class="nottickedoff">surfaceProvenance = decodeScalarField &quot;trcSurfaceProvenance&quot; obj</span>
+<span class="lineno">  387 </span><span class="spaces">              </span><span class="nottickedoff">contractProvenance = decodeScalarField &quot;trcContractProvenance&quot; obj</span>
+<span class="lineno">  388 </span><span class="spaces">              </span><span class="nottickedoff">derivationTags = decodeStringArrayField &quot;trcDerivationTags&quot; obj</span>
+<span class="lineno">  389 </span><span class="spaces">            </span><span class="nottickedoff">in ReplayTraceLoaded ReplayTraceSummary</span>
+<span class="lineno">  390 </span><span class="spaces">                 </span><span class="nottickedoff">{ rtsRecoveryCause = recoveryCause</span>
+<span class="lineno">  391 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsRecoveryStrategy = recoveryStrategy</span>
+<span class="lineno">  392 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsRecoveryEvidence = evidence</span>
+<span class="lineno">  393 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsShadowSeverity = shadowSeverity</span>
+<span class="lineno">  394 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsLearningValidationStatus = learningValidationStatus</span>
+<span class="lineno">  395 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsFallbackReason = fallbackReason</span>
+<span class="lineno">  396 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsAuthorityClass = authorityClass</span>
+<span class="lineno">  397 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsTruthContractStatus = truthContractStatus</span>
+<span class="lineno">  398 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsAssemblyPath = assemblyPath</span>
+<span class="lineno">  399 </span><span class="spaces">                 </span><span class="nottickedoff">, rtsReplayProvenanceStatus = replayProvenanceStatus</span>
+<span class="lineno">  400 </span><span class="spaces">                  </span><span class="nottickedoff">, rtsSurfaceProvenance = surfaceProvenance</span>
+<span class="lineno">  401 </span><span class="spaces">                  </span><span class="nottickedoff">, rtsContractProvenance = contractProvenance</span>
+<span class="lineno">  402 </span><span class="spaces">                  </span><span class="nottickedoff">, rtsDerivationTags = derivationTags</span>
+<span class="lineno">  403 </span><span class="spaces">                  </span><span class="nottickedoff">, rtsLoadStatus = &quot;loaded&quot;</span>
+<span class="lineno">  404 </span><span class="spaces">                 </span><span class="nottickedoff">}</span>
+<span class="lineno">  405 </span><span class="spaces">        </span><span class="nottickedoff">Just _ -&gt; ReplayTraceSchemaError &quot;replay_trace_not_object&quot;</span>
+<span class="lineno">  406 </span><span class="spaces">        </span><span class="nottickedoff">Nothing -&gt; ReplayTraceDecodeError &quot;replay_trace_decode_failed&quot;</span>
+<span class="lineno">  407 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  408 </span><span class="spaces">    </span><span class="nottickedoff">decodeScalarField :: Text -&gt; Aeson.Object -&gt; Maybe Text</span>
+<span class="lineno">  409 </span><span class="spaces">    </span><span class="nottickedoff">decodeScalarField key obj =</span>
+<span class="lineno">  410 </span><span class="spaces">      </span><span class="nottickedoff">case KM.lookup (K.fromText key) obj of</span>
+<span class="lineno">  411 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.String t) -&gt; Just t</span>
+<span class="lineno">  412 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.Number n) -&gt; Just (T.pack (show n))</span>
+<span class="lineno">  413 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.Bool True) -&gt; Just &quot;true&quot;</span>
+<span class="lineno">  414 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.Bool False) -&gt; Just &quot;false&quot;</span>
+<span class="lineno">  415 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; Nothing</span>
+<span class="lineno">  416 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="nottickedoff">decodeStringArrayField :: Text -&gt; Aeson.Object -&gt; [Text]</span>
+<span class="lineno">  418 </span><span class="spaces">    </span><span class="nottickedoff">decodeStringArrayField key obj =</span>
+<span class="lineno">  419 </span><span class="spaces">      </span><span class="nottickedoff">case KM.lookup (K.fromText key) obj of</span>
+<span class="lineno">  420 </span><span class="spaces">        </span><span class="nottickedoff">Just (Aeson.Array arr) -&gt;</span>
+<span class="lineno">  421 </span><span class="spaces">          </span><span class="nottickedoff">[ t | Aeson.String t &lt;- V.toList arr ]</span>
+<span class="lineno">  422 </span><span class="spaces">        </span><span class="nottickedoff">_ -&gt; []</span></span>
+<span class="lineno">  423 </span>
+<span class="lineno">  424 </span>finalizeQuietly :: NSQL.Statement -&gt; IO ()
+<span class="lineno">  425 </span><span class="decl"><span class="nottickedoff">finalizeQuietly stmt = do</span>
+<span class="lineno">  426 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- try (NSQL.finalize stmt) :: IO (Either SomeException ())</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  428 </span>
+<span class="lineno">  429 </span>parseGradientFromEvidence :: [Text] -&gt; Maybe (Double, Double, Double)
+<span class="lineno">  430 </span><span class="decl"><span class="nottickedoff">parseGradientFromEvidence evidence =</span>
+<span class="lineno">  431 </span><span class="spaces">  </span><span class="nottickedoff">let findMarker prefix =</span>
+<span class="lineno">  432 </span><span class="spaces">        </span><span class="nottickedoff">case [ rest | entry &lt;- evidence, Just rest &lt;- [T.stripPrefix prefix entry] ] of</span>
+<span class="lineno">  433 </span><span class="spaces">          </span><span class="nottickedoff">rest : _ -&gt; case reads (T.unpack (T.takeWhile (/= ' ') rest)) of</span>
+<span class="lineno">  434 </span><span class="spaces">            </span><span class="nottickedoff">[(n, _)] -&gt; Just n</span>
+<span class="lineno">  435 </span><span class="spaces">            </span><span class="nottickedoff">_ -&gt; Nothing</span>
+<span class="lineno">  436 </span><span class="spaces">          </span><span class="nottickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  437 </span><span class="spaces">      </span><span class="nottickedoff">m = findMarker &quot;conatus_gradient_m=&quot;</span>
+<span class="lineno">  438 </span><span class="spaces">      </span><span class="nottickedoff">c = findMarker &quot;conatus_gradient_c=&quot;</span>
+<span class="lineno">  439 </span><span class="spaces">      </span><span class="nottickedoff">t = findMarker &quot;conatus_gradient_t=&quot;</span>
+<span class="lineno">  440 </span><span class="spaces">  </span><span class="nottickedoff">in case (m, c, t) of</span>
+<span class="lineno">  441 </span><span class="spaces">       </span><span class="nottickedoff">(Just m', Just c', Just t') -&gt; Just (m', c', t')</span>
+<span class="lineno">  442 </span><span class="spaces">       </span><span class="nottickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">  443 </span>
+<span class="lineno">  444 </span>renderGradientTag :: (Double, Double, Double) -&gt; Text
+<span class="lineno">  445 </span><span class="decl"><span class="nottickedoff">renderGradientTag (m, c, t) =</span>
+<span class="lineno">  446 </span><span class="spaces">  </span><span class="nottickedoff">T.concat [ &quot;m=&quot;, T.pack (show m), &quot;,c=&quot;, T.pack (show c), &quot;,t=&quot;, T.pack (show t) ]</span></span>
+
+</pre>
+</body>
+</html>

@@ -14,6 +14,7 @@ module QxFx0.Core.PipelineIO
   , shadowPolicyText
   , pipelineLocalRecoveryPolicy
   , localRecoveryPolicyText
+  , scheduleTurnEffects
   , resolveTurnEffect
   , resolveTurnEffects
   , runShadowVerification
@@ -44,6 +45,7 @@ import QxFx0.Core.PipelineIO.Operations
     , pipelineLocalRecoveryPolicy
     , pipelineRuntimeModeText
     , pipelineRuntimeMode
+    , scheduleTurnEffects
     , pipelineShadowPolicy
     , shadowPolicyText
   , pipelineUpdateHistory

@@ -1,0 +1,171 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Deterministic `PipelineIO` test harness and default in-memory effect interpreter. -}
+<span class="lineno">    5 </span>module QxFx0.Core.PipelineIO.Test
+<span class="lineno">    6 </span>  ( TestPipelineConfig(..)
+<span class="lineno">    7 </span>  , defaultTestPipelineConfig
+<span class="lineno">    8 </span>  , mkTestPipelineIO
+<span class="lineno">    9 </span>  ) where
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import QxFx0.Core.ConsciousnessLoop
+<span class="lineno">   12 </span>  ( clLastNarrative
+<span class="lineno">   13 </span>  , initialLoop
+<span class="lineno">   14 </span>  , runConsciousnessLoopWithSalience
+<span class="lineno">   15 </span>  )
+<span class="lineno">   16 </span>import QxFx0.Self.Field (emptyField, fieldResonance, mkResonance)
+<span class="lineno">   17 </span>import QxFx0.Self.Salience (computeSalience)
+<span class="lineno">   18 </span>import QxFx0.Core.Intuition
+<span class="lineno">   19 </span>  ( checkIntuition
+<span class="lineno">   20 </span>  , defaultIntuitiveState
+<span class="lineno">   21 </span>  , effectivePosterior
+<span class="lineno">   22 </span>  )
+<span class="lineno">   23 </span>import QxFx0.Core.PipelineIO.Internal
+<span class="lineno">   24 </span>  ( PipelineIO(..)
+<span class="lineno">   25 </span>  , PipelineRuntimeMode(..)
+<span class="lineno">   26 </span>  , ShadowPolicy(..)
+<span class="lineno">   27 </span>  , TurnEffectInterpreter
+<span class="lineno">   28 </span>  , defaultConatusPrior
+<span class="lineno">   29 </span>  )
+<span class="lineno">   30 </span>import QxFx0.Core.TurnPipeline.Effects
+<span class="lineno">   31 </span>  ( TurnEffectRequest(..)
+<span class="lineno">   32 </span>  , TurnEffectResult(..)
+<span class="lineno">   33 </span>  )
+<span class="lineno">   34 </span>import QxFx0.Types.ExternalQuery (ExternalQueryError(..))
+<span class="lineno">   35 </span>import QxFx0.Semantic.Embedding (textToEmbeddingResult)
+<span class="lineno">   36 </span>import QxFx0.Types.Decision (ShadowStatus(..))
+<span class="lineno">   37 </span>import QxFx0.Types.Domain (NixGuardStatus(..))
+<span class="lineno">   38 </span>import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))
+<span class="lineno">   39 </span>import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
+<span class="lineno">   40 </span>import QxFx0.Types.Recovery (LocalRecoveryPolicy(..))
+<span class="lineno">   41 </span>import QxFx0.Types.ShadowDivergence
+<span class="lineno">   42 </span>  ( ShadowSnapshotId(..)
+<span class="lineno">   43 </span>  , emptyShadowDivergence
+<span class="lineno">   44 </span>  )
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>import Data.Sequence (Seq)
+<span class="lineno">   47 </span>import qualified Data.Sequence as Seq
+<span class="lineno">   48 </span>import Data.Text (Text)
+<span class="lineno">   49 </span>import qualified Data.Text as T
+<span class="lineno">   50 </span>import qualified Data.Time.Clock as Clock
+<span class="lineno">   51 </span>import Data.Time.Calendar (Day(ModifiedJulianDay))
+<span class="lineno">   52 </span>import Control.Concurrent.MVar (modifyMVar, newMVar)
+<span class="lineno">   53 </span>import System.IO.Unsafe (unsafePerformIO)
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>data TestPipelineConfig = TestPipelineConfig
+<span class="lineno">   56 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">tpcRuntimeMode</span></span></span> :: !PipelineRuntimeMode
+<span class="lineno">   57 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpcShadowPolicy</span></span></span> :: !ShadowPolicy
+<span class="lineno">   58 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpcLocalRecoveryPolicy</span></span></span> :: !LocalRecoveryPolicy
+<span class="lineno">   59 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpcInterpreter</span></span></span> :: !TurnEffectInterpreter
+<span class="lineno">   60 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">tpcUpdateHistory</span></span></span> :: Text -&gt; Seq Text -&gt; Seq Text
+<span class="lineno">   61 </span>  }
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>defaultTestPipelineConfig :: TestPipelineConfig
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">defaultTestPipelineConfig = TestPipelineConfig</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">{ tpcRuntimeMode = RuntimeDegraded</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">, tpcShadowPolicy = ShadowObserve</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">, tpcLocalRecoveryPolicy = LocalRecoveryEnabled</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">, tpcInterpreter = defaultTestInterpreter</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">, tpcUpdateHistory = \new hist -&gt;</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">let updated = new Seq.&lt;| hist</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">in Seq.take 50 updated</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>mkTestPipelineIO :: TestPipelineConfig -&gt; PipelineIO
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">mkTestPipelineIO cfg =</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">consciousState = unsafePerformIO (newMVar initialLoop)</span></span>
+<span class="lineno">   77 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">intuitionState = unsafePerformIO (newMVar defaultIntuitiveState)</span></span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">in PipelineIO</span>
+<span class="lineno">   79 </span><span class="spaces">      </span><span class="istickedoff">{ pioRuntimeMode = tpcRuntimeMode cfg</span>
+<span class="lineno">   80 </span><span class="spaces">      </span><span class="istickedoff">, pioShadowPolicy = tpcShadowPolicy cfg</span>
+<span class="lineno">   81 </span><span class="spaces">      </span><span class="istickedoff">, pioLocalRecoveryPolicy = tpcLocalRecoveryPolicy cfg</span>
+<span class="lineno">   82 </span><span class="spaces">      </span><span class="istickedoff">, pioInterpreter = tpcInterpreter cfg</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff">, pioUpdateHistory = tpcUpdateHistory cfg</span>
+<span class="lineno">   84 </span><span class="spaces">      </span><span class="istickedoff">, pioModifyConsciousLoop = \f -&gt; <span class="nottickedoff">modifyMVar consciousState $ \st -&gt; do</span></span>
+<span class="lineno">   85 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(st', result) &lt;- f st</span></span>
+<span class="lineno">   86 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure (st', result)</span></span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">, pioModifyIntuition = \f -&gt; <span class="nottickedoff">modifyMVar intuitionState $ \st -&gt; do</span></span>
+<span class="lineno">   88 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(st', result) &lt;- f st</span></span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">pure (st', result)</span></span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">, pioConatusPrior = defaultConatusPrior</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>defaultTestInterpreter :: TurnEffectInterpreter
+<span class="lineno">   94 </span><span class="decl"><span class="nottickedoff">defaultTestInterpreter request =</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="nottickedoff">case request of</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqEmbedding inputText -&gt;</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="nottickedoff">TurnResEmbedding &lt;$&gt; textToEmbeddingResult inputText</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqNixGuard _ _ _ -&gt;</span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResNixGuard (Unavailable &quot;nix_unavailable_default_test_pipeline&quot;))</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -&gt; do</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="nottickedoff">let salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance })</span>
+<span class="lineno">  102 </span><span class="spaces">          </span><span class="nottickedoff">(nextLoop, fragment) =</span>
+<span class="lineno">  103 </span><span class="spaces">            </span><span class="nottickedoff">runConsciousnessLoopWithSalience salience initialLoop semanticInput humanTheta resonance</span>
+<span class="lineno">  104 </span><span class="spaces">          </span><span class="nottickedoff">nextNarrative = clLastNarrative nextLoop</span>
+<span class="lineno">  105 </span><span class="spaces">          </span><span class="nottickedoff">nextFragment = if T.null fragment then Nothing else Just fragment</span>
+<span class="lineno">  106 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResConsciousness nextLoop nextNarrative nextFragment)</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqIntuition _inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -&gt; do</span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="nottickedoff">let (mFlash, intuitive') = checkIntuition resonance tension turnNumber defaultIntuitiveState</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResIntuition mFlash (effectivePosterior intuitive') intuitive')</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqApiHealth -&gt;</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResApiHealth False)</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqShadow _ _ _ -&gt;</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="nottickedoff">pure</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="nottickedoff">(TurnResShadow</span>
+<span class="lineno">  115 </span><span class="spaces">          </span><span class="nottickedoff">Nothing</span>
+<span class="lineno">  116 </span><span class="spaces">          </span><span class="nottickedoff">ShadowUnavailable</span>
+<span class="lineno">  117 </span><span class="spaces">          </span><span class="nottickedoff">emptyShadowDivergence</span>
+<span class="lineno">  118 </span><span class="spaces">          </span><span class="nottickedoff">(ShadowSnapshotId &quot;shadow:test_default&quot;)</span>
+<span class="lineno">  119 </span><span class="spaces">          </span><span class="nottickedoff">[&quot;shadow_unavailable_default_test_pipeline&quot;])</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqAgdaVerify -&gt;</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResAgdaVerify AgdaMissingWitness)</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqCurrentTime -&gt;</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResCurrentTime fixedTestTime)</span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqRequestId -&gt;</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResRequestId &quot;request-id-test&quot;)</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqReadEnv _ -&gt;</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResReadEnv Nothing)</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqTestMarkOnceFile _ -&gt;</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResTestMarkOnceFile False)</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqSemanticIntrospectionEnv -&gt;</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResSemanticIntrospectionEnv False)</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqCommitRuntimeState _ _ _ -&gt;</span>
+<span class="lineno">  133 </span><span class="spaces">      </span><span class="nottickedoff">pure TurnResCommitRuntimeState</span>
+<span class="lineno">  134 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqSaveState _ _ _ -&gt;</span>
+<span class="lineno">  135 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResSaveState (Left (PdSaveFailed StageUnknown Nothing (Just &quot;persistence_unavailable_default_test_pipeline&quot;))))</span>
+<span class="lineno">  136 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqRollbackTurnProjections _ _ -&gt;</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResRollbackTurnProjections (Left (PdRollbackFailed StageUnknown Nothing (Just &quot;persistence_unavailable_default_test_pipeline&quot;))))</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqCheckpoint _ -&gt;</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="nottickedoff">pure TurnResCheckpointCompleted</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqLinearizeClaimAst _ _ _ -&gt;</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResLinearizeClaimAst (Left &quot;pgf_unavailable_default_test_pipeline&quot;))</span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqLinearizeDialogAtoms _ _ _ -&gt;</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResLinearizeDialogAtoms (Left &quot;pgf_unavailable_default_test_pipeline&quot;))</span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="nottickedoff">TurnReqExternalQuery _ _ _ -&gt;</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="nottickedoff">pure (TurnResExternalQuery (Left (EqeInvalidResponse &quot;external_query_unavailable_default_test_pipeline&quot;)))</span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>fixedTestTime :: Clock.UTCTime
+<span class="lineno">  148 </span><span class="decl"><span class="nottickedoff">fixedTestTime = Clock.UTCTime (ModifiedJulianDay 0) 0</span></span>
+
+</pre>
+</body>
+</html>

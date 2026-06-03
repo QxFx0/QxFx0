@@ -3,7 +3,7 @@
 
 {-|
 Module      : Test.Suite.SelfEssenceCommit
-Description : Property and unit tests for Phase-10 forced commitment
+Description : Property and unit tests for Phase-10 law-driven commitment
               and post-commitment guard.
 
 Verifies, by QuickCheck and HUnit, the laws asserted in
@@ -12,8 +12,8 @@ Verifies, by QuickCheck and HUnit, the laws asserted in
 
   * 'EssenceCommitted' is sticky (never reverts);
   * 'CMRepair' and 'NarrativeNeutral' are always admissible;
-  * default-off preserves Phase 9 behaviour exactly;
-  * flag-on triggers commitment at threshold;
+  * pre-threshold trajectories stay uncommitted;
+  * threshold crossings trigger commitment;
   * 'EssenceRupture' aborts the turn before persistence;
   * sliding-window Conatus erosion semantics;
   * reconcile-time courtesy never widens the admissible set.
@@ -94,19 +94,19 @@ selfEssenceCommitTests =
       quickCheckProperty "neutral tone always admissible"
         propNeutralToneAlwaysAdmissible
 
-    -- Regression — flag off preserves Phase 9 shape
+    -- Regression — pre-threshold shape stays uncommitted
     -- TODO: replace with an actual buildNextSystemState call once
     -- a reusable Phase-10 fixture builder is extracted; see
     -- docs/post-phase-10-roadmap-closure-spec.md §1.2.
-  , TestLabel "flag-off produces EssenceUncommitted with one witness" $
+  , TestLabel "pre-threshold trajectory stays EssenceUncommitted with one witness" $
       TestCase testFlagOffEssenceUncommittedShape
 
-    -- HUnit — flag on commitment fires
-  , TestLabel "flag-on with angst threshold crossed yields EssenceCommitted" $
+    -- HUnit — threshold commitment fires
+  , TestLabel "threshold-crossed trajectory yields EssenceCommitted" $
       TestCase testFlagOnCommitmentFires
 
-    -- HUnit — flag on rupture throws before persistence
-  , TestLabel "flag-on with violation throws EssenceRupture before persistence" $
+    -- HUnit — rupture throws before persistence
+  , TestLabel "committed violating plan throws EssenceRupture before persistence" $
       TestCase testFlagOnRuptureThrows
 
     -- Q7 — sliding-window exact semantics
@@ -295,7 +295,7 @@ arbitraryEssenceCommitment = do
     { ecMode        = mode
     , ecTrigger     = trigger
     , ecCommittedAt = turnOrd
-    , ecWitnessHash = TrajectoryHash 0
+    , ecWitnessHash = TrajectoryHash "sha256:test-fixture"
     }
 
 -- ---------------------------------------------------------------------------
@@ -464,7 +464,7 @@ testFlagOnRuptureThrows = do
         { ecMode = EssenceContemplative
         , ecTrigger = TriggerAngstThreshold
         , ecCommittedAt = 1
-        , ecWitnessHash = TrajectoryHash 0
+        , ecWitnessHash = TrajectoryHash "sha256:test-rupture"
         }
       -- A Plan with family CMContact is NOT admissible for Contemplative
       badPlan = defaultPlan { planFamily = CMContact }

@@ -1,0 +1,189 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module QxFx0.Types.Sense
+<span class="lineno">    7 </span>  ( SemanticNodeId(..)
+<span class="lineno">    8 </span>  , FamilyId(..)
+<span class="lineno">    9 </span>  , SenseAxis(..)
+<span class="lineno">   10 </span>  , SensePolarity(..)
+<span class="lineno">   11 </span>  , SenseOperator(..)
+<span class="lineno">   12 </span>  , SenseVector(..)
+<span class="lineno">   13 </span>  , ResponseSensePlan(..)
+<span class="lineno">   14 </span>  , MicroPlan(..)
+<span class="lineno">   15 </span>  , emptySenseVector
+<span class="lineno">   16 </span>  , emptyResponseSensePlan
+<span class="lineno">   17 </span>  , emptyMicroPlan
+<span class="lineno">   18 </span>  , renderSenseAxis
+<span class="lineno">   19 </span>  , renderSenseOperator
+<span class="lineno">   20 </span>  ) where
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   23 </span>import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+<span class="lineno">   24 </span>import Data.Map.Strict (Map)
+<span class="lineno">   25 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   26 </span>import Data.Text (Text)
+<span class="lineno">   27 </span>import GHC.Generics (Generic)
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>newtype SemanticNodeId = SemanticNodeId { <span class="istickedoff"><span class="decl"><span class="istickedoff">unSemanticNodeId</span></span></span> :: Text }
+<span class="lineno">   30 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   31 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>newtype FamilyId = FamilyId { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unFamilyId</span></span></span> :: Text }
+<span class="lineno">   34 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   35 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>data SenseAxis
+<span class="lineno">   38 </span>  = AxIdentity
+<span class="lineno">   39 </span>  | AxCause
+<span class="lineno">   40 </span>  | AxPurpose
+<span class="lineno">   41 </span>  | AxContrast
+<span class="lineno">   42 </span>  | AxBoundary
+<span class="lineno">   43 </span>  | AxAction
+<span class="lineno">   44 </span>  | AxState
+<span class="lineno">   45 </span>  | AxKnowledge
+<span class="lineno">   46 </span>  | AxNorm
+<span class="lineno">   47 </span>  | AxTime
+<span class="lineno">   48 </span>  | AxPossibility
+<span class="lineno">   49 </span>  | AxSelf
+<span class="lineno">   50 </span>  | AxOther
+<span class="lineno">   51 </span>  | AxRepair
+<span class="lineno">   52 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   53 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSONKey</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSONKey</span></span></span></span>)
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>data SensePolarity
+<span class="lineno">   56 </span>  = SpAffirm
+<span class="lineno">   57 </span>  | SpDeny
+<span class="lineno">   58 </span>  | SpUncertain
+<span class="lineno">   59 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   60 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>data SenseOperator
+<span class="lineno">   63 </span>  = OpDefine
+<span class="lineno">   64 </span>  | OpGround
+<span class="lineno">   65 </span>  | OpDistinguish
+<span class="lineno">   66 </span>  | OpExplainCause
+<span class="lineno">   67 </span>  | OpExplainPurpose
+<span class="lineno">   68 </span>  | OpReflect
+<span class="lineno">   69 </span>  | OpConstrain
+<span class="lineno">   70 </span>  | OpRepair
+<span class="lineno">   71 </span>  | OpClarify
+<span class="lineno">   72 </span>  | OpDeepen
+<span class="lineno">   73 </span>  | OpNextStep
+<span class="lineno">   74 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   75 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>data SenseVector = SenseVector
+<span class="lineno">   78 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">svAnchor</span></span></span> :: !SemanticNodeId
+<span class="lineno">   79 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svLexicalFamily</span></span></span> :: !(Maybe FamilyId)
+<span class="lineno">   80 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svEvidenceNodes</span></span></span> :: ![SemanticNodeId]
+<span class="lineno">   81 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">svAxes</span></span></span> :: !(Map SenseAxis Double)
+<span class="lineno">   82 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">svOperators</span></span></span> :: ![SenseOperator]
+<span class="lineno">   83 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svPolarity</span></span></span> :: !SensePolarity
+<span class="lineno">   84 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svAgent</span></span></span> :: !(Maybe SemanticNodeId)
+<span class="lineno">   85 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svTarget</span></span></span> :: !(Maybe SemanticNodeId)
+<span class="lineno">   86 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">svConfidence</span></span></span> :: !Double
+<span class="lineno">   87 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   88 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>data ResponseSensePlan = ResponseSensePlan
+<span class="lineno">   91 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">rspInputVector</span></span></span> :: !SenseVector
+<span class="lineno">   92 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rspChosenOperator</span></span></span> :: !SenseOperator
+<span class="lineno">   93 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">rspPreservedAxes</span></span></span> :: ![SenseAxis]
+<span class="lineno">   94 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rspShiftReason</span></span></span> :: !Text
+<span class="lineno">   95 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">rspDistance</span></span></span> :: !Int
+<span class="lineno">   96 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   97 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>data MicroPlan = MicroPlan
+<span class="lineno">  100 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">mpRhetoricalMoves</span></span></span> :: ![Text]
+<span class="lineno">  101 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mpExplicitness</span></span></span> :: !Double
+<span class="lineno">  102 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mpStructureBudget</span></span></span> :: !Int
+<span class="lineno">  103 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">mpFallbackPolicy</span></span></span> :: !Text
+<span class="lineno">  104 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  105 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>)
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>emptySenseVector :: SenseVector
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">emptySenseVector = SenseVector</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">{ svAnchor = SemanticNodeId &quot;unknown&quot;</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">, svLexicalFamily = Nothing</span>
+<span class="lineno">  111 </span><span class="spaces">  </span><span class="istickedoff">, svEvidenceNodes = []</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">, svAxes = M.empty</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">, svOperators = [OpGround]</span>
+<span class="lineno">  114 </span><span class="spaces">  </span><span class="istickedoff">, svPolarity = SpUncertain</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">, svAgent = Nothing</span>
+<span class="lineno">  116 </span><span class="spaces">  </span><span class="istickedoff">, svTarget = Nothing</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">, svConfidence = 0.0</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>emptyResponseSensePlan :: ResponseSensePlan
+<span class="lineno">  121 </span><span class="decl"><span class="istickedoff">emptyResponseSensePlan = ResponseSensePlan</span>
+<span class="lineno">  122 </span><span class="spaces">  </span><span class="istickedoff">{ rspInputVector = emptySenseVector</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">, rspChosenOperator = OpGround</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">, rspPreservedAxes = []</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">, rspShiftReason = &quot;default_grounding&quot;</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">, rspDistance = 0</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>emptyMicroPlan :: MicroPlan
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">emptyMicroPlan = MicroPlan</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">{ mpRhetoricalMoves = []</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">, mpExplicitness = 0.5</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">, mpStructureBudget = 1</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">, mpFallbackPolicy = &quot;safe_degrade&quot;</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>renderSenseAxis :: SenseAxis -&gt; Text
+<span class="lineno">  138 </span><span class="decl"><span class="istickedoff">renderSenseAxis axis = case axis of</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">AxIdentity -&gt; &quot;identity&quot;</span>
+<span class="lineno">  140 </span><span class="spaces">  </span><span class="istickedoff">AxCause -&gt; &quot;cause&quot;</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">AxPurpose -&gt; &quot;purpose&quot;</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">AxContrast -&gt; &quot;contrast&quot;</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">AxBoundary -&gt; &quot;boundary&quot;</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">AxAction -&gt; &quot;action&quot;</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">AxState -&gt; &quot;state&quot;</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">AxKnowledge -&gt; &quot;knowledge&quot;</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">AxNorm -&gt; <span class="nottickedoff">&quot;norm&quot;</span></span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">AxTime -&gt; <span class="nottickedoff">&quot;time&quot;</span></span>
+<span class="lineno">  149 </span><span class="spaces">  </span><span class="istickedoff">AxPossibility -&gt; <span class="nottickedoff">&quot;possibility&quot;</span></span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="istickedoff">AxSelf -&gt; &quot;self&quot;</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">AxOther -&gt; &quot;other&quot;</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">AxRepair -&gt; <span class="nottickedoff">&quot;repair&quot;</span></span></span>
+<span class="lineno">  153 </span>
+<span class="lineno">  154 </span>renderSenseOperator :: SenseOperator -&gt; Text
+<span class="lineno">  155 </span><span class="decl"><span class="nottickedoff">renderSenseOperator op = case op of</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="nottickedoff">OpDefine -&gt; &quot;define&quot;</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="nottickedoff">OpGround -&gt; &quot;ground&quot;</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="nottickedoff">OpDistinguish -&gt; &quot;distinguish&quot;</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="nottickedoff">OpExplainCause -&gt; &quot;explain_cause&quot;</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="nottickedoff">OpExplainPurpose -&gt; &quot;explain_purpose&quot;</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="nottickedoff">OpReflect -&gt; &quot;reflect&quot;</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="nottickedoff">OpConstrain -&gt; &quot;constrain&quot;</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="nottickedoff">OpRepair -&gt; &quot;repair&quot;</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="nottickedoff">OpClarify -&gt; &quot;clarify&quot;</span>
+<span class="lineno">  165 </span><span class="spaces">  </span><span class="nottickedoff">OpDeepen -&gt; &quot;deepen&quot;</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="nottickedoff">OpNextStep -&gt; &quot;next_step&quot;</span></span>
+
+</pre>
+</body>
+</html>

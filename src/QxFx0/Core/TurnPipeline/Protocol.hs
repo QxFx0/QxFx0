@@ -165,7 +165,7 @@ resolveFinalizePrecommit = Finalize.resolveFinalizePrecommit
 buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> FinalizePrecommitBundle
 buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 
-planFinalizeCommit :: Text -> SystemState -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
+planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
 planFinalizeCommit = Finalize.planFinalizeCommit
 
 resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
@@ -216,7 +216,7 @@ finalizeTurn pio ss sessionId _requestId (RenderedTurn ti ts tp ta) = do
   let precommitPlan = Finalize.planFinalizePrecommit ss ti ts tp ta
   precommitResults <- Finalize.resolveFinalizePrecommit pio precommitPlan
   let precommitBundle = Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
-      commitPlan = Finalize.planFinalizeCommit sessionId ss ts ta precommitBundle
+      commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
   commitResults <- Finalize.resolveFinalizeCommit pio commitPlan
   let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults
   Finalize.resolveFinalizePostCommit (trMetrics turnResult)

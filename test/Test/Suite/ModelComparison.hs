@@ -207,9 +207,16 @@ testComparisonRunThreeModels = TestCase $ do
         ]
   run <- runComparison "test-run-001" Sequential models deterministicCorpus emptySystemState
   assertEqual "3 model outcomes" 3 (length (crModelOutcomes run))
-  let glm = head (filter ((== "glm")      . moModelId) (crModelOutcomes run))
-  let ds  = head (filter ((== "deepseek") . moModelId) (crModelOutcomes run))
-  let km  = head (filter ((== "kimi")     . moModelId) (crModelOutcomes run))
+  let outcomes = crModelOutcomes run
+      glm = case filter ((== "glm") . moModelId) outcomes of
+        []    -> error "testComparisonRunThreeModels: glm outcome not found"
+        (x:_) -> x
+      ds  = case filter ((== "deepseek") . moModelId) outcomes of
+        []    -> error "testComparisonRunThreeModels: deepseek outcome not found"
+        (x:_) -> x
+      km  = case filter ((== "kimi") . moModelId) outcomes of
+        []    -> error "testComparisonRunThreeModels: kimi outcome not found"
+        (x:_) -> x
   assertEqual "glm perfect success rate" 1.0 (moAvgSuccessRate glm)
   assertEqual "glm zero incidents" 0 (moTotalIncidents glm)
   assertBool "deepseek has reduced success rate" (moAvgSuccessRate ds < 1.0)

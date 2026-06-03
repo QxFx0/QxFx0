@@ -46,6 +46,7 @@ data BackendReadiness = BackendReadiness
   , brEmbeddingExplicit    :: !Bool
   , brEmbeddingBackend     :: !Text
   , brEmbeddingQuality     :: !Text
+  , brEmbeddingIssues      :: ![Text]
   , brNixOperational       :: !Bool
   , brNixIssues            :: ![Text]
   , brDatalogReady         :: !Bool
@@ -94,6 +95,7 @@ mkBackendReadiness embeddingHealth nixProbe datalogProbe agdaReport =
     , brEmbeddingExplicit = ehExplicit embeddingHealth
     , brEmbeddingBackend = embeddingBackendText (ehBackend embeddingHealth)
     , brEmbeddingQuality = embeddingQualityText (ehQuality embeddingHealth)
+    , brEmbeddingIssues = ehIssues embeddingHealth
     , brNixOperational = either (const False) (const True) nixProbe
     , brNixIssues = either (:[]) (const []) nixProbe
     , brDatalogReady = either (const False) (const True) datalogProbe

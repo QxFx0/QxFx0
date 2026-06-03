@@ -355,6 +355,10 @@ isTermKnownInKnowledgeTree term tree =
       matchesProp f = T.isInfixOf lower (T.toLower (kfProposition f))
   in any (\f -> kfValidated f && (matchesWord f || matchesProp f)) allFruits
 
--- | Clamp to [0, 1].
+-- | Clamp to [0, 1].  NaN inputs collapse to the lower bound so that
+-- 'rootStressSignal' (and any other consumer) cannot leak non-finite
+-- doubles into the calibration signal pipeline.  See regression G1.
 clampUnit :: Double -> Double
-clampUnit x = max 0.0 (min 1.0 x)
+clampUnit x
+  | isNaN x   = 0.0
+  | otherwise = max 0.0 (min 1.0 x)

@@ -8,8 +8,10 @@ module QxFx0.Bridge.SQLite.Queries
   , loadClusters
   ) where
 
+import Control.Exception (finally)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Char (isAlphaNum, isLetter, isSpace)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy (QxFx0Exception(SQLiteError), throwQxFx0)
 import QxFx0.Types
@@ -40,36 +42,45 @@ queryExactTrigger :: NSQL.Database -> Text -> IO [IdentityClaimRef]
 queryExactTrigger db keyword = do
   let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE concept = ? LIMIT 10"
   stmt <- prepareQuery db "queryExactTrigger" sql
-  _ <- NSQL.bindText stmt 1 keyword
-  claims <- collectClaims stmt
-  NSQL.finalize stmt
-  pure claims
+  (do
+      _ <- NSQL.bindText stmt 1 keyword
+      collectClaims stmt
+    ) `finally` NSQL.finalize stmt
 
 queryFTS5 :: NSQL.Database -> Text -> IO [IdentityClaimRef]
 queryFTS5 db keyword = do
-  let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE id IN (SELECT rowid FROM identity_claims_fts WHERE text MATCH ? LIMIT 10)"
-  stmt <- prepareQuery db "queryFTS5" sql
-  _ <- NSQL.bindText stmt 1 keyword
-  claims <- collectClaims stmt
-  NSQL.finalize stmt
-  pure claims
+  case quoteFtsPhrase keyword of
+    Nothing -> pure []
+    Just phrase -> do
+      let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE id IN (SELECT rowid FROM identity_claims_fts WHERE text MATCH ? LIMIT 10)"
+      stmt <- prepareQuery db "queryFTS5" sql
+      (do
+          _ <- NSQL.bindText stmt 1 phrase
+          collectClaims stmt
+        ) `finally` NSQL.finalize stmt
+
+quoteFtsPhrase :: Text -> Maybe Text
+quoteFtsPhrase raw =
+  let cleaned = T.filter (\c -> isAlphaNum c || isLetter c || isSpace c) raw
+      normalized = T.strip (T.filter (/= '"') cleaned)
+  in if T.null normalized
+       then Nothing
+       else Just (T.concat ["\"", normalized, "\""])
 
 queryTopicFallback :: NSQL.Database -> Text -> IO [IdentityClaimRef]
 queryTopicFallback db topic = do
   let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE topic = ? LIMIT 10"
   stmt <- prepareQuery db "queryTopicFallback" sql
-  _ <- NSQL.bindText stmt 1 topic
-  claims <- collectClaims stmt
-  NSQL.finalize stmt
-  pure claims
+  (do
+      _ <- NSQL.bindText stmt 1 topic
+      collectClaims stmt
+    ) `finally` NSQL.finalize stmt
 
 queryTopClaims :: NSQL.Database -> IO [IdentityClaimRef]
 queryTopClaims db = do
   let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims ORDER BY confidence DESC, id ASC LIMIT 10"
   stmt <- prepareQuery db "queryTopClaims" sql
-  claims <- collectClaims stmt
-  NSQL.finalize stmt
-  pure claims
+  collectClaims stmt `finally` NSQL.finalize stmt
 
 collectClaims :: NSQL.Statement -> IO [IdentityClaimRef]
 collectClaims stmt = go []
@@ -99,9 +110,7 @@ loadScenes :: NSQL.Database -> IO [SemanticScene]
 loadScenes db = do
   let sql = "SELECT MIN(confidence), MAX(confidence), topic, topic FROM identity_claims GROUP BY topic"
   stmt <- prepareQuery db "loadScenes" sql
-  scenes <- collectScenes stmt
-  NSQL.finalize stmt
-  pure scenes
+  collectScenes stmt `finally` NSQL.finalize stmt
   where
     collectScenes stmt = go []
       where
@@ -120,9 +129,7 @@ loadClusters :: NSQL.Database -> IO [ClusterDef]
 loadClusters db = do
   let sql = "SELECT name, keywords, priority FROM semantic_clusters ORDER BY priority DESC"
   stmt <- prepareQuery db "loadClusters" sql
-  clusters <- collectClusters stmt
-  NSQL.finalize stmt
-  pure clusters
+  collectClusters stmt `finally` NSQL.finalize stmt
   where
     collectClusters stmt = go []
       where

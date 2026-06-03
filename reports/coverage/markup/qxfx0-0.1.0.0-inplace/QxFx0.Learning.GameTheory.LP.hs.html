@@ -1,0 +1,182 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>{-|
+<span class="lineno">    7 </span>Proper LP solver for zero-sum mixed-strategy games using the simplex method.
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>Formulation (primal):
+<span class="lineno">   10 </span>  minimise   sum_i w_i
+<span class="lineno">   11 </span>  subject to sum_i w_i * B_{ij} &gt;= 1   for all j
+<span class="lineno">   12 </span>             w_i &gt;= 0
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>where B = A + C is the payoff matrix shifted so every entry is &gt; 0.
+<span class="lineno">   15 </span>The optimal mixed strategy is p_i = w_i / sum_i w_i.
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>We solve the dual problem via the revised simplex tableau,
+<span class="lineno">   18 </span>then recover the primal variables from the objective-row reduced costs.
+<span class="lineno">   19 </span>-}
+<span class="lineno">   20 </span>module QxFx0.Learning.GameTheory.LP
+<span class="lineno">   21 </span>  ( solveMixedStrategy
+<span class="lineno">   22 </span>  ) where
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>import Data.List (minimumBy)
+<span class="lineno">   25 </span>import Data.Ord (comparing)
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>epsilon :: Double
+<span class="lineno">   28 </span><span class="decl"><span class="istickedoff">epsilon = 1e-9</span></span>
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>-- | Solve a zero-sum mixed-strategy LP.
+<span class="lineno">   31 </span>-- Input: payoff matrix A (n rows x m columns).
+<span class="lineno">   32 </span>-- Returns: list of n probabilities summing to 1, or Nothing if degenerate.
+<span class="lineno">   33 </span>solveMixedStrategy :: [[Double]] -&gt; Maybe [Double]
+<span class="lineno">   34 </span><span class="decl"><span class="istickedoff">solveMixedStrategy a =</span>
+<span class="lineno">   35 </span><span class="spaces">  </span><span class="istickedoff">case a of</span>
+<span class="lineno">   36 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">   37 </span><span class="spaces">    </span><span class="istickedoff">(row0:_) | <span class="tickonlyfalse">null row0</span> -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   38 </span><span class="spaces">    </span><span class="istickedoff">(row0:_) -&gt;</span>
+<span class="lineno">   39 </span><span class="spaces">      </span><span class="istickedoff">let n = length a</span>
+<span class="lineno">   40 </span><span class="spaces">          </span><span class="istickedoff">m = length row0</span>
+<span class="lineno">   41 </span><span class="spaces">          </span><span class="istickedoff">rectangular = all ((== m) . length) a</span>
+<span class="lineno">   42 </span><span class="spaces">          </span><span class="istickedoff">-- Shift payoffs so every entry &gt;= 1 (guarantees v &gt; 0)</span>
+<span class="lineno">   43 </span><span class="spaces">          </span><span class="istickedoff">minA = minimum (concat a)</span>
+<span class="lineno">   44 </span><span class="spaces">          </span><span class="istickedoff">shift = if <span class="tickonlyfalse">minA &lt; 1.0</span> then <span class="nottickedoff">1.0 - minA</span> else 0.0</span>
+<span class="lineno">   45 </span><span class="spaces">          </span><span class="istickedoff">b = map (map (+ shift)) a</span>
+<span class="lineno">   46 </span><span class="spaces">          </span><span class="istickedoff">-- Dual problem: max sum_j y_j</span>
+<span class="lineno">   47 </span><span class="spaces">          </span><span class="istickedoff">-- s.t. sum_j b_{ij} y_j &lt;= 1 for all i</span>
+<span class="lineno">   48 </span><span class="spaces">          </span><span class="istickedoff">-- Build tableau with n constraints, m decision + n slack variables</span>
+<span class="lineno">   49 </span><span class="spaces">          </span><span class="istickedoff">nVars = m + n</span>
+<span class="lineno">   50 </span><span class="spaces">          </span><span class="istickedoff">-- Objective row: -z + sum y_j = 0  (maximisation convention)</span>
+<span class="lineno">   51 </span><span class="spaces">          </span><span class="istickedoff">objRow = replicate m 1.0 ++ replicate n 0.0</span>
+<span class="lineno">   52 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">objRHS = 0.0</span></span>
+<span class="lineno">   53 </span><span class="spaces">          </span><span class="istickedoff">-- Constraint rows: sum_j b_{ij} y_j + s_i = 1</span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff">conRows = zipWith (\row i -&gt;</span>
+<span class="lineno">   55 </span><span class="spaces">                              </span><span class="istickedoff">take m row ++ replicate i <span class="nottickedoff">0.0</span> ++ [1.0] ++ replicate (n - i - 1) <span class="nottickedoff">0.0</span>)</span>
+<span class="lineno">   56 </span><span class="spaces">                            </span><span class="istickedoff">b [0..]</span>
+<span class="lineno">   57 </span><span class="spaces">          </span><span class="istickedoff">conRHS = replicate n 1.0</span>
+<span class="lineno">   58 </span><span class="spaces">          </span><span class="istickedoff">-- Initial basic variables are the slacks (indices m .. m+n-1)</span>
+<span class="lineno">   59 </span><span class="spaces">          </span><span class="istickedoff">basic = [m .. m+n-1]</span>
+<span class="lineno">   60 </span><span class="spaces">          </span><span class="istickedoff">-- Run simplex (fail-closed: validate tableau dimensions first)</span>
+<span class="lineno">   61 </span><span class="spaces">          </span><span class="istickedoff">final = if rectangular &amp;&amp; all (\row -&gt; length row == nVars) conRows</span>
+<span class="lineno">   62 </span><span class="spaces">                     </span><span class="istickedoff">then simplexLoop nVars conRows conRHS objRow <span class="nottickedoff">objRHS</span> basic 1000</span>
+<span class="lineno">   63 </span><span class="spaces">                     </span><span class="istickedoff">else Nothing</span>
+<span class="lineno">   64 </span><span class="spaces">       </span><span class="istickedoff">in case final of</span>
+<span class="lineno">   65 </span><span class="spaces">            </span><span class="istickedoff">Nothing -&gt; Nothing</span>
+<span class="lineno">   66 </span><span class="spaces">            </span><span class="istickedoff">Just (_, objR, _, bas, _) -&gt;</span>
+<span class="lineno">   67 </span><span class="spaces">              </span><span class="istickedoff">let -- Primal variables w_i = - (objective coefficient of slack s_i)</span>
+<span class="lineno">   68 </span><span class="spaces">                  </span><span class="istickedoff">w = [ let coeff = if (m + i) `elem` bas then 0.0 else atOrZero objR (m + i)</span>
+<span class="lineno">   69 </span><span class="spaces">                        </span><span class="istickedoff">in max 0.0 (-coeff)</span>
+<span class="lineno">   70 </span><span class="spaces">                      </span><span class="istickedoff">| i &lt;- [0 .. n-1] ]</span>
+<span class="lineno">   71 </span><span class="spaces">                  </span><span class="istickedoff">total = sum w</span>
+<span class="lineno">   72 </span><span class="spaces">              </span><span class="istickedoff">in if <span class="tickonlytrue">total &gt; epsilon</span></span>
+<span class="lineno">   73 </span><span class="spaces">                 </span><span class="istickedoff">then Just <span class="nottickedoff">(map (/ total) w)</span></span>
+<span class="lineno">   74 </span><span class="spaces">                 </span><span class="istickedoff">else <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>-- | Simplex tableau iteration.
+<span class="lineno">   77 </span>simplexLoop :: Int                          -- total variables
+<span class="lineno">   78 </span>            -&gt; [[Double]]                   -- constraint rows
+<span class="lineno">   79 </span>            -&gt; [Double]                     -- constraint RHS
+<span class="lineno">   80 </span>            -&gt; [Double]                     -- objective coefficients
+<span class="lineno">   81 </span>            -&gt; Double                       -- objective RHS
+<span class="lineno">   82 </span>            -&gt; [Int]                        -- basic variable per row
+<span class="lineno">   83 </span>            -&gt; Int                          -- max iterations
+<span class="lineno">   84 </span>            -&gt; Maybe ([[Double]], [Double], Double, [Int], [Double])
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">simplexLoop nVars conRows conRHS objRow objRHS basic limit</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">limit &lt;= 0</span> = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">let nonBasic = filter (`notElem` basic) [0 .. nVars-1]</span>
+<span class="lineno">   89 </span><span class="spaces">          </span><span class="istickedoff">-- Optimality: for maximisation with -z + c^T x = RHS,</span>
+<span class="lineno">   90 </span><span class="spaces">          </span><span class="istickedoff">-- optimal when all nonbasic objective coefficients &lt;= 0</span>
+<span class="lineno">   91 </span><span class="spaces">          </span><span class="istickedoff">entering = findEntering objRow nonBasic</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">in case entering of</span>
+<span class="lineno">   93 </span><span class="spaces">           </span><span class="istickedoff">Nothing -&gt; Just (<span class="nottickedoff">conRows</span>, objRow, <span class="nottickedoff">objRHS</span>, basic, <span class="nottickedoff">conRHS</span>)</span>
+<span class="lineno">   94 </span><span class="spaces">           </span><span class="istickedoff">Just e -&gt;</span>
+<span class="lineno">   95 </span><span class="spaces">              </span><span class="istickedoff">let -- Ratio test: for each row where coeff &gt; 0, RHS / coeff</span>
+<span class="lineno">   96 </span><span class="spaces">                  </span><span class="istickedoff">ratios =</span>
+<span class="lineno">   97 </span><span class="spaces">                    </span><span class="istickedoff">[ (atOrZero conRHS i / coeff, i)</span>
+<span class="lineno">   98 </span><span class="spaces">                    </span><span class="istickedoff">| i &lt;- [0 .. length conRows - 1]</span>
+<span class="lineno">   99 </span><span class="spaces">                    </span><span class="istickedoff">, Just row &lt;- [safeIndex conRows i]</span>
+<span class="lineno">  100 </span><span class="spaces">                    </span><span class="istickedoff">, let coeff = atOrZero row e</span>
+<span class="lineno">  101 </span><span class="spaces">                    </span><span class="istickedoff">, <span class="tickonlytrue">coeff &gt; epsilon</span></span>
+<span class="lineno">  102 </span><span class="spaces">                    </span><span class="istickedoff">]</span>
+<span class="lineno">  103 </span><span class="spaces">              </span><span class="istickedoff">in if <span class="tickonlyfalse">null ratios</span></span>
+<span class="lineno">  104 </span><span class="spaces">                 </span><span class="istickedoff">then <span class="nottickedoff">Nothing</span>  -- unbounded</span>
+<span class="lineno">  105 </span><span class="spaces">                 </span><span class="istickedoff">else</span>
+<span class="lineno">  106 </span><span class="spaces">                   </span><span class="istickedoff">let (_, l) = minimumBy (comparing fst) ratios</span>
+<span class="lineno">  107 </span><span class="spaces">                   </span><span class="istickedoff">in case safeIndex conRows l of</span>
+<span class="lineno">  108 </span><span class="spaces">                        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  109 </span><span class="spaces">                        </span><span class="istickedoff">Just pivotRowRaw -&gt;</span>
+<span class="lineno">  110 </span><span class="spaces">                          </span><span class="istickedoff">let pivotElem = atOrZero pivotRowRaw e</span>
+<span class="lineno">  111 </span><span class="spaces">                          </span><span class="istickedoff">in if <span class="tickonlyfalse">pivotElem &lt;= epsilon</span></span>
+<span class="lineno">  112 </span><span class="spaces">                               </span><span class="istickedoff">then <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  113 </span><span class="spaces">                               </span><span class="istickedoff">else</span>
+<span class="lineno">  114 </span><span class="spaces">                                 </span><span class="istickedoff">let pivotRow = map (/ pivotElem) pivotRowRaw</span>
+<span class="lineno">  115 </span><span class="spaces">                                     </span><span class="istickedoff"><span class="nottickedoff">pivotRHS = atOrZero conRHS l / pivotElem</span></span>
+<span class="lineno">  116 </span><span class="spaces">                                     </span><span class="istickedoff"><span class="nottickedoff">updateRow row rhs =</span></span>
+<span class="lineno">  117 </span><span class="spaces">                                       </span><span class="istickedoff"><span class="nottickedoff">let coeff = atOrZero row e</span></span>
+<span class="lineno">  118 </span><span class="spaces">                                           </span><span class="istickedoff"><span class="nottickedoff">newRow = zipWith (-) row (map (* coeff) pivotRow)</span></span>
+<span class="lineno">  119 </span><span class="spaces">                                           </span><span class="istickedoff"><span class="nottickedoff">newRHS = rhs - coeff * pivotRHS</span></span>
+<span class="lineno">  120 </span><span class="spaces">                                       </span><span class="istickedoff"><span class="nottickedoff">in (replaceAt e 0.0 newRow, newRHS)</span></span>
+<span class="lineno">  121 </span><span class="spaces">                                     </span><span class="istickedoff"><span class="nottickedoff">rebuilt =</span></span>
+<span class="lineno">  122 </span><span class="spaces">                                       </span><span class="istickedoff"><span class="nottickedoff">[ if i == l</span></span>
+<span class="lineno">  123 </span><span class="spaces">                                           </span><span class="istickedoff"><span class="nottickedoff">then (pivotRow, pivotRHS)</span></span>
+<span class="lineno">  124 </span><span class="spaces">                                           </span><span class="istickedoff"><span class="nottickedoff">else updateRow row (atOrZero conRHS i)</span></span>
+<span class="lineno">  125 </span><span class="spaces">                                       </span><span class="istickedoff"><span class="nottickedoff">| (i, row) &lt;- zip [0 ..] conRows</span></span>
+<span class="lineno">  126 </span><span class="spaces">                                       </span><span class="istickedoff"><span class="nottickedoff">]</span></span>
+<span class="lineno">  127 </span><span class="spaces">                                     </span><span class="istickedoff">(conRows', conRHS') = <span class="nottickedoff">unzip rebuilt</span></span>
+<span class="lineno">  128 </span><span class="spaces">                                     </span><span class="istickedoff">objCoeffE = atOrZero objRow e</span>
+<span class="lineno">  129 </span><span class="spaces">                                     </span><span class="istickedoff">newObjRow = zipWith (-) objRow (map (* objCoeffE) pivotRow)</span>
+<span class="lineno">  130 </span><span class="spaces">                                     </span><span class="istickedoff"><span class="nottickedoff">newObjRHS = objRHS - objCoeffE * pivotRHS</span></span>
+<span class="lineno">  131 </span><span class="spaces">                                     </span><span class="istickedoff">newObjRow' = replaceAt e <span class="nottickedoff">0.0</span> newObjRow</span>
+<span class="lineno">  132 </span><span class="spaces">                                     </span><span class="istickedoff">basic' = take l <span class="nottickedoff">basic</span> ++ [e] ++ drop (l + 1) basic</span>
+<span class="lineno">  133 </span><span class="spaces">                                 </span><span class="istickedoff">in simplexLoop nVars <span class="nottickedoff">conRows'</span> <span class="nottickedoff">conRHS'</span> newObjRow' <span class="nottickedoff">newObjRHS</span> basic' (limit - 1)</span></span>
+<span class="lineno">  134 </span>
+<span class="lineno">  135 </span>findEntering :: [Double] -&gt; [Int] -&gt; Maybe Int
+<span class="lineno">  136 </span><span class="decl"><span class="istickedoff">findEntering objRow nonBasic =</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff">let candidates = filter (\j -&gt; atOrZero objRow j &gt; epsilon) nonBasic</span>
+<span class="lineno">  138 </span><span class="spaces">  </span><span class="istickedoff">in case candidates of</span>
+<span class="lineno">  139 </span><span class="spaces">       </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  140 </span><span class="spaces">       </span><span class="istickedoff">js -&gt; Just (minimum js)</span></span>  -- Bland's rule: smallest index with positive reduced cost
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>atOrZero :: [Double] -&gt; Int -&gt; Double
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">atOrZero xs idx = maybe <span class="nottickedoff">0.0</span> id (safeIndex xs idx)</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>safeIndex :: [a] -&gt; Int -&gt; Maybe a
+<span class="lineno">  146 </span><span class="decl"><span class="istickedoff">safeIndex xs idx</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">idx &lt; 0</span> = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">case drop idx xs of</span>
+<span class="lineno">  150 </span><span class="spaces">        </span><span class="istickedoff">y:_ -&gt; Just y</span>
+<span class="lineno">  151 </span><span class="spaces">        </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">  152 </span>
+<span class="lineno">  153 </span>replaceAt :: Int -&gt; a -&gt; [a] -&gt; [a]
+<span class="lineno">  154 </span><span class="decl"><span class="istickedoff">replaceAt idx value xs</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">idx &lt; 0</span> = <span class="nottickedoff">xs</span></span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">case splitAt idx xs of</span>
+<span class="lineno">  158 </span><span class="spaces">        </span><span class="istickedoff">(prefix, _ : suffix) -&gt; prefix ++ <span class="nottickedoff">value</span> : suffix</span>
+<span class="lineno">  159 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">xs</span></span></span>
+
+</pre>
+</body>
+</html>

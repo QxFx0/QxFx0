@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 
 {-|
@@ -74,7 +75,7 @@ module Test.Suite.PromotionFlagDiscipline
 import Test.HUnit (Test (..), assertFailure, assertBool)
 
 import Control.Exception (SomeException, catch)
-import Prelude (Bool (..), Eq, IO, Show, String, all, filter, isInfixOf, isPrefixOf, lines, mapM, not, null, unlines, (.))
+import Prelude (Bool (..), Eq, FilePath, IO, Show, String, all, filter, lines, mapM, not, null, unlines, (.))
 
 import qualified Data.List as L
 import qualified System.Directory as D

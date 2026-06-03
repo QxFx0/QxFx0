@@ -362,3 +362,151 @@ regressed. Added 2026-05-18.
 - Hard rules: one section per session, design-triage sections
   produce stubs not full ADRs, operations sections produce
   documentation not actual flips, test count never decreases.
+
+## Session 2026-05-25 — Tech-plan closure regression locks landed
+
+Five targeted regression tests added closing the gaps surfaced by the
+post-Phase-10 audit on top of KIMI's previous focused-coverage wave.
+
+Tests added:
+
+- `Test.Suite.Guardrails.testCanSubmitOnTurnZeroWithEmptyState` —
+  locks ADR-0030 §5.2 regression (`circuitBreakerOpen` treating
+  `gsCooldownExpiry = 0` as an open circuit on turn 0).
+- `Test.Suite.SemanticCorpus.testFallbackMatcherInventoryHasBreadth` —
+  locks ADR-0030 §5.1 regression (`detectKeywordFallbackType`
+  accidentally truncated to 3 of 31 matchers).  Eight single-token
+  inputs across distinct matcher categories; assertion fails
+  decisively if the chain regresses to the truncated state.
+- `Test.Suite.KnowledgeTree.testPruneFruitsCleansUnvalidatedQuarantineUnderBulkInsertion` —
+  partial mitigation for audit-round3 P0 #3 (`ktQuarantine` unbounded).
+  Confirms `pruneFruits` drains unvalidated entries even under bulk
+  insertion of 500 fruits.  Validated-but-rejected accumulation
+  remains an open residual gap requiring a hard cap.
+- `Test.Suite.KnowledgeTree.testRootStressSignalIsNaNSafe` — locks
+  regression G1 for the calibration-signal boundary.
+- `Test.Suite.SelfPerspective.testPerspectiveCandidateIsNaNSafe` —
+  locks regression G1 for the perspective-candidate boundary
+  (confidence, counterargument pressure, normative alignment,
+  internal tension all finite + clamped to unit interval).
+
+Source fixes (minimal, surgical) to make the NaN tests pass:
+
+- `src/QxFx0/Self/Perspective.hs:761-764` — `clampUnit` now collapses
+  NaN to 0.0 (fail-closed lower bound) before the existing
+  [0.0, 1.0] clamp.
+- `src/QxFx0/Learning/KnowledgeTree.hs:358-364` — same `clampUnit`
+  NaN-safety hardening at the calibration-signal boundary.
+
+Export expansion:
+
+- `src/QxFx0/Semantic/Proposition.hs` — exports
+  `detectKeywordFallbackType` so the matcher-inventory regression
+  lock can invoke it directly without going through full
+  `parseProposition`.
+
+Validation:
+
+- `cabal build lib:qxfx0 -j1` — green (only pre-existing warnings).
+- `cabal build test:qxfx0-test-unit test:qxfx0-test-fast test:qxfx0-test -j1` — green.
+- `cabal test qxfx0-test-unit -j1` — 701 / 701 PASS (was 696, +5).
+- `cabal test qxfx0-test-fast -j1` — 730 / 730 PASS (was 725, +5).
+
+Residual gaps explicitly NOT closed in this session (deferred to the
+larger remediation plan):
+
+- audit-round3 P0 #3 hard cap on validated quarantine entries.
+- G1 cross-layer NaN property test (`prop_NoNaNInSelfLayer`,
+  `prop_NoNaNInLearningLayer`).
+- Architectural invariants test (Self.* layer acyclicity).
+- DialogueDevelopment / PerspectiveRegistry focused suites.
+
+2026-05-25 — ADR-0032 DialogueDevelopment focused suite closure
+
+Implemented and registered `Test.Suite.DialogueDevelopment` as the focused
+unit lock for the live-but-conservative dialogue-development contour.
+
+Coverage landed:
+
+- outcome learning keeps `dolRecentOutcomes` bounded by
+  `maxRecentOutcomeSamples`.
+- outcome counters increment separately for weak acknowledgements and repair
+  requests.
+- strong update gates speech-policy mutation while weak/observational outcomes
+  keep policy unchanged.
+- speech pattern map remains bounded by `maxSpeechPatternEntries`.
+- render-style adjustment preserves `StyleRecovery` and can choose
+  `StyleDirect` only when the speech policy has enough directness evidence.
+- weak acknowledgement detection recognizes the current cue list and rejects
+  non-cues.
+- `normalizeDialogueText` locks the current replace-before-lowercase contract.
+- `DialogueOutcomeLearningState`, `SpeechPolicyState`, and `BeliefStore`
+  survive JSON round-trips.
+
+Registration:
+
+- `test/TestMainUnit.hs` imports and concatenates `dialogueDevelopmentTests`.
+- `test/TestMainFast.hs` imports and concatenates `dialogueDevelopmentTests`.
+- `test/TestMain.hs` imports and concatenates `dialogueDevelopmentTests`.
+- `qxfx0.cabal` lists `Test.Suite.DialogueDevelopment` in the shared
+  `test-common` `other-modules` stanza.
+
+Validation:
+
+- `cabal test qxfx0-test-unit -j1 --test-show-details=direct` — 711 / 711 PASS.
+- `cabal test qxfx0-test-fast -j1 --test-show-details=direct` — 740 / 740 PASS.
+- `cabal build test:qxfx0-test -j1` — compiles after registering the aggregate
+  import.
+- `cabal test qxfx0-test -j1 --test-show-details=direct` — aggregate executes
+  but currently reports unrelated pre-existing/runtime-environment failures in
+  `RuntimeInfrastructure` and `HttpRuntime` (5 errors, 7 failures out of 879);
+  no failure is from `DialogueDevelopment`.
+
+Next focused suite:
+
+- `PerspectiveRegistry`, per P4 canonical versioned lineage source contract.
+
+2026-05-25 — P4 PerspectiveRegistry focused suite closure
+
+Implemented and registered `Test.Suite.PerspectiveRegistry` as the focused
+unit lock for the canonical versioned lineage source behind P4
+`OpinionCore / PerspectiveOperator`.
+
+Coverage landed:
+
+- observe-only decisions update the evaluated turn without allocating a
+  perspective id, version id, lineage thread, or projection.
+- first promotion creates a canonical active thread, active endorsed version,
+  revision entry, and safe projection.
+- active revision promotes a new version, marks the prior active version
+  `PerspectiveRevised`, and keeps the newest revision first.
+- per-scope revision history respects `prMaxRevisionsPerScope`.
+- inactive endorsed versions respect `prMaxInactiveVersions`.
+- global active cap suspends older active scopes without deleting lineage
+  threads.
+- explicit suspension clears active projections.
+- registry JSON round-trip preserves lineage.
+- duplicate normative profile ids fail decode rather than silently overwriting
+  persisted profile state.
+- public `PerspectiveProjection` exposes only capped summary/count/provenance
+  surfaces while canonical registry entries keep bounded support and
+  counterargument lists.
+
+Registration:
+
+- `test/TestMainUnit.hs` imports and concatenates `perspectiveRegistryTests`.
+- `test/TestMainFast.hs` imports and concatenates `perspectiveRegistryTests`.
+- `test/TestMain.hs` imports and concatenates `perspectiveRegistryTests`.
+- `qxfx0.cabal` lists `Test.Suite.PerspectiveRegistry` in the shared
+  `test-common` `other-modules` stanza.
+
+Validation:
+
+- `cabal build test:qxfx0-test-unit -j1` — green.
+- `cabal test qxfx0-test-unit -j1 --test-show-details=direct` — 721 / 721 PASS.
+- `cabal test qxfx0-test-fast -j1 --test-show-details=direct` — 750 / 750 PASS.
+- `cabal build test:qxfx0-test -j1` — green.
+- `cabal test qxfx0-test -j1 --test-show-details=direct` — aggregate executes
+  but still reports unrelated runtime-environment/infrastructure failures in
+  `RuntimeInfrastructure` and `HttpRuntime` (5 errors, 7 failures out of 889
+  on the diagnostic rerun); no failure block is from `PerspectiveRegistry`.

@@ -1,0 +1,301 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.PerspectiveRegistry
+<span class="lineno">    4 </span>  ( perspectiveRegistryTests
+<span class="lineno">    5 </span>  ) where
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>import Data.Aeson (decode, encode)
+<span class="lineno">    8 </span>import qualified Data.ByteString.Lazy.Char8 as BL8
+<span class="lineno">    9 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   10 </span>import qualified Data.Text as T
+<span class="lineno">   11 </span>import Test.HUnit
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import QxFx0.Self.Perspective
+<span class="lineno">   14 </span>  ( applyPerspectiveDecision
+<span class="lineno">   15 </span>  , buildActivePerspectiveProjections
+<span class="lineno">   16 </span>  , buildPerspectiveProjection
+<span class="lineno">   17 </span>  , opinionCore
+<span class="lineno">   18 </span>  )
+<span class="lineno">   19 </span>import QxFx0.Types.State
+<span class="lineno">   20 </span>  ( ClaimStanceRef(..)
+<span class="lineno">   21 </span>  , ConatusSlice(..)
+<span class="lineno">   22 </span>  , CounterargumentRef(..)
+<span class="lineno">   23 </span>  , EndorsedPerspective(..)
+<span class="lineno">   24 </span>  , EvidenceRef(..)
+<span class="lineno">   25 </span>  , IdentitySlice(..)
+<span class="lineno">   26 </span>  , PerspectiveCandidate(..)
+<span class="lineno">   27 </span>  , PerspectiveInputBundle(..)
+<span class="lineno">   28 </span>  , PerspectiveProjection(..)
+<span class="lineno">   29 </span>  , PerspectivePromotionDecision(..)
+<span class="lineno">   30 </span>  , PerspectiveRegistry(..)
+<span class="lineno">   31 </span>  , PerspectiveRevisionRecord(..)
+<span class="lineno">   32 </span>  , PerspectiveScope(..)
+<span class="lineno">   33 </span>  , PerspectiveStatus(..)
+<span class="lineno">   34 </span>  , PerspectiveThread(..)
+<span class="lineno">   35 </span>  , PerspectiveVersionId(..)
+<span class="lineno">   36 </span>  , activeEndorsedPerspective
+<span class="lineno">   37 </span>  , activePerspectiveProjectionScopes
+<span class="lineno">   38 </span>  , defaultNormativeProfile
+<span class="lineno">   39 </span>  , defaultPerspectiveRegistry
+<span class="lineno">   40 </span>  )
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>perspectiveRegistryTests :: [Test]
+<span class="lineno">   43 </span><span class="decl"><span class="istickedoff">perspectiveRegistryTests =</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry observe-only preserves empty lineage&quot;</span> testObserveOnlyUpdatesTurnWithoutThread</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry promotion creates active canonical thread&quot;</span> testPromotionCreatesCanonicalActiveThread</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry revision marks prior active version&quot;</span> testRevisionMarksPriorActiveVersion</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry revision history is bounded&quot;</span> testRevisionHistoryIsBounded</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry inactive versions are bounded&quot;</span> testInactiveVersionsAreBounded</span>
+<span class="lineno">   49 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry active cap suspends older scope&quot;</span> testActiveCapSuspendsOlderScope</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry suspension clears projection&quot;</span> testSuspensionClearsProjection</span>
+<span class="lineno">   51 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry JSON round-trip is stable&quot;</span> testRegistryJsonRoundTripIsStable</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry duplicate normative profiles fail decode&quot;</span> testDuplicateNormativeProfilesFailDecode</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;PerspectiveRegistry projection caps public surface&quot;</span> testProjectionCapsPublicSurface</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>testObserveOnlyUpdatesTurnWithoutThread :: Test
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">testObserveOnlyUpdatesTurnWithoutThread = TestCase $ do</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">   59 </span><span class="spaces">      </span><span class="istickedoff">registry = applyDecision 9 PpdObserveOnly defaultPerspectiveRegistry <span class="nottickedoff">scope</span> <span class="nottickedoff">&quot;observed only&quot;</span></span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;observe-only must not create a lineage thread&quot;</span></span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">M.empty (prThreads registry)</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;observe-only still records the last evaluated turn&quot;</span></span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">9 (prLastUpdatedTurn registry)</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;observe-only must not allocate a perspective id&quot;</span></span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">1 (prNextPerspectiveOrdinal registry)</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;observe-only must not allocate a version id&quot;</span></span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">1 (prNextVersionOrdinal registry)</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;observe-only must not expose a projection&quot;</span></span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">Nothing (buildPerspectiveProjection registry scope)</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>testPromotionCreatesCanonicalActiveThread :: Test
+<span class="lineno">   72 </span><span class="decl"><span class="istickedoff">testPromotionCreatesCanonicalActiveThread = TestCase $ do</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">registry = applyDecision 1 PpdPromoteEndorsed defaultPerspectiveRegistry scope &quot;initial promoted thesis&quot;</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected promoted perspective thread&quot;</span> (M.lookup scope (prThreads registry))</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">active &lt;- expectJust <span class="nottickedoff">&quot;expected active endorsed perspective&quot;</span> (activeEndorsedPerspective thread)</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- expectJust <span class="nottickedoff">&quot;expected active projection&quot;</span> (buildPerspectiveProjection registry scope)</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;first promoted scope receives version 1&quot;</span></span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">(Just (PerspectiveVersionId 1)) (ptActiveVersion thread)</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;thread status is active&quot;</span></span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveActive (ptStatus thread)</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;active endorsed perspective is version 1&quot;</span></span>
+<span class="lineno">   83 </span><span class="spaces">    </span><span class="istickedoff">(PerspectiveVersionId 1) (epVersion active)</span>
+<span class="lineno">   84 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;active endorsed perspective status is active&quot;</span></span>
+<span class="lineno">   85 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveActive (epStatus active)</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;promotion records one revision entry&quot;</span></span>
+<span class="lineno">   87 </span><span class="spaces">    </span><span class="istickedoff">1 (length (ptRevisionHistory thread))</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection points at the active version&quot;</span></span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">(PerspectiveVersionId 1) (ppPerspectiveVersion projection)</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection is scoped through the registry thread&quot;</span></span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">scope (ppScope projection)</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;perspective ordinal advances after first new thread&quot;</span></span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">2 (prNextPerspectiveOrdinal registry)</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;version ordinal advances after first endorsed version&quot;</span></span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">2 (prNextVersionOrdinal registry)</span></span>
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>testRevisionMarksPriorActiveVersion :: Test
+<span class="lineno">   98 </span><span class="decl"><span class="istickedoff">testRevisionMarksPriorActiveVersion = TestCase $ do</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">registry1 = applyDecision 1 PpdPromoteEndorsed defaultPerspectiveRegistry scope &quot;initial promoted thesis&quot;</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">registry2 = applyDecision 2 PpdReviseActive registry1 scope &quot;revision one&quot;</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected revised perspective thread&quot;</span> (M.lookup scope (prThreads registry2))</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- expectJust <span class="nottickedoff">&quot;expected revised active projection&quot;</span> (buildPerspectiveProjection registry2 scope)</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;revision makes version 2 active&quot;</span></span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">(Just (PerspectiveVersionId 2)) (ptActiveVersion thread)</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;prior version remains in lineage as revised&quot;</span></span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">(any (hasVersionStatus (PerspectiveVersionId 1) PerspectiveRevised) (ptVersions thread))</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;new version is the only active version&quot;</span></span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">(oneActiveVersion (ptVersions thread))</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection exposes the revised thesis&quot;</span></span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">&quot;revision one&quot; (ppSummary projection)</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;revision history keeps newest revision first&quot;</span></span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">[PerspectiveVersionId 2, PerspectiveVersionId 1] (map prrToVersion (ptRevisionHistory thread))</span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>testRevisionHistoryIsBounded :: Test
+<span class="lineno">  116 </span><span class="decl"><span class="istickedoff">testRevisionHistoryIsBounded = TestCase $ do</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">cappedRegistry = defaultPerspectiveRegistry { prMaxRevisionsPerScope = 2 }</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">registry = applyMany scope cappedRegistry</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="istickedoff">[ (1, PpdPromoteEndorsed, &quot;initial&quot;)</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">, (2, PpdReviseActive, &quot;revision one&quot;)</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="istickedoff">, (3, PpdReviseActive, &quot;revision two&quot;)</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="istickedoff">, (4, PpdReviseActive, &quot;revision three&quot;)</span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected bounded revision thread&quot;</span> (M.lookup scope (prThreads registry))</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;revision history respects registry cap&quot;</span></span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">2 (length (ptRevisionHistory thread))</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bounded history keeps the two newest versions&quot;</span></span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">[PerspectiveVersionId 4, PerspectiveVersionId 3] (map prrToVersion (ptRevisionHistory thread))</span></span>
+<span class="lineno">  130 </span>
+<span class="lineno">  131 </span>testInactiveVersionsAreBounded :: Test
+<span class="lineno">  132 </span><span class="decl"><span class="istickedoff">testInactiveVersionsAreBounded = TestCase $ do</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">cappedRegistry = defaultPerspectiveRegistry { prMaxInactiveVersions = 1 }</span>
+<span class="lineno">  135 </span><span class="spaces">      </span><span class="istickedoff">registry = applyMany scope cappedRegistry</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">[ (1, PpdPromoteEndorsed, &quot;initial&quot;)</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">, (2, PpdReviseActive, &quot;revision one&quot;)</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="istickedoff">, (3, PpdReviseActive, &quot;revision two&quot;)</span>
+<span class="lineno">  139 </span><span class="spaces">        </span><span class="istickedoff">, (4, PpdReviseActive, &quot;revision three&quot;)</span>
+<span class="lineno">  140 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected bounded version thread&quot;</span> (M.lookup scope (prThreads registry))</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;active plus one inactive version are retained&quot;</span></span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="istickedoff">2 (length (ptVersions thread))</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bounded versions keep active newest plus newest inactive&quot;</span></span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">[PerspectiveVersionId 4, PerspectiveVersionId 3] (map epVersion (ptVersions thread))</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;retained statuses stay active/revised&quot;</span></span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="istickedoff">[PerspectiveActive, PerspectiveRevised] (map epStatus (ptVersions thread))</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>testActiveCapSuspendsOlderScope :: Test
+<span class="lineno">  150 </span><span class="decl"><span class="istickedoff">testActiveCapSuspendsOlderScope = TestCase $ do</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="istickedoff">let scopeA = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">scopeB = ScopeTopic &quot;responsibility&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">cappedRegistry = defaultPerspectiveRegistry { prMaxActivePerspectives = 1 }</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">registry1 = applyDecision 1 PpdPromoteEndorsed cappedRegistry scopeA &quot;freedom thesis&quot;</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">registry2 = applyDecision 2 PpdPromoteEndorsed registry1 scopeB &quot;responsibility thesis&quot;</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="istickedoff">threadA &lt;- expectJust <span class="nottickedoff">&quot;expected older thread to remain present&quot;</span> (M.lookup scopeA (prThreads registry2))</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">threadB &lt;- expectJust <span class="nottickedoff">&quot;expected newer thread to remain present&quot;</span> (M.lookup scopeB (prThreads registry2))</span>
+<span class="lineno">  158 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;newer scope is the only active projection scope under cap&quot;</span></span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">[scopeB] (activePerspectiveProjectionScopes registry2)</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;older thread active pointer is cleared, not deleted&quot;</span></span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">Nothing (ptActiveVersion threadA)</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;older thread is suspended by active cap&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveSuspended (ptStatus threadA)</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;newer thread remains active&quot;</span></span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">(Just (PerspectiveVersionId 2)) (ptActiveVersion threadB)</span></span>
+<span class="lineno">  166 </span>
+<span class="lineno">  167 </span>testSuspensionClearsProjection :: Test
+<span class="lineno">  168 </span><span class="decl"><span class="istickedoff">testSuspensionClearsProjection = TestCase $ do</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">registry1 = applyDecision 1 PpdPromoteEndorsed defaultPerspectiveRegistry scope &quot;initial promoted thesis&quot;</span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">registry2 = applyDecision 2 PpdSuspendActive registry1 scope &quot;suspend candidate&quot;</span>
+<span class="lineno">  172 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected suspended thread&quot;</span> (M.lookup scope (prThreads registry2))</span>
+<span class="lineno">  173 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;suspended thread clears active pointer&quot;</span></span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="istickedoff">Nothing (ptActiveVersion thread)</span>
+<span class="lineno">  175 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;suspended thread has suspended status&quot;</span></span>
+<span class="lineno">  176 </span><span class="spaces">    </span><span class="istickedoff">PerspectiveSuspended (ptStatus thread)</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;suspended perspective does not project&quot;</span></span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">Nothing (buildPerspectiveProjection registry2 scope)</span>
+<span class="lineno">  179 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;suspended registry has no active projections&quot;</span></span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff">[] (buildActivePerspectiveProjections registry2)</span></span>
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>testRegistryJsonRoundTripIsStable :: Test
+<span class="lineno">  183 </span><span class="decl"><span class="istickedoff">testRegistryJsonRoundTripIsStable = TestCase $ do</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  185 </span><span class="spaces">      </span><span class="istickedoff">registry = applyMany scope defaultPerspectiveRegistry</span>
+<span class="lineno">  186 </span><span class="spaces">        </span><span class="istickedoff">[ (1, PpdPromoteEndorsed, &quot;initial&quot;)</span>
+<span class="lineno">  187 </span><span class="spaces">        </span><span class="istickedoff">, (2, PpdReviseActive, &quot;revision one&quot;)</span>
+<span class="lineno">  188 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;registry JSON must round-trip without losing lineage&quot;</span></span>
+<span class="lineno">  190 </span><span class="spaces">    </span><span class="istickedoff">(Just registry) (decode (encode registry) :: Maybe PerspectiveRegistry)</span></span>
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>testDuplicateNormativeProfilesFailDecode :: Test
+<span class="lineno">  193 </span><span class="decl"><span class="istickedoff">testDuplicateNormativeProfilesFailDecode = TestCase $ do</span>
+<span class="lineno">  194 </span><span class="spaces">  </span><span class="istickedoff">let duplicateJson = BL8.pack</span>
+<span class="lineno">  195 </span><span class="spaces">        </span><span class="istickedoff">&quot;{\&quot;threads\&quot;:[],\&quot;normativeProfiles\&quot;:[{\&quot;npId\&quot;:\&quot;duplicate\&quot;,\&quot;npVersionId\&quot;:1,\&quot;npPriorities\&quot;:{},\&quot;npConflictPolicy\&quot;:\&quot;conservative\&quot;,\&quot;npActivationScope\&quot;:null},{\&quot;npId\&quot;:\&quot;duplicate\&quot;,\&quot;npVersionId\&quot;:2,\&quot;npPriorities\&quot;:{},\&quot;npConflictPolicy\&quot;:\&quot;permissive\&quot;,\&quot;npActivationScope\&quot;:null}],\&quot;activeNormativeProfileId\&quot;:\&quot;duplicate\&quot;}&quot;</span>
+<span class="lineno">  196 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;duplicate normative profile ids must fail decode instead of overwriting&quot;</span></span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">Nothing (decode duplicateJson :: Maybe PerspectiveRegistry)</span></span>
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>testProjectionCapsPublicSurface :: Test
+<span class="lineno">  200 </span><span class="decl"><span class="istickedoff">testProjectionCapsPublicSurface = TestCase $ do</span>
+<span class="lineno">  201 </span><span class="spaces">  </span><span class="istickedoff">let scope = ScopeTopic &quot;freedom&quot;</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="istickedoff">bundle = mkRichPerspectiveBundle scope</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="istickedoff">candidate = (opinionCore bundle) { pcThesis = T.replicate 220 &quot;x&quot; }</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="istickedoff">registry = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">thread &lt;- expectJust <span class="nottickedoff">&quot;expected rich projection thread&quot;</span> (M.lookup scope (prThreads registry))</span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="istickedoff">active &lt;- expectJust <span class="nottickedoff">&quot;expected rich active perspective&quot;</span> (activeEndorsedPerspective thread)</span>
+<span class="lineno">  207 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- expectJust <span class="nottickedoff">&quot;expected rich active projection&quot;</span> (buildPerspectiveProjection registry scope)</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection summary is capped&quot;</span></span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">180 (T.length (ppSummary projection))</span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection evidence count reflects capped support surface&quot;</span></span>
+<span class="lineno">  211 </span><span class="spaces">    </span><span class="istickedoff">8 (ppEvidenceCount projection)</span>
+<span class="lineno">  212 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;projection counterargument count reflects capped counterargument surface&quot;</span></span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">8 (ppCounterargumentCount projection)</span>
+<span class="lineno">  214 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;endorsed support claims are capped in canonical registry&quot;</span></span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="istickedoff">8 (length (epSupportingClaims active))</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;endorsed counterarguments are capped in canonical registry&quot;</span></span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">8 (length (epCounterarguments active))</span></span>
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>applyMany :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; [(Int, PerspectivePromotionDecision, T.Text)] -&gt; PerspectiveRegistry
+<span class="lineno">  220 </span><span class="decl"><span class="istickedoff">applyMany scope = foldl step</span>
+<span class="lineno">  221 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  222 </span><span class="spaces">    </span><span class="istickedoff">step registry (turn, decision, thesis) = applyDecision turn decision registry scope thesis</span></span>
+<span class="lineno">  223 </span>
+<span class="lineno">  224 </span>applyDecision :: Int -&gt; PerspectivePromotionDecision -&gt; PerspectiveRegistry -&gt; PerspectiveScope -&gt; T.Text -&gt; PerspectiveRegistry
+<span class="lineno">  225 </span><span class="decl"><span class="istickedoff">applyDecision turn decision registry scope thesis =</span>
+<span class="lineno">  226 </span><span class="spaces">  </span><span class="istickedoff">let bundle = mkPerspectiveBundle scope (lineageForScope scope registry)</span>
+<span class="lineno">  227 </span><span class="spaces">      </span><span class="istickedoff">candidate = (opinionCore bundle) { pcThesis = thesis }</span>
+<span class="lineno">  228 </span><span class="spaces">  </span><span class="istickedoff">in applyPerspectiveDecision turn registry bundle candidate decision</span></span>
+<span class="lineno">  229 </span>
+<span class="lineno">  230 </span>mkPerspectiveBundle :: PerspectiveScope -&gt; [PerspectiveRevisionRecord] -&gt; PerspectiveInputBundle
+<span class="lineno">  231 </span><span class="decl"><span class="istickedoff">mkPerspectiveBundle scope lineage = PerspectiveInputBundle</span>
+<span class="lineno">  232 </span><span class="spaces">  </span><span class="istickedoff">{ pibScope = scope</span>
+<span class="lineno">  233 </span><span class="spaces">  </span><span class="istickedoff">, pibEvidence =</span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="istickedoff">[ EvidenceRef &quot;knowledge:bounded agency&quot;</span>
+<span class="lineno">  235 </span><span class="spaces">      </span><span class="istickedoff">, EvidenceRef &quot;dialogue:DialogueOutcomeSuccess:stable topic&quot;</span>
+<span class="lineno">  236 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno">  237 </span><span class="spaces">  </span><span class="istickedoff">, pibStanceSlice = [ClaimStanceRef &quot;stance:BeliefAffirmed:stable topic requires responsibility&quot;]</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">, pibIdentitySlice = IdentitySlice</span>
+<span class="lineno">  239 </span><span class="spaces">      </span><span class="istickedoff">{ isSessionId = &quot;test-session&quot;</span>
+<span class="lineno">  240 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaims = []</span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff">, isIdentityClaimCount = 0</span>
+<span class="lineno">  242 </span><span class="spaces">      </span><span class="istickedoff">, isTurnCount = 1</span>
+<span class="lineno">  243 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  244 </span><span class="spaces">  </span><span class="istickedoff">, pibConatusSlice = ConatusSlice</span>
+<span class="lineno">  245 </span><span class="spaces">      </span><span class="istickedoff">{ csEnergy = 10.0</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">, csGateFired = False</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">, csFieldConfidence = 1.0</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">, csStability = 1.0</span>
+<span class="lineno">  249 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  250 </span><span class="spaces">  </span><span class="istickedoff">, pibNormativeProfile = defaultNormativeProfile</span>
+<span class="lineno">  251 </span><span class="spaces">  </span><span class="istickedoff">, pibCounterarguments = []</span>
+<span class="lineno">  252 </span><span class="spaces">  </span><span class="istickedoff">, pibRevisionLineage = lineage</span>
+<span class="lineno">  253 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  254 </span>
+<span class="lineno">  255 </span>mkRichPerspectiveBundle :: PerspectiveScope -&gt; PerspectiveInputBundle
+<span class="lineno">  256 </span><span class="decl"><span class="istickedoff">mkRichPerspectiveBundle scope = (mkPerspectiveBundle scope [])</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">{ pibEvidence = map (EvidenceRef . (&quot;evidence-&quot; &lt;&gt;) . T.pack . show) ([1..12] :: [Int])</span>
+<span class="lineno">  258 </span><span class="spaces">  </span><span class="istickedoff">, pibStanceSlice = map <span class="nottickedoff">(ClaimStanceRef . (&quot;stance-&quot; &lt;&gt;) . T.pack . show)</span> ([1..12] :: [Int])</span>
+<span class="lineno">  259 </span><span class="spaces">  </span><span class="istickedoff">, pibCounterarguments = map <span class="nottickedoff">(CounterargumentRef . (&quot;counter-&quot; &lt;&gt;) . T.pack . show)</span> ([1..12] :: [Int])</span>
+<span class="lineno">  260 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  261 </span>
+<span class="lineno">  262 </span>lineageForScope :: PerspectiveScope -&gt; PerspectiveRegistry -&gt; [PerspectiveRevisionRecord]
+<span class="lineno">  263 </span><span class="decl"><span class="istickedoff">lineageForScope scope registry =</span>
+<span class="lineno">  264 </span><span class="spaces">  </span><span class="istickedoff">maybe [] ptRevisionHistory (M.lookup scope (prThreads registry))</span></span>
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>hasVersionStatus :: PerspectiveVersionId -&gt; PerspectiveStatus -&gt; EndorsedPerspective -&gt; Bool
+<span class="lineno">  267 </span><span class="decl"><span class="istickedoff">hasVersionStatus version status endorsed =</span>
+<span class="lineno">  268 </span><span class="spaces">  </span><span class="istickedoff">epVersion endorsed == version &amp;&amp; epStatus endorsed == status</span></span>
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>oneActiveVersion :: [EndorsedPerspective] -&gt; Bool
+<span class="lineno">  271 </span><span class="decl"><span class="istickedoff">oneActiveVersion versions =</span>
+<span class="lineno">  272 </span><span class="spaces">  </span><span class="istickedoff">length (filter ((== PerspectiveActive) . epStatus) versions) == 1</span></span>
+<span class="lineno">  273 </span>
+<span class="lineno">  274 </span>expectJust :: String -&gt; Maybe a -&gt; IO a
+<span class="lineno">  275 </span><span class="decl"><span class="istickedoff">expectJust label value =</span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">case value of</span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">assertFailure label &gt;&gt; fail label</span></span>
+<span class="lineno">  278 </span><span class="spaces">    </span><span class="istickedoff">Just found -&gt; pure found</span></span>
+
+</pre>
+</body>
+</html>

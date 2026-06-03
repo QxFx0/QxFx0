@@ -1,5 +1,322 @@
-Error:
-    Internal libraries only supported with per-component builds.
-    Per-component builds were disabled because program coverage is enabled
-    In the package 'vector-0.13.2.0'
+
+src/QxFx0/Core/SessionLock.hs:20:1: warning: [-Wunused-imports]
+    The import of ‘Data.Ord’ is redundant
+      except perhaps to import instances from ‘Data.Ord’
+    To import instances alone, use: import Data.Ord()
+   |
+20 | import Data.Ord (comparing)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/KnowledgeTree.hs:301:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pred’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Learning/KnowledgeTree.hs:22:8-35
+      (and originally defined in ‘GHC.Enum’)
+    |
+301 |   let pred b = brHealth b >= threshold
+    |       ^^^^
+
+src/QxFx0/Semantic/DialogAtom.hs:39:1: warning: [-Wunused-imports]
+    The import of ‘defaultOptions, genericParseJSON, genericToJSON’
+    from module ‘Data.Aeson’ is redundant
+   |
+39 | import Data.Aeson (FromJSON(..), ToJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSONKey(..), ToJSONKeyFunction(..), defaultOptions, genericParseJSON, genericToJSON)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Semantic/Lexicon/RuntimeParadigms.hs:49:31: warning: [-Wunused-imports]
+    The import of ‘listToMaybe’ from module ‘Data.Maybe’ is redundant
+   |
+49 | import Data.Maybe (fromMaybe, listToMaybe)
+   |                               ^^^^^^^^^^^
+
+src/QxFx0/Semantic/Lexicon/RuntimeParadigms.hs:353:21: warning: [-Wunused-matches]
+    Defined but not used: ‘mAnim’
+    |
+353 |        inferMasc cs mAnim
+    |                     ^^^^^
+
+src/QxFx0/Semantic/MeaningAtom.hs:26:1: warning: [-Wunused-imports]
+    The import of ‘defaultOptions, genericParseJSON, genericToJSON’
+    from module ‘Data.Aeson’ is redundant
+   |
+26 | import Data.Aeson (FromJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSON(..), ToJSONKey(..), ToJSONKeyFunction(..), defaultOptions, genericParseJSON, genericToJSON, toJSON, toEncoding)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Semantic/MeaningDecompose/Domains.hs:327:1: warning: [-Wunused-top-binds]
+    Defined but not used: ‘mathematics_fact2’
+    |
+327 | mathematics_fact2 = FactAtoms (M.fromListWith (++)
+    | ^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Semantic/MeaningDecompose/Core.hs:14:1: warning: [-Wunused-imports]
+    The import of ‘aorta, bloodGroups, bloodVolume, heartPump, vessels’
+    from module ‘QxFx0.Semantic.MeaningDecompose.Domains’ is redundant
+   |
+14 | import QxFx0.Semantic.MeaningDecompose.Domains
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+
+src/QxFx0/Types/Bayesian.hs:13:1: warning: [-Wunused-imports]
+    The import of ‘defaultOptions, genericParseJSON, genericToJSON’
+    from module ‘Data.Aeson’ is redundant
+   |
+13 | import Data.Aeson
+   | ^^^^^^^^^^^^^^^^^...
+
+src/QxFx0/Semantic/Input/Parse.hs:98:7: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘words’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Semantic/Input/Parse.hs:12:8-33
+      (and originally defined in ‘base-4.18.2.1:Data.OldList’)
+   |
+98 |   let words = T.words raw
+   |       ^^^^^
+
+src/QxFx0/Core/Bayesian.hs:75:32: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+75 | likelihood cfg UserWantsDefine pi =
+   |                                ^^
+
+src/QxFx0/Core/Bayesian.hs:78:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+78 | likelihood cfg UserWantsCompare pi =
+   |                                 ^^
+
+src/QxFx0/Core/Bayesian.hs:81:34: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+81 | likelihood cfg UserWantsConfront pi =
+   |                                  ^^
+
+src/QxFx0/Core/Bayesian.hs:84:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+84 | likelihood cfg UserSeeksSupport pi =
+   |                                 ^^
+
+src/QxFx0/Core/Bayesian.hs:87:31: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+87 | likelihood cfg UserIsConfused pi =
+   |                               ^^
+
+src/QxFx0/Core/Bayesian.hs:90:33: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pi’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Core/Bayesian.hs:10:8-26
+      (and originally defined in ‘GHC.Float’)
+   |
+90 | likelihood cfg UserIsDistressed pi =
+   |                                 ^^
+
+src/QxFx0/Core/Spectral.hs:27:27: warning: [-Wunused-imports]
+    The import of ‘sortBy’ from module ‘Data.List’ is redundant
+   |
+27 | import Data.List (foldl', sortBy)
+   |                           ^^^^^^
+
+src/QxFx0/Core/Spectral.hs:28:1: warning: [-Wunused-imports]
+    The import of ‘Data.Ord’ is redundant
+      except perhaps to import instances from ‘Data.Ord’
+    To import instances alone, use: import Data.Ord()
+   |
+28 | import Data.Ord (comparing)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Core/Spectral.hs:110:1: warning: [-Wunused-top-binds]
+    Defined but not used: ‘addVec’
+    |
+110 | addVec = zipWith (+)
+    | ^^^^^^
+
+src/QxFx0/Core/Spectral.hs:113:1: warning: [-Wunused-top-binds]
+    Defined but not used: ‘subVec’
+    |
+113 | subVec = zipWith (-)
+    | ^^^^^^
+
+src/QxFx0/Self/Salience.hs:131:5: warning: [-Wunused-imports]
+    The import of ‘ConatusComponents’
+    from module ‘QxFx0.Self.Conatus’ is redundant
+    |
+131 |   ( ConatusComponents (..)
+    |     ^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Need.hs:40:66: warning: [-Wunused-imports]
+    The import of ‘.:’ from module ‘Data.Aeson’ is redundant
+   |
+40 | import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
+   |                                                                  ^^^^
+
+src/QxFx0/Learning/Need.hs:42:1: warning: [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+42 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Need.hs:45:43: warning: [-Wunused-imports]
+    The import of ‘ConatusEnergy(ceScalar)’
+    from module ‘QxFx0.Self.Conatus’ is redundant
+   |
+45 | import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+   |                                           ^^^^^^^^
+
+src/QxFx0/Learning/Need.hs:47:1: warning: [-Wunused-imports]
+    The import of ‘QxFx0.Self.Salience’ is redundant
+      except perhaps to import instances from ‘QxFx0.Self.Salience’
+    To import instances alone, use: import QxFx0.Self.Salience()
+   |
+47 | import QxFx0.Self.Salience (Salience(..), salienceHolisticBias)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Need.hs:226:36: warning: [-Wunused-matches]
+    Defined but not used: ‘conatusEnergy’
+    |
+226 | detectLearningNeedWithPressure cfg conatusEnergy field _repairCount unknownTopicCount turnCount oldState isTopicUnknown currentGraftedCount =
+    |                                    ^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Need.hs:226:69: warning: [-Wunused-matches]
+    Defined but not used: ‘unknownTopicCount’
+    |
+226 | detectLearningNeedWithPressure cfg conatusEnergy field _repairCount unknownTopicCount turnCount oldState isTopicUnknown currentGraftedCount =
+    |                                                                     ^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Signal.hs:40:1: warning: [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+40 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Signal.hs:44:52: warning: [-Wunused-imports]
+    The import of ‘NeedTrend’
+    from module ‘QxFx0.Learning.Need’ is redundant
+   |
+44 | import QxFx0.Learning.Need (LearningNeedState(..), NeedTrend(..), lnsHistory)
+   |                                                    ^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Calibration.hs:256:43: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘log’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Learning/Calibration.hs:20:8-33
+      (and originally defined in ‘GHC.Float’)
+    |
+256 | currentCalibrationVersion (CalibrationLog log) =
+    |                                           ^^^
+
+src/QxFx0/Learning/Guardrails.hs:36:66: warning: [-Wunused-imports]
+    The import of ‘.:’ from module ‘Data.Aeson’ is redundant
+   |
+36 | import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
+   |                                                                  ^^^^
+
+src/QxFx0/Learning/Guardrails.hs:37:1: warning: [-Wunused-imports]
+    The import of ‘Data.Maybe’ is redundant
+      except perhaps to import instances from ‘Data.Maybe’
+    To import instances alone, use: import Data.Maybe()
+   |
+37 | import Data.Maybe (isJust)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Guardrails.hs:38:1: warning: [-Wunused-imports]
+    The import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+38 | import Data.Text (Text)
+   | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Guardrails.hs:39:1: warning: [-Wunused-imports]
+    The qualified import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+   |
+39 | import qualified Data.Text as T
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Learning/Guardrails.hs:42:55: warning: [-Wunused-imports]
+    The import of ‘CalibrationProposal’
+    from module ‘QxFx0.Learning.Calibration’ is redundant
+   |
+42 | import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationProposal(..))
+   |                                                       ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Self/Deliberation.hs:497:26: warning: [GHC-63397] [-Wname-shadowing]
+    This binding for ‘pred’ shadows the existing binding
+      imported from ‘Prelude’ at src/QxFx0/Self/Deliberation.hs:81:8-30
+      (and originally defined in ‘GHC.Enum’)
+    |
+497 |                     Just pred ->
+    |                          ^^^^
+
+src/QxFx0/Self/Essence.hs:92:5: warning: [-Wunused-imports]
+    The import of ‘FieldConfidence’
+    from module ‘QxFx0.Self.Field’ is redundant
+   |
+92 |   , FieldConfidence (..)
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+src/QxFx0/Self/Essence.hs:404:23: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘c0’ to type ‘Integer’ in the following constraints
+        (Num c0)
+          arising from a use of ‘tally’
+          at src/QxFx0/Self/Essence.hs:404:23-27
+        (Integral c0)
+          arising from a use of ‘fromIntegral’
+          at src/QxFx0/Self/Essence.hs:408:29-40
+    • In the first argument of ‘foldl'’, namely ‘tally’
+      In the expression: foldl' tally (0, 0, 0) ws
+      In an equation for ‘counts’: counts = foldl' tally (0, 0, 0) ws
+    |
+404 |       counts = foldl' tally (0, 0, 0) ws
+    |                       ^^^^^
+
+src/QxFx0/Self/Essence.hs:404:23: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘b0’ to type ‘Integer’ in the following constraints
+        (Num b0)
+          arising from a use of ‘tally’
+          at src/QxFx0/Self/Essence.hs:404:23-27
+        (Integral b0)
+          arising from a use of ‘fromIntegral’
+          at src/QxFx0/Self/Essence.hs:407:29-40
+    • In the first argument of ‘foldl'’, namely ‘tally’
+      In the expression: foldl' tally (0, 0, 0) ws
+      In an equation for ‘counts’: counts = foldl' tally (0, 0, 0) ws
+    |
+404 |       counts = foldl' tally (0, 0, 0) ws
+    |                       ^^^^^
+
+src/QxFx0/Self/Essence.hs:404:23: warning: [GHC-18042] [-Wtype-defaults]
+    • Defaulting the type variable ‘a0’ to type ‘Integer’ in the following constraints
+        (Num a0)
+          arising from a use of ‘tally’
+          at src/QxFx0/Self/Essence.hs:404:23-27
+        (Integral a0)
+          arising from a use of ‘fromIntegral’
+          at src/QxFx0/Self/Essence.hs:406:29-40
+    • In the first argument of ‘foldl'’, namely ‘tally’
+      In the expression: foldl' tally (0, 0, 0) ws
+      In an equation for ‘counts’: counts = foldl' tally (0, 0, 0) ws
+    |
+404 |       counts = foldl' tally (0, 0, 0) ws
+    |                       ^^^^^
+
+src/QxFx0/Learning/GameTheory.hs:187:26: warning: [-Wunused-matches]
+    Defined but not used: ‘i’
+    |
+187 |      then case filter (\(i, rowMin) -> abs (rowMin - maxMin) < eps) (zip [0..] rowMins) of
+    |                          ^
+terminated
+Error: [Cabal-7125]
+Failed to build qxfx0-0.1.0.0 (which is required by test:qxfx0-test from qxfx0-0.1.0.0).
 

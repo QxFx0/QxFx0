@@ -1,0 +1,347 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Schema bootstrap, migration runner, and seed loading for the runtime SQLite backend. -}
+<span class="lineno">    5 </span>module QxFx0.Bridge.SQLite.Bootstrap
+<span class="lineno">    6 </span>  ( currentSchemaVersion
+<span class="lineno">    7 </span>  , ensureSchemaMigrations
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import Control.Exception (IOException, finally)
+<span class="lineno">   11 </span>import Data.Text (Text)
+<span class="lineno">   12 </span>import qualified Data.Text as T
+<span class="lineno">   13 </span>import qualified Data.Text.IO as TIO
+<span class="lineno">   14 </span>import QxFx0.Bridge.EmbeddedSQL (schemaSQL, seedClustersSQL, seedIdentitySQL, seedTemplatesSQL)
+<span class="lineno">   15 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   16 </span>import QxFx0.Bridge.SQLite.SchemaContract
+<span class="lineno">   17 </span>  ( currentSchemaVersion
+<span class="lineno">   18 </span>  , checkSchemaContract
+<span class="lineno">   19 </span>  , validateSchemaContractTablesAndColumns
+<span class="lineno">   20 </span>  , readSchemaVersion
+<span class="lineno">   21 </span>  , SchemaContractResult(..)
+<span class="lineno">   22 </span>  , SchemaVersionStatus(..)
+<span class="lineno">   23 </span>  , renderSchemaContractResult
+<span class="lineno">   24 </span>  , columnMissing
+<span class="lineno">   25 </span>  , isV1Shape
+<span class="lineno">   26 </span>  , isV2Shape
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>import QxFx0.ExceptionPolicy
+<span class="lineno">   29 </span>  ( QxFx0Exception(SQLiteError)
+<span class="lineno">   30 </span>  , catchIO
+<span class="lineno">   31 </span>  , throwQxFx0
+<span class="lineno">   32 </span>  , tryQxFx0
+<span class="lineno">   33 </span>  )
+<span class="lineno">   34 </span>import QxFx0.Resources
+<span class="lineno">   35 </span>  ( resolveResourcePaths
+<span class="lineno">   36 </span>  , rpSchemaSql
+<span class="lineno">   37 </span>  , rpSeedClusters
+<span class="lineno">   38 </span>  , rpSeedIdentity
+<span class="lineno">   39 </span>  , rpSeedTemplates
+<span class="lineno">   40 </span>  )
+<span class="lineno">   41 </span>import System.Environment (lookupEnv)
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>currentSchemaDescription :: Text
+<span class="lineno">   44 </span><span class="decl"><span class="istickedoff">currentSchemaDescription = &quot;Runtime schema v3: shadow_divergence_log trace columns (shadow_snapshot_id, shadow_divergence_kind)&quot;</span></span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>ensureSchemaMigrations :: NSQL.Database -&gt; IO ()
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">ensureSchemaMigrations db = do</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">sqlSet &lt;- loadBootstrapSqlSet</span>
+<span class="lineno">   49 </span><span class="spaces">  </span><span class="istickedoff">-- 1. Run canonical schema (IF NOT EXISTS — safe for old and new DBs)</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">execBootstrapSql db (<span class="nottickedoff">&quot;schema.sql&quot;</span>, bootstrapSchema sqlSet)</span>
+<span class="lineno">   51 </span><span class="spaces">  </span><span class="istickedoff">-- 2. Determine current version state and act accordingly</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">versionStatus &lt;- readSchemaVersion db</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">case versionStatus of</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">SchemaVersionMissingTable -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">isV1 &lt;- isV1Shape db</span></span>
+<span class="lineno">   56 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">if isV1</span></span>
+<span class="lineno">   57 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">then do</span></span>
+<span class="lineno">   58 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">runPendingMigrations db 1</span></span>
+<span class="lineno">   59 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">seedAfterMigration sqlSet db</span></span>
+<span class="lineno">   60 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">else do</span></span>
+<span class="lineno">   61 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">isV2 &lt;- isV2Shape db</span></span>
+<span class="lineno">   62 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">if isV2</span></span>
+<span class="lineno">   63 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">then do</span></span>
+<span class="lineno">   64 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">insertSchemaVersion db currentSchemaVersion currentSchemaDescription</span></span>
+<span class="lineno">   65 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">seedAfterMigration sqlSet db</span></span>
+<span class="lineno">   66 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">else do</span></span>
+<span class="lineno">   67 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">-- Fresh DB: no tables and no schema_version</span></span>
+<span class="lineno">   68 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">insertSchemaVersion db currentSchemaVersion currentSchemaDescription</span></span>
+<span class="lineno">   69 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">seedAfterMigration sqlSet db</span></span>
+<span class="lineno">   70 </span><span class="spaces">    </span><span class="istickedoff">SchemaVersionEmpty -&gt; do</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">isV1 &lt;- isV1Shape db</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">if isV1</span>
+<span class="lineno">   73 </span><span class="spaces">        </span><span class="istickedoff">then do</span>
+<span class="lineno">   74 </span><span class="spaces">          </span><span class="istickedoff">runPendingMigrations db 1</span>
+<span class="lineno">   75 </span><span class="spaces">          </span><span class="istickedoff">seedAfterMigration sqlSet db</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="istickedoff">else do</span>
+<span class="lineno">   77 </span><span class="spaces">          </span><span class="istickedoff">isV2 &lt;- isV2Shape db</span>
+<span class="lineno">   78 </span><span class="spaces">          </span><span class="istickedoff">if <span class="tickonlytrue">isV2</span></span>
+<span class="lineno">   79 </span><span class="spaces">            </span><span class="istickedoff">then do</span>
+<span class="lineno">   80 </span><span class="spaces">              </span><span class="istickedoff">insertSchemaVersion db currentSchemaVersion currentSchemaDescription</span>
+<span class="lineno">   81 </span><span class="spaces">              </span><span class="istickedoff">seedAfterMigration sqlSet db</span>
+<span class="lineno">   82 </span><span class="spaces">            </span><span class="istickedoff">else</span>
+<span class="lineno">   83 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">do</span></span>
+<span class="lineno">   84 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">insertSchemaVersion db currentSchemaVersion currentSchemaDescription</span></span>
+<span class="lineno">   85 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">seedAfterMigration sqlSet db</span></span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">SchemaVersionPresent 1 -&gt; do</span>
+<span class="lineno">   87 </span><span class="spaces">      </span><span class="istickedoff">runPendingMigrations db 1</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">seedAfterMigration sqlSet db</span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">SchemaVersionPresent v</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">| v == currentSchemaVersion -&gt;</span>
+<span class="lineno">   91 </span><span class="spaces">          </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">| v &lt; currentSchemaVersion -&gt; do</span>
+<span class="lineno">   93 </span><span class="spaces">          </span><span class="istickedoff">runPendingMigrations db v</span>
+<span class="lineno">   94 </span><span class="spaces">          </span><span class="istickedoff">seedAfterMigration sqlSet db</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt;</span>
+<span class="lineno">   96 </span><span class="spaces">          </span><span class="istickedoff">throwQxFx0</span>
+<span class="lineno">   97 </span><span class="spaces">            </span><span class="istickedoff">(SQLiteError $</span>
+<span class="lineno">   98 </span><span class="spaces">              </span><span class="istickedoff">&quot;schema_version mismatch: expected &quot;</span>
+<span class="lineno">   99 </span><span class="spaces">                </span><span class="istickedoff">&lt;&gt; T.pack (show currentSchemaVersion)</span>
+<span class="lineno">  100 </span><span class="spaces">                </span><span class="istickedoff">&lt;&gt; &quot;, found &quot;</span>
+<span class="lineno">  101 </span><span class="spaces">                </span><span class="istickedoff">&lt;&gt; T.pack (show v)</span>
+<span class="lineno">  102 </span><span class="spaces">                </span><span class="istickedoff">&lt;&gt; &quot;. Downgrade is not supported.&quot;)</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">-- 3. Post-bootstrap validation</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">contractResult &lt;- checkSchemaContract db</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">case contractResult of</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractOk _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractFreshBootstrapable -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractVersionBehind expected actual -&gt;</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $</span></span>
+<span class="lineno">  110 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">&quot;schema version behind: expected &quot; &lt;&gt; T.pack (show expected)</span></span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;, found &quot; &lt;&gt; T.pack (show actual))</span></span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractMissingTable t -&gt;</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract failed: missing table &quot; &lt;&gt; t)</span></span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractMissingColumns t cols -&gt;</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $</span></span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">&quot;schema contract failed: table &quot; &lt;&gt; t &lt;&gt; &quot; missing columns: &quot;</span></span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; T.intercalate &quot;, &quot; cols)</span></span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractMissingIndex ix -&gt;</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract failed: missing index &quot; &lt;&gt; ix)</span></span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractMissingTrigger tr -&gt;</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract failed: missing trigger &quot; &lt;&gt; tr)</span></span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractMissingFTS fts -&gt;</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract failed: missing fts table &quot; &lt;&gt; fts)</span></span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractInconsistent reason -&gt;</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract inconsistent: &quot; &lt;&gt; reason)</span></span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">SchemaContractQueryFailed msg -&gt;</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema contract query failed: &quot; &lt;&gt; msg)</span></span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>seedAfterMigration :: BootstrapSqlSet -&gt; NSQL.Database -&gt; IO ()
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">seedAfterMigration sqlSet db = do</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">seedBootstrapSql db &quot;semantic_clusters&quot; (<span class="nottickedoff">&quot;seed_clusters.sql&quot;</span>, bootstrapClusters sqlSet)</span>
+<span class="lineno">  132 </span><span class="spaces">  </span><span class="istickedoff">seedBootstrapSql db &quot;realization_templates&quot; (<span class="nottickedoff">&quot;seed_templates.sql&quot;</span>, bootstrapTemplates sqlSet)</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">seedBootstrapSql db &quot;identity_claims&quot; (<span class="nottickedoff">&quot;seed_identity.sql&quot;</span>, bootstrapIdentity sqlSet)</span></span>
+<span class="lineno">  134 </span>
+<span class="lineno">  135 </span>data BootstrapSqlSet = BootstrapSqlSet
+<span class="lineno">  136 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">bootstrapSchema</span></span></span> :: !Text
+<span class="lineno">  137 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">bootstrapClusters</span></span></span> :: !Text
+<span class="lineno">  138 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">bootstrapTemplates</span></span></span> :: !Text
+<span class="lineno">  139 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">bootstrapIdentity</span></span></span> :: !Text
+<span class="lineno">  140 </span>  }
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>loadBootstrapSqlSet :: IO BootstrapSqlSet
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">loadBootstrapSqlSet = do</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">pathsResult &lt;- tryQxFx0 resolveResourcePaths</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">case pathsResult of</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  147 </span><span class="spaces">      </span><span class="istickedoff">allowEmbeddedSqlFallback</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">(&quot;resolveResourcePaths failed: &quot; &lt;&gt; T.pack (show err))</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">fallbackBootstrapSqlSet</span></span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="istickedoff">Right paths -&gt;</span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">BootstrapSqlSet</span>
+<span class="lineno">  152 </span><span class="spaces">        </span><span class="istickedoff">&lt;$&gt; loadSqlFileOrFallback (rpSchemaSql paths) <span class="nottickedoff">schemaSQL</span></span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="istickedoff">&lt;*&gt; loadSqlFileOrFallback (rpSeedClusters paths) <span class="nottickedoff">seedClustersSQL</span></span>
+<span class="lineno">  154 </span><span class="spaces">        </span><span class="istickedoff">&lt;*&gt; loadSqlFileOrFallback (rpSeedTemplates paths) <span class="nottickedoff">seedTemplatesSQL</span></span>
+<span class="lineno">  155 </span><span class="spaces">        </span><span class="istickedoff">&lt;*&gt; loadSqlFileOrFallback (rpSeedIdentity paths) <span class="nottickedoff">seedIdentitySQL</span></span></span>
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>fallbackBootstrapSqlSet :: BootstrapSqlSet
+<span class="lineno">  158 </span><span class="decl"><span class="nottickedoff">fallbackBootstrapSqlSet =</span>
+<span class="lineno">  159 </span><span class="spaces">  </span><span class="nottickedoff">BootstrapSqlSet</span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="nottickedoff">{ bootstrapSchema = schemaSQL</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="nottickedoff">, bootstrapClusters = seedClustersSQL</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="nottickedoff">, bootstrapTemplates = seedTemplatesSQL</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="nottickedoff">, bootstrapIdentity = seedIdentitySQL</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  165 </span>
+<span class="lineno">  166 </span>loadSqlFileOrFallback :: FilePath -&gt; Text -&gt; IO Text
+<span class="lineno">  167 </span><span class="decl"><span class="istickedoff">loadSqlFileOrFallback path fallback =</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">TIO.readFile path `catchIO` <span class="nottickedoff">onFailure</span></span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">onFailure :: IOException -&gt; IO Text</span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">onFailure err =</span></span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">allowEmbeddedSqlFallback</span></span>
+<span class="lineno">  173 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(&quot;SQL file read failed: &quot; &lt;&gt; T.pack path &lt;&gt; &quot; (&quot; &lt;&gt; T.pack (show err) &lt;&gt; &quot;)&quot;)</span></span>
+<span class="lineno">  174 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">fallback</span></span></span>
+<span class="lineno">  175 </span>
+<span class="lineno">  176 </span>allowEmbeddedSqlFallback :: Text -&gt; a -&gt; IO a
+<span class="lineno">  177 </span><span class="decl"><span class="istickedoff">allowEmbeddedSqlFallback reason fallbackValue = do</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="istickedoff">mFallback &lt;- lookupEnv &quot;QXFX0_ALLOW_EMBEDDED_SQL_FALLBACK&quot;</span>
+<span class="lineno">  179 </span><span class="spaces">  </span><span class="istickedoff">case mFallback of</span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;1&quot; -&gt; <span class="nottickedoff">pure fallbackValue</span></span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  182 </span><span class="spaces">      </span><span class="istickedoff">throwQxFx0</span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="istickedoff">(SQLiteError $</span>
+<span class="lineno">  184 </span><span class="spaces">          </span><span class="istickedoff">&quot;embedded SQL fallback disabled; canonical spec/sql is required: &quot; &lt;&gt; reason</span>
+<span class="lineno">  185 </span><span class="spaces">        </span><span class="istickedoff">)</span></span>
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>insertSchemaVersion :: NSQL.Database -&gt; Int -&gt; Text -&gt; IO ()
+<span class="lineno">  188 </span><span class="decl"><span class="istickedoff">insertSchemaVersion db version description = do</span>
+<span class="lineno">  189 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db &quot;INSERT OR REPLACE INTO schema_version(version, description) VALUES(?, ?)&quot;</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;schema version insert prepare failed: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  193 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindInt stmt 1 version</span>
+<span class="lineno">  194 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 description</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.step stmt</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- tryQxFx0 (NSQL.finalize stmt)</span>
+<span class="lineno">  197 </span><span class="spaces">      </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>-- | Explicit, idempotent migration step.
+<span class="lineno">  200 </span>data MigrationStep
+<span class="lineno">  201 </span>  = EnsureColumn !Text !Text !Text       -- ^ table, column, definition
+<span class="lineno">  202 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>-- | Run all pending migrations from (currentVersion + 1) up to currentSchemaVersion.
+<span class="lineno">  205 </span>--   Wrapped in a transaction: version marker is only committed after validation succeeds.
+<span class="lineno">  206 </span>runPendingMigrations :: NSQL.Database -&gt; Int -&gt; IO ()
+<span class="lineno">  207 </span><span class="decl"><span class="istickedoff">runPendingMigrations db currentVersion = do</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">let steps = resolveMigrationSteps currentVersion</span>
+<span class="lineno">  209 </span><span class="spaces">  </span><span class="istickedoff">beginResult &lt;- NSQL.execSql db &quot;BEGIN IMMEDIATE;&quot;</span>
+<span class="lineno">  210 </span><span class="spaces">  </span><span class="istickedoff">case beginResult of</span>
+<span class="lineno">  211 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;migration tx begin failed: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  215 </span><span class="spaces">  </span><span class="istickedoff">-- Run migration steps</span>
+<span class="lineno">  216 </span><span class="spaces">  </span><span class="istickedoff">flip finally (rollbackOnException db) $ do</span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">mapM_ (runMigrationStep db) steps</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">-- Validate before committing</span>
+<span class="lineno">  219 </span><span class="spaces">    </span><span class="istickedoff">contractResult &lt;- validateSchemaContractTablesAndColumns db</span>
+<span class="lineno">  220 </span><span class="spaces">    </span><span class="istickedoff">case contractResult of</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="istickedoff">SchemaContractOk _ -&gt; do</span>
+<span class="lineno">  222 </span><span class="spaces">        </span><span class="istickedoff">insertSchemaVersion db currentSchemaVersion currentSchemaDescription</span>
+<span class="lineno">  223 </span><span class="spaces">        </span><span class="istickedoff">commitResult &lt;- NSQL.execSql db &quot;COMMIT;&quot;</span>
+<span class="lineno">  224 </span><span class="spaces">        </span><span class="istickedoff">case commitResult of</span>
+<span class="lineno">  225 </span><span class="spaces">          </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  226 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $ &quot;migration tx commit failed: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  227 </span><span class="spaces">          </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  228 </span><span class="spaces">            </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">other -&gt; do</span>
+<span class="lineno">  230 </span><span class="spaces">        </span><span class="istickedoff">rollbackResult &lt;- NSQL.execSql db &quot;ROLLBACK;&quot;</span>
+<span class="lineno">  231 </span><span class="spaces">        </span><span class="istickedoff">case rollbackResult of</span>
+<span class="lineno">  232 </span><span class="spaces">          </span><span class="istickedoff">Left rbErr -&gt;</span>
+<span class="lineno">  233 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError $</span></span>
+<span class="lineno">  234 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">&quot;migration validation failed: &quot; &lt;&gt; renderSchemaContractResult other</span></span>
+<span class="lineno">  235 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;; rollback also failed: &quot; &lt;&gt; rbErr)</span></span>
+<span class="lineno">  236 </span><span class="spaces">          </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  237 </span><span class="spaces">            </span><span class="istickedoff">throwQxFx0 (SQLiteError $</span>
+<span class="lineno">  238 </span><span class="spaces">              </span><span class="istickedoff">&quot;migration validation failed: &quot; &lt;&gt; renderSchemaContractResult other)</span></span>
+<span class="lineno">  239 </span>
+<span class="lineno">  240 </span>rollbackOnException :: NSQL.Database -&gt; IO ()
+<span class="lineno">  241 </span><span class="decl"><span class="istickedoff">rollbackOnException db = do</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.execSql db &quot;ROLLBACK;&quot;</span>
+<span class="lineno">  243 </span><span class="spaces">  </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  244 </span>
+<span class="lineno">  245 </span>resolveMigrationSteps :: Int -&gt; [MigrationStep]
+<span class="lineno">  246 </span><span class="decl"><span class="istickedoff">resolveMigrationSteps fromVersion</span>
+<span class="lineno">  247 </span><span class="spaces">  </span><span class="istickedoff">= concat</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">[ if fromVersion &lt; 2</span>
+<span class="lineno">  249 </span><span class="spaces">          </span><span class="istickedoff">then</span>
+<span class="lineno">  250 </span><span class="spaces">            </span><span class="istickedoff">[ EnsureColumn &quot;turn_quality&quot; &quot;warranted_mode&quot; &quot;TEXT NOT NULL DEFAULT 'ConditionallyWarranted'&quot;</span>
+<span class="lineno">  251 </span><span class="spaces">            </span><span class="istickedoff">, EnsureColumn &quot;turn_quality&quot; &quot;decision_disposition&quot; &quot;TEXT NOT NULL DEFAULT 'advisory'&quot;</span>
+<span class="lineno">  252 </span><span class="spaces">            </span><span class="istickedoff">, EnsureColumn &quot;turn_quality&quot; &quot;shadow_snapshot_id&quot; &quot;TEXT NOT NULL DEFAULT ''&quot;</span>
+<span class="lineno">  253 </span><span class="spaces">            </span><span class="istickedoff">, EnsureColumn &quot;turn_quality&quot; &quot;shadow_divergence_kind&quot; &quot;TEXT NOT NULL DEFAULT 'none'&quot;</span>
+<span class="lineno">  254 </span><span class="spaces">            </span><span class="istickedoff">, EnsureColumn &quot;turn_quality&quot; &quot;replay_trace_json&quot; &quot;TEXT NOT NULL DEFAULT '{}'&quot;</span>
+<span class="lineno">  255 </span><span class="spaces">            </span><span class="istickedoff">]</span>
+<span class="lineno">  256 </span><span class="spaces">          </span><span class="istickedoff">else []</span>
+<span class="lineno">  257 </span><span class="spaces">      </span><span class="istickedoff">, if <span class="tickonlytrue">fromVersion &lt; 3</span></span>
+<span class="lineno">  258 </span><span class="spaces">          </span><span class="istickedoff">then</span>
+<span class="lineno">  259 </span><span class="spaces">            </span><span class="istickedoff">[ EnsureColumn &quot;shadow_divergence_log&quot; &quot;shadow_snapshot_id&quot; &quot;TEXT NOT NULL DEFAULT ''&quot;</span>
+<span class="lineno">  260 </span><span class="spaces">            </span><span class="istickedoff">, EnsureColumn &quot;shadow_divergence_log&quot; &quot;shadow_divergence_kind&quot; &quot;TEXT NOT NULL DEFAULT 'none'&quot;</span>
+<span class="lineno">  261 </span><span class="spaces">            </span><span class="istickedoff">]</span>
+<span class="lineno">  262 </span><span class="spaces">          </span><span class="istickedoff">else <span class="nottickedoff">[]</span></span>
+<span class="lineno">  263 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>runMigrationStep :: NSQL.Database -&gt; MigrationStep -&gt; IO ()
+<span class="lineno">  266 </span><span class="decl"><span class="istickedoff">runMigrationStep db step = case step of</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">EnsureColumn table col def -&gt; do</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">missing &lt;- columnMissing db table col</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">if missing</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="istickedoff">then do</span>
+<span class="lineno">  271 </span><span class="spaces">        </span><span class="istickedoff">let sql = &quot;ALTER TABLE &quot; &lt;&gt; table &lt;&gt; &quot; ADD COLUMN &quot; &lt;&gt; col &lt;&gt; &quot; &quot; &lt;&gt; def</span>
+<span class="lineno">  272 </span><span class="spaces">        </span><span class="istickedoff">result &lt;- NSQL.execSql db sql</span>
+<span class="lineno">  273 </span><span class="spaces">        </span><span class="istickedoff">case result of</span>
+<span class="lineno">  274 </span><span class="spaces">          </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  275 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0</span></span>
+<span class="lineno">  276 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">(SQLiteError $</span></span>
+<span class="lineno">  277 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&quot;migration_failed stage=ensure_column table=&quot; &lt;&gt; table</span></span>
+<span class="lineno">  278 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot; column=&quot; &lt;&gt; col &lt;&gt; &quot; sqlite=&quot; &lt;&gt; err)</span></span>
+<span class="lineno">  279 </span><span class="spaces">          </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  280 </span><span class="spaces">      </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  281 </span>
+<span class="lineno">  282 </span>execBootstrapSql :: NSQL.Database -&gt; (FilePath, Text) -&gt; IO ()
+<span class="lineno">  283 </span><span class="decl"><span class="istickedoff">execBootstrapSql db (label, sqlText) = do</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- NSQL.execSql db sqlText</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  286 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">throwQxFx0 (SQLiteError $ T.pack (&quot;bootstrap SQL failed for &quot; &lt;&gt; label &lt;&gt; &quot;: &quot;) &lt;&gt; err)</span></span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>seedBootstrapSql :: NSQL.Database -&gt; Text -&gt; (FilePath, Text) -&gt; IO ()
+<span class="lineno">  290 </span><span class="decl"><span class="istickedoff">seedBootstrapSql db tableName payload = do</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">query &lt;- tableHasRowsQuery tableName</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="istickedoff">hasRows &lt;- tableHasRows db query</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">hasRows</span></span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  295 </span><span class="spaces">    </span><span class="istickedoff">else execBootstrapSql db payload</span></span>
+<span class="lineno">  296 </span>
+<span class="lineno">  297 </span>tableHasRowsQuery :: Text -&gt; IO Text
+<span class="lineno">  298 </span><span class="decl"><span class="istickedoff">tableHasRowsQuery tableName =</span>
+<span class="lineno">  299 </span><span class="spaces">  </span><span class="istickedoff">case tableName of</span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="istickedoff">&quot;semantic_clusters&quot; -&gt; pure &quot;SELECT 1 FROM semantic_clusters LIMIT 1&quot;</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">&quot;realization_templates&quot; -&gt; pure &quot;SELECT 1 FROM realization_templates LIMIT 1&quot;</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="istickedoff">&quot;identity_claims&quot; -&gt; pure &quot;SELECT 1 FROM identity_claims LIMIT 1&quot;</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  304 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0</span></span>
+<span class="lineno">  305 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(SQLiteError</span></span>
+<span class="lineno">  306 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(&quot;unsupported bootstrap seed table name: &quot; &lt;&gt; tableName))</span></span></span>
+<span class="lineno">  307 </span>
+<span class="lineno">  308 </span>tableHasRows :: NSQL.Database -&gt; Text -&gt; IO Bool
+<span class="lineno">  309 </span><span class="decl"><span class="istickedoff">tableHasRows db sql = do</span>
+<span class="lineno">  310 </span><span class="spaces">  </span><span class="istickedoff">withPreparedStatement db sql <span class="nottickedoff">&quot;tableHasRows query&quot;</span> NSQL.stepRow</span></span>
+<span class="lineno">  311 </span>
+<span class="lineno">  312 </span>withPreparedStatement :: NSQL.Database -&gt; Text -&gt; Text -&gt; (NSQL.Statement -&gt; IO a) -&gt; IO a
+<span class="lineno">  313 </span><span class="decl"><span class="istickedoff">withPreparedStatement db sql context action = do</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  315 </span><span class="spaces">  </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  317 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError (context &lt;&gt; &quot; prepare failed: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="istickedoff">Right stmt -&gt;</span>
+<span class="lineno">  319 </span><span class="spaces">      </span><span class="istickedoff">action stmt `finally` finalizeBestEffort stmt</span></span>
+<span class="lineno">  320 </span>
+<span class="lineno">  321 </span>finalizeBestEffort :: NSQL.Statement -&gt; IO ()
+<span class="lineno">  322 </span><span class="decl"><span class="istickedoff">finalizeBestEffort stmt = do</span>
+<span class="lineno">  323 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- tryQxFx0 (NSQL.finalize stmt)</span>
+<span class="lineno">  324 </span><span class="spaces">  </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+
+</pre>
+</body>
+</html>

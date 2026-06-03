@@ -1,0 +1,99 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.LongSessionCorpus
+<span class="lineno">    4 </span>  ( longSessionCorpusTests
+<span class="lineno">    5 </span>  ) where
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>import Control.Exception (try)
+<span class="lineno">    8 </span>import Control.Monad (foldM)
+<span class="lineno">    9 </span>import qualified Data.Text as T
+<span class="lineno">   10 </span>import System.Directory (getCurrentDirectory)
+<span class="lineno">   11 </span>import System.FilePath ((&lt;/&gt;))
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import Test.HUnit (Test(..), assertBool, assertFailure)
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+<span class="lineno">   16 </span>import QxFx0.Self.Essence
+<span class="lineno">   17 </span>  ( Essence(..)
+<span class="lineno">   18 </span>  , etAngstLevel
+<span class="lineno">   19 </span>  , etWitnesses
+<span class="lineno">   20 </span>  )
+<span class="lineno">   21 </span>import QxFx0.Types (SystemState(..))
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>import qualified QxFx0.Runtime as Runtime
+<span class="lineno">   24 </span>  ( Session(..)
+<span class="lineno">   25 </span>  , bootstrapSession
+<span class="lineno">   26 </span>  , runTurnInSession
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>import Test.Support (withRuntimeEnv)
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>longSessionCorpusTests :: [Test]
+<span class="lineno">   32 </span><span class="decl"><span class="istickedoff">longSessionCorpusTests =</span>
+<span class="lineno">   33 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;long-session dialogical commitment&quot;</span> $</span>
+<span class="lineno">   34 </span><span class="spaces">      </span><span class="istickedoff">TestCase (runLongSessionFixture &quot;dialogical-commitment.jsonl&quot;)</span>
+<span class="lineno">   35 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;long-session contemplative commitment&quot;</span> $</span>
+<span class="lineno">   36 </span><span class="spaces">      </span><span class="istickedoff">TestCase (runLongSessionFixture &quot;contemplative-commitment.jsonl&quot;)</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;long-session integrative no commitment&quot;</span> $</span>
+<span class="lineno">   38 </span><span class="spaces">      </span><span class="istickedoff">TestCase (runLongSessionFixture &quot;integrative-no-commitment.jsonl&quot;)</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;long-session conatus erosion&quot;</span> $</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">TestCase (runLongSessionFixture &quot;conatus-erosion.jsonl&quot;)</span>
+<span class="lineno">   41 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;long-session mixed divergence&quot;</span> $</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="istickedoff">TestCase (runLongSessionFixture &quot;mixed-divergence.jsonl&quot;)</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>runLongSessionFixture :: FilePath -&gt; IO ()
+<span class="lineno">   46 </span><span class="decl"><span class="istickedoff">runLongSessionFixture filename = do</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">root &lt;- getCurrentDirectory</span>
+<span class="lineno">   48 </span><span class="spaces">  </span><span class="istickedoff">let fixturePath = root &lt;/&gt; &quot;test/fixtures/long-sessions&quot; &lt;/&gt; filename</span>
+<span class="lineno">   49 </span><span class="spaces">  </span><span class="istickedoff">inputs &lt;- fmap T.pack . lines &lt;$&gt; readFile fixturePath</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv (&quot;long-session-&quot; &lt;&gt; filename) $</span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">do</span>
+<span class="lineno">   52 </span><span class="spaces">      </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;long-session-test&quot;</span>
+<span class="lineno">   53 </span><span class="spaces">      </span><span class="istickedoff">let step (turnIdx, sess) input = do</span>
+<span class="lineno">   54 </span><span class="spaces">            </span><span class="istickedoff">result &lt;- try (Runtime.runTurnInSession sess input)</span>
+<span class="lineno">   55 </span><span class="spaces">                          </span><span class="istickedoff">:: IO (Either QxFx0Exception (Runtime.Session, T.Text))</span>
+<span class="lineno">   56 </span><span class="spaces">            </span><span class="istickedoff">case result of</span>
+<span class="lineno">   57 </span><span class="spaces">              </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">   58 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;turn &quot; ++ show turnIdx ++ &quot; raised: &quot; ++ show err)</span></span>
+<span class="lineno">   59 </span><span class="spaces">              </span><span class="istickedoff">Right (sess', _) -&gt; do</span>
+<span class="lineno">   60 </span><span class="spaces">                </span><span class="istickedoff">let ss = Runtime.sessSystemState sess'</span>
+<span class="lineno">   61 </span><span class="spaces">                    </span><span class="istickedoff">angst = case ssEssence ss of</span>
+<span class="lineno">   62 </span><span class="spaces">                              </span><span class="istickedoff">EssenceUncommitted t -&gt; etAngstLevel t</span>
+<span class="lineno">   63 </span><span class="spaces">                              </span><span class="istickedoff">EssenceCommitted t _ -&gt; <span class="nottickedoff">etAngstLevel t</span></span>
+<span class="lineno">   64 </span><span class="spaces">                    </span><span class="istickedoff">wits  = case ssEssence ss of</span>
+<span class="lineno">   65 </span><span class="spaces">                              </span><span class="istickedoff">EssenceUncommitted t -&gt; length (etWitnesses t)</span>
+<span class="lineno">   66 </span><span class="spaces">                              </span><span class="istickedoff">EssenceCommitted t _ -&gt; <span class="nottickedoff">length (etWitnesses t)</span></span>
+<span class="lineno">   67 </span><span class="spaces">                </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;angst out of [0,1] at turn &quot; ++ show turnIdx)</span></span>
+<span class="lineno">   68 </span><span class="spaces">                  </span><span class="istickedoff">(angst &gt;= 0.0 &amp;&amp; angst &lt;= 1.0)</span>
+<span class="lineno">   69 </span><span class="spaces">                </span><span class="istickedoff">assertBool <span class="nottickedoff">(&quot;witness count must increase at turn &quot; ++ show turnIdx)</span></span>
+<span class="lineno">   70 </span><span class="spaces">                  </span><span class="istickedoff">(wits == turnIdx)</span>
+<span class="lineno">   71 </span><span class="spaces">                </span><span class="istickedoff">pure (turnIdx + 1, sess')</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">(_, finalSession) &lt;- foldM step (1, session0) inputs</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">let finalAngst = case ssEssence (Runtime.sessSystemState finalSession) of</span>
+<span class="lineno">   74 </span><span class="spaces">                         </span><span class="istickedoff">EssenceUncommitted t -&gt; etAngstLevel t</span>
+<span class="lineno">   75 </span><span class="spaces">                         </span><span class="istickedoff">EssenceCommitted t _ -&gt; <span class="nottickedoff">etAngstLevel t</span></span>
+<span class="lineno">   76 </span><span class="spaces">      </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;final angst must be non-negative&quot;</span> (finalAngst &gt;= 0.0)</span></span>
+
+</pre>
+</body>
+</html>

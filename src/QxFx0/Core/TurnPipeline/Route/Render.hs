@@ -26,6 +26,7 @@ import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , PipelineRuntimeMode(..)
+  , scheduleTurnEffects
   , resolveTurnEffect
   )
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..))
@@ -74,12 +75,10 @@ import QxFx0.Types.State.Discourse (DiscourseState(..))
 import QxFx0.Types.Text (finalizeForce)
 import QxFx0.Types.Thresholds (parserLowConfidenceThreshold)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..), shadowDivergenceSeverityText)
-import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(PersistenceError)
-  , throwQxFx0
-  )
+import QxFx0.ExceptionPolicy (throwQxFx0)
 
 import Data.Char (isAlpha, isSpace)
+import Control.Concurrent.Async (forConcurrently)
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import Data.Maybe (fromMaybe)
@@ -110,6 +109,7 @@ data LocalRecoveryPlan = LocalRecoveryPlan
 
 data RenderEffectPlan = RenderEffectPlan
   { repRenderStatic :: !RenderStatic
+  , repTurnInput :: !TurnInput
   , repLocalRecoveryPlan :: !(Maybe LocalRecoveryPlan)
   , repRenderMorphologyWarning :: !(Maybe Text)
   , repKnowledgeTopic :: !Text
@@ -126,7 +126,7 @@ data RenderEffectPlan = RenderEffectPlan
   , repExternalQuerySkipReason :: !(Maybe Text)
     -- ^ WP3 dedup telemetry: reason why external query was skipped
     --   (already_known_morphology / already_known_tree).
-  } deriving stock (Eq, Show)
+  }
 
 data RenderTimeline = RenderTimeline
   { rtlRenderStart :: !UTCTime
@@ -293,8 +293,8 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                           in case mTool of
                                Just tool | etReliability tool >= 0.3 -> Just (tool, need, queryText)
                                _ -> Nothing
-   in RenderEffectPlan
-       { repRenderStatic = RenderStatic
+    in RenderEffectPlan
+        { repRenderStatic = RenderStatic
            { rsRenderWithBg = renderWithBg
            , rsTemplateArtifact = dialogueArtifact
            , rsPreferredGfLang = detectInputGfLang input
@@ -322,6 +322,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                 else narrativeFragment
           , rsSurfacingFragmentText = surfacingFragment
           }
+      , repTurnInput = ti
       , repLocalRecoveryPlan = localRecoveryPlan
       , repRenderMorphologyWarning = morphologyWarning
       , repKnowledgeTopic = bestTopic
@@ -357,11 +358,11 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
-  tRender0 <- resolveRenderCurrentTime pio
+  let tRender0 = tiStartTime (repTurnInput effectPlan)
   warnMorphologyFallback <- shouldWarnMorphologyFallback pio
   case repRenderMorphologyWarning effectPlan of
     Just bestTopic | warnMorphologyFallback ->
-      hPutStrLnWarning ("Morphology fallback: unknown topic lexeme: " <> T.unpack bestTopic)
+      hPutStrLnWarning ("Morphology fallback: unknown topic lexeme: " <> bestTopic)
     _ ->
       pure ()
 
@@ -371,23 +372,29 @@ resolveRenderEffects pio effectPlan = do
   mLegalFact <- retrieveLegalFact (repKnowledgeTopic effectPlan)
   let mKnowledgeFact = legalFactToKnowledgeFragment <$> mLegalFact
       mKnowledgeSource = lfSourceId <$> mLegalFact
-  -- Phase 8 gap closure: execute external query when a request strategy is chosen.
-  mExternalQueryResult <- case repExternalQueryRequest effectPlan of
-    Nothing -> pure Nothing
-    Just (tool, need, queryText) -> do
-      result <- resolveTurnEffect pio (TurnReqExternalQuery tool need queryText)
-      case result of
-        TurnResExternalQuery res -> pure (Just res)
-        _ -> pure (Just (Left (EqeInvalidResponse "unexpected_effect_result")))
-  -- Phase 9: execute autonomous exploratory external query.
-  mExploratoryQueryResult <- case repExploratoryQueryRequest effectPlan of
-    Nothing -> pure Nothing
-    Just (tool, need, queryText) -> do
-      result <- resolveTurnEffect pio (TurnReqExternalQuery tool need queryText)
-      case result of
-        TurnResExternalQuery res -> pure (Just res)
-        _ -> pure (Just (Left (EqeInvalidResponse "unexpected_effect_result")))
-  tRender1 <- resolveRenderCurrentTime pio
+  let scheduledRequests =
+        scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
+          (  [ ("request", TurnReqExternalQuery tool need queryText)
+             | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
+             ]
+          <> [ ("explore", TurnReqExternalQuery tool need queryText)
+             | Just (tool, need, queryText) <- [repExploratoryQueryRequest effectPlan]
+             ]
+          )
+  resolvedEffects <- forConcurrently scheduledRequests $ \(label, request) -> do
+    result <- resolveTurnEffect pio request
+    pure (label, result)
+  let mExternalQueryResult =
+        case firstMatch (\(label, _) -> label == "request") resolvedEffects of
+          Nothing -> Nothing
+          Just (_, TurnResExternalQuery res) -> Just res
+          Just _ -> Just (Left (EqeInvalidResponse "unexpected_effect_result"))
+      mExploratoryQueryResult =
+        case firstMatch (\(label, _) -> label == "explore") resolvedEffects of
+          Nothing -> Nothing
+          Just (_, TurnResExternalQuery res) -> Just res
+          Just _ -> Just (Left (EqeInvalidResponse "unexpected_effect_result"))
+  let tRender1 = tiStartTime (repTurnInput effectPlan)
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
         { rtlRenderStart = tRender0
@@ -583,7 +590,18 @@ safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assembl
     Left _ ->
       case mkExecutedTurnOutcome CMRepair IFOffer AuthorityRecovery RecoveryRoute FromRecovery GuardRecoveryRoute manifest of
         Right recoveryOutcome -> recoveryOutcome
-        Left err -> error (T.unpack err)
+        Left _ ->
+          ExecutedTurnOutcome
+            { etoFamily = CMRepair
+            , etoForce = IFOffer
+            , etoAuthorityClass = AuthorityRecovery
+            , etoTruthContractStatus = NonExpansiveRecoverySurface
+            , etoContractProvenance = RecoveryRoute
+            , etoSurfaceProvenance = FromRecovery
+            , etoAssemblyPath = GuardRecoveryRoute
+            , etoArtifactManifest = manifest
+            , etoTransitionWon = False
+            }
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
 buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = Nothing
@@ -901,13 +919,6 @@ shouldWarnMorphologyFallback pio = do
     TurnResReadEnv _ -> pure False
     _ -> pure False
 
-resolveRenderCurrentTime :: PipelineIO -> IO UTCTime
-resolveRenderCurrentTime pio = do
-  result <- resolveTurnEffect pio TurnReqCurrentTime
-  case result of
-    TurnResCurrentTime currentTime -> pure currentTime
-    _ -> throwQxFx0 (PersistenceError "render timeline current time effect returned unexpected result")
-
 resolveRuntimeGfLinearization :: PipelineIO -> RenderStatic -> IO (Maybe RenderStatic)
 resolveRuntimeGfLinearization pio renderStatic = do
   runtimeEnabled <- shouldUseGfRuntime pio
@@ -959,6 +970,14 @@ resolveGfPgfPath pio = do
 normalizeBool :: Text -> Bool
 normalizeBool rawValue =
   T.toLower (T.strip rawValue) `elem` ["1", "true", "yes", "on"]
+
+firstMatch :: (a -> Bool) -> [a] -> Maybe a
+firstMatch predicate = go
+  where
+    go [] = Nothing
+    go (x:xs)
+      | predicate x = Just x
+      | otherwise = go xs
 
 applyRuntimeGfResult :: Text -> RenderStatic -> TurnEffectResult -> RenderStatic
 applyRuntimeGfResult gfLang renderStatic result =

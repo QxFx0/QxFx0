@@ -8,7 +8,7 @@
     (the 7 boundary rules)
   - `docs/closure/AUTHORITY_MAP.md` §7 (the per-rule
     summary)
-  - `scripts/check_architecture.sh` rules [1]–[19]
+  - `scripts/check_architecture.sh` rules [1]–[20]
 - **Related**:
   - `docs/closure/ONBOARDING.md` §7 (the discipline)
   - `docs/closure/TEST_AUTHORITY_AUDIT.md` (per-test
@@ -20,7 +20,7 @@ The closure plan's ADR-0034 §3 has 7 boundary rules.
 The plan's enforcement is **mechanical** (where
 possible) and **declarative** (where mechanical
 enforcement is impractical). The CI script
-`scripts/check_architecture.sh` has 19 rules; the
+`scripts/check_architecture.sh` has 20 rules; the
 mapping from ADR-0034 §3's 7 rules to the CI rules
 is implicit. This matrix makes the mapping explicit
 and adds the **test** and **doc** columns, so the
@@ -131,14 +131,11 @@ The discipline of this matrix is:
 
 This matrix is **closed** when:
 
-- [ ] Every ADR-0034 §3 rule has all 4 columns
+- [x] Every ADR-0034 §3 rule has all 4 columns
       filled (CI, test, doc, status).
-- [ ] The 3 yellow rows (R2 test, R3 test, R7
-      test) are closed (per §4).
-- [ ] The 2 red rows (R3 test, R7 test) are
-      closed (per §4).
-- [ ] The non-R rules (§2) are mapped to their
+- [x] The matrix working tree has 0 yellow and 0 red rows.
+- [x] The non-R rules (§2) are mapped to their
       source (Freeze-0 / Runtime).
 
-The matrix is **deferred** until all 4 criteria
-are met.
+The matrix is **structurally closed in the working tree**. Full
+landing still depends on build/test/CI evidence outside this doc.

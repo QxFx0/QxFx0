@@ -1,0 +1,884 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.StatePersistence
+<span class="lineno">    4 </span>  ( statePersistenceFastTests
+<span class="lineno">    5 </span>  , statePersistenceSlowTests
+<span class="lineno">    6 </span>  , statePersistenceTests
+<span class="lineno">    7 </span>  ) where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>import Control.Exception (try)
+<span class="lineno">   10 </span>import Control.Monad (forM_)
+<span class="lineno">   11 </span>import qualified Data.Aeson as Aeson
+<span class="lineno">   12 </span>import Data.Aeson (Value(..), eitherDecodeStrict')
+<span class="lineno">   13 </span>import qualified Data.Aeson.Key as Key
+<span class="lineno">   14 </span>import qualified Data.Aeson.KeyMap as KeyMap
+<span class="lineno">   15 </span>import qualified Data.ByteString.Lazy as BL
+<span class="lineno">   16 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   17 </span>import qualified Data.Text as T
+<span class="lineno">   18 </span>import Data.Text.Encoding (encodeUtf8)
+<span class="lineno">   19 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   20 </span>import qualified Data.Vector as V
+<span class="lineno">   21 </span>import Test.HUnit hiding (Testable)
+<span class="lineno">   22 </span>import Test.QuickCheck
+<span class="lineno">   23 </span>  ( Result(..)
+<span class="lineno">   24 </span>  , Testable
+<span class="lineno">   25 </span>  , maxSuccess
+<span class="lineno">   26 </span>  , quickCheckWithResult
+<span class="lineno">   27 </span>  , stdArgs
+<span class="lineno">   28 </span>  )
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>import QxFx0.Learning.KnowledgeTree
+<span class="lineno">   31 </span>  ( KnowledgeSource(..)
+<span class="lineno">   32 </span>  , KnowledgeFruit(..)
+<span class="lineno">   33 </span>  , emptyKnowledgeTree
+<span class="lineno">   34 </span>  , graftFruit
+<span class="lineno">   35 </span>  )
+<span class="lineno">   36 </span>import QxFx0.Types
+<span class="lineno">   37 </span>import QxFx0.Types.Persistence
+<span class="lineno">   38 </span>  ( LoadStateResult(..)
+<span class="lineno">   39 </span>  , PersistenceDiagnostic(..)
+<span class="lineno">   40 </span>  , renderPersistenceDiagnostics
+<span class="lineno">   41 </span>  )
+<span class="lineno">   42 </span>import QxFx0.Types.ShadowDivergence
+<span class="lineno">   43 </span>  ( ShadowDivergenceKind(..)
+<span class="lineno">   44 </span>  , ShadowDivergenceSeverity(..)
+<span class="lineno">   45 </span>  , ShadowSnapshotId(..)
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
+<span class="lineno">   48 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   49 </span>import qualified QxFx0.Bridge.StatePersistence as StatePersistence
+<span class="lineno">   50 </span>import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+<span class="lineno">   51 </span>import qualified QxFx0.Runtime as Runtime
+<span class="lineno">   52 </span>import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+<span class="lineno">   53 </span>import QxFx0.Self.Essence
+<span class="lineno">   54 </span>  ( CommitmentTrigger(..)
+<span class="lineno">   55 </span>  , Essence(..)
+<span class="lineno">   56 </span>  , EssenceCommitment(..)
+<span class="lineno">   57 </span>  , EssenceMode(..)
+<span class="lineno">   58 </span>  , TrajectoryHash(..)
+<span class="lineno">   59 </span>  , emptyTrajectory
+<span class="lineno">   60 </span>  )
+<span class="lineno">   61 </span>import QxFx0.Self.Field (emptyField)
+<span class="lineno">   62 </span>import QxFx0.Self.Perspective (applyPerspectiveOperator)
+<span class="lineno">   63 </span>import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
+<span class="lineno">   64 </span>import Test.Support (assertExec, queryCount, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>statePersistenceFastTests :: [Test]
+<span class="lineno">   67 </span><span class="decl"><span class="istickedoff">statePersistenceFastTests =</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="istickedoff">[ testBootstrapRejectsNonAuthoritativePersistedState</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">, testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="istickedoff">, testBootstrapSessionRestoresCanonicalGovernanceViews</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">, testBootstrapSessionStrictRejectsNonAuthoritativePersistedState</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">, testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">, testLoadStateCorruptBlobIsReported</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">, testLoadStateCorruptUtf8BlobIsReported</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">, testLoadStateLegacyNumericTrajectoryHashRestores</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">, testBootstrapSessionMarksRecoveredCorruption</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">, testStateBlobDiagnosticsDetectsMissingOptionalFields</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="istickedoff">, testLoadStateMissingRequiredTopLevelFieldsFailsDecode</span>
+<span class="lineno">   79 </span><span class="spaces">  </span><span class="istickedoff">, testSaveStateReturnsRightOnSuccess</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>statePersistenceSlowTests :: [Test]
+<span class="lineno">   83 </span><span class="decl"><span class="istickedoff">statePersistenceSlowTests =</span>
+<span class="lineno">   84 </span><span class="spaces">  </span><span class="istickedoff">[ testSaveStateWithProjectionFailureRollsBackTransaction</span>
+<span class="lineno">   85 </span><span class="spaces">  </span><span class="istickedoff">, testPersistedSystemStateSessionIdMatchesBootstrapId</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">, testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">, testPersistedReplayTraceDeterministicWithFixedTimeProperty</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">, testSaveStateWithDivergencePersistsShadowLog</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>statePersistenceTests :: [Test]
+<span class="lineno">   92 </span><span class="decl"><span class="istickedoff">statePersistenceTests = statePersistenceFastTests ++ statePersistenceSlowTests</span></span>
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>testBootstrapRejectsNonAuthoritativePersistedState :: Test
+<span class="lineno">   95 </span><span class="decl"><span class="istickedoff">testBootstrapRejectsNonAuthoritativePersistedState = TestCase $ do</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_bootstrap_non_authoritative.db&quot; $ do</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;bootstrap_non_authoritative&quot;</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 &quot;bootstrap_non_authoritative&quot;</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist non-authoritative state fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  104 </span><span class="spaces">    </span><span class="istickedoff">writeNonAuthoritativePersistedTruthBlob rt &quot;bootstrap_non_authoritative&quot;</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;bootstrap_non_authoritative&quot;</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">LoadStateCorrupt _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">other -&gt; <span class="nottickedoff">assertFailure (&quot;expected non-authoritative persisted state to be rejected, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory :: Test
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_governance_load_rebuild.db&quot; $ do</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;governance_load_rebuild&quot;</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="istickedoff">governedState = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff">stalePersistedState = governedState</span>
+<span class="lineno">  117 </span><span class="spaces">          </span><span class="istickedoff">{ ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState</span>
+<span class="lineno">  118 </span><span class="spaces">          </span><span class="istickedoff">, ssGovernanceProjection = ssGovernanceProjection emptySystemState</span>
+<span class="lineno">  119 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;governed fixture must record canonical governance history&quot;</span></span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">(not (null (ssGovernanceHistory governedState)))</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;governed fixture must produce a non-empty derived perspective registry&quot;</span></span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">(ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)</span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState &quot;governance_load_rebuild&quot;</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist governed state fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">loaded &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;governance_load_rebuild&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">case loaded of</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">LoadStateRestored restored -&gt; do</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;canonical governance history must be preserved on load&quot;</span></span>
+<span class="lineno">  132 </span><span class="spaces">          </span><span class="istickedoff">(ssGovernanceHistory governedState)</span>
+<span class="lineno">  133 </span><span class="spaces">          </span><span class="istickedoff">(ssGovernanceHistory restored)</span>
+<span class="lineno">  134 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;derived perspective registry must be rebuilt from canonical history&quot;</span></span>
+<span class="lineno">  135 </span><span class="spaces">          </span><span class="istickedoff">(ssPerspectiveRegistry governedState)</span>
+<span class="lineno">  136 </span><span class="spaces">          </span><span class="istickedoff">(ssPerspectiveRegistry restored)</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;governance projection must be rebuilt from canonical history&quot;</span></span>
+<span class="lineno">  138 </span><span class="spaces">          </span><span class="istickedoff">(ssGovernanceProjection governedState)</span>
+<span class="lineno">  139 </span><span class="spaces">          </span><span class="istickedoff">(ssGovernanceProjection restored)</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">other -&gt; <span class="nottickedoff">assertFailure (&quot;expected restored governed state, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>testBootstrapSessionRestoresCanonicalGovernanceViews :: Test
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_governance_bootstrap_restore.db&quot; $ do</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;governance_bootstrap_restore&quot;</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">governedState = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">stalePersistedState = governedState</span>
+<span class="lineno">  149 </span><span class="spaces">          </span><span class="istickedoff">{ ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState</span>
+<span class="lineno">  150 </span><span class="spaces">          </span><span class="istickedoff">, ssGovernanceProjection = ssGovernanceProjection emptySystemState</span>
+<span class="lineno">  151 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;bootstrap governed fixture must record canonical governance history&quot;</span></span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">(not (null (ssGovernanceHistory governedState)))</span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;bootstrap governed fixture must produce a non-empty derived perspective registry&quot;</span></span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">(ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)</span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState &quot;governance_bootstrap_restore&quot;</span>
+<span class="lineno">  157 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist governed bootstrap fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="istickedoff">restored &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;governance_bootstrap_restore&quot;</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">let restoredState = Runtime.sessSystemState restored</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bootstrap should report restored origin for authoritative governed state&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="istickedoff">Runtime.RestoredOrigin</span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff">(Runtime.sessStateOrigin restored)</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bootstrap must preserve canonical governance history&quot;</span></span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">(ssGovernanceHistory governedState)</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">(ssGovernanceHistory restoredState)</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bootstrap must rebuild perspective registry from canonical history&quot;</span></span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">(ssPerspectiveRegistry governedState)</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">(ssPerspectiveRegistry restoredState)</span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;bootstrap must rebuild governance projection from canonical history&quot;</span></span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">(ssGovernanceProjection governedState)</span>
+<span class="lineno">  173 </span><span class="spaces">      </span><span class="istickedoff">(ssGovernanceProjection restoredState)</span></span>
+<span class="lineno">  174 </span>
+<span class="lineno">  175 </span>testBootstrapSessionStrictRejectsNonAuthoritativePersistedState :: Test
+<span class="lineno">  176 </span><span class="decl"><span class="istickedoff">testBootstrapSessionStrictRejectsNonAuthoritativePersistedState = TestCase $ do</span>
+<span class="lineno">  177 </span><span class="spaces">  </span><span class="istickedoff">withStrictRuntimeEnv &quot;qxfx0_test_bootstrap_non_authoritative_strict.db&quot; $ do</span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;bootstrap_non_authoritative_strict&quot;</span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  180 </span><span class="spaces">        </span><span class="istickedoff">ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 &quot;bootstrap_non_authoritative_strict&quot;</span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  183 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist strict non-authoritative state fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  184 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">writeNonAuthoritativePersistedTruthBlob rt &quot;bootstrap_non_authoritative_strict&quot;</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- try (Runtime.bootstrapSession True &quot;bootstrap_non_authoritative_strict&quot;) :: IO (Either QxFx0Exception Runtime.Session)</span>
+<span class="lineno">  187 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">  188 </span><span class="spaces">      </span><span class="istickedoff">Left (RuntimeInitError msg) -&gt;</span>
+<span class="lineno">  189 </span><span class="spaces">        </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;strict bootstrap should reject non-authoritative persisted state&quot;</span></span>
+<span class="lineno">  190 </span><span class="spaces">          </span><span class="istickedoff">(&quot;non_authoritative_persisted_state&quot; `T.isInfixOf` msg)</span>
+<span class="lineno">  191 </span><span class="spaces">      </span><span class="istickedoff">Left other -&gt;</span>
+<span class="lineno">  192 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;expected RuntimeInitError for strict non-authoritative restore, got: &quot; &lt;&gt; show other)</span></span>
+<span class="lineno">  193 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  194 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure &quot;strict bootstrap should fail closed on non-authoritative persisted state&quot;</span></span></span>
+<span class="lineno">  195 </span>
+<span class="lineno">  196 </span>testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState :: Test
+<span class="lineno">  197 </span><span class="decl"><span class="istickedoff">testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState = TestCase $ do</span>
+<span class="lineno">  198 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_bootstrap_non_authoritative_degraded.db&quot; $ do</span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;bootstrap_non_authoritative_degraded&quot;</span>
+<span class="lineno">  200 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  201 </span><span class="spaces">        </span><span class="istickedoff">ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 &quot;bootstrap_non_authoritative_degraded&quot;</span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist degraded non-authoritative state fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="istickedoff">writeNonAuthoritativePersistedTruthBlob rt &quot;bootstrap_non_authoritative_degraded&quot;</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">recovered &lt;- Runtime.bootstrapSession True &quot;bootstrap_non_authoritative_degraded&quot;</span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;degraded bootstrap should recover corrupt/non-authoritative persisted state&quot;</span></span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="istickedoff">Runtime.RecoveredCorruptOrigin</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="istickedoff">(Runtime.sessStateOrigin recovered)</span>
+<span class="lineno">  211 </span><span class="spaces">    </span><span class="istickedoff">case ssGovernanceRuntimeFault (Runtime.sessSystemState recovered) of</span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="istickedoff">Just (GrfRecoveredCorruptBootstrap detail) -&gt;</span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;degraded bootstrap should surface non-authoritative persisted-state cause&quot;</span></span>
+<span class="lineno">  214 </span><span class="spaces">          </span><span class="istickedoff">(&quot;non_authoritative_persisted_state&quot; `T.isInfixOf` detail)</span>
+<span class="lineno">  215 </span><span class="spaces">      </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  216 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;expected recovered-corrupt bootstrap governance fault, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  217 </span>
+<span class="lineno">  218 </span>testLoadStateCorruptBlobIsReported :: Test
+<span class="lineno">  219 </span><span class="decl"><span class="istickedoff">testLoadStateCorruptBlobIsReported = TestCase $ do</span>
+<span class="lineno">  220 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_corrupt_field.db&quot; $ do</span>
+<span class="lineno">  221 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_corrupt&quot;</span>
+<span class="lineno">  222 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  223 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  224 </span><span class="spaces">      </span><span class="istickedoff">let sql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  226 </span><span class="spaces">      </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  227 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  228 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  229 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 &quot;test_corrupt&quot;</span>
+<span class="lineno">  230 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  231 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 3 &quot;{not valid json&quot;</span>
+<span class="lineno">  232 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.step stmt</span>
+<span class="lineno">  233 </span><span class="spaces">          </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  234 </span><span class="spaces">          </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  235 </span><span class="spaces">    </span><span class="istickedoff">loaded &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;test_corrupt&quot;</span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">case loaded of</span>
+<span class="lineno">  237 </span><span class="spaces">      </span><span class="istickedoff">StatePersistence.LoadStateCorrupt _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  238 </span><span class="spaces">      </span><span class="istickedoff">other -&gt; <span class="nottickedoff">assertFailure (&quot;expected corrupt load result, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  239 </span>
+<span class="lineno">  240 </span>testLoadStateCorruptUtf8BlobIsReported :: Test
+<span class="lineno">  241 </span><span class="decl"><span class="istickedoff">testLoadStateCorruptUtf8BlobIsReported = TestCase $ do</span>
+<span class="lineno">  242 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_corrupt_utf8_blob.db&quot; $ do</span>
+<span class="lineno">  243 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_corrupt_utf8&quot;</span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  245 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  246 </span><span class="spaces">      </span><span class="istickedoff">let sql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, CAST(X'80' AS TEXT), datetime('now'))&quot;</span>
+<span class="lineno">  247 </span><span class="spaces">      </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  250 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  251 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 &quot;test_corrupt_utf8&quot;</span>
+<span class="lineno">  252 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  253 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.step stmt</span>
+<span class="lineno">  254 </span><span class="spaces">          </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  255 </span><span class="spaces">          </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">loaded &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;test_corrupt_utf8&quot;</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">case loaded of</span>
+<span class="lineno">  258 </span><span class="spaces">      </span><span class="istickedoff">StatePersistence.LoadStateCorrupt diagnostics -&gt;</span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;invalid UTF-8 must be classified as corrupt decode&quot;</span></span>
+<span class="lineno">  260 </span><span class="spaces">          </span><span class="istickedoff">(PdCorruptDecode `elem` diagnostics)</span>
+<span class="lineno">  261 </span><span class="spaces">      </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;expected corrupt UTF-8 load result, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  263 </span>
+<span class="lineno">  264 </span>testLoadStateLegacyNumericTrajectoryHashRestores :: Test
+<span class="lineno">  265 </span><span class="decl"><span class="istickedoff">testLoadStateLegacyNumericTrajectoryHashRestores = TestCase $ do</span>
+<span class="lineno">  266 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_legacy_numeric_trajectory_hash.db&quot; $ do</span>
+<span class="lineno">  267 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_legacy_numeric_trajectory_hash&quot;</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  269 </span><span class="spaces">        </span><span class="istickedoff">ss0 = (Runtime.sessSystemState session0)</span>
+<span class="lineno">  270 </span><span class="spaces">          </span><span class="istickedoff">{ ssEssence = EssenceCommitted emptyTrajectory</span>
+<span class="lineno">  271 </span><span class="spaces">              </span><span class="istickedoff">(EssenceCommitment EssenceContemplative TriggerAngstThreshold 1 (TrajectoryHash &quot;sha256:legacy-fixture&quot;))</span>
+<span class="lineno">  272 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 &quot;test_legacy_numeric_trajectory_hash&quot;</span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  275 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to persist legacy trajectory hash fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  276 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  278 </span><span class="spaces">      </span><span class="istickedoff">let selectSql = &quot;SELECT value FROM dialogue_state WHERE session_id = ? AND key = ?&quot;</span>
+<span class="lineno">  279 </span><span class="spaces">      </span><span class="istickedoff">mSelect &lt;- NSQL.prepare db selectSql</span>
+<span class="lineno">  280 </span><span class="spaces">      </span><span class="istickedoff">selectStmt &lt;- case mSelect of</span>
+<span class="lineno">  281 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to prepare legacy trajectory hash select: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  282 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; pure stmt</span>
+<span class="lineno">  283 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText selectStmt 1 &quot;test_legacy_numeric_trajectory_hash&quot;</span>
+<span class="lineno">  284 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText selectStmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  285 </span><span class="spaces">      </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow selectStmt</span>
+<span class="lineno">  286 </span><span class="spaces">      </span><span class="istickedoff">blob &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnText selectStmt 0 else <span class="nottickedoff">assertFailure &quot;missing persisted state blob for legacy trajectory hash fixture&quot; &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  287 </span><span class="spaces">      </span><span class="istickedoff">NSQL.finalize selectStmt</span>
+<span class="lineno">  288 </span><span class="spaces">      </span><span class="istickedoff">let updateSql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  289 </span><span class="spaces">      </span><span class="istickedoff">mUpdate &lt;- NSQL.prepare db updateSql</span>
+<span class="lineno">  290 </span><span class="spaces">      </span><span class="istickedoff">updateStmt &lt;- case mUpdate of</span>
+<span class="lineno">  291 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to prepare legacy trajectory hash update: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  292 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; pure stmt</span>
+<span class="lineno">  293 </span><span class="spaces">      </span><span class="istickedoff">legacyBlob &lt;-</span>
+<span class="lineno">  294 </span><span class="spaces">        </span><span class="istickedoff">case (Aeson.decode (BL.fromStrict (encodeUtf8 blob)) :: Maybe Value) of</span>
+<span class="lineno">  295 </span><span class="spaces">          </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">assertFailure &quot;failed to decode persisted legacy trajectory fixture JSON&quot; &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  296 </span><span class="spaces">          </span><span class="istickedoff">Just value -&gt;</span>
+<span class="lineno">  297 </span><span class="spaces">            </span><span class="istickedoff">pure (TE.decodeUtf8 . BL.toStrict . Aeson.encode $ injectLegacyNumericTrajectoryHash value)</span>
+<span class="lineno">  298 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 1 &quot;test_legacy_numeric_trajectory_hash&quot;</span>
+<span class="lineno">  299 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  300 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 3 legacyBlob</span>
+<span class="lineno">  301 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.step updateStmt</span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="istickedoff">NSQL.finalize updateStmt</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="istickedoff">loaded &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;test_legacy_numeric_trajectory_hash&quot;</span>
+<span class="lineno">  304 </span><span class="spaces">    </span><span class="istickedoff">case loaded of</span>
+<span class="lineno">  305 </span><span class="spaces">      </span><span class="istickedoff">StatePersistence.LoadStateRestored restored -&gt;</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="istickedoff">case ssEssence restored of</span>
+<span class="lineno">  307 </span><span class="spaces">          </span><span class="istickedoff">EssenceCommitted _ commitment -&gt;</span>
+<span class="lineno">  308 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;legacy numeric trajectory hash should restore as text-compatible value&quot;</span></span>
+<span class="lineno">  309 </span><span class="spaces">              </span><span class="istickedoff">(TrajectoryHash &quot;0&quot;)</span>
+<span class="lineno">  310 </span><span class="spaces">              </span><span class="istickedoff">(ecWitnessHash commitment)</span>
+<span class="lineno">  311 </span><span class="spaces">          </span><span class="istickedoff">other -&gt; <span class="nottickedoff">assertFailure (&quot;expected committed essence after legacy trajectory restore, got: &quot; &lt;&gt; show other)</span></span>
+<span class="lineno">  312 </span><span class="spaces">      </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  313 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;expected restored state for legacy numeric trajectory hash, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  314 </span>
+<span class="lineno">  315 </span>injectLegacyNumericTrajectoryHash :: Value -&gt; Value
+<span class="lineno">  316 </span><span class="decl"><span class="istickedoff">injectLegacyNumericTrajectoryHash value =</span>
+<span class="lineno">  317 </span><span class="spaces">  </span><span class="istickedoff">case value of</span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="istickedoff">Object root -&gt;</span>
+<span class="lineno">  319 </span><span class="spaces">      </span><span class="istickedoff">Object (updateKeyMap (Key.fromText &quot;essence&quot;) updateEssence root)</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">value</span></span>
+<span class="lineno">  321 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">updateEssence essenceVal =</span>
+<span class="lineno">  323 </span><span class="spaces">      </span><span class="istickedoff">case essenceVal of</span>
+<span class="lineno">  324 </span><span class="spaces">        </span><span class="istickedoff">Object essenceObj -&gt;</span>
+<span class="lineno">  325 </span><span class="spaces">          </span><span class="istickedoff">Object (updateKeyMap (Key.fromText &quot;contents&quot;) updateCommitmentContents essenceObj)</span>
+<span class="lineno">  326 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">essenceVal</span></span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="istickedoff">updateCommitmentContents contentsVal =</span>
+<span class="lineno">  328 </span><span class="spaces">      </span><span class="istickedoff">case contentsVal of</span>
+<span class="lineno">  329 </span><span class="spaces">        </span><span class="istickedoff">Array xs</span>
+<span class="lineno">  330 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">length xs &gt;= 2</span> -&gt;</span>
+<span class="lineno">  331 </span><span class="spaces">              </span><span class="istickedoff">let updated = xs V.// [(1, updateCommitment (xs V.! 1))]</span>
+<span class="lineno">  332 </span><span class="spaces">              </span><span class="istickedoff">in Array updated</span>
+<span class="lineno">  333 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">contentsVal</span></span>
+<span class="lineno">  334 </span><span class="spaces">    </span><span class="istickedoff">updateCommitment commitmentVal =</span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">case commitmentVal of</span>
+<span class="lineno">  336 </span><span class="spaces">        </span><span class="istickedoff">Object commitmentObj -&gt;</span>
+<span class="lineno">  337 </span><span class="spaces">          </span><span class="istickedoff">Object (KeyMap.insert (Key.fromText &quot;ecWitnessHash&quot;) (Number 0) commitmentObj)</span>
+<span class="lineno">  338 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">commitmentVal</span></span></span>
+<span class="lineno">  339 </span>
+<span class="lineno">  340 </span>updateKeyMap :: Key.Key -&gt; (Value -&gt; Value) -&gt; KeyMap.KeyMap Value -&gt; KeyMap.KeyMap Value
+<span class="lineno">  341 </span><span class="decl"><span class="istickedoff">updateKeyMap key f km =</span>
+<span class="lineno">  342 </span><span class="spaces">  </span><span class="istickedoff">case KeyMap.lookup key km of</span>
+<span class="lineno">  343 </span><span class="spaces">    </span><span class="istickedoff">Just current -&gt; KeyMap.insert key (f current) km</span>
+<span class="lineno">  344 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">km</span></span></span>
+<span class="lineno">  345 </span>
+<span class="lineno">  346 </span>injectNonAuthoritativeTruthContract :: Value -&gt; Value
+<span class="lineno">  347 </span><span class="decl"><span class="istickedoff">injectNonAuthoritativeTruthContract value =</span>
+<span class="lineno">  348 </span><span class="spaces">  </span><span class="istickedoff">case value of</span>
+<span class="lineno">  349 </span><span class="spaces">    </span><span class="istickedoff">Object root -&gt; Object (KeyMap.insert (Key.fromText &quot;truthContractStatus&quot;) (String &quot;LegacyIncompleteSurface&quot;) root)</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">value</span></span></span>
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>writeNonAuthoritativePersistedTruthBlob :: Runtime.RuntimeContext -&gt; T.Text -&gt; IO ()
+<span class="lineno">  353 </span><span class="decl"><span class="istickedoff">writeNonAuthoritativePersistedTruthBlob rt sessionId =</span>
+<span class="lineno">  354 </span><span class="spaces">  </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  355 </span><span class="spaces">    </span><span class="istickedoff">let selectSql = &quot;SELECT value FROM dialogue_state WHERE session_id = ? AND key = ?&quot;</span>
+<span class="lineno">  356 </span><span class="spaces">    </span><span class="istickedoff">mSelect &lt;- NSQL.prepare db selectSql</span>
+<span class="lineno">  357 </span><span class="spaces">    </span><span class="istickedoff">selectStmt &lt;- case mSelect of</span>
+<span class="lineno">  358 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to prepare non-authoritative persisted-state select: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  359 </span><span class="spaces">      </span><span class="istickedoff">Right stmt -&gt; pure stmt</span>
+<span class="lineno">  360 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText selectStmt 1 sessionId</span>
+<span class="lineno">  361 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText selectStmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow selectStmt</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">blob &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnText selectStmt 0 else <span class="nottickedoff">assertFailure &quot;missing persisted state blob for non-authoritative fixture&quot; &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  364 </span><span class="spaces">    </span><span class="istickedoff">NSQL.finalize selectStmt</span>
+<span class="lineno">  365 </span><span class="spaces">    </span><span class="istickedoff">mutatedBlob &lt;-</span>
+<span class="lineno">  366 </span><span class="spaces">      </span><span class="istickedoff">case (Aeson.decode (BL.fromStrict (encodeUtf8 blob)) :: Maybe Value) of</span>
+<span class="lineno">  367 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">assertFailure &quot;failed to decode persisted state JSON for non-authoritative fixture&quot; &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  368 </span><span class="spaces">        </span><span class="istickedoff">Just value -&gt; pure (TE.decodeUtf8 . BL.toStrict . Aeson.encode $ injectNonAuthoritativeTruthContract value)</span>
+<span class="lineno">  369 </span><span class="spaces">    </span><span class="istickedoff">let updateSql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  370 </span><span class="spaces">    </span><span class="istickedoff">mUpdate &lt;- NSQL.prepare db updateSql</span>
+<span class="lineno">  371 </span><span class="spaces">    </span><span class="istickedoff">updateStmt &lt;- case mUpdate of</span>
+<span class="lineno">  372 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;failed to prepare non-authoritative persisted-state update: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  373 </span><span class="spaces">      </span><span class="istickedoff">Right stmt -&gt; pure stmt</span>
+<span class="lineno">  374 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 1 sessionId</span>
+<span class="lineno">  375 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  376 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.bindText updateStmt 3 mutatedBlob</span>
+<span class="lineno">  377 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- NSQL.step updateStmt</span>
+<span class="lineno">  378 </span><span class="spaces">    </span><span class="istickedoff">NSQL.finalize updateStmt</span></span>
+<span class="lineno">  379 </span>
+<span class="lineno">  380 </span>testBootstrapSessionMarksRecoveredCorruption :: Test
+<span class="lineno">  381 </span><span class="decl"><span class="istickedoff">testBootstrapSessionMarksRecoveredCorruption = TestCase $ do</span>
+<span class="lineno">  382 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_corrupt_bootstrap.db&quot; $ do</span>
+<span class="lineno">  383 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_corrupt_bootstrap&quot;</span>
+<span class="lineno">  384 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  385 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">let sql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  387 </span><span class="spaces">      </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  388 </span><span class="spaces">      </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  389 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  390 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  391 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 &quot;test_corrupt_bootstrap&quot;</span>
+<span class="lineno">  392 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  393 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 3 &quot;{corrupt&quot;</span>
+<span class="lineno">  394 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.step stmt</span>
+<span class="lineno">  395 </span><span class="spaces">          </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  396 </span><span class="spaces">          </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  397 </span><span class="spaces">    </span><span class="istickedoff">recovered &lt;- Runtime.bootstrapSession True &quot;test_corrupt_bootstrap&quot;</span>
+<span class="lineno">  398 </span><span class="spaces">    </span><span class="istickedoff">assertEqual</span>
+<span class="lineno">  399 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&quot;corrupt persisted state should not masquerade as fresh bootstrap&quot;</span></span>
+<span class="lineno">  400 </span><span class="spaces">      </span><span class="istickedoff">Runtime.RecoveredCorruptOrigin</span>
+<span class="lineno">  401 </span><span class="spaces">      </span><span class="istickedoff">(Runtime.sessStateOrigin recovered)</span></span>
+<span class="lineno">  402 </span>
+<span class="lineno">  403 </span>testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
+<span class="lineno">  404 </span><span class="decl"><span class="istickedoff">testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do</span>
+<span class="lineno">  405 </span><span class="spaces">  </span><span class="istickedoff">let minimalBlob = T.pack &quot;{\&quot;history\&quot;:[],\&quot;rawInputHistory\&quot;:[],\&quot;turnCount\&quot;:0,\&quot;lastTopic\&quot;:\&quot;\&quot;,\&quot;lastFamily\&quot;:\&quot;CMGround\&quot;,\&quot;lastForce\&quot;:\&quot;IFAssert\&quot;,\&quot;lastLayer\&quot;:\&quot;ContentLayer\&quot;,\&quot;lastEmbedding\&quot;:[],\&quot;consecutiveReflect\&quot;:0,\&quot;recentFamilies\&quot;:[],\&quot;activeScene\&quot;:\&quot;None\&quot;,\&quot;userState\&quot;:{\&quot;claims\&quot;:[],\&quot;topics\&quot;:[]},\&quot;ego\&quot;:{\&quot;tension\&quot;:0.0,\&quot;agency\&quot;:1.0,\&quot;narrative\&quot;:\&quot;\&quot;},\&quot;identityClaims\&quot;:[],\&quot;orbitalMemory\&quot;:[],\&quot;trace\&quot;:[],\&quot;meaningGraph\&quot;:{\&quot;edges\&quot;:[],\&quot;turnCount\&quot;:0},\&quot;kernelPulse\&quot;:\&quot;Neutral\&quot;,\&quot;blockedConcepts\&quot;:[],\&quot;clusters\&quot;:[],\&quot;intuitConfidence\&quot;:0.5,\&quot;sessionId\&quot;:\&quot;test\&quot;,\&quot;outputMode\&quot;:\&quot;text\&quot;,\&quot;morphology\&quot;:{\&quot;entries\&quot;:[]},\&quot;observability\&quot;:{\&quot;lastQualityScore\&quot;:0.0,\&quot;lastShadowDivergence\&quot;:null,\&quot;lastCheckpointTurn\&quot;:0}}&quot;</span>
+<span class="lineno">  406 </span><span class="spaces">      </span><span class="istickedoff">diagnostics = StatePersistence.stateBlobDiagnostics minimalBlob</span>
+<span class="lineno">  407 </span><span class="spaces">      </span><span class="istickedoff">completeBlob = T.pack &quot;{\&quot;history\&quot;:[],\&quot;rawInputHistory\&quot;:[],\&quot;turnCount\&quot;:0,\&quot;lastTopic\&quot;:\&quot;\&quot;,\&quot;lastFamily\&quot;:\&quot;CMGround\&quot;,\&quot;lastForce\&quot;:\&quot;IFAssert\&quot;,\&quot;lastLayer\&quot;:\&quot;ContentLayer\&quot;,\&quot;lastEmbedding\&quot;:[],\&quot;consecutiveReflect\&quot;:0,\&quot;recentFamilies\&quot;:[],\&quot;activeScene\&quot;:\&quot;None\&quot;,\&quot;userState\&quot;:{\&quot;claims\&quot;:[],\&quot;topics\&quot;:[]},\&quot;ego\&quot;:{\&quot;tension\&quot;:0.0,\&quot;agency\&quot;:1.0,\&quot;narrative\&quot;:\&quot;\&quot;},\&quot;identityClaims\&quot;:[],\&quot;orbitalMemory\&quot;:[],\&quot;lastGuardReport\&quot;:null,\&quot;trace\&quot;:[],\&quot;meaningGraph\&quot;:{\&quot;edges\&quot;:[],\&quot;turnCount\&quot;:0},\&quot;kernelPulse\&quot;:\&quot;Neutral\&quot;,\&quot;blockedConcepts\&quot;:[],\&quot;clusters\&quot;:[],\&quot;dreamState\&quot;:null,\&quot;intuitionState\&quot;:null,\&quot;semanticAnchor\&quot;:null,\&quot;lastTurnDecision\&quot;:null,\&quot;intuitConfidence\&quot;:0.5,\&quot;sessionId\&quot;:\&quot;test\&quot;,\&quot;outputMode\&quot;:\&quot;text\&quot;,\&quot;morphology\&quot;:{\&quot;entries\&quot;:[]},\&quot;observability\&quot;:{\&quot;lastQualityScore\&quot;:0.0,\&quot;lastShadowDivergence\&quot;:null,\&quot;lastCheckpointTurn\&quot;:0}}&quot;</span>
+<span class="lineno">  408 </span><span class="spaces">      </span><span class="istickedoff">diagnosticsComplete = StatePersistence.stateBlobDiagnostics completeBlob</span>
+<span class="lineno">  409 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;state blob diagnostics should surface omitted optional compatibility fields explicitly&quot;</span></span>
+<span class="lineno">  410 </span><span class="spaces">    </span><span class="istickedoff">[PdSchemaMissingFields [&quot;lastGuardReport&quot;, &quot;dreamState&quot;, &quot;intuitionState&quot;, &quot;semanticAnchor&quot;, &quot;lastTurnDecision&quot;]]</span>
+<span class="lineno">  411 </span><span class="spaces">    </span><span class="istickedoff">diagnostics</span>
+<span class="lineno">  412 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;complete blob should have no diagnostics&quot;</span> [] diagnosticsComplete</span></span>
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>testLoadStateMissingRequiredTopLevelFieldsFailsDecode :: Test
+<span class="lineno">  415 </span><span class="decl"><span class="istickedoff">testLoadStateMissingRequiredTopLevelFieldsFailsDecode = TestCase $ do</span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_missing_required_state_fields.db&quot; $ do</span>
+<span class="lineno">  417 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_missing_required_state_fields&quot;</span>
+<span class="lineno">  418 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  419 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  420 </span><span class="spaces">      </span><span class="istickedoff">let blob = T.pack &quot;{\&quot;history\&quot;:[],\&quot;rawInputHistory\&quot;:[],\&quot;turnCount\&quot;:0,\&quot;lastTopic\&quot;:\&quot;\&quot;,\&quot;lastFamily\&quot;:\&quot;CMGround\&quot;,\&quot;lastForce\&quot;:\&quot;IFAssert\&quot;,\&quot;lastLayer\&quot;:\&quot;ContentLayer\&quot;,\&quot;lastEmbedding\&quot;:[],\&quot;consecutiveReflect\&quot;:0,\&quot;recentFamilies\&quot;:[],\&quot;activeScene\&quot;:\&quot;None\&quot;,\&quot;userState\&quot;:{\&quot;claims\&quot;:[],\&quot;topics\&quot;:[]},\&quot;ego\&quot;:{\&quot;tension\&quot;:0.0,\&quot;agency\&quot;:1.0,\&quot;narrative\&quot;:\&quot;\&quot;},\&quot;identityClaims\&quot;:[],\&quot;orbitalMemory\&quot;:[],\&quot;trace\&quot;:[],\&quot;meaningGraph\&quot;:{\&quot;edges\&quot;:[],\&quot;turnCount\&quot;:0},\&quot;kernelPulse\&quot;:\&quot;Neutral\&quot;,\&quot;blockedConcepts\&quot;:[],\&quot;clusters\&quot;:[],\&quot;intuitConfidence\&quot;:0.5,\&quot;sessionId\&quot;:\&quot;test\&quot;,\&quot;outputMode\&quot;:\&quot;text\&quot;,\&quot;observability\&quot;:{\&quot;lastQualityScore\&quot;:0.0,\&quot;lastShadowDivergence\&quot;:null,\&quot;lastCheckpointTurn\&quot;:0}}&quot;</span>
+<span class="lineno">  421 </span><span class="spaces">          </span><span class="istickedoff">sql = &quot;INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))&quot;</span>
+<span class="lineno">  422 </span><span class="spaces">      </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db sql</span>
+<span class="lineno">  423 </span><span class="spaces">      </span><span class="istickedoff">case mStmt of</span>
+<span class="lineno">  424 </span><span class="spaces">        </span><span class="istickedoff">Left _ -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  425 </span><span class="spaces">        </span><span class="istickedoff">Right stmt -&gt; do</span>
+<span class="lineno">  426 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 &quot;test_missing_required_state_fields&quot;</span>
+<span class="lineno">  427 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  428 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 3 blob</span>
+<span class="lineno">  429 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.step stmt</span>
+<span class="lineno">  430 </span><span class="spaces">          </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  431 </span><span class="spaces">    </span><span class="istickedoff">loaded &lt;- StatePersistence.loadState (Runtime.withRuntimeDb rt) &quot;test_missing_required_state_fields&quot;</span>
+<span class="lineno">  432 </span><span class="spaces">    </span><span class="istickedoff">case loaded of</span>
+<span class="lineno">  433 </span><span class="spaces">      </span><span class="istickedoff">StatePersistence.LoadStateCorrupt diagnostics -&gt;</span>
+<span class="lineno">  434 </span><span class="spaces">        </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;missing required top-level fields must fail decode instead of silently defaulting&quot;</span></span>
+<span class="lineno">  435 </span><span class="spaces">          </span><span class="istickedoff">(PdCorruptDecode `elem` diagnostics)</span>
+<span class="lineno">  436 </span><span class="spaces">      </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  437 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;expected corrupt result for missing required state fields, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  438 </span>
+<span class="lineno">  439 </span>testSaveStateReturnsRightOnSuccess :: Test
+<span class="lineno">  440 </span><span class="decl"><span class="istickedoff">testSaveStateReturnsRightOnSuccess = TestCase $ do</span>
+<span class="lineno">  441 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_save_success.db&quot; $ do</span>
+<span class="lineno">  442 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;test_save_ok&quot;</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  444 </span><span class="spaces">        </span><span class="istickedoff">governedState = authoritativeGovernedState (Runtime.sessSystemState session0)</span>
+<span class="lineno">  445 </span><span class="spaces">        </span><span class="istickedoff">ss0 = governedState</span>
+<span class="lineno">  446 </span><span class="spaces">          </span><span class="istickedoff">{ ssOutputMode = SemanticIntrospectionOutput</span>
+<span class="lineno">  447 </span><span class="spaces">          </span><span class="istickedoff">, ssTruthContractStatus = NonExpansiveRecoverySurface</span>
+<span class="lineno">  448 </span><span class="spaces">          </span><span class="istickedoff">, ssGovernanceRuntimeFault = Just GrfRebuildMismatch</span>
+<span class="lineno">  449 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  450 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 &quot;test_save_ok&quot;</span>
+<span class="lineno">  451 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">  452 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;saveState should return Right on success, got Left: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  453 </span><span class="spaces">      </span><span class="istickedoff">Right ss -&gt; do</span>
+<span class="lineno">  454 </span><span class="spaces">        </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;saved runtime continuation should preserve turn count&quot;</span> (ssTurnCount ss == ssTurnCount ss0)</span>
+<span class="lineno">  455 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;saved runtime continuation should preserve output mode&quot;</span></span>
+<span class="lineno">  456 </span><span class="spaces">          </span><span class="istickedoff">SemanticIntrospectionOutput</span>
+<span class="lineno">  457 </span><span class="spaces">          </span><span class="istickedoff">(ssOutputMode ss)</span>
+<span class="lineno">  458 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;saved runtime continuation should preserve runtime governance fault&quot;</span></span>
+<span class="lineno">  459 </span><span class="spaces">          </span><span class="istickedoff">(Just GrfRebuildMismatch)</span>
+<span class="lineno">  460 </span><span class="spaces">          </span><span class="istickedoff">(ssGovernanceRuntimeFault ss)</span>
+<span class="lineno">  461 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;saved runtime continuation should preserve live perspective registry&quot;</span></span>
+<span class="lineno">  462 </span><span class="spaces">          </span><span class="istickedoff">(ssPerspectiveRegistry ss0)</span>
+<span class="lineno">  463 </span><span class="spaces">          </span><span class="istickedoff">(ssPerspectiveRegistry ss)</span>
+<span class="lineno">  464 </span><span class="spaces">        </span><span class="istickedoff">persistedBlob &lt;- Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  465 </span><span class="spaces">          </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db &quot;SELECT value FROM dialogue_state WHERE session_id = ? AND key = ? ORDER BY updated_at DESC LIMIT 1&quot;</span>
+<span class="lineno">  466 </span><span class="spaces">          </span><span class="istickedoff">stmt &lt;- case mStmt of</span>
+<span class="lineno">  467 </span><span class="spaces">            </span><span class="istickedoff">Left sqlErr -&gt; <span class="nottickedoff">assertFailure (&quot;Failed to prepare persisted-state query: &quot; &lt;&gt; T.unpack sqlErr) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  468 </span><span class="spaces">            </span><span class="istickedoff">Right s -&gt; pure s</span>
+<span class="lineno">  469 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 &quot;test_save_ok&quot;</span>
+<span class="lineno">  470 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  471 </span><span class="spaces">          </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  472 </span><span class="spaces">          </span><span class="istickedoff">payload &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnText stmt 0 else <span class="nottickedoff">pure &quot;&quot;</span></span>
+<span class="lineno">  473 </span><span class="spaces">          </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  474 </span><span class="spaces">          </span><span class="istickedoff">pure payload</span>
+<span class="lineno">  475 </span><span class="spaces">        </span><span class="istickedoff">case (eitherDecodeStrict' (encodeUtf8 persistedBlob) :: Either String SystemState) of</span>
+<span class="lineno">  476 </span><span class="spaces">          </span><span class="istickedoff">Left decodeErr -&gt;</span>
+<span class="lineno">  477 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;Persisted system state should decode as JSON: &quot; &lt;&gt; decodeErr)</span></span>
+<span class="lineno">  478 </span><span class="spaces">          </span><span class="istickedoff">Right persistedState -&gt; do</span>
+<span class="lineno">  479 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;persisted canonical state must clear output mode&quot;</span></span>
+<span class="lineno">  480 </span><span class="spaces">              </span><span class="istickedoff">DialogueOutput</span>
+<span class="lineno">  481 </span><span class="spaces">              </span><span class="istickedoff">(ssOutputMode persistedState)</span>
+<span class="lineno">  482 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;persisted canonical state must retain authoritative truth for restore/rebuild&quot;</span></span>
+<span class="lineno">  483 </span><span class="spaces">              </span><span class="istickedoff">AssembledSurfacePreserved</span>
+<span class="lineno">  484 </span><span class="spaces">              </span><span class="istickedoff">(ssTruthContractStatus persistedState)</span>
+<span class="lineno">  485 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;persisted canonical state must clear runtime governance fault&quot;</span></span>
+<span class="lineno">  486 </span><span class="spaces">              </span><span class="istickedoff">Nothing</span>
+<span class="lineno">  487 </span><span class="spaces">              </span><span class="istickedoff">(ssGovernanceRuntimeFault persistedState)</span>
+<span class="lineno">  488 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;persisted canonical state must not carry rebuildable registry&quot;</span></span>
+<span class="lineno">  489 </span><span class="spaces">              </span><span class="istickedoff">(ssPerspectiveRegistry emptySystemState)</span>
+<span class="lineno">  490 </span><span class="spaces">              </span><span class="istickedoff">(ssPerspectiveRegistry persistedState)</span></span>
+<span class="lineno">  491 </span>
+<span class="lineno">  492 </span>testSaveStateWithProjectionFailureRollsBackTransaction :: Test
+<span class="lineno">  493 </span><span class="decl"><span class="istickedoff">testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do</span>
+<span class="lineno">  494 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_save_projection_rollback.db&quot; $ do</span>
+<span class="lineno">  495 </span><span class="spaces">    </span><span class="istickedoff">let sessionId = &quot;test_save_projection_rollback&quot;</span>
+<span class="lineno">  496 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> sessionId</span>
+<span class="lineno">  497 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  498 </span><span class="spaces">        </span><span class="istickedoff">ss0 = Runtime.sessSystemState session0</span>
+<span class="lineno">  499 </span><span class="spaces">        </span><span class="istickedoff">projection = TurnProjection</span>
+<span class="lineno">  500 </span><span class="spaces">          </span><span class="istickedoff">{ tqpTurn = 1</span>
+<span class="lineno">  501 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserMode = ParserFrameV1</span>
+<span class="lineno">  502 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserConfidence = 0.31</span>
+<span class="lineno">  503 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserErrors = [&quot;projection_failure_fixture&quot;]</span>
+<span class="lineno">  504 </span><span class="spaces">          </span><span class="istickedoff">, tqpPlannerMode = DefaultPlanner</span>
+<span class="lineno">  505 </span><span class="spaces">          </span><span class="istickedoff">, tqpPlannerDecision = CMGround</span>
+<span class="lineno">  506 </span><span class="spaces">          </span><span class="istickedoff">, tqpAtomRegister = Search</span>
+<span class="lineno">  507 </span><span class="spaces">          </span><span class="istickedoff">, tqpAtomLoad = 0.7</span>
+<span class="lineno">  508 </span><span class="spaces">          </span><span class="istickedoff">, tqpScenePressure = PressureHigh</span>
+<span class="lineno">  509 </span><span class="spaces">          </span><span class="istickedoff">, tqpSceneRequest = &quot;rollback_fixture&quot;</span>
+<span class="lineno">  510 </span><span class="spaces">          </span><span class="istickedoff">, tqpSceneStance = MetaLayer</span>
+<span class="lineno">  511 </span><span class="spaces">          </span><span class="istickedoff">, tqpRenderLane = ValidateMove</span>
+<span class="lineno">  512 </span><span class="spaces">          </span><span class="istickedoff">, tqpRenderStyle = StyleFormal</span>
+<span class="lineno">  513 </span><span class="spaces">          </span><span class="istickedoff">, tqpLegitimacyStatus = LegitimacyDegraded</span>
+<span class="lineno">  514 </span><span class="spaces">          </span><span class="istickedoff">, tqpLegitimacyReason = ReasonShadowDivergence</span>
+<span class="lineno">  515 </span><span class="spaces">          </span><span class="istickedoff">, tqpWarrantedMode = AlwaysWarranted</span>
+<span class="lineno">  516 </span><span class="spaces">          </span><span class="istickedoff">, tqpDecisionDisposition = DispositionRepair</span>
+<span class="lineno">  517 </span><span class="spaces">          </span><span class="istickedoff">, tqpOwnerFamily = CMGround</span>
+<span class="lineno">  518 </span><span class="spaces">          </span><span class="istickedoff">, tqpOwnerForce = IFAssert</span>
+<span class="lineno">  519 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowStatus = ShadowDiverged</span>
+<span class="lineno">  520 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowSnapshotId = ShadowSnapshotId &quot;shadow:projection_rollback_fixture&quot;</span>
+<span class="lineno">  521 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowDivergenceKind = ShadowVerdictMismatch</span>
+<span class="lineno">  522 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowFamily = Just CMConfront</span>
+<span class="lineno">  523 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowForce = Just IFConfront</span>
+<span class="lineno">  524 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowMessage = &quot;fixture_divergence&quot;</span>
+<span class="lineno">  525 </span><span class="spaces">          </span><span class="istickedoff">, tqpReplayTrace = fixtureReplayTrace sessionId 0.31 &quot;ok&quot; Nothing</span>
+<span class="lineno">  526 </span><span class="spaces">          </span><span class="istickedoff">, tqpDivergence = True</span>
+<span class="lineno">  527 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  528 </span><span class="spaces">    </span><span class="istickedoff">beforeCount &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  529 </span><span class="spaces">      </span><span class="istickedoff">queryCount db &quot;SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'&quot;</span>
+<span class="lineno">  530 </span><span class="spaces">    </span><span class="istickedoff">Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  531 </span><span class="spaces">      </span><span class="istickedoff">assertExec db <span class="nottickedoff">&quot;drop shadow_divergence_log&quot;</span> &quot;DROP TABLE IF EXISTS shadow_divergence_log;&quot;</span>
+<span class="lineno">  532 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- StatePersistence.saveStateWithProjection</span>
+<span class="lineno">  533 </span><span class="spaces">      </span><span class="istickedoff">(Runtime.withRuntimeDb rt)</span>
+<span class="lineno">  534 </span><span class="spaces">      </span><span class="istickedoff">ss0</span>
+<span class="lineno">  535 </span><span class="spaces">      </span><span class="istickedoff">sessionId</span>
+<span class="lineno">  536 </span><span class="spaces">      </span><span class="istickedoff">(Just projection)</span>
+<span class="lineno">  537 </span><span class="spaces">    </span><span class="istickedoff">case result of</span>
+<span class="lineno">  538 </span><span class="spaces">      </span><span class="istickedoff">Left _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  539 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; <span class="nottickedoff">assertFailure &quot;saveStateWithProjection should fail when divergence table is missing&quot;</span></span>
+<span class="lineno">  540 </span><span class="spaces">    </span><span class="istickedoff">afterCount &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  541 </span><span class="spaces">      </span><span class="istickedoff">queryCount db &quot;SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'&quot;</span>
+<span class="lineno">  542 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;failed projection persistence must rollback turn_quality insert&quot;</span> beforeCount afterCount</span></span>
+<span class="lineno">  543 </span>
+<span class="lineno">  544 </span>testPersistedSystemStateSessionIdMatchesBootstrapId :: Test
+<span class="lineno">  545 </span><span class="decl"><span class="istickedoff">testPersistedSystemStateSessionIdMatchesBootstrapId = TestCase $ do</span>
+<span class="lineno">  546 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_session_id_persist.db&quot; $ do</span>
+<span class="lineno">  547 </span><span class="spaces">    </span><span class="istickedoff">let sessionId = &quot;test_session_id_persist&quot;</span>
+<span class="lineno">  548 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> sessionId</span>
+<span class="lineno">  549 </span><span class="spaces">    </span><span class="istickedoff">(session1, output1) &lt;- Runtime.runTurnInSession session0 &quot;Что такое свобода?&quot;</span>
+<span class="lineno">  550 </span><span class="spaces">    </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;turn output should not be empty&quot;</span> (not (T.null output1))</span>
+<span class="lineno">  551 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session1</span>
+<span class="lineno">  552 </span><span class="spaces">    </span><span class="istickedoff">persistedBlob &lt;- Runtime.withRuntimeDb rt $ \db -&gt; do</span>
+<span class="lineno">  553 </span><span class="spaces">      </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db &quot;SELECT value FROM dialogue_state WHERE session_id = ? AND key = ? ORDER BY updated_at DESC LIMIT 1&quot;</span>
+<span class="lineno">  554 </span><span class="spaces">      </span><span class="istickedoff">stmt &lt;- case mStmt of</span>
+<span class="lineno">  555 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;Failed to prepare persisted-state query: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  556 </span><span class="spaces">        </span><span class="istickedoff">Right s -&gt; pure s</span>
+<span class="lineno">  557 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 sessionId</span>
+<span class="lineno">  558 </span><span class="spaces">      </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 2 &quot;__system_state__&quot;</span>
+<span class="lineno">  559 </span><span class="spaces">      </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  560 </span><span class="spaces">      </span><span class="istickedoff">payload &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnText stmt 0 else <span class="nottickedoff">pure &quot;&quot;</span></span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  562 </span><span class="spaces">      </span><span class="istickedoff">pure payload</span>
+<span class="lineno">  563 </span><span class="spaces">    </span><span class="istickedoff">case eitherDecodeStrict' (encodeUtf8 persistedBlob) of</span>
+<span class="lineno">  564 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  565 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;Persisted system state should decode as JSON: &quot; &lt;&gt; err)</span></span>
+<span class="lineno">  566 </span><span class="spaces">      </span><span class="istickedoff">Right (Object obj) -&gt;</span>
+<span class="lineno">  567 </span><span class="spaces">        </span><span class="istickedoff">case KeyMap.lookup &quot;sessionId&quot; obj of</span>
+<span class="lineno">  568 </span><span class="spaces">          </span><span class="istickedoff">Just (String persistedSessionId) -&gt;</span>
+<span class="lineno">  569 </span><span class="spaces">            </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;Persisted SystemState.sessionId should match runtime session id&quot;</span></span>
+<span class="lineno">  570 </span><span class="spaces">              </span><span class="istickedoff">sessionId</span>
+<span class="lineno">  571 </span><span class="spaces">              </span><span class="istickedoff">persistedSessionId</span>
+<span class="lineno">  572 </span><span class="spaces">          </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  573 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;Persisted SystemState.sessionId should be JSON string, got: &quot; &lt;&gt; show other)</span></span>
+<span class="lineno">  574 </span><span class="spaces">      </span><span class="istickedoff">Right other -&gt;</span>
+<span class="lineno">  575 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">assertFailure (&quot;Persisted system state should be JSON object, got: &quot; &lt;&gt; show other)</span></span></span>
+<span class="lineno">  576 </span>
+<span class="lineno">  577 </span>testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty :: Test
+<span class="lineno">  578 </span><span class="decl"><span class="istickedoff">testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty =</span>
+<span class="lineno">  579 </span><span class="spaces">  </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  580 </span><span class="spaces">    </span><span class="istickedoff">forM_ replayInputs $ \rawInput -&gt;</span>
+<span class="lineno">  581 </span><span class="spaces">      </span><span class="istickedoff">withStrictRuntimeEnv &quot;qxfx0_test_replay_trace_determinism.db&quot; $ do</span>
+<span class="lineno">  582 </span><span class="spaces">        </span><span class="istickedoff">sessionA &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;fresh_det_session_a&quot;</span>
+<span class="lineno">  583 </span><span class="spaces">        </span><span class="istickedoff">_ &lt;- Runtime.runTurnInSession sessionA (T.pack rawInput)</span>
+<span class="lineno">  584 </span><span class="spaces">        </span><span class="istickedoff">sessionB &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;fresh_det_session_b&quot;</span>
+<span class="lineno">  585 </span><span class="spaces">        </span><span class="istickedoff">_ &lt;- Runtime.runTurnInSession sessionB (T.pack rawInput)</span>
+<span class="lineno">  586 </span><span class="spaces">        </span><span class="istickedoff">let rt = Runtime.sessRuntime sessionB</span>
+<span class="lineno">  587 </span><span class="spaces">        </span><span class="istickedoff">replayA &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  588 </span><span class="spaces">          </span><span class="istickedoff">fetchLatestReplayTraceJson db &quot;fresh_det_session_a&quot;</span>
+<span class="lineno">  589 </span><span class="spaces">        </span><span class="istickedoff">replayB &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  590 </span><span class="spaces">          </span><span class="istickedoff">fetchLatestReplayTraceJson db &quot;fresh_det_session_b&quot;</span>
+<span class="lineno">  591 </span><span class="spaces">        </span><span class="istickedoff">normalizedA &lt;- normalizeReplayTraceJson <span class="nottickedoff">&quot;fresh_det_session_a&quot;</span> replayA</span>
+<span class="lineno">  592 </span><span class="spaces">        </span><span class="istickedoff">normalizedB &lt;- normalizeReplayTraceJson <span class="nottickedoff">&quot;fresh_det_session_b&quot;</span> replayB</span>
+<span class="lineno">  593 </span><span class="spaces">        </span><span class="istickedoff">assertEqual <span class="nottickedoff">(&quot;persisted replay trace should be deterministic across fresh sessions for input: &quot; &lt;&gt; rawInput)</span></span>
+<span class="lineno">  594 </span><span class="spaces">          </span><span class="istickedoff">normalizedA</span>
+<span class="lineno">  595 </span><span class="spaces">          </span><span class="istickedoff">normalizedB</span>
+<span class="lineno">  596 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  597 </span><span class="spaces">    </span><span class="istickedoff">replayInputs =</span>
+<span class="lineno">  598 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;Что такое свобода?&quot;</span>
+<span class="lineno">  599 </span><span class="spaces">      </span><span class="istickedoff">, &quot;Мне нужен контакт.&quot;</span>
+<span class="lineno">  600 </span><span class="spaces">      </span><span class="istickedoff">, &quot;Где граница между смыслом и пустотой?&quot;</span>
+<span class="lineno">  601 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  602 </span>
+<span class="lineno">  603 </span>testPersistedReplayTraceDeterministicWithFixedTimeProperty :: Test
+<span class="lineno">  604 </span><span class="decl"><span class="istickedoff">testPersistedReplayTraceDeterministicWithFixedTimeProperty =</span>
+<span class="lineno">  605 </span><span class="spaces">  </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  606 </span><span class="spaces">    </span><span class="istickedoff">forM_ replayInputs $ \rawInput -&gt;</span>
+<span class="lineno">  607 </span><span class="spaces">      </span><span class="istickedoff">withEnvVar &quot;QXFX0_TEST_FIXED_TIME&quot; (Just &quot;0&quot;) $</span>
+<span class="lineno">  608 </span><span class="spaces">        </span><span class="istickedoff">withStrictRuntimeEnv &quot;qxfx0_test_replay_trace_fixed_time.db&quot; $ do</span>
+<span class="lineno">  609 </span><span class="spaces">          </span><span class="istickedoff">sessionA &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;fixed_time_session_a&quot;</span>
+<span class="lineno">  610 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- Runtime.runTurnInSession sessionA (T.pack rawInput)</span>
+<span class="lineno">  611 </span><span class="spaces">          </span><span class="istickedoff">sessionB &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> &quot;fixed_time_session_b&quot;</span>
+<span class="lineno">  612 </span><span class="spaces">          </span><span class="istickedoff">_ &lt;- Runtime.runTurnInSession sessionB (T.pack rawInput)</span>
+<span class="lineno">  613 </span><span class="spaces">          </span><span class="istickedoff">let rt = Runtime.sessRuntime sessionB</span>
+<span class="lineno">  614 </span><span class="spaces">          </span><span class="istickedoff">replayA &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  615 </span><span class="spaces">            </span><span class="istickedoff">fetchLatestReplayTraceJson db &quot;fixed_time_session_a&quot;</span>
+<span class="lineno">  616 </span><span class="spaces">          </span><span class="istickedoff">replayB &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  617 </span><span class="spaces">            </span><span class="istickedoff">fetchLatestReplayTraceJson db &quot;fixed_time_session_b&quot;</span>
+<span class="lineno">  618 </span><span class="spaces">          </span><span class="istickedoff">normalizedA &lt;- normalizeReplayTraceJson <span class="nottickedoff">&quot;fixed_time_session_a&quot;</span> replayA</span>
+<span class="lineno">  619 </span><span class="spaces">          </span><span class="istickedoff">normalizedB &lt;- normalizeReplayTraceJson <span class="nottickedoff">&quot;fixed_time_session_b&quot;</span> replayB</span>
+<span class="lineno">  620 </span><span class="spaces">          </span><span class="istickedoff">assertEqual <span class="nottickedoff">(&quot;persisted replay trace should be deterministic with fixed time for input: &quot; &lt;&gt; rawInput)</span></span>
+<span class="lineno">  621 </span><span class="spaces">            </span><span class="istickedoff">normalizedA</span>
+<span class="lineno">  622 </span><span class="spaces">            </span><span class="istickedoff">normalizedB</span>
+<span class="lineno">  623 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  624 </span><span class="spaces">    </span><span class="istickedoff">replayInputs =</span>
+<span class="lineno">  625 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;Что такое свобода?&quot;</span>
+<span class="lineno">  626 </span><span class="spaces">      </span><span class="istickedoff">, &quot;Мне нужен контакт.&quot;</span>
+<span class="lineno">  627 </span><span class="spaces">      </span><span class="istickedoff">, &quot;Где граница между смыслом и пустотой?&quot;</span>
+<span class="lineno">  628 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  629 </span>
+<span class="lineno">  630 </span>testSaveStateWithDivergencePersistsShadowLog :: Test
+<span class="lineno">  631 </span><span class="decl"><span class="istickedoff">testSaveStateWithDivergencePersistsShadowLog = TestCase $ do</span>
+<span class="lineno">  632 </span><span class="spaces">  </span><span class="istickedoff">withRuntimeEnv &quot;qxfx0_test_shadow_divergence.db&quot; $ do</span>
+<span class="lineno">  633 </span><span class="spaces">    </span><span class="istickedoff">let sessionId = &quot;test_shadow_divergence&quot;</span>
+<span class="lineno">  634 </span><span class="spaces">    </span><span class="istickedoff">session0 &lt;- Runtime.bootstrapSession <span class="nottickedoff">True</span> sessionId</span>
+<span class="lineno">  635 </span><span class="spaces">    </span><span class="istickedoff">let rt = Runtime.sessRuntime session0</span>
+<span class="lineno">  636 </span><span class="spaces">        </span><span class="istickedoff">ss0 = Runtime.sessSystemState session0</span>
+<span class="lineno">  637 </span><span class="spaces">        </span><span class="istickedoff">projection = TurnProjection</span>
+<span class="lineno">  638 </span><span class="spaces">          </span><span class="istickedoff">{ tqpTurn = 1</span>
+<span class="lineno">  639 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserMode = ParserFrameV1</span>
+<span class="lineno">  640 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserConfidence = 0.3</span>
+<span class="lineno">  641 </span><span class="spaces">          </span><span class="istickedoff">, tqpParserErrors = [&quot;low_confidence&quot;]</span>
+<span class="lineno">  642 </span><span class="spaces">          </span><span class="istickedoff">, tqpPlannerMode = DefaultPlanner</span>
+<span class="lineno">  643 </span><span class="spaces">          </span><span class="istickedoff">, tqpPlannerDecision = CMGround</span>
+<span class="lineno">  644 </span><span class="spaces">          </span><span class="istickedoff">, tqpAtomRegister = Search</span>
+<span class="lineno">  645 </span><span class="spaces">          </span><span class="istickedoff">, tqpAtomLoad = 0.8</span>
+<span class="lineno">  646 </span><span class="spaces">          </span><span class="istickedoff">, tqpScenePressure = PressureHigh</span>
+<span class="lineno">  647 </span><span class="spaces">          </span><span class="istickedoff">, tqpSceneRequest = &quot;свобода&quot;</span>
+<span class="lineno">  648 </span><span class="spaces">          </span><span class="istickedoff">, tqpSceneStance = MetaLayer</span>
+<span class="lineno">  649 </span><span class="spaces">          </span><span class="istickedoff">, tqpRenderLane = ValidateMove</span>
+<span class="lineno">  650 </span><span class="spaces">          </span><span class="istickedoff">, tqpRenderStyle = StyleFormal</span>
+<span class="lineno">  651 </span><span class="spaces">          </span><span class="istickedoff">, tqpLegitimacyStatus = LegitimacyDegraded</span>
+<span class="lineno">  652 </span><span class="spaces">          </span><span class="istickedoff">, tqpLegitimacyReason = ReasonShadowDivergence</span>
+<span class="lineno">  653 </span><span class="spaces">          </span><span class="istickedoff">, tqpWarrantedMode = AlwaysWarranted</span>
+<span class="lineno">  654 </span><span class="spaces">          </span><span class="istickedoff">, tqpDecisionDisposition = DispositionRepair</span>
+<span class="lineno">  655 </span><span class="spaces">          </span><span class="istickedoff">, tqpOwnerFamily = CMGround</span>
+<span class="lineno">  656 </span><span class="spaces">          </span><span class="istickedoff">, tqpOwnerForce = IFAssert</span>
+<span class="lineno">  657 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowStatus = ShadowDiverged</span>
+<span class="lineno">  658 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowSnapshotId = ShadowSnapshotId &quot;shadow:test_divergence_fixture&quot;</span>
+<span class="lineno">  659 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowDivergenceKind = ShadowVerdictMismatch</span>
+<span class="lineno">  660 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowFamily = Just CMConfront</span>
+<span class="lineno">  661 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowForce = Just IFConfront</span>
+<span class="lineno">  662 </span><span class="spaces">          </span><span class="istickedoff">, tqpShadowMessage = &quot;fixture_divergence&quot;</span>
+<span class="lineno">  663 </span><span class="spaces">          </span><span class="istickedoff">, tqpReplayTrace = fixtureReplayTrace sessionId 0.3 &quot;degraded&quot; (Just &quot;low_confidence&quot;)</span>
+<span class="lineno">  664 </span><span class="spaces">          </span><span class="istickedoff">, tqpDivergence = True</span>
+<span class="lineno">  665 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  666 </span><span class="spaces">    </span><span class="istickedoff">saveResult &lt;- StatePersistence.saveStateWithProjection</span>
+<span class="lineno">  667 </span><span class="spaces">      </span><span class="istickedoff">(Runtime.withRuntimeDb rt)</span>
+<span class="lineno">  668 </span><span class="spaces">      </span><span class="istickedoff">ss0</span>
+<span class="lineno">  669 </span><span class="spaces">      </span><span class="istickedoff">sessionId</span>
+<span class="lineno">  670 </span><span class="spaces">      </span><span class="istickedoff">(Just projection)</span>
+<span class="lineno">  671 </span><span class="spaces">    </span><span class="istickedoff">case saveResult of</span>
+<span class="lineno">  672 </span><span class="spaces">      </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;saveStateWithProjection should persist divergence fixture: &quot; &lt;&gt; T.unpack (renderPersistenceDiagnostics [err]))</span></span>
+<span class="lineno">  673 </span><span class="spaces">      </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  674 </span><span class="spaces">    </span><span class="istickedoff">shadowCount &lt;- Runtime.withRuntimeDb rt $ \db -&gt;</span>
+<span class="lineno">  675 </span><span class="spaces">      </span><span class="istickedoff">queryCount db &quot;SELECT count(*) FROM shadow_divergence_log WHERE session_id = 'test_shadow_divergence'&quot;</span>
+<span class="lineno">  676 </span><span class="spaces">    </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;divergent projection should persist one shadow log row&quot;</span> 1 shadowCount</span></span>
+<span class="lineno">  677 </span>
+<span class="lineno">  678 </span>fetchLatestReplayTraceJson :: NSQL.Database -&gt; T.Text -&gt; IO T.Text
+<span class="lineno">  679 </span><span class="decl"><span class="istickedoff">fetchLatestReplayTraceJson db sessionId = do</span>
+<span class="lineno">  680 </span><span class="spaces">  </span><span class="istickedoff">mStmt &lt;- NSQL.prepare db &quot;SELECT replay_trace_json FROM turn_quality WHERE session_id = ? ORDER BY turn DESC LIMIT 1&quot;</span>
+<span class="lineno">  681 </span><span class="spaces">  </span><span class="istickedoff">stmt &lt;- case mStmt of</span>
+<span class="lineno">  682 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;Failed to prepare replay_trace_json query: &quot; &lt;&gt; T.unpack err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  683 </span><span class="spaces">    </span><span class="istickedoff">Right s -&gt; pure s</span>
+<span class="lineno">  684 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- NSQL.bindText stmt 1 sessionId</span>
+<span class="lineno">  685 </span><span class="spaces">  </span><span class="istickedoff">hasRow &lt;- NSQL.stepRow stmt</span>
+<span class="lineno">  686 </span><span class="spaces">  </span><span class="istickedoff">value &lt;- if <span class="tickonlytrue">hasRow</span> then NSQL.columnText stmt 0 else <span class="nottickedoff">pure &quot;&quot;</span></span>
+<span class="lineno">  687 </span><span class="spaces">  </span><span class="istickedoff">NSQL.finalize stmt</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="istickedoff">pure value</span></span>
+<span class="lineno">  689 </span>
+<span class="lineno">  690 </span>normalizeReplayTraceJson :: String -&gt; T.Text -&gt; IO Value
+<span class="lineno">  691 </span><span class="decl"><span class="istickedoff">normalizeReplayTraceJson label payload =</span>
+<span class="lineno">  692 </span><span class="spaces">  </span><span class="istickedoff">case eitherDecodeStrict' (encodeUtf8 payload) of</span>
+<span class="lineno">  693 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">assertFailure (&quot;Failed to decode replay trace JSON for &quot; &lt;&gt; label &lt;&gt; &quot;: &quot; &lt;&gt; err) &gt;&gt; fail &quot;unreachable&quot;</span></span>
+<span class="lineno">  694 </span><span class="spaces">    </span><span class="istickedoff">Right value -&gt; pure (normalizeReplayTraceValue value)</span></span>
+<span class="lineno">  695 </span>
+<span class="lineno">  696 </span>normalizeReplayTraceValue :: Value -&gt; Value
+<span class="lineno">  697 </span><span class="decl"><span class="istickedoff">normalizeReplayTraceValue (Object objectValue) =</span>
+<span class="lineno">  698 </span><span class="spaces">  </span><span class="istickedoff">Object</span>
+<span class="lineno">  699 </span><span class="spaces">    </span><span class="istickedoff">( KeyMap.insert &quot;trcSessionId&quot; (String &quot;&lt;normalized-session&gt;&quot;)</span>
+<span class="lineno">  700 </span><span class="spaces">    </span><span class="istickedoff">$ KeyMap.insert &quot;trcRequestId&quot; (String &quot;&lt;normalized-request&gt;&quot;) objectValue</span>
+<span class="lineno">  701 </span><span class="spaces">    </span><span class="istickedoff">)</span>
+<span class="lineno">  702 </span><span class="spaces"></span><span class="istickedoff">normalizeReplayTraceValue other = <span class="nottickedoff">other</span></span></span>
+<span class="lineno">  703 </span>
+<span class="lineno">  704 </span>quickCheckTest :: Testable prop =&gt; Int -&gt; String -&gt; prop -&gt; Test
+<span class="lineno">  705 </span><span class="decl"><span class="nottickedoff">quickCheckTest maxCases label prop = TestCase $ do</span>
+<span class="lineno">  706 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- quickCheckWithResult stdArgs { maxSuccess = maxCases } prop</span>
+<span class="lineno">  707 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  708 </span><span class="spaces">    </span><span class="nottickedoff">Success{} -&gt; pure ()</span>
+<span class="lineno">  709 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; assertFailure (&quot;QuickCheck failed: &quot; &lt;&gt; label)</span></span>
+<span class="lineno">  710 </span>
+<span class="lineno">  711 </span>fixtureReplayTrace :: T.Text -&gt; Double -&gt; T.Text -&gt; Maybe T.Text -&gt; TurnReplayTrace
+<span class="lineno">  712 </span><span class="decl"><span class="istickedoff">fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReason =</span>
+<span class="lineno">  713 </span><span class="spaces">  </span><span class="istickedoff">TurnReplayTrace</span>
+<span class="lineno">  714 </span><span class="spaces">    </span><span class="istickedoff">{ trcRequestId = &quot;req_projection_fixture&quot;</span>
+<span class="lineno">  715 </span><span class="spaces">    </span><span class="istickedoff">, trcSessionId = sessionId</span>
+<span class="lineno">  716 </span><span class="spaces">    </span><span class="istickedoff">, trcRuntimeMode = &quot;strict&quot;</span>
+<span class="lineno">  717 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowPolicy = &quot;block_on_unavailable_or_divergence&quot;</span>
+<span class="lineno">  718 </span><span class="spaces">    </span><span class="istickedoff">, trcLocalRecoveryPolicy = &quot;enabled&quot;</span>
+<span class="lineno">  719 </span><span class="spaces">    </span><span class="istickedoff">, trcRecoveryCause = Just RecoveryShadowDivergence</span>
+<span class="lineno">  720 </span><span class="spaces">    </span><span class="istickedoff">, trcRecoveryStrategy = Just StrategyNarrowScope</span>
+<span class="lineno">  721 </span><span class="spaces">    </span><span class="istickedoff">, trcRecoveryEvidence = [&quot;shadow_status=diverged&quot;]</span>
+<span class="lineno">  722 </span><span class="spaces">    </span><span class="istickedoff">, trcSemanticIntrospectionEnabled = False</span>
+<span class="lineno">  723 </span><span class="spaces">    </span><span class="istickedoff">, trcWarnMorphologyFallbackEnabled = False</span>
+<span class="lineno">  724 </span><span class="spaces">    </span><span class="istickedoff">, trcRequestedFamily = CMGround</span>
+<span class="lineno">  725 </span><span class="spaces">    </span><span class="istickedoff">, trcStrategyFamily = Just CMGround</span>
+<span class="lineno">  726 </span><span class="spaces">    </span><span class="istickedoff">, trcNarrativeHint = Nothing</span>
+<span class="lineno">  727 </span><span class="spaces">    </span><span class="istickedoff">, trcIntuitionHint = Nothing</span>
+<span class="lineno">  728 </span><span class="spaces">    </span><span class="istickedoff">, trcPreShadowFamily = CMGround</span>
+<span class="lineno">  729 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowSnapshotId = ShadowSnapshotId &quot;shadow:projection_fixture&quot;</span>
+<span class="lineno">  730 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowStatus = ShadowDiverged</span>
+<span class="lineno">  731 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowDivergenceKind = ShadowVerdictMismatch</span>
+<span class="lineno">  732 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowDivergenceSeverity = ShadowSeverityContract</span>
+<span class="lineno">  733 </span><span class="spaces">    </span><span class="istickedoff">, trcShadowResolvedFamily = CMConfront</span>
+<span class="lineno">  734 </span><span class="spaces">    </span><span class="istickedoff">, trcFinalFamily = CMGround</span>
+<span class="lineno">  735 </span><span class="spaces">    </span><span class="istickedoff">, trcFinalForce = IFAssert</span>
+<span class="lineno">  736 </span><span class="spaces">    </span><span class="istickedoff">, trcDecisionDisposition = DispositionRepair</span>
+<span class="lineno">  737 </span><span class="spaces">    </span><span class="istickedoff">, trcLegitimacyReason = ReasonShadowDivergence</span>
+<span class="lineno">  738 </span><span class="spaces">    </span><span class="istickedoff">, trcParserConfidence = parserConfidence</span>
+<span class="lineno">  739 </span><span class="spaces">    </span><span class="istickedoff">, trcParserBackend = &quot;local_rule_based&quot;</span>
+<span class="lineno">  740 </span><span class="spaces">    </span><span class="istickedoff">, trcParserStatus = parserStatus</span>
+<span class="lineno">  741 </span><span class="spaces">    </span><span class="istickedoff">, trcParserDegradationReason = parserDegradationReason</span>
+<span class="lineno">  742 </span><span class="spaces">    </span><span class="istickedoff">, trcParserLatencyMs = 0</span>
+<span class="lineno">  743 </span><span class="spaces">    </span><span class="istickedoff">, trcEmbeddingQuality = &quot;heuristic&quot;</span>
+<span class="lineno">  744 </span><span class="spaces">    </span><span class="istickedoff">, trcClaimAst = Nothing</span>
+<span class="lineno">  745 </span><span class="spaces">    </span><span class="istickedoff">, trcPreSafetyRenderedRaw = &quot;fixture_pre_safety&quot;</span>
+<span class="lineno">  746 </span><span class="spaces">    </span><span class="istickedoff">, trcRenderedAfterRebind = &quot;fixture_rendered&quot;</span>
+<span class="lineno">  747 </span><span class="spaces">    </span><span class="istickedoff">, trcLinearizationLang = Nothing</span>
+<span class="lineno">  748 </span><span class="spaces">    </span><span class="istickedoff">, trcLinearizationOk = False</span>
+<span class="lineno">  749 </span><span class="spaces">    </span><span class="istickedoff">, trcFallbackReason = Nothing</span>
+<span class="lineno">  750 </span><span class="spaces">    </span><span class="istickedoff">, trcContractProvenance = Just FallbackRoute</span>
+<span class="lineno">  751 </span><span class="spaces">    </span><span class="istickedoff">, trcSurfaceProvenance = Just FromFallback</span>
+<span class="lineno">  752 </span><span class="spaces">    </span><span class="istickedoff">, trcAuthorityClass = Just AuthorityFallback</span>
+<span class="lineno">  753 </span><span class="spaces">    </span><span class="istickedoff">, trcTruthContractStatus = ExplicitFallbackSurface</span>
+<span class="lineno">  754 </span><span class="spaces">    </span><span class="istickedoff">, trcAssemblyPath = Just TemplateFallbackRoute</span>
+<span class="lineno">  755 </span><span class="spaces">    </span><span class="istickedoff">, trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing &quot;fixture_manifest&quot;)</span>
+<span class="lineno">  756 </span><span class="spaces">    </span><span class="istickedoff">, trcReplayProvenanceStatus = ReplayProvenanceComplete</span>
+<span class="lineno">  757 </span><span class="spaces">    </span><span class="istickedoff">, trcDerivationTags = []</span>
+<span class="lineno">  758 </span><span class="spaces">    </span><span class="istickedoff">, trcSalienceDriver = &quot;default&quot;</span>
+<span class="lineno">  759 </span><span class="spaces">    </span><span class="istickedoff">, trcSalienceHolisticBias = 0.5</span>
+<span class="lineno">  760 </span><span class="spaces">    </span><span class="istickedoff">, trcSalienceConfidence = 1.0</span>
+<span class="lineno">  761 </span><span class="spaces">    </span><span class="istickedoff">, trcDeliberationRule = Nothing</span>
+<span class="lineno">  762 </span><span class="spaces">    </span><span class="istickedoff">, trcDeliberationAgreement = Nothing</span>
+<span class="lineno">  763 </span><span class="spaces">    </span><span class="istickedoff">, trcDeliberationDivergence = Nothing</span>
+<span class="lineno">  764 </span><span class="spaces">    </span><span class="istickedoff">, trcDeliberationNarrativeTone = Nothing</span>
+<span class="lineno">  765 </span><span class="spaces">    </span><span class="istickedoff">, trcEssenceMode = Nothing</span>
+<span class="lineno">  766 </span><span class="spaces">    </span><span class="istickedoff">, trcEssenceCommitted = Nothing</span>
+<span class="lineno">  767 </span><span class="spaces">    </span><span class="istickedoff">, trcEssenceAngstLevel = Nothing</span>
+<span class="lineno">  768 </span><span class="spaces">    </span><span class="istickedoff">, trcEssenceTrigger = Nothing</span>
+<span class="lineno">  769 </span><span class="spaces">    </span><span class="istickedoff">, trcLearningQueryType = Nothing</span>
+<span class="lineno">  770 </span><span class="spaces">    </span><span class="istickedoff">, trcExternalTool = Nothing</span>
+<span class="lineno">  771 </span><span class="spaces">    </span><span class="istickedoff">, trcLearningValidationStatus = Nothing</span>
+<span class="lineno">  772 </span><span class="spaces">    </span><span class="istickedoff">, trcLearningSandboxResult = Nothing</span>
+<span class="lineno">  773 </span><span class="spaces">    </span><span class="istickedoff">, trcLearningGraftTurn = Nothing</span>
+<span class="lineno">  774 </span><span class="spaces">    </span><span class="istickedoff">, trcLearningRejectReason = Nothing</span>
+<span class="lineno">  775 </span><span class="spaces">    </span><span class="istickedoff">, trcSenseAnchor = &quot;fixture_anchor&quot;</span>
+<span class="lineno">  776 </span><span class="spaces">    </span><span class="istickedoff">, trcSenseOperator = Nothing</span>
+<span class="lineno">  777 </span><span class="spaces">    </span><span class="istickedoff">, trcSensePreservedAxes = []</span>
+<span class="lineno">  778 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueFocus = &quot;fixture_focus&quot;</span>
+<span class="lineno">  779 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueFocusBefore = &quot;fixture_focus&quot;</span>
+<span class="lineno">  780 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueFocusAfter = &quot;fixture_focus&quot;</span>
+<span class="lineno">  781 </span><span class="spaces">    </span><span class="istickedoff">, trcDialoguePhase = Exploring</span>
+<span class="lineno">  782 </span><span class="spaces">    </span><span class="istickedoff">, trcDialoguePhaseBefore = Exploring</span>
+<span class="lineno">  783 </span><span class="spaces">    </span><span class="istickedoff">, trcDialoguePhaseAfter = Exploring</span>
+<span class="lineno">  784 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueCommitmentCount = 0</span>
+<span class="lineno">  785 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueCommitmentCountBefore = 0</span>
+<span class="lineno">  786 </span><span class="spaces">    </span><span class="istickedoff">, trcDialogueCommitmentCountAfter = 0</span>
+<span class="lineno">  787 </span><span class="spaces">    </span><span class="istickedoff">, trcMicroPlanMoves = []</span>
+<span class="lineno">  788 </span><span class="spaces">    </span><span class="istickedoff">, trcMicroPlanExplicitness = 0.5</span>
+<span class="lineno">  789 </span><span class="spaces">    </span><span class="istickedoff">, trcPerspectiveProjection = Nothing</span>
+<span class="lineno">  790 </span><span class="spaces">    </span><span class="istickedoff">, trcPerspectiveProjections = []</span>
+<span class="lineno">  791 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  792 </span>
+<span class="lineno">  793 </span>authoritativeGovernedState :: SystemState -&gt; SystemState
+<span class="lineno">  794 </span><span class="decl"><span class="istickedoff">authoritativeGovernedState ss0 =</span>
+<span class="lineno">  795 </span><span class="spaces">  </span><span class="istickedoff">let fruit = KnowledgeFruit</span>
+<span class="lineno">  796 </span><span class="spaces">        </span><span class="istickedoff">{ kfProposition = &quot;freedom requires responsibility&quot;</span>
+<span class="lineno">  797 </span><span class="spaces">        </span><span class="istickedoff">, kfWord = &quot;свобода&quot;</span>
+<span class="lineno">  798 </span><span class="spaces">        </span><span class="istickedoff">, kfSource = SourceInternal</span>
+<span class="lineno">  799 </span><span class="spaces">        </span><span class="istickedoff">, kfValidated = True</span>
+<span class="lineno">  800 </span><span class="spaces">        </span><span class="istickedoff">, kfConatusDelta = 0.6</span>
+<span class="lineno">  801 </span><span class="spaces">        </span><span class="istickedoff">, kfPredictiveDelta = 0.4</span>
+<span class="lineno">  802 </span><span class="spaces">        </span><span class="istickedoff">, kfGraftedTurn = Nothing</span>
+<span class="lineno">  803 </span><span class="spaces">        </span><span class="istickedoff">, kfObservedTurn = 1</span>
+<span class="lineno">  804 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  805 </span><span class="spaces">      </span><span class="istickedoff">tree = graftFruit &quot;agreement&quot; fruit emptyKnowledgeTree</span>
+<span class="lineno">  806 </span><span class="spaces">      </span><span class="istickedoff">dialogueOutcome = DialogueOutcomeSample</span>
+<span class="lineno">  807 </span><span class="spaces">        </span><span class="istickedoff">{ dosTurn = 1</span>
+<span class="lineno">  808 </span><span class="spaces">        </span><span class="istickedoff">, dosKind = DialogueOutcomeSuccess</span>
+<span class="lineno">  809 </span><span class="spaces">        </span><span class="istickedoff">, dosTopic = &quot;freedom&quot;</span>
+<span class="lineno">  810 </span><span class="spaces">        </span><span class="istickedoff">, dosSignals = [&quot;strong_positive_confirmation&quot;]</span>
+<span class="lineno">  811 </span><span class="spaces">        </span><span class="istickedoff">, dosEvidenceStrength = EvidenceStrong</span>
+<span class="lineno">  812 </span><span class="spaces">        </span><span class="istickedoff">, dosStrongUpdate = True</span>
+<span class="lineno">  813 </span><span class="spaces">        </span><span class="istickedoff">, dosDecisionRecord = AdaptiveDecisionRecord</span>
+<span class="lineno">  814 </span><span class="spaces">            </span><span class="istickedoff">{ adrTurn = 1</span>
+<span class="lineno">  815 </span><span class="spaces">            </span><span class="istickedoff">, adrCause = &quot;dialogue_outcome:success&quot;</span>
+<span class="lineno">  816 </span><span class="spaces">            </span><span class="istickedoff">, adrEvidence = [&quot;strong_positive_confirmation&quot;]</span>
+<span class="lineno">  817 </span><span class="spaces">            </span><span class="istickedoff">, adrConfidence = 0.8</span>
+<span class="lineno">  818 </span><span class="spaces">            </span><span class="istickedoff">, adrBoundedDelta = [&quot;recent_outcomes&lt;=12&quot;]</span>
+<span class="lineno">  819 </span><span class="spaces">            </span><span class="istickedoff">, adrDecision = AdaptiveAccepted</span>
+<span class="lineno">  820 </span><span class="spaces">            </span><span class="istickedoff">, adrTargets = [MutDialogueOutcome]</span>
+<span class="lineno">  821 </span><span class="spaces">            </span><span class="istickedoff">, adrMutationRecords = []</span>
+<span class="lineno">  822 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  823 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  824 </span><span class="spaces">      </span><span class="istickedoff">stateWithEvidence = ss0</span>
+<span class="lineno">  825 </span><span class="spaces">        </span><span class="istickedoff">{ ssSessionId = ssSessionId ss0</span>
+<span class="lineno">  826 </span><span class="spaces">        </span><span class="istickedoff">, ssDialogue = (ssDialogue ss0)</span>
+<span class="lineno">  827 </span><span class="spaces">            </span><span class="istickedoff">{ dsTurnCount = 1</span>
+<span class="lineno">  828 </span><span class="spaces">            </span><span class="istickedoff">, dsLastTopic = &quot;freedom&quot;</span>
+<span class="lineno">  829 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  830 </span><span class="spaces">        </span><span class="istickedoff">, ssTruthContractStatus = CanonicalSurfacePreserved</span>
+<span class="lineno">  831 </span><span class="spaces">        </span><span class="istickedoff">, ssKnowledgeTree = tree</span>
+<span class="lineno">  832 </span><span class="spaces">        </span><span class="istickedoff">, ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState</span>
+<span class="lineno">  833 </span><span class="spaces">            </span><span class="istickedoff">{ dolRecentOutcomes = [dialogueOutcome]</span>
+<span class="lineno">  834 </span><span class="spaces">            </span><span class="istickedoff">, dolSuccessCount = 1</span>
+<span class="lineno">  835 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  836 </span><span class="spaces">        </span><span class="istickedoff">, ssBeliefStore = emptyBeliefStore</span>
+<span class="lineno">  837 </span><span class="spaces">            </span><span class="istickedoff">{ bsClaims = M.fromList</span>
+<span class="lineno">  838 </span><span class="spaces">                </span><span class="istickedoff">[ (&quot;freedom&quot;, BeliefRecord</span>
+<span class="lineno">  839 </span><span class="spaces">                    </span><span class="istickedoff">{ brClaim = &quot;freedom&quot;</span>
+<span class="lineno">  840 </span><span class="spaces">                    </span><span class="istickedoff">, brPolarity = BeliefAffirmed</span>
+<span class="lineno">  841 </span><span class="spaces">                    </span><span class="istickedoff">, brConfidence = 0.8</span>
+<span class="lineno">  842 </span><span class="spaces">                    </span><span class="istickedoff">, brEvidence = [&quot;turn=1:success&quot;]</span>
+<span class="lineno">  843 </span><span class="spaces">                    </span><span class="istickedoff">, brCounterEvidence = []</span>
+<span class="lineno">  844 </span><span class="spaces">                    </span><span class="istickedoff">, brLastUpdatedTurn = 1</span>
+<span class="lineno">  845 </span><span class="spaces">                    </span><span class="istickedoff">, brRevisionCount = 0</span>
+<span class="lineno">  846 </span><span class="spaces">                    </span><span class="istickedoff">})</span>
+<span class="lineno">  847 </span><span class="spaces">                </span><span class="istickedoff">]</span>
+<span class="lineno">  848 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  849 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  850 </span><span class="spaces">  </span><span class="istickedoff">in applyPerspectiveOperator stateWithEvidence positiveConatus False emptyField</span></span>
+<span class="lineno">  851 </span>
+<span class="lineno">  852 </span>positiveConatus :: ConatusEnergy
+<span class="lineno">  853 </span><span class="decl"><span class="istickedoff">positiveConatus = ConatusEnergy</span>
+<span class="lineno">  854 </span><span class="spaces">  </span><span class="istickedoff">{ ceScalar = 10.0</span>
+<span class="lineno">  855 </span><span class="spaces">  </span><span class="istickedoff">, ceComponents = ConatusComponents</span>
+<span class="lineno">  856 </span><span class="spaces">      </span><span class="istickedoff">{ ccMorphology = 0.0</span>
+<span class="lineno">  857 </span><span class="spaces">      </span><span class="istickedoff">, ccIdentity = 0.0</span>
+<span class="lineno">  858 </span><span class="spaces">      </span><span class="istickedoff">, ccTurns = 10.0</span>
+<span class="lineno">  859 </span><span class="spaces">      </span><span class="istickedoff">, ccPenalty = 0.0</span>
+<span class="lineno">  860 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  861 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

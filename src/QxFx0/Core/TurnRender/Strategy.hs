@@ -23,6 +23,7 @@ import QxFx0.Core.PrincipledCore (PrincipledMode(..))
 import QxFx0.Core.R5Dynamics (EncounterMode(..))
 import QxFx0.Self.Adjunction (Holistic(..), Formal(..), Adjunction(..))
 import QxFx0.Self.Field (Field)
+import QxFx0.Self.Deliberation (NarrativeTone(..))
 import QxFx0.Self.Salience
   ( Salience
   , SalienceWeights
@@ -67,11 +68,12 @@ applyRenderStrategyWithTruthContract truthStatus family strategy meaningPlan =
     , rmpDepthMode = strategyDepthMode (rsDepth strategy)
     }
 
-renderStyleFromDecision :: ResponseStrategy -> Maybe PrincipledMode -> IdentitySignal -> Maybe SemanticAnchor -> SemanticInput -> RenderStyle
-renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput =
+renderStyleFromDecision :: ResponseStrategy -> Maybe PrincipledMode -> NarrativeTone -> IdentitySignal -> Maybe SemanticAnchor -> SemanticInput -> RenderStyle
+renderStyleFromDecision strategy mode tone identitySignal semanticAnchor semanticInput =
   let byStrategy = styleFromStrategy strategy
       byPrincipled = styleFromPrincipled mode byStrategy
-      byIdentity = styleFromIdentity identitySignal byPrincipled
+      byTone = styleFromTone tone byPrincipled
+      byIdentity = styleFromIdentity identitySignal byTone
       bySemantic = styleFromSemantic semanticInput byIdentity
    in maybe bySemantic (`styleFromAnchor` bySemantic) semanticAnchor
 
@@ -89,16 +91,17 @@ renderStyleFromDecisionWithSalience
   -> Field
   -> ResponseStrategy
   -> Maybe PrincipledMode
+  -> NarrativeTone
   -> IdentitySignal
   -> Maybe SemanticAnchor
   -> SemanticInput
   -> RenderStyle
-renderStyleFromDecisionWithSalience salienceWeights salience field strategy mode identitySignal semanticAnchor semanticInput =
+renderStyleFromDecisionWithSalience salienceWeights salience field strategy mode tone identitySignal semanticAnchor semanticInput =
   applySalienceToStyle
     salienceWeights
     salience
     field
-    (renderStyleFromDecision strategy mode identitySignal semanticAnchor semanticInput)
+    (renderStyleFromDecision strategy mode tone identitySignal semanticAnchor semanticInput)
 
 -- | Re-shape a 'RenderStyle' under a 'Salience' verdict via the
 -- 'Holistic ⊣ Formal' adjunction.  This is the first runtime call
@@ -217,6 +220,15 @@ styleFromPrincipled mode fallback =
     Just HoldGround -> StyleFormal
     Just AcknowledgeAndHold -> StyleWarm
     _ -> fallback
+
+styleFromTone :: NarrativeTone -> RenderStyle -> RenderStyle
+styleFromTone tone fallback =
+  case tone of
+    NarrativeRecovery -> StyleRecovery
+    NarrativeWarm -> StyleWarm
+    NarrativeFormal -> StyleFormal
+    NarrativeTerse -> StyleCautious
+    NarrativeNeutral -> fallback
 
 styleFromIdentity :: IdentitySignal -> RenderStyle -> RenderStyle
 styleFromIdentity identitySignal fallback =

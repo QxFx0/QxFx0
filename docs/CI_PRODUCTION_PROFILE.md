@@ -11,8 +11,8 @@
 
 | Tier | Name | When | Runner | Contract Verdict | Gates |
 |------|------|------|--------|------------------|-------|
-| **Core** | Production Contract | Every push / PR | `ubuntu-latest` (16 GB) | `PROD_GO` | Build, fast tests, architecture, GF quality, haddock, SQL sync, schema consistency/contract, generated artifacts, lexicon, release-smoke degraded-local |
-| **Extended** | Full Scientific Contract | Nightly/weekly + manual dispatch + `main` only | High-mem (>=32 GB) | `FULL_SCIENTIFIC_GO` | Core gates + slow tests, coverage >=51%, release-smoke strict (ACCEPT + Failed=0, no skips) |
+| **Core** | Production Contract | Push / PR / weekly schedule / manual dispatch | `ubuntu-latest` (16 GB) | `PROD_GO` | Build, fast tests, architecture, GF quality, haddock, SQL sync, schema consistency/contract, generated artifacts, lexicon, release-smoke degraded-local |
+| **Extended** | Full Scientific Contract | Weekly schedule + manual dispatch | High-mem (>=32 GB) | `FULL_SCIENTIFIC_GO` | Core gates + slow tests, coverage >=51%, release-smoke strict (ACCEPT + Failed=0, no skips) |
 
 **Rule:** `FULL_SCIENTIFIC_GO` implies `PROD_GO` already passed. The extended tier is a superset, not an alternative.
 
@@ -47,7 +47,6 @@
 | Agda | 2.6.4+ | Via nix or `apt-get install agda agda-stdlib` |
 | GF | 3.11+ | Via nix or `apt-get install gf` |
 | Soufflé | 2.4+ | `apt-get install souffle` |
-| spaCy + ru_core_news_sm | 3.7+ | `python -m spacy download ru_core_news_sm` |
 | pgf2 Haskell lib | 1.3 | Links against `libpgf.so.0` / `libgu.so.0` |
 
 ---
@@ -81,7 +80,7 @@
 
 ### Job 1: Core Contract (`core-contract`)
 
-**Trigger:** push, pull_request, manual dispatch with `profile=core`  
+**Trigger:** push, pull_request, schedule, manual dispatch with `profile=core` or `profile=extended`  
 **Runner:** `ubuntu-latest` (8 GB sufficient)  
 **Timeout:** 25 minutes  
 **Contract verdict target:** `PROD_GO`
@@ -97,6 +96,8 @@
 - `release-smoke.sh` runs in `degraded-local` mode.
 - `ACCEPT_WITH_SKIPS` is **allowed** for infra-only skips (e.g., nix/souffle unavailable).
 - Any `FAIL` → contract `REJECT`.
+- Manual `profile=extended` dispatch still runs `core-contract` first because the
+  extended job depends on the core verdict.
 
 **Artifacts:**
 - `core-gate-logs-{run_id}` → `reports/baseline_v2/final_gates/_gate_results_*.md`
@@ -106,9 +107,8 @@
 **Trigger:**
 - Schedule: weekly cron (`0 2 * * 1`)
 - Manual dispatch with `profile=extended`
-- Push to `main` branch only
 
-**Runner:** `ubuntu-latest` with high-mem label (>=32 GB)  
+**Runner:** `high-mem` (>=32 GB)  
 **Timeout:** 45 minutes  
 **Depends on:** `core-contract` (must pass first)  
 **Contract verdict target:** `FULL_SCIENTIFIC_GO`
@@ -117,7 +117,7 @@
 1. Checkout
 2. Setup Haskell (GHC 9.6.6, Cabal 3.10)
 3. Cache cabal store + dist-newstyle (warm from core job)
-4. Install Python deps + spaCy model
+4. Install Python deps
 5. Install system deps (`agda`, `gf`, `souffle`, `libsqlite3-dev`)
 6. Install Nix
 7. `bash scripts/ci_gate_contract.sh` (profile=extended)
@@ -131,15 +131,44 @@
 **Artifacts:**
 - `extended-gate-logs-{run_id}` → `reports/baseline_v2/final_gates/_gate_results_*.md` + `.tsv`
 
-### Job 3: Granular Fast Gates (`build-test`)
+### Current Workflow Graph
 
-**Trigger:** push, pull_request (legacy, kept for PR step visibility)  
-**Runner:** `ubuntu-latest`  
-**Timeout:** 15 minutes  
+- The live GitHub Actions workflow contains two contract jobs only:
+  - `core-contract`
+  - `extended-contract`
+- There is no separate `build-test` job in the current workflow.
 
-**Steps:** Individual cabal build/test steps + architecture/lexicon/haddock checks.
+### Current Test Suite Graph
 
-**Note:** This job is redundant with `core-contract` but provides per-step failure visibility in PR checks. It does **not** run `ci_gate_contract.sh`.
+- `qxfx0-test-unit`:
+  - architecture/core/self/guardrails/knowledge-tree/dialogue-development suites
+  - `TurnPipelineProtocol`
+  - `LearningLoop`, `TrainingCycle`, `ModelComparison`
+- `qxfx0-test-property`:
+  - `TurnPipelineProtocol`
+  - `SelfDeliberation`
+- `qxfx0-test-integration`:
+  - `SemanticCorpus`
+  - `LegalAdapter`
+  - `RenderDialogueCoverage`
+  - `RussianQuality`
+  - `LongSessionCorpus`
+- `qxfx0-test-fast`:
+  - unit-like suites
+  - `SemanticCorpus`
+  - `TurnPipelineProtocol`
+  - `ReliabilityHardening`
+- `qxfx0-test-slow`:
+  - `RuntimeInfrastructure`
+  - `StatePersistence`
+  - `HttpRuntime`
+- `qxfx0-test` (full aggregate):
+  - fast contour
+  - slow contour
+  - remaining corpus/adapter/regression suites
+- CI currently invokes `qxfx0-test-fast` in both profiles and `qxfx0-test-slow`
+  only in the extended profile; the other suites remain useful for local or
+  specialized validation, not as direct workflow entrypoints.
 
 ---
 

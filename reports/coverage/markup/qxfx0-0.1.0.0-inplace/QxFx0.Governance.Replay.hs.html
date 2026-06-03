@@ -1,0 +1,234 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module QxFx0.Governance.Replay
+<span class="lineno">    5 </span>  ( rebuildGovernedPerspectiveState
+<span class="lineno">    6 </span>  , verifyPerspectiveRegistryRebuild
+<span class="lineno">    7 </span>  , rebuildGovernanceProjection
+<span class="lineno">    8 </span>  , governanceReplayProof
+<span class="lineno">    9 </span>  , rebuildGovernedViews
+<span class="lineno">   10 </span>  , rebuildGovernedSystemState
+<span class="lineno">   11 </span>  ) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   14 </span>import Data.Text (Text)
+<span class="lineno">   15 </span>import qualified Data.Text as T
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
+<span class="lineno">   18 </span>import QxFx0.Self.Perspective.Reduce
+<span class="lineno">   19 </span>  ( applyPerspectiveDecision
+<span class="lineno">   20 </span>  , buildActivePerspectiveProjections
+<span class="lineno">   21 </span>  )
+<span class="lineno">   22 </span>import QxFx0.Types.State.Governance
+<span class="lineno">   23 </span>  ( GovernanceDecision(..)
+<span class="lineno">   24 </span>  , GovernanceEvent(..)
+<span class="lineno">   25 </span>  , GovernanceEventEnvelope(..)
+<span class="lineno">   26 </span>  , GovernanceProvenanceLink
+<span class="lineno">   27 </span>  , GovernedProjectionRef(..)
+<span class="lineno">   28 </span>  , GovernedSubject(..)
+<span class="lineno">   29 </span>  , GovernancePayload(..)
+<span class="lineno">   30 </span>  , GovernanceProjection(..)
+<span class="lineno">   31 </span>  , PerspectivePayload(..)
+<span class="lineno">   32 </span>  , ProjectionMeta(..)
+<span class="lineno">   33 </span>  , canonicalizeGovernanceHistory
+<span class="lineno">   34 </span>  , currentProjectionVersion
+<span class="lineno">   35 </span>  , currentReducerVersion
+<span class="lineno">   36 </span>  , governanceDecisionFromPerspectivePromotion
+<span class="lineno">   37 </span>  , governanceProjectionChecksum
+<span class="lineno">   38 </span>  , governanceProvenanceTrail
+<span class="lineno">   39 </span>  )
+<span class="lineno">   40 </span>import QxFx0.Types.State.Perspective
+<span class="lineno">   41 </span>  ( IdentitySlice(..)
+<span class="lineno">   42 </span>  , PerspectiveInputBundle(..)
+<span class="lineno">   43 </span>  , PerspectivePromotionDecision(..)
+<span class="lineno">   44 </span>  , PerspectiveRegistry(..)
+<span class="lineno">   45 </span>  , emptyPerspectiveRegistry
+<span class="lineno">   46 </span>  )
+<span class="lineno">   47 </span>import QxFx0.Types.State.System
+<span class="lineno">   48 </span>  ( SystemState(..)
+<span class="lineno">   49 </span>  )
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>rebuildGovernedPerspectiveState :: [GovernanceEvent] -&gt; Either Text PerspectiveRegistry
+<span class="lineno">   52 </span><span class="decl"><span class="istickedoff">rebuildGovernedPerspectiveState events = do</span>
+<span class="lineno">   53 </span><span class="spaces">  </span><span class="istickedoff">ordered &lt;- canonicalizeGovernanceHistory events</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">foldGovernanceEvent emptyPerspectiveRegistry ordered</span></span>
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>verifyPerspectiveRegistryRebuild :: [GovernanceEvent] -&gt; PerspectiveRegistry -&gt; Either Text PerspectiveRegistry
+<span class="lineno">   57 </span><span class="decl"><span class="istickedoff">verifyPerspectiveRegistryRebuild events expectedRegistry = do</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">rebuilt &lt;- rebuildGovernedPerspectiveState events</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">if rebuilt == expectedRegistry</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">then Right rebuilt</span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">else Left <span class="nottickedoff">&quot;governance perspective registry rebuild mismatch&quot;</span></span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>rebuildGovernanceProjection :: [GovernanceEvent] -&gt; Either Text GovernanceProjection
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">rebuildGovernanceProjection events = do</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">ordered &lt;- canonicalizeGovernanceHistory events</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">registry &lt;- foldGovernanceEvent emptyPerspectiveRegistry ordered</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">let projections = buildActivePerspectiveProjections registry</span>
+<span class="lineno">   68 </span><span class="spaces">      </span><span class="istickedoff">governedRefs = map governanceProjectionRef ordered</span>
+<span class="lineno">   69 </span><span class="spaces">      </span><span class="istickedoff">meta = ProjectionMeta</span>
+<span class="lineno">   70 </span><span class="spaces">        </span><span class="istickedoff">{ pmProjectionVersion = currentProjectionVersion</span>
+<span class="lineno">   71 </span><span class="spaces">        </span><span class="istickedoff">, pmReducerVersion = currentReducerVersion</span>
+<span class="lineno">   72 </span><span class="spaces">        </span><span class="istickedoff">, pmSnapshotTurn = Just (prLastUpdatedTurn registry)</span>
+<span class="lineno">   73 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">checksum = governanceProjectionChecksum meta registry projections governedRefs</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">pure GovernanceProjection</span>
+<span class="lineno">   76 </span><span class="spaces">    </span><span class="istickedoff">{ gpMeta = meta</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">, gpPerspectiveRegistry = registry</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">, gpActivePerspectiveProjections = projections</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">, gpGovernedRefs = governedRefs</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">, gpProjectionChecksum = checksum</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>rebuildGovernedViews :: SystemState -&gt; Either Text (PerspectiveRegistry, GovernanceProjection)
+<span class="lineno">   84 </span><span class="decl"><span class="istickedoff">rebuildGovernedViews ss = do</span>
+<span class="lineno">   85 </span><span class="spaces">  </span><span class="istickedoff">if not (truthContractIsAuthoritative (ssTruthContractStatus ss))</span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">then Left &quot;governance_replay_non_authoritative_truth_contract&quot;</span>
+<span class="lineno">   87 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">projection &lt;- rebuildGovernanceProjection (ssGovernanceHistory ss)</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">pure (gpPerspectiveRegistry projection, projection)</span></span>
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>rebuildGovernedSystemState :: SystemState -&gt; Either Text SystemState
+<span class="lineno">   92 </span><span class="decl"><span class="istickedoff">rebuildGovernedSystemState ss = do</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">(registry, projection) &lt;- rebuildGovernedViews ss</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">pure ss</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">{ ssPerspectiveRegistry = registry</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">, ssGovernanceProjection = projection</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>governanceReplayProof :: [GovernanceEvent] -&gt; PerspectiveRegistry -&gt; Either Text [GovernanceProvenanceLink]
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">governanceReplayProof events expectedRegistry = do</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- verifyPerspectiveRegistryRebuild events expectedRegistry</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">governanceProvenanceTrail events</span></span>
+<span class="lineno">  103 </span>
+<span class="lineno">  104 </span>foldGovernanceEvent :: PerspectiveRegistry -&gt; [GovernanceEvent] -&gt; Either Text PerspectiveRegistry
+<span class="lineno">  105 </span><span class="decl"><span class="istickedoff">foldGovernanceEvent registry [] = Right registry</span>
+<span class="lineno">  106 </span><span class="spaces"></span><span class="istickedoff">foldGovernanceEvent registry (event:rest) = do</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="istickedoff">next &lt;- applyGovernanceEvent registry event</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="istickedoff">foldGovernanceEvent next rest</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>applyGovernanceEvent :: PerspectiveRegistry -&gt; GovernanceEvent -&gt; Either Text PerspectiveRegistry
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">applyGovernanceEvent registry event =</span>
+<span class="lineno">  112 </span><span class="spaces">  </span><span class="istickedoff">case gePayload event of</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">GpPerspective payload -&gt; applyPerspectiveGovernancePayload registry (geEnvelope event) payload</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">Right registry { prLastUpdatedTurn = fromMaybe <span class="nottickedoff">(prLastUpdatedTurn registry)</span> (geeTurnId (geEnvelope event)) }</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>applyPerspectiveGovernancePayload :: PerspectiveRegistry -&gt; GovernanceEventEnvelope -&gt; PerspectivePayload -&gt; Either Text PerspectiveRegistry
+<span class="lineno">  118 </span><span class="decl"><span class="istickedoff">applyPerspectiveGovernancePayload registry envelope payload = do</span>
+<span class="lineno">  119 </span><span class="spaces">  </span><span class="istickedoff">ensurePerspectiveReplayConsistency envelope payload</span>
+<span class="lineno">  120 </span><span class="spaces">  </span><span class="istickedoff">case geeDecision envelope of</span>
+<span class="lineno">  121 </span><span class="spaces">    </span><span class="istickedoff">GovObserveOnly -&gt; Right registry { prLastUpdatedTurn = eventTurn }</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">GovDeny -&gt; Right registry { prLastUpdatedTurn = eventTurn }</span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="istickedoff">GovQuarantine -&gt; <span class="nottickedoff">applyResolved PpdQuarantine</span></span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">GovAcceptBounded -&gt; <span class="nottickedoff">applyResolved PpdAcceptBounded</span></span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">GovPromote -&gt; applyResolvedPerspectivePromote</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">GovSuspend -&gt; <span class="nottickedoff">applyResolved PpdSuspendActive</span></span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">GovRollback -&gt; applyResolved PpdRollbackPrior</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">GovFreeze -&gt; <span class="nottickedoff">Left &quot;governance replay cannot apply GovFreeze to perspective payload&quot;</span></span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="istickedoff">eventTurn = fromMaybe <span class="nottickedoff">(isTurnCount (pibIdentitySlice (ppPerspectiveInput payload)))</span> (geeTurnId envelope)</span>
+<span class="lineno">  131 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">applyResolved :: PerspectivePromotionDecision -&gt; Either Text PerspectiveRegistry</span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">applyResolved expectedDecision</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">ppResolvedDecision payload == expectedDecision</span> =</span>
+<span class="lineno">  135 </span><span class="spaces">          </span><span class="istickedoff">Right (applyPerspectiveDecision eventTurn registry <span class="nottickedoff">(ppPerspectiveInput payload)</span> (ppPerspectiveCandidate payload) expectedDecision)</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> =</span>
+<span class="lineno">  137 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Left</span></span>
+<span class="lineno">  138 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">( &quot;governance replay payload decision mismatch: expected &quot;</span></span>
+<span class="lineno">  139 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; payloadDecisionTag expectedDecision</span></span>
+<span class="lineno">  140 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;, got &quot;</span></span>
+<span class="lineno">  141 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; payloadDecisionTag (ppResolvedDecision payload)</span></span>
+<span class="lineno">  142 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  143 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">applyResolvedPerspectivePromote :: Either Text PerspectiveRegistry</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">applyResolvedPerspectivePromote =</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">case ppResolvedDecision payload of</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">PpdPromoteEndorsed -&gt; Right (applyPerspectiveDecision eventTurn registry (ppPerspectiveInput payload) (ppPerspectiveCandidate payload) PpdPromoteEndorsed)</span>
+<span class="lineno">  148 </span><span class="spaces">        </span><span class="istickedoff">PpdReviseActive -&gt; Right (applyPerspectiveDecision eventTurn registry (ppPerspectiveInput payload) (ppPerspectiveCandidate payload) PpdReviseActive)</span>
+<span class="lineno">  149 </span><span class="spaces">        </span><span class="istickedoff">other -&gt;</span>
+<span class="lineno">  150 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Left</span></span>
+<span class="lineno">  151 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">( &quot;governance replay payload decision mismatch: GovPromote requires promote/revise payload, got &quot;</span></span>
+<span class="lineno">  152 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; payloadDecisionTag other</span></span>
+<span class="lineno">  153 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">)</span></span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>ensurePerspectiveReplayConsistency :: GovernanceEventEnvelope -&gt; PerspectivePayload -&gt; Either Text ()
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">ensurePerspectiveReplayConsistency envelope payload = do</span>
+<span class="lineno">  157 </span><span class="spaces">  </span><span class="istickedoff">let canonicalDecision = geeDecision envelope</span>
+<span class="lineno">  158 </span><span class="spaces">      </span><span class="istickedoff">resolvedDecision = ppResolvedDecision payload</span>
+<span class="lineno">  159 </span><span class="spaces">      </span><span class="istickedoff">sameSubject = geeSubject envelope == SubjectPerspective (ppPerspectiveId payload)</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">if <span class="tickonlyfalse">not sameSubject</span></span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">then <span class="nottickedoff">Left &quot;governance replay subject mismatch for perspective payload&quot;</span></span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">else pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">case geeResolvedDecision envelope of</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">Just resolvedGov</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">resolvedGov /= canonicalDecision</span> -&gt;</span>
+<span class="lineno">  166 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Left &quot;governance replay envelope resolved decision mismatch&quot;</span></span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">case canonicalDecision of</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">GovDeny</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">resolvedDecision == PpdObserveOnly</span> -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">governanceDecisionFromPerspectivePromotion resolvedDecision == GovDeny</span> -&gt; <span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt;</span>
+<span class="lineno">  173 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">Left</span></span>
+<span class="lineno">  174 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">( &quot;governance replay envelope/payload decision mismatch: envelope=&quot;</span></span>
+<span class="lineno">  175 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; T.pack (show canonicalDecision)</span></span>
+<span class="lineno">  176 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;, payload=&quot;</span></span>
+<span class="lineno">  177 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; payloadDecisionTag resolvedDecision</span></span>
+<span class="lineno">  178 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">)</span></span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">_</span>
+<span class="lineno">  180 </span><span class="spaces">      </span><span class="istickedoff">| governanceDecisionFromPerspectivePromotion resolvedDecision == canonicalDecision -&gt; pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  181 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt;</span>
+<span class="lineno">  182 </span><span class="spaces">          </span><span class="istickedoff">Left</span>
+<span class="lineno">  183 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">( &quot;governance replay envelope/payload decision mismatch: envelope=&quot;</span></span>
+<span class="lineno">  184 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; T.pack (show canonicalDecision)</span></span>
+<span class="lineno">  185 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;, payload=&quot;</span></span>
+<span class="lineno">  186 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; payloadDecisionTag resolvedDecision</span></span>
+<span class="lineno">  187 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">)</span></span></span>
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>payloadTag :: GovernancePayload -&gt; Text
+<span class="lineno">  190 </span><span class="decl"><span class="nottickedoff">payloadTag payload =</span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="nottickedoff">case payload of</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="nottickedoff">GpPerspective _ -&gt; &quot;GpPerspective&quot;</span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="nottickedoff">GpClaimStance _ -&gt; &quot;GpClaimStance&quot;</span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="nottickedoff">GpCapability _ -&gt; &quot;GpCapability&quot;</span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="nottickedoff">GpFreeze _ -&gt; &quot;GpFreeze&quot;</span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="nottickedoff">GpCarry _ -&gt; &quot;GpCarry&quot;</span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="nottickedoff">GpNormativeRevision _ -&gt; &quot;GpNormativeRevision&quot;</span></span>
+<span class="lineno">  198 </span>
+<span class="lineno">  199 </span>payloadDecisionTag :: PerspectivePromotionDecision -&gt; Text
+<span class="lineno">  200 </span><span class="decl"><span class="nottickedoff">payloadDecisionTag = T.pack . show</span></span>
+<span class="lineno">  201 </span>
+<span class="lineno">  202 </span>governanceProjectionRef :: GovernanceEvent -&gt; GovernedProjectionRef
+<span class="lineno">  203 </span><span class="decl"><span class="istickedoff">governanceProjectionRef event =</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">let envelope = geEnvelope event</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">in GovernedProjectionRef</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff">{ gprEventId = geeId envelope</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="istickedoff">, gprSubject = geeSubject envelope</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">, gprDecision = geeDecision envelope</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="istickedoff">, gprLifecycleStatus = geeLifecycleStatus envelope</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="istickedoff">, gprEffectRef = geeEffectRef envelope</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

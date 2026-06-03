@@ -33,9 +33,6 @@ cabal --version  # >= 3.10.3.0
 # Verify nix (for Agda fallback)
 nix --version  # >= 2.18
 
-# Verify spaCy + ru_core_news_sm
-python3 -c "import spacy; spacy.load('ru_core_news_sm')"
-
 # Verify souffle
 souffle --version  # >= 2.4
 
@@ -43,7 +40,7 @@ souffle --version  # >= 2.4
 agda --version  # >= 2.6.4
 
 # Verify GF runtime libs
-ls /tmp/gf-install/lib/libpgf.so* /tmp/gf-install/lib/libgu.so*
+ls /tmp/gf-install/usr/lib/libpgf.so* /tmp/gf-install/usr/lib/libgu.so*
 # If missing, rebuild:
 #   git clone --depth 1 https://github.com/GrammaticalFramework/gf-core /tmp/gf-core-src
 #   cd /tmp/gf-core-src && autoreconf -i && ./configure --prefix=/tmp/gf-install && make && make install
@@ -76,7 +73,7 @@ export QXFX0_REQUIRE_STRICT_RUNTIME=1
 export QXFX0_RELEASE_SMOKE_MODE=strict
 export QXFX0_SKIP_AGDA=0
 export QXFX0_GF_RUNTIME=1
-export LD_LIBRARY_PATH="/tmp/gf-install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="/tmp/gf-install/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QXFX0_CABAL_LOCK_FILE=/tmp/qxfx0-cabal.lock
 export PATH="/tmp/ghc-wrapper:$PATH"  # If using GHC wrapper workaround
 ```

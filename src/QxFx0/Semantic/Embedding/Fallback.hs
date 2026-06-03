@@ -3,18 +3,20 @@
 {-| Deterministic local fallback embedding and vector algebra helpers. -}
 module QxFx0.Semantic.Embedding.Fallback
   ( fallbackEmbedding
+  , stableHash
   , cosineSimilarity
   ) where
 
 import Control.Monad (forM_)
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
+import qualified Data.Text as T
 import QxFx0.Semantic.Embedding.Support (embeddingDim)
 import QxFx0.Semantic.Embedding.Types (Embedding)
 
-fallbackEmbedding :: String -> Embedding
+fallbackEmbedding :: T.Text -> Embedding
 fallbackEmbedding input =
-  let ws = words (filter (`notElem` (".,!?:;\"'" :: String)) input)
+  let ws = T.words (T.filter (`notElem` (".,!?:;\"'" :: String)) input)
       rawVec = V.create $ do
         v <- MV.replicate embeddingDim 0.0
         forM_ (zip [(0 :: Int) ..] ws) $ \(i, w) -> do
@@ -29,11 +31,15 @@ fallbackEmbedding input =
         then V.map (/ norm) rawVec
         else V.replicate embeddingDim 0.0
 
-stableHash :: String -> Int
+stableHash :: T.Text -> Int
 stableHash = go 0
   where
-    go acc [] = if acc == 0 then 1 else acc
-    go acc (c : cs) = go ((acc * 31 + fromEnum c) `mod` (maxBound `div` 2)) cs
+    go acc t
+      | T.null t  = if acc == 0 then 1 else acc
+      | otherwise =
+          case T.uncons t of
+            Nothing -> if acc == 0 then 1 else acc
+            Just (ch, rest) -> go ((acc * 31 + fromEnum ch) `mod` (maxBound `div` 2)) rest
 
 cosineSimilarity :: Embedding -> Embedding -> Float
 cosineSimilarity v1 v2

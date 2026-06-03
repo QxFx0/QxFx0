@@ -1,0 +1,192 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE RankNTypes #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-| Public operations over `PipelineIO`, including effect dispatch and typed adapters. -}
+<span class="lineno">    5 </span>module QxFx0.Core.PipelineIO.Operations
+<span class="lineno">    6 </span>  ( pipelineRuntimeMode
+<span class="lineno">    7 </span>  , pipelineRuntimeModeText
+<span class="lineno">    8 </span>  , pipelineShadowPolicy
+<span class="lineno">    9 </span>  , shadowPolicyText
+<span class="lineno">   10 </span>  , pipelineLocalRecoveryPolicy
+<span class="lineno">   11 </span>  , localRecoveryPolicyText
+<span class="lineno">   12 </span>  , scheduleTurnEffects
+<span class="lineno">   13 </span>  , resolveTurnEffect
+<span class="lineno">   14 </span>  , resolveTurnEffects
+<span class="lineno">   15 </span>  , runShadowVerification
+<span class="lineno">   16 </span>  , verifyPipelineAgda
+<span class="lineno">   17 </span>  , savePipelineState
+<span class="lineno">   18 </span>  , checkpointPipelineState
+<span class="lineno">   19 </span>  , resolvePipelineNixPath
+<span class="lineno">   20 </span>  , runPipelineNixCheck
+<span class="lineno">   21 </span>  , modifyPipelineConsciousLoop
+<span class="lineno">   22 </span>  , modifyPipelineIntuition
+<span class="lineno">   23 </span>  , checkPipelineApiHealth
+<span class="lineno">   24 </span>  , pipelineUpdateHistory
+<span class="lineno">   25 </span>  ) where
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, initialLoop)
+<span class="lineno">   28 </span>import QxFx0.Core.Intuition (IntuitiveState, defaultIntuitiveState)
+<span class="lineno">   29 </span>import QxFx0.Core.PipelineIO.Internal
+<span class="lineno">   30 </span>  ( PipelineIO(..)
+<span class="lineno">   31 </span>  , PipelineRuntimeMode(..)
+<span class="lineno">   32 </span>  , ShadowPolicy(..)
+<span class="lineno">   33 </span>  , ShadowResult(..)
+<span class="lineno">   34 </span>  )
+<span class="lineno">   35 </span>import QxFx0.Self.Conatus (ConatusEnergy)
+<span class="lineno">   36 </span>import QxFx0.Core.TurnPipeline.Effects
+<span class="lineno">   37 </span>  ( TurnEffectRequest(..)
+<span class="lineno">   38 </span>  , TurnEffectResult(..)
+<span class="lineno">   39 </span>  )
+<span class="lineno">   40 </span>import QxFx0.Types
+<span class="lineno">   41 </span>  ( CanonicalMoveFamily
+<span class="lineno">   42 </span>  , IllocutionaryForce
+<span class="lineno">   43 </span>  , SystemState
+<span class="lineno">   44 </span>  )
+<span class="lineno">   45 </span>import QxFx0.Types.Decision (ShadowStatus(..))
+<span class="lineno">   46 </span>import QxFx0.Types.Domain (AtomTag, NixGuardStatus(..))
+<span class="lineno">   47 </span>import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
+<span class="lineno">   48 </span>import QxFx0.Types.Recovery (LocalRecoveryPolicy, renderLocalRecoveryPolicy)
+<span class="lineno">   49 </span>import QxFx0.Types.ShadowDivergence
+<span class="lineno">   50 </span>  ( ShadowDivergence(..)
+<span class="lineno">   51 </span>  , ShadowDivergenceKind(..)
+<span class="lineno">   52 </span>  , ShadowSnapshotId(..)
+<span class="lineno">   53 </span>  , emptyShadowDivergence
+<span class="lineno">   54 </span>  )
+<span class="lineno">   55 </span>import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))
+<span class="lineno">   56 </span>import QxFx0.Types.TurnProjection (TurnProjection)
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>import Data.Sequence (Seq)
+<span class="lineno">   59 </span>import Data.Text (Text)
+<span class="lineno">   60 </span>import Data.List (sortBy)
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>pipelineRuntimeMode :: PipelineIO -&gt; PipelineRuntimeMode
+<span class="lineno">   63 </span><span class="decl"><span class="istickedoff">pipelineRuntimeMode = pioRuntimeMode</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>pipelineRuntimeModeText :: PipelineRuntimeMode -&gt; Text
+<span class="lineno">   66 </span><span class="decl"><span class="istickedoff">pipelineRuntimeModeText mode =</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">case mode of</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">RuntimeStrict -&gt; &quot;strict&quot;</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">RuntimeDegraded -&gt; &quot;degraded&quot;</span></span>
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>pipelineShadowPolicy :: PipelineIO -&gt; ShadowPolicy
+<span class="lineno">   72 </span><span class="decl"><span class="istickedoff">pipelineShadowPolicy = pioShadowPolicy</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>shadowPolicyText :: ShadowPolicy -&gt; Text
+<span class="lineno">   75 </span><span class="decl"><span class="istickedoff">shadowPolicyText policy =</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="istickedoff">case policy of</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="istickedoff">ShadowObserve -&gt; &quot;observe&quot;</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">ShadowPreferVerified -&gt; <span class="nottickedoff">&quot;prefer_verified&quot;</span></span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="istickedoff">ShadowBlockOnUnavailableOrDivergence -&gt; &quot;block_on_unavailable_or_divergence&quot;</span></span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>pipelineLocalRecoveryPolicy :: PipelineIO -&gt; LocalRecoveryPolicy
+<span class="lineno">   82 </span><span class="decl"><span class="istickedoff">pipelineLocalRecoveryPolicy = pioLocalRecoveryPolicy</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>localRecoveryPolicyText :: LocalRecoveryPolicy -&gt; Text
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">localRecoveryPolicyText = renderLocalRecoveryPolicy</span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>scheduleTurnEffects :: PipelineIO -&gt; ConatusEnergy -&gt; [(a, TurnEffectRequest)] -&gt; [(a, TurnEffectRequest)]
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">scheduleTurnEffects pio conatus requests =</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">map snd (sortBy compareScheduled scoredRequests)</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">scoredRequests =</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">zipWith</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">(\idx request -&gt; ((pioConatusPrior pio conatus (snd request), idx), request))</span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">[(0 :: Int)..]</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">requests</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">compareScheduled ((priority1, idx1), _) ((priority2, idx2), _) =</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">compare priority2 priority1 &lt;&gt; compare idx1 idx2</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>resolveTurnEffect :: PipelineIO -&gt; TurnEffectRequest -&gt; IO TurnEffectResult
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">resolveTurnEffect pio request = pioInterpreter pio request</span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>resolveTurnEffects :: PipelineIO -&gt; [TurnEffectRequest] -&gt; IO [TurnEffectResult]
+<span class="lineno">  103 </span><span class="decl"><span class="nottickedoff">resolveTurnEffects pio = mapM (resolveTurnEffect pio)</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>runShadowVerification :: PipelineIO -&gt; CanonicalMoveFamily -&gt; IllocutionaryForce -&gt; [AtomTag] -&gt; IO ShadowResult
+<span class="lineno">  106 </span><span class="decl"><span class="nottickedoff">runShadowVerification pio family force atomTags = do</span>
+<span class="lineno">  107 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio (TurnReqShadow family force atomTags)</span>
+<span class="lineno">  108 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="nottickedoff">TurnResShadow datalogVerdict shadowStatus divergence snapshotId diagnostics -&gt;</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="nottickedoff">pure ShadowResult</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="nottickedoff">{ srDatalogVerdict = datalogVerdict</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="nottickedoff">, srStatus = shadowStatus</span>
+<span class="lineno">  113 </span><span class="spaces">        </span><span class="nottickedoff">, srDivergence = divergence</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="nottickedoff">, srSnapshotId = snapshotId</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="nottickedoff">, srDiagnostics = diagnostics</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="nottickedoff">}</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt;</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="nottickedoff">pure ShadowResult</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="nottickedoff">{ srDatalogVerdict = Nothing</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="nottickedoff">, srStatus = ShadowUnavailable</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="nottickedoff">, srDivergence = emptyShadowDivergence { sdKind = ShadowBridgeSkew }</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="nottickedoff">, srSnapshotId = ShadowSnapshotId &quot;shadow:unexpected_effect&quot;</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="nottickedoff">, srDiagnostics = [&quot;unexpected_shadow_effect_result&quot;]</span>
+<span class="lineno">  124 </span><span class="spaces">        </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>verifyPipelineAgda :: PipelineIO -&gt; IO AgdaVerificationStatus
+<span class="lineno">  127 </span><span class="decl"><span class="nottickedoff">verifyPipelineAgda pio = do</span>
+<span class="lineno">  128 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio TurnReqAgdaVerify</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="nottickedoff">TurnResAgdaVerify agdaStatus -&gt; pure agdaStatus</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; pure AgdaInvalid</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>savePipelineState :: PipelineIO -&gt; SystemState -&gt; Text -&gt; Maybe TurnProjection -&gt; IO (Either PersistenceDiagnostic SystemState)
+<span class="lineno">  134 </span><span class="decl"><span class="nottickedoff">savePipelineState pio ss sid mProj = do</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio (TurnReqSaveState ss sid mProj)</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="nottickedoff">TurnResSaveState saved -&gt; pure saved</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; pure (Left (PdSaveFailed StageUnknown (Just &quot;savePipelineState&quot;) (Just &quot;unexpected_save_state_effect_result&quot;)))</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>checkpointPipelineState :: PipelineIO -&gt; Int -&gt; IO ()
+<span class="lineno">  141 </span><span class="decl"><span class="nottickedoff">checkpointPipelineState pio turnCount = do</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="nottickedoff">_ &lt;- resolveTurnEffect pio (TurnReqCheckpoint turnCount)</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="nottickedoff">pure ()</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>resolvePipelineNixPath :: PipelineIO -&gt; IO (Maybe FilePath)
+<span class="lineno">  146 </span><span class="decl"><span class="nottickedoff">resolvePipelineNixPath _ = pure Nothing</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>runPipelineNixCheck :: PipelineIO -&gt; Maybe FilePath -&gt; Text -&gt; Double -&gt; Double -&gt; IO NixGuardStatus
+<span class="lineno">  149 </span><span class="decl"><span class="nottickedoff">runPipelineNixCheck pio _ concept agency tension = do</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio (TurnReqNixGuard concept agency tension)</span>
+<span class="lineno">  151 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="nottickedoff">TurnResNixGuard nixStatus -&gt; pure nixStatus</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; pure (Blocked &quot;nix_guard_internal_error&quot;)</span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>modifyPipelineConsciousLoop :: PipelineIO -&gt; (forall a. (ConsciousnessLoop -&gt; IO (ConsciousnessLoop, a)) -&gt; IO a)
+<span class="lineno">  156 </span><span class="decl"><span class="nottickedoff">modifyPipelineConsciousLoop = pioModifyConsciousLoop</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>modifyPipelineIntuition :: PipelineIO -&gt; (forall a. (IntuitiveState -&gt; IO (IntuitiveState, a)) -&gt; IO a)
+<span class="lineno">  159 </span><span class="decl"><span class="nottickedoff">modifyPipelineIntuition = pioModifyIntuition</span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>checkPipelineApiHealth :: PipelineIO -&gt; IO Bool
+<span class="lineno">  162 </span><span class="decl"><span class="nottickedoff">checkPipelineApiHealth pio = do</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="nottickedoff">result &lt;- resolveTurnEffect pio TurnReqApiHealth</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="nottickedoff">case result of</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="nottickedoff">TurnResApiHealth ok -&gt; pure ok</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="nottickedoff">_ -&gt; pure False</span></span>
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>pipelineUpdateHistory :: PipelineIO -&gt; Text -&gt; Seq Text -&gt; Seq Text
+<span class="lineno">  169 </span><span class="decl"><span class="istickedoff">pipelineUpdateHistory pio = pioUpdateHistory pio</span></span>
+
+</pre>
+</body>
+</html>

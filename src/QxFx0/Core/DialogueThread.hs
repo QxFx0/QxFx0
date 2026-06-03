@@ -15,10 +15,12 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Input.Model
 import QxFx0.Types.State.DialogueDevelopment
 import QxFx0.Types.State.Dialogue
+import QxFx0.Types.State.Perspective (PerspectiveScope(..))
 
 deriveDialogueThread :: DialogueThread -> DialogueCommitmentLedger -> DialogueState -> UtteranceSemanticFrame -> DialogueThread
 deriveDialogueThread previous ledger dialogue frame =
   let focus = firstNonEmpty [usfTopic frame, usfFocus frame, dsLastTopic dialogue, dtCurrentFocus previous]
+      structuralScope = deriveStructuralScope previous ledger frame focus
       activeQuestion = if usfSpeechAct frame == ActAsk then Just (usfRawText frame) else dtActiveQuestion previous
       userGoal = firstNonEmptyMaybe (maybeToList (usfTarget frame) ++ [usfTopic frame] ++ maybeToList (dtUserGoal previous))
       intentHypothesis = Just (renderSpeechAct (usfSpeechAct frame))
@@ -36,11 +38,37 @@ deriveDialogueThread previous ledger dialogue frame =
       , dtOpenLoops = openLoops
       , dtAcceptedTerms = acceptedTerms
       , dtTopicConfidence = topicConfidence
-      , dtResistance = resistance
-      , dtClarifiedItems = clarifiedItems
-      , dtUnclarifiedItems = unclarifiedItems
-      , dtPhaseScope = focus
-      }
+       , dtResistance = resistance
+       , dtClarifiedItems = clarifiedItems
+       , dtUnclarifiedItems = unclarifiedItems
+       , dtStructuralScope = structuralScope
+       , dtPhaseScope = focus
+       }
+
+deriveStructuralScope :: DialogueThread -> DialogueCommitmentLedger -> UtteranceSemanticFrame -> Text -> Maybe PerspectiveScope
+deriveStructuralScope previous ledger frame focus =
+  case firstNonEmptyMaybe [usfTopic frame, usfFocus frame, focus] of
+    Nothing -> dtStructuralScope previous
+    Just scopeText ->
+      case dtStructuralScope previous of
+        Just priorScope
+          | lockedScope && normalizeScopeKey (scopeTextOf priorScope) /= normalizeScopeKey scopeText ->
+              Just priorScope
+        _ -> Just (ScopeTopic scopeText)
+  where
+    lockedScope =
+      any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) (dclItems ledger)
+        || usfSpeechAct frame == ActAsk
+
+    scopeTextOf :: PerspectiveScope -> Text
+    scopeTextOf scope =
+      case scope of
+        ScopeTopic topic -> topic
+        ScopeTheme theme -> theme
+        ScopeCluster cluster -> cluster
+
+    normalizeScopeKey :: Text -> Text
+    normalizeScopeKey = T.unwords . T.words . T.toLower . T.strip
 
 deriveDialogueCommitmentLedger :: DialogueCommitmentLedger -> UtteranceSemanticFrame -> DialogueCommitmentLedger
 deriveDialogueCommitmentLedger (DialogueCommitmentLedger existing) frame =

@@ -12,7 +12,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.TruthContract (capCommitmentStrengthByTruthContract)
-import QxFx0.Lexicon.GfMap (lookupTopicGfLexemeId)
+import QxFx0.Lexicon.GfMap (topicToGfLexemeDecision)
 import QxFx0.Core.SensePlan (familySenseBundle)
 import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
@@ -21,6 +21,7 @@ import QxFx0.Core.TurnPlanning.Modulation
   )
 import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
 import QxFx0.Types
+import QxFx0.Types.State.Perspective (PerspectiveScope(..), renderPerspectiveScope)
 
 buildRMP :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
 buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailable =
@@ -38,9 +39,10 @@ buildRMPWithTruthContract truthStatus family ledger phase thread frame senseVect
         let topic0 = topicFromFrame thread ledger phase frame topic
             anchorTxt = unSemanticNodeId (svAnchor senseVector)
         in if T.null (T.strip topic0) then anchorTxt else topic0
+      plannedScope = dialogueStructuralScope phase thread ledger plannedTopic
       primaryClaim = primaryClaimFromFrame plannedTruthStatus frame plannedTopic
       baseAst = claimAstFromFrame plannedTruthStatus frame plannedTopic ego
-      primaryClaimAst = fmap (applyStanceToAst feralStance) baseAst
+      primaryClaimAst = fmap (applyStanceToAst finalStance) baseAst
       contrastAxis =
         let axis0 = contrastAxisFromFrame frame
         in if T.null axis0 then senseAxisSummary (rspPreservedAxes sensePlan) else axis0
@@ -55,8 +57,9 @@ buildRMPWithTruthContract truthStatus family ledger phase thread frame senseVect
         , rmpTopic = plannedTopic
         , rmpPrimaryClaim = primaryClaim
         , rmpPrimaryClaimAst = primaryClaimAst
+        , rmpScope = plannedScope
         , rmpContrastAxis = contrastAxis
-        , rmpImplicationDirection = "forward"
+        , rmpImplicationDirection = implicationDirectionFromScope plannedScope plannedTruthStatus family'
         , rmpProvenance = BuiltClaim
         , rmpTruthContractStatus = plannedTruthStatus
         , rmpCommitmentStrength = capCommitmentStrengthByTruthContract plannedTruthStatus (epistemicConfidence finalEpistemic)
@@ -127,7 +130,7 @@ clampTopicToDialogueScope :: DialoguePhase -> DialogueThread -> DialogueCommitme
 clampTopicToDialogueScope phase thread ledger proposedTopic =
   let threadFocus = T.strip (dtCurrentFocus thread)
       scopeFocus = T.strip (dtPhaseScope thread)
-      canonicalFocus = nonEmptyOr scopeFocus threadFocus
+      canonicalFocus = structuralScopeText thread (nonEmptyOr scopeFocus threadFocus)
       normalizedProposed = T.strip proposedTopic
       inLockedPhase = phase `elem` [Clarifying, Repairing, Grounding, Contesting]
       hasOpenLedger = any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) (dclItems ledger)
@@ -135,15 +138,42 @@ clampTopicToDialogueScope phase thread ledger proposedTopic =
         not (T.null canonicalFocus)
           && not (T.null normalizedProposed)
           && canonicalFocus /= normalizedProposed
-          && not (canonicalFocus `T.isInfixOf` normalizedProposed)
-          && not (normalizedProposed `T.isInfixOf` canonicalFocus)
+          && normalizeScopeKey canonicalFocus /= normalizeScopeKey normalizedProposed
   in if T.null canonicalFocus
        then normalizedProposed
        else if T.null normalizedProposed
          then canonicalFocus
          else if (inLockedPhase || hasOpenLedger) && topicEscapesScope
-           then canonicalFocus
-           else normalizedProposed
+            then canonicalFocus
+            else normalizedProposed
+
+dialogueStructuralScope :: DialoguePhase -> DialogueThread -> DialogueCommitmentLedger -> Text -> Maybe PerspectiveScope
+dialogueStructuralScope phase thread ledger topicText
+  | T.null normalizedTopic = dtStructuralScope thread
+  | lockedPhase || hasOpenLedger = Just (ScopeTopic scopedTopic)
+  | otherwise = Just (ScopeTopic normalizedTopic)
+  where
+    normalizedTopic = T.strip topicText
+    scopedTopic = structuralScopeText thread normalizedTopic
+    lockedPhase = phase `elem` [Clarifying, Repairing, Grounding, Contesting]
+    hasOpenLedger = any ((`elem` [CsUnresolved, CsContested, CsSuspended]) . dcStatus) (dclItems ledger)
+
+structuralScopeText :: DialogueThread -> Text -> Text
+structuralScopeText thread fallback =
+  case dtStructuralScope thread of
+    Just (ScopeTopic topic) -> nonEmptyOr topic fallback
+    Just (ScopeTheme theme) -> nonEmptyOr theme fallback
+    Just (ScopeCluster cluster) -> nonEmptyOr cluster fallback
+    Nothing -> fallback
+
+normalizeScopeKey :: Text -> Text
+normalizeScopeKey = T.unwords . T.words . T.toLower . T.strip
+
+implicationDirectionFromScope :: Maybe PerspectiveScope -> TruthContractStatus -> CanonicalMoveFamily -> Text
+implicationDirectionFromScope mScope truthStatus family
+  | truthStatus `notElem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = "bounded"
+  | family `elem` [CMNextStep, CMDeepen, CMPurpose] = maybe "bounded" (const "forward") mScope
+  | otherwise = "bounded"
 
 primaryClaimFromFrame :: TruthContractStatus -> InputPropositionFrame -> Text -> Text
 primaryClaimFromFrame truthStatus frame fallback =
@@ -195,7 +225,8 @@ claimAstFromFrame truthStatus frame fallback ego =
   let subject0 = nonEmptyOr (ipfSemanticSubject frame) fallback
       scopedSubject = if truthStatus `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] then subject0 else fallback
       topicNP = mkTopicNP scopedSubject
-      familyFallback = fallbackAstForFamily (ipfCanonicalFamily frame) topicNP
+      familyFallback = markDefaultLexemeFallback scopedSubject (fallbackAstForFamily (ipfCanonicalFamily frame) topicNP)
+      withTopicFallback = markDefaultLexemeFallback scopedSubject
   in case propositionTypeFromText (ipfPropositionType frame) of
       Just DialogueInvitationQ ->
         let gfMod = if egoTension ego > 0.5 then ModStrictly else ModFirst
@@ -203,17 +234,17 @@ claimAstFromFrame truthStatus frame fallback ego =
             gfAction = if egoAgency ego > 0.6
                        then ActDefine "granitsa_N"
                        else ActMaintain gfNum "ramka_N"
-        in Just (MoveInvite topicNP gfMod gfAction)
+        in Just (withTopicFallback (MoveInvite topicNP gfMod gfAction))
       Just ConceptKnowledgeQ ->
-        Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
+        Just (withTopicFallback (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N")))
       Just WorldCauseQ ->
-        Just (MoveCause topicNP MechParse)
+        Just (withTopicFallback (MoveCause topicNP MechParse))
       Just PurposeQ ->
-        Just (MovePurpose topicNP)
+        Just (withTopicFallback (MovePurpose topicNP))
       Just SelfStateQ ->
         Just MoveSelfState
       Just ComparisonPlausibilityQ ->
-        Just (buildComparisonAst frame topicNP)
+        Just (withTopicFallback (buildComparisonAst frame topicNP))
       Just OperationalStatusQ ->
         Just MoveOperationalStatus
       Just OperationalCauseQ ->
@@ -225,65 +256,74 @@ claimAstFromFrame truthStatus frame fallback ego =
       Just GenerativePrompt ->
         Just MoveGenerativeThought
       Just ContemplativeTopic ->
-        Just (MoveContemplative topicNP)
+        Just (withTopicFallback (MoveContemplative topicNP))
       Just ContactSignal ->
-        Just (MoveContact topicNP)
+        Just (withTopicFallback (MoveContact topicNP))
       Just ExploratoryPrompt ->
         Just familyFallback
       Just AffectiveQ ->
-        Just (MoveContact topicNP)
+        Just (withTopicFallback (MoveContact topicNP))
       Just ReflectiveQ ->
-        Just (MoveReflect topicNP)
+        Just (withTopicFallback (MoveReflect topicNP))
       Just DefinitionalQ ->
-        Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
+        Just (withTopicFallback (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N")))
       Just DistinctionQ ->
-        Just (buildComparisonAst frame topicNP)
+        Just (withTopicFallback (buildComparisonAst frame topicNP))
       Just GroundQ ->
-        Just (MoveGround topicNP)
+        Just (withTopicFallback (MoveGround topicNP))
       Just SelfDescQ ->
-        Just (MoveDescribe topicNP)
+        Just (withTopicFallback (MoveDescribe topicNP))
       Just HypotheticalQ ->
-        Just (MoveHypothesis topicNP)
+        Just (withTopicFallback (MoveHypothesis topicNP))
       Just RepairSignal ->
         Just MoveMisunderstanding
       Just AnchorSignal ->
-        Just (MoveAnchor topicNP)
+        Just (withTopicFallback (MoveAnchor topicNP))
       Just ClarifyQ ->
-        Just (MoveClarify topicNP)
+        Just (withTopicFallback (MoveClarify topicNP))
       Just DeepenQ ->
-        Just (MoveDeepen topicNP)
+        Just (withTopicFallback (MoveDeepen topicNP))
       Just ConfrontQ ->
-        Just (MoveConfront topicNP)
+        Just (withTopicFallback (MoveConfront topicNP))
       Just NextStepQ ->
-        Just (MoveNextStepLocal topicNP)
+        Just (withTopicFallback (MoveNextStepLocal topicNP))
       Just PlainAssert ->
-        Just (MoveGround topicNP)
+        Just (withTopicFallback (MoveGround topicNP))
       Just EpistemicQ ->
-        Just (MoveClarify topicNP)
+        Just (withTopicFallback (MoveClarify topicNP))
       Just RequestQ ->
-        Just (MoveClarify topicNP)
+        Just (withTopicFallback (MoveClarify topicNP))
       Just EvaluationQ ->
-        Just (buildComparisonAst frame topicNP)
+        Just (withTopicFallback (buildComparisonAst frame topicNP))
       Just NarrativeQ ->
-        Just (MoveDescribe topicNP)
+        Just (withTopicFallback (MoveDescribe topicNP))
       Just SelfKnowledgeQ ->
-        Just (MoveDescribe topicNP)
+        Just (withTopicFallback (MoveDescribe topicNP))
       Just LocationFormationQ ->
-        Just (MoveGround topicNP)
+        Just (withTopicFallback (MoveGround topicNP))
       Nothing ->
         Just familyFallback
 
 mkTopicNP :: Text -> GfNP
 mkTopicNP topic =
-  MkNP $ case lookupTopicGfLexemeId topic of
-    Just funId -> funId
-    Nothing -> "ponyatie_N"
+  MkNP (fst (topicToGfLexemeDecision topic))
+
+markDefaultLexemeFallback :: Text -> ClaimAst -> ClaimAst
+markDefaultLexemeFallback topic ast =
+  case topicToGfLexemeDecision topic of
+    (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
+    _ -> ast
 
 buildComparisonAst :: InputPropositionFrame -> GfNP -> ClaimAst
 buildComparisonAst frame fallbackTopic =
   case ipfSemanticCandidates frame of
     left : right : _ ->
-      MoveDistinguish (mkTopicNP left) (mkTopicNP right)
+      let ast = MoveDistinguish (mkTopicNP left) (mkTopicNP right)
+      in case topicToGfLexemeDecision left of
+           (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
+           _ -> case topicToGfLexemeDecision right of
+                  (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
+                  _ -> ast
     _ ->
       MoveCompare fallbackTopic (MkNP "ponyatie_N")
 
@@ -350,9 +390,14 @@ buildRCP family meaningPlan =
         if family == CMRepair
           then MoveAcknowledgeRupture
           else familyToCoreMove family
-    , rcpContinuation = senseContinuationMove (rspChosenOperator (rmpSensePlan meaningPlan))
+    , rcpContinuation = continuationMoveForScope meaningPlan
     , rcpStyle = styleForStance (rmpStance meaningPlan)
     }
+
+continuationMoveForScope :: ResponseMeaningPlan -> ContentMove
+continuationMoveForScope meaningPlan
+  | rmpImplicationDirection meaningPlan /= "forward" = MoveStateBoundary
+  | otherwise = senseContinuationMove (rspChosenOperator (rmpSensePlan meaningPlan))
 
 senseContinuationMove :: SenseOperator -> ContentMove
 senseContinuationMove op = case op of

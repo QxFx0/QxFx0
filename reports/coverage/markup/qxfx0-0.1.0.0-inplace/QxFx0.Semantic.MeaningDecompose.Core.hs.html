@@ -1,0 +1,55 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>module QxFx0.Semantic.MeaningDecompose.Core
+<span class="lineno">    3 </span>  ( decomposedFacts
+<span class="lineno">    4 </span>  , factBySubject
+<span class="lineno">    5 </span>  , heartFacts
+<span class="lineno">    6 </span>  , bloodFacts
+<span class="lineno">    7 </span>  ) where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   10 </span>import Data.Text (Text)
+<span class="lineno">   11 </span>import qualified Data.Text as T
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import QxFx0.Semantic.MeaningAtom (FactAtoms)
+<span class="lineno">   14 </span>import QxFx0.Semantic.MeaningDecompose.Domains
+<span class="lineno">   15 </span>  ( heartPump
+<span class="lineno">   16 </span>  , aorta
+<span class="lineno">   17 </span>  , vessels
+<span class="lineno">   18 </span>  , bloodGroups
+<span class="lineno">   19 </span>  , bloodVolume
+<span class="lineno">   20 </span>  , decomposedFacts
+<span class="lineno">   21 </span>  , heartFacts
+<span class="lineno">   22 </span>  , bloodFacts
+<span class="lineno">   23 </span>  )
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>factBySubject :: Text -&gt; Maybe FactAtoms
+<span class="lineno">   26 </span><span class="decl"><span class="istickedoff">factBySubject key =</span>
+<span class="lineno">   27 </span><span class="spaces">  </span><span class="istickedoff">case M.lookup (T.toLower (T.strip key)) decomposedFacts of</span>
+<span class="lineno">   28 </span><span class="spaces">    </span><span class="istickedoff">Just fa -&gt; Just fa</span>
+<span class="lineno">   29 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   30 </span><span class="spaces">      </span><span class="istickedoff">case M.lookup (T.strip key) decomposedFacts of</span>
+<span class="lineno">   31 </span><span class="spaces">        </span><span class="istickedoff">Just fa -&gt; <span class="nottickedoff">Just fa</span></span>
+<span class="lineno">   32 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; Nothing</span></span>
+
+</pre>
+</body>
+</html>

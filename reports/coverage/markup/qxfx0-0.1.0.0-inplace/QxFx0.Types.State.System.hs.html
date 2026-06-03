@@ -1,0 +1,741 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>{-| Canonical top-level persisted system state plus compatibility accessors. -}
+<span class="lineno">    7 </span>module QxFx0.Types.State.System
+<span class="lineno">    8 </span>  ( SystemState(..)
+<span class="lineno">    9 </span>  , PersistenceDomain(..)
+<span class="lineno">   10 </span>  , PersistenceDomainClass(..)
+<span class="lineno">   11 </span>  , StatePersistenceSnapshot(..)
+<span class="lineno">   12 </span>  , persistenceDomainClass
+<span class="lineno">   13 </span>  , persistenceDomainCanonicalFields
+<span class="lineno">   14 </span>  , persistenceDomainProjectionFields
+<span class="lineno">   15 </span>  , persistenceDomainTransientFields
+<span class="lineno">   16 </span>  , preparePersistenceSnapshot
+<span class="lineno">   17 </span>  , persistedCanonicalState
+<span class="lineno">   18 </span>  , runtimeContinuationState
+<span class="lineno">   19 </span>  , sanitizeForPersistence
+<span class="lineno">   20 </span>  , ssHistory
+<span class="lineno">   21 </span>  , ssRawInputHistory
+<span class="lineno">   22 </span>  , ssTurnCount
+<span class="lineno">   23 </span>  , ssLastFamily
+<span class="lineno">   24 </span>  , ssLastTopic
+<span class="lineno">   25 </span>  , ssLastForce
+<span class="lineno">   26 </span>  , ssLastLayer
+<span class="lineno">   27 </span>  , ssLastEmbedding
+<span class="lineno">   28 </span>  , ssConsecutiveReflect
+<span class="lineno">   29 </span>  , ssRecentFamilies
+<span class="lineno">   30 </span>  , ssActiveScene
+<span class="lineno">   31 </span>  , ssUserState
+<span class="lineno">   32 </span>  , ssEgo
+<span class="lineno">   33 </span>  , ssIdentityClaims
+<span class="lineno">   34 </span>  , ssOrbitalMemory
+<span class="lineno">   35 </span>  , ssLastGuardReport
+<span class="lineno">   36 </span>  , ssTrace
+<span class="lineno">   37 </span>  , ssMeaningGraph
+<span class="lineno">   38 </span>  , ssDiscourse
+<span class="lineno">   39 </span>  , ssSemanticConfig
+<span class="lineno">   40 </span>  , ssKernelPulse
+<span class="lineno">   41 </span>  , ssBlockedConcepts
+<span class="lineno">   42 </span>  , ssClusters
+<span class="lineno">   43 </span>  , ssSemanticAnchor
+<span class="lineno">   44 </span>  , ssLastTurnDecision
+<span class="lineno">   45 </span>  , ssIntuitConfidence
+<span class="lineno">   46 </span>  , ssDreamState
+<span class="lineno">   47 </span>  , ssDreamAxiom
+<span class="lineno">   48 </span>  , ssIntuitionState
+<span class="lineno">   49 </span>  , ssLastSalienceBias
+<span class="lineno">   50 </span>  , ssHolisticStreak
+<span class="lineno">   51 </span>  , ssRecentNarrativeSuccess
+<span class="lineno">   52 </span>  , ssSalienceWeights
+<span class="lineno">   53 </span>  , ssFieldHeuristics
+<span class="lineno">   54 </span>  , ssLearningNeedState
+<span class="lineno">   55 </span>  , ssGovernanceRuntimeFault
+<span class="lineno">   56 </span>  , appendAdaptiveMutationRecord
+<span class="lineno">   57 </span>  , appendAdaptiveMutationRecords
+<span class="lineno">   58 </span>  , commitGovernedPerspectiveProjection
+<span class="lineno">   59 </span>  , appendGovernanceEventRecord
+<span class="lineno">   60 </span>  , emptySystemState
+<span class="lineno">   61 </span>  ) where
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   64 </span>import Data.Aeson
+<span class="lineno">   65 </span>  ( FromJSON(..)
+<span class="lineno">   66 </span>  , ToJSON(..)
+<span class="lineno">   67 </span>  , object
+<span class="lineno">   68 </span>  , withObject
+<span class="lineno">   69 </span>  , (.:)
+<span class="lineno">   70 </span>  , (.:?)
+<span class="lineno">   71 </span>  , (.!=)
+<span class="lineno">   72 </span>  , (.=)
+<span class="lineno">   73 </span>  )
+<span class="lineno">   74 </span>import qualified Data.Aeson.Key as AK
+<span class="lineno">   75 </span>import qualified Data.Aeson.KeyMap as KM
+<span class="lineno">   76 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   77 </span>import Data.Sequence (Seq)
+<span class="lineno">   78 </span>import qualified Data.Sequence as Seq
+<span class="lineno">   79 </span>import Control.Monad (when)
+<span class="lineno">   80 </span>import Data.Text (Text)
+<span class="lineno">   81 </span>import qualified Data.Text as T
+<span class="lineno">   82 </span>import GHC.Generics (Generic)
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>import QxFx0.Types.Decision (DialogueOutputMode(..), dialogueOutputModeText, parseDialogueOutputMode, SemanticAnchor, TurnDecision)
+<span class="lineno">   85 </span>import QxFx0.Types.Domain
+<span class="lineno">   86 </span>  ( AtomTrace
+<span class="lineno">   87 </span>  , CanonicalMoveFamily
+<span class="lineno">   88 </span>  , ClusterDef
+<span class="lineno">   89 </span>  , Embedding
+<span class="lineno">   90 </span>  , IdentityClaimRef
+<span class="lineno">   91 </span>  , IllocutionaryForce
+<span class="lineno">   92 </span>  , MorphologyData(..)
+<span class="lineno">   93 </span>  , SemanticLayer
+<span class="lineno">   94 </span>  , SemanticScene
+<span class="lineno">   95 </span>  , UserState
+<span class="lineno">   96 </span>  )
+<span class="lineno">   97 </span>import QxFx0.Types.Dream (DreamState(..))
+<span class="lineno">   98 </span>import QxFx0.Types.IdentityGuard (IdentityGuardReport)
+<span class="lineno">   99 </span>import QxFx0.Types.Intuition (IntuitiveState, defaultIntuitiveState)
+<span class="lineno">  100 </span>import QxFx0.Types.Observability
+<span class="lineno">  101 </span>  ( KernelPulse
+<span class="lineno">  102 </span>  , MeaningGraph
+<span class="lineno">  103 </span>  , ObservabilityState
+<span class="lineno">  104 </span>  , TruthContractStatus(..)
+<span class="lineno">  105 </span>  , emptyObservabilityState
+<span class="lineno">  106 </span>  )
+<span class="lineno">  107 </span>import QxFx0.Types.Orbital (OrbitalMemory)
+<span class="lineno">  108 </span>import QxFx0.Types.State.Dialogue
+<span class="lineno">  109 </span>  ( DialogueState(..)
+<span class="lineno">  110 </span>  , emptyDialogueState
+<span class="lineno">  111 </span>  )
+<span class="lineno">  112 </span>import QxFx0.Types.State.AdaptiveMutation
+<span class="lineno">  113 </span>  ( AdaptiveMutationRecord
+<span class="lineno">  114 </span>  )
+<span class="lineno">  115 </span>import QxFx0.Types.State.DialogueDevelopment
+<span class="lineno">  116 </span>  ( BeliefStore
+<span class="lineno">  117 </span>  , DialogueCommitmentLedger
+<span class="lineno">  118 </span>  , DialoguePhase(..)
+<span class="lineno">  119 </span>  , DialogueThread
+<span class="lineno">  120 </span>  , DialogueOutcomeLearningState
+<span class="lineno">  121 </span>  , SpeechPolicyState
+<span class="lineno">  122 </span>  , emptyDialogueCommitmentLedger
+<span class="lineno">  123 </span>  , emptyDialogueThread
+<span class="lineno">  124 </span>  , emptyBeliefStore
+<span class="lineno">  125 </span>  , emptyDialogueOutcomeLearningState
+<span class="lineno">  126 </span>  , emptySpeechPolicyState
+<span class="lineno">  127 </span>  )
+<span class="lineno">  128 </span>import QxFx0.Types.State.Perspective
+<span class="lineno">  129 </span>  ( PerspectiveRegistry
+<span class="lineno">  130 </span>  , emptyPerspectiveRegistry
+<span class="lineno">  131 </span>  )
+<span class="lineno">  132 </span>import QxFx0.Types.State.Governance
+<span class="lineno">  133 </span>  ( GovernanceEvent
+<span class="lineno">  134 </span>  , GovernanceProjection(..)
+<span class="lineno">  135 </span>  , GovernanceRuntimeFault
+<span class="lineno">  136 </span>  , ProjectionMeta(..)
+<span class="lineno">  137 </span>  , appendGovernanceEventToHistory
+<span class="lineno">  138 </span>  , currentProjectionVersion
+<span class="lineno">  139 </span>  , currentReducerVersion
+<span class="lineno">  140 </span>  )
+<span class="lineno">  141 </span>import QxFx0.Types.State.Discourse
+<span class="lineno">  142 </span>  ( DiscourseState(..)
+<span class="lineno">  143 </span>  , emptyDiscourseState
+<span class="lineno">  144 </span>  , TurnMemory(..)
+<span class="lineno">  145 </span>  , recomputeDiscourse
+<span class="lineno">  146 </span>  )
+<span class="lineno">  147 </span>import QxFx0.Types.SemanticConfig
+<span class="lineno">  148 </span>  ( SemanticConfig
+<span class="lineno">  149 </span>  , defaultSemanticConfig
+<span class="lineno">  150 </span>  )
+<span class="lineno">  151 </span>import QxFx0.Types.State.Identity
+<span class="lineno">  152 </span>  ( EgoState
+<span class="lineno">  153 </span>  , IdentityState(..)
+<span class="lineno">  154 </span>  , emptyIdentityState
+<span class="lineno">  155 </span>  )
+<span class="lineno">  156 </span>import QxFx0.Types.State.Semantic
+<span class="lineno">  157 </span>  ( SemanticState(..)
+<span class="lineno">  158 </span>  , emptySemanticState
+<span class="lineno">  159 </span>  )
+<span class="lineno">  160 </span>import QxFx0.Types.Vec (zeroVec)
+<span class="lineno">  161 </span>import QxFx0.Types.Dream (emptyDreamState)
+<span class="lineno">  162 </span>import QxFx0.Self.Essence (Essence, emptyEssence)
+<span class="lineno">  163 </span>import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
+<span class="lineno">  164 </span>import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
+<span class="lineno">  165 </span>import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
+<span class="lineno">  166 </span>import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
+<span class="lineno">  167 </span>import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
+<span class="lineno">  168 </span>import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
+<span class="lineno">  169 </span>import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
+<span class="lineno">  170 </span>import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
+<span class="lineno">  171 </span>import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>data PersistenceDomain
+<span class="lineno">  174 </span>  = PdCoreConversation
+<span class="lineno">  175 </span>  | PdAdaptiveLearning
+<span class="lineno">  176 </span>  | PdDialogueDevelopment
+<span class="lineno">  177 </span>  | PdGovernanceCanonical
+<span class="lineno">  178 </span>  | PdGovernanceDerived
+<span class="lineno">  179 </span>  | PdSessionTransient
+<span class="lineno">  180 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>data PersistenceDomainClass
+<span class="lineno">  183 </span>  = PdcCanonicalTruth
+<span class="lineno">  184 </span>  | PdcRebuildableProjection
+<span class="lineno">  185 </span>  | PdcRuntimeTransient
+<span class="lineno">  186 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>data SystemState = SystemState
+<span class="lineno">  189 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">ssDialogue</span></span></span> :: !DialogueState
+<span class="lineno">  190 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssIdentity</span></span></span> :: !IdentityState
+<span class="lineno">  191 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssSemantic</span></span></span> :: !SemanticState
+<span class="lineno">  192 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssSessionId</span></span></span> :: !Text
+<span class="lineno">  193 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssOutputMode</span></span></span> :: !DialogueOutputMode
+<span class="lineno">  194 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssMorphology</span></span></span> :: !MorphologyData
+<span class="lineno">  195 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssObservability</span></span></span> :: !ObservabilityState
+<span class="lineno">  196 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssEssence</span></span></span> :: !Essence
+<span class="lineno">  197 </span>    -- ^ Phase 9: essence-selection trajectory accumulator.
+<span class="lineno">  198 </span>    --   Carries the uncommitted (or committed) 'Essence' across
+<span class="lineno">  199 </span>    --   turns.  Initialised to 'emptyEssence'.
+<span class="lineno">  200 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssSalienceWeights</span></span></span> :: !SalienceWeights
+<span class="lineno">  201 </span>    -- ^ Phase B: mutable salience weights for post-commitment
+<span class="lineno">  202 </span>    --   bounded self-tuning.  Initialised to 'defaultSalienceWeights'.
+<span class="lineno">  203 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssFieldHeuristics</span></span></span> :: !FieldHeuristics
+<span class="lineno">  204 </span>    -- ^ Phase B: mutable field heuristics for post-commitment
+<span class="lineno">  205 </span>    --   bounded self-tuning.  Initialised to 'defaultFieldHeuristics'.
+<span class="lineno">  206 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssShadowVetoState</span></span></span> :: !ShadowVetoState
+<span class="lineno">  207 </span>    -- ^ WP2 (GAP2): bounded shadow-veto counter and window anchor.
+<span class="lineno">  208 </span>    --   Tracks gate-trigger count within a sliding window to prevent
+<span class="lineno">  209 </span>    --   infinite shadow-verdict loops.  Initialised to
+<span class="lineno">  210 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssProvisionalAtoms</span></span></span> :: ![ProvisionalAtom]
+<span class="lineno">  211 </span>    -- ^ WP3 (GAP3): provisional-atom quarantine for ontology accretion.
+<span class="lineno">  212 </span>    --   Atoms observed from user input that do not yet match canonical
+<span class="lineno">  213 </span>    --   clusters are held here until they meet promotion criteria or
+<span class="lineno">  214 </span>    --   decay.  Initialised to '[]'.
+<span class="lineno">  215 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssLearningNeedState</span></span></span> :: !LearningNeedState
+<span class="lineno">  216 </span>    -- ^ WP1: endogenous learning diagnostic drive state.
+<span class="lineno">  217 </span>    --   Tracks persistent deficit patterns (salience calibration,
+<span class="lineno">  218 </span>    --   keyword enrichment, lexicon extension) across turns.
+<span class="lineno">  219 </span>    --   Initialised to 'emptyLearningNeedState'.
+<span class="lineno">  220 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssGuardrailState</span></span></span> :: !GuardrailState
+<span class="lineno">  221 </span>    -- ^ WP5: guardrail counters for rate limit, circuit breaker,
+<span class="lineno">  222 </span>    --   and quarantine.  Initialised to 'emptyGuardrailState'.
+<span class="lineno">  223 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssCalibrationLog</span></span></span> :: !CalibrationLog
+<span class="lineno">  224 </span>    -- ^ WP4: versioned calibration ledger (accepted/rolled-back
+<span class="lineno">  225 </span>    --   proposals).  Initialised to 'emptyCalibrationLog'.
+<span class="lineno">  226 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssKnowledgeTree</span></span></span> :: !KnowledgeTree
+<span class="lineno">  227 </span>    -- ^ Phase 7: rooted knowledge tree anchored in the current
+<span class="lineno">  228 </span>    --   EssenceCommitment.  Branches keyed by reconcile rule;
+<span class="lineno">  229 </span>    --   fruits validated through verify/simulate gates.
+<span class="lineno">  230 </span>    --   Initialised to 'emptyKnowledgeTree'.
+<span class="lineno">  231 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssToolReliability</span></span></span> :: !(M.Map Text Double)
+<span class="lineno">  232 </span>    -- ^ WP5: dynamic reliability overrides per tool name.
+<span class="lineno">  233 </span>    --   Updated by acceptance/rejection outcomes.  Names not present
+<span class="lineno">  234 </span>    --   fall back to static profile defaults.  Initialised to 'M.empty'.
+<span class="lineno">  235 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssCalibrationSnapshots</span></span></span> :: ![CalibrationSnapshot]
+<span class="lineno">  236 </span>    -- ^ Phase 9: audit trail of calibration signal computations.
+<span class="lineno">  237 </span>    --   Each turn that produces a signal appends a snapshot with
+<span class="lineno">  238 </span>    --   timestamp, run-id, components, and decision.  Bounded to
+<span class="lineno">  239 </span>    --   the most recent 100 entries to prevent unbounded growth.
+<span class="lineno">  240 </span>    --   Initialised to '[]'.
+<span class="lineno">  241 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssAdaptiveMutationLog</span></span></span> :: ![AdaptiveMutationRecord]
+<span class="lineno">  242 </span>    -- ^ P0: unified bounded log of meaningful adaptive mutations across
+<span class="lineno">  243 </span>    --   knowledge, calibration, tool reliability, speech policy, and
+<span class="lineno">  244 </span>    --   claim-stance contours. Initialised to '[]'.
+<span class="lineno">  245 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssDialogueOutcomeLearning</span></span></span> :: !DialogueOutcomeLearningState
+<span class="lineno">  246 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssDialogueThread</span></span></span> :: !DialogueThread
+<span class="lineno">  247 </span>    -- ^ Canonical shared-thinking thread derived from event history and
+<span class="lineno">  248 </span>    --   updated per turn. Single authoritative carrier of current
+<span class="lineno">  249 </span>    --   conversational focus and active unresolved object.
+<span class="lineno">  250 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssDialogueCommitmentLedger</span></span></span> :: !DialogueCommitmentLedger
+<span class="lineno">  251 </span>    -- ^ Canonical dialogue commitment state. Constrains future moves and
+<span class="lineno">  252 </span>    --   prevents planning from ignoring accepted/contested/suspended claims.
+<span class="lineno">  253 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssDialoguePhase</span></span></span> :: !DialoguePhase
+<span class="lineno">  254 </span>    -- ^ Machine-enforced current phase of the dialogue.
+<span class="lineno">  255 </span>    -- ^ Phase 11/ADR-0032: bounded outcome counters and recent
+<span class="lineno">  256 </span>    --   dialogue-outcome samples. Initialised to
+<span class="lineno">  257 </span>    --   'emptyDialogueOutcomeLearningState'.
+<span class="lineno">  258 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssTruthContractStatus</span></span></span> :: !TruthContractStatus
+<span class="lineno">  259 </span>    -- ^ Persisted post-turn truth contract used to cap downstream channels.
+<span class="lineno">  260 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssSpeechPolicyState</span></span></span> :: !SpeechPolicyState
+<span class="lineno">  261 </span>    -- ^ Phase 11/ADR-0032: bounded style-pressure state derived from
+<span class="lineno">  262 </span>    --   strong dialogue outcomes. Initialised to 'emptySpeechPolicyState'.
+<span class="lineno">  263 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssBeliefStore</span></span></span> :: !BeliefStore
+<span class="lineno">  264 </span>    -- ^ Phase 11/ADR-0032: revisable dialogue claim-stance memory,
+<span class="lineno">  265 </span>    --   separate from the validated 'KnowledgeTree'. The legacy field name
+<span class="lineno">  266 </span>    --   is kept for persisted JSON compatibility; conceptually this is the
+<span class="lineno">  267 </span>    --   ClaimStanceStore contour. Initialised to 'emptyBeliefStore'.
+<span class="lineno">  268 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssPerspectiveRegistry</span></span></span> :: !PerspectiveRegistry
+<span class="lineno">  269 </span>    -- ^ P4/P5 derived versioned perspective lineage projection.
+<span class="lineno">  270 </span>    --   P5 canonical truth is 'ssGovernanceHistory'; this registry is kept
+<span class="lineno">  271 </span>    --   as a rebuildable runtime view. Initialised to 'emptyPerspectiveRegistry'.
+<span class="lineno">  272 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssGovernanceProjection</span></span></span> :: !GovernanceProjection
+<span class="lineno">  273 </span>    -- ^ Rebuildable governance-wide runtime projection derived from
+<span class="lineno">  274 </span>    --   canonical governance history.
+<span class="lineno">  275 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssGovernanceHistory</span></span></span> :: ![GovernanceEvent]
+<span class="lineno">  276 </span>    -- ^ P5: append-only canonical governance history for high-impact
+<span class="lineno">  277 </span>    --   governed mutations. Initialised to '[]'.
+<span class="lineno">  278 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">ssGovernanceRuntimeFault</span></span></span> :: !(Maybe GovernanceRuntimeFault)
+<span class="lineno">  279 </span>    -- ^ Surfaced fail-closed governance fault marker. A populated value
+<span class="lineno">  280 </span>    --   means the last governed mutation attempt was non-authoritative.
+<span class="lineno">  281 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  282 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  283 </span>
+<span class="lineno">  284 </span>data StatePersistenceSnapshot = StatePersistenceSnapshot
+<span class="lineno">  285 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">spsCanonicalState</span></span></span> :: !SystemState
+<span class="lineno">  286 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">spsRuntimeContinuation</span></span></span> :: !SystemState
+<span class="lineno">  287 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  288 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON SystemState</span></span></span></span></span></span></span></span> where
+<span class="lineno">  291 </span>  <span class="decl"><span class="istickedoff">toJSON ss = object</span>
+<span class="lineno">  292 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;schemaVersion&quot; .= currentSystemStateSchemaVersion</span>
+<span class="lineno">  293 </span><span class="spaces">    </span><span class="istickedoff">, &quot;history&quot; .= dsHistory (ssDialogue ss)</span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="istickedoff">, &quot;rawInputHistory&quot; .= dsRawInputHistory (ssDialogue ss)</span>
+<span class="lineno">  295 </span><span class="spaces">    </span><span class="istickedoff">, &quot;turnCount&quot; .= dsTurnCount (ssDialogue ss)</span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastFamily&quot; .= dsLastFamily (ssDialogue ss)</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastTopic&quot; .= dsLastTopic (ssDialogue ss)</span>
+<span class="lineno">  298 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastForce&quot; .= dsLastForce (ssDialogue ss)</span>
+<span class="lineno">  299 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastLayer&quot; .= dsLastLayer (ssDialogue ss)</span>
+<span class="lineno">  300 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastEmbedding&quot; .= dsLastEmbedding (ssDialogue ss)</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">, &quot;consecutiveReflect&quot; .= dsConsecutiveReflect (ssDialogue ss)</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="istickedoff">, &quot;recentFamilies&quot; .= dsRecentFamilies (ssDialogue ss)</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="istickedoff">, &quot;activeScene&quot; .= dsActiveScene (ssDialogue ss)</span>
+<span class="lineno">  304 </span><span class="spaces">     </span><span class="istickedoff">, &quot;userState&quot; .= dsUserState (ssDialogue ss)</span>
+<span class="lineno">  305 </span><span class="spaces">     </span><span class="istickedoff">, &quot;lastSalienceBias&quot; .= dsLastSalienceBias (ssDialogue ss)</span>
+<span class="lineno">  306 </span><span class="spaces">     </span><span class="istickedoff">, &quot;holisticStreak&quot; .= dsHolisticStreak (ssDialogue ss)</span>
+<span class="lineno">  307 </span><span class="spaces">     </span><span class="istickedoff">, &quot;recentNarrativeSuccess&quot; .= dsRecentNarrativeSuccess (ssDialogue ss)</span>
+<span class="lineno">  308 </span><span class="spaces">     </span><span class="istickedoff">, &quot;ego&quot; .= idsEgo (ssIdentity ss)</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="istickedoff">, &quot;identityClaims&quot; .= idsIdentityClaims (ssIdentity ss)</span>
+<span class="lineno">  310 </span><span class="spaces">    </span><span class="istickedoff">, &quot;orbitalMemory&quot; .= idsOrbitalMemory (ssIdentity ss)</span>
+<span class="lineno">  311 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastGuardReport&quot; .= idsLastGuardReport (ssIdentity ss)</span>
+<span class="lineno">  312 </span><span class="spaces">    </span><span class="istickedoff">, &quot;trace&quot; .= semTrace (ssSemantic ss)</span>
+<span class="lineno">  313 </span><span class="spaces">    </span><span class="istickedoff">, &quot;meaningGraph&quot; .= semMeaningGraph (ssSemantic ss)</span>
+<span class="lineno">  314 </span><span class="spaces">    </span><span class="istickedoff">, &quot;kernelPulse&quot; .= semKernelPulse (ssSemantic ss)</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">, &quot;blockedConcepts&quot; .= semBlockedConcepts (ssSemantic ss)</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="istickedoff">, &quot;clusters&quot; .= semClusters (ssSemantic ss)</span>
+<span class="lineno">  317 </span><span class="spaces">    </span><span class="istickedoff">, &quot;dreamState&quot; .= semDreamState (ssSemantic ss)</span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="istickedoff">, &quot;intuitionState&quot; .= semIntuitionState (ssSemantic ss)</span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="istickedoff">, &quot;semanticAnchor&quot; .= semSemanticAnchor (ssSemantic ss)</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="istickedoff">, &quot;lastTurnDecision&quot; .= semLastTurnDecision (ssSemantic ss)</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="istickedoff">, &quot;intuitConfidence&quot; .= semIntuitConfidence (ssSemantic ss)</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">, &quot;sessionId&quot; .= ssSessionId ss</span>
+<span class="lineno">  323 </span><span class="spaces">     </span><span class="istickedoff">, &quot;outputMode&quot; .= dialogueOutputModeText (ssOutputMode ss)</span>
+<span class="lineno">  324 </span><span class="spaces">     </span><span class="istickedoff">, &quot;morphology&quot; .= ssMorphology ss</span>
+<span class="lineno">  325 </span><span class="spaces">     </span><span class="istickedoff">, &quot;observability&quot; .= ssObservability ss</span>
+<span class="lineno">  326 </span><span class="spaces">     </span><span class="istickedoff">, &quot;essence&quot; .= ssEssence ss</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="istickedoff">, &quot;salienceWeights&quot; .= ssSalienceWeights ss</span>
+<span class="lineno">  328 </span><span class="spaces">    </span><span class="istickedoff">, &quot;fieldHeuristics&quot; .= ssFieldHeuristics ss</span>
+<span class="lineno">  329 </span><span class="spaces">     </span><span class="istickedoff">, &quot;shadowVetoState&quot; .= ssShadowVetoState ss</span>
+<span class="lineno">  330 </span><span class="spaces">     </span><span class="istickedoff">, &quot;provisionalAtoms&quot; .= ssProvisionalAtoms ss</span>
+<span class="lineno">  331 </span><span class="spaces">     </span><span class="istickedoff">, &quot;learningNeedState&quot; .= ssLearningNeedState ss</span>
+<span class="lineno">  332 </span><span class="spaces">     </span><span class="istickedoff">, &quot;guardrailState&quot; .= ssGuardrailState ss</span>
+<span class="lineno">  333 </span><span class="spaces">     </span><span class="istickedoff">, &quot;calibrationLog&quot; .= ssCalibrationLog ss</span>
+<span class="lineno">  334 </span><span class="spaces">      </span><span class="istickedoff">, &quot;knowledgeTree&quot; .= ssKnowledgeTree ss</span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">, &quot;toolReliability&quot; .= ssToolReliability ss</span>
+<span class="lineno">  336 </span><span class="spaces">      </span><span class="istickedoff">, &quot;calibrationSnapshots&quot; .= ssCalibrationSnapshots ss</span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff">, &quot;adaptiveMutationLog&quot; .= ssAdaptiveMutationLog ss</span>
+<span class="lineno">  338 </span><span class="spaces">        </span><span class="istickedoff">, &quot;dialogueOutcomeLearning&quot; .= ssDialogueOutcomeLearning ss</span>
+<span class="lineno">  339 </span><span class="spaces">        </span><span class="istickedoff">, &quot;dialogueThread&quot; .= ssDialogueThread ss</span>
+<span class="lineno">  340 </span><span class="spaces">        </span><span class="istickedoff">, &quot;dialogueCommitmentLedger&quot; .= ssDialogueCommitmentLedger ss</span>
+<span class="lineno">  341 </span><span class="spaces">        </span><span class="istickedoff">, &quot;dialoguePhase&quot; .= ssDialoguePhase ss</span>
+<span class="lineno">  342 </span><span class="spaces">        </span><span class="istickedoff">, &quot;truthContractStatus&quot; .= ssTruthContractStatus ss</span>
+<span class="lineno">  343 </span><span class="spaces">         </span><span class="istickedoff">, &quot;speechPolicyState&quot; .= ssSpeechPolicyState ss</span>
+<span class="lineno">  344 </span><span class="spaces">         </span><span class="istickedoff">, &quot;beliefStore&quot; .= ssBeliefStore ss</span>
+<span class="lineno">  345 </span><span class="spaces">         </span><span class="istickedoff">, &quot;governanceHistory&quot; .= ssGovernanceHistory ss</span>
+<span class="lineno">  346 </span><span class="spaces">         </span><span class="istickedoff">, &quot;governanceRuntimeFault&quot; .= ssGovernanceRuntimeFault ss</span>
+<span class="lineno">  347 </span><span class="spaces">         </span><span class="istickedoff">]</span></span>
+<span class="lineno">  348 </span>
+<span class="lineno">  349 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON SystemState</span></span></span></span> where
+<span class="lineno">  350 </span>  <span class="decl"><span class="istickedoff">parseJSON = withObject <span class="nottickedoff">&quot;SystemState&quot;</span> $ \o -&gt; do</span>
+<span class="lineno">  351 </span><span class="spaces">    </span><span class="istickedoff">schemaVersion &lt;- o .:? &quot;schemaVersion&quot; .!= 1</span>
+<span class="lineno">  352 </span><span class="spaces">    </span><span class="istickedoff">let requiredTopLevelFields</span>
+<span class="lineno">  353 </span><span class="spaces">          </span><span class="istickedoff">| schemaVersion &gt;= currentSystemStateSchemaVersion =</span>
+<span class="lineno">  354 </span><span class="spaces">              </span><span class="istickedoff">[ &quot;morphology&quot;</span>
+<span class="lineno">  355 </span><span class="spaces">              </span><span class="istickedoff">, &quot;salienceWeights&quot;</span>
+<span class="lineno">  356 </span><span class="spaces">              </span><span class="istickedoff">, &quot;fieldHeuristics&quot;</span>
+<span class="lineno">  357 </span><span class="spaces">              </span><span class="istickedoff">, &quot;learningNeedState&quot;</span>
+<span class="lineno">  358 </span><span class="spaces">              </span><span class="istickedoff">, &quot;knowledgeTree&quot;</span>
+<span class="lineno">  359 </span><span class="spaces">              </span><span class="istickedoff">, &quot;truthContractStatus&quot;</span>
+<span class="lineno">  360 </span><span class="spaces">              </span><span class="istickedoff">, &quot;dialogueOutcomeLearning&quot;</span>
+<span class="lineno">  361 </span><span class="spaces">              </span><span class="istickedoff">, &quot;dialogueThread&quot;</span>
+<span class="lineno">  362 </span><span class="spaces">              </span><span class="istickedoff">, &quot;dialogueCommitmentLedger&quot;</span>
+<span class="lineno">  363 </span><span class="spaces">              </span><span class="istickedoff">, &quot;dialoguePhase&quot;</span>
+<span class="lineno">  364 </span><span class="spaces">              </span><span class="istickedoff">, &quot;speechPolicyState&quot;</span>
+<span class="lineno">  365 </span><span class="spaces">              </span><span class="istickedoff">, &quot;beliefStore&quot;</span>
+<span class="lineno">  366 </span><span class="spaces">              </span><span class="istickedoff">, &quot;governanceHistory&quot;</span>
+<span class="lineno">  367 </span><span class="spaces">              </span><span class="istickedoff">]</span>
+<span class="lineno">  368 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  369 </span><span class="spaces">              </span><span class="istickedoff">[ &quot;morphology&quot;</span>
+<span class="lineno">  370 </span><span class="spaces">              </span><span class="istickedoff">, &quot;salienceWeights&quot;</span>
+<span class="lineno">  371 </span><span class="spaces">              </span><span class="istickedoff">, &quot;fieldHeuristics&quot;</span>
+<span class="lineno">  372 </span><span class="spaces">              </span><span class="istickedoff">, &quot;learningNeedState&quot;</span>
+<span class="lineno">  373 </span><span class="spaces">              </span><span class="istickedoff">, &quot;knowledgeTree&quot;</span>
+<span class="lineno">  374 </span><span class="spaces">              </span><span class="istickedoff">, &quot;truthContractStatus&quot;</span>
+<span class="lineno">  375 </span><span class="spaces">              </span><span class="istickedoff">]</span>
+<span class="lineno">  376 </span><span class="spaces">        </span><span class="istickedoff">missingTopLevel = filter (\k -&gt; not (KM.member (AK.fromText k) o)) requiredTopLevelFields</span>
+<span class="lineno">  377 </span><span class="spaces">    </span><span class="istickedoff">when (not (null missingTopLevel)) $</span>
+<span class="lineno">  378 </span><span class="spaces">      </span><span class="istickedoff">fail (&quot;missing required top-level fields: &quot; &lt;&gt; show missingTopLevel)</span>
+<span class="lineno">  379 </span><span class="spaces">    </span><span class="istickedoff">ds &lt;- DialogueState</span>
+<span class="lineno">  380 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .: &quot;history&quot;</span>
+<span class="lineno">  381 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;rawInputHistory&quot;</span>
+<span class="lineno">  382 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;turnCount&quot;</span>
+<span class="lineno">  383 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lastTopic&quot;</span>
+<span class="lineno">  384 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lastFamily&quot;</span>
+<span class="lineno">  385 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lastForce&quot;</span>
+<span class="lineno">  386 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lastLayer&quot;</span>
+<span class="lineno">  387 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;lastEmbedding&quot;</span>
+<span class="lineno">  388 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;consecutiveReflect&quot;</span>
+<span class="lineno">  389 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;recentFamilies&quot;</span>
+<span class="lineno">  390 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;activeScene&quot;</span>
+<span class="lineno">  391 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;userState&quot;</span>
+<span class="lineno">  392 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;lastSalienceBias&quot; .!= <span class="nottickedoff">0.0</span></span>
+<span class="lineno">  393 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;holisticStreak&quot; .!= <span class="nottickedoff">0</span></span>
+<span class="lineno">  394 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;recentNarrativeSuccess&quot; .!= <span class="nottickedoff">[]</span></span>
+<span class="lineno">  395 </span><span class="spaces">    </span><span class="istickedoff">ids &lt;- IdentityState</span>
+<span class="lineno">  396 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .: &quot;ego&quot;</span>
+<span class="lineno">  397 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;identityClaims&quot;</span>
+<span class="lineno">  398 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;orbitalMemory&quot;</span>
+<span class="lineno">  399 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;lastGuardReport&quot; .!= Nothing</span>
+<span class="lineno">  400 </span><span class="spaces">    </span><span class="istickedoff">sem &lt;- SemanticState</span>
+<span class="lineno">  401 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .: &quot;trace&quot;</span>
+<span class="lineno">  402 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;meaningGraph&quot;</span>
+<span class="lineno">  403 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;kernelPulse&quot;</span>
+<span class="lineno">  404 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;blockedConcepts&quot;</span>
+<span class="lineno">  405 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;clusters&quot;</span>
+<span class="lineno">  406 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;dreamState&quot; .!= <span class="nottickedoff">emptyDreamState zeroVec</span></span>
+<span class="lineno">  407 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;intuitionState&quot; .!= <span class="nottickedoff">Just defaultIntuitiveState</span></span>
+<span class="lineno">  408 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;semanticAnchor&quot; .!= Nothing</span>
+<span class="lineno">  409 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;lastTurnDecision&quot; .!= Nothing</span>
+<span class="lineno">  410 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;intuitConfidence&quot;</span>
+<span class="lineno">  411 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;semanticConfig&quot; .!= defaultSemanticConfig</span>
+<span class="lineno">  412 </span><span class="spaces">    </span><span class="istickedoff">SystemState ds ids sem</span>
+<span class="lineno">  413 </span><span class="spaces">      </span><span class="istickedoff">&lt;$&gt; o .: &quot;sessionId&quot;</span>
+<span class="lineno">  414 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; (parseDialogueOutputMode &lt;$&gt; o .: &quot;outputMode&quot;)</span>
+<span class="lineno">  415 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;morphology&quot; else o .:? &quot;morphology&quot; .!= <span class="nottickedoff">MorphologyData M.empty M.empty M.empty M.empty</span>)</span>
+<span class="lineno">  416 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .: &quot;observability&quot;</span>
+<span class="lineno">  417 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; o .:? &quot;essence&quot; .!= <span class="nottickedoff">emptyEssence</span></span>
+<span class="lineno">  418 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;salienceWeights&quot; else o .:? &quot;salienceWeights&quot; .!= <span class="nottickedoff">defaultSalienceWeights</span>)</span>
+<span class="lineno">  419 </span><span class="spaces">      </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;fieldHeuristics&quot; else o .:? &quot;fieldHeuristics&quot; .!= <span class="nottickedoff">defaultFieldHeuristics</span>)</span>
+<span class="lineno">  420 </span><span class="spaces">       </span><span class="istickedoff">&lt;*&gt; o .:? &quot;shadowVetoState&quot; .!= <span class="nottickedoff">defaultShadowVetoState</span></span>
+<span class="lineno">  421 </span><span class="spaces">       </span><span class="istickedoff">&lt;*&gt; o .:? &quot;provisionalAtoms&quot; .!= <span class="nottickedoff">[]</span></span>
+<span class="lineno">  422 </span><span class="spaces">       </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;learningNeedState&quot; else o .:? &quot;learningNeedState&quot; .!= <span class="nottickedoff">emptyLearningNeedState</span>)</span>
+<span class="lineno">  423 </span><span class="spaces">       </span><span class="istickedoff">&lt;*&gt; o .:? &quot;guardrailState&quot; .!= <span class="nottickedoff">emptyGuardrailState</span></span>
+<span class="lineno">  424 </span><span class="spaces">       </span><span class="istickedoff">&lt;*&gt; o .:? &quot;calibrationLog&quot; .!= <span class="nottickedoff">emptyCalibrationLog</span></span>
+<span class="lineno">  425 </span><span class="spaces">          </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;knowledgeTree&quot; else o .:? &quot;knowledgeTree&quot; .!= <span class="nottickedoff">emptyKnowledgeTree</span>)</span>
+<span class="lineno">  426 </span><span class="spaces">          </span><span class="istickedoff">&lt;*&gt; o .:? &quot;toolReliability&quot; .!= <span class="nottickedoff">M.empty</span></span>
+<span class="lineno">  427 </span><span class="spaces">          </span><span class="istickedoff">&lt;*&gt; o .:? &quot;calibrationSnapshots&quot; .!= <span class="nottickedoff">[]</span></span>
+<span class="lineno">  428 </span><span class="spaces">          </span><span class="istickedoff">&lt;*&gt; o .:? &quot;adaptiveMutationLog&quot; .!= []</span>
+<span class="lineno">  429 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;dialogueOutcomeLearning&quot; else o .:? &quot;dialogueOutcomeLearning&quot; .!= emptyDialogueOutcomeLearningState)</span>
+<span class="lineno">  430 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;dialogueThread&quot; else o .:? &quot;dialogueThread&quot; .!= emptyDialogueThread)</span>
+<span class="lineno">  431 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;dialogueCommitmentLedger&quot; else o .:? &quot;dialogueCommitmentLedger&quot; .!= emptyDialogueCommitmentLedger)</span>
+<span class="lineno">  432 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;dialoguePhase&quot; else o .:? &quot;dialoguePhase&quot; .!= Exploring)</span>
+<span class="lineno">  433 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;truthContractStatus&quot; else o .:? &quot;truthContractStatus&quot; .!= <span class="nottickedoff">LegacyIncompleteSurface</span>)</span>
+<span class="lineno">  434 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;speechPolicyState&quot; else o .:? &quot;speechPolicyState&quot; .!= emptySpeechPolicyState)</span>
+<span class="lineno">  435 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;beliefStore&quot; else o .:? &quot;beliefStore&quot; .!= emptyBeliefStore)</span>
+<span class="lineno">  436 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; pure emptyPerspectiveRegistry</span>
+<span class="lineno">  437 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; pure emptyGovernanceProjection</span>
+<span class="lineno">  438 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; (if schemaVersion &gt;= currentSystemStateSchemaVersion then o .: &quot;governanceHistory&quot; else o .:? &quot;governanceHistory&quot; .!= [])</span>
+<span class="lineno">  439 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; o .:? &quot;governanceRuntimeFault&quot; .!= Nothing</span></span>
+<span class="lineno">  440 </span>
+<span class="lineno">  441 </span>ssHistory :: SystemState -&gt; Seq Text
+<span class="lineno">  442 </span><span class="decl"><span class="istickedoff">ssHistory = dsHistory . ssDialogue</span></span>
+<span class="lineno">  443 </span>
+<span class="lineno">  444 </span>ssRawInputHistory :: SystemState -&gt; Seq Text
+<span class="lineno">  445 </span><span class="decl"><span class="istickedoff">ssRawInputHistory = dsRawInputHistory . ssDialogue</span></span>
+<span class="lineno">  446 </span>
+<span class="lineno">  447 </span>ssTurnCount :: SystemState -&gt; Int
+<span class="lineno">  448 </span><span class="decl"><span class="istickedoff">ssTurnCount = dsTurnCount . ssDialogue</span></span>
+<span class="lineno">  449 </span>
+<span class="lineno">  450 </span>ssLastFamily :: SystemState -&gt; CanonicalMoveFamily
+<span class="lineno">  451 </span><span class="decl"><span class="istickedoff">ssLastFamily = dsLastFamily . ssDialogue</span></span>
+<span class="lineno">  452 </span>
+<span class="lineno">  453 </span>ssLastTopic :: SystemState -&gt; Text
+<span class="lineno">  454 </span><span class="decl"><span class="istickedoff">ssLastTopic = dsLastTopic . ssDialogue</span></span>
+<span class="lineno">  455 </span>
+<span class="lineno">  456 </span>ssLastForce :: SystemState -&gt; IllocutionaryForce
+<span class="lineno">  457 </span><span class="decl"><span class="nottickedoff">ssLastForce = dsLastForce . ssDialogue</span></span>
+<span class="lineno">  458 </span>
+<span class="lineno">  459 </span>ssLastLayer :: SystemState -&gt; SemanticLayer
+<span class="lineno">  460 </span><span class="decl"><span class="nottickedoff">ssLastLayer = dsLastLayer . ssDialogue</span></span>
+<span class="lineno">  461 </span>
+<span class="lineno">  462 </span>ssLastEmbedding :: SystemState -&gt; Maybe Embedding
+<span class="lineno">  463 </span><span class="decl"><span class="nottickedoff">ssLastEmbedding = dsLastEmbedding . ssDialogue</span></span>
+<span class="lineno">  464 </span>
+<span class="lineno">  465 </span>ssConsecutiveReflect :: SystemState -&gt; Int
+<span class="lineno">  466 </span><span class="decl"><span class="istickedoff">ssConsecutiveReflect = dsConsecutiveReflect . ssDialogue</span></span>
+<span class="lineno">  467 </span>
+<span class="lineno">  468 </span>ssRecentFamilies :: SystemState -&gt; [CanonicalMoveFamily]
+<span class="lineno">  469 </span><span class="decl"><span class="istickedoff">ssRecentFamilies = dsRecentFamilies . ssDialogue</span></span>
+<span class="lineno">  470 </span>
+<span class="lineno">  471 </span>ssActiveScene :: SystemState -&gt; SemanticScene
+<span class="lineno">  472 </span><span class="decl"><span class="nottickedoff">ssActiveScene = dsActiveScene . ssDialogue</span></span>
+<span class="lineno">  473 </span>
+<span class="lineno">  474 </span>ssUserState :: SystemState -&gt; UserState
+<span class="lineno">  475 </span><span class="decl"><span class="nottickedoff">ssUserState = dsUserState . ssDialogue</span></span>
+<span class="lineno">  476 </span>
+<span class="lineno">  477 </span>ssEgo :: SystemState -&gt; EgoState
+<span class="lineno">  478 </span><span class="decl"><span class="istickedoff">ssEgo = idsEgo . ssIdentity</span></span>
+<span class="lineno">  479 </span>
+<span class="lineno">  480 </span>ssIdentityClaims :: SystemState -&gt; [IdentityClaimRef]
+<span class="lineno">  481 </span><span class="decl"><span class="istickedoff">ssIdentityClaims = idsIdentityClaims . ssIdentity</span></span>
+<span class="lineno">  482 </span>
+<span class="lineno">  483 </span>ssOrbitalMemory :: SystemState -&gt; OrbitalMemory
+<span class="lineno">  484 </span><span class="decl"><span class="istickedoff">ssOrbitalMemory = idsOrbitalMemory . ssIdentity</span></span>
+<span class="lineno">  485 </span>
+<span class="lineno">  486 </span>ssLastGuardReport :: SystemState -&gt; Maybe IdentityGuardReport
+<span class="lineno">  487 </span><span class="decl"><span class="istickedoff">ssLastGuardReport = idsLastGuardReport . ssIdentity</span></span>
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>ssTrace :: SystemState -&gt; AtomTrace
+<span class="lineno">  490 </span><span class="decl"><span class="istickedoff">ssTrace = semTrace . ssSemantic</span></span>
+<span class="lineno">  491 </span>
+<span class="lineno">  492 </span>ssMeaningGraph :: SystemState -&gt; MeaningGraph
+<span class="lineno">  493 </span><span class="decl"><span class="istickedoff">ssMeaningGraph = semMeaningGraph . ssSemantic</span></span>
+<span class="lineno">  494 </span>
+<span class="lineno">  495 </span>ssDiscourse :: SystemState -&gt; DiscourseState
+<span class="lineno">  496 </span><span class="decl"><span class="istickedoff">ssDiscourse ss =</span>
+<span class="lineno">  497 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">history = dsHistory (ssDialogue ss)</span></span>
+<span class="lineno">  498 </span><span class="spaces">      </span><span class="istickedoff">turnCount = dsTurnCount (ssDialogue ss)</span>
+<span class="lineno">  499 </span><span class="spaces">      </span><span class="istickedoff">lastTopic = dsLastTopic (ssDialogue ss)</span>
+<span class="lineno">  500 </span><span class="spaces">      </span><span class="istickedoff">turnMemory = if turnCount &lt;= 0</span>
+<span class="lineno">  501 </span><span class="spaces">        </span><span class="istickedoff">then Seq.empty</span>
+<span class="lineno">  502 </span><span class="spaces">        </span><span class="istickedoff">else Seq.singleton <span class="nottickedoff">TurnMemory</span></span>
+<span class="lineno">  503 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">{ tmrTurnIndex = max 0 (turnCount - 1)</span></span>
+<span class="lineno">  504 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, tmrTopic = lastTopic</span></span>
+<span class="lineno">  505 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, tmrFamily = dsLastFamily (ssDialogue ss)</span></span>
+<span class="lineno">  506 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">, tmrRendered = maybe &quot;&quot; id (Seq.lookup (max 0 (Seq.length history - 1)) history)</span></span>
+<span class="lineno">  507 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  508 </span><span class="spaces">  </span><span class="istickedoff">in recomputeDiscourse emptyDiscourseState</span>
+<span class="lineno">  509 </span><span class="spaces">       </span><span class="istickedoff">{ dscTurnMemory = turnMemory</span>
+<span class="lineno">  510 </span><span class="spaces">       </span><span class="istickedoff">, dscTopicChain = filter (not . T.null) [lastTopic]</span>
+<span class="lineno">  511 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  512 </span>
+<span class="lineno">  513 </span>ssSemanticConfig :: SystemState -&gt; SemanticConfig
+<span class="lineno">  514 </span><span class="decl"><span class="istickedoff">ssSemanticConfig = semConfig . ssSemantic</span></span>
+<span class="lineno">  515 </span>
+<span class="lineno">  516 </span>ssKernelPulse :: SystemState -&gt; KernelPulse
+<span class="lineno">  517 </span><span class="decl"><span class="istickedoff">ssKernelPulse = semKernelPulse . ssSemantic</span></span>
+<span class="lineno">  518 </span>
+<span class="lineno">  519 </span>ssBlockedConcepts :: SystemState -&gt; [Text]
+<span class="lineno">  520 </span><span class="decl"><span class="istickedoff">ssBlockedConcepts = semBlockedConcepts . ssSemantic</span></span>
+<span class="lineno">  521 </span>
+<span class="lineno">  522 </span>ssClusters :: SystemState -&gt; [ClusterDef]
+<span class="lineno">  523 </span><span class="decl"><span class="istickedoff">ssClusters = semClusters . ssSemantic</span></span>
+<span class="lineno">  524 </span>
+<span class="lineno">  525 </span>ssSemanticAnchor :: SystemState -&gt; Maybe SemanticAnchor
+<span class="lineno">  526 </span><span class="decl"><span class="istickedoff">ssSemanticAnchor = semSemanticAnchor . ssSemantic</span></span>
+<span class="lineno">  527 </span>
+<span class="lineno">  528 </span>ssLastTurnDecision :: SystemState -&gt; Maybe TurnDecision
+<span class="lineno">  529 </span><span class="decl"><span class="nottickedoff">ssLastTurnDecision = semLastTurnDecision . ssSemantic</span></span>
+<span class="lineno">  530 </span>
+<span class="lineno">  531 </span>ssIntuitConfidence :: SystemState -&gt; Double
+<span class="lineno">  532 </span><span class="decl"><span class="nottickedoff">ssIntuitConfidence = semIntuitConfidence . ssSemantic</span></span>
+<span class="lineno">  533 </span>
+<span class="lineno">  534 </span>ssDreamAxiom :: SystemState -&gt; Text
+<span class="lineno">  535 </span><span class="decl"><span class="istickedoff">ssDreamAxiom ss =</span>
+<span class="lineno">  536 </span><span class="spaces">  </span><span class="istickedoff">let dreamState = semDreamState (ssSemantic ss)</span>
+<span class="lineno">  537 </span><span class="spaces">      </span><span class="istickedoff">cycles = dsDreamCycleCount dreamState</span>
+<span class="lineno">  538 </span><span class="spaces">  </span><span class="istickedoff">in if cycles &lt;= 0</span>
+<span class="lineno">  539 </span><span class="spaces">       </span><span class="istickedoff">then &quot;&quot;</span>
+<span class="lineno">  540 </span><span class="spaces">       </span><span class="istickedoff">else T.concat [&quot;dream_cycle_count=&quot;, T.pack (show cycles)]</span></span>
+<span class="lineno">  541 </span>
+<span class="lineno">  542 </span>ssDreamState :: SystemState -&gt; DreamState
+<span class="lineno">  543 </span><span class="decl"><span class="nottickedoff">ssDreamState = semDreamState . ssSemantic</span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>ssIntuitionState :: SystemState -&gt; Maybe IntuitiveState
+<span class="lineno">  546 </span><span class="decl"><span class="istickedoff">ssIntuitionState = semIntuitionState . ssSemantic</span></span>
+<span class="lineno">  547 </span>
+<span class="lineno">  548 </span>ssLastSalienceBias :: SystemState -&gt; Double
+<span class="lineno">  549 </span><span class="decl"><span class="nottickedoff">ssLastSalienceBias = dsLastSalienceBias . ssDialogue</span></span>
+<span class="lineno">  550 </span>
+<span class="lineno">  551 </span>ssHolisticStreak :: SystemState -&gt; Int
+<span class="lineno">  552 </span><span class="decl"><span class="istickedoff">ssHolisticStreak = dsHolisticStreak . ssDialogue</span></span>
+<span class="lineno">  553 </span>
+<span class="lineno">  554 </span>ssRecentNarrativeSuccess :: SystemState -&gt; [Bool]
+<span class="lineno">  555 </span><span class="decl"><span class="istickedoff">ssRecentNarrativeSuccess = dsRecentNarrativeSuccess . ssDialogue</span></span>
+<span class="lineno">  556 </span>
+<span class="lineno">  557 </span>adaptiveMutationLogLimit :: Int
+<span class="lineno">  558 </span><span class="decl"><span class="istickedoff">adaptiveMutationLogLimit = 100</span></span>
+<span class="lineno">  559 </span>
+<span class="lineno">  560 </span>currentSystemStateSchemaVersion :: Int
+<span class="lineno">  561 </span><span class="decl"><span class="istickedoff">currentSystemStateSchemaVersion = 2</span></span>
+<span class="lineno">  562 </span>
+<span class="lineno">  563 </span>appendAdaptiveMutationRecord :: AdaptiveMutationRecord -&gt; SystemState -&gt; SystemState
+<span class="lineno">  564 </span><span class="decl"><span class="istickedoff">appendAdaptiveMutationRecord record ss =</span>
+<span class="lineno">  565 </span><span class="spaces">  </span><span class="istickedoff">ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (record : ssAdaptiveMutationLog ss) }</span></span>
+<span class="lineno">  566 </span>
+<span class="lineno">  567 </span>appendAdaptiveMutationRecords :: [AdaptiveMutationRecord] -&gt; SystemState -&gt; SystemState
+<span class="lineno">  568 </span><span class="decl"><span class="istickedoff">appendAdaptiveMutationRecords records ss =</span>
+<span class="lineno">  569 </span><span class="spaces">  </span><span class="istickedoff">ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (records ++ ssAdaptiveMutationLog ss) }</span></span>
+<span class="lineno">  570 </span>
+<span class="lineno">  571 </span>commitGovernedPerspectiveProjection :: GovernanceProjection -&gt; AdaptiveMutationRecord -&gt; SystemState -&gt; SystemState
+<span class="lineno">  572 </span><span class="decl"><span class="istickedoff">commitGovernedPerspectiveProjection projection record ss =</span>
+<span class="lineno">  573 </span><span class="spaces">  </span><span class="istickedoff">appendAdaptiveMutationRecord record ss</span>
+<span class="lineno">  574 </span><span class="spaces">    </span><span class="istickedoff">{ ssPerspectiveRegistry = gpPerspectiveRegistry projection</span>
+<span class="lineno">  575 </span><span class="spaces">    </span><span class="istickedoff">, ssGovernanceProjection = projection</span>
+<span class="lineno">  576 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  577 </span>
+<span class="lineno">  578 </span>appendGovernanceEventRecord :: GovernanceEvent -&gt; SystemState -&gt; Either Text SystemState
+<span class="lineno">  579 </span><span class="decl"><span class="istickedoff">appendGovernanceEventRecord event ss = do</span>
+<span class="lineno">  580 </span><span class="spaces">  </span><span class="istickedoff">history &lt;- appendGovernanceEventToHistory event (ssGovernanceHistory ss)</span>
+<span class="lineno">  581 </span><span class="spaces">  </span><span class="istickedoff">pure ss { ssGovernanceHistory = history }</span></span>
+<span class="lineno">  582 </span>
+<span class="lineno">  583 </span>persistenceDomainClass :: PersistenceDomain -&gt; PersistenceDomainClass
+<span class="lineno">  584 </span><span class="decl"><span class="istickedoff">persistenceDomainClass domain =</span>
+<span class="lineno">  585 </span><span class="spaces">  </span><span class="istickedoff">case domain of</span>
+<span class="lineno">  586 </span><span class="spaces">    </span><span class="istickedoff">PdGovernanceDerived -&gt; PdcRebuildableProjection</span>
+<span class="lineno">  587 </span><span class="spaces">    </span><span class="istickedoff">PdSessionTransient -&gt; PdcRuntimeTransient</span>
+<span class="lineno">  588 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; PdcCanonicalTruth</span></span>
+<span class="lineno">  589 </span>
+<span class="lineno">  590 </span>persistenceDomainCanonicalFields :: PersistenceDomain -&gt; [Text]
+<span class="lineno">  591 </span><span class="decl"><span class="nottickedoff">persistenceDomainCanonicalFields domain = case domain of</span>
+<span class="lineno">  592 </span><span class="spaces">  </span><span class="nottickedoff">PdCoreConversation -&gt;</span>
+<span class="lineno">  593 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssDialogue&quot;</span>
+<span class="lineno">  594 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssIdentity&quot;</span>
+<span class="lineno">  595 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssSemantic&quot;</span>
+<span class="lineno">  596 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssSessionId&quot;</span>
+<span class="lineno">  597 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssMorphology&quot;</span>
+<span class="lineno">  598 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssObservability&quot;</span>
+<span class="lineno">  599 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssEssence&quot;</span>
+<span class="lineno">  600 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssTruthContractStatus&quot;</span>
+<span class="lineno">  601 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  602 </span><span class="spaces">  </span><span class="nottickedoff">PdAdaptiveLearning -&gt;</span>
+<span class="lineno">  603 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssSalienceWeights&quot;</span>
+<span class="lineno">  604 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssFieldHeuristics&quot;</span>
+<span class="lineno">  605 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssShadowVetoState&quot;</span>
+<span class="lineno">  606 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssProvisionalAtoms&quot;</span>
+<span class="lineno">  607 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssLearningNeedState&quot;</span>
+<span class="lineno">  608 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssGuardrailState&quot;</span>
+<span class="lineno">  609 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssCalibrationLog&quot;</span>
+<span class="lineno">  610 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssKnowledgeTree&quot;</span>
+<span class="lineno">  611 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssToolReliability&quot;</span>
+<span class="lineno">  612 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssCalibrationSnapshots&quot;</span>
+<span class="lineno">  613 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssAdaptiveMutationLog&quot;</span>
+<span class="lineno">  614 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  615 </span><span class="spaces">  </span><span class="nottickedoff">PdDialogueDevelopment -&gt;</span>
+<span class="lineno">  616 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssDialogueOutcomeLearning&quot;</span>
+<span class="lineno">  617 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssDialogueThread&quot;</span>
+<span class="lineno">  618 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssDialogueCommitmentLedger&quot;</span>
+<span class="lineno">  619 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssDialoguePhase&quot;</span>
+<span class="lineno">  620 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssSpeechPolicyState&quot;</span>
+<span class="lineno">  621 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssBeliefStore&quot;</span>
+<span class="lineno">  622 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  623 </span><span class="spaces">  </span><span class="nottickedoff">PdGovernanceCanonical -&gt;</span>
+<span class="lineno">  624 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssGovernanceHistory&quot; ]</span>
+<span class="lineno">  625 </span><span class="spaces">  </span><span class="nottickedoff">_ -&gt; []</span></span>
+<span class="lineno">  626 </span>
+<span class="lineno">  627 </span>persistenceDomainProjectionFields :: PersistenceDomain -&gt; [Text]
+<span class="lineno">  628 </span><span class="decl"><span class="nottickedoff">persistenceDomainProjectionFields domain = case domain of</span>
+<span class="lineno">  629 </span><span class="spaces">  </span><span class="nottickedoff">PdGovernanceDerived -&gt;</span>
+<span class="lineno">  630 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssPerspectiveRegistry&quot;</span>
+<span class="lineno">  631 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssGovernanceProjection&quot;</span>
+<span class="lineno">  632 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  633 </span><span class="spaces">  </span><span class="nottickedoff">_ -&gt; []</span></span>
+<span class="lineno">  634 </span>
+<span class="lineno">  635 </span>persistenceDomainTransientFields :: PersistenceDomain -&gt; [Text]
+<span class="lineno">  636 </span><span class="decl"><span class="nottickedoff">persistenceDomainTransientFields domain = case domain of</span>
+<span class="lineno">  637 </span><span class="spaces">  </span><span class="nottickedoff">PdSessionTransient -&gt;</span>
+<span class="lineno">  638 </span><span class="spaces">    </span><span class="nottickedoff">[ &quot;ssGovernanceRuntimeFault&quot;</span>
+<span class="lineno">  639 </span><span class="spaces">    </span><span class="nottickedoff">, &quot;ssOutputMode&quot;</span>
+<span class="lineno">  640 </span><span class="spaces">    </span><span class="nottickedoff">]</span>
+<span class="lineno">  641 </span><span class="spaces">  </span><span class="nottickedoff">_ -&gt; []</span></span>
+<span class="lineno">  642 </span>
+<span class="lineno">  643 </span>persistedCanonicalState :: Text -&gt; SystemState -&gt; SystemState
+<span class="lineno">  644 </span><span class="decl"><span class="istickedoff">persistedCanonicalState sessionId ss =</span>
+<span class="lineno">  645 </span><span class="spaces">  </span><span class="istickedoff">ss</span>
+<span class="lineno">  646 </span><span class="spaces">    </span><span class="istickedoff">{ ssSessionId = sessionId</span>
+<span class="lineno">  647 </span><span class="spaces">    </span><span class="istickedoff">, ssOutputMode = DialogueOutput</span>
+<span class="lineno">  648 </span><span class="spaces">    </span><span class="istickedoff">, ssTruthContractStatus = persistenceCanonicalTruthStatus (ssTruthContractStatus ss)</span>
+<span class="lineno">  649 </span><span class="spaces">    </span><span class="istickedoff">, ssPerspectiveRegistry = emptyPerspectiveRegistry</span>
+<span class="lineno">  650 </span><span class="spaces">    </span><span class="istickedoff">, ssGovernanceProjection = emptyGovernanceProjection</span>
+<span class="lineno">  651 </span><span class="spaces">    </span><span class="istickedoff">, ssGovernanceRuntimeFault = Nothing</span>
+<span class="lineno">  652 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  653 </span>
+<span class="lineno">  654 </span>persistenceCanonicalTruthStatus :: TruthContractStatus -&gt; TruthContractStatus
+<span class="lineno">  655 </span><span class="decl"><span class="istickedoff">persistenceCanonicalTruthStatus status</span>
+<span class="lineno">  656 </span><span class="spaces">  </span><span class="istickedoff">| status `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = status</span>
+<span class="lineno">  657 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = AssembledSurfacePreserved</span></span>
+<span class="lineno">  658 </span>
+<span class="lineno">  659 </span>runtimeContinuationState :: Text -&gt; SystemState -&gt; SystemState
+<span class="lineno">  660 </span><span class="decl"><span class="istickedoff">runtimeContinuationState sessionId ss =</span>
+<span class="lineno">  661 </span><span class="spaces">  </span><span class="istickedoff">ss { ssSessionId = sessionId }</span></span>
+<span class="lineno">  662 </span>
+<span class="lineno">  663 </span>preparePersistenceSnapshot :: Text -&gt; SystemState -&gt; StatePersistenceSnapshot
+<span class="lineno">  664 </span><span class="decl"><span class="istickedoff">preparePersistenceSnapshot sessionId ss =</span>
+<span class="lineno">  665 </span><span class="spaces">  </span><span class="istickedoff">StatePersistenceSnapshot</span>
+<span class="lineno">  666 </span><span class="spaces">    </span><span class="istickedoff">{ spsCanonicalState = persistedCanonicalState sessionId ss</span>
+<span class="lineno">  667 </span><span class="spaces">    </span><span class="istickedoff">, spsRuntimeContinuation = runtimeContinuationState sessionId ss</span>
+<span class="lineno">  668 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  669 </span>
+<span class="lineno">  670 </span>sanitizeForPersistence :: Text -&gt; SystemState -&gt; SystemState
+<span class="lineno">  671 </span><span class="decl"><span class="nottickedoff">sanitizeForPersistence = persistedCanonicalState</span></span>
+<span class="lineno">  672 </span>
+<span class="lineno">  673 </span>emptySystemState :: SystemState
+<span class="lineno">  674 </span><span class="decl"><span class="istickedoff">emptySystemState = SystemState</span>
+<span class="lineno">  675 </span><span class="spaces">  </span><span class="istickedoff">{ ssDialogue = emptyDialogueState</span>
+<span class="lineno">  676 </span><span class="spaces">  </span><span class="istickedoff">, ssIdentity = emptyIdentityState</span>
+<span class="lineno">  677 </span><span class="spaces">  </span><span class="istickedoff">, ssSemantic = emptySemanticState</span>
+<span class="lineno">  678 </span><span class="spaces">  </span><span class="istickedoff">, ssSessionId = &quot;&quot;</span>
+<span class="lineno">  679 </span><span class="spaces">  </span><span class="istickedoff">, ssOutputMode = DialogueOutput</span>
+<span class="lineno">  680 </span><span class="spaces">  </span><span class="istickedoff">, ssMorphology = MorphologyData M.empty M.empty M.empty M.empty</span>
+<span class="lineno">  681 </span><span class="spaces">  </span><span class="istickedoff">, ssObservability = emptyObservabilityState</span>
+<span class="lineno">  682 </span><span class="spaces">  </span><span class="istickedoff">, ssEssence = emptyEssence</span>
+<span class="lineno">  683 </span><span class="spaces">  </span><span class="istickedoff">, ssSalienceWeights = defaultSalienceWeights</span>
+<span class="lineno">  684 </span><span class="spaces">  </span><span class="istickedoff">, ssFieldHeuristics = defaultFieldHeuristics</span>
+<span class="lineno">  685 </span><span class="spaces">  </span><span class="istickedoff">, ssShadowVetoState = defaultShadowVetoState</span>
+<span class="lineno">  686 </span><span class="spaces">  </span><span class="istickedoff">, ssProvisionalAtoms = []</span>
+<span class="lineno">  687 </span><span class="spaces">  </span><span class="istickedoff">, ssLearningNeedState = emptyLearningNeedState</span>
+<span class="lineno">  688 </span><span class="spaces">  </span><span class="istickedoff">, ssGuardrailState = emptyGuardrailState</span>
+<span class="lineno">  689 </span><span class="spaces">  </span><span class="istickedoff">, ssCalibrationLog = emptyCalibrationLog</span>
+<span class="lineno">  690 </span><span class="spaces">  </span><span class="istickedoff">, ssKnowledgeTree = emptyKnowledgeTree</span>
+<span class="lineno">  691 </span><span class="spaces">  </span><span class="istickedoff">, ssToolReliability = M.empty</span>
+<span class="lineno">  692 </span><span class="spaces">  </span><span class="istickedoff">, ssCalibrationSnapshots = []</span>
+<span class="lineno">  693 </span><span class="spaces">  </span><span class="istickedoff">, ssAdaptiveMutationLog = []</span>
+<span class="lineno">  694 </span><span class="spaces">  </span><span class="istickedoff">, ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState</span>
+<span class="lineno">  695 </span><span class="spaces">  </span><span class="istickedoff">, ssDialogueThread = emptyDialogueThread</span>
+<span class="lineno">  696 </span><span class="spaces">  </span><span class="istickedoff">, ssDialogueCommitmentLedger = emptyDialogueCommitmentLedger</span>
+<span class="lineno">  697 </span><span class="spaces">  </span><span class="istickedoff">, ssDialoguePhase = Exploring</span>
+<span class="lineno">  698 </span><span class="spaces">  </span><span class="istickedoff">, ssTruthContractStatus = LegacyIncompleteSurface</span>
+<span class="lineno">  699 </span><span class="spaces">  </span><span class="istickedoff">, ssSpeechPolicyState = emptySpeechPolicyState</span>
+<span class="lineno">  700 </span><span class="spaces">  </span><span class="istickedoff">, ssBeliefStore = emptyBeliefStore</span>
+<span class="lineno">  701 </span><span class="spaces">  </span><span class="istickedoff">, ssPerspectiveRegistry = emptyPerspectiveRegistry</span>
+<span class="lineno">  702 </span><span class="spaces">  </span><span class="istickedoff">, ssGovernanceProjection = emptyGovernanceProjection</span>
+<span class="lineno">  703 </span><span class="spaces">  </span><span class="istickedoff">, ssGovernanceHistory = []</span>
+<span class="lineno">  704 </span><span class="spaces">  </span><span class="istickedoff">, ssGovernanceRuntimeFault = Nothing</span>
+<span class="lineno">  705 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  706 </span>
+<span class="lineno">  707 </span>emptyGovernanceProjection :: GovernanceProjection
+<span class="lineno">  708 </span><span class="decl"><span class="istickedoff">emptyGovernanceProjection = GovernanceProjection</span>
+<span class="lineno">  709 </span><span class="spaces">  </span><span class="istickedoff">{ gpMeta = ProjectionMeta</span>
+<span class="lineno">  710 </span><span class="spaces">      </span><span class="istickedoff">{ pmProjectionVersion = currentProjectionVersion</span>
+<span class="lineno">  711 </span><span class="spaces">      </span><span class="istickedoff">, pmReducerVersion = currentReducerVersion</span>
+<span class="lineno">  712 </span><span class="spaces">      </span><span class="istickedoff">, pmSnapshotTurn = Just 0</span>
+<span class="lineno">  713 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  714 </span><span class="spaces">  </span><span class="istickedoff">, gpPerspectiveRegistry = emptyPerspectiveRegistry</span>
+<span class="lineno">  715 </span><span class="spaces">  </span><span class="istickedoff">, gpActivePerspectiveProjections = []</span>
+<span class="lineno">  716 </span><span class="spaces">  </span><span class="istickedoff">, gpGovernedRefs = []</span>
+<span class="lineno">  717 </span><span class="spaces">  </span><span class="istickedoff">, gpProjectionChecksum = &quot;governance_projection_empty&quot;</span>
+<span class="lineno">  718 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

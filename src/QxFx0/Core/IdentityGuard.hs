@@ -22,15 +22,23 @@ buildIdentityGuardReportSimple
   -> Double -> Double -> Double -> Double
   -> IdentityGuardReport
 buildIdentityGuardReportSimple calib prevAgency curAgency prevTension curTension =
-  let agencyDelta = curAgency - prevAgency
+  let nonFinite = any isNaN [prevAgency, curAgency, prevTension, curTension]
+      agencyDelta = curAgency - prevAgency
       tensionDelta = curTension - prevTension
       absTensionDelta = abs tensionDelta
-      warnings = [ GuardTransitionOutsideManifold | absTensionDelta > igcTensionDriftThreshold calib ]
-                  ++ [ GuardHighTensionDrift          | curTension > igcTensionCeiling calib ]
-                  ++ [ GuardAgencyCollapse             | curAgency < igcAgencyFloor calib ]
+      warnings
+        | nonFinite =
+            [ GuardTransitionOutsideManifold
+            , GuardHighTensionDrift
+            , GuardAgencyCollapse
+            ]
+        | otherwise =
+            [ GuardTransitionOutsideManifold | absTensionDelta > igcTensionDriftThreshold calib ]
+            ++ [ GuardHighTensionDrift | curTension > igcTensionCeiling calib ]
+            ++ [ GuardAgencyCollapse | curAgency < igcAgencyFloor calib ]
   in IdentityGuardReport
-     { igrAgencyDelta  = agencyDelta
-     , igrTensionDelta = tensionDelta
-     , igrWithinBounds = null warnings
-     , igrWarnings     = warnings
-     }
+       { igrAgencyDelta = if nonFinite then 0 else agencyDelta
+       , igrTensionDelta = if nonFinite then 0 else tensionDelta
+       , igrWithinBounds = null warnings
+       , igrWarnings = warnings
+       }

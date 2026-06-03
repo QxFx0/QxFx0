@@ -1,0 +1,149 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module Test.Suite.Guardrails
+<span class="lineno">    4 </span>  ( guardrailsTests
+<span class="lineno">    5 </span>  ) where
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>import Data.Aeson (decode, encode)
+<span class="lineno">    8 </span>import Test.HUnit
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import QxFx0.Learning.Calibration (CalibrationId(..))
+<span class="lineno">   11 </span>import QxFx0.Learning.Guardrails
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>guardrailsTests :: [Test]
+<span class="lineno">   14 </span><span class="decl"><span class="istickedoff">guardrailsTests =</span>
+<span class="lineno">   15 </span><span class="spaces">  </span><span class="istickedoff">[ TestLabel <span class="nottickedoff">&quot;Guardrails record proposal submission&quot;</span> testRecordProposalSubmissionTracksQuarantine</span>
+<span class="lineno">   16 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails reset expired proposal window&quot;</span> testRecordProposalSubmissionResetsExpiredWindow</span>
+<span class="lineno">   17 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails rate limit blocks after max&quot;</span> testGuardrailRateLimitBlocksAfterMax</span>
+<span class="lineno">   18 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails circuit breaker opens after rejections&quot;</span> testGuardrailCircuitBreakerOpensAfterRejections</span>
+<span class="lineno">   19 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails acceptance resets rejection streak only&quot;</span> testGuardrailAcceptanceResetsRejectionStreak</span>
+<span class="lineno">   20 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails quarantine expires after minimum turns&quot;</span> testGuardrailQuarantineExpiresAfterMinTurns</span>
+<span class="lineno">   21 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails quarantine prunes stale entries&quot;</span> testGuardrailQuarantinePrunesStaleEntries</span>
+<span class="lineno">   22 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails state round-trips through JSON&quot;</span> testGuardrailStateRoundTripsThroughJson</span>
+<span class="lineno">   23 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;Guardrails fresh state allows submission on turn 0&quot;</span> testCanSubmitOnTurnZeroWithEmptyState</span>
+<span class="lineno">   24 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>testRecordProposalSubmissionTracksQuarantine :: Test
+<span class="lineno">   27 </span><span class="decl"><span class="istickedoff">testRecordProposalSubmissionTracksQuarantine = TestCase $ do</span>
+<span class="lineno">   28 </span><span class="spaces">  </span><span class="istickedoff">let proposalId = CalibrationId 7</span>
+<span class="lineno">   29 </span><span class="spaces">      </span><span class="istickedoff">gs = recordProposalSubmission emptyGuardrailState 5 proposalId</span>
+<span class="lineno">   30 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;submission must record last proposal turn&quot;</span></span>
+<span class="lineno">   31 </span><span class="spaces">    </span><span class="istickedoff">5 (gsLastProposalTurn gs)</span>
+<span class="lineno">   32 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;submission must increment proposals in current window&quot;</span></span>
+<span class="lineno">   33 </span><span class="spaces">    </span><span class="istickedoff">1 (gsProposalsThisWindow gs)</span>
+<span class="lineno">   34 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;submission must quarantine the proposal id&quot;</span></span>
+<span class="lineno">   35 </span><span class="spaces">    </span><span class="istickedoff">[(5, proposalId)] (gsQuarantine gs)</span></span>
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>testRecordProposalSubmissionResetsExpiredWindow :: Test
+<span class="lineno">   38 </span><span class="decl"><span class="istickedoff">testRecordProposalSubmissionResetsExpiredWindow = TestCase $ do</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="istickedoff">let <span class="nottickedoff">proposalId = CalibrationId 3</span></span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">gs0 = emptyGuardrailState</span>
+<span class="lineno">   41 </span><span class="spaces">        </span><span class="istickedoff">{ gsWindowStart = 1</span>
+<span class="lineno">   42 </span><span class="spaces">        </span><span class="istickedoff">, gsProposalsThisWindow = 2</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   44 </span><span class="spaces">      </span><span class="istickedoff">gs1 = recordProposalSubmission gs0 12 <span class="nottickedoff">proposalId</span></span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;expired window must restart at the new turn&quot;</span></span>
+<span class="lineno">   46 </span><span class="spaces">    </span><span class="istickedoff">12 (gsWindowStart gs1)</span>
+<span class="lineno">   47 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;expired window must restart proposal count at one&quot;</span></span>
+<span class="lineno">   48 </span><span class="spaces">    </span><span class="istickedoff">1 (gsProposalsThisWindow gs1)</span></span>
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>testGuardrailRateLimitBlocksAfterMax :: Test
+<span class="lineno">   51 </span><span class="decl"><span class="istickedoff">testGuardrailRateLimitBlocksAfterMax = TestCase $ do</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">let gs = emptyGuardrailState</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff">{ gsWindowStart = 1</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="istickedoff">, gsProposalsThisWindow = 2</span>
+<span class="lineno">   55 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;must block when window is full&quot;</span></span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">(not (canSubmitProposal gs 5))</span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>testGuardrailCircuitBreakerOpensAfterRejections :: Test
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">testGuardrailCircuitBreakerOpensAfterRejections = TestCase $ do</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">let gs0 = emptyGuardrailState { gsConsecutiveRejections = 2 }</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">gs1 = recordRejection gs0 10</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;rejection must increment consecutive rejection counter&quot;</span></span>
+<span class="lineno">   64 </span><span class="spaces">    </span><span class="istickedoff">3 (gsConsecutiveRejections gs1)</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;threshold rejection must open cooldown window&quot;</span></span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">15 (gsCooldownExpiry gs1)</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;circuit breaker must be open during cooldown&quot;</span></span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">(not (canSubmitProposal gs1 11))</span></span>
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>testGuardrailAcceptanceResetsRejectionStreak :: Test
+<span class="lineno">   71 </span><span class="decl"><span class="istickedoff">testGuardrailAcceptanceResetsRejectionStreak = TestCase $ do</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">let gs0 = emptyGuardrailState</span>
+<span class="lineno">   73 </span><span class="spaces">        </span><span class="istickedoff">{ gsConsecutiveRejections = 2</span>
+<span class="lineno">   74 </span><span class="spaces">        </span><span class="istickedoff">, gsCooldownExpiry = 15</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   76 </span><span class="spaces">      </span><span class="istickedoff">gs1 = recordAcceptance gs0</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;acceptance must reset rejection streak&quot;</span></span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="istickedoff">0 (gsConsecutiveRejections gs1)</span>
+<span class="lineno">   79 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;acceptance must not silently clear active cooldown&quot;</span></span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">15 (gsCooldownExpiry gs1)</span></span>
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>testGuardrailQuarantineExpiresAfterMinTurns :: Test
+<span class="lineno">   83 </span><span class="decl"><span class="istickedoff">testGuardrailQuarantineExpiresAfterMinTurns = TestCase $ do</span>
+<span class="lineno">   84 </span><span class="spaces">  </span><span class="istickedoff">let gs = emptyGuardrailState { gsQuarantine = [(5, CalibrationId 1)] }</span>
+<span class="lineno">   85 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;quarantine must block before min turns&quot;</span></span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">(not (isQuarantineExpired gs 6 (CalibrationId 1)))</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;quarantine must expire after min turns&quot;</span></span>
+<span class="lineno">   88 </span><span class="spaces">    </span><span class="istickedoff">(isQuarantineExpired gs 7 (CalibrationId 1))</span></span>
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>testGuardrailQuarantinePrunesStaleEntries :: Test
+<span class="lineno">   91 </span><span class="decl"><span class="istickedoff">testGuardrailQuarantinePrunesStaleEntries = TestCase $ do</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">let gs0 = emptyGuardrailState</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">{ gsQuarantine = [(7, <span class="nottickedoff">CalibrationId 1</span>), (9, CalibrationId 2)] }</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">gs1 = quarantineProposal gs0 10 (CalibrationId 3)</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;stale quarantine entries must be pruned on insert&quot;</span></span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="istickedoff">[(10, CalibrationId 3), (9, CalibrationId 2)]</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">(gsQuarantine gs1)</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>testGuardrailStateRoundTripsThroughJson :: Test
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">testGuardrailStateRoundTripsThroughJson = TestCase $ do</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">let gs = GuardrailState</span>
+<span class="lineno">  102 </span><span class="spaces">        </span><span class="istickedoff">{ gsLastProposalTurn = 7</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="istickedoff">, gsProposalsThisWindow = 2</span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="istickedoff">, gsWindowStart = 3</span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="istickedoff">, gsConsecutiveRejections = 1</span>
+<span class="lineno">  106 </span><span class="spaces">        </span><span class="istickedoff">, gsCooldownExpiry = 15</span>
+<span class="lineno">  107 </span><span class="spaces">        </span><span class="istickedoff">, gsQuarantine = [(5, CalibrationId 1), (6, CalibrationId 2)]</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">decoded = decode (encode gs) :: Maybe GuardrailState</span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">assertEqual <span class="nottickedoff">&quot;guardrail state must round-trip through JSON&quot;</span></span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">(Just gs) decoded</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>-- | Regression lock for ADR-0030 §5.2.  A previously shipped bug treated
+<span class="lineno">  114 </span>-- @gsCooldownExpiry = 0@ (the empty-state sentinel meaning &quot;no active
+<span class="lineno">  115 </span>-- cooldown&quot;) as an open circuit on turn 0, blocking the first
+<span class="lineno">  116 </span>-- 'canSubmitProposal' call of every fresh session.  This test pins the
+<span class="lineno">  117 </span>-- contract that a fresh 'emptyGuardrailState' permits submissions on
+<span class="lineno">  118 </span>-- turn 0 and on any later turn while no cooldown has been recorded.
+<span class="lineno">  119 </span>testCanSubmitOnTurnZeroWithEmptyState :: Test
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">testCanSubmitOnTurnZeroWithEmptyState = TestCase $ do</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;fresh guardrail state must allow submission on turn 0&quot;</span></span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">(canSubmitProposal emptyGuardrailState 0)</span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;fresh guardrail state must allow submission on a later turn&quot;</span></span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">(canSubmitProposal emptyGuardrailState 100)</span>
+<span class="lineno">  125 </span><span class="spaces">  </span><span class="istickedoff">assertBool <span class="nottickedoff">&quot;fresh guardrail state must allow submission far ahead in time&quot;</span></span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">(canSubmitProposal emptyGuardrailState 1000000)</span></span>
+
+</pre>
+</body>
+</html>

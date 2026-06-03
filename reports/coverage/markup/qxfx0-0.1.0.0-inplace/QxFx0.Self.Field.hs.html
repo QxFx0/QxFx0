@@ -1,0 +1,520 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>{-|
+<span class="lineno">    7 </span>Module      : QxFx0.Self.Field
+<span class="lineno">    8 </span>Description : Phase-4 right-hemispheric observation summary.
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>A typed, pure realisation of the five-component @Field@ named in
+<span class="lineno">   11 </span>@docs\/adr\/0007-dual-mode-conatus.md@ and pinned by
+<span class="lineno">   12 </span>@docs\/adr\/0009-right-hemisphere-field.md@.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>Phase 3 (commit @20d5611@, @QxFx0.Self.Adjunction@) shipped a
+<span class="lineno">   15 </span>single-'Double' stub for 'Field'. This module replaces that stub
+<span class="lineno">   16 </span>with the substantive five-component record:
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>* 'Resonance'       — peak similarity of the current turn to its
+<span class="lineno">   19 </span>  recent context.
+<span class="lineno">   20 </span>* 'Atmosphere'      — two-dimensional valence\/arousal affect.
+<span class="lineno">   21 </span>* 'FieldConfidence' — internal-coherence score, derived from the
+<span class="lineno">   22 </span>  rest.
+<span class="lineno">   23 </span>* 'Consolidation'   — narrative-integration scalar over the
+<span class="lineno">   24 </span>  recent window (genuinely temporal).
+<span class="lineno">   25 </span>* 'Counterfactual'  — diversity of plausible alternative parses.
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>Each component is a 'newtype' around a refined numeric value,
+<span class="lineno">   28 </span>with a documented range and a documented operational meaning.
+<span class="lineno">   29 </span>The 'Field' record is strict in every field.
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>== What this module is /not/
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>This module is the algebraic /shape/ of the right-hemispheric
+<span class="lineno">   34 </span>observation summary. It does /not/ source values from the runtime,
+<span class="lineno">   35 </span>does /not/ touch the turn pipeline, and does /not/ know about
+<span class="lineno">   36 </span>@Holistic@\/@Formal@ from @QxFx0.Self.Adjunction@ — that module
+<span class="lineno">   37 </span>imports /this/ one, not the other way round.
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>Sourcing of values from runtime signals (semantic embedding,
+<span class="lineno">   40 </span>consciousness-loop narrative tone, Bayesian posterior diversity,
+<span class="lineno">   41 </span>etc.) is Phase-5 work and lives outside this module.
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>== Combination laws
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>Per ADR-0009 §2.2, 'Field' is /not/ a global 'Monoid'. The natural
+<span class="lineno">   46 </span>combination law differs by component:
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>* 'combineResonance'       uses 'max'  — \&quot;strongest echo found\&quot;.
+<span class="lineno">   49 </span>* 'combineAtmosphere'      uses weighted average of valence and
+<span class="lineno">   50 </span>  arousal — affect drifts; combining two snapshots is interpolation.
+<span class="lineno">   51 </span>* 'combineFieldConfidence' uses 'min'  — combined confidence is at
+<span class="lineno">   52 </span>  most each individual.
+<span class="lineno">   53 </span>* 'combineConsolidation'   uses additive (clipped at @1.0@) —
+<span class="lineno">   54 </span>  consolidation accumulates over a window.
+<span class="lineno">   55 </span>* 'combineCounterfactual'  uses 'max'  — preserve highest
+<span class="lineno">   56 </span>  counterfactual signal.
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>Field-level combination is exposed as 'combineField' parameterised
+<span class="lineno">   59 </span>by an explicit 'CombineMode'.
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>== History stub
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>'FieldHistory' is a Phase-4 stub for the windowed trajectory that
+<span class="lineno">   64 </span>Phase 5 will fill in. Phase 4 ships a trivial keep-the-last-32
+<span class="lineno">   65 </span>buffer with a most-recent-wins summariser; this is enough to let
+<span class="lineno">   66 </span>downstream modules import the type and the operations, and lets
+<span class="lineno">   67 </span>Phase 5 grow the substantive sliding-window summary without
+<span class="lineno">   68 </span>breaking imports.
+<span class="lineno">   69 </span>-}
+<span class="lineno">   70 </span>module QxFx0.Self.Field
+<span class="lineno">   71 </span>  ( -- * The five components
+<span class="lineno">   72 </span>    Resonance (..)
+<span class="lineno">   73 </span>  , Atmosphere (..)
+<span class="lineno">   74 </span>  , FieldConfidence (..)
+<span class="lineno">   75 </span>  , Consolidation (..)
+<span class="lineno">   76 </span>  , Counterfactual (..)
+<span class="lineno">   77 </span>    -- * Smart constructors with range checking
+<span class="lineno">   78 </span>  , mkResonance
+<span class="lineno">   79 </span>  , mkAtmosphere
+<span class="lineno">   80 </span>  , mkFieldConfidence
+<span class="lineno">   81 </span>  , mkConsolidation
+<span class="lineno">   82 </span>  , mkCounterfactual
+<span class="lineno">   83 </span>    -- * The Field record
+<span class="lineno">   84 </span>  , Field (..)
+<span class="lineno">   85 </span>  , emptyField
+<span class="lineno">   86 </span>  , deriveFieldConfidence
+<span class="lineno">   87 </span>    -- * Phase-7 tunable heuristics (lifeness gates)
+<span class="lineno">   88 </span>  , FieldHeuristics (..)
+<span class="lineno">   89 </span>  , defaultFieldHeuristics
+<span class="lineno">   90 </span>  , computeConsolidation
+<span class="lineno">   91 </span>  , computeCounterfactual
+<span class="lineno">   92 </span>  , computeAtmosphere
+<span class="lineno">   93 </span>    -- * Phase-B bounded post-commitment adaptation
+<span class="lineno">   94 </span>  , adaptFieldHeuristics
+<span class="lineno">   95 </span>    -- * Component combinators
+<span class="lineno">   96 </span>  , combineResonance
+<span class="lineno">   97 </span>  , combineAtmosphere
+<span class="lineno">   98 </span>  , combineFieldConfidence
+<span class="lineno">   99 </span>  , combineConsolidation
+<span class="lineno">  100 </span>  , combineCounterfactual
+<span class="lineno">  101 </span>    -- * Field-level combinators
+<span class="lineno">  102 </span>  , CombineMode (..)
+<span class="lineno">  103 </span>  , combineField
+<span class="lineno">  104 </span>    -- * History stub (filled in Phase 5)
+<span class="lineno">  105 </span>  , FieldHistory
+<span class="lineno">  106 </span>  , emptyHistory
+<span class="lineno">  107 </span>  , recordFieldOnto
+<span class="lineno">  108 </span>  , summariseFrom
+<span class="lineno">  109 </span>  , unFieldHistory
+<span class="lineno">  110 </span>  ) where
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>import Control.DeepSeq (NFData)
+<span class="lineno">  113 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">  114 </span>import GHC.Generics (Generic)
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  117 </span>-- Component newtypes
+<span class="lineno">  118 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>-- | Maximum cosine similarity between the current turn's semantic
+<span class="lineno">  121 </span>-- embedding and any of the previous @k@ turn embeddings in the
+<span class="lineno">  122 </span>-- conversational window. Range @[0, 1]@: 0 = topic shift,
+<span class="lineno">  123 </span>-- 1 = exact echo. @k@ is a Phase-5 tunable.
+<span class="lineno">  124 </span>newtype Resonance = Resonance { <span class="istickedoff"><span class="decl"><span class="istickedoff">unResonance</span></span></span> :: Double }
+<span class="lineno">  125 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  126 </span>
+<span class="lineno">  127 </span>-- | Two-dimensional affective summary on the valence\/arousal axis.
+<span class="lineno">  128 </span>--
+<span class="lineno">  129 </span>-- * 'atmosphereValence' in @[-1, 1]@: @-1@ negative … @1@ positive.
+<span class="lineno">  130 </span>-- * 'atmosphereArousal' in @[0, 1]@: @0@ calm … @1@ urgent\/intense.
+<span class="lineno">  131 </span>data Atmosphere = Atmosphere
+<span class="lineno">  132 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">atmosphereValence</span></span></span> :: !Double
+<span class="lineno">  133 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">atmosphereArousal</span></span></span> :: !Double
+<span class="lineno">  134 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>-- | Internal-coherence score in @[0, 1]@: @1@ = all signals agree,
+<span class="lineno">  137 </span>-- @0@ = signals are mutually contradictory and any decision drawn
+<span class="lineno">  138 </span>-- from this 'Field' is suspect.
+<span class="lineno">  139 </span>newtype FieldConfidence = FieldConfidence { <span class="istickedoff"><span class="decl"><span class="istickedoff">unFieldConfidence</span></span></span> :: Double }
+<span class="lineno">  140 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>-- | Narrative-integration scalar in @[0, 1]@: how much of the
+<span class="lineno">  143 </span>-- recent conversation has been digested into the system's running
+<span class="lineno">  144 </span>-- model. Genuinely temporal — its value at turn @n@ depends on
+<span class="lineno">  145 </span>-- the trajectory through turns @1..n@, not just the current turn.
+<span class="lineno">  146 </span>newtype Consolidation = Consolidation { <span class="istickedoff"><span class="decl"><span class="istickedoff">unConsolidation</span></span></span> :: Double }
+<span class="lineno">  147 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>-- | Diversity of plausible alternative interpretations of the
+<span class="lineno">  150 </span>-- current turn, normalised to @[0, 1]@. High = posterior was
+<span class="lineno">  151 </span>-- spread; low = posterior was peaked.
+<span class="lineno">  152 </span>newtype Counterfactual = Counterfactual { <span class="istickedoff"><span class="decl"><span class="istickedoff">unCounterfactual</span></span></span> :: Double }
+<span class="lineno">  153 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  156 </span>-- Smart constructors
+<span class="lineno">  157 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>-- | Construct a 'Resonance', clamping out-of-range inputs to
+<span class="lineno">  160 </span>-- @[0, 1]@.
+<span class="lineno">  161 </span>mkResonance :: Double -&gt; Resonance
+<span class="lineno">  162 </span><span class="decl"><span class="istickedoff">mkResonance = Resonance . clampUnit</span></span>
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>-- | Construct an 'Atmosphere', clamping valence to @[-1, 1]@ and
+<span class="lineno">  165 </span>-- arousal to @[0, 1]@.
+<span class="lineno">  166 </span>mkAtmosphere :: Double -&gt; Double -&gt; Atmosphere
+<span class="lineno">  167 </span><span class="decl"><span class="istickedoff">mkAtmosphere v a =</span>
+<span class="lineno">  168 </span><span class="spaces">  </span><span class="istickedoff">Atmosphere</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">{ atmosphereValence = clamp (-1.0) 1.0 v</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">, atmosphereArousal = clampUnit a</span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  172 </span>
+<span class="lineno">  173 </span>-- | Construct a 'FieldConfidence', clamping to @[0, 1]@.
+<span class="lineno">  174 </span>mkFieldConfidence :: Double -&gt; FieldConfidence
+<span class="lineno">  175 </span><span class="decl"><span class="istickedoff">mkFieldConfidence = FieldConfidence . clampUnit</span></span>
+<span class="lineno">  176 </span>
+<span class="lineno">  177 </span>-- | Construct a 'Consolidation', clamping to @[0, 1]@.
+<span class="lineno">  178 </span>mkConsolidation :: Double -&gt; Consolidation
+<span class="lineno">  179 </span><span class="decl"><span class="istickedoff">mkConsolidation = Consolidation . clampUnit</span></span>
+<span class="lineno">  180 </span>
+<span class="lineno">  181 </span>-- | Construct a 'Counterfactual', clamping to @[0, 1]@.
+<span class="lineno">  182 </span>mkCounterfactual :: Double -&gt; Counterfactual
+<span class="lineno">  183 </span><span class="decl"><span class="istickedoff">mkCounterfactual = Counterfactual . clampUnit</span></span>
+<span class="lineno">  184 </span>
+<span class="lineno">  185 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  186 </span>-- The Field record
+<span class="lineno">  187 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>-- | The right-hemispheric observation summary at one moment in
+<span class="lineno">  190 </span>-- time. A snapshot, not a history; trajectories live in
+<span class="lineno">  191 </span>-- 'FieldHistory'.
+<span class="lineno">  192 </span>data Field = Field
+<span class="lineno">  193 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">fieldResonance</span></span></span>      :: !Resonance
+<span class="lineno">  194 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fieldAtmosphere</span></span></span>     :: !Atmosphere
+<span class="lineno">  195 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fieldConfidence</span></span></span>     :: !FieldConfidence
+<span class="lineno">  196 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fieldConsolidation</span></span></span>  :: !Consolidation
+<span class="lineno">  197 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fieldCounterfactual</span></span></span> :: !Counterfactual
+<span class="lineno">  198 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>-- | The \&quot;no observation yet\&quot; zero. Per ADR-0009 §4.4,
+<span class="lineno">  201 </span>-- 'fieldConfidence' is set to @1.0@: a system that has not yet
+<span class="lineno">  202 </span>-- observed anything is uninformed, not unconfident.
+<span class="lineno">  203 </span>emptyField :: Field
+<span class="lineno">  204 </span><span class="decl"><span class="istickedoff">emptyField =</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">Field</span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="istickedoff">{ fieldResonance      = Resonance       0.0</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">, fieldAtmosphere     = Atmosphere      0.0 0.0</span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">, fieldConfidence     = FieldConfidence 1.0</span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">, fieldConsolidation  = Consolidation   0.0</span>
+<span class="lineno">  210 </span><span class="spaces">    </span><span class="istickedoff">, fieldCounterfactual = Counterfactual  0.0</span>
+<span class="lineno">  211 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>-- | Derive 'FieldConfidence' from the other four components.
+<span class="lineno">  214 </span>--
+<span class="lineno">  215 </span>-- The default formula reduces 'Atmosphere' to its arousal
+<span class="lineno">  216 </span>-- magnitude (the @[0, 1]@-valued dimension) and computes
+<span class="lineno">  217 </span>-- @1 - dispersion@, where dispersion is the variance of the four
+<span class="lineno">  218 </span>-- scalarised components, normalised so a uniform field gives
+<span class="lineno">  219 </span>-- @1.0@ and a maximally split field (two zeros, two ones) gives
+<span class="lineno">  220 </span>-- @0.0@.
+<span class="lineno">  221 </span>--
+<span class="lineno">  222 </span>-- Phase 5 may override this default with a richer derivation; the
+<span class="lineno">  223 </span>-- formula here is documented to be transparent and total, not
+<span class="lineno">  224 </span>-- canonical.
+<span class="lineno">  225 </span>deriveFieldConfidence :: Field -&gt; FieldConfidence
+<span class="lineno">  226 </span><span class="decl"><span class="istickedoff">deriveFieldConfidence f =</span>
+<span class="lineno">  227 </span><span class="spaces">  </span><span class="istickedoff">FieldConfidence (1.0 - clampUnit normalised)</span>
+<span class="lineno">  228 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  229 </span><span class="spaces">    </span><span class="istickedoff">xs =</span>
+<span class="lineno">  230 </span><span class="spaces">      </span><span class="istickedoff">[ unResonance       (fieldResonance      f)</span>
+<span class="lineno">  231 </span><span class="spaces">      </span><span class="istickedoff">, atmosphereArousal (fieldAtmosphere     f)</span>
+<span class="lineno">  232 </span><span class="spaces">      </span><span class="istickedoff">, unConsolidation   (fieldConsolidation  f)</span>
+<span class="lineno">  233 </span><span class="spaces">      </span><span class="istickedoff">, unCounterfactual  (fieldCounterfactual f)</span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="istickedoff">]</span>
+<span class="lineno">  235 </span><span class="spaces">    </span><span class="istickedoff">n          = fromIntegral (length xs) :: Double</span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">mu         = sum xs / n</span>
+<span class="lineno">  237 </span><span class="spaces">    </span><span class="istickedoff">var        = sum [(x - mu) * (x - mu) | x &lt;- xs] / n</span>
+<span class="lineno">  238 </span><span class="spaces">    </span><span class="istickedoff">-- Maximum variance for n=4 samples in [0,1] is 0.25</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="istickedoff">-- (achieved when half are 0 and half are 1).</span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="istickedoff">normalised = var / 0.25</span></span>
+<span class="lineno">  241 </span>
+<span class="lineno">  242 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  243 </span>-- Phase-7 tunable heuristics (lifeness gates / calibration)
+<span class="lineno">  244 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>-- | Tunable parameters for the four Phase-5.5d heuristics that
+<span class="lineno">  247 </span>-- populate a 'Field' from runtime signals.  Previously these were
+<span class="lineno">  248 </span>-- magic constants embedded in 'buildPrepareEffectPlan'; Phase 7
+<span class="lineno">  249 </span>-- extracts them into a single calibration record so that
+<span class="lineno">  250 </span>-- property-based lifeness gates can vary the parameters and
+<span class="lineno">  251 </span>-- verify boundary behaviour.
+<span class="lineno">  252 </span>data FieldHeuristics = FieldHeuristics
+<span class="lineno">  253 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">fhNarrativeWindowSize</span></span></span>     :: !Int
+<span class="lineno">  254 </span>    -- ^ Window over 'ssRecentNarrativeSuccess' used for the
+<span class="lineno">  255 </span>    --   consolidation narrative-rate computation. Default: 5.
+<span class="lineno">  256 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhDefaultNarrativeRate</span></span></span>    :: !Double
+<span class="lineno">  257 </span>    -- ^ Consolidation fallback when the window is empty.
+<span class="lineno">  258 </span>    --   Default: 0.2.
+<span class="lineno">  259 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhTopicStabilityBoost</span></span></span>     :: !Double
+<span class="lineno">  260 </span>    -- ^ Floor applied to consolidation when the current topic
+<span class="lineno">  261 </span>    --   matches the previous turn's topic. Default: 0.5.
+<span class="lineno">  262 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhEntropyEpsilon</span></span></span>          :: !Double
+<span class="lineno">  263 </span>    -- ^ Small additive guard against division-by-zero when
+<span class="lineno">  264 </span>    --   normalising family weights for entropy. Default: 1e-9.
+<span class="lineno">  265 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhHolisticStreakBoostRate</span></span></span> :: !Double
+<span class="lineno">  266 </span>    -- ^ Increment added to counterfactual per unbroken holistic
+<span class="lineno">  267 </span>    --   turn in the streak. Default: 0.05.
+<span class="lineno">  268 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhHolisticStreakBoostCap</span></span></span>  :: !Double
+<span class="lineno">  269 </span>    -- ^ Maximum total streak boost. Default: 0.2.
+<span class="lineno">  270 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhLegitimacyMidpoint</span></span></span>      :: !Double
+<span class="lineno">  271 </span>    -- ^ Legitimacy score treated as neutral for atmosphere
+<span class="lineno">  272 </span>    --   valence modulation. Default: 0.5.
+<span class="lineno">  273 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">fhLegitimacyBonusScale</span></span></span>    :: !Double
+<span class="lineno">  274 </span>    -- ^ Multiplier on (legitimacy − midpoint) that is added
+<span class="lineno">  275 </span>    --   to the ego-derived valence base. Default: 0.4.
+<span class="lineno">  276 </span>  }
+<span class="lineno">  277 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Generic</span></span></span></span>)
+<span class="lineno">  278 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  279 </span>
+<span class="lineno">  280 </span>-- | Phase-7 default heuristic parameters.  These reproduce the
+<span class="lineno">  281 </span>-- behaviour of the hardcoded constants that shipped in Phase 5.5d.
+<span class="lineno">  282 </span>defaultFieldHeuristics :: FieldHeuristics
+<span class="lineno">  283 </span><span class="decl"><span class="istickedoff">defaultFieldHeuristics = FieldHeuristics</span>
+<span class="lineno">  284 </span><span class="spaces">  </span><span class="istickedoff">{ fhNarrativeWindowSize     = 5</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="istickedoff">, fhDefaultNarrativeRate    = 0.2</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">, fhTopicStabilityBoost   = 0.5</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">, fhEntropyEpsilon        = 1e-9</span>
+<span class="lineno">  288 </span><span class="spaces">  </span><span class="istickedoff">, fhHolisticStreakBoostRate = 0.05</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">, fhHolisticStreakBoostCap  = 0.2</span>
+<span class="lineno">  290 </span><span class="spaces">  </span><span class="istickedoff">, fhLegitimacyMidpoint      = 0.5</span>
+<span class="lineno">  291 </span><span class="spaces">  </span><span class="istickedoff">, fhLegitimacyBonusScale    = 0.4</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  293 </span>
+<span class="lineno">  294 </span>-- | Compute 'Consolidation' from a window of recent narrative
+<span class="lineno">  295 </span>-- success flags and a topic-stability indicator.
+<span class="lineno">  296 </span>--
+<span class="lineno">  297 </span>-- Lifeness gate: result is always in @[0, 1]@ because the raw
+<span class="lineno">  298 </span>-- value is routed through 'mkConsolidation'.
+<span class="lineno">  299 </span>computeConsolidation :: FieldHeuristics -&gt; [Bool] -&gt; Bool -&gt; Consolidation
+<span class="lineno">  300 </span><span class="decl"><span class="istickedoff">computeConsolidation fh recentSuccess sameTopic =</span>
+<span class="lineno">  301 </span><span class="spaces">  </span><span class="istickedoff">let window = take (fhNarrativeWindowSize fh) recentSuccess</span>
+<span class="lineno">  302 </span><span class="spaces">      </span><span class="istickedoff">rate   = if null window</span>
+<span class="lineno">  303 </span><span class="spaces">                 </span><span class="istickedoff">then fhDefaultNarrativeRate fh</span>
+<span class="lineno">  304 </span><span class="spaces">                 </span><span class="istickedoff">else fromIntegral (length (filter id window))</span>
+<span class="lineno">  305 </span><span class="spaces">                      </span><span class="istickedoff">/ fromIntegral (length window)</span>
+<span class="lineno">  306 </span><span class="spaces">      </span><span class="istickedoff">raw    = if sameTopic then max (fhTopicStabilityBoost fh) rate else rate</span>
+<span class="lineno">  307 </span><span class="spaces">  </span><span class="istickedoff">in mkConsolidation raw</span></span>
+<span class="lineno">  308 </span>
+<span class="lineno">  309 </span>-- | Compute 'Counterfactual' from a list of semantic-logic family
+<span class="lineno">  310 </span>-- weights and the current holistic streak length.
+<span class="lineno">  311 </span>--
+<span class="lineno">  312 </span>-- Lifeness gate: result is always in @[0, 1]@ because the raw
+<span class="lineno">  313 </span>-- value is routed through 'mkCounterfactual'.
+<span class="lineno">  314 </span>computeCounterfactual :: FieldHeuristics -&gt; [Double] -&gt; Int -&gt; Counterfactual
+<span class="lineno">  315 </span><span class="decl"><span class="istickedoff">computeCounterfactual fh weights streak =</span>
+<span class="lineno">  316 </span><span class="spaces">  </span><span class="istickedoff">let totalWeight  = sum weights</span>
+<span class="lineno">  317 </span><span class="spaces">      </span><span class="istickedoff">epsilon      = fhEntropyEpsilon fh</span>
+<span class="lineno">  318 </span><span class="spaces">      </span><span class="istickedoff">normWeights  = map (/ max epsilon totalWeight) weights</span>
+<span class="lineno">  319 </span><span class="spaces">      </span><span class="istickedoff">entropy      = negate $ sum [ p * log (max epsilon p) | p &lt;- normWeights ]</span>
+<span class="lineno">  320 </span><span class="spaces">      </span><span class="istickedoff">maxEntropy   = log (fromIntegral (max 1 (length normWeights)))</span>
+<span class="lineno">  321 </span><span class="spaces">      </span><span class="istickedoff">ambiguity    = if maxEntropy &gt; 0 then entropy / maxEntropy else 0.0</span>
+<span class="lineno">  322 </span><span class="spaces">      </span><span class="istickedoff">boost        = min (fromIntegral streak * fhHolisticStreakBoostRate fh)</span>
+<span class="lineno">  323 </span><span class="spaces">                         </span><span class="istickedoff">(fhHolisticStreakBoostCap fh)</span>
+<span class="lineno">  324 </span><span class="spaces">      </span><span class="istickedoff">raw          = min 1.0 (ambiguity + boost)</span>
+<span class="lineno">  325 </span><span class="spaces">  </span><span class="istickedoff">in mkCounterfactual raw</span></span>
+<span class="lineno">  326 </span>
+<span class="lineno">  327 </span>-- | Compute 'Atmosphere' from ego agency, ego tension, and the
+<span class="lineno">  328 </span>-- last legitimacy score.
+<span class="lineno">  329 </span>--
+<span class="lineno">  330 </span>-- Lifeness gate: the returned 'Atmosphere' is always well-formed
+<span class="lineno">  331 </span>-- because 'mkAtmosphere' clamps both axes.
+<span class="lineno">  332 </span>computeAtmosphere :: FieldHeuristics -&gt; Double -&gt; Double -&gt; Double -&gt; Atmosphere
+<span class="lineno">  333 </span><span class="decl"><span class="istickedoff">computeAtmosphere fh egoAgency egoTension legitScore =</span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="istickedoff">let valenceBase = egoAgency - egoTension</span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">legitBonus  = (legitScore - fhLegitimacyMidpoint fh)</span>
+<span class="lineno">  336 </span><span class="spaces">                    </span><span class="istickedoff">* fhLegitimacyBonusScale fh</span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff">valence     = valenceBase + legitBonus</span>
+<span class="lineno">  338 </span><span class="spaces">      </span><span class="istickedoff">arousal     = egoTension</span>
+<span class="lineno">  339 </span><span class="spaces">  </span><span class="istickedoff">in mkAtmosphere valence arousal</span></span>
+<span class="lineno">  340 </span>
+<span class="lineno">  341 </span>-- | Bounded adaptation of field-heuristic parameters.
+<span class="lineno">  342 </span>--
+<span class="lineno">  343 </span>-- Only the 'Double' fields are adapted; 'Int' fields (window size)
+<span class="lineno">  344 </span>-- are left unchanged to avoid brittle integer drift.  Each adapted
+<span class="lineno">  345 </span>-- value is clamped to @[0.0, 1.0]@ and further constrained to stay
+<span class="lineno">  346 </span>-- within @±0.5@ of its default, providing an anti-drift guardrail.
+<span class="lineno">  347 </span>--
+<span class="lineno">  348 </span>-- Signal in @[-1, 1]@; learning rate capped at @0.02@ per turn.
+<span class="lineno">  349 </span>-- Empirical signal generation is deferred to Phase 7; this function
+<span class="lineno">  350 </span>-- wires the bounded mechanics.
+<span class="lineno">  351 </span>adaptFieldHeuristics :: Double -&gt; FieldHeuristics -&gt; FieldHeuristics
+<span class="lineno">  352 </span><span class="decl"><span class="istickedoff">adaptFieldHeuristics rawSignal fh =</span>
+<span class="lineno">  353 </span><span class="spaces">  </span><span class="istickedoff">let lr        = 0.02</span>
+<span class="lineno">  354 </span><span class="spaces">      </span><span class="istickedoff">signal    = max (-1.0) (min 1.0 rawSignal)</span>
+<span class="lineno">  355 </span><span class="spaces">      </span><span class="istickedoff">delta     = signal * lr</span>
+<span class="lineno">  356 </span><span class="spaces">      </span><span class="istickedoff">-- Anti-drift only applies when we are actually adapting;</span>
+<span class="lineno">  357 </span><span class="spaces">      </span><span class="istickedoff">-- signal=0 must be identity to respect the gating contract.</span>
+<span class="lineno">  358 </span><span class="spaces">      </span><span class="istickedoff">bounded target x =</span>
+<span class="lineno">  359 </span><span class="spaces">        </span><span class="istickedoff">let adapted = max 0.0 (min 1.0 (x + delta))</span>
+<span class="lineno">  360 </span><span class="spaces">        </span><span class="istickedoff">in if abs delta &lt; 1e-12</span>
+<span class="lineno">  361 </span><span class="spaces">             </span><span class="istickedoff">then x</span>
+<span class="lineno">  362 </span><span class="spaces">             </span><span class="istickedoff">else max (target - 0.5) (min (target + 0.5) adapted)</span>
+<span class="lineno">  363 </span><span class="spaces">      </span><span class="istickedoff">def       = defaultFieldHeuristics</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="istickedoff">in fh</span>
+<span class="lineno">  365 </span><span class="spaces">       </span><span class="istickedoff">{ fhDefaultNarrativeRate    = bounded (fhDefaultNarrativeRate    def) (fhDefaultNarrativeRate    fh)</span>
+<span class="lineno">  366 </span><span class="spaces">       </span><span class="istickedoff">, fhTopicStabilityBoost     = bounded (fhTopicStabilityBoost     def) (fhTopicStabilityBoost     fh)</span>
+<span class="lineno">  367 </span><span class="spaces">       </span><span class="istickedoff">, fhHolisticStreakBoostRate = bounded (fhHolisticStreakBoostRate def) (fhHolisticStreakBoostRate fh)</span>
+<span class="lineno">  368 </span><span class="spaces">       </span><span class="istickedoff">, fhHolisticStreakBoostCap  = bounded (fhHolisticStreakBoostCap  def) (fhHolisticStreakBoostCap  fh)</span>
+<span class="lineno">  369 </span><span class="spaces">       </span><span class="istickedoff">, fhLegitimacyMidpoint      = bounded (fhLegitimacyMidpoint      def) (fhLegitimacyMidpoint      fh)</span>
+<span class="lineno">  370 </span><span class="spaces">       </span><span class="istickedoff">, fhLegitimacyBonusScale    = bounded (fhLegitimacyBonusScale    def) (fhLegitimacyBonusScale    fh)</span>
+<span class="lineno">  371 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  372 </span>
+<span class="lineno">  373 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  374 </span>-- Per-component combinators
+<span class="lineno">  375 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  376 </span>
+<span class="lineno">  377 </span>-- | Combine two 'Resonance' values by 'max'.
+<span class="lineno">  378 </span>-- Commutative, associative, idempotent.
+<span class="lineno">  379 </span>combineResonance :: Resonance -&gt; Resonance -&gt; Resonance
+<span class="lineno">  380 </span><span class="decl"><span class="istickedoff">combineResonance (Resonance a) (Resonance b) = Resonance (max a b)</span></span>
+<span class="lineno">  381 </span>
+<span class="lineno">  382 </span>-- | Combine two 'Atmosphere' values by weighted linear interpolation
+<span class="lineno">  383 </span>-- on each axis. Weight is clamped to @[0, 1]@; a weight of @1@
+<span class="lineno">  384 </span>-- returns the first argument unchanged, a weight of @0@ returns
+<span class="lineno">  385 </span>-- the second.
+<span class="lineno">  386 </span>combineAtmosphere :: Double -&gt; Atmosphere -&gt; Atmosphere -&gt; Atmosphere
+<span class="lineno">  387 </span><span class="decl"><span class="istickedoff">combineAtmosphere w a1 a2 =</span>
+<span class="lineno">  388 </span><span class="spaces">  </span><span class="istickedoff">Atmosphere</span>
+<span class="lineno">  389 </span><span class="spaces">    </span><span class="istickedoff">{ atmosphereValence = w' * atmosphereValence a1 + (1 - w') * atmosphereValence a2</span>
+<span class="lineno">  390 </span><span class="spaces">    </span><span class="istickedoff">, atmosphereArousal = w' * atmosphereArousal a1 + (1 - w') * atmosphereArousal a2</span>
+<span class="lineno">  391 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  393 </span><span class="spaces">    </span><span class="istickedoff">w' = clampUnit w</span></span>
+<span class="lineno">  394 </span>
+<span class="lineno">  395 </span>-- | Combine two 'FieldConfidence' values by 'min'.
+<span class="lineno">  396 </span>-- Commutative, associative, idempotent.
+<span class="lineno">  397 </span>combineFieldConfidence :: FieldConfidence -&gt; FieldConfidence -&gt; FieldConfidence
+<span class="lineno">  398 </span><span class="decl"><span class="istickedoff">combineFieldConfidence (FieldConfidence a) (FieldConfidence b) =</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">FieldConfidence (min a b)</span></span>
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>-- | Combine two 'Consolidation' values additively, clipped at
+<span class="lineno">  402 </span>-- @1.0@. Commutative, associative; @Consolidation 0@ is the
+<span class="lineno">  403 </span>-- identity.
+<span class="lineno">  404 </span>combineConsolidation :: Consolidation -&gt; Consolidation -&gt; Consolidation
+<span class="lineno">  405 </span><span class="decl"><span class="istickedoff">combineConsolidation (Consolidation a) (Consolidation b) =</span>
+<span class="lineno">  406 </span><span class="spaces">  </span><span class="istickedoff">Consolidation (min 1.0 (a + b))</span></span>
+<span class="lineno">  407 </span>
+<span class="lineno">  408 </span>-- | Combine two 'Counterfactual' values by 'max'.
+<span class="lineno">  409 </span>-- Commutative, associative, idempotent.
+<span class="lineno">  410 </span>combineCounterfactual :: Counterfactual -&gt; Counterfactual -&gt; Counterfactual
+<span class="lineno">  411 </span><span class="decl"><span class="istickedoff">combineCounterfactual (Counterfactual a) (Counterfactual b) =</span>
+<span class="lineno">  412 </span><span class="spaces">  </span><span class="istickedoff">Counterfactual (max a b)</span></span>
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  415 </span>-- Field-level combinators
+<span class="lineno">  416 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  417 </span>
+<span class="lineno">  418 </span>-- | Strategy for combining two 'Field' snapshots.
+<span class="lineno">  419 </span>data CombineMode
+<span class="lineno">  420 </span>  = CombineMaxima      -- ^ Per-component max where it makes sense;
+<span class="lineno">  421 </span>                       --   atmosphere by 50\/50 average; confidence by 'min'.
+<span class="lineno">  422 </span>  | CombineAverage     -- ^ Per-component arithmetic mean of every scalar.
+<span class="lineno">  423 </span>  | CombineAccumulate  -- ^ Additive on consolidation, max on the other
+<span class="lineno">  424 </span>                       --   non-confidence components, 'min' on confidence.
+<span class="lineno">  425 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  426 </span>
+<span class="lineno">  427 </span>-- | Combine two 'Field' snapshots according to a 'CombineMode'.
+<span class="lineno">  428 </span>combineField :: CombineMode -&gt; Field -&gt; Field -&gt; Field
+<span class="lineno">  429 </span><span class="decl"><span class="istickedoff">combineField mode f1 f2 = case mode of</span>
+<span class="lineno">  430 </span><span class="spaces">  </span><span class="istickedoff">CombineMaxima -&gt;</span>
+<span class="lineno">  431 </span><span class="spaces">    </span><span class="istickedoff">Field</span>
+<span class="lineno">  432 </span><span class="spaces">      </span><span class="istickedoff">{ fieldResonance      = combineResonance       (fieldResonance      f1) (fieldResonance      f2)</span>
+<span class="lineno">  433 </span><span class="spaces">      </span><span class="istickedoff">, fieldAtmosphere     = combineAtmosphere 0.5  (fieldAtmosphere     f1) (fieldAtmosphere     f2)</span>
+<span class="lineno">  434 </span><span class="spaces">      </span><span class="istickedoff">, fieldConfidence     = combineFieldConfidence (fieldConfidence     f1) (fieldConfidence     f2)</span>
+<span class="lineno">  435 </span><span class="spaces">      </span><span class="istickedoff">, fieldConsolidation  =</span>
+<span class="lineno">  436 </span><span class="spaces">          </span><span class="istickedoff">mkConsolidation</span>
+<span class="lineno">  437 </span><span class="spaces">            </span><span class="istickedoff">(max</span>
+<span class="lineno">  438 </span><span class="spaces">               </span><span class="istickedoff">(unConsolidation (fieldConsolidation f1))</span>
+<span class="lineno">  439 </span><span class="spaces">               </span><span class="istickedoff">(unConsolidation (fieldConsolidation f2)))</span>
+<span class="lineno">  440 </span><span class="spaces">      </span><span class="istickedoff">, fieldCounterfactual = combineCounterfactual  (fieldCounterfactual f1) (fieldCounterfactual f2)</span>
+<span class="lineno">  441 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  442 </span><span class="spaces">  </span><span class="istickedoff">CombineAverage -&gt;</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="istickedoff">Field</span>
+<span class="lineno">  444 </span><span class="spaces">      </span><span class="istickedoff">{ fieldResonance      = mkResonance       (avgUnit (fieldResonance      f1) (fieldResonance      f2) unResonance)</span>
+<span class="lineno">  445 </span><span class="spaces">      </span><span class="istickedoff">, fieldAtmosphere     = combineAtmosphere 0.5  (fieldAtmosphere     f1) (fieldAtmosphere     f2)</span>
+<span class="lineno">  446 </span><span class="spaces">      </span><span class="istickedoff">, fieldConfidence     = mkFieldConfidence (avgUnit (fieldConfidence     f1) (fieldConfidence     f2) unFieldConfidence)</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="istickedoff">, fieldConsolidation  = mkConsolidation   (avgUnit (fieldConsolidation  f1) (fieldConsolidation  f2) unConsolidation)</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="istickedoff">, fieldCounterfactual = mkCounterfactual  (avgUnit (fieldCounterfactual f1) (fieldCounterfactual f2) unCounterfactual)</span>
+<span class="lineno">  449 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  450 </span><span class="spaces">  </span><span class="istickedoff">CombineAccumulate -&gt;</span>
+<span class="lineno">  451 </span><span class="spaces">    </span><span class="istickedoff">Field</span>
+<span class="lineno">  452 </span><span class="spaces">      </span><span class="istickedoff">{ fieldResonance      = combineResonance       (fieldResonance      f1) (fieldResonance      f2)</span>
+<span class="lineno">  453 </span><span class="spaces">      </span><span class="istickedoff">, fieldAtmosphere     = combineAtmosphere 0.5  (fieldAtmosphere     f1) (fieldAtmosphere     f2)</span>
+<span class="lineno">  454 </span><span class="spaces">      </span><span class="istickedoff">, fieldConfidence     = combineFieldConfidence (fieldConfidence     f1) (fieldConfidence     f2)</span>
+<span class="lineno">  455 </span><span class="spaces">      </span><span class="istickedoff">, fieldConsolidation  = combineConsolidation   (fieldConsolidation  f1) (fieldConsolidation  f2)</span>
+<span class="lineno">  456 </span><span class="spaces">      </span><span class="istickedoff">, fieldCounterfactual = combineCounterfactual  (fieldCounterfactual f1) (fieldCounterfactual f2)</span>
+<span class="lineno">  457 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  458 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  459 </span><span class="spaces">    </span><span class="istickedoff">avgUnit :: a -&gt; a -&gt; (a -&gt; Double) -&gt; Double</span>
+<span class="lineno">  460 </span><span class="spaces">    </span><span class="istickedoff">avgUnit x y un = (un x + un y) / 2.0</span></span>
+<span class="lineno">  461 </span>
+<span class="lineno">  462 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  463 </span>-- FieldHistory stub
+<span class="lineno">  464 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  465 </span>
+<span class="lineno">  466 </span>-- | A bounded buffer of recent 'Field' snapshots. Phase-4 stub;
+<span class="lineno">  467 </span>-- Phase 5 commits the substantive shape (sliding window with
+<span class="lineno">  468 </span>-- decay weights, etc.). The current capacity is fixed at 32 to
+<span class="lineno">  469 </span>-- keep the type closed and the buffer cheap.
+<span class="lineno">  470 </span>newtype FieldHistory = FieldHistory { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unFieldHistory</span></span></span> :: [Field] }
+<span class="lineno">  471 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  472 </span>
+<span class="lineno">  473 </span>-- | The empty history.
+<span class="lineno">  474 </span>emptyHistory :: FieldHistory
+<span class="lineno">  475 </span><span class="decl"><span class="nottickedoff">emptyHistory = FieldHistory []</span></span>
+<span class="lineno">  476 </span>
+<span class="lineno">  477 </span>-- | Prepend a new 'Field' onto the history, dropping older entries
+<span class="lineno">  478 </span>-- to keep the buffer at most 32 deep.
+<span class="lineno">  479 </span>recordFieldOnto :: Field -&gt; FieldHistory -&gt; FieldHistory
+<span class="lineno">  480 </span><span class="decl"><span class="nottickedoff">recordFieldOnto f (FieldHistory xs) = FieldHistory (f : take 31 xs)</span></span>
+<span class="lineno">  481 </span>
+<span class="lineno">  482 </span>-- | Summarise a 'FieldHistory' to a single 'Field'. Phase-4 stub:
+<span class="lineno">  483 </span>-- returns the most-recent snapshot, or 'emptyField' if the history
+<span class="lineno">  484 </span>-- is empty. Phase 5 replaces this with a windowed summary.
+<span class="lineno">  485 </span>summariseFrom :: FieldHistory -&gt; Field
+<span class="lineno">  486 </span><span class="decl"><span class="nottickedoff">summariseFrom (FieldHistory []     ) = emptyField</span>
+<span class="lineno">  487 </span><span class="spaces"></span><span class="nottickedoff">summariseFrom (FieldHistory (f : _)) = f</span></span>
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  490 </span>-- Internal helpers
+<span class="lineno">  491 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  492 </span>
+<span class="lineno">  493 </span>clamp :: Ord a =&gt; a -&gt; a -&gt; a -&gt; a
+<span class="lineno">  494 </span><span class="decl"><span class="istickedoff">clamp lo hi = max lo . min hi</span></span>
+<span class="lineno">  495 </span>
+<span class="lineno">  496 </span>clampUnit :: Double -&gt; Double
+<span class="lineno">  497 </span><span class="decl"><span class="istickedoff">clampUnit = clamp 0.0 1.0</span></span>
+
+</pre>
+</body>
+</html>

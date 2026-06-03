@@ -528,18 +528,18 @@ promoteCandidate
   -> CalibrationCandidate
   -> Int                  -- ^ current turn
   -> Maybe CalibrationId  -- ^ previous version for rollback
-  -> (CalibrationEntry, CalibrationId)
+  -> Either Text (CalibrationEntry, CalibrationId)
 promoteCandidate nextId cand turn prevId =
   let proposal = case ccType cand of
         CandidateSalience ->
           case ccSalienceWeights cand of
-            Just w  -> ProposalSalienceWeights w
-            Nothing -> ProposalConcept "salience_placeholder"
+            Just w  -> Right (ProposalSalienceWeights w)
+            Nothing -> Left "training-cycle promotion missing salience weights"
         CandidateField ->
           case ccFieldHeuristics cand of
-            Just fh -> ProposalFieldHeuristics fh
-            Nothing -> ProposalConcept "field_placeholder"
-  in acceptProposal nextId proposal turn prevId
+            Just fh -> Right (ProposalFieldHeuristics fh)
+            Nothing -> Left "training-cycle promotion missing field heuristics"
+  in fmap (\resolvedProposal -> acceptProposal nextId resolvedProposal turn prevId) proposal
 
 -- | Rollback a promoted training-cycle candidate.
 -- Returns the rolled-back entry and the previous version ID that is

@@ -1,0 +1,529 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Outcome-derived dialogue development.
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>This module keeps the next phase fail-closed: only distinguishable signals
+<span class="lineno">    6 </span>drive strong updates. Ambiguous turns are recorded but do not mutate speech
+<span class="lineno">    7 </span>policy or claim stance confidence.
+<span class="lineno">    8 </span>-}
+<span class="lineno">    9 </span>module QxFx0.Learning.DialogueDevelopment
+<span class="lineno">   10 </span>  ( applyDialogueDevelopment
+<span class="lineno">   11 </span>  , assessDialogueOutcome
+<span class="lineno">   12 </span>  , updateDialogueOutcomeLearning
+<span class="lineno">   13 </span>  , updateSpeechPolicy
+<span class="lineno">   14 </span>  , updateBeliefStore
+<span class="lineno">   15 </span>  , adjustRenderStyleForSpeechPolicy
+<span class="lineno">   16 </span>  , normalizeDialogueText
+<span class="lineno">   17 </span>  , isWeakAcknowledgementText
+<span class="lineno">   18 </span>  ) where
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import qualified Data.Foldable as F
+<span class="lineno">   21 </span>import Data.Char (isAlphaNum, isSpace)
+<span class="lineno">   22 </span>import Data.List (sortBy)
+<span class="lineno">   23 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   24 </span>import Data.Maybe (fromMaybe, isJust)
+<span class="lineno">   25 </span>import Data.Text (Text)
+<span class="lineno">   26 </span>import qualified Data.Text as T
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>import QxFx0.Core.TruthContract (truthContractAllowsStrongMutation)
+<span class="lineno">   29 </span>import QxFx0.Core.TurnPipeline.Types
+<span class="lineno">   30 </span>  ( TurnArtifacts(..)
+<span class="lineno">   31 </span>  , TurnInput(..)
+<span class="lineno">   32 </span>  , TurnPlan(..)
+<span class="lineno">   33 </span>  )
+<span class="lineno">   34 </span>import QxFx0.Types
+<span class="lineno">   35 </span>import QxFx0.Types.State.AdaptiveMutation
+<span class="lineno">   36 </span>  ( AdaptiveDecision(..)
+<span class="lineno">   37 </span>  , AdaptiveMutationKind(..)
+<span class="lineno">   38 </span>  , AdaptiveMutationRecord(..)
+<span class="lineno">   39 </span>  , EvidenceStrength(..)
+<span class="lineno">   40 </span>  )
+<span class="lineno">   41 </span>import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>maxRecentOutcomeSamples :: Int
+<span class="lineno">   44 </span><span class="decl"><span class="istickedoff">maxRecentOutcomeSamples = 12</span></span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>maxClaimEvidence :: Int
+<span class="lineno">   47 </span><span class="decl"><span class="istickedoff">maxClaimEvidence = 8</span></span>
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>maxClaimRevisions :: Int
+<span class="lineno">   50 </span><span class="decl"><span class="istickedoff">maxClaimRevisions = 20</span></span>
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>maxSpeechPatternEntries :: Int
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">maxSpeechPatternEntries = 8</span></span>
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>maxClaimStanceEntries :: Int
+<span class="lineno">   56 </span><span class="decl"><span class="istickedoff">maxClaimStanceEntries = 64</span></span>
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>maxClaimRevisionsPerStore :: Int
+<span class="lineno">   59 </span><span class="decl"><span class="istickedoff">maxClaimRevisionsPerStore = maxClaimRevisions</span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>applyDialogueDevelopment
+<span class="lineno">   62 </span>  :: SystemState  -- ^ pre-turn state, used for repeated-input evidence
+<span class="lineno">   63 </span>  -&gt; SystemState  -- ^ post-base-finalize state, receives persistent updates
+<span class="lineno">   64 </span>  -&gt; TurnInput
+<span class="lineno">   65 </span>  -&gt; TurnPlan
+<span class="lineno">   66 </span>  -&gt; TurnArtifacts
+<span class="lineno">   67 </span>  -&gt; SystemState
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">applyDialogueDevelopment previousState postState ti tp ta =</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="istickedoff">let sample = assessDialogueOutcome previousState postState ti <span class="nottickedoff">tp</span> ta</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">style = tdRenderStyle (taDecision ta)</span>
+<span class="lineno">   71 </span><span class="spaces">      </span><span class="istickedoff">outcomeState = updateDialogueOutcomeLearning sample (ssDialogueOutcomeLearning postState)</span>
+<span class="lineno">   72 </span><span class="spaces">      </span><span class="istickedoff">speechPolicy = updateSpeechPolicy sample style (ssSpeechPolicyState postState)</span>
+<span class="lineno">   73 </span><span class="spaces">      </span><span class="istickedoff">beliefStore = updateBeliefStore previousState sample <span class="nottickedoff">ti</span> tp (ssBeliefStore postState)</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">updated = postState</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">{ ssDialogueOutcomeLearning = outcomeState</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="istickedoff">, ssSpeechPolicyState = speechPolicy</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">, ssBeliefStore = beliefStore</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">   79 </span><span class="spaces">  </span><span class="istickedoff">in appendAdaptiveMutationRecords (adrMutationRecords (dosDecisionRecord sample)) updated</span></span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>assessDialogueOutcome
+<span class="lineno">   82 </span>  :: SystemState
+<span class="lineno">   83 </span>  -&gt; SystemState
+<span class="lineno">   84 </span>  -&gt; TurnInput
+<span class="lineno">   85 </span>  -&gt; TurnPlan
+<span class="lineno">   86 </span>  -&gt; TurnArtifacts
+<span class="lineno">   87 </span>  -&gt; DialogueOutcomeSample
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">assessDialogueOutcome previousState postState ti tp ta =</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">let frame = tiFrame ti</span>
+<span class="lineno">   90 </span><span class="spaces">      </span><span class="istickedoff">raw = normalizeDialogueText (ipfRawText frame)</span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">propositionType = ipfPropositionType frame</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">truthStatus = taTruthContractStatus ta</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">previousInputs = map normalizeDialogueText (F.toList (ssRawInputHistory previousState))</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">repeatedInput = not (T.null raw) &amp;&amp; raw `elem` take 3 (reverse previousInputs)</span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">localRecovery = taSurfaceProv ta == FromRecovery || isJust (taLocalRecoveryCause ta) || not (truthContractAllowsStrongMutation truthStatus)</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">postRenderRetightened = taRendered ta /= taPreSafetyRendered ta || <span class="nottickedoff">taFinalRendered ta /= taRendered ta</span></span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">decisionRepair = tdFamily (taDecision ta) == CMRepair</span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">renderEmpty = T.null (T.strip (taFinalRendered ta))</span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="istickedoff">userRepair = propositionType `elem` [&quot;RepairSignal&quot;, &quot;MisunderstandingReport&quot;]</span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">userClarification = propositionType `elem` [&quot;ClarifyQ&quot;, &quot;EpistemicQ&quot;, &quot;RequestQ&quot;]</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">successfulContinuation = propositionType == &quot;NextStepQ&quot;</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">userConflict = propositionType == &quot;ConfrontQ&quot; || matchesAnyCue raw conflictPhrases</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">strongPositiveConfirmation = matchesAnyCue raw strongPositiveConfirmationPhrases</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">weakAcknowledgement = isWeakAcknowledgementText raw</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">(kind0, strong0, strength0) =</span>
+<span class="lineno">  106 </span><span class="spaces">        </span><span class="istickedoff">if userConflict</span>
+<span class="lineno">  107 </span><span class="spaces">          </span><span class="istickedoff">then (<span class="nottickedoff">DialogueOutcomeConflict</span>, <span class="nottickedoff">True</span>, EvidenceStrong)</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">else if <span class="tickonlyfalse">userRepair</span></span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">then <span class="nottickedoff">(DialogueOutcomeRepairRequested, True, EvidenceStrong)</span></span>
+<span class="lineno">  110 </span><span class="spaces">        </span><span class="istickedoff">else if repeatedInput</span>
+<span class="lineno">  111 </span><span class="spaces">          </span><span class="istickedoff">then (<span class="nottickedoff">DialogueOutcomeRepeatedQuestion</span>, <span class="nottickedoff">True</span>, EvidenceStrong)</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">else if strongPositiveConfirmation</span>
+<span class="lineno">  113 </span><span class="spaces">          </span><span class="istickedoff">then (DialogueOutcomeSuccess, True, EvidenceStrong)</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="istickedoff">else if weakAcknowledgement</span>
+<span class="lineno">  115 </span><span class="spaces">          </span><span class="istickedoff">then (<span class="nottickedoff">DialogueOutcomePartialSuccess</span>, <span class="nottickedoff">False</span>, EvidenceWeak)</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff">else if <span class="tickonlytrue">localRecovery || <span class="nottickedoff">decisionRepair || renderEmpty</span></span></span>
+<span class="lineno">  117 </span><span class="spaces">          </span><span class="istickedoff">then (<span class="nottickedoff">DialogueOutcomeDegraded</span>, <span class="nottickedoff">True</span>, EvidenceStrong)</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="istickedoff">else <span class="nottickedoff">if successfulContinuation || userClarification</span></span>
+<span class="lineno">  119 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">then (DialogueOutcomePartialSuccess, False, EvidenceModerate)</span></span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">else (DialogueOutcomeUncertain, False, EvidenceWeak)</span></span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">(kind, strong, strength) =</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="istickedoff">if truthContractAllowsStrongMutation truthStatus</span>
+<span class="lineno">  123 </span><span class="spaces">          </span><span class="istickedoff">then (kind0, strong0, strength0)</span>
+<span class="lineno">  124 </span><span class="spaces">          </span><span class="istickedoff">else (DialogueOutcomeDegraded, False, max strength0 EvidenceModerate)</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">topic = firstNonEmpty</span>
+<span class="lineno">  126 </span><span class="spaces">        </span><span class="istickedoff">[ if strongPositiveConfirmation || weakAcknowledgement then ssLastTopic previousState else &quot;&quot;</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">, tiBestTopic ti</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="istickedoff">, ipfSemanticSubject frame</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">, <span class="nottickedoff">rmpTopic (tpRmpAfterLegit tp)</span></span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  131 </span><span class="spaces">      </span><span class="istickedoff">signals = outcomeSignals propositionType repeatedInput localRecovery decisionRepair renderEmpty userConflict strongPositiveConfirmation weakAcknowledgement successfulContinuation userClarification</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">&lt;&gt; flag &quot;post_render_truth_retightened&quot; postRenderRetightened</span>
+<span class="lineno">  133 </span><span class="spaces">      </span><span class="istickedoff">decision = adaptiveDecisionRecord (ssTurnCount postState) kind signals strong strength</span>
+<span class="lineno">  134 </span><span class="spaces">  </span><span class="istickedoff">in DialogueOutcomeSample</span>
+<span class="lineno">  135 </span><span class="spaces">       </span><span class="istickedoff">{ dosTurn = ssTurnCount postState</span>
+<span class="lineno">  136 </span><span class="spaces">       </span><span class="istickedoff">, dosKind = kind</span>
+<span class="lineno">  137 </span><span class="spaces">       </span><span class="istickedoff">, dosTopic = topic</span>
+<span class="lineno">  138 </span><span class="spaces">       </span><span class="istickedoff">, dosSignals = signals</span>
+<span class="lineno">  139 </span><span class="spaces">       </span><span class="istickedoff">, dosEvidenceStrength = strength</span>
+<span class="lineno">  140 </span><span class="spaces">       </span><span class="istickedoff">, dosStrongUpdate = strong</span>
+<span class="lineno">  141 </span><span class="spaces">       </span><span class="istickedoff">, dosDecisionRecord = decision</span>
+<span class="lineno">  142 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  143 </span>
+<span class="lineno">  144 </span>updateDialogueOutcomeLearning :: DialogueOutcomeSample -&gt; DialogueOutcomeLearningState -&gt; DialogueOutcomeLearningState
+<span class="lineno">  145 </span><span class="decl"><span class="istickedoff">updateDialogueOutcomeLearning sample state0 =</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">let state = state0 { dolRecentOutcomes = take maxRecentOutcomeSamples (sample : dolRecentOutcomes state0) }</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">in case dosKind sample of</span>
+<span class="lineno">  148 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeSuccess -&gt; state { dolSuccessCount = dolSuccessCount state + 1 }</span>
+<span class="lineno">  149 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomePartialSuccess -&gt; state { dolPartialSuccessCount = dolPartialSuccessCount state + 1 }</span>
+<span class="lineno">  150 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeRepairRequested -&gt; state { dolRepairRequestCount = dolRepairRequestCount state + 1 }</span>
+<span class="lineno">  151 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeRepeatedQuestion -&gt; state { dolRepeatedQuestionCount = dolRepeatedQuestionCount state + 1 }</span>
+<span class="lineno">  152 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeConflict -&gt; state { dolConflictCount = dolConflictCount state + 1 }</span>
+<span class="lineno">  153 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeDegraded -&gt; state { dolDegradedCount = dolDegradedCount state + 1 }</span>
+<span class="lineno">  154 </span><span class="spaces">       </span><span class="istickedoff">DialogueOutcomeUncertain -&gt; state { dolUncertainCount = dolUncertainCount state + 1 }</span></span>
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span>adaptiveDecisionRecord
+<span class="lineno">  157 </span>  :: Int
+<span class="lineno">  158 </span>  -&gt; DialogueOutcomeKind
+<span class="lineno">  159 </span>  -&gt; [Text]
+<span class="lineno">  160 </span>  -&gt; Bool
+<span class="lineno">  161 </span>  -&gt; EvidenceStrength
+<span class="lineno">  162 </span>  -&gt; AdaptiveDecisionRecord
+<span class="lineno">  163 </span><span class="decl"><span class="istickedoff">adaptiveDecisionRecord turn kind signals strong strength =</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">let cause = &quot;dialogue_outcome:&quot; &lt;&gt; renderDialogueOutcomeKind kind</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">confidence = evidenceConfidence strength</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">boundedDelta = boundedDeltaFor <span class="nottickedoff">kind</span> strong</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">decision = if strong then AdaptiveAccepted else AdaptiveObserved</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">targets = mutationTargetsFor <span class="nottickedoff">kind</span> strong</span>
+<span class="lineno">  169 </span><span class="spaces">  </span><span class="istickedoff">in AdaptiveDecisionRecord</span>
+<span class="lineno">  170 </span><span class="spaces">       </span><span class="istickedoff">{ adrTurn = turn</span>
+<span class="lineno">  171 </span><span class="spaces">       </span><span class="istickedoff">, adrCause = cause</span>
+<span class="lineno">  172 </span><span class="spaces">       </span><span class="istickedoff">, adrEvidence = signals</span>
+<span class="lineno">  173 </span><span class="spaces">       </span><span class="istickedoff">, adrConfidence = confidence</span>
+<span class="lineno">  174 </span><span class="spaces">       </span><span class="istickedoff">, adrBoundedDelta = boundedDelta</span>
+<span class="lineno">  175 </span><span class="spaces">       </span><span class="istickedoff">, adrDecision = decision</span>
+<span class="lineno">  176 </span><span class="spaces">       </span><span class="istickedoff">, adrTargets = targets</span>
+<span class="lineno">  177 </span><span class="spaces">       </span><span class="istickedoff">, adrMutationRecords = mutationRecordsForDialogue turn cause signals strength confidence decision targets</span>
+<span class="lineno">  178 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>evidenceConfidence :: EvidenceStrength -&gt; Double
+<span class="lineno">  181 </span><span class="decl"><span class="istickedoff">evidenceConfidence strength =</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">case strength of</span>
+<span class="lineno">  183 </span><span class="spaces">    </span><span class="istickedoff">EvidenceObservational -&gt; <span class="nottickedoff">0.10</span></span>
+<span class="lineno">  184 </span><span class="spaces">    </span><span class="istickedoff">EvidenceWeak -&gt; <span class="nottickedoff">0.25</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">EvidenceModerate -&gt; 0.50</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="istickedoff">EvidenceStrong -&gt; 0.80</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>boundedDeltaFor :: DialogueOutcomeKind -&gt; Bool -&gt; [Text]
+<span class="lineno">  189 </span><span class="decl"><span class="istickedoff">boundedDeltaFor kind strong =</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;recent_outcomes&lt;=12&quot; ]</span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; if <span class="tickonlytrue">not strong</span></span>
+<span class="lineno">  192 </span><span class="spaces">         </span><span class="istickedoff">then []</span>
+<span class="lineno">  193 </span><span class="spaces">         </span><span class="istickedoff">else <span class="nottickedoff">case kind of</span></span>
+<span class="lineno">  194 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeSuccess -&gt; [&quot;speech_patterns&lt;=8&quot;, &quot;claim_stance_entries&lt;=64&quot;]</span></span>
+<span class="lineno">  195 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeConflict -&gt; [&quot;speech_patterns&lt;=8&quot;, &quot;claim_stance_entries&lt;=64&quot;, &quot;claim_revisions&lt;=20&quot;]</span></span>
+<span class="lineno">  196 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeRepairRequested -&gt; [&quot;speech_patterns&lt;=8&quot;]</span></span>
+<span class="lineno">  197 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeRepeatedQuestion -&gt; [&quot;speech_patterns&lt;=8&quot;]</span></span>
+<span class="lineno">  198 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeDegraded -&gt; [&quot;speech_patterns&lt;=8&quot;]</span></span>
+<span class="lineno">  199 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomePartialSuccess -&gt; []</span></span>
+<span class="lineno">  200 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeUncertain -&gt; []</span></span></span>
+<span class="lineno">  201 </span>
+<span class="lineno">  202 </span>mutationTargetsFor :: DialogueOutcomeKind -&gt; Bool -&gt; [AdaptiveMutationKind]
+<span class="lineno">  203 </span><span class="decl"><span class="istickedoff">mutationTargetsFor kind strong =</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">MutDialogueOutcome :</span>
+<span class="lineno">  205 </span><span class="spaces">    </span><span class="istickedoff">if <span class="tickonlytrue">not strong</span></span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff">then []</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="istickedoff">else <span class="nottickedoff">case kind of</span></span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeSuccess -&gt; [MutSpeechPolicy, MutClaimStance]</span></span>
+<span class="lineno">  209 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeConflict -&gt; [MutSpeechPolicy, MutClaimStance]</span></span>
+<span class="lineno">  210 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeRepairRequested -&gt; [MutSpeechPolicy]</span></span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeRepeatedQuestion -&gt; [MutSpeechPolicy]</span></span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeDegraded -&gt; [MutSpeechPolicy]</span></span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomePartialSuccess -&gt; []</span></span>
+<span class="lineno">  214 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">DialogueOutcomeUncertain -&gt; []</span></span></span>
+<span class="lineno">  215 </span>
+<span class="lineno">  216 </span>mutationRecordsForDialogue
+<span class="lineno">  217 </span>  :: Int
+<span class="lineno">  218 </span>  -&gt; Text
+<span class="lineno">  219 </span>  -&gt; [Text]
+<span class="lineno">  220 </span>  -&gt; EvidenceStrength
+<span class="lineno">  221 </span>  -&gt; Double
+<span class="lineno">  222 </span>  -&gt; AdaptiveDecision
+<span class="lineno">  223 </span>  -&gt; [AdaptiveMutationKind]
+<span class="lineno">  224 </span>  -&gt; [AdaptiveMutationRecord]
+<span class="lineno">  225 </span><span class="decl"><span class="istickedoff">mutationRecordsForDialogue turn cause signals strength confidence decision targets =</span>
+<span class="lineno">  226 </span><span class="spaces">  </span><span class="istickedoff">map targetRecord targets</span>
+<span class="lineno">  227 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  228 </span><span class="spaces">    </span><span class="istickedoff">targetRecord target = AdaptiveMutationRecord</span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">{ amrTurnId = turn</span>
+<span class="lineno">  230 </span><span class="spaces">      </span><span class="istickedoff">, amrKind = target</span>
+<span class="lineno">  231 </span><span class="spaces">      </span><span class="istickedoff">, amrCause = cause</span>
+<span class="lineno">  232 </span><span class="spaces">      </span><span class="istickedoff">, amrEvidence = signals</span>
+<span class="lineno">  233 </span><span class="spaces">      </span><span class="istickedoff">, amrEvidenceStrength = strength</span>
+<span class="lineno">  234 </span><span class="spaces">      </span><span class="istickedoff">, amrConfidence = confidence</span>
+<span class="lineno">  235 </span><span class="spaces">      </span><span class="istickedoff">, amrBoundedDelta = boundedDeltaForTarget target</span>
+<span class="lineno">  236 </span><span class="spaces">      </span><span class="istickedoff">, amrDecision = decision</span>
+<span class="lineno">  237 </span><span class="spaces">      </span><span class="istickedoff">}</span></span>
+<span class="lineno">  238 </span>
+<span class="lineno">  239 </span>boundedDeltaForTarget :: AdaptiveMutationKind -&gt; Maybe Double
+<span class="lineno">  240 </span><span class="decl"><span class="istickedoff">boundedDeltaForTarget target =</span>
+<span class="lineno">  241 </span><span class="spaces">  </span><span class="istickedoff">case target of</span>
+<span class="lineno">  242 </span><span class="spaces">    </span><span class="istickedoff">MutDialogueOutcome -&gt; Just (fromIntegral maxRecentOutcomeSamples)</span>
+<span class="lineno">  243 </span><span class="spaces">    </span><span class="istickedoff">MutSpeechPolicy -&gt; <span class="nottickedoff">Just 0.12</span></span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="istickedoff">MutClaimStance -&gt; <span class="nottickedoff">Just (fromIntegral maxClaimStanceEntries)</span></span>
+<span class="lineno">  245 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Nothing</span></span></span>
+<span class="lineno">  246 </span>
+<span class="lineno">  247 </span>decisionAllowsBoundedMutation :: DialogueOutcomeSample -&gt; Bool
+<span class="lineno">  248 </span><span class="decl"><span class="istickedoff">decisionAllowsBoundedMutation sample =</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">case adrDecision (dosDecisionRecord sample) of</span>
+<span class="lineno">  250 </span><span class="spaces">    </span><span class="istickedoff">AdaptiveAccepted -&gt; dosStrongUpdate sample</span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; False</span></span>
+<span class="lineno">  252 </span>
+<span class="lineno">  253 </span>updateSpeechPolicy :: DialogueOutcomeSample -&gt; RenderStyle -&gt; SpeechPolicyState -&gt; SpeechPolicyState
+<span class="lineno">  254 </span><span class="decl"><span class="istickedoff">updateSpeechPolicy sample style state</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">| not (decisionAllowsBoundedMutation sample) = state</span>
+<span class="lineno">  256 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  257 </span><span class="spaces">      </span><span class="istickedoff">case dosKind sample of</span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeSuccess -&gt;</span>
+<span class="lineno">  259 </span><span class="spaces">          </span><span class="istickedoff">let next = state</span>
+<span class="lineno">  260 </span><span class="spaces">                </span><span class="istickedoff">{ spsSuccessfulPatterns = bump styleTag (spsSuccessfulPatterns state)</span>
+<span class="lineno">  261 </span><span class="spaces">                </span><span class="istickedoff">, spsRepairBias = clamp01 (spsRepairBias state - 0.05)</span>
+<span class="lineno">  262 </span><span class="spaces">                </span><span class="istickedoff">, spsLastUpdatedTurn = dosTurn sample</span>
+<span class="lineno">  263 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  264 </span><span class="spaces">          </span><span class="istickedoff">in boundSpeechPolicy next</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomePartialSuccess -&gt;</span>
+<span class="lineno">  266 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">tune 0.04 0.04 (-0.02) 0.08 True</span></span>
+<span class="lineno">  267 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeRepairRequested -&gt;</span>
+<span class="lineno">  268 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">tune 0.12 0.12 (-0.10) 0.30 False</span></span>
+<span class="lineno">  269 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeRepeatedQuestion -&gt;</span>
+<span class="lineno">  270 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">tune 0.12 0.15 (-0.10) 0.30 False</span></span>
+<span class="lineno">  271 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeConflict -&gt;</span>
+<span class="lineno">  272 </span><span class="spaces">          </span><span class="istickedoff">tune 0.05 0.03 (-0.07) 0.18 False</span>
+<span class="lineno">  273 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeDegraded -&gt;</span>
+<span class="lineno">  274 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">tune 0.10 0.12 (-0.12) 0.30 False</span></span>
+<span class="lineno">  275 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeUncertain -&gt; <span class="nottickedoff">state</span></span>
+<span class="lineno">  276 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  277 </span><span class="spaces">    </span><span class="istickedoff">styleTag = renderStyleText style</span>
+<span class="lineno">  278 </span><span class="spaces">    </span><span class="istickedoff">bump key = capCounterMap maxSpeechPatternEntries . M.insertWith <span class="nottickedoff">(+)</span> key 1</span>
+<span class="lineno">  279 </span><span class="spaces">    </span><span class="istickedoff">tune directDelta compressionDelta ambiguityDelta repairDelta positive =</span>
+<span class="lineno">  280 </span><span class="spaces">      </span><span class="istickedoff">let next = state</span>
+<span class="lineno">  281 </span><span class="spaces">            </span><span class="istickedoff">{ spsDirectness = clamp01 (spsDirectness state + directDelta)</span>
+<span class="lineno">  282 </span><span class="spaces">            </span><span class="istickedoff">, spsCompression = clamp01 (spsCompression state + compressionDelta)</span>
+<span class="lineno">  283 </span><span class="spaces">            </span><span class="istickedoff">, spsAmbiguityTolerance = clamp01 (spsAmbiguityTolerance state + ambiguityDelta)</span>
+<span class="lineno">  284 </span><span class="spaces">            </span><span class="istickedoff">, spsRepairBias = clamp01 (spsRepairBias state + repairDelta)</span>
+<span class="lineno">  285 </span><span class="spaces">            </span><span class="istickedoff">, spsSuccessfulPatterns = if <span class="tickonlyfalse">positive</span> then <span class="nottickedoff">bump styleTag (spsSuccessfulPatterns state)</span> else spsSuccessfulPatterns state</span>
+<span class="lineno">  286 </span><span class="spaces">            </span><span class="istickedoff">, spsFailedPatterns = if <span class="tickonlyfalse">positive</span> then <span class="nottickedoff">spsFailedPatterns state</span> else bump styleTag (spsFailedPatterns state)</span>
+<span class="lineno">  287 </span><span class="spaces">            </span><span class="istickedoff">, spsLastUpdatedTurn = dosTurn sample</span>
+<span class="lineno">  288 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  289 </span><span class="spaces">      </span><span class="istickedoff">in boundSpeechPolicy next</span></span>
+<span class="lineno">  290 </span>
+<span class="lineno">  291 </span>updateBeliefStore :: SystemState -&gt; DialogueOutcomeSample -&gt; TurnInput -&gt; TurnPlan -&gt; BeliefStore -&gt; BeliefStore
+<span class="lineno">  292 </span><span class="decl"><span class="istickedoff">updateBeliefStore previousState sample ti tp store</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="istickedoff">| not (decisionAllowsBoundedMutation sample) = store</span>
+<span class="lineno">  294 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">T.null claimKey</span> = <span class="nottickedoff">store</span></span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  296 </span><span class="spaces">      </span><span class="istickedoff">case dosKind sample of</span>
+<span class="lineno">  297 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeSuccess -&gt; upsertPositive</span>
+<span class="lineno">  298 </span><span class="spaces">        </span><span class="istickedoff">DialogueOutcomeConflict -&gt; upsertConflict</span>
+<span class="lineno">  299 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">store</span></span>
+<span class="lineno">  300 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">rmp = tpRmpAfterLegit tp</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="istickedoff">priorTopic = ssLastTopic previousState</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="istickedoff">claimText =</span>
+<span class="lineno">  304 </span><span class="spaces">      </span><span class="istickedoff">if <span class="tickonlytrue">not (T.null (T.strip priorTopic))</span></span>
+<span class="lineno">  305 </span><span class="spaces">        </span><span class="istickedoff">then priorTopic</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="istickedoff">else <span class="nottickedoff">firstNonEmpty [rmpPrimaryClaim rmp, tiBestTopic ti]</span></span>
+<span class="lineno">  307 </span><span class="spaces">    </span><span class="istickedoff">claimKey = normalizeDialogueText claimText</span>
+<span class="lineno">  308 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">evidenceTag = T.concat [&quot;turn=&quot;, T.pack (show (dosTurn sample)), &quot;:&quot;, renderDialogueOutcomeKind (dosKind sample)]</span></span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="istickedoff">stancePolarity = stanceToPolarity (rmpStance rmp)</span>
+<span class="lineno">  310 </span><span class="spaces">    </span><span class="istickedoff">existing = M.lookup claimKey (bsClaims store)</span>
+<span class="lineno">  311 </span><span class="spaces">    </span><span class="istickedoff">basePositive = fromMaybe</span>
+<span class="lineno">  312 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">BeliefRecord</span></span>
+<span class="lineno">  313 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">{ brClaim = claimText</span></span>
+<span class="lineno">  314 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brPolarity = stancePolarity</span></span>
+<span class="lineno">  315 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brConfidence = 0.50</span></span>
+<span class="lineno">  316 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brEvidence = []</span></span>
+<span class="lineno">  317 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brCounterEvidence = []</span></span>
+<span class="lineno">  318 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brLastUpdatedTurn = 0</span></span>
+<span class="lineno">  319 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">, brRevisionCount = 0</span></span>
+<span class="lineno">  320 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">}</span></span>
+<span class="lineno">  321 </span><span class="spaces">      </span><span class="istickedoff">existing</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">upsertPositive =</span>
+<span class="lineno">  323 </span><span class="spaces">      </span><span class="istickedoff">let polarity = case brPolarity basePositive of</span>
+<span class="lineno">  324 </span><span class="spaces">            </span><span class="istickedoff">BeliefContested -&gt; <span class="nottickedoff">BeliefTentative</span></span>
+<span class="lineno">  325 </span><span class="spaces">            </span><span class="istickedoff">BeliefRejected -&gt; <span class="nottickedoff">BeliefTentative</span></span>
+<span class="lineno">  326 </span><span class="spaces">            </span><span class="istickedoff">_ -&gt; stancePolarity</span>
+<span class="lineno">  327 </span><span class="spaces">          </span><span class="istickedoff">entry = basePositive</span>
+<span class="lineno">  328 </span><span class="spaces">            </span><span class="istickedoff">{ brPolarity = polarity</span>
+<span class="lineno">  329 </span><span class="spaces">            </span><span class="istickedoff">, brConfidence = clamp01 (brConfidence basePositive + 0.08)</span>
+<span class="lineno">  330 </span><span class="spaces">            </span><span class="istickedoff">, brEvidence = take maxClaimEvidence (<span class="nottickedoff">evidenceTag</span> : <span class="nottickedoff">brEvidence basePositive</span>)</span>
+<span class="lineno">  331 </span><span class="spaces">            </span><span class="istickedoff">, brLastUpdatedTurn = dosTurn sample</span>
+<span class="lineno">  332 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  333 </span><span class="spaces">      </span><span class="istickedoff">in store { bsClaims = insertBoundedClaim claimKey entry (bsClaims store) }</span>
+<span class="lineno">  334 </span><span class="spaces">    </span><span class="istickedoff">upsertConflict =</span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">let base = fromMaybe</span>
+<span class="lineno">  336 </span><span class="spaces">            </span><span class="istickedoff">BeliefRecord</span>
+<span class="lineno">  337 </span><span class="spaces">              </span><span class="istickedoff">{ brClaim = claimText</span>
+<span class="lineno">  338 </span><span class="spaces">              </span><span class="istickedoff">, brPolarity = BeliefContested</span>
+<span class="lineno">  339 </span><span class="spaces">              </span><span class="istickedoff">, brConfidence = 0.45</span>
+<span class="lineno">  340 </span><span class="spaces">              </span><span class="istickedoff">, brEvidence = []</span>
+<span class="lineno">  341 </span><span class="spaces">              </span><span class="istickedoff">, brCounterEvidence = []</span>
+<span class="lineno">  342 </span><span class="spaces">              </span><span class="istickedoff">, brLastUpdatedTurn = 0</span>
+<span class="lineno">  343 </span><span class="spaces">              </span><span class="istickedoff">, brRevisionCount = 0</span>
+<span class="lineno">  344 </span><span class="spaces">              </span><span class="istickedoff">}</span>
+<span class="lineno">  345 </span><span class="spaces">            </span><span class="istickedoff">existing</span>
+<span class="lineno">  346 </span><span class="spaces">          </span><span class="istickedoff">entry = base</span>
+<span class="lineno">  347 </span><span class="spaces">            </span><span class="istickedoff">{ brPolarity = BeliefContested</span>
+<span class="lineno">  348 </span><span class="spaces">            </span><span class="istickedoff">, brConfidence = clamp01 (brConfidence base - 0.15)</span>
+<span class="lineno">  349 </span><span class="spaces">            </span><span class="istickedoff">, brCounterEvidence = take maxClaimEvidence (<span class="nottickedoff">evidenceTag</span> : <span class="nottickedoff">brCounterEvidence base</span>)</span>
+<span class="lineno">  350 </span><span class="spaces">            </span><span class="istickedoff">, brLastUpdatedTurn = dosTurn sample</span>
+<span class="lineno">  351 </span><span class="spaces">            </span><span class="istickedoff">, brRevisionCount = brRevisionCount base + 1</span>
+<span class="lineno">  352 </span><span class="spaces">            </span><span class="istickedoff">}</span>
+<span class="lineno">  353 </span><span class="spaces">      </span><span class="istickedoff">in store</span>
+<span class="lineno">  354 </span><span class="spaces">           </span><span class="istickedoff">{ bsClaims = insertBoundedClaim claimKey entry (bsClaims store)</span>
+<span class="lineno">  355 </span><span class="spaces">           </span><span class="istickedoff">, bsRecentRevisions = take maxClaimRevisionsPerStore (<span class="nottickedoff">claimKey</span> : <span class="nottickedoff">bsRecentRevisions store</span>)</span>
+<span class="lineno">  356 </span><span class="spaces">           </span><span class="istickedoff">}</span></span>
+<span class="lineno">  357 </span>
+<span class="lineno">  358 </span>adjustRenderStyleForSpeechPolicy :: SpeechPolicyState -&gt; RenderStyle -&gt; RenderStyle
+<span class="lineno">  359 </span><span class="decl"><span class="istickedoff">adjustRenderStyleForSpeechPolicy policy original</span>
+<span class="lineno">  360 </span><span class="spaces">  </span><span class="istickedoff">| original == StyleRecovery = StyleRecovery</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="istickedoff">| spsRepairBias policy &gt;= 0.60 = StyleRecovery</span>
+<span class="lineno">  362 </span><span class="spaces">  </span><span class="istickedoff">| spsDirectness policy &gt;= 0.65 &amp;&amp; spsCompression policy &gt;= 0.65 = StyleDirect</span>
+<span class="lineno">  363 </span><span class="spaces">  </span><span class="istickedoff">| spsAmbiguityTolerance policy &lt;= 0.30 = StyleClinical</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = original</span></span>
+<span class="lineno">  365 </span>
+<span class="lineno">  366 </span>outcomeSignals :: Text -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; Bool -&gt; [Text]
+<span class="lineno">  367 </span><span class="decl"><span class="istickedoff">outcomeSignals propositionType repeatedInput localRecovery decisionRepair renderEmpty userConflict strongPositiveConfirmation weakAcknowledgement successfulContinuation userClarification =</span>
+<span class="lineno">  368 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;proposition_type=&quot; &lt;&gt; propositionType ]</span>
+<span class="lineno">  369 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag <span class="nottickedoff">&quot;repeated_question&quot;</span> repeatedInput</span>
+<span class="lineno">  370 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag &quot;local_recovery&quot; localRecovery</span>
+<span class="lineno">  371 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag &quot;decision_repair&quot; decisionRepair</span>
+<span class="lineno">  372 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag <span class="nottickedoff">&quot;empty_render&quot;</span> renderEmpty</span>
+<span class="lineno">  373 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag <span class="nottickedoff">&quot;user_conflict&quot;</span> userConflict</span>
+<span class="lineno">  374 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag &quot;strong_positive_confirmation&quot; strongPositiveConfirmation</span>
+<span class="lineno">  375 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag &quot;weak_acknowledgement&quot; weakAcknowledgement</span>
+<span class="lineno">  376 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag <span class="nottickedoff">&quot;successful_continuation&quot;</span> successfulContinuation</span>
+<span class="lineno">  377 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; flag <span class="nottickedoff">&quot;clarification_request&quot;</span> userClarification</span></span>
+<span class="lineno">  378 </span>
+<span class="lineno">  379 </span>flag :: Text -&gt; Bool -&gt; [Text]
+<span class="lineno">  380 </span><span class="decl"><span class="istickedoff">flag label ok = if ok then [label] else []</span></span>
+<span class="lineno">  381 </span>
+<span class="lineno">  382 </span>matchesAnyCue :: Text -&gt; [Text] -&gt; Bool
+<span class="lineno">  383 </span><span class="decl"><span class="istickedoff">matchesAnyCue text = any (matchesCue text)</span></span>
+<span class="lineno">  384 </span>
+<span class="lineno">  385 </span>matchesCue :: Text -&gt; Text -&gt; Bool
+<span class="lineno">  386 </span><span class="decl"><span class="istickedoff">matchesCue text cue</span>
+<span class="lineno">  387 </span><span class="spaces">  </span><span class="istickedoff">| T.any isSpace cue = cue `T.isInfixOf` text</span>
+<span class="lineno">  388 </span><span class="spaces">  </span><span class="istickedoff">| T.length cue &lt; 5 = cue `elem` tokenizeDialogueText text</span>
+<span class="lineno">  389 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = cue `T.isInfixOf` text</span></span>
+<span class="lineno">  390 </span>
+<span class="lineno">  391 </span>strongPositiveConfirmationPhrases :: [Text]
+<span class="lineno">  392 </span><span class="decl"><span class="istickedoff">strongPositiveConfirmationPhrases =</span>
+<span class="lineno">  393 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;стало понятно&quot;</span>
+<span class="lineno">  394 </span><span class="spaces">  </span><span class="istickedoff">, &quot;это помогло&quot;</span>
+<span class="lineno">  395 </span><span class="spaces">  </span><span class="istickedoff">, &quot;помогло&quot;</span>
+<span class="lineno">  396 </span><span class="spaces">  </span><span class="istickedoff">, &quot;верно&quot;</span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">, &quot;that helps&quot;</span>
+<span class="lineno">  398 </span><span class="spaces">  </span><span class="istickedoff">, &quot;clear now&quot;</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>weakAcknowledgementPhrases :: [Text]
+<span class="lineno">  402 </span><span class="decl"><span class="istickedoff">weakAcknowledgementPhrases =</span>
+<span class="lineno">  403 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;ack&quot;</span>
+<span class="lineno">  404 </span><span class="spaces">  </span><span class="istickedoff">, &quot;понял&quot;</span>
+<span class="lineno">  405 </span><span class="spaces">  </span><span class="istickedoff">, &quot;поняла&quot;</span>
+<span class="lineno">  406 </span><span class="spaces">  </span><span class="istickedoff">, &quot;ясно&quot;</span>
+<span class="lineno">  407 </span><span class="spaces">  </span><span class="istickedoff">, &quot;спасибо&quot;</span>
+<span class="lineno">  408 </span><span class="spaces">  </span><span class="istickedoff">, &quot;thank you&quot;</span>
+<span class="lineno">  409 </span><span class="spaces">  </span><span class="istickedoff">, &quot;thanks&quot;</span>
+<span class="lineno">  410 </span><span class="spaces">  </span><span class="istickedoff">, &quot;i understand&quot;</span>
+<span class="lineno">  411 </span><span class="spaces">  </span><span class="istickedoff">, &quot;makes sense&quot;</span>
+<span class="lineno">  412 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>isWeakAcknowledgementText :: Text -&gt; Bool
+<span class="lineno">  415 </span><span class="decl"><span class="istickedoff">isWeakAcknowledgementText text =</span>
+<span class="lineno">  416 </span><span class="spaces">  </span><span class="istickedoff">matchesAnyCue (normalizeDialogueText text) weakAcknowledgementPhrases</span></span>
+<span class="lineno">  417 </span>
+<span class="lineno">  418 </span>conflictPhrases :: [Text]
+<span class="lineno">  419 </span><span class="decl"><span class="istickedoff">conflictPhrases =</span>
+<span class="lineno">  420 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;не соглас&quot;</span>
+<span class="lineno">  421 </span><span class="spaces">  </span><span class="istickedoff">, &quot;противореч&quot;</span>
+<span class="lineno">  422 </span><span class="spaces">  </span><span class="istickedoff">, &quot;неверно&quot;</span>
+<span class="lineno">  423 </span><span class="spaces">  </span><span class="istickedoff">, &quot;ошибка&quot;</span>
+<span class="lineno">  424 </span><span class="spaces">  </span><span class="istickedoff">, &quot;wrong&quot;</span>
+<span class="lineno">  425 </span><span class="spaces">  </span><span class="istickedoff">, &quot;not true&quot;</span>
+<span class="lineno">  426 </span><span class="spaces">  </span><span class="istickedoff">, &quot;does not follow&quot;</span>
+<span class="lineno">  427 </span><span class="spaces">  </span><span class="istickedoff">, &quot;contradiction&quot;</span>
+<span class="lineno">  428 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  429 </span>
+<span class="lineno">  430 </span>stanceToPolarity :: StanceMarker -&gt; BeliefPolarity
+<span class="lineno">  431 </span><span class="decl"><span class="istickedoff">stanceToPolarity stance =</span>
+<span class="lineno">  432 </span><span class="spaces">  </span><span class="istickedoff">case stance of</span>
+<span class="lineno">  433 </span><span class="spaces">    </span><span class="istickedoff">Firm -&gt; <span class="nottickedoff">BeliefAffirmed</span></span>
+<span class="lineno">  434 </span><span class="spaces">    </span><span class="istickedoff">Commit -&gt; <span class="nottickedoff">BeliefAffirmed</span></span>
+<span class="lineno">  435 </span><span class="spaces">    </span><span class="istickedoff">Curated -&gt; <span class="nottickedoff">BeliefAffirmed</span></span>
+<span class="lineno">  436 </span><span class="spaces">    </span><span class="istickedoff">HoldBack -&gt; <span class="nottickedoff">BeliefTentative</span></span>
+<span class="lineno">  437 </span><span class="spaces">    </span><span class="istickedoff">Honest -&gt; <span class="nottickedoff">BeliefTentative</span></span>
+<span class="lineno">  438 </span><span class="spaces">    </span><span class="istickedoff">Observe -&gt; <span class="nottickedoff">BeliefTentative</span></span>
+<span class="lineno">  439 </span><span class="spaces">    </span><span class="istickedoff">Explore -&gt; BeliefTentative</span>
+<span class="lineno">  440 </span><span class="spaces">    </span><span class="istickedoff">Tentative -&gt; <span class="nottickedoff">BeliefTentative</span></span></span>
+<span class="lineno">  441 </span>
+<span class="lineno">  442 </span>boundSpeechPolicy :: SpeechPolicyState -&gt; SpeechPolicyState
+<span class="lineno">  443 </span><span class="decl"><span class="istickedoff">boundSpeechPolicy state =</span>
+<span class="lineno">  444 </span><span class="spaces">  </span><span class="istickedoff">state</span>
+<span class="lineno">  445 </span><span class="spaces">    </span><span class="istickedoff">{ spsSuccessfulPatterns = capCounterMap maxSpeechPatternEntries (spsSuccessfulPatterns state)</span>
+<span class="lineno">  446 </span><span class="spaces">    </span><span class="istickedoff">, spsFailedPatterns = capCounterMap maxSpeechPatternEntries (spsFailedPatterns state)</span>
+<span class="lineno">  447 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  448 </span>
+<span class="lineno">  449 </span>capCounterMap :: Int -&gt; M.Map Text Int -&gt; M.Map Text Int
+<span class="lineno">  450 </span><span class="decl"><span class="istickedoff">capCounterMap limit = M.fromList . take limit . sortBy compareEntry . M.toList</span>
+<span class="lineno">  451 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  452 </span><span class="spaces">    </span><span class="istickedoff">compareEntry (k1, v1) (k2, v2) = compare v2 v1 &lt;&gt; compare k1 k2</span></span>
+<span class="lineno">  453 </span>
+<span class="lineno">  454 </span>insertBoundedClaim :: Text -&gt; BeliefRecord -&gt; M.Map Text BeliefRecord -&gt; M.Map Text BeliefRecord
+<span class="lineno">  455 </span><span class="decl"><span class="istickedoff">insertBoundedClaim key entry claims =</span>
+<span class="lineno">  456 </span><span class="spaces">  </span><span class="istickedoff">let next = M.insert key entry claims</span>
+<span class="lineno">  457 </span><span class="spaces">  </span><span class="istickedoff">in if M.size next &lt;= maxClaimStanceEntries</span>
+<span class="lineno">  458 </span><span class="spaces">       </span><span class="istickedoff">then next</span>
+<span class="lineno">  459 </span><span class="spaces">       </span><span class="istickedoff">else pruneClaimMap key next</span></span>
+<span class="lineno">  460 </span>
+<span class="lineno">  461 </span>pruneClaimMap :: Text -&gt; M.Map Text BeliefRecord -&gt; M.Map Text BeliefRecord
+<span class="lineno">  462 </span><span class="decl"><span class="istickedoff">pruneClaimMap preservedKey claims =</span>
+<span class="lineno">  463 </span><span class="spaces">  </span><span class="istickedoff">let sorted = sortBy compareRecord (M.toList claims)</span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">keepCount = max 0 (maxClaimStanceEntries - 1)</span>
+<span class="lineno">  465 </span><span class="spaces">      </span><span class="istickedoff">kept = take keepCount (filter ((/= preservedKey) . fst) sorted)</span>
+<span class="lineno">  466 </span><span class="spaces">  </span><span class="istickedoff">in M.fromList (kept &lt;&gt; maybeToList (fmap (\value -&gt; (preservedKey, value)) (M.lookup preservedKey claims)))</span></span>
+<span class="lineno">  467 </span>
+<span class="lineno">  468 </span>compareRecord :: (Text, BeliefRecord) -&gt; (Text, BeliefRecord) -&gt; Ordering
+<span class="lineno">  469 </span><span class="decl"><span class="istickedoff">compareRecord (k1, r1) (k2, r2) =</span>
+<span class="lineno">  470 </span><span class="spaces">  </span><span class="istickedoff">compare (brLastUpdatedTurn r2) (brLastUpdatedTurn r1)</span>
+<span class="lineno">  471 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; <span class="nottickedoff">compare (brRevisionCount r2) (brRevisionCount r1)</span></span>
+<span class="lineno">  472 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; compare k1 k2</span></span></span>
+<span class="lineno">  473 </span>
+<span class="lineno">  474 </span>maybeToList :: Maybe a -&gt; [a]
+<span class="lineno">  475 </span><span class="decl"><span class="istickedoff">maybeToList Nothing = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  476 </span><span class="spaces"></span><span class="istickedoff">maybeToList (Just x) = [x]</span></span>
+<span class="lineno">  477 </span>
+<span class="lineno">  478 </span>renderDialogueOutcomeKind :: DialogueOutcomeKind -&gt; Text
+<span class="lineno">  479 </span><span class="decl"><span class="istickedoff">renderDialogueOutcomeKind kind =</span>
+<span class="lineno">  480 </span><span class="spaces">  </span><span class="istickedoff">case kind of</span>
+<span class="lineno">  481 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeSuccess -&gt; &quot;success&quot;</span>
+<span class="lineno">  482 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomePartialSuccess -&gt; <span class="nottickedoff">&quot;partial_success&quot;</span></span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeRepairRequested -&gt; <span class="nottickedoff">&quot;repair_requested&quot;</span></span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeRepeatedQuestion -&gt; <span class="nottickedoff">&quot;repeated_question&quot;</span></span>
+<span class="lineno">  485 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeConflict -&gt; <span class="nottickedoff">&quot;conflict&quot;</span></span>
+<span class="lineno">  486 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeDegraded -&gt; &quot;degraded&quot;</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="istickedoff">DialogueOutcomeUncertain -&gt; <span class="nottickedoff">&quot;uncertain&quot;</span></span></span>
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>firstNonEmpty :: [Text] -&gt; Text
+<span class="lineno">  490 </span><span class="decl"><span class="istickedoff">firstNonEmpty = fromMaybe <span class="nottickedoff">&quot;&quot;</span> . safeHead . filter (not . T.null . T.strip)</span>
+<span class="lineno">  491 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  492 </span><span class="spaces">    </span><span class="istickedoff">safeHead [] = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  493 </span><span class="spaces">    </span><span class="istickedoff">safeHead (x:_) = Just (T.strip x)</span></span>
+<span class="lineno">  494 </span>
+<span class="lineno">  495 </span>normalizeDialogueText :: Text -&gt; Text
+<span class="lineno">  496 </span><span class="decl"><span class="istickedoff">normalizeDialogueText = T.unwords . T.words . T.toLower . T.replace &quot;ё&quot; &quot;е&quot; . T.strip</span></span>
+<span class="lineno">  497 </span>
+<span class="lineno">  498 </span>tokenizeDialogueText :: Text -&gt; [Text]
+<span class="lineno">  499 </span><span class="decl"><span class="istickedoff">tokenizeDialogueText = filter (not . T.null) . T.words . T.map replaceNonToken</span>
+<span class="lineno">  500 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  501 </span><span class="spaces">    </span><span class="istickedoff">replaceNonToken c</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff">| isAlphaNum c || c == '-' = c</span>
+<span class="lineno">  503 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = ' '</span></span>
+<span class="lineno">  504 </span>
+<span class="lineno">  505 </span>clamp01 :: Double -&gt; Double
+<span class="lineno">  506 </span><span class="decl"><span class="istickedoff">clamp01 = max 0.0 . min 1.0</span></span>
+
+</pre>
+</body>
+</html>

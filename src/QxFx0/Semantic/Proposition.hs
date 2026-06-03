@@ -10,6 +10,7 @@ module QxFx0.Semantic.Proposition
   , parseProposition
   , parsePropositionMorph
   , extractFocusEntity
+  , detectKeywordFallbackType
   ) where
 
 import QxFx0.Types

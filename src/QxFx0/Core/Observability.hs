@@ -95,20 +95,20 @@ recordThresholdProbe signal threshold fired tm =
 renderMetricsLog :: TurnMetrics -> Text
 renderMetricsLog TurnMetrics{..} = T.intercalate " "
   [ "qxfx0_turn"
-  , "request_id=" <> tmRequestId
-  , "session_id=" <> tmSessionId
+  , "request_id=" <> sanitizeLogField tmRequestId
+  , "session_id=" <> sanitizeLogField tmSessionId
   , "turn=" <> textShow tmTurnCount
-  , "family=" <> tmFamily
-  , "embedding=" <> tmEmbeddingSource
-  , "nix=" <> tmNixStatus
-  , "safety=" <> tmSafetyStatus
+  , "family=" <> sanitizeLogField tmFamily
+  , "embedding=" <> sanitizeLogField tmEmbeddingSource
+  , "nix=" <> sanitizeLogField tmNixStatus
+  , "safety=" <> sanitizeLogField tmSafetyStatus
   , "api_healthy=" <> (if tmApiHealthy then "1" else "0")
   , "phases=" <> T.intercalate "," (map renderPhaseTiming tmPhases)
   , "thresholds=" <> T.intercalate "," (map renderThresholdProbe tmThresholds)
   , "total_ms=" <> textShow (totalDurationMs tmPhases)
   , case tmError of
       Nothing -> ""
-      Just e  -> "error=" <> e
+      Just e  -> "error=" <> sanitizeLogField e
   ]
 
 renderThresholdProbe :: ThresholdProbe -> Text
@@ -139,5 +139,8 @@ logMetrics :: TurnMetrics -> IO ()
 -- to avoid threading an IO logger through pure planning code paths.
 logMetrics = T.hPutStrLn stderr . renderMetricsLog
 
-hPutStrLnWarning :: String -> IO ()
-hPutStrLnWarning = hPutStrLn stderr
+hPutStrLnWarning :: Text -> IO ()
+hPutStrLnWarning = T.hPutStrLn stderr
+
+sanitizeLogField :: Text -> Text
+sanitizeLogField = T.filter (\c -> c >= ' ' && c <= '~' && c /= '\\' && c /= '\n' && c /= '\r')

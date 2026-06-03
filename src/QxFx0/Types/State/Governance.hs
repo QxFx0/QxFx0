@@ -76,12 +76,13 @@ module QxFx0.Types.State.Governance
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON, encode)
+import qualified Crypto.Hash.SHA256 as SHA256
 import Data.Bits (xor)
+import Data.Aeson (FromJSON, ToJSON, encode)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as BL8
-import Data.Char (ord)
 import Data.Function (on)
-import Data.List (foldl', groupBy, sortOn)
+import Data.List (groupBy, sortOn)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -111,6 +112,11 @@ import QxFx0.Types.State.Perspective
 newtype GovernanceEventId = GovernanceEventId { unGovernanceEventId :: Text }
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
+
+data GovernanceHashScheme
+  = GovernanceHashLegacyFNV
+  | GovernanceHashSha256
+  deriving stock (Eq, Show)
 
 data GovernanceActor
   = ActorRuntime
@@ -646,7 +652,7 @@ appendGovernanceEventToHistory event history = do
   normalized <- normalizeGovernanceEventChecked event
   let eventId = geeId (geEnvelope normalized)
       sameId existing = geeId (geEnvelope existing) == eventId
-      normalizedHistory = map normalizeGovernanceEvent history
+  normalizedHistory <- traverse normalizeGovernanceEventChecked history
   validateGovernanceHashChain normalizedHistory
   case filter sameId normalizedHistory of
     [] -> do
@@ -677,7 +683,8 @@ normalizeGovernanceEventChecked event = do
   if geeSequenceNo envelope <= 0
     then Left ("invalid governance sequence number: " <> T.pack (show (geeSequenceNo envelope)))
     else pure ()
-  let normalized = normalizeGovernanceEvent event
+  let scheme = detectGovernanceHashScheme envelope
+      normalized = normalizeGovernanceEventWith scheme event
       normalizedEnvelope = geEnvelope normalized
   case geePayloadHash envelope of
     Just payloadHash | payloadHash /= fromMaybe "" (geePayloadHash normalizedEnvelope) ->
@@ -894,12 +901,23 @@ payloadSubject event =
     GpNormativeRevision payload -> SubjectNormativeProfile (nrpProfileId payload)
 
 normalizeGovernanceEvent :: GovernanceEvent -> GovernanceEvent
-normalizeGovernanceEvent event =
+normalizeGovernanceEvent = normalizeGovernanceEventWith GovernanceHashSha256
+
+normalizeGovernanceEventWith :: GovernanceHashScheme -> GovernanceEvent -> GovernanceEvent
+normalizeGovernanceEventWith scheme event =
   event { geEnvelope = envelope { geePayloadHash = Just payloadHash, geeEventHash = Just eventHash } }
   where
     envelope = geEnvelope event
-    payloadHash = governanceEventPayloadHashText event
-    eventHash = governanceEventHashText event payloadHash
+    payloadHash = governanceEventPayloadHashTextWith scheme event
+    eventHash = governanceEventHashTextWith scheme event payloadHash
+
+detectGovernanceHashScheme :: GovernanceEventEnvelope -> GovernanceHashScheme
+detectGovernanceHashScheme envelope =
+  fromMaybe GovernanceHashSha256
+    ( (geePayloadHash envelope >>= hashSchemeFromText)
+      <|> (geeEventHash envelope >>= hashSchemeFromText)
+      <|> (geePrevHash envelope >>= hashSchemeFromText)
+    )
 
 governanceDecisionFromPerspectivePromotion :: PerspectivePromotionDecision -> GovernanceDecision
 governanceDecisionFromPerspectivePromotion decision =
@@ -922,11 +940,17 @@ governanceEventIdText :: GovernanceEventId -> Text
 governanceEventIdText = unGovernanceEventId
 
 governanceEventPayloadHashText :: GovernanceEvent -> Text
-governanceEventPayloadHashText = hashString . BL8.unpack . encode . gePayload
+governanceEventPayloadHashText = governanceEventPayloadHashTextWith GovernanceHashSha256
+
+governanceEventPayloadHashTextWith :: GovernanceHashScheme -> GovernanceEvent -> Text
+governanceEventPayloadHashTextWith scheme = hashStringWith scheme . BL8.unpack . encode . gePayload
 
 governanceEventHashText :: GovernanceEvent -> Text -> Text
-governanceEventHashText event payloadHash =
-  hashString (T.unpack (governanceEnvelopeCoreText (geEnvelope event) payloadHash))
+governanceEventHashText = governanceEventHashTextWith GovernanceHashSha256
+
+governanceEventHashTextWith :: GovernanceHashScheme -> GovernanceEvent -> Text -> Text
+governanceEventHashTextWith scheme event payloadHash =
+  hashStringWith scheme (T.unpack (governanceEnvelopeCoreText (geEnvelope event) payloadHash))
 
 governanceHistoryFingerprint :: [GovernanceEvent] -> Text
 governanceHistoryFingerprint events =
@@ -1038,9 +1062,9 @@ validateGovernanceAppend event history = do
       if geePrevHash envelope == Nothing
         then pure ()
         else Left ("first governance event must not carry prev_hash: " <> eventId)
-    _ -> do
-      let previous = last history
-          previousEnvelope = geEnvelope previous
+    previous : rest -> do
+      let previousEvent = foldl (\_ current -> current) previous rest
+          previousEnvelope = geEnvelope previousEvent
       if geeSequenceNo envelope > geeSequenceNo previousEnvelope
         then pure ()
         else Left ("governance sequence must increase on append: " <> eventId)
@@ -1059,13 +1083,34 @@ safeEventText = T.map safeChar
       | otherwise = ch
 
 hashString :: String -> Text
-hashString input = T.pack ("fnv1a64:" <> showHex (foldl' fnvStep fnvOffset input) "")
+hashString = hashStringWith GovernanceHashSha256
+
+hashStringWith :: GovernanceHashScheme -> String -> Text
+hashStringWith scheme input = case scheme of
+  GovernanceHashLegacyFNV -> legacyFNV input
+  GovernanceHashSha256 -> "sha256:" <> sha256Hex (SHA256.hashlazy (BL8.pack input))
+  where
+    sha256Hex = T.pack . concatMap byteToHex . BS.unpack
+    byteToHex byte =
+      let raw = showHex byte ""
+      in case raw of
+           [single] -> ['0', single]
+           other -> other
+
+legacyFNV :: String -> Text
+legacyFNV input = T.pack ("fnv1a64:" <> showHex (foldl fnvStep fnvOffset input) "")
   where
     fnvOffset :: Word64
     fnvOffset = 14695981039346656037
-    fnvPrime :: Word64
-    fnvPrime = 1099511628211
-    fnvStep h ch = (h `xor` fromIntegral (ord ch)) * fnvPrime
+
+    fnvStep :: Word64 -> Char -> Word64
+    fnvStep h ch = (h `xor` fromIntegral (fromEnum ch)) * 1099511628211
+
+hashSchemeFromText :: Text -> Maybe GovernanceHashScheme
+hashSchemeFromText value
+  | "fnv1a64:" `T.isPrefixOf` value = Just GovernanceHashLegacyFNV
+  | "sha256:" `T.isPrefixOf` value = Just GovernanceHashSha256
+  | otherwise = Nothing
 
 (<|>) :: Maybe a -> Maybe a -> Maybe a
 Just a <|> _ = Just a

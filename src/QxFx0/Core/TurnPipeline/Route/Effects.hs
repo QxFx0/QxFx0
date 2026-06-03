@@ -6,10 +6,11 @@ module QxFx0.Core.TurnPipeline.Route.Effects
   , resolveRouteEffects
   ) where
 
-import Control.Concurrent.Async (concurrently)
+import Control.Concurrent.Async (forConcurrently)
 import Control.Monad (when)
 import qualified Data.Foldable as F
-import qualified Data.Text as T
+import Data.Maybe (fromMaybe)
+import Data.Text (Text)
 
 import QxFx0.Core.Observability (hPutStrLnWarning)
 import QxFx0.Core.PipelineIO
@@ -17,6 +18,7 @@ import QxFx0.Core.PipelineIO
   , PipelineRuntimeMode(..)
   , ShadowResult(..)
   , pipelineRuntimeMode
+  , scheduleTurnEffects
   , resolveTurnEffect
   )
 import QxFx0.Core.TurnPipeline.Effects
@@ -76,65 +78,73 @@ planRouteEffects ss ti ts =
       atomTags = map maTag (asAtoms atomSet)
    in RouteEffectPlan
         { repStatic = RouteStatic {rsRoutingDecision = rd}
+        , repRouteTurnInput = ti
         , repShadowRequest = RouteReqShadow family (forceForFamily family) atomTags
         , repAgdaRequest = RouteReqAgdaVerify
         }
 
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects pio effectPlan = do
-  (shadowResult, agdaStatus) <-
-    concurrently
-      (resolveShadowEffect pio (repShadowRequest effectPlan))
-      (resolveAgdaEffect pio (repAgdaRequest effectPlan))
+  let scheduledRequests :: [(Text, TurnEffectRequest)]
+      scheduledRequests =
+        scheduleTurnEffects pio (tiConatusEnergy (repRouteTurnInput effectPlan))
+          ( [ ("shadow", TurnReqShadow family force atomTags)
+            | RouteReqShadow family force atomTags <- [repShadowRequest effectPlan]
+            ]
+         <> [ ("agda", TurnReqAgdaVerify)
+            | RouteReqAgdaVerify <- [repAgdaRequest effectPlan]
+            ]
+          )
+  resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
+    result <- resolveTurnEffect pio request
+    pure (label, result)
+  let shadowResult =
+        fromMaybe unexpectedShadowResult $ do
+          (_, result) <- firstMatch (\(label, _) -> label == "shadow") resolved
+          shadowResultFromTurnResult result
+      agdaStatus =
+        fromMaybe AgdaInvalid $ do
+          (_, result) <- firstMatch (\(label, _) -> label == "agda") resolved
+          agdaStatusFromTurnResult result
   let agdaReady = agdaVerificationReady agdaStatus
       strictMode = pipelineRuntimeMode pio == RuntimeStrict
       agdaMsg = "agda_status=" <> agdaVerificationStatusText agdaStatus
   when (strictMode && not agdaReady) $
     throwQxFx0 (AgdaGateError agdaMsg)
   when (not agdaReady) $
-    hPutStrLnWarning ("Agda R5 verification: " ++ T.unpack (agdaVerificationStatusText agdaStatus))
+    hPutStrLnWarning ("Agda R5 verification: " <> agdaVerificationStatusText agdaStatus)
   pure RouteEffectResults
     { rerShadowResult = shadowResult
     , rerAgdaStatus = agdaStatus
     }
 
-resolveShadowEffect :: PipelineIO -> RouteEffectRequest -> IO ShadowResult
-resolveShadowEffect pio request =
-  case routeRequestToTurnEffect request of
-    Just turnRequest -> do
-      result <- resolveTurnEffect pio turnRequest
-      case result of
-        TurnResShadow datalogVerdict shadowStatus divergence snapshotId diagnostics ->
-          pure ShadowResult
-            { srDatalogVerdict = datalogVerdict
-            , srStatus = shadowStatus
-            , srDivergence = divergence
-            , srSnapshotId = snapshotId
-            , srDiagnostics = diagnostics
-            }
-        _ ->
-          pure unexpectedShadowResult
-    Nothing ->
-      pure unexpectedShadowResult
+shadowResultFromTurnResult :: TurnEffectResult -> Maybe ShadowResult
+shadowResultFromTurnResult result =
+  case result of
+    TurnResShadow datalogVerdict shadowStatus divergence snapshotId diagnostics ->
+      Just ShadowResult
+        { srDatalogVerdict = datalogVerdict
+        , srStatus = shadowStatus
+        , srDivergence = divergence
+        , srSnapshotId = snapshotId
+        , srDiagnostics = diagnostics
+        }
+    _ ->
+      Nothing
 
-resolveAgdaEffect :: PipelineIO -> RouteEffectRequest -> IO AgdaVerificationStatus
-resolveAgdaEffect pio request =
-  case routeRequestToTurnEffect request of
-    Just turnRequest -> do
-      result <- resolveTurnEffect pio turnRequest
-      case result of
-        TurnResAgdaVerify agdaStatus -> pure agdaStatus
-        _ -> pure AgdaInvalid
-    Nothing ->
-      pure AgdaInvalid
+agdaStatusFromTurnResult :: TurnEffectResult -> Maybe AgdaVerificationStatus
+agdaStatusFromTurnResult result =
+  case result of
+    TurnResAgdaVerify agdaStatus -> Just agdaStatus
+    _ -> Nothing
 
-routeRequestToTurnEffect :: RouteEffectRequest -> Maybe TurnEffectRequest
-routeRequestToTurnEffect request =
-  case request of
-    RouteReqShadow family force atomTags ->
-      Just (TurnReqShadow family force atomTags)
-    RouteReqAgdaVerify ->
-      Just TurnReqAgdaVerify
+firstMatch :: (a -> Bool) -> [a] -> Maybe a
+firstMatch predicate = go
+  where
+    go [] = Nothing
+    go (x:xs)
+      | predicate x = Just x
+      | otherwise = go xs
 
 unexpectedShadowResult :: ShadowResult
 unexpectedShadowResult =

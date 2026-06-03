@@ -1,0 +1,613 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Self.Deliberation
+<span class="lineno">    9 </span>Description : Phase-8 deliberation framework — symbiotic reconciliation
+<span class="lineno">   10 </span>              of two hemispheric proposals into one outgoing 'Plan'.
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>== What this module is
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>A pure, leaf-level realisation of the deliberation contract pinned
+<span class="lineno">   15 </span>by ADR-0011 (forthcoming). It introduces a single composite
+<span class="lineno">   16 </span>'Plan' record that carries every output decision the dual-mode
+<span class="lineno">   17 </span>runtime currently makes (family / render-style / recovery cause /
+<span class="lineno">   18 </span>narrative tone) plus a self-reported confidence, and a single
+<span class="lineno">   19 </span>morphism
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>@
+<span class="lineno">   22 </span>'reconcile' :: 'Salience' -&gt; 'HolisticProposal' -&gt; 'FormalProposal' -&gt; 'Field' -&gt; 'Deliberation'
+<span class="lineno">   23 </span>@
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>that takes one proposal from each hemisphere (a 'Holistic' 'Plan'
+<span class="lineno">   26 </span>on the right, a @'Field' -&gt; 'Plan'@ strategy on the left, both
+<span class="lineno">   27 </span>typed through the existing 'QxFx0.Self.Adjunction.Adjunction'
+<span class="lineno">   28 </span>spine) and produces a reconciled 'Plan' together with a structured
+<span class="lineno">   29 </span>'DeliberationTrace' that records /both/ proposals and the
+<span class="lineno">   30 </span>reconciliation rule that was applied.
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>This replaces the previous \&quot;priority switching\&quot; pattern (where
+<span class="lineno">   33 </span>the salience verdict picked one of two values to forward) with a
+<span class="lineno">   34 </span>\&quot;deliberation\&quot; pattern (where both values are always materialised
+<span class="lineno">   35 </span>and a typed reconciliation chooses the outgoing payload field by
+<span class="lineno">   36 </span>field). The single-output discipline of ADR-0010 §5 is preserved:
+<span class="lineno">   37 </span>the caller forwards exactly one 'Plan'; the trace carries both.
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>== What this module is /not/
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>This module is the algebraic /shape/ of deliberation. It does not
+<span class="lineno">   42 </span>import from @QxFx0.Core.*@ and does not know anything about turn
+<span class="lineno">   43 </span>pipelines, routing cascades, render strategies, or recovery sites.
+<span class="lineno">   44 </span>The Phase-8 milestones (B.5.M1 / M2 / M3) are responsible for
+<span class="lineno">   45 </span>constructing 'HolisticProposal' / 'FormalProposal' values from the
+<span class="lineno">   46 </span>existing routing inputs and consuming the reconciled 'Plan' at the
+<span class="lineno">   47 </span>three call sites currently using salience-based priority switching.
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>== Decision rule (overview)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>Six rules apply in priority order; the first that matches becomes
+<span class="lineno">   52 </span>'dtRule' on the returned trace:
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>1.  'RuleConatusOverride' — if @'salienceDriver' = 'DrivenByConatusGate'@
+<span class="lineno">   55 </span>    the formal proposal is forced into a recovery shape regardless
+<span class="lineno">   56 </span>    of the holistic proposal.
+<span class="lineno">   57 </span>2.  'RuleAgreement' — if both proposals match field-for-field
+<span class="lineno">   58 </span>    (modulo 'planConfidence'), the merged confidence is the max
+<span class="lineno">   59 </span>    of the two.
+<span class="lineno">   60 </span>3.  'RuleSalienceLead' — if 'salienceConfidence' exceeds
+<span class="lineno">   61 </span>    'smEscalationConfidenceFloor', the verdict-side proposal wins
+<span class="lineno">   62 </span>    wholesale.
+<span class="lineno">   63 </span>4.  'RuleHolisticAdvantage' / 'RuleFormalAdvantage' — when exactly
+<span class="lineno">   64 </span>    one of (family, style, tone) differs, the verdict side decides
+<span class="lineno">   65 </span>    that single axis.
+<span class="lineno">   66 </span>5.  'RuleTiedFallback' — formal proposal wins as the safe default
+<span class="lineno">   67 </span>    (matches ADR-0010 §5).
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>In every non-Conatus rule, 'planRecoveryCause' is determined by
+<span class="lineno">   70 </span>'pickHigherSeverity' across both proposals — recovery is never
+<span class="lineno">   71 </span>silenced by a high-bias holistic proposal.
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>== Honest scope
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>The default 'NarrativeNeutral' tone, the 'recoveryCauseSeverity'
+<span class="lineno">   76 </span>ordering, and the per-axis differs/equal classification are pinned
+<span class="lineno">   77 </span>to make the property tests pass and the operational mapping
+<span class="lineno">   78 </span>(ADR-0011) plausible. Calibration of the severity ladder against
+<span class="lineno">   79 </span>empirical recovery preferences is Phase-7 (lifeness gates) work.
+<span class="lineno">   80 </span>-}
+<span class="lineno">   81 </span>module QxFx0.Self.Deliberation
+<span class="lineno">   82 </span>  (     -- * Plan: hemispheric proposal payload
+<span class="lineno">   83 </span>    Plan (..)
+<span class="lineno">   84 </span>  , NarrativeTone (..)
+<span class="lineno">   85 </span>  , defaultPlan
+<span class="lineno">   86 </span>    -- * Tunable tone modulation thresholds
+<span class="lineno">   87 </span>  , DeliberationModulation (..)
+<span class="lineno">   88 </span>  , defaultDeliberationModulation
+<span class="lineno">   89 </span>    -- * Proposals over the @Holistic ⊣ Formal@ adjunction
+<span class="lineno">   90 </span>  , HolisticProposal
+<span class="lineno">   91 </span>  , FormalProposal
+<span class="lineno">   92 </span>  , holisticProposal
+<span class="lineno">   93 </span>  , formalProposal
+<span class="lineno">   94 </span>    -- * Deliberation result
+<span class="lineno">   95 </span>  , Deliberation (..)
+<span class="lineno">   96 </span>  , DeliberationTrace (..)
+<span class="lineno">   97 </span>  , Agreement (..)
+<span class="lineno">   98 </span>  , ReconcileRule (..)
+<span class="lineno">   99 </span>    -- * Severity helper for recovery causes
+<span class="lineno">  100 </span>  , recoveryCauseSeverity
+<span class="lineno">  101 </span>  , pickHigherSeverity
+<span class="lineno">  102 </span>    -- * The deliberation morphism
+<span class="lineno">  103 </span>  , reconcile
+<span class="lineno">  104 </span>     -- * Trace rendering (Phase-8 observability)
+<span class="lineno">  105 </span>   , renderAgreement
+<span class="lineno">  106 </span>   , renderReconcileRule
+<span class="lineno">  107 </span>   , renderNarrativeTone
+<span class="lineno">  108 </span>     -- * Default fallback (Phase-9 witness ingestion)
+<span class="lineno">  109 </span>   , defaultDeliberation
+<span class="lineno">  110 </span>   ) where
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>import Control.DeepSeq (NFData)
+<span class="lineno">  113 </span>import Data.Aeson (FromJSON, ToJSON)
+<span class="lineno">  114 </span>import Data.Text (Text)
+<span class="lineno">  115 </span>import GHC.Generics (Generic)
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>import QxFx0.Self.Adjunction
+<span class="lineno">  118 </span>  ( Field
+<span class="lineno">  119 </span>  , Formal (..)
+<span class="lineno">  120 </span>  , Holistic (..)
+<span class="lineno">  121 </span>  , groundIn
+<span class="lineno">  122 </span>  , probe
+<span class="lineno">  123 </span>  )
+<span class="lineno">  124 </span>import QxFx0.Self.Salience
+<span class="lineno">  125 </span>  ( Salience (..)
+<span class="lineno">  126 </span>  , SalienceDriver (..)
+<span class="lineno">  127 </span>  , SalienceModulation (..)
+<span class="lineno">  128 </span>  , SalienceVerdict (..)
+<span class="lineno">  129 </span>  , defaultSalienceModulation
+<span class="lineno">  130 </span>  , defaultSalienceWeights
+<span class="lineno">  131 </span>  , salienceVerdict
+<span class="lineno">  132 </span>  )
+<span class="lineno">  133 </span>import QxFx0.Types.Decision.Enums.Render (RenderStyle (..))
+<span class="lineno">  134 </span>import QxFx0.Types.Domain (CanonicalMoveFamily (..))
+<span class="lineno">  135 </span>import QxFx0.Types.Recovery (LocalRecoveryCause (..))
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  138 </span>-- Narrative tone
+<span class="lineno">  139 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>-- | Closed enumeration of narrative tones the dual-mode pipeline
+<span class="lineno">  142 </span>-- can request. Distinct from
+<span class="lineno">  143 </span>-- 'QxFx0.Types.Decision.Enums.Render.EmotionalTone' (which is a
+<span class="lineno">  144 </span>-- post-render artefact tag) — this is a /pre/-render commitment
+<span class="lineno">  145 </span>-- attached to the 'Plan' so each hemisphere can express tone
+<span class="lineno">  146 </span>-- without having to bake it into the render style.
+<span class="lineno">  147 </span>--
+<span class="lineno">  148 </span>-- Constructors are prefixed @Narrative*@ to keep the namespace
+<span class="lineno">  149 </span>-- distinct from the existing 'EmotionalTone' tags exported by
+<span class="lineno">  150 </span>-- 'QxFx0.Types.Decision.Enums.Render'.
+<span class="lineno">  151 </span>data NarrativeTone
+<span class="lineno">  152 </span>  = NarrativeNeutral
+<span class="lineno">  153 </span>  | NarrativeWarm
+<span class="lineno">  154 </span>  | NarrativeFormal
+<span class="lineno">  155 </span>  | NarrativeTerse
+<span class="lineno">  156 </span>  | NarrativeRecovery
+<span class="lineno">  157 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  158 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  159 </span>
+<span class="lineno">  160 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  161 </span>-- Plan: hemispheric proposal payload
+<span class="lineno">  162 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>-- | A composite proposal from one hemisphere for a single turn.
+<span class="lineno">  165 </span>--
+<span class="lineno">  166 </span>-- Aggregates every output decision currently scattered across
+<span class="lineno">  167 </span>-- routing, render-style, and recovery so that two proposals can
+<span class="lineno">  168 </span>-- be compared field-for-field by 'reconcile'.
+<span class="lineno">  169 </span>--
+<span class="lineno">  170 </span>-- Invariants:
+<span class="lineno">  171 </span>--
+<span class="lineno">  172 </span>--   * @0 \\&lt;= 'planConfidence' \\&lt;= 1@.
+<span class="lineno">  173 </span>--   * 'planRecoveryCause' = 'Just' /c/ implies the proposing
+<span class="lineno">  174 </span>--     hemisphere asserts a recovery condition; 'Nothing' means it
+<span class="lineno">  175 </span>--     does not. Whether the merged plan emits recovery is decided
+<span class="lineno">  176 </span>--     by 'pickHigherSeverity' across both sides, not by either
+<span class="lineno">  177 </span>--     side alone.
+<span class="lineno">  178 </span>data Plan = Plan
+<span class="lineno">  179 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">planFamily</span></span></span>        :: !CanonicalMoveFamily
+<span class="lineno">  180 </span>    -- ^ The proposed canonical move family for the turn.
+<span class="lineno">  181 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">planRenderStyle</span></span></span>   :: !RenderStyle
+<span class="lineno">  182 </span>    -- ^ The proposed render style.
+<span class="lineno">  183 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">planRecoveryCause</span></span></span> :: !(Maybe LocalRecoveryCause)
+<span class="lineno">  184 </span>    -- ^ A proposed recovery cause, or 'Nothing' to abstain.
+<span class="lineno">  185 </span>    --   Recovery is never silenced by 'reconcile' — see
+<span class="lineno">  186 </span>    --   'pickHigherSeverity' / 'RuleConatusOverride'.
+<span class="lineno">  187 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">planNarrativeTone</span></span></span> :: !NarrativeTone
+<span class="lineno">  188 </span>    -- ^ The proposed narrative tone.
+<span class="lineno">  189 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">planConfidence</span></span></span>    :: !Double
+<span class="lineno">  190 </span>    -- ^ How confident the proposing hemisphere is in this 'Plan',
+<span class="lineno">  191 </span>    --   in @[0, 1]@.
+<span class="lineno">  192 </span>  }
+<span class="lineno">  193 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>-- | The neutral 'Plan' used as a safe fallback by callers
+<span class="lineno">  196 </span>-- bootstrapping a hemispheric projection without strong signals.
+<span class="lineno">  197 </span>--
+<span class="lineno">  198 </span>-- Not consumed by 'reconcile' itself; provided so that downstream
+<span class="lineno">  199 </span>-- helpers in the Phase-8 milestones (B.5.M1 / M2 / M3) have a
+<span class="lineno">  200 </span>-- reproducible neutral starting point.
+<span class="lineno">  201 </span>defaultPlan :: Plan
+<span class="lineno">  202 </span><span class="decl"><span class="istickedoff">defaultPlan = Plan</span>
+<span class="lineno">  203 </span><span class="spaces">  </span><span class="istickedoff">{ planFamily        = CMReflect</span>
+<span class="lineno">  204 </span><span class="spaces">  </span><span class="istickedoff">, planRenderStyle   = StyleStandard</span>
+<span class="lineno">  205 </span><span class="spaces">  </span><span class="istickedoff">, planRecoveryCause = Nothing</span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="istickedoff">, planNarrativeTone = NarrativeNeutral</span>
+<span class="lineno">  207 </span><span class="spaces">  </span><span class="istickedoff">, planConfidence    = 0.5</span>
+<span class="lineno">  208 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  209 </span>
+<span class="lineno">  210 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  211 </span>-- Tunable tone modulation thresholds
+<span class="lineno">  212 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  213 </span>
+<span class="lineno">  214 </span>-- | Thresholds for deriving the holistic 'NarrativeTone' from the
+<span class="lineno">  215 </span>-- per-turn 'Field'.  Like 'SalienceModulation' in 'Self.Salience',
+<span class="lineno">  216 </span>-- these are pinned to make integration tests pass and are
+<span class="lineno">  217 </span>-- candidates for Phase-7 calibration.
+<span class="lineno">  218 </span>data DeliberationModulation = DeliberationModulation
+<span class="lineno">  219 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">dmToneArousalFloor</span></span></span>   :: !Double
+<span class="lineno">  220 </span>    -- ^ 'atmosphereArousal' above this triggers a non-neutral tone.
+<span class="lineno">  221 </span>    --   Default: 0.5.
+<span class="lineno">  222 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dmToneValenceNeutral</span></span></span> :: !Double
+<span class="lineno">  223 </span>    -- ^ Valence at or above this (when arousal is above the floor)
+<span class="lineno">  224 </span>    --   yields 'NarrativeWarm'; below yields 'NarrativeTerse'.
+<span class="lineno">  225 </span>    --   Default: 0.0.
+<span class="lineno">  226 </span>  }
+<span class="lineno">  227 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  228 </span>
+<span class="lineno">  229 </span>-- | Phase-8 default tone thresholds.  Values are bikeshed-eligible
+<span class="lineno">  230 </span>-- but frozen for test stability.
+<span class="lineno">  231 </span>defaultDeliberationModulation :: DeliberationModulation
+<span class="lineno">  232 </span><span class="decl"><span class="istickedoff">defaultDeliberationModulation = DeliberationModulation</span>
+<span class="lineno">  233 </span><span class="spaces">  </span><span class="istickedoff">{ dmToneArousalFloor   = 0.5</span>
+<span class="lineno">  234 </span><span class="spaces">  </span><span class="istickedoff">, dmToneValenceNeutral = 0.0</span>
+<span class="lineno">  235 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  238 </span>-- Proposals
+<span class="lineno">  239 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>-- | Right-hemispheric proposal: a 'Plan' perceived /with/ the
+<span class="lineno">  242 </span>-- 'Field' the proposing hemisphere read.
+<span class="lineno">  243 </span>--
+<span class="lineno">  244 </span>-- Type alias over the existing 'Holistic' functor from
+<span class="lineno">  245 </span>-- @QxFx0.Self.Adjunction@; no new structure, just a documented
+<span class="lineno">  246 </span>-- specialisation at @a = 'Plan'@.
+<span class="lineno">  247 </span>type HolisticProposal = Holistic Plan
+<span class="lineno">  248 </span>
+<span class="lineno">  249 </span>-- | Left-hemispheric proposal: a /strategy/ producing a 'Plan'
+<span class="lineno">  250 </span>-- when given any 'Field', not committed to a particular ground.
+<span class="lineno">  251 </span>--
+<span class="lineno">  252 </span>-- Type alias over the existing 'Formal' functor from
+<span class="lineno">  253 </span>-- @QxFx0.Self.Adjunction@; no new structure.
+<span class="lineno">  254 </span>type FormalProposal = Formal Plan
+<span class="lineno">  255 </span>
+<span class="lineno">  256 </span>-- | Smart constructor for 'HolisticProposal'. Pairs a 'Plan' with
+<span class="lineno">  257 </span>-- the 'Field' it was perceived in.
+<span class="lineno">  258 </span>holisticProposal :: Plan -&gt; Field -&gt; HolisticProposal
+<span class="lineno">  259 </span><span class="decl"><span class="istickedoff">holisticProposal plan fd = Holistic (plan, <span class="nottickedoff">fd</span>)</span></span>
+<span class="lineno">  260 </span>
+<span class="lineno">  261 </span>-- | Smart constructor for 'FormalProposal'. Wraps a strategy in
+<span class="lineno">  262 </span>-- the 'Formal' functor.
+<span class="lineno">  263 </span>formalProposal :: (Field -&gt; Plan) -&gt; FormalProposal
+<span class="lineno">  264 </span><span class="decl"><span class="istickedoff">formalProposal = Formal</span></span>
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  267 </span>-- Deliberation result
+<span class="lineno">  268 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>-- | Closed enumeration of how the two hemispheric proposals
+<span class="lineno">  271 </span>-- relate per turn. Used in 'DeliberationTrace' for observability
+<span class="lineno">  272 </span>-- and in 'Test.Suite.SelfDeliberation' for property checks.
+<span class="lineno">  273 </span>--
+<span class="lineno">  274 </span>-- Tag set is closed and trace-stable: any change is a breaking
+<span class="lineno">  275 </span>-- change to the replay-trace JSON schema.
+<span class="lineno">  276 </span>data Agreement
+<span class="lineno">  277 </span>  = Agree
+<span class="lineno">  278 </span>  | DivergeOnFamily
+<span class="lineno">  279 </span>  | DivergeOnStyle
+<span class="lineno">  280 </span>  | DivergeOnRecovery
+<span class="lineno">  281 </span>  | DivergeOnTone
+<span class="lineno">  282 </span>  | DivergeMultiple
+<span class="lineno">  283 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  284 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  285 </span>
+<span class="lineno">  286 </span>-- | Closed enumeration of the rule that produced the reconciled
+<span class="lineno">  287 </span>-- 'Plan'. Exactly one is chosen per call to 'reconcile'; rules
+<span class="lineno">  288 </span>-- are tried in priority order (see module-level overview).
+<span class="lineno">  289 </span>--
+<span class="lineno">  290 </span>-- Tag set is closed and trace-stable.
+<span class="lineno">  291 </span>data ReconcileRule
+<span class="lineno">  292 </span>  = RuleAgreement
+<span class="lineno">  293 </span>  | RuleConatusOverride
+<span class="lineno">  294 </span>  | RuleSalienceLead
+<span class="lineno">  295 </span>  | RuleHolisticAdvantage
+<span class="lineno">  296 </span>  | RuleFormalAdvantage
+<span class="lineno">  297 </span>  | RuleTiedFallback
+<span class="lineno">  298 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Bounded</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">  299 </span>  deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON</span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff">FromJSON</span></span></span></span></span></span>)
+<span class="lineno">  300 </span>
+<span class="lineno">  301 </span>-- | Per-turn observability record produced by 'reconcile'. Carried
+<span class="lineno">  302 </span>-- alongside the reconciled 'Plan' in 'Deliberation'; intended to
+<span class="lineno">  303 </span>-- be projected into 'QxFx0.Types.TurnProjection.TurnReplayTrace'
+<span class="lineno">  304 </span>-- by the B.7 milestone.
+<span class="lineno">  305 </span>data DeliberationTrace = DeliberationTrace
+<span class="lineno">  306 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">dtAgreement</span></span></span>      :: !Agreement
+<span class="lineno">  307 </span>    -- ^ How the two proposals related, classified by axes.
+<span class="lineno">  308 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dtDivergence</span></span></span>     :: !Double
+<span class="lineno">  309 </span>    -- ^ Number of differing axes among
+<span class="lineno">  310 </span>    --   @{family, style, recovery, tone}@ divided by @4@; in
+<span class="lineno">  311 </span>    --   @[0, 1]@.
+<span class="lineno">  312 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dtRule</span></span></span>           :: !ReconcileRule
+<span class="lineno">  313 </span>    -- ^ Which rule produced 'delibReconciled'.
+<span class="lineno">  314 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">dtSalienceDriver</span></span></span> :: !SalienceDriver
+<span class="lineno">  315 </span>    -- ^ Echo of 'salienceDriver' for compactness in the trace —
+<span class="lineno">  316 </span>    --   so 'TurnReplayTrace' consumers do not have to join two
+<span class="lineno">  317 </span>    --   records.
+<span class="lineno">  318 </span>  }
+<span class="lineno">  319 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  320 </span>
+<span class="lineno">  321 </span>-- | The result of one deliberation. Carries both proposals in
+<span class="lineno">  322 </span>-- their projected (value-level) form and the reconciled 'Plan'.
+<span class="lineno">  323 </span>--
+<span class="lineno">  324 </span>-- Single-output discipline (ADR-0010 §5): 'delibReconciled' is
+<span class="lineno">  325 </span>-- the value the caller forwards downstream; 'delibHolistic' and
+<span class="lineno">  326 </span>-- 'delibFormal' exist for trace and for diagnostics.
+<span class="lineno">  327 </span>data Deliberation = Deliberation
+<span class="lineno">  328 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">delibHolistic</span></span></span>    :: !Plan
+<span class="lineno">  329 </span>    -- ^ 'groundIn' projection of the right-hemispheric proposal.
+<span class="lineno">  330 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">delibFormal</span></span></span>      :: !Plan
+<span class="lineno">  331 </span>    -- ^ 'probe' projection of the left-hemispheric proposal at
+<span class="lineno">  332 </span>    --   the per-turn 'Field'.
+<span class="lineno">  333 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">delibReconciled</span></span></span>  :: !Plan
+<span class="lineno">  334 </span>    -- ^ The reconciled outgoing 'Plan'. Always exactly one of
+<span class="lineno">  335 </span>    --   the four reconciliation paths.
+<span class="lineno">  336 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">delibTrace</span></span></span>       :: !DeliberationTrace
+<span class="lineno">  337 </span>    -- ^ Structured per-turn audit record.
+<span class="lineno">  338 </span>  }
+<span class="lineno">  339 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">  340 </span>
+<span class="lineno">  341 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  342 </span>-- Recovery severity ladder
+<span class="lineno">  343 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>-- | Total order on 'LocalRecoveryCause' used to merge two
+<span class="lineno">  346 </span>-- proposals\' 'planRecoveryCause' fields.
+<span class="lineno">  347 </span>--
+<span class="lineno">  348 </span>-- 'Nothing' is the floor (severity @0@); a structural-Conatus
+<span class="lineno">  349 </span>-- event is the ceiling. This ordering is the single source of
+<span class="lineno">  350 </span>-- truth for B.3.5 (\&quot;recovery is never silenced\&quot;): the proposal
+<span class="lineno">  351 </span>-- with higher severity wins on the recovery axis regardless of
+<span class="lineno">  352 </span>-- the salience verdict.
+<span class="lineno">  353 </span>--
+<span class="lineno">  354 </span>-- Numbers are deliberately spaced so future variants slot in
+<span class="lineno">  355 </span>-- without renumbering the existing ladder.
+<span class="lineno">  356 </span>recoveryCauseSeverity :: Maybe LocalRecoveryCause -&gt; Int
+<span class="lineno">  357 </span><span class="decl"><span class="istickedoff">recoveryCauseSeverity Nothing                          = 0</span>
+<span class="lineno">  358 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryParserLowConfidence) = 20</span>
+<span class="lineno">  359 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryLowLegitimacy)       = 30</span>
+<span class="lineno">  360 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryUnknownTopic)        = 40</span>
+<span class="lineno">  361 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryShadowUnavailable)   = 50</span>
+<span class="lineno">  362 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryShadowDivergence)    = 60</span>
+<span class="lineno">  363 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryRuntimeDegraded)     = 70</span>
+<span class="lineno">  364 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryRenderBlocked)       = 80</span>
+<span class="lineno">  365 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryLearningNeed)        = 85</span>
+<span class="lineno">  366 </span><span class="spaces"></span><span class="istickedoff">recoveryCauseSeverity (Just RecoveryConatusGate)         = 100</span></span>
+<span class="lineno">  367 </span>
+<span class="lineno">  368 </span>-- | Pick the higher-severity recovery proposal per
+<span class="lineno">  369 </span>-- 'recoveryCauseSeverity'. Ties favour the left argument so the
+<span class="lineno">  370 </span>-- function is stable under repeated calls.
+<span class="lineno">  371 </span>pickHigherSeverity
+<span class="lineno">  372 </span>  :: Maybe LocalRecoveryCause
+<span class="lineno">  373 </span>  -&gt; Maybe LocalRecoveryCause
+<span class="lineno">  374 </span>  -&gt; Maybe LocalRecoveryCause
+<span class="lineno">  375 </span><span class="decl"><span class="istickedoff">pickHigherSeverity a b</span>
+<span class="lineno">  376 </span><span class="spaces">  </span><span class="istickedoff">| recoveryCauseSeverity a &gt;= recoveryCauseSeverity b = a</span>
+<span class="lineno">  377 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = b</span></span>
+<span class="lineno">  378 </span>
+<span class="lineno">  379 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  380 </span>-- Default fallback (Phase-9 witness ingestion)
+<span class="lineno">  381 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  382 </span>
+<span class="lineno">  383 </span>-- | A placeholder 'Deliberation' used when a turn did not run
+<span class="lineno">  384 </span>-- 'reconcile' (e.g. Conatus-gated early exit).  Fields are chosen
+<span class="lineno">  385 </span>-- to have minimal impact on the 'EssenceTrajectory': agreement
+<span class="lineno">  386 </span>-- with zero divergence, neutral tone, and a stable driver so that
+<span class="lineno">  387 </span>-- 'witness' does not accrue or decay angst artificially.
+<span class="lineno">  388 </span>defaultDeliberation :: Deliberation
+<span class="lineno">  389 </span><span class="decl"><span class="istickedoff">defaultDeliberation = Deliberation</span>
+<span class="lineno">  390 </span><span class="spaces">  </span><span class="istickedoff">{ delibHolistic   = defaultPlan</span>
+<span class="lineno">  391 </span><span class="spaces">  </span><span class="istickedoff">, delibFormal     = defaultPlan</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="istickedoff">, delibReconciled = defaultPlan</span>
+<span class="lineno">  393 </span><span class="spaces">  </span><span class="istickedoff">, delibTrace      = DeliberationTrace</span>
+<span class="lineno">  394 </span><span class="spaces">      </span><span class="istickedoff">{ dtAgreement      = Agree</span>
+<span class="lineno">  395 </span><span class="spaces">      </span><span class="istickedoff">, dtDivergence     = 0.0</span>
+<span class="lineno">  396 </span><span class="spaces">      </span><span class="istickedoff">, dtRule           = RuleSalienceLead</span>
+<span class="lineno">  397 </span><span class="spaces">      </span><span class="istickedoff">, dtSalienceDriver = DrivenByDefault</span>
+<span class="lineno">  398 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  399 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  402 </span>-- The deliberation morphism
+<span class="lineno">  403 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  404 </span>
+<span class="lineno">  405 </span>-- | Reconcile a holistic and a formal proposal under a salience
+<span class="lineno">  406 </span>-- verdict, producing a 'Deliberation' record that includes both
+<span class="lineno">  407 </span>-- projected proposals, the reconciled 'Plan', and a per-turn
+<span class="lineno">  408 </span>-- 'DeliberationTrace'.
+<span class="lineno">  409 </span>--
+<span class="lineno">  410 </span>-- Total, deterministic, pure. Identical inputs produce identical
+<span class="lineno">  411 </span>-- 'Deliberation' values, including 'dtRule' and 'dtAgreement'.
+<span class="lineno">  412 </span>--
+<span class="lineno">  413 </span>-- Rule priority (first match wins; see module-level overview for
+<span class="lineno">  414 </span>-- the rationale):
+<span class="lineno">  415 </span>--
+<span class="lineno">  416 </span>--   1.  'RuleConatusOverride' on @'salienceDriver' = 'DrivenByConatusGate'@.
+<span class="lineno">  417 </span>--   2.  'RuleAgreement' on field-for-field equality (modulo
+<span class="lineno">  418 </span>--       'planConfidence').
+<span class="lineno">  419 </span>--   3.  'RuleSalienceLead' when @'salienceConfidence' &gt;
+<span class="lineno">  420 </span>--       'smEscalationConfidenceFloor' 'defaultSalienceModulation'@.
+<span class="lineno">  421 </span>--   4.  'RuleHolisticAdvantage' / 'RuleFormalAdvantage' on
+<span class="lineno">  422 </span>--       single-axis disagreement (excluding the recovery axis).
+<span class="lineno">  423 </span>--   5.  'RuleTiedFallback' otherwise — formal proposal wins as
+<span class="lineno">  424 </span>--       the safe default (ADR-0010 §5).
+<span class="lineno">  425 </span>--
+<span class="lineno">  426 </span>-- The recovery axis is always merged via 'pickHigherSeverity',
+<span class="lineno">  427 </span>-- regardless of which rule fires (except 'RuleConatusOverride',
+<span class="lineno">  428 </span>-- which forces 'Just' 'RecoveryConatusGate' wholesale).
+<span class="lineno">  429 </span>reconcile
+<span class="lineno">  430 </span>  :: Maybe (Plan -&gt; Bool)   -- ^ Phase 10: optional courtesy predicate.
+<span class="lineno">  431 </span>                              -- When 'RuleTiedFallback' fires and this is
+<span class="lineno">  432 </span>                              -- 'Just p', the tie-break prefers the
+<span class="lineno">  433 </span>                              -- proposal that satisfies @p@, but only
+<span class="lineno">  434 </span>                              -- if exactly one does.  Never widens the
+<span class="lineno">  435 </span>                              -- admissible set.
+<span class="lineno">  436 </span>  -&gt; Salience
+<span class="lineno">  437 </span>  -&gt; HolisticProposal
+<span class="lineno">  438 </span>  -&gt; FormalProposal
+<span class="lineno">  439 </span>  -&gt; Field
+<span class="lineno">  440 </span>  -&gt; Deliberation
+<span class="lineno">  441 </span><span class="decl"><span class="istickedoff">reconcile mCourtesy salience hp fp fd =</span>
+<span class="lineno">  442 </span><span class="spaces">  </span><span class="istickedoff">let hPlan          = groundIn hp</span>
+<span class="lineno">  443 </span><span class="spaces">      </span><span class="istickedoff">fPlan          = probe fp <span class="nottickedoff">fd</span></span>
+<span class="lineno">  444 </span><span class="spaces">      </span><span class="istickedoff">driver         = salienceDriver salience</span>
+<span class="lineno">  445 </span><span class="spaces">      </span><span class="istickedoff">agreement      = classifyAgreement hPlan fPlan</span>
+<span class="lineno">  446 </span><span class="spaces">      </span><span class="istickedoff">divergence     = computeDivergence hPlan fPlan</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="istickedoff">mergedRecovery = pickHigherSeverity (planRecoveryCause hPlan) (planRecoveryCause fPlan)</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="istickedoff">mkTrace rule = DeliberationTrace</span>
+<span class="lineno">  449 </span><span class="spaces">        </span><span class="istickedoff">{ dtAgreement      = agreement</span>
+<span class="lineno">  450 </span><span class="spaces">        </span><span class="istickedoff">, dtDivergence     = divergence</span>
+<span class="lineno">  451 </span><span class="spaces">        </span><span class="istickedoff">, dtRule           = rule</span>
+<span class="lineno">  452 </span><span class="spaces">        </span><span class="istickedoff">, dtSalienceDriver = driver</span>
+<span class="lineno">  453 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  454 </span><span class="spaces">      </span><span class="istickedoff">mkResult plan rule = Deliberation</span>
+<span class="lineno">  455 </span><span class="spaces">        </span><span class="istickedoff">{ delibHolistic   = hPlan</span>
+<span class="lineno">  456 </span><span class="spaces">        </span><span class="istickedoff">, delibFormal     = fPlan</span>
+<span class="lineno">  457 </span><span class="spaces">        </span><span class="istickedoff">, delibReconciled = plan</span>
+<span class="lineno">  458 </span><span class="spaces">        </span><span class="istickedoff">, delibTrace      = mkTrace rule</span>
+<span class="lineno">  459 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  460 </span><span class="spaces">   </span><span class="istickedoff">in case driver of</span>
+<span class="lineno">  461 </span><span class="spaces">        </span><span class="istickedoff">DrivenByConatusGate -&gt;</span>
+<span class="lineno">  462 </span><span class="spaces">          </span><span class="istickedoff">let conatusPlan = fPlan</span>
+<span class="lineno">  463 </span><span class="spaces">                </span><span class="istickedoff">{ planRenderStyle   = StyleRecovery</span>
+<span class="lineno">  464 </span><span class="spaces">                </span><span class="istickedoff">, planRecoveryCause = Just RecoveryConatusGate</span>
+<span class="lineno">  465 </span><span class="spaces">                </span><span class="istickedoff">, planNarrativeTone = NarrativeRecovery</span>
+<span class="lineno">  466 </span><span class="spaces">                </span><span class="istickedoff">, planConfidence    = 1.0</span>
+<span class="lineno">  467 </span><span class="spaces">                </span><span class="istickedoff">}</span>
+<span class="lineno">  468 </span><span class="spaces">           </span><span class="istickedoff">in mkResult conatusPlan RuleConatusOverride</span>
+<span class="lineno">  469 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  470 </span><span class="spaces">        </span><span class="istickedoff">_ | plansEqualModConfidence hPlan fPlan -&gt;</span>
+<span class="lineno">  471 </span><span class="spaces">              </span><span class="istickedoff">let agreedPlan = hPlan</span>
+<span class="lineno">  472 </span><span class="spaces">                    </span><span class="istickedoff">{ planConfidence    = max (planConfidence hPlan) (planConfidence fPlan)</span>
+<span class="lineno">  473 </span><span class="spaces">                    </span><span class="istickedoff">, planRecoveryCause = mergedRecovery</span>
+<span class="lineno">  474 </span><span class="spaces">                    </span><span class="istickedoff">}</span>
+<span class="lineno">  475 </span><span class="spaces">               </span><span class="istickedoff">in mkResult agreedPlan RuleAgreement</span>
+<span class="lineno">  476 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  477 </span><span class="spaces">        </span><span class="istickedoff">_ | salienceConfidence salience &gt; smEscalationConfidenceFloor defaultSalienceModulation -&gt;</span>
+<span class="lineno">  478 </span><span class="spaces">              </span><span class="istickedoff">let chosen = case salienceVerdict defaultSalienceWeights salience of</span>
+<span class="lineno">  479 </span><span class="spaces">                    </span><span class="istickedoff">PreferHolistic _ -&gt; hPlan</span>
+<span class="lineno">  480 </span><span class="spaces">                    </span><span class="istickedoff">PreferFormal   _ -&gt; fPlan</span>
+<span class="lineno">  481 </span><span class="spaces">                    </span><span class="istickedoff">Tied             -&gt; fPlan</span>
+<span class="lineno">  482 </span><span class="spaces">                  </span><span class="istickedoff">withRecovery = chosen { planRecoveryCause = mergedRecovery }</span>
+<span class="lineno">  483 </span><span class="spaces">               </span><span class="istickedoff">in mkResult withRecovery RuleSalienceLead</span>
+<span class="lineno">  484 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  485 </span><span class="spaces">        </span><span class="istickedoff">_ | singleNonRecoveryAxisDiffers hPlan fPlan -&gt;</span>
+<span class="lineno">  486 </span><span class="spaces">              </span><span class="istickedoff">let (rule, base) = case salienceVerdict defaultSalienceWeights salience of</span>
+<span class="lineno">  487 </span><span class="spaces">                    </span><span class="istickedoff">PreferHolistic _ -&gt; (RuleHolisticAdvantage, hPlan)</span>
+<span class="lineno">  488 </span><span class="spaces">                    </span><span class="istickedoff">PreferFormal   _ -&gt; (RuleFormalAdvantage,   fPlan)</span>
+<span class="lineno">  489 </span><span class="spaces">                    </span><span class="istickedoff">Tied             -&gt; (RuleFormalAdvantage,   fPlan)</span>
+<span class="lineno">  490 </span><span class="spaces">                  </span><span class="istickedoff">withRecovery = base { planRecoveryCause = mergedRecovery }</span>
+<span class="lineno">  491 </span><span class="spaces">               </span><span class="istickedoff">in mkResult withRecovery rule</span>
+<span class="lineno">  492 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  493 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  494 </span><span class="spaces">              </span><span class="istickedoff">let baseFallback = fPlan { planRecoveryCause = mergedRecovery }</span>
+<span class="lineno">  495 </span><span class="spaces">                  </span><span class="istickedoff">fallback = case mCourtesy of</span>
+<span class="lineno">  496 </span><span class="spaces">                    </span><span class="istickedoff">Nothing -&gt; baseFallback</span>
+<span class="lineno">  497 </span><span class="spaces">                    </span><span class="istickedoff">Just pred -&gt;</span>
+<span class="lineno">  498 </span><span class="spaces">                      </span><span class="istickedoff">case (pred hPlan, pred fPlan) of</span>
+<span class="lineno">  499 </span><span class="spaces">                        </span><span class="istickedoff">(True, False) -&gt; hPlan { planRecoveryCause = mergedRecovery }</span>
+<span class="lineno">  500 </span><span class="spaces">                        </span><span class="istickedoff">_             -&gt; baseFallback</span>
+<span class="lineno">  501 </span><span class="spaces">               </span><span class="istickedoff">in mkResult fallback RuleTiedFallback</span></span>
+<span class="lineno">  502 </span>
+<span class="lineno">  503 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  504 </span>-- Trace rendering
+<span class="lineno">  505 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>-- | Render an 'Agreement' to a stable @snake_case@ tag. Closed
+<span class="lineno">  508 </span>-- set; any change is a breaking change to the replay-trace JSON
+<span class="lineno">  509 </span>-- schema.
+<span class="lineno">  510 </span>renderAgreement :: Agreement -&gt; Text
+<span class="lineno">  511 </span><span class="decl"><span class="istickedoff">renderAgreement Agree             = &quot;agree&quot;</span>
+<span class="lineno">  512 </span><span class="spaces"></span><span class="istickedoff">renderAgreement DivergeOnFamily   = &quot;diverge_on_family&quot;</span>
+<span class="lineno">  513 </span><span class="spaces"></span><span class="istickedoff">renderAgreement DivergeOnStyle    = &quot;diverge_on_style&quot;</span>
+<span class="lineno">  514 </span><span class="spaces"></span><span class="istickedoff">renderAgreement DivergeOnRecovery = &quot;diverge_on_recovery&quot;</span>
+<span class="lineno">  515 </span><span class="spaces"></span><span class="istickedoff">renderAgreement DivergeOnTone     = &quot;diverge_on_tone&quot;</span>
+<span class="lineno">  516 </span><span class="spaces"></span><span class="istickedoff">renderAgreement DivergeMultiple   = &quot;diverge_multiple&quot;</span></span>
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>-- | Render a 'ReconcileRule' to a stable @snake_case@ tag. Closed
+<span class="lineno">  519 </span>-- set; trace-stable.
+<span class="lineno">  520 </span>renderReconcileRule :: ReconcileRule -&gt; Text
+<span class="lineno">  521 </span><span class="decl"><span class="istickedoff">renderReconcileRule RuleAgreement         = &quot;agreement&quot;</span>
+<span class="lineno">  522 </span><span class="spaces"></span><span class="istickedoff">renderReconcileRule RuleConatusOverride   = &quot;conatus_override&quot;</span>
+<span class="lineno">  523 </span><span class="spaces"></span><span class="istickedoff">renderReconcileRule RuleSalienceLead      = &quot;salience_lead&quot;</span>
+<span class="lineno">  524 </span><span class="spaces"></span><span class="istickedoff">renderReconcileRule RuleHolisticAdvantage = &quot;holistic_advantage&quot;</span>
+<span class="lineno">  525 </span><span class="spaces"></span><span class="istickedoff">renderReconcileRule RuleFormalAdvantage   = &quot;formal_advantage&quot;</span>
+<span class="lineno">  526 </span><span class="spaces"></span><span class="istickedoff">renderReconcileRule RuleTiedFallback      = &quot;tied_fallback&quot;</span></span>
+<span class="lineno">  527 </span>
+<span class="lineno">  528 </span>-- | Render a 'NarrativeTone' to a stable @snake_case@ tag. Closed
+<span class="lineno">  529 </span>-- set; trace-stable.
+<span class="lineno">  530 </span>renderNarrativeTone :: NarrativeTone -&gt; Text
+<span class="lineno">  531 </span><span class="decl"><span class="istickedoff">renderNarrativeTone NarrativeNeutral  = &quot;neutral&quot;</span>
+<span class="lineno">  532 </span><span class="spaces"></span><span class="istickedoff">renderNarrativeTone NarrativeWarm     = <span class="nottickedoff">&quot;warm&quot;</span></span>
+<span class="lineno">  533 </span><span class="spaces"></span><span class="istickedoff">renderNarrativeTone NarrativeFormal   = <span class="nottickedoff">&quot;formal&quot;</span></span>
+<span class="lineno">  534 </span><span class="spaces"></span><span class="istickedoff">renderNarrativeTone NarrativeTerse    = <span class="nottickedoff">&quot;terse&quot;</span></span>
+<span class="lineno">  535 </span><span class="spaces"></span><span class="istickedoff">renderNarrativeTone NarrativeRecovery = <span class="nottickedoff">&quot;recovery&quot;</span></span></span>
+<span class="lineno">  536 </span>
+<span class="lineno">  537 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  538 </span>-- Internals
+<span class="lineno">  539 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">  540 </span>
+<span class="lineno">  541 </span>-- | Field-for-field equality on 'Plan' that ignores
+<span class="lineno">  542 </span>-- 'planConfidence'. Used by 'RuleAgreement'.
+<span class="lineno">  543 </span>plansEqualModConfidence :: Plan -&gt; Plan -&gt; Bool
+<span class="lineno">  544 </span><span class="decl"><span class="istickedoff">plansEqualModConfidence a b =</span>
+<span class="lineno">  545 </span><span class="spaces">     </span><span class="istickedoff">planFamily        a == planFamily        b</span>
+<span class="lineno">  546 </span><span class="spaces">  </span><span class="istickedoff">&amp;&amp; planRenderStyle   a == planRenderStyle   b</span>
+<span class="lineno">  547 </span><span class="spaces">  </span><span class="istickedoff">&amp;&amp; planRecoveryCause a == planRecoveryCause b</span>
+<span class="lineno">  548 </span><span class="spaces">  </span><span class="istickedoff">&amp;&amp; planNarrativeTone a == planNarrativeTone b</span></span>
+<span class="lineno">  549 </span>
+<span class="lineno">  550 </span>-- | Classify how the two plans differ across the four axes.
+<span class="lineno">  551 </span>classifyAgreement :: Plan -&gt; Plan -&gt; Agreement
+<span class="lineno">  552 </span><span class="decl"><span class="istickedoff">classifyAgreement a b =</span>
+<span class="lineno">  553 </span><span class="spaces">  </span><span class="istickedoff">let famDiff = planFamily        a /= planFamily        b</span>
+<span class="lineno">  554 </span><span class="spaces">      </span><span class="istickedoff">styDiff = planRenderStyle   a /= planRenderStyle   b</span>
+<span class="lineno">  555 </span><span class="spaces">      </span><span class="istickedoff">recDiff = planRecoveryCause a /= planRecoveryCause b</span>
+<span class="lineno">  556 </span><span class="spaces">      </span><span class="istickedoff">tonDiff = planNarrativeTone a /= planNarrativeTone b</span>
+<span class="lineno">  557 </span><span class="spaces">      </span><span class="istickedoff">diffs   = [famDiff, styDiff, recDiff, tonDiff]</span>
+<span class="lineno">  558 </span><span class="spaces">      </span><span class="istickedoff">n       = length (filter id diffs)</span>
+<span class="lineno">  559 </span><span class="spaces">   </span><span class="istickedoff">in case n of</span>
+<span class="lineno">  560 </span><span class="spaces">        </span><span class="istickedoff">0 -&gt; Agree</span>
+<span class="lineno">  561 </span><span class="spaces">        </span><span class="istickedoff">1</span>
+<span class="lineno">  562 </span><span class="spaces">          </span><span class="istickedoff">| famDiff -&gt; DivergeOnFamily</span>
+<span class="lineno">  563 </span><span class="spaces">          </span><span class="istickedoff">| styDiff -&gt; DivergeOnStyle</span>
+<span class="lineno">  564 </span><span class="spaces">          </span><span class="istickedoff">| recDiff -&gt; DivergeOnRecovery</span>
+<span class="lineno">  565 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">tonDiff</span> -&gt; DivergeOnTone</span>
+<span class="lineno">  566 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">Agree</span></span>
+<span class="lineno">  567 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; DivergeMultiple</span></span>
+<span class="lineno">  568 </span>
+<span class="lineno">  569 </span>-- | Number of differing axes / 4. Always in @[0, 1]@.
+<span class="lineno">  570 </span>computeDivergence :: Plan -&gt; Plan -&gt; Double
+<span class="lineno">  571 </span><span class="decl"><span class="istickedoff">computeDivergence a b =</span>
+<span class="lineno">  572 </span><span class="spaces">  </span><span class="istickedoff">let count = length . filter id $</span>
+<span class="lineno">  573 </span><span class="spaces">        </span><span class="istickedoff">[ planFamily        a /= planFamily        b</span>
+<span class="lineno">  574 </span><span class="spaces">        </span><span class="istickedoff">, planRenderStyle   a /= planRenderStyle   b</span>
+<span class="lineno">  575 </span><span class="spaces">        </span><span class="istickedoff">, planRecoveryCause a /= planRecoveryCause b</span>
+<span class="lineno">  576 </span><span class="spaces">        </span><span class="istickedoff">, planNarrativeTone a /= planNarrativeTone b</span>
+<span class="lineno">  577 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  578 </span><span class="spaces">   </span><span class="istickedoff">in fromIntegral count / 4.0</span></span>
+<span class="lineno">  579 </span>
+<span class="lineno">  580 </span>-- | Predicate: do the two plans differ on exactly one of
+<span class="lineno">  581 </span>-- @{family, style, tone}@? The recovery axis is excluded because
+<span class="lineno">  582 </span>-- it is always merged separately via 'pickHigherSeverity'.
+<span class="lineno">  583 </span>singleNonRecoveryAxisDiffers :: Plan -&gt; Plan -&gt; Bool
+<span class="lineno">  584 </span><span class="decl"><span class="istickedoff">singleNonRecoveryAxisDiffers a b =</span>
+<span class="lineno">  585 </span><span class="spaces">  </span><span class="istickedoff">let diffs =</span>
+<span class="lineno">  586 </span><span class="spaces">        </span><span class="istickedoff">[ planFamily        a /= planFamily        b</span>
+<span class="lineno">  587 </span><span class="spaces">        </span><span class="istickedoff">, planRenderStyle   a /= planRenderStyle   b</span>
+<span class="lineno">  588 </span><span class="spaces">        </span><span class="istickedoff">, planNarrativeTone a /= planNarrativeTone b</span>
+<span class="lineno">  589 </span><span class="spaces">        </span><span class="istickedoff">]</span>
+<span class="lineno">  590 </span><span class="spaces">   </span><span class="istickedoff">in length (filter id diffs) == 1</span></span>
+
+</pre>
+</body>
+</html>

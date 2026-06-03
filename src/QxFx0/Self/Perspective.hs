@@ -53,7 +53,8 @@ import QxFx0.Types.State.Governance
   , buildPerspectiveGovernanceEvent
   )
 import QxFx0.Governance.Replay
-  ( verifyPerspectiveRegistryRebuild
+  ( rebuildGovernedViews
+  , verifyPerspectiveRegistryRebuild
   )
 import QxFx0.Types.State.DialogueDevelopment
   ( BeliefPolarity(..)
@@ -216,13 +217,17 @@ applyPerspectiveOperator ss conatusEnergy conatusGateFired field =
         Left err -> ss { ssGovernanceRuntimeFault = Just (GrfAppendRejected err) }
         Right ssWithGovernance ->
            case verifyPerspectiveRegistryRebuild (ssGovernanceHistory ssWithGovernance) prospectiveRegistry of
-             Right rebuiltRegistry ->
-               (commitGovernedPerspectiveProjection rebuiltRegistry prospectiveAdaptiveRecord ssWithGovernance)
-                 { ssGovernanceRuntimeFault = Nothing }
-             Left "governance perspective registry rebuild mismatch" ->
-               ss { ssGovernanceRuntimeFault = Just GrfRebuildMismatch }
-             Left err ->
-               ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }
+              Right _ ->
+                case rebuildGovernedViews ssWithGovernance of
+                  Right (_, rebuiltProjection) ->
+                    (commitGovernedPerspectiveProjection rebuiltProjection prospectiveAdaptiveRecord ssWithGovernance)
+                      { ssGovernanceRuntimeFault = Nothing }
+                  Left err ->
+                    ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }
+              Left "governance perspective registry rebuild mismatch" ->
+                ss { ssGovernanceRuntimeFault = Just GrfRebuildMismatch }
+              Left err ->
+                ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }
 
 selectPerspectiveScope :: SystemState -> PerspectiveScope
 selectPerspectiveScope ss =
@@ -232,20 +237,25 @@ selectPerspectiveScope ss =
         , strongestKnowledgeTopic (ssKnowledgeTree ss)
         ]
       scopedTopic = clampPerspectiveScopeTopic (ssDialoguePhase ss) (ssDialogueThread ss) (fromMaybe "general" topic)
-  in ScopeTopic scopedTopic
+      threadScope = dtStructuralScope (ssDialogueThread ss)
+  in case threadScope of
+       Just scope
+         | ssDialoguePhase ss `elem` [Clarifying, Grounding, Repairing, Contesting, Closing] -> scope
+         | normalizeDialogueText (scopeText scope) == normalizeDialogueText scopedTopic -> scope
+       _ -> ScopeTopic scopedTopic
 
 clampPerspectiveScopeTopic :: DialoguePhase -> DialogueThread -> Text -> Text
 clampPerspectiveScopeTopic phase thread proposedTopic =
   let proposed = normalizeDialogueText proposedTopic
       currentFocus = normalizeDialogueText (dtCurrentFocus thread)
       phaseScope = normalizeDialogueText (dtPhaseScope thread)
-      activeScope = firstNonEmpty [nonEmptyMaybe phaseScope, nonEmptyMaybe currentFocus]
+      activeScope = firstNonEmpty [structuralScopeTextMaybe (dtStructuralScope thread), nonEmptyMaybe phaseScope, nonEmptyMaybe currentFocus]
       lockedPhase = phase `elem` [Clarifying, Grounding, Repairing, Contesting, Closing]
   in case activeScope of
        Nothing -> if T.null proposed then "general" else proposed
        Just scope
          | T.null proposed -> scope
-         | lockedPhase && scope /= proposed && not (scope `T.isInfixOf` proposed) && not (proposed `T.isInfixOf` scope) -> scope
+         | lockedPhase && normalizeDialogueText scope /= normalizeDialogueText proposed -> scope
          | otherwise -> proposed
 
 nonEmptyMaybe :: Text -> Maybe Text
@@ -724,6 +734,10 @@ samePerspectiveScope left right =
     (ScopeCluster a, ScopeCluster b) -> normalizeDialogueText a == normalizeDialogueText b
     _ -> False
 
+structuralScopeTextMaybe :: Maybe PerspectiveScope -> Maybe Text
+structuralScopeTextMaybe Nothing = Nothing
+structuralScopeTextMaybe (Just scope) = Just (scopeText scope)
+
 dialogueEvidenceText :: DialogueOutcomeSample -> Text
 dialogueEvidenceText sample =
   "dialogue:" <> T.pack (show (dosKind sample)) <> ":" <> dosTopic sample
@@ -745,4 +759,6 @@ renderIdentityClaim :: IdentityClaimRef -> Text
 renderIdentityClaim = T.pack . show
 
 clampUnit :: Double -> Double
-clampUnit = max 0.0 . min 1.0
+clampUnit x
+  | isNaN x   = 0.0
+  | otherwise = max 0.0 (min 1.0 x)

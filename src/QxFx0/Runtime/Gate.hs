@@ -34,8 +34,9 @@ evaluateBootstrapReadiness runtimeMode readinessMode =
 
 evaluateStrictHealth :: RuntimeMode -> SystemHealth -> Either RuntimeGateFailure ()
 evaluateStrictHealth runtimeMode health
-  | not (isStrictRuntimeMode runtimeMode) =
-      Right ()
+  | not (isStrictRuntimeMode runtimeMode) && not (shReady health) =
+      Left (GateStrictHealth health)
+  | not (isStrictRuntimeMode runtimeMode) = Right ()
   | shReady health && shStatus health == "ok" =
       Right ()
   | otherwise =
@@ -72,6 +73,7 @@ renderStrictHealthDetail health =
         , "agda=" <> T.pack (show (shAgdaReady health))
         , "datalog=" <> T.pack (show (shDatalogReady health))
         , "embed=" <> T.pack (show (shEmbeddingAlive health))
+        , "embed_backend=" <> shEmbeddingBackend health
         , "decision_local_only=" <> T.pack (show (shDecisionPathLocalOnly health))
         , "network_optional_only=" <> T.pack (show (shNetworkOptionalOnly health))
         , "llm_decision_path=" <> T.pack (show (shLlmDecisionPath health))
@@ -86,6 +88,7 @@ renderStrictHealthDetail health =
         [ if null (shAgdaIssues health) then [] else ["agda_issues=" <> T.intercalate "," (shAgdaIssues health)]
         , if null (shDatalogIssues health) then [] else ["datalog_issues=" <> T.intercalate "," (shDatalogIssues health)]
         , if null (shNixIssues health) then [] else ["nix_issues=" <> T.intercalate "," (shNixIssues health)]
+        , if null (shEmbeddingIssues health) then [] else ["embed_issues=" <> T.intercalate "," (shEmbeddingIssues health)]
         , maybe [] (\issue -> ["gfmap_issue=" <> issue]) (shGfMapIssue health)
         , if T.null (shSchemaReason health) then [] else ["schema_reason=" <> shSchemaReason health]
         ]

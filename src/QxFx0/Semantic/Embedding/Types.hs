@@ -40,6 +40,7 @@ data EmbeddingHealth = EmbeddingHealth
   , ehExplicit :: !Bool
   , ehOperational :: !Bool
   , ehStrictReady :: !Bool
+  , ehIssues :: ![Text]
   }
   deriving stock (Eq, Show)
 

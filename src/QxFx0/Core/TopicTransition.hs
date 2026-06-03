@@ -66,10 +66,9 @@ geodesicRouter mg fromTopic toTopic recentTopics =
               fromId = T.unpack fromTopic
               toId   = T.unpack toTopic
               fromNeighbors = M.keys (M.findWithDefault M.empty fromId adj)
-              toNeighbors   = M.keys (M.findWithDefault M.empty toId adj)
-              bridges = filter (`elem` toNeighbors) fromNeighbors
+              bridges = filter (\bridge -> M.member toId (M.findWithDefault M.empty bridge adj)) fromNeighbors
               recentIds = map T.unpack recentTopics
               fresh = filter (`notElem` recentIds) bridges
-          in if null fresh
-             then DirectJump
-             else BridgedJump (take 2 (map T.pack fresh))
+           in if null fresh
+              then DirectJump
+              else BridgedJump (take 2 (map T.pack fresh))

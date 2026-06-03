@@ -5,7 +5,7 @@
 - **Refines**: AGENTS.md, ADRs 0007–0012
 - **Related**:
   - `docs/closure/AUTHORITY_MAP.md`
-  - `docs/closure/adr-0013-role-split.md`
+  - `docs/adr/proposed/0034-self-core-role-split.md`
 
 ## 0. Why this document exists
 

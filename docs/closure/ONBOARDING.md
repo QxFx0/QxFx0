@@ -13,8 +13,8 @@
 
 ## 0. What this doc is
 
-The closure plan has 25 docs in `docs/closure/` and 12 ADRs in
-`docs/adr/proposed/` (1 accepted, 11 proposed). The
+The closure plan has a growing set of docs in `docs/closure/` and
+12 ADRs in `docs/adr/proposed/`. The
 "first read" order is implicit. This doc makes it explicit.
 
 If you are a new contributor and have **one hour**, read §1
@@ -36,8 +36,8 @@ is either promoted (default flipped to `True`) or demoted
 replay gate, every Python in the authority path is replaced
 by Haskell.
 
-The closure plan is **design-complete** (13 docs in
-`docs/closure/` + 12 ADRs in `docs/adr/proposed/`); the
+The closure plan is **design-complete** (closure docs + proposed
+ADRs are in the repo); the
 **execution** is the open work.
 
 ## 2. The five-minute read
@@ -191,14 +191,11 @@ As of 2026-06-02:
 
 ### 6.1 Docs and ADRs
 
-- 25 docs in `docs/closure/` (≈ 8 400 lines).
-- 12 ADRs in `docs/adr/proposed/` (1 accepted, 11
-  proposed — the 5 promotion ADRs 0018–0022, the
-  demotion procedure 0023, and 5 from earlier
-  design passes).
-- 0 docs in `docs/adr/` (proposed) that are
-  unmerged as of this pass; the next contributor
-  promotes them to `docs/adr/` as they land.
+- closure docs in `docs/closure/` (count changes as the working
+  tree evolves).
+- 12 ADRs in `docs/adr/proposed/` (the 5 promotion ADRs,
+  the demotion procedure, and earlier design stubs).
+- proposed ADRs stay in `docs/adr/proposed/` until they land.
 
 ### 6.2 Code artifacts
 
@@ -209,7 +206,7 @@ As of 2026-06-02:
   (13 parameters).
 - 2 new CI scripts: `scripts/check_calibration_codomain.sh`
   (Package 11), `scripts/check_architecture.sh` extended
-  with rules [13]–[19] (Package 1).
+  with rules [13]–[20] (Package 1).
 - 2 CI hooks: `ci_gate_contract.sh` (Gate 3b) and
   `verify.sh` (step [10b/10]).
 
@@ -233,7 +230,7 @@ The discipline of this closure plan is:
   in a closed range; the script enforces this.
 - **The architecture check is the discipline.** The
   7 boundary rules of ADR-0034 §3 are enforced
-  by `check_architecture.sh` rules [13]–[19].
+  by `check_architecture.sh` rules [13]–[20].
 - **The Python → Haskell migration is tracked.** The
   closure plan's "Python free" goal is the work
   list in `PYTHON_MIGRATION_TRACKER.md`.

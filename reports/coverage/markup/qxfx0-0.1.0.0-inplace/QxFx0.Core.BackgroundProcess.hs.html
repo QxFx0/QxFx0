@@ -1,0 +1,189 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies, OverloadedStrings #-}
+<span class="lineno">    2 </span>{-| Background surfacing state machine and pressure-channel bookkeeping. -}
+<span class="lineno">    3 </span>module QxFx0.Core.BackgroundProcess
+<span class="lineno">    4 </span>  ( PressureChannel(..)
+<span class="lineno">    5 </span>  , BackgroundState(..)
+<span class="lineno">    6 </span>  , SurfacingEvent(..)
+<span class="lineno">    7 </span>  , initialBackground
+<span class="lineno">    8 </span>  , recordDesireConflict
+<span class="lineno">    9 </span>  , runBackgroundCycle
+<span class="lineno">   10 </span>  , checkSurfacing
+<span class="lineno">   11 </span>  , surfacingToFragment
+<span class="lineno">   12 </span>  , surfacingThreshold
+<span class="lineno">   13 </span>  ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import qualified Data.Text as T
+<span class="lineno">   17 </span>import Data.List (sortBy)
+<span class="lineno">   18 </span>import Data.Ord (comparing, Down(..))
+<span class="lineno">   19 </span>import QxFx0.Types.Thresholds
+<span class="lineno">   20 </span>  ( backgroundConflictMediumThreshold
+<span class="lineno">   21 </span>  , backgroundConflictStrongThreshold
+<span class="lineno">   22 </span>  , backgroundDesireConflictDelta
+<span class="lineno">   23 </span>  , backgroundExplicitConflictDelta
+<span class="lineno">   24 </span>  , backgroundPressureDecayFactor
+<span class="lineno">   25 </span>  , backgroundProductModeResistanceDelta
+<span class="lineno">   26 </span>  , backgroundSurfacingThreshold
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>import QxFx0.Policy.Consciousness
+<span class="lineno">   29 </span>  ( desireConflictPrefix, productModeSkillLabel
+<span class="lineno">   30 </span>  , surfacingDesireConflictPrefix, surfacingPatternNoticePrefix
+<span class="lineno">   31 </span>  , surfacingSelfModelGapPrefix, surfacingTrajectoryInsightPrefix
+<span class="lineno">   32 </span>  , surfacingProductModePrefix, surfacingProductModeFragment
+<span class="lineno">   33 </span>  , conflictStrongFragment, conflictStrongSuffix, conflictMediumFragment
+<span class="lineno">   34 </span>  , conflictLightFragment, patternNoticeFragmentPrefix
+<span class="lineno">   35 </span>  , patternNoticeFragmentSuffix, selfModelGapFragmentPrefix
+<span class="lineno">   36 </span>  , trajectoryInsightFragmentPrefix
+<span class="lineno">   37 </span>  , productModeSkillAnalyzeName, productModeSkillComposeName, productModeSkillWriteName
+<span class="lineno">   38 </span>  )
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>data PressureChannel
+<span class="lineno">   41 </span>  = DesireConflict | PatternNotice | SelfModelGap | TrajectoryInsight | ProductModeResistance
+<span class="lineno">   42 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Bounded</span></span></span></span>)
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>data BackgroundPressure = BackgroundPressure
+<span class="lineno">   45 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">channel</span></span></span>  :: PressureChannel
+<span class="lineno">   46 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">pressure</span></span></span> :: Double
+<span class="lineno">   47 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">content</span></span></span>  :: Text
+<span class="lineno">   48 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">turns</span></span></span>    :: Int
+<span class="lineno">   49 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>data BackgroundState = BackgroundState
+<span class="lineno">   52 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">bsPressures</span></span></span>    :: [BackgroundPressure]
+<span class="lineno">   53 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">bsLastSurfaced</span></span></span> :: Int
+<span class="lineno">   54 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">bsTurnCount</span></span></span>    :: Int
+<span class="lineno">   55 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>)
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>data SurfacingEvent = SurfacingEvent
+<span class="lineno">   58 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">seChannel</span></span></span>  :: PressureChannel
+<span class="lineno">   59 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">seContent</span></span></span>  :: Text
+<span class="lineno">   60 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">seFragment</span></span></span> :: Text
+<span class="lineno">   61 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">sePressure</span></span></span> :: Double
+<span class="lineno">   62 </span>  } deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Read</span></span></span></span></span></span></span></span>)
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>surfacingThreshold :: Double
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">surfacingThreshold = backgroundSurfacingThreshold</span></span>
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>minSurfacingGap :: Int
+<span class="lineno">   68 </span><span class="decl"><span class="istickedoff">minSurfacingGap = 3</span></span>
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>initialBackground :: BackgroundState
+<span class="lineno">   71 </span><span class="decl"><span class="istickedoff">initialBackground = BackgroundState</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">{ bsPressures    = map emptyChannel [minBound .. maxBound]</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">, bsLastSurfaced = -100</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="istickedoff">, bsTurnCount    = 0</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>emptyChannel :: PressureChannel -&gt; BackgroundPressure
+<span class="lineno">   78 </span><span class="decl"><span class="istickedoff">emptyChannel ch = BackgroundPressure ch 0.0 &quot;&quot; <span class="nottickedoff">0</span></span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>tickBackground :: BackgroundState -&gt; BackgroundState
+<span class="lineno">   81 </span><span class="decl"><span class="istickedoff">tickBackground bs = bs</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">{ bsPressures = map tick (bsPressures bs)</span>
+<span class="lineno">   83 </span><span class="spaces">  </span><span class="istickedoff">, bsTurnCount = bsTurnCount bs + 1</span>
+<span class="lineno">   84 </span><span class="spaces">  </span><span class="istickedoff">}</span>
+<span class="lineno">   85 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">tick bp = bp { pressure = pressure bp * backgroundPressureDecayFactor, turns = <span class="nottickedoff">turns bp + 1</span> }</span></span>
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>recordKernelAction :: BackgroundState -&gt; Text -&gt; [Text] -&gt; [Text] -&gt; BackgroundState
+<span class="lineno">   89 </span><span class="decl"><span class="istickedoff">recordKernelAction bs skillUsed _activeDesires conflicts =</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">let bs1 = if <span class="tickonlytrue">not (null conflicts)</span></span>
+<span class="lineno">   91 </span><span class="spaces">            </span><span class="istickedoff">then addPressure bs DesireConflict backgroundDesireConflictDelta (desireConflictPrefix &lt;&gt; T.intercalate &quot;, &quot; conflicts)</span>
+<span class="lineno">   92 </span><span class="spaces">            </span><span class="istickedoff">else <span class="nottickedoff">bs</span></span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">bs2 = if <span class="tickonlyfalse">skillUsed `elem` [productModeSkillAnalyzeName, productModeSkillComposeName, productModeSkillWriteName]</span></span>
+<span class="lineno">   94 </span><span class="spaces">            </span><span class="istickedoff">then <span class="nottickedoff">addPressure bs1 ProductModeResistance backgroundProductModeResistanceDelta (productModeSkillLabel &lt;&gt; skillUsed)</span></span>
+<span class="lineno">   95 </span><span class="spaces">            </span><span class="istickedoff">else bs1</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">in bs2</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>recordDesireConflict :: BackgroundState -&gt; Text -&gt; BackgroundState
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">recordDesireConflict bs conflictDesc =</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">addPressure bs DesireConflict backgroundExplicitConflictDelta <span class="nottickedoff">conflictDesc</span></span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>addPressure :: BackgroundState -&gt; PressureChannel -&gt; Double -&gt; Text -&gt; BackgroundState
+<span class="lineno">  103 </span><span class="decl"><span class="istickedoff">addPressure bs ch delta newContent =</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">let newPressures = map update (bsPressures bs)</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">in bs { bsPressures = newPressures }</span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">update bp</span>
+<span class="lineno">  108 </span><span class="spaces">      </span><span class="istickedoff">| channel bp == ch = bp</span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">{ pressure = min 1.0 (pressure bp + delta)</span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff">, content  = if T.null (content bp) then newContent else content bp &lt;&gt; &quot; / &quot; &lt;&gt; newContent</span>
+<span class="lineno">  111 </span><span class="spaces">          </span><span class="istickedoff">, turns    = <span class="nottickedoff">0</span></span>
+<span class="lineno">  112 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = bp</span></span>
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>checkSurfacing :: BackgroundState -&gt; Maybe SurfacingEvent
+<span class="lineno">  116 </span><span class="decl"><span class="istickedoff">checkSurfacing bs</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">| bsTurnCount bs - bsLastSurfaced bs &lt; minSurfacingGap = Nothing</span>
+<span class="lineno">  118 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">let candidates = filter (\bp -&gt; pressure bp &gt;= surfacingThreshold) (bsPressures bs)</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">in case sortBy <span class="nottickedoff">(comparing (Down . pressure))</span> candidates of</span>
+<span class="lineno">  121 </span><span class="spaces">           </span><span class="istickedoff">[]     -&gt; Nothing</span>
+<span class="lineno">  122 </span><span class="spaces">           </span><span class="istickedoff">(bp:_) -&gt; Just (buildSurfacingEvent bp)</span></span>
+<span class="lineno">  123 </span>
+<span class="lineno">  124 </span>buildSurfacingEvent :: BackgroundPressure -&gt; SurfacingEvent
+<span class="lineno">  125 </span><span class="decl"><span class="istickedoff">buildSurfacingEvent bp =</span>
+<span class="lineno">  126 </span><span class="spaces">  </span><span class="istickedoff">let (what, fragment) = channelSurfacing (channel bp) (content bp) (pressure bp)</span>
+<span class="lineno">  127 </span><span class="spaces">  </span><span class="istickedoff">in SurfacingEvent (channel bp) <span class="nottickedoff">what</span> fragment (pressure bp)</span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>channelSurfacing :: PressureChannel -&gt; Text -&gt; Double -&gt; (Text, Text)
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">channelSurfacing DesireConflict pc p =</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">(<span class="nottickedoff">surfacingDesireConflictPrefix &lt;&gt; pc</span>, conflictFragment pc p)</span>
+<span class="lineno">  132 </span><span class="spaces"></span><span class="istickedoff">channelSurfacing PatternNotice pc _ =</span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">(surfacingPatternNoticePrefix &lt;&gt; pc, patternNoticeFragmentPrefix &lt;&gt; pc &lt;&gt; patternNoticeFragmentSuffix)</span></span>
+<span class="lineno">  134 </span><span class="spaces"></span><span class="istickedoff">channelSurfacing SelfModelGap pc _ =</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">(surfacingSelfModelGapPrefix &lt;&gt; pc, selfModelGapFragmentPrefix &lt;&gt; pc &lt;&gt; patternNoticeFragmentSuffix)</span></span>
+<span class="lineno">  136 </span><span class="spaces"></span><span class="istickedoff">channelSurfacing TrajectoryInsight pc _ =</span>
+<span class="lineno">  137 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">(surfacingTrajectoryInsightPrefix &lt;&gt; pc, trajectoryInsightFragmentPrefix &lt;&gt; pc &lt;&gt; patternNoticeFragmentSuffix)</span></span>
+<span class="lineno">  138 </span><span class="spaces"></span><span class="istickedoff">channelSurfacing ProductModeResistance pc _ =</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff"><span class="nottickedoff">(surfacingProductModePrefix &lt;&gt; pc, surfacingProductModeFragment)</span></span></span>
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>conflictFragment :: Text -&gt; Double -&gt; Text
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">conflictFragment pc p</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">p &gt; backgroundConflictStrongThreshold</span> = <span class="nottickedoff">conflictStrongFragment &lt;&gt; T.take 60 pc &lt;&gt; conflictStrongSuffix</span></span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">p &gt; backgroundConflictMediumThreshold</span> = conflictMediumFragment &lt;&gt; T.take 60 pc &lt;&gt; patternNoticeFragmentSuffix</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> = <span class="nottickedoff">conflictLightFragment &lt;&gt; T.take 60 pc &lt;&gt; patternNoticeFragmentSuffix</span></span></span>
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>surfacingToFragment :: SurfacingEvent -&gt; Text
+<span class="lineno">  148 </span><span class="decl"><span class="istickedoff">surfacingToFragment = seFragment</span></span>
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>runBackgroundCycle :: BackgroundState -&gt; Text -&gt; [Text] -&gt; [Text] -&gt; (BackgroundState, Maybe SurfacingEvent)
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">runBackgroundCycle bs skill desires conflicts =</span>
+<span class="lineno">  152 </span><span class="spaces">  </span><span class="istickedoff">let bs1 = tickBackground bs</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">bs2 = recordKernelAction bs1 skill <span class="nottickedoff">desires</span> conflicts</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">mEv = checkSurfacing bs2</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">bs3 = maybe bs2 (applySurfacing bs2) mEv</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="istickedoff">in (bs3, mEv)</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>applySurfacing :: BackgroundState -&gt; SurfacingEvent -&gt; BackgroundState
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">applySurfacing bs ev = bs</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">{ bsPressures = map reset (bsPressures bs)</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">, bsLastSurfaced = bsTurnCount bs</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">}</span>
+<span class="lineno">  163 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">reset bp</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff">| channel bp == seChannel ev = bp { pressure = 0.0, content = &quot;&quot; }</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = bp</span></span>
+
+</pre>
+</body>
+</html>

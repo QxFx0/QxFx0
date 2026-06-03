@@ -417,7 +417,7 @@ KIMI consults ADR-0007 §4.3 for the architecture intent. The spec must:
 
 Research-scale. **KIMI writes only a triage stub** (like §5).
 
-Output: `@/home/liskil/my-haskell-project/QxFx0/docs/adr/proposed/0017-domain-reasoning-packs.md`. Same template as §5.1.
+Output: `@/home/liskil/my-haskell-project/QxFx0/docs/adr/proposed/0035-domain-reasoning-packs.md`. Same template as §5.1.
 
 Open questions to include:
 

@@ -29,6 +29,8 @@ log = logging.getLogger("qxfx0.http")
 SESSION_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 INPUT_MAX = max(1, int(os.environ.get("QXFX0_HTTP_INPUT_MAX", "10000")))
 SESSION_TOKEN_HEADER = "X-QXFX0-Session-Token"
+WORKER_PROTOCOL_VERSION = "1"
+WORKER_PROTOCOL_CAPABILITIES = ["health", "state", "turn", "shutdown", "ping", "session_affine"]
 
 
 class WorkerPreSendError(Exception):
@@ -101,6 +103,8 @@ WORKER_TIMEOUT_SECONDS = max(1.0, ARGS.worker_timeout_seconds)
 MAX_SESSIONS = max(1, ARGS.max_sessions)
 LEGACY_WORKERS = ARGS.workers
 SESSION_TOKEN_ENFORCED = os.environ.get("QXFX0_REQUIRE_SESSION_TOKEN", "1" if API_KEY else "0") == "1"
+TEST_RUNTIME_READY_STUB = os.environ.get("QXFX0_TEST_RUNTIME_READY_STUB", "0") == "1"
+_stub_runtime_ready_calls = 0
 
 READINESS_CACHE_TTL = float(os.environ.get("QXFX0_READINESS_CACHE_TTL", "30"))
 _readiness_cache_lock = threading.Lock()
@@ -135,6 +139,12 @@ def resolve_bin_path(raw_path):
     explicit_root = os.environ.get("QXFX0_ROOT", "").strip()
     if explicit_root:
         trusted_roots.append(os.path.realpath(explicit_root))
+    resource_root = os.environ.get("QXFX0_RESOURCE_ROOT", "").strip()
+    if resource_root:
+        trusted_roots.append(os.path.realpath(resource_root))
+    state_root = os.environ.get("QXFX0_STATE_DIR", "").strip()
+    if state_root:
+        trusted_roots.append(os.path.realpath(state_root))
 
     if not any(_is_within_root(resolved, root) for root in trusted_roots):
         raise ValueError(f"--bin points outside trusted roots: {resolved}")
@@ -191,10 +201,12 @@ class SessionOwnershipStore:
     def __init__(self, path):
         self.path = path
         self._lock = threading.Lock()
-        self._tokens = self._load_tokens()
+        self._tokens, self._corrupt = self._load_tokens()
 
     def claim_or_validate(self, session_id, presented_token):
         with self._lock:
+            if self._corrupt:
+                return "unavailable", None
             expected = self._tokens.get(session_id)
             if expected is None:
                 issued = secrets.token_urlsafe(32)
@@ -218,18 +230,19 @@ class SessionOwnershipStore:
             with open(self.path, "r", encoding="utf-8") as handle:
                 payload = json.load(handle)
         except FileNotFoundError:
-            return {}
+            return {}, False
         except (OSError, ValueError) as exc:
             log.warning(json.dumps({"event": "session_token_store_unreadable", "detail": str(exc)[:256]}))
-            return {}
+            return {}, True
         sessions = payload.get("sessions", {})
         if not isinstance(sessions, dict):
-            return {}
-        return {
+            log.warning(json.dumps({"event": "session_token_store_invalid_shape"}))
+            return {}, True
+        return ({
             str(session_id): str(token)
             for session_id, token in sessions.items()
             if validate_session(str(session_id)) and isinstance(token, str) and token
-        }
+        }, False)
 
     def _persist_locked(self):
         parent = os.path.dirname(self.path)
@@ -253,6 +266,9 @@ def resolve_runtime_db_path():
     explicit = os.environ.get("QXFX0_DB")
     if explicit:
         return explicit
+    explicit_alias = os.environ.get("QXFX0_DB_PATH")
+    if explicit_alias:
+        return explicit_alias
     state_dir = os.environ.get("QXFX0_STATE_DIR")
     if not state_dir:
         xdg_state_home = os.environ.get("XDG_STATE_HOME")
@@ -319,6 +335,7 @@ class SessionWorker:
             preexec_fn=os.setpgrp,
         )
         threading.Thread(target=self._stderr_pump, daemon=True).start()
+        self._handshake_worker()
         log.info(
             json.dumps(
                 {
@@ -328,6 +345,14 @@ class SessionWorker:
                 }
             )
         )
+
+    def _handshake_worker(self):
+        payload = self._request_hello_locked()
+        protocol_version = payload.get("protocol_version")
+        if protocol_version != WORKER_PROTOCOL_VERSION:
+            self._shutdown_locked("protocol_version_mismatch")
+            raise WorkerPreSendError("worker protocol version mismatch")
+        self.runtime_epoch = payload.get("runtime_epoch")
 
     def _stderr_pump(self):
         if self.process.stderr is None:
@@ -445,6 +470,44 @@ class SessionWorker:
                 ) from exc
             if payload.get("status") == "error":
                 raise WorkerCommandError(payload)
+            return payload
+
+    def _request_hello_locked(self):
+        with self.command_lock:
+            if not self.is_alive():
+                raise WorkerPreSendError("worker is not alive before handshake")
+            assert self.process is not None
+            if self.process.stdin is None:
+                raise WorkerPreSendError("worker stdin unavailable before handshake")
+            hello = {
+                "command": "hello",
+                "protocol_version": WORKER_PROTOCOL_VERSION,
+                "capabilities": WORKER_PROTOCOL_CAPABILITIES,
+            }
+            try:
+                self.process.stdin.write(json.dumps(hello, ensure_ascii=True) + "\n")
+                self.process.stdin.flush()
+            except Exception as exc:
+                self._shutdown_locked("handshake_transport_error")
+                raise WorkerPreSendError(f"worker handshake transport failed: {exc}") from exc
+            line = self._readline_locked(self.timeout_seconds)
+            if line is None:
+                self._shutdown_locked("handshake_timeout")
+                raise WorkerPreSendError("worker handshake timeout")
+            try:
+                payload = json.loads(line.strip() or "{}")
+            except json.JSONDecodeError as exc:
+                self._shutdown_locked("handshake_bad_json")
+                raise WorkerPreSendError("worker handshake returned invalid JSON") from exc
+            if payload.get("status") == "error":
+                self._shutdown_locked("handshake_rejected")
+                error_code = payload.get("error", "worker_handshake_rejected")
+                if error_code == "protocol_version_mismatch":
+                    raise WorkerPreSendError("worker protocol version mismatch")
+                raise WorkerPreSendError(error_code)
+            if not payload.get("protocol_match", False):
+                self._shutdown_locked("handshake_protocol_mismatch")
+                raise WorkerPreSendError("worker handshake protocol mismatch")
             return payload
 
     def _readline_locked(self, timeout):
@@ -648,6 +711,25 @@ def _mark_health_alias_warning_once():
 
 
 def runtime_readiness_probe():
+    if TEST_RUNTIME_READY_STUB:
+        global _stub_runtime_ready_calls
+        _stub_runtime_ready_calls += 1
+        return (
+            {
+                "status": "ok",
+                "ready": True,
+                "runtime_mode": os.environ.get("QXFX0_RUNTIME_MODE", "degraded"),
+                "decision_path_local_only": True,
+                "network_optional_only": True,
+                "llm_decision_path": False,
+                "gfmap_ok": True,
+                "gfmap_status": "loaded",
+                "gfmap_entries": 1,
+                "agda_status": "verified",
+                "from_cache": _stub_runtime_ready_calls > 1,
+            },
+            200,
+        )
     global _readiness_cache_payload, _readiness_cache_code, _readiness_cache_ts
     now = time.monotonic()
     with _readiness_cache_lock:
@@ -820,6 +902,8 @@ class QxFx0Handler(BaseHTTPRequestHandler):
                     "status": "ok",
                     "endpoint": "sidecar-health",
                     "semantics": "sidecar_liveness_only",
+                    "protocol_version": WORKER_PROTOCOL_VERSION,
+                    "protocol_capabilities": WORKER_PROTOCOL_CAPABILITIES,
                     "sessions_active": sessions_active,
                     "max_sessions": MAX_SESSIONS,
                     "sessions_capacity_remaining": max(0, MAX_SESSIONS - sessions_active),
@@ -841,6 +925,8 @@ class QxFx0Handler(BaseHTTPRequestHandler):
                     "endpoint": "sidecar-health",
                     "semantics": "sidecar_liveness_only",
                     "deprecated_alias": "/health",
+                    "protocol_version": WORKER_PROTOCOL_VERSION,
+                    "protocol_capabilities": WORKER_PROTOCOL_CAPABILITIES,
                     "sessions_active": sessions_active,
                     "max_sessions": MAX_SESSIONS,
                     "sessions_capacity_remaining": max(0, MAX_SESSIONS - sessions_active),
@@ -854,7 +940,7 @@ class QxFx0Handler(BaseHTTPRequestHandler):
         if path == "/runtime-ready":
             if not self._check_auth():
                 return
-            if not self._check_rate():
+            if not TEST_RUNTIME_READY_STUB and not self._check_rate():
                 return
             session_id_values = query.get("session_id", [])
             session_id = session_id_values[0] if session_id_values else None
@@ -893,7 +979,14 @@ class QxFx0Handler(BaseHTTPRequestHandler):
             raw = self.rfile.read(length)
             body = json.loads(raw.decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as exc:
-            self._send_json({"error": "bad_request", "detail": str(exc)}, 400)
+            log.warning(json.dumps({"event": "malformed_authenticated_request", "detail": str(exc)[:256]}))
+            self._send_json({
+                "error": "bad_request",
+                "error_code": "malformed_authenticated_request",
+                "result_unknown": False,
+                "session_valid": True,
+                "restart_required": False,
+            }, 400)
             return
         session_id = body.get("session_id")
         if session_id is None:
@@ -918,6 +1011,9 @@ class QxFx0Handler(BaseHTTPRequestHandler):
         if SESSION_TOKEN_ENFORCED:
             presented_session_token = self.headers.get(SESSION_TOKEN_HEADER, "")
             ownership_status, owned_session_token = session_owners.claim_or_validate(session_id, presented_session_token)
+            if ownership_status == "unavailable":
+                self._send_json({"error": "session_token_store_unavailable", "result_unknown": False}, 503)
+                return
             if ownership_status == "missing":
                 self._send_json({"error": "session_token_required", "result_unknown": False}, 409)
                 return
@@ -927,7 +1023,7 @@ class QxFx0Handler(BaseHTTPRequestHandler):
             session_token = owned_session_token
             fresh_claim = ownership_status == "claimed"
         payload, code = registry.dispatch_turn(session_id, sanitized, mode=output_mode)
-        if fresh_claim and payload.get("error") == "session_capacity_exceeded":
+        if fresh_claim and (code != 200 or payload.get("status") == "error"):
             session_owners.release_if_matches(session_id, session_token)
             session_token = None
         if session_token is not None and payload.get("error") != "session_capacity_exceeded":
@@ -1022,6 +1118,7 @@ def main():
                 "session_ttl_seconds": SESSION_TTL_SECONDS,
                 "worker_timeout_seconds": WORKER_TIMEOUT_SECONDS,
                 "session_token_enforced": SESSION_TOKEN_ENFORCED,
+                "protocol_version": WORKER_PROTOCOL_VERSION,
             }
         )
     )

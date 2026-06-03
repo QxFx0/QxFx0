@@ -16,6 +16,9 @@ Most conversational systems optimize for plausibility. QxFx0 optimizes for:
 
 If you need deterministic dialogue infrastructure with strict operational semantics, QxFx0 is built for that.
 
+Canonical runtime/deployment contract source:
+`docs/runtime_deployment_contract.md`.
+
 ## What Is Implemented
 
 - Typed semantic routing (`CanonicalMoveFamily`, `IllocutionaryForce`) via `Semantic.Logic`
@@ -233,11 +236,12 @@ The following gates are **INFRA-DEFERRED** on low-RAM runners (~10–11 GB):
 
 Core contour verdict: `CONTRACT_VERDICT: PROD_GO` (verified by individual gates).
 
-**Python test coverage**: No Python unit-test suite currently exists.  The CI
-runs three verified Python check scripts (`sync_embedded_sql.py`,
-`check_schema_consistency.py`, `check_schema_contract.py`) as part of the
-gate contract.  A dedicated Python test contour is a documented gap — see
-`docs/PYTHON_TEST_GAP.md`.
+**Python test coverage**: the canonical Python test command is
+`python3 -m unittest discover -s test -p 'test_*.py'`. CI runs that command
+in addition to the Python validation scripts (`sync_embedded_sql.py`,
+`check_schema_consistency.py`, `check_schema_contract.py`,
+`check_runtime_contract.py`, `check_concepts_schema.py`). Historical gaps and
+scope notes are tracked in `docs/PYTHON_TEST_GAP.md`.
 
 ## Run a Dialogue Session
 

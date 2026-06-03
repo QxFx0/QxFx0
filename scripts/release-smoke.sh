@@ -6,6 +6,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib/cabal_env.sh"
 HOST_HOME="${HOME:-}"
 HOST_CABAL_DIR="${CABAL_DIR:-${HOST_HOME}/.cabal}"
 HOST_CABAL_CONFIG="${HOST_CABAL_DIR}/config"
@@ -16,9 +17,7 @@ SHARED_CABAL_STORE="${QXFX0_SHARED_CABAL_STORE:-$DEFAULT_CABAL_STORE}"
 SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
 CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
 HOST_PYTHON_SITE_PACKAGES=""
-if command -v python3 >/dev/null 2>&1; then
-  HOST_PYTHON_SITE_PACKAGES="$(python3 -c "import site; print(site.getusersitepackages())" 2>/dev/null || true)"
-fi
+setup_shared_python_site_packages HOST_PYTHON_SITE_PACKAGES
 BIN=""
 DB="/tmp/qxfx0-smoke-$$.db"
 PORT=19170
@@ -54,34 +53,7 @@ NC='\033[0m'
 
 mkdir -p "$RELEASE_CACHE" "$RELEASE_CONFIG" "$RELEASE_STATE" "$RELEASE_CABAL_DIR" "$SHARED_CABAL_STORE" "$SHARED_CABAL_LOGS" "$(dirname "$CABAL_LOCK_FILE")"
 
-seed_release_cabal_home() {
-    local host_config="$HOST_CABAL_CONFIG"
-    local host_packages="$HOST_CABAL_DIR/packages"
-
-    if [ ! -f "$host_config" ]; then
-        host_config="$HOST_XDG_CONFIG_HOME/cabal/config"
-    fi
-
-    if [ -f "$host_config" ] && [ ! -f "$RELEASE_CABAL_DIR/config" ]; then
-        cp "$host_config" "$RELEASE_CABAL_DIR/config"
-    fi
-    if [ ! -f "$RELEASE_CABAL_DIR/config" ]; then
-        : >"$RELEASE_CABAL_DIR/config"
-    fi
-    {
-        printf '\nstore-dir: %s\n' "$SHARED_CABAL_STORE"
-        printf 'logs-dir: %s\n' "$SHARED_CABAL_LOGS"
-        printf 'build-summary: %s/build.log\n' "$SHARED_CABAL_LOGS"
-        if [ -d "$host_packages" ]; then
-            printf 'remote-repo-cache: %s\n' "$host_packages"
-        fi
-    } >>"$RELEASE_CABAL_DIR/config"
-    if [ -d "$host_packages" ] && [ ! -e "$RELEASE_CABAL_DIR/packages" ]; then
-        ln -s "$host_packages" "$RELEASE_CABAL_DIR/packages"
-    fi
-}
-
-seed_release_cabal_home
+seed_shared_cabal_home "$RELEASE_CABAL_DIR" "$SHARED_CABAL_STORE" "$SHARED_CABAL_LOGS" "$HOST_CABAL_DIR" "$HOST_XDG_CONFIG_HOME"
 
 if [ "$REQUIRE_STRICT_RUNTIME" != "1" ] && [ -n "${QXFX0_RUNTIME_MODE:-}" ]; then
     SMOKE_RUNTIME_MODE="${QXFX0_RUNTIME_MODE}"
@@ -124,61 +96,10 @@ is_http_infra_fail() {
 }
 
 validate_replay_trace_json() {
-    python3 - "$1" <<'PY'
-import json
-import sys
-
-try:
-    trace = json.loads(sys.argv[1])
-except json.JSONDecodeError as exc:
-    print(f"invalid replay_trace_json: {exc}")
-    raise SystemExit(1)
-
-required_fields = [
-    "trcRequestId",
-    "trcShadowSnapshotId",
-    "trcRuntimeMode",
-    "trcShadowPolicy",
-    "trcLocalRecoveryPolicy",
-    "trcRecoveryCause",
-    "trcRecoveryStrategy",
-    "trcRecoveryEvidence",
-    "trcSemanticIntrospectionEnabled",
-    "trcWarnMorphologyFallbackEnabled",
-    "trcAuthorityClass",
-    "trcTruthContractStatus",
-    "trcAssemblyPath",
-    "trcReplayProvenanceStatus",
-    "trcPreSafetyRenderedRaw",
-    "trcRenderedAfterRebind",
-]
-missing = [name for name in required_fields if name not in trace]
-if missing:
-    print("missing replay envelope fields:", ",".join(missing))
-    raise SystemExit(1)
-
-for text_field in ("trcRuntimeMode", "trcShadowPolicy", "trcLocalRecoveryPolicy"):
-    value = trace.get(text_field)
-    if not isinstance(value, str) or not value:
-        print(f"invalid replay envelope text field: {text_field}")
-        raise SystemExit(1)
-
-for optional_text_field in ("trcRecoveryCause", "trcRecoveryStrategy"):
-    value = trace.get(optional_text_field)
-    if value is not None and not isinstance(value, str):
-        print(f"invalid replay envelope optional text field: {optional_text_field}")
-        raise SystemExit(1)
-
-recovery_evidence = trace.get("trcRecoveryEvidence")
-if not isinstance(recovery_evidence, list) or not all(isinstance(item, str) for item in recovery_evidence):
-    print("invalid replay envelope evidence field: trcRecoveryEvidence")
-    raise SystemExit(1)
-
-for bool_field in ("trcSemanticIntrospectionEnabled", "trcWarnMorphologyFallbackEnabled"):
-    if not isinstance(trace.get(bool_field), bool):
-        print(f"invalid replay envelope bool field: {bool_field}")
-        raise SystemExit(1)
-PY
+    # Canonical local-recovery replay envelope fields required here:
+    # trcLocalRecoveryPolicy, trcRecoveryCause,
+    # trcRecoveryStrategy, trcRecoveryEvidence.
+    python3 "$ROOT/scripts/check_replay_trace_fields.py" --json "$1"
 }
 
 nix_flake_available() {
@@ -277,32 +198,8 @@ resolve_souffle_binary() {
 }
 
 run_local_cabal() {
-  (
-    cd "$ROOT" || exit 1
-    flock -w 1800 9 || exit 1
-    HOME="$RELEASE_HOME" \
-    XDG_CACHE_HOME="$RELEASE_CACHE" \
-      XDG_CONFIG_HOME="$RELEASE_CONFIG" \
-      XDG_STATE_HOME="$RELEASE_STATE" \
-      CABAL_DIR="$RELEASE_CABAL_DIR" \
-      PYTHONPATH="${HOST_PYTHON_SITE_PACKAGES}${PYTHONPATH:+:$PYTHONPATH}" \
-      "$@"
-  ) 9>"$CABAL_LOCK_FILE"
-}
-
-spacy_ru_model_ready() {
-    if ! command -v python3 >/dev/null 2>&1; then
-        return 1
-    fi
-    python3 - <<'PY' >/dev/null 2>&1
-import importlib.util
-import sys
-
-if importlib.util.find_spec("spacy") is None:
-    raise SystemExit(1)
-import spacy
-spacy.load("ru_core_news_sm")
-PY
+  run_locked_command "$CABAL_LOCK_FILE" "$RELEASE_HOME" "$RELEASE_CACHE" "$RELEASE_CONFIG" "$RELEASE_STATE" "$RELEASE_CABAL_DIR" "$HOST_PYTHON_SITE_PACKAGES" \
+    bash -c "cd \"$ROOT\" && \"\$@\"" -- "$@"
 }
 
 AGDA_BIN=""
@@ -479,36 +376,19 @@ case "$RUN_SLOW_TESTS" in
         step_skip "slow suite disabled (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
         ;;
     1|true|TRUE|yes|YES)
-        if ! spacy_ru_model_ready; then
-            step_fail "QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS but spaCy/ru_core_news_sm is unavailable"
+        SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
+        step_info "Running cabal test qxfx0-test-slow..."
+        if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
+            tail -8 "$SLOW_TEST_LOG"
+            step_pass
         else
-            SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
-            step_info "Running cabal test qxfx0-test-slow..."
-            if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
-                tail -8 "$SLOW_TEST_LOG"
-                step_pass
-            else
-                tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
-                step_fail "cabal test qxfx0-test-slow exited non-zero"
-            fi
-            rm -f "$SLOW_TEST_LOG"
+            tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
+            step_fail "cabal test qxfx0-test-slow exited non-zero"
         fi
+        rm -f "$SLOW_TEST_LOG"
         ;;
     auto|AUTO|Auto|'')
-        if spacy_ru_model_ready; then
-            SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
-            step_info "Running cabal test qxfx0-test-slow..."
-            if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
-                tail -8 "$SLOW_TEST_LOG"
-                step_pass
-            else
-                tail -20 "$SLOW_TEST_LOG" 2>/dev/null || true
-                step_fail "cabal test qxfx0-test-slow exited non-zero"
-            fi
-            rm -f "$SLOW_TEST_LOG"
-        else
-            step_skip "slow suite skipped: spaCy + ru_core_news_sm is unavailable"
-        fi
+        step_skip "slow suite skipped in auto mode; set QXFX0_RUN_SLOW_TESTS=1 to force"
         ;;
     *)
         step_fail "unsupported QXFX0_RUN_SLOW_TESTS value: $RUN_SLOW_TESTS"
@@ -597,15 +477,9 @@ if [ -d "$MIGDIR" ]; then
             TABLE_COUNT="$(echo "$TABLES" | wc -w 2>/dev/null || echo "0")"
             step_info "Applied $MIG_COUNT migrations, $TABLE_COUNT tables"
             if [ -n "$TABLES" ]; then
-                if ! command -v python3 &>/dev/null; then
-                    step_fail "python3 is required for SQL single-source schema checks"
-                elif [ ! -f "$ROOT/scripts/sync_embedded_sql.py" ]; then
-                    step_fail "scripts/sync_embedded_sql.py is missing"
-                elif ! python3 "$ROOT/scripts/sync_embedded_sql.py" --check >/dev/null 2>&1; then
+                if ! (cd "$ROOT" && cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1); then
                     step_fail "EmbeddedSQL.hs/migration drifted from canonical spec/sql"
-                elif [ ! -f "$ROOT/scripts/check_schema_consistency.py" ]; then
-                    step_fail "scripts/check_schema_consistency.py is missing"
-                elif python3 "$ROOT/scripts/check_schema_consistency.py" >/dev/null 2>&1; then
+                elif (cd "$ROOT" && cabal run qxfx0-main -- --check-schema-consistency >/dev/null 2>&1); then
                     step_info "Cumulative migration schema matches canonical schema.sql"
                     step_pass
                 else
@@ -901,7 +775,14 @@ echo "[8/10] Policy catalog sync verification"
 echo "─────────────────────────────────────────────────────────────"
 POLICY="$ROOT/semantics/concepts.nix"
 CATALOG_SCRIPT="$ROOT/scripts/verify_agda_sync.py"
-if [ -f "$POLICY" ] && [ -f "$CATALOG_SCRIPT" ]; then
+CONCEPTS_SCHEMA_SCRIPT="$ROOT/scripts/check_concepts_schema.py"
+if [ -f "$POLICY" ] && [ -f "$CATALOG_SCRIPT" ] && [ -f "$CONCEPTS_SCHEMA_SCRIPT" ]; then
+    step_info "Running check_concepts_schema.py..."
+    if python3 "$CONCEPTS_SCHEMA_SCRIPT" 2>&1; then
+        step_info "Concept catalog schema verified"
+    else
+        step_fail "concept catalog schema check failed"
+    fi
     step_info "Running verify_agda_sync.py..."
     if python3 "$CATALOG_SCRIPT" 2>&1; then
         step_info "Agda–Haskell constructor sync verified"

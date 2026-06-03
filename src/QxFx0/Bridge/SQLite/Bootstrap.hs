@@ -38,7 +38,6 @@ import QxFx0.Resources
   , rpSeedIdentity
   , rpSeedTemplates
   )
-import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
 
 currentSchemaDescription :: Text
@@ -81,8 +80,9 @@ ensureSchemaMigrations db = do
               insertSchemaVersion db currentSchemaVersion currentSchemaDescription
               seedAfterMigration sqlSet db
             else
-              throwQxFx0
-                (SQLiteError "schema_version table exists but is empty, and database shape is not v1 or v2")
+              do
+                insertSchemaVersion db currentSchemaVersion currentSchemaDescription
+                seedAfterMigration sqlSet db
     SchemaVersionPresent 1 -> do
       runPendingMigrations db 1
       seedAfterMigration sqlSet db
@@ -164,11 +164,8 @@ fallbackBootstrapSqlSet =
     }
 
 loadSqlFileOrFallback :: FilePath -> Text -> IO Text
-loadSqlFileOrFallback path fallback = do
-  exists <- doesFileExist path
-  if exists
-    then TIO.readFile path `catchIO` onFailure
-    else allowEmbeddedSqlFallback ("SQL file not found: " <> T.pack path) fallback
+loadSqlFileOrFallback path fallback =
+  TIO.readFile path `catchIO` onFailure
   where
     onFailure :: IOException -> IO Text
     onFailure err =

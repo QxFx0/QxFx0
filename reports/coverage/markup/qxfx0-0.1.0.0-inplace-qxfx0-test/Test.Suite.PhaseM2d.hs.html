@@ -1,0 +1,176 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-|
+<span class="lineno">    4 </span>Module      : Test.Suite.PhaseM2d
+<span class="lineno">    5 </span>Description : Unit tests for Phase 2.5 (M2d) + 5.5e + RecoveryConatusGate.
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>Pure tests covering the artefacts introduced by:
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>  * /Phase 2.5 (M2d)/ — runtime Conatus replaces the placeholder
+<span class="lineno">   10 </span>    in 'PrepareEffectPlan' construction; 'psConatusEnergy' carries
+<span class="lineno">   11 </span>    the canonical per-turn energy; 'PrepareReqConsciousness' \/
+<span class="lineno">   12 </span>    'PrepareReqIntuition' carry the energy through to the handlers.
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>  * /Phase 5.5e/ — 'renderSalienceDriver' exposes a stable
+<span class="lineno">   15 </span>    snake_case tag for every 'SalienceDriver' variant.
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>  * /RecoveryConatusGate/ — dedicated 'LocalRecoveryCause' variant
+<span class="lineno">   18 </span>    and matching 'renderLocalRecoveryCause' \/ 'ToJSON' rendering.
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>Tests are pure and require no IO or pipeline fixtures beyond
+<span class="lineno">   21 </span>'emptySystemState' and a minimal 'MorphologyData'.
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>See:
+<span class="lineno">   24 </span>  * @docs\/adr\/0010-salience-controller.md@ §5
+<span class="lineno">   25 </span>  * @docs\/THEORY.md@ §4.1
+<span class="lineno">   26 </span>  * commits e70fade (M2d), fc4cc0a (5.5e), 2be7506 (RecoveryConatusGate)
+<span class="lineno">   27 </span>-}
+<span class="lineno">   28 </span>module Test.Suite.PhaseM2d
+<span class="lineno">   29 </span>  ( phaseM2dTests
+<span class="lineno">   30 </span>  ) where
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">   33 </span>import Data.Aeson (Value (String), toJSON)
+<span class="lineno">   34 </span>import Data.Time.Clock (UTCTime(..))
+<span class="lineno">   35 </span>import Data.Time.Calendar (Day(ModifiedJulianDay))
+<span class="lineno">   36 </span>import Test.HUnit (Test (..), (@?=), assertBool, assertFailure)
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>import QxFx0.Core.TurnPipeline
+<span class="lineno">   39 </span>  ( PrepareEffectPlan (..)
+<span class="lineno">   40 </span>  , PrepareEffectRequest (..)
+<span class="lineno">   41 </span>  , PrepareStatic (..)
+<span class="lineno">   42 </span>  , buildPrepareEffectPlan
+<span class="lineno">   43 </span>  )
+<span class="lineno">   44 </span>import QxFx0.Self.Blanket (computeSelfBlanket)
+<span class="lineno">   45 </span>import QxFx0.Self.Conatus
+<span class="lineno">   46 </span>  ( ConatusEnergy (..)
+<span class="lineno">   47 </span>  , computeConatusEnergy
+<span class="lineno">   48 </span>  )
+<span class="lineno">   49 </span>import QxFx0.Self.Invariants (checkInitialBlanket)
+<span class="lineno">   50 </span>import QxFx0.Self.Salience
+<span class="lineno">   51 </span>  ( SalienceDriver (..)
+<span class="lineno">   52 </span>  , renderSalienceDriver
+<span class="lineno">   53 </span>  )
+<span class="lineno">   54 </span>import QxFx0.Types
+<span class="lineno">   55 </span>  ( MorphologyData (..)
+<span class="lineno">   56 </span>  , SystemState (..)
+<span class="lineno">   57 </span>  )
+<span class="lineno">   58 </span>import QxFx0.Types.Recovery
+<span class="lineno">   59 </span>  ( LocalRecoveryCause (..)
+<span class="lineno">   60 </span>  , renderLocalRecoveryCause
+<span class="lineno">   61 </span>  )
+<span class="lineno">   62 </span>import QxFx0.Types.State (emptySystemState)
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   65 </span>-- Fixtures
+<span class="lineno">   66 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>-- | A minimal 'SystemState' that satisfies 'checkInitialBlanket'
+<span class="lineno">   69 </span>-- (non-empty session id + non-empty morphology). Mirrors
+<span class="lineno">   70 </span>-- 'Test.Suite.SelfBlanket.viableSystemState'.
+<span class="lineno">   71 </span>viableSystemState :: SystemState
+<span class="lineno">   72 </span><span class="decl"><span class="istickedoff">viableSystemState =</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="istickedoff">let base  = emptySystemState</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">morph = MorphologyData</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">(Map.singleton &quot;о&quot; &quot;preposition&quot;)</span>
+<span class="lineno">   76 </span><span class="spaces">        </span><span class="istickedoff">Map.empty</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="istickedoff">Map.empty</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="istickedoff">Map.empty</span>
+<span class="lineno">   79 </span><span class="spaces">   </span><span class="istickedoff">in base</span>
+<span class="lineno">   80 </span><span class="spaces">        </span><span class="istickedoff">{ ssSessionId  = &quot;phaseM2d_demo&quot;</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">, ssMorphology = morph</span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">}</span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   85 </span>-- Test-suite entry point
+<span class="lineno">   86 </span>-- ---------------------------------------------------------------------------
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>phaseM2dTests :: [Test]
+<span class="lineno">   89 </span><span class="decl"><span class="istickedoff">phaseM2dTests =</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">[ -- Phase 5.5e — renderSalienceDriver coverage</span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">TestLabel <span class="nottickedoff">&quot;renderSalienceDriver covers all 7 variants with stable snake_case tags&quot;</span> $</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByResonance       @?= &quot;resonance&quot;</span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByAtmosphere      @?= &quot;atmosphere&quot;</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByConsolidation   @?= &quot;consolidation&quot;</span>
+<span class="lineno">   96 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByCounterfactual  @?= &quot;counterfactual&quot;</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByFieldConfidence @?= &quot;field_confidence&quot;</span>
+<span class="lineno">   98 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByConatusGate     @?= &quot;conatus_gate&quot;</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">renderSalienceDriver DrivenByDefault         @?= &quot;default&quot;</span>
+<span class="lineno">  100 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">-- RecoveryConatusGate — text rendering and JSON tag</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;renderLocalRecoveryCause RecoveryConatusGate renders to conatus_gate&quot;</span> $</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">TestCase $</span>
+<span class="lineno">  104 </span><span class="spaces">        </span><span class="istickedoff">renderLocalRecoveryCause RecoveryConatusGate @?= &quot;conatus_gate&quot;</span>
+<span class="lineno">  105 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  106 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;ToJSON RecoveryConatusGate produces String \&quot;conatus_gate\&quot;&quot;</span> $</span>
+<span class="lineno">  107 </span><span class="spaces">      </span><span class="istickedoff">TestCase $</span>
+<span class="lineno">  108 </span><span class="spaces">        </span><span class="istickedoff">toJSON RecoveryConatusGate @?= String &quot;conatus_gate&quot;</span>
+<span class="lineno">  109 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  110 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;renderLocalRecoveryCause RecoveryRuntimeDegraded preserves runtime_degraded after split&quot;</span> $</span>
+<span class="lineno">  111 </span><span class="spaces">      </span><span class="istickedoff">TestCase $</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">renderLocalRecoveryCause RecoveryRuntimeDegraded @?= &quot;runtime_degraded&quot;</span>
+<span class="lineno">  113 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">-- Phase 2.5 (M2d) — psConatusEnergy invariant</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;buildPrepareEffectPlan stores psConatusEnergy matching direct computation&quot;</span> $</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff">let plan       = buildPrepareEffectPlan viableSystemState &quot;пробный ввод&quot; testEpochZero</span>
+<span class="lineno">  118 </span><span class="spaces">            </span><span class="istickedoff">blanket    = computeSelfBlanket viableSystemState</span>
+<span class="lineno">  119 </span><span class="spaces">            </span><span class="istickedoff">violations = checkInitialBlanket blanket</span>
+<span class="lineno">  120 </span><span class="spaces">            </span><span class="istickedoff">expected   = computeConatusEnergy blanket violations</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">psConatusEnergy (pepStatic plan) @?= expected</span>
+<span class="lineno">  122 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  123 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;buildPrepareEffectPlan threads conatusEnergy into PrepareReqConsciousness&quot;</span> $</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="istickedoff">let plan     = buildPrepareEffectPlan viableSystemState &quot;пробный ввод&quot; testEpochZero</span>
+<span class="lineno">  126 </span><span class="spaces">            </span><span class="istickedoff">expected = psConatusEnergy (pepStatic plan)</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">case pepConsciousnessRequest plan of</span>
+<span class="lineno">  128 </span><span class="spaces">          </span><span class="istickedoff">PrepareReqConsciousness _ _ _ ce _ -&gt;</span>
+<span class="lineno">  129 </span><span class="spaces">            </span><span class="istickedoff">ce @?= expected</span>
+<span class="lineno">  130 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  131 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">assertFailure &quot;pepConsciousnessRequest must be PrepareReqConsciousness&quot;</span></span>
+<span class="lineno">  132 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  133 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;buildPrepareEffectPlan threads conatusEnergy into PrepareReqIntuition&quot;</span> $</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">let plan     = buildPrepareEffectPlan viableSystemState &quot;пробный ввод&quot; testEpochZero</span>
+<span class="lineno">  136 </span><span class="spaces">            </span><span class="istickedoff">expected = psConatusEnergy (pepStatic plan)</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">case pepIntuitionRequest plan of</span>
+<span class="lineno">  138 </span><span class="spaces">          </span><span class="istickedoff">PrepareReqIntuition _ _ _ _ ce _ _ -&gt;</span>
+<span class="lineno">  139 </span><span class="spaces">            </span><span class="istickedoff">ce @?= expected</span>
+<span class="lineno">  140 </span><span class="spaces">          </span><span class="istickedoff">_ -&gt;</span>
+<span class="lineno">  141 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">assertFailure &quot;pepIntuitionRequest must be PrepareReqIntuition&quot;</span></span>
+<span class="lineno">  142 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">, TestLabel <span class="nottickedoff">&quot;viable SystemState yields a healthy ConatusEnergy (gate does not fire)&quot;</span> $</span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">TestCase $ do</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="istickedoff">let plan = buildPrepareEffectPlan viableSystemState &quot;пробный ввод&quot; testEpochZero</span>
+<span class="lineno">  146 </span><span class="spaces">            </span><span class="istickedoff">ce   = psConatusEnergy (pepStatic plan)</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="istickedoff">assertBool</span>
+<span class="lineno">  148 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(&quot;ceScalar should be &gt;= 0 on a viable state, got &quot; ++ show (ceScalar ce))</span></span>
+<span class="lineno">  149 </span><span class="spaces">          </span><span class="istickedoff">(ceScalar ce &gt;= 0.0)</span>
+<span class="lineno">  150 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>testEpochZero :: UTCTime
+<span class="lineno">  153 </span><span class="decl"><span class="istickedoff">testEpochZero = UTCTime <span class="nottickedoff">(ModifiedJulianDay 0)</span> <span class="nottickedoff">0</span></span></span>
+
+</pre>
+</body>
+</html>

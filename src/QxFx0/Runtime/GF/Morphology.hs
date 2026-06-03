@@ -70,6 +70,7 @@ accusativeForm md w =
       in case (gender, animacy) of
             (Masculine, Inanimate) -> w
             (Neuter, _) -> w
+            (Feminine, Inanimate) -> feminineAccusativeByRule w
             _ -> genitiveForm md w
 
 resolveCandidateAccusative :: MorphologyData -> Text -> Maybe Text
@@ -83,15 +84,7 @@ data Gender = Masculine | Feminine | Neuter
   deriving stock (Eq, Show)
 
 guessAnimacy :: Text -> Animacy
-guessAnimacy w =
-  let lower = T.toLower w
-      animateSuffixes =
-        [ morphFemSuffixA
-        , morphFemSuffixYa
-        , morphNounSuffixA
-        , morphNounSuffixIya
-        ]
-  in if any (`T.isSuffixOf` lower) animateSuffixes then Animate else Inanimate
+guessAnimacy _ = Inanimate
 
 guessGender :: Text -> Gender
 guessGender w
@@ -112,8 +105,18 @@ feminineSoftSignExceptions =
   , "кость", "лестница", "постель", "тень", "цель", "чь", "цепь"
   , "боль", "роль", "сталь", "соль", "мать", "дочь"
   , "любовь", "морковь", "пыль", "медь", "гроз", "кровь"
-  , "область", "гавань", "мелочь", "библиотека"
+  , "область", "гавань", "мелочь"
   ]
+
+feminineAccusativeByRule :: Text -> Text
+feminineAccusativeByRule w
+  | T.isSuffixOf morphFemSuffixA lower = T.dropEnd 1 lower <> "у"
+  | T.isSuffixOf morphFemSuffixYa lower = T.dropEnd 1 lower <> "ю"
+  | T.isSuffixOf morphNounSuffixA lower = T.dropEnd 1 lower <> "у"
+  | T.isSuffixOf morphNounSuffixIya lower = T.dropEnd 2 lower <> "ию"
+  | otherwise = w
+  where
+    lower = T.toLower w
 
 prepositionalForm :: MorphologyData -> Text -> Text
 prepositionalForm md w = case M.lookup w (mdPrepositional md) of
@@ -191,6 +194,7 @@ classifyVerb infinitive =
   let lower = T.toLower infinitive
   in case () of
        _
+         | lower `elem` secondConjExceptions -> SecondConj
          | T.isSuffixOf "ить" lower -> SecondConj
          | T.isSuffixOf "еть" lower -> FirstConj
          | T.isSuffixOf "ать" lower -> FirstConj
@@ -201,6 +205,12 @@ classifyVerb infinitive =
          | T.isSuffixOf "чь" lower -> FirstConj
          | T.isSuffixOf "ти" lower -> FirstConj
          | otherwise -> FirstConj
+
+secondConjExceptions :: [Text]
+secondConjExceptions =
+  [ "смотреть", "видеть", "ненавидеть", "обидеть", "зависеть", "терпеть"
+  , "вертеть", "дышать", "держать", "слышать", "гнать"
+  ]
 
 data ConjugationClass = FirstConj | SecondConj
   deriving stock (Eq, Show)

@@ -5,11 +5,13 @@ module QxFx0.ExceptionPolicy
   , tryQxFx0
   , catchIO
   , QxFx0Exception(..)
+  , renderQxFx0ExceptionForLog
   , throwQxFx0
   ) where
 
 import Control.Exception (IOException, SomeException, AsyncException, try, catch, fromException, throwIO, Exception)
 import Data.Text (Text)
+import qualified Data.Text as T
 
 import QxFx0.Types.Persistence (PersistenceStage)
 
@@ -35,12 +37,28 @@ data QxFx0Exception
     -- it has chosen to be. Not recoverable; the session must abort
     -- the turn (no persistence). Co-located with 'IdentityRupture'
     -- in 'Finalize.Commit'; the two failures are orthogonal.
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
+
+instance Show QxFx0Exception where
+  show = T.unpack . renderQxFx0ExceptionForLog
 
 instance Exception QxFx0Exception
 
 throwQxFx0 :: QxFx0Exception -> IO a
 throwQxFx0 = throwIO
+
+renderQxFx0ExceptionForLog :: QxFx0Exception -> Text
+renderQxFx0ExceptionForLog ex =
+  case ex of
+    PersistenceError _ -> T.pack "PersistenceError(<redacted>)"
+    PersistenceTxError stage _ -> T.pack "PersistenceTxError(stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>)"
+    SQLiteError _ -> T.pack "SQLiteError(<redacted>)"
+    RuntimeInitError _ -> T.pack "RuntimeInitError(<redacted>)"
+    EmbeddingError _ -> T.pack "EmbeddingError(<redacted>)"
+    ThresholdParseError _ -> T.pack "ThresholdParseError(<redacted>)"
+    AgdaGateError _ -> T.pack "AgdaGateError(<redacted>)"
+    IdentityRupture _ -> T.pack "IdentityRupture(<redacted>)"
+    EssenceRupture _ -> T.pack "EssenceRupture(<redacted>)"
 
 tryAsync :: IO a -> IO (Either SomeException a)
 tryAsync action = do

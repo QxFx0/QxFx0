@@ -1,0 +1,195 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE RecordWildCards #-}
+<span class="lineno">    2 </span>{-| Facade for routing-phase synthesis, family hints, and guard-aware cascade. -}
+<span class="lineno">    3 </span>module QxFx0.Core.TurnRouting
+<span class="lineno">    4 </span>  ( routeFamily
+<span class="lineno">    5 </span>  , mergeFamilySignals
+<span class="lineno">    6 </span>  , preferFamily
+<span class="lineno">    7 </span>  , semanticInputFamilyHint
+<span class="lineno">    8 </span>  , strategyFamilyHint
+<span class="lineno">    9 </span>  , identityFamilyHint
+<span class="lineno">   10 </span>  , applyPrincipledFamily
+<span class="lineno">   11 </span>  , applyGuardGating
+<span class="lineno">   12 </span>  , RoutingPhase(..)
+<span class="lineno">   13 </span>  , FamilyCascade(..)
+<span class="lineno">   14 </span>  , computeRoutingPhase
+<span class="lineno">   15 </span>  , runFamilyCascade
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import QxFx0.Types
+<span class="lineno">   19 </span>import QxFx0.Core.TurnPipeline.Types (RoutingDecision(..))
+<span class="lineno">   20 </span>import QxFx0.Core.Ego (updateEgoFromTurn)
+<span class="lineno">   21 </span>import QxFx0.Core.IdentitySignal (buildIdentitySignalSimple)
+<span class="lineno">   22 </span>import QxFx0.Semantic.SemanticInput (buildSemanticInputSimple)
+<span class="lineno">   23 </span>import QxFx0.Core.TurnModulation (computeTensionDelta)
+<span class="lineno">   24 </span>import QxFx0.Core.TurnRender
+<span class="lineno">   25 </span>  ( deriveSemanticAnchor
+<span class="lineno">   26 </span>  , renderStyleFromDecision
+<span class="lineno">   27 </span>  , applySalienceToStyle
+<span class="lineno">   28 </span>  )
+<span class="lineno">   29 </span>import QxFx0.Self.Conatus (ConatusEnergy)
+<span class="lineno">   30 </span>import QxFx0.Self.Deliberation
+<span class="lineno">   31 </span>  ( Plan(..)
+<span class="lineno">   32 </span>  , defaultPlan
+<span class="lineno">   33 </span>  , defaultDeliberationModulation
+<span class="lineno">   34 </span>  , DeliberationModulation(..)
+<span class="lineno">   35 </span>  , holisticProposal
+<span class="lineno">   36 </span>  , formalProposal
+<span class="lineno">   37 </span>  , Deliberation(..)
+<span class="lineno">   38 </span>  , reconcile
+<span class="lineno">   39 </span>  , NarrativeTone(..)
+<span class="lineno">   40 </span>  )
+<span class="lineno">   41 </span>import QxFx0.Self.Field (Field, emptyField, fieldAtmosphere, Atmosphere(..))
+<span class="lineno">   42 </span>import QxFx0.Self.Salience
+<span class="lineno">   43 </span>  ( Salience(..)
+<span class="lineno">   44 </span>  , computeSalience
+<span class="lineno">   45 </span>  )
+<span class="lineno">   46 </span>import QxFx0.Core.TurnRouting.Cascade
+<span class="lineno">   47 </span>  ( applyGuardGating
+<span class="lineno">   48 </span>  , applyPrincipledFamily
+<span class="lineno">   49 </span>  , buildGuardReport
+<span class="lineno">   50 </span>  , runFamilyCascade
+<span class="lineno">   51 </span>  )
+<span class="lineno">   52 </span>import QxFx0.Core.TurnRouting.Phase
+<span class="lineno">   53 </span>  ( computeRoutingPhase
+<span class="lineno">   54 </span>  , identityFamilyHint
+<span class="lineno">   55 </span>  , mergeFamilySignals
+<span class="lineno">   56 </span>  , preferFamily
+<span class="lineno">   57 </span>  , semanticInputFamilyHint
+<span class="lineno">   58 </span>  , strategyFamilyHint
+<span class="lineno">   59 </span>  )
+<span class="lineno">   60 </span>import QxFx0.Core.TurnRouting.Types
+<span class="lineno">   61 </span>  ( FamilyCascade(..)
+<span class="lineno">   62 </span>  , RoutingPhase(..)
+<span class="lineno">   63 </span>  )
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>import Data.Text (Text)
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>nearestHolistic :: CanonicalMoveFamily -&gt; CanonicalMoveFamily
+<span class="lineno">   68 </span><span class="decl"><span class="nottickedoff">nearestHolistic CMAnchor      = CMReflect</span>
+<span class="lineno">   69 </span><span class="spaces"></span><span class="nottickedoff">nearestHolistic CMDistinguish = CMDefine</span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="nottickedoff">nearestHolistic CMClarify     = CMHypothesis</span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="nottickedoff">nearestHolistic CMNextStep    = CMPurpose</span>
+<span class="lineno">   72 </span><span class="spaces"></span><span class="nottickedoff">nearestHolistic other         = other</span></span>
+<span class="lineno">   73 </span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span>-- | Phase 6 (M6) + Phase 5.5d: 'routeFamily' takes the per-turn
+<span class="lineno">   77 </span>-- 'ConatusEnergy' and 'Field' precomputed by the Prepare stage
+<span class="lineno">   78 </span>-- (see 'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy' \/
+<span class="lineno">   79 </span>-- 'psField', threaded through 'tiConatusEnergy' \/ 'tiField').
+<span class="lineno">   80 </span>-- The previous local computeSelfBlanket \/ checkInitialBlanket
+<span class="lineno">   81 </span>-- \/ salienceFromBlanket triple was already collapsed in M6;
+<span class="lineno">   82 </span>-- this commit additionally replaces the @emptyField@ default in
+<span class="lineno">   83 </span>-- 'salienceFromConatusEnergy' with the canonical pre-turn
+<span class="lineno">   84 </span>-- 'Field' carrying the runtime Resonance component.
+<span class="lineno">   85 </span>routeFamily :: CanonicalMoveFamily -&gt; InputPropositionFrame -&gt; AtomSet -&gt; UserState
+<span class="lineno">   86 </span>            -&gt; SystemState -&gt; [Text] -&gt; Text -&gt; Bool -&gt; Text
+<span class="lineno">   87 </span>            -&gt; Maybe ConsciousnessNarrative -&gt; Double -&gt; ConatusEnergy -&gt; Field
+<span class="lineno">   88 </span>            -&gt; Maybe (Plan -&gt; Bool)
+<span class="lineno">   89 </span>            -&gt; RoutingDecision
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField mCourtesy =</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">routingSalience = computeSalience (ssSalienceWeights ss) conatusEnergy preparedField</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">cascade = runFamilyCascade phase ss <span class="nottickedoff">nextUserState</span> frame <span class="nottickedoff">atomSet</span> <span class="nottickedoff">history</span> <span class="nottickedoff">input</span> mNarrative intuitPosterior isNixBlocked routingSalience</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">FamilyCascade{..} = cascade</span>
+<span class="lineno">   95 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">-- Phase 8 (M1/M2): build hemispheric proposals and reconcile.</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">-- Package D: family divergence is feature-flagged (default</span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">-- False) so baseline behaviour is preserved while the</span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="istickedoff">-- adjunction mapping is corrected.</span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">familyDivergenceEnabled = False</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">formalFamily   = fcFinalFamily</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">holisticFamily = if <span class="tickonlyfalse">familyDivergenceEnabled</span> then <span class="nottickedoff">nearestHolistic fcFinalFamily</span> else fcFinalFamily</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">renderStrategy = rpChosenStrategy</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">atmosphereTone =</span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="istickedoff">let a = fieldAtmosphere preparedField</span>
+<span class="lineno">  106 </span><span class="spaces">            </span><span class="istickedoff">dm = defaultDeliberationModulation</span>
+<span class="lineno">  107 </span><span class="spaces">        </span><span class="istickedoff">in if atmosphereArousal a &gt; dmToneArousalFloor dm &amp;&amp; atmosphereValence a &gt;= dmToneValenceNeutral dm</span>
+<span class="lineno">  108 </span><span class="spaces">             </span><span class="istickedoff">then NarrativeWarm</span>
+<span class="lineno">  109 </span><span class="spaces">           </span><span class="istickedoff">else if <span class="tickonlyfalse">atmosphereArousal a &gt; dmToneArousalFloor dm &amp;&amp; <span class="nottickedoff">atmosphereValence a &lt; dmToneValenceNeutral dm</span></span></span>
+<span class="lineno">  110 </span><span class="spaces">             </span><span class="istickedoff">then <span class="nottickedoff">NarrativeTerse</span></span>
+<span class="lineno">  111 </span><span class="spaces">           </span><span class="istickedoff">else NarrativeNeutral</span>
+<span class="lineno">  112 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">baseStyle =</span>
+<span class="lineno">  114 </span><span class="spaces">        </span><span class="istickedoff">let styleIdentitySignal = buildIdentitySignalSimple rpOrbitalPhase rpEncounterMode rpPrevDirective</span>
+<span class="lineno">  115 </span><span class="spaces">                                  </span><span class="istickedoff">(asRegister atomSet) (usNeedLayer nextUserState) fcFinalFamily (forceForFamily fcFinalFamily)</span>
+<span class="lineno">  116 </span><span class="spaces">            </span><span class="istickedoff">styleSemanticInput  = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)</span>
+<span class="lineno">  117 </span><span class="spaces">            </span><span class="istickedoff">styleSemanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) styleSemanticInput currentTopic (ssTurnCount ss + 1)</span>
+<span class="lineno">  118 </span><span class="spaces">         </span><span class="istickedoff">in renderStyleFromDecision renderStrategy rpPrincipledModeResult atmosphereTone styleIdentitySignal styleSemanticAnchor styleSemanticInput</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">salienceStyle = applySalienceToStyle (ssSalienceWeights ss) routingSalience <span class="nottickedoff">preparedField</span> baseStyle</span>
+<span class="lineno">  120 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">-- Contract status: bounded causal contour. Narrative tone is not</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">-- rendered directly, but committed essence validation reads the</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">-- reconciled tone and may fail closed on mismatch.</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">-- Phase 8 Package C: observability-grade divergence.</span>
+<span class="lineno">  125 </span><span class="spaces">      </span><span class="istickedoff">-- Both proposals share the same reconciled family and style</span>
+<span class="lineno">  126 </span><span class="spaces">      </span><span class="istickedoff">-- (behaviour-preserving baseline), but the holistic proposal</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">-- carries a narrative tone derived from field atmosphere.</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">-- This produces trace-visible 'DivergeOnTone' without directly</span>
+<span class="lineno">  129 </span><span class="spaces">      </span><span class="istickedoff">-- changing rendered output (§1 ADR-0011 Package C note).</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="istickedoff">formalPlan = defaultPlan</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">{ planFamily      = formalFamily</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">, planRenderStyle = salienceStyle</span>
+<span class="lineno">  133 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">holisticPlan = defaultPlan</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">{ planFamily      = holisticFamily</span>
+<span class="lineno">  136 </span><span class="spaces">        </span><span class="istickedoff">, planRenderStyle = salienceStyle</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">, planNarrativeTone = atmosphereTone</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="istickedoff">, planConfidence  = salienceConfidence routingSalience</span>
+<span class="lineno">  139 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  140 </span><span class="spaces">      </span><span class="istickedoff">-- Package D: formal hemisphere probes the field; holistic</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="istickedoff">-- hemisphere carries atmosphere-derived tone already baked</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="istickedoff">-- into the Plan, so the wrapper is field-independent.</span>
+<span class="lineno">  143 </span><span class="spaces">      </span><span class="istickedoff">deliberation = reconcile <span class="nottickedoff">mCourtesy</span> routingSalience (holisticProposal holisticPlan <span class="nottickedoff">emptyField</span>) (formalProposal (\_fd -&gt; formalPlan)) <span class="nottickedoff">preparedField</span></span>
+<span class="lineno">  144 </span><span class="spaces">      </span><span class="istickedoff">reconciledPlan = delibReconciled deliberation</span>
+<span class="lineno">  145 </span><span class="spaces">      </span><span class="istickedoff">reconciledFamily = planFamily reconciledPlan</span>
+<span class="lineno">  146 </span><span class="spaces">      </span><span class="istickedoff">reconciledStyle  = planRenderStyle reconciledPlan</span>
+<span class="lineno">  147 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">-- Recompute downstream context if the reconciled family</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">-- diverges from the salience-escalated candidate.</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff">newEgo = updateEgoFromTurn (ssEgo ss) reconciledFamily (computeTensionDelta input ss)</span>
+<span class="lineno">  151 </span><span class="spaces">      </span><span class="istickedoff">identitySignal = buildIdentitySignalSimple rpOrbitalPhase rpEncounterMode rpPrevDirective</span>
+<span class="lineno">  152 </span><span class="spaces">                         </span><span class="istickedoff">(asRegister atomSet) (usNeedLayer nextUserState) reconciledFamily (forceForFamily reconciledFamily)</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="istickedoff">guardReport = buildGuardReport (ssLastGuardReport ss) (ssEgo ss) newEgo</span>
+<span class="lineno">  154 </span><span class="spaces">      </span><span class="istickedoff">semanticInput = buildSemanticInputSimple input atomSet frame reconciledFamily (asRegister atomSet) (usNeedLayer nextUserState)</span>
+<span class="lineno">  155 </span><span class="spaces">      </span><span class="istickedoff">semanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) semanticInput currentTopic (ssTurnCount ss + 1)</span>
+<span class="lineno">  156 </span><span class="spaces">   </span><span class="istickedoff">in RoutingDecision</span>
+<span class="lineno">  157 </span><span class="spaces">        </span><span class="istickedoff">{ rdFamily = reconciledFamily</span>
+<span class="lineno">  158 </span><span class="spaces">       </span><span class="istickedoff">, rdNewEgo = newEgo</span>
+<span class="lineno">  159 </span><span class="spaces">       </span><span class="istickedoff">, rdIdentitySignal = identitySignal</span>
+<span class="lineno">  160 </span><span class="spaces">       </span><span class="istickedoff">, rdGuardReport = guardReport</span>
+<span class="lineno">  161 </span><span class="spaces">       </span><span class="istickedoff">, rdSemanticInput = semanticInput</span>
+<span class="lineno">  162 </span><span class="spaces">       </span><span class="istickedoff">, rdSemanticAnchor = semanticAnchor</span>
+<span class="lineno">  163 </span><span class="spaces">       </span><span class="istickedoff">, rdRenderStrategy = renderStrategy</span>
+<span class="lineno">  164 </span><span class="spaces">       </span><span class="istickedoff">, rdRenderStyle = reconciledStyle</span>
+<span class="lineno">  165 </span><span class="spaces">       </span><span class="istickedoff">, rdPrincipledMode = rpPrincipledModeResult</span>
+<span class="lineno">  166 </span><span class="spaces">       </span><span class="istickedoff">, rdPressure = rpMPressure</span>
+<span class="lineno">  167 </span><span class="spaces">       </span><span class="istickedoff">, rdUpdatedOrbital = rpUpdatedOrbital</span>
+<span class="lineno">  168 </span><span class="spaces">       </span><span class="istickedoff">, rdFromMs = rpFromMs</span>
+<span class="lineno">  169 </span><span class="spaces">       </span><span class="istickedoff">, rdToMs = rpToMs</span>
+<span class="lineno">  170 </span><span class="spaces">       </span><span class="istickedoff">, rdStrategyFamily = rpStrategyFamily</span>
+<span class="lineno">  171 </span><span class="spaces">       </span><span class="istickedoff">, rdDeliberation = Just deliberation</span>
+<span class="lineno">  172 </span><span class="spaces">       </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

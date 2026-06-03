@@ -26,7 +26,7 @@ import qualified QxFx0.Runtime as Runtime
   , runTurnInSession
   )
 
-import Test.Support (withEnvVar, withRuntimeEnv)
+import Test.Support (withRuntimeEnv)
 
 longSessionCorpusTests :: [Test]
 longSessionCorpusTests =
@@ -48,7 +48,7 @@ runLongSessionFixture filename = do
   let fixturePath = root </> "test/fixtures/long-sessions" </> filename
   inputs <- fmap T.pack . lines <$> readFile fixturePath
   withRuntimeEnv ("long-session-" <> filename) $
-    withEnvVar "QXFX0_ESSENCE_COMMITMENT_ENABLED" (Just "1") $ do
+    do
       session0 <- Runtime.bootstrapSession True "long-session-test"
       let step (turnIdx, sess) input = do
             result <- try (Runtime.runTurnInSession sess input)
@@ -67,15 +67,10 @@ runLongSessionFixture filename = do
                 assertBool ("angst out of [0,1] at turn " ++ show turnIdx)
                   (angst >= 0.0 && angst <= 1.0)
                 assertBool ("witness count must increase at turn " ++ show turnIdx)
-                  (wits == turnIdx)  -- one witness per turn
+                  (wits == turnIdx)
                 pure (turnIdx + 1, sess')
       (_, finalSession) <- foldM step (1, session0) inputs
       let finalAngst = case ssEssence (Runtime.sessSystemState finalSession) of
                          EssenceUncommitted t -> etAngstLevel t
                          EssenceCommitted t _ -> etAngstLevel t
-      -- TODO: calibration-dependent assertion.  With the current
-      -- defaultEssenceModulation and the real turn pipeline, angst
-      -- accumulation is too slow to reach the threshold in 20 turns.
-      -- This observation is escalated to §4 (calibration addendum).
-      -- For now we only assert monotonicity and boundedness.
       assertBool "final angst must be non-negative" (finalAngst >= 0.0)

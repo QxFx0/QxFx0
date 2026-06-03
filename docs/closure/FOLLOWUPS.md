@@ -158,7 +158,7 @@ Each entry has:
 ### F-12: check_architecture.sh extension
 - **owner-package**: P1
 - **kind**: CI
-- **status**: drafted (in this pass; rules [13]–[19] added
+- **status**: drafted (in this pass; rules [13]–[20] added
   to `scripts/check_architecture.sh` — see §6 below)
 - **prerequisite-of**: P1 closure; P5 closure verification
 - **estimate**: S (7 grep rules; ~50 lines of bash)
@@ -260,7 +260,7 @@ tracker entry:
    body of `parseAuthoritySurface` and the property's
    expectation; no consumer signature changes.
 2. `test/Test/Suite/RenderAuthorityStub.hs` — a small
-   `tasty-hunit` test suite that locks the stub's contract:
+   HUnit test suite that locks the stub's contract:
    parser returns `Nothing` for every input, renderer always
    returns the stub surface, the round-trip property holds.
    When the real parser is landed, this suite is extended
@@ -280,7 +280,7 @@ GF Haskell parser.
 ## 6. Artifacts produced by F-12
 
 F-12 extended `scripts/check_architecture.sh` with rules
-[13]–[19], one per boundary rule of ADR-0034 §3:
+[13]–[20], one per boundary rule of ADR-0034 §3:
 
 - **Rule [13]** — Rule 1 (mechanical): `Self/*` must not
   import `Core.TurnPipeline.*` or `Bridge.*`.
@@ -444,11 +444,10 @@ the closure plan executable.
   matrix is the **discipline map**; a row that is
   missing a column is a **gap**, not a redundancy.
 - **owner**: package owners (one per row)
-- **status**: drafted (2026-06-02); 3 yellow + 2 red
-  rows to close
-- **next action**: close the red rows (R3 test, R7
-  test) first, then the yellow rows (R2 test
-  extension, R6 CI check)
+- **status**: drafted (2026-06-02); current working-tree matrix
+  is 7G/0Y/0R, landed status still requires build/test/CI
+- **next action**: keep matrix rows aligned with actual script and
+  test wiring; do not re-open closed rows without evidence
 
 ### 11.3 PYTHON_MIGRATION_TRACKER.md
 - **purpose**: status board for the closure plan's
@@ -477,9 +476,9 @@ the closure plan executable.
 
 The closure plan's enforcement is in 4 scripts:
 
-1. `scripts/check_architecture.sh` — 19 rules
+1. `scripts/check_architecture.sh` — 20 rules
    ([1]–[12] freeze-0 / runtime perimeter;
-   [13]–[19] ADR-0034 §3 role split). Package 1.
+   [13]–[20] ADR-0034 §3 role split). Package 1.
 2. `scripts/check_calibration_codomain.sh` — 13
    parameters in `data/calibration/ranges.json`.
    Package 11.
@@ -547,9 +546,9 @@ the operational layer.
 The closure plan's enforcement is now in 5 scripts
 (1 is the stub from F-11, 1 was the gap, 1 is new):
 
-1. `scripts/check_architecture.sh` — 19 rules
+1. `scripts/check_architecture.sh` — 20 rules
    ([1]–[12] freeze-0 / runtime perimeter;
-   [13]–[19] ADR-0034 §3 role split). Package 1.
+   [13]–[20] ADR-0034 §3 role split). Package 1.
 2. `scripts/check_calibration_codomain.sh` — 13
    parameters in `data/calibration/ranges.json`.
    Package 11.
@@ -712,9 +711,12 @@ a read-only session).
   - `Conatus|TRACE_SCHEMA.md §2`
   - `Field|TRACE_SCHEMA.md §3`
   - `Identity|TRACE_SCHEMA.md §7`
-- The script's output is unchanged in form
-  (it still reports "GAP X — Package 3 work
-  item") but the doc-ref is now printed:
+- Before the working-tree trace-gap closure, the
+  script reported a GAP message. After landing
+  `trcConatusEnergy`, `trcField`, and
+  `trcIdentityClaims`, the same checks report
+  `OK` for those contours.
+  Historical GAP output example:
   ```
   GAP Conatus (trcConatusEnergy) — Package 3
       work item; see TRACE_SCHEMA.md §2
@@ -981,11 +983,9 @@ The Tier 1 items (per the session's earlier
 1. **R6 CI rule [20]** (just landed in §15 —
    `check_architecture.sh [20]` walks the 5
    promotion flags; matrix is now 7G/0Y/0R).
-2. **3 ADR numbering collisions** — renumber
-   `proposed/0013` (×2), `0017`, `0018` →
-   `0034-0037`. S-sized `git mv` + `sed`
-   pass. **drafted** in `ADR_INDEX.md §1` but
-   not **wired** (not applied yet).
+2. **ADR renumbering landing** — renumbering is
+   already applied in the working tree (`0034`, `0035`, `0036`,
+   `0041`); the remaining step is canonical landing via build/test/CI.
 3. **Land ADR-0019** (Family Divergence) —
    the first candidate per the playbook. The
    flag is `= False` literal at `Cascade.hs:74`;

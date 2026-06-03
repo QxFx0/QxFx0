@@ -35,6 +35,7 @@ import Control.Concurrent.MVar (MVar, modifyMVar, modifyMVar_, newMVar, readMVar
 import Control.Exception (finally, mask, onException)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Sequence as Seq
 import qualified Data.Char as Char
 import System.Directory (doesFileExist)
@@ -52,8 +53,8 @@ import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..), ResponseObservation,
 import QxFx0.Core.Intuition (IntuitiveState, defaultIntuitiveState)
 import QxFx0.Core.SessionLock (SessionLockManager, newSessionLockManager, withSessionLock)
 import QxFx0.Resources (getNixGuardPath)
-import QxFx0.Runtime.Mode (RuntimeMode, resolveRuntimeMode)
-import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealth, checkEmbeddingHealth)
+import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
+import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealthWithManager, checkEmbeddingHealthWithManager)
 import QxFx0.Types (SystemState, ssIntuitionState, ssTurnCount)
 import Network.HTTP.Client (Manager, closeManager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -170,16 +171,16 @@ buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager tim
 
 withRuntimeSession :: RuntimeContext -> Text -> IO a -> IO a
 withRuntimeSession ctx sessionId action = do
-  lockEnabled <- readSessionLockFlag
+  lockEnabled <- readSessionLockFlag (rcMode ctx)
   if lockEnabled
     then withSessionLock (rtlSession (rcLocks ctx)) sessionId action
     else action
 
 readApiHealth :: RuntimeContext -> IO Bool
-readApiHealth ctx = checkApiHealth (rtcHealth (rcCaches ctx))
+readApiHealth ctx = checkApiHealthWithManager (rtwHttpManager (rcWorkers ctx)) (rtcHealth (rcCaches ctx))
 
 readEmbeddingHealth :: RuntimeContext -> IO EmbeddingHealth
-readEmbeddingHealth ctx = checkEmbeddingHealth (rtcHealth (rcCaches ctx))
+readEmbeddingHealth ctx = checkEmbeddingHealthWithManager (rtwHttpManager (rcWorkers ctx)) (rtcHealth (rcCaches ctx))
 
 withRuntimeDb :: RuntimeContext -> (NSQL.Database -> IO a) -> IO a
 withRuntimeDb ctx = withPooledDB (rtwDbPool (rcWorkers ctx))
@@ -223,9 +224,13 @@ hydrateRuntimeTurnState ctx ss =
 
 updateHistoryStrict :: Text -> Seq.Seq Text -> Seq.Seq Text
 updateHistoryStrict !newEntry !history =
-  let !updated = newEntry Seq.<| history
+  let !truncated = T.take maxHistoryEntryChars newEntry
+      !updated = truncated Seq.<| history
       !bounded = Seq.take 50 updated
   in bounded
+
+maxHistoryEntryChars :: Int
+maxHistoryEntryChars = 4096
 
 resolveNixPath :: RuntimeContext -> IO (Maybe FilePath)
 resolveNixPath ctx = do
@@ -249,15 +254,15 @@ resolveSouffleExecutableCached ctx = do
       modifyMVar_ (rtrSoufflePath (rcTurn ctx)) $ \_ -> pure (Just result)
       pure result
 
-readSessionLockFlag :: IO Bool
-readSessionLockFlag = do
+readSessionLockFlag :: RuntimeMode -> IO Bool
+readSessionLockFlag runtimeMode = do
   mVal <- lookupEnv "QXFX0_SESSION_LOCK"
   pure $ case mVal of
     Nothing -> True
     Just raw ->
       case map Char.toLower raw of
-        "off" -> False
-        "0" -> False
+        "off" -> runtimeMode /= StrictRuntime
+        "0" -> runtimeMode /= StrictRuntime
         "on" -> True
         "1" -> True
         _ -> True

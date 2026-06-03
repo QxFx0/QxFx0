@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_ID="${1:-run_001}"
-PROMPTS_FILE="${2:-$ROOT/reports/dialogue_eval_200_prompts.tsv}"
+PROMPTS_FILE="${2:-$ROOT/data/semantic/en_baseline_prompts.tsv}"
 RUNTIME_MODE="${QXFX0_RUNTIME_MODE:-degraded}"
 SESSION_ID="${QXFX0_EVAL_SESSION_ID:-eval-${RUN_ID}}"
 SESSION_MODE="${QXFX0_EVAL_SESSION_MODE:-isolated}"

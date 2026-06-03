@@ -144,12 +144,8 @@ while IFS= read -r file; do
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [10] EmbeddedSQL.hs must be in sync with spec/sql..."
-if ! command -v python3 &>/dev/null; then
-  fail_violation "python3 is required for SQL single-source sync checks"
-elif [ ! -x "$ROOT/scripts/sync_embedded_sql.py" ]; then
-  fail_violation "scripts/sync_embedded_sql.py is missing or not executable"
-elif ! python3 "$ROOT/scripts/sync_embedded_sql.py" --check >/dev/null 2>&1; then
-  fail_violation "EmbeddedSQL.hs/migration are out of sync with spec/sql (run: python3 scripts/sync_embedded_sql.py)"
+if ! (cd "$ROOT" && cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1); then
+  fail_violation "EmbeddedSQL.hs/migration are out of sync with spec/sql (run: cabal run qxfx0-main -- --sync-embedded-sql)"
 fi
 
 echo "  [10b] HTTP perimeter invariants must stay closed..."
@@ -346,7 +342,7 @@ echo "  [14] ADR-0013 §3 Rule 2: Core/* supplier modules must not import canoni
 # declare "observer" or "supplier" in its module Haddock header
 # (the line beginning "Description :") must not import
 # Core.TurnPipeline.Finalize.* or Core.TurnPipeline.Effects.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
@@ -397,7 +393,7 @@ echo "  [15] ADR-0013 §3 Rule 5: only Bridge.ExternalLLM may be opt-in by featu
 # A new Bridge/* module that uses a feature flag (QXFX0_*_ENABLED)
 # is rejected unless it is Bridge/ExternalLLM.hs. The check
 # enumerates Bridge/*.hs and looks for QXFX0_*_ENABLED lookups.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
@@ -433,7 +429,7 @@ echo "  [16] ADR-0013 §3 Rule 7: derived modules must have a regenerator refere
 # scripts/verify.sh or scripts/ci_gate_contract.sh (the canonical
 # CI entry point). This is a heuristic: we check that the
 # generator script exists.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import sys
 
@@ -468,7 +464,7 @@ echo "  [17] ADR-0013 §3 Rule 1 (declarative): Self/* modules must declare role
 # (canonical, canonical-flag-off, or supplier — supplier is
 # permitted only for Self/* adapters; not for the self-layer
 # proper).
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
@@ -506,7 +502,7 @@ echo "  [18] ADR-0013 §3 Rule 4 (review): Render/* must route through Route/Ren
 # QxFx0.Core.TurnPipeline.Route.Render (or be a renderer
 # orchestrator itself). This is a heuristic: it flags modules
 # that look like they bypass the orchestrator.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
@@ -551,7 +547,7 @@ echo "  [19] ADR-0013 §3 Rule 3 (review): Core/* observer modules declare role 
 # any function that returns a SystemState or writes to ss*.
 # Heuristic: any module that imports Core.Observability but does
 # not have "observer" in its Haddock Description is a violation.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
@@ -610,7 +606,7 @@ echo "  [20] ADR-0013 §3 Rule 6: canonical-flag-off modules are not in the auth
 #       (Essence's flag is at the integration level
 #       per AGENTS.md, not in Haskell code; the
 #       other 3 are env-vars, not yet wired.)
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys

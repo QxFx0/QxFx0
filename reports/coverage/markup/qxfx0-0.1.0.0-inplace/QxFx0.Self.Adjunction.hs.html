@@ -1,0 +1,187 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveFunctor #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>{-# LANGUAGE FunctionalDependencies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE MultiParamTypeClasses #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>{-|
+<span class="lineno">    8 </span>Module      : QxFx0.Self.Adjunction
+<span class="lineno">    9 </span>Description : Phase-3 algebraic backbone of the dual-mode runtime.
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>A typed, pure realisation of the @Holistic ⊣ Formal@ adjunction
+<span class="lineno">   12 </span>named in @docs\/THEORY.md@ §3.2 and pinned by
+<span class="lineno">   13 </span>@docs\/adr\/0008-left-right-adjunction.md@.
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>== What this module is
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>The right-hemispheric (\&quot;holistic\&quot;) and left-hemispheric (\&quot;formal\&quot;)
+<span class="lineno">   18 </span>modes of operation live as two parameterised types,
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>@
+<span class="lineno">   21 </span>'Holistic' a = (a, 'Field')      -- value perceived together with its field
+<span class="lineno">   22 </span>'Formal'   a = 'Field' -&gt; a      -- value as a strategy across fields
+<span class="lineno">   23 </span>@
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>The pair is the textbook product–exponential adjunction
+<span class="lineno">   26 </span>\(- \times s \dashv s \to -\) with \(s = \mathrm{Field}\), and it
+<span class="lineno">   27 </span>is the standard /currying/ isomorphism
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>@
+<span class="lineno">   30 </span>('Holistic' a -&gt; b)  ≅  (a -&gt; 'Formal' b)
+<span class="lineno">   31 </span>@
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>witnessed by 'leftAdjunct' and 'rightAdjunct'. The unit and counit
+<span class="lineno">   34 </span>of the adjunction are forced by the types up to 'Functor' action;
+<span class="lineno">   35 </span>neither requires a designated zero field, monoid structure, or any
+<span class="lineno">   36 </span>choice beyond what the types determine.
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>== What this module is /not/
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>This module is the algebraic /spine/ of the dual-mode story. It
+<span class="lineno">   41 </span>does /not/ implement any holistic computation, does /not/ touch
+<span class="lineno">   42 </span>the turn pipeline, and does /not/ commit to a final shape of
+<span class="lineno">   43 </span>'Field' (which is intentionally a stub here and grows in Phase 4).
+<span class="lineno">   44 </span>Phase 4–5 work re-shapes call sites in @Core.Intuition@,
+<span class="lineno">   45 </span>@Core.ConsciousnessLoop@, and @RouteEffects@ in terms of these
+<span class="lineno">   46 </span>types; this module only provides the algebra those phases will
+<span class="lineno">   47 </span>quote from.
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>== Triangle identities
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>The adjunction is required to satisfy
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>@
+<span class="lineno">   54 </span>counit . fmap unit       ≡ id   -- on 'Holistic' (left triangle)
+<span class="lineno">   55 </span>fmap counit . unit       ≡ id   -- on 'Formal'   (right triangle, pointwise)
+<span class="lineno">   56 </span>@
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>Both hold by direct calculation on the concrete instance below;
+<span class="lineno">   59 </span>both are also verified by the @Test.Suite.SelfAdjunction@
+<span class="lineno">   60 </span>property suite.
+<span class="lineno">   61 </span>-}
+<span class="lineno">   62 </span>module QxFx0.Self.Adjunction
+<span class="lineno">   63 </span>  ( -- * The adjunction class
+<span class="lineno">   64 </span>    Adjunction (..)
+<span class="lineno">   65 </span>    -- * Concrete adjunction for Phase 3
+<span class="lineno">   66 </span>  , Field
+<span class="lineno">   67 </span>  , Holistic (..)
+<span class="lineno">   68 </span>  , Formal   (..)
+<span class="lineno">   69 </span>    -- * Derived combinators
+<span class="lineno">   70 </span>  , groundIn
+<span class="lineno">   71 </span>  , rebroaden
+<span class="lineno">   72 </span>  , probe
+<span class="lineno">   73 </span>  ) where
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>import QxFx0.Self.Field (Field)
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>-- | Categorical adjunction @l ⊣ r@: a pair of functors with a
+<span class="lineno">   78 </span>-- natural hom-set isomorphism witnessed by @leftAdjunct@ and
+<span class="lineno">   79 </span>-- @rightAdjunct@, equivalently by the 'unit' and 'counit' natural
+<span class="lineno">   80 </span>-- transformations.
+<span class="lineno">   81 </span>--
+<span class="lineno">   82 </span>-- Default implementations express @leftAdjunct@/@rightAdjunct@ in
+<span class="lineno">   83 </span>-- terms of @unit@/@counit@; instances may override them for
+<span class="lineno">   84 </span>-- efficiency but the laws (the triangle identities and
+<span class="lineno">   85 </span>-- naturality) must hold either way.
+<span class="lineno">   86 </span>class (Functor l, Functor r) =&gt; Adjunction l r | l -&gt; r, r -&gt; l where
+<span class="lineno">   87 </span>  -- | @η : 1 ⇒ r ∘ l@. Lifts a value into the round-trip
+<span class="lineno">   88 </span>  -- @r (l a)@.
+<span class="lineno">   89 </span>  unit         :: a -&gt; r (l a)
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>  -- | @ε : l ∘ r ⇒ 1@. Collapses a round-trip @l (r a)@ back to
+<span class="lineno">   92 </span>  -- @a@.
+<span class="lineno">   93 </span>  counit       :: l (r a) -&gt; a
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>  -- | The forward direction of the hom-set isomorphism
+<span class="lineno">   96 </span>  -- @Hom(l a, b) ≅ Hom(a, r b)@.
+<span class="lineno">   97 </span>  --
+<span class="lineno">   98 </span>  -- __Status (Phase A consolidation):__ documentation-only; production
+<span class="lineno">   99 </span>  -- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
+<span class="lineno">  100 </span>  leftAdjunct  :: (l a -&gt; b) -&gt; (a -&gt; r b)
+<span class="lineno">  101 </span>  <span class="decl"><span class="istickedoff">leftAdjunct g a = fmap g (unit a)</span></span>
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>  -- | The reverse direction of the hom-set isomorphism
+<span class="lineno">  104 </span>  -- @Hom(l a, b) ≅ Hom(a, r b)@.
+<span class="lineno">  105 </span>  rightAdjunct :: (a -&gt; r b) -&gt; (l a -&gt; b)
+<span class="lineno">  106 </span>  <span class="decl"><span class="istickedoff">rightAdjunct k la = counit (fmap k la)</span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>-- | Right-hemispheric mode: a value perceived /with/ its field,
+<span class="lineno">  109 </span>-- inseparable from its ground.
+<span class="lineno">  110 </span>--
+<span class="lineno">  111 </span>-- The left adjoint of the adjunction. As a functor, 'Holistic' is
+<span class="lineno">  112 </span>-- the product functor @(- × Field)@; @fmap@ acts on the value and
+<span class="lineno">  113 </span>-- leaves the field untouched.
+<span class="lineno">  114 </span>newtype Holistic a = Holistic { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">runHolistic</span></span></span> :: (a, Field) }
+<span class="lineno">  115 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Functor</span></span></span></span>)
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>-- | Left-hemispheric mode: a value as a /strategy/ across fields,
+<span class="lineno">  118 </span>-- a context-respecting commitment that is re-evaluable in any
+<span class="lineno">  119 </span>-- field.
+<span class="lineno">  120 </span>--
+<span class="lineno">  121 </span>-- The right adjoint of the adjunction. As a functor, 'Formal' is
+<span class="lineno">  122 </span>-- the exponential @(Field -&gt; -)@; @fmap@ post-composes with the
+<span class="lineno">  123 </span>-- function.
+<span class="lineno">  124 </span>newtype Formal a = Formal { <span class="istickedoff"><span class="decl"><span class="istickedoff">runFormal</span></span></span> :: Field -&gt; a }
+<span class="lineno">  125 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Functor</span></span></span></span>)
+<span class="lineno">  126 </span>
+<span class="lineno">  127 </span>-- | The adjunction @Holistic ⊣ Formal@. The unit and counit are
+<span class="lineno">  128 </span>-- forced by the types up to 'Functor' action and require no
+<span class="lineno">  129 </span>-- additional structure on 'Field'.
+<span class="lineno">  130 </span>instance <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Adjunction Holistic Formal</span></span></span></span> where
+<span class="lineno">  131 </span>  <span class="decl"><span class="istickedoff">unit a                            = Formal (\fd -&gt; Holistic (a, fd))</span></span>
+<span class="lineno">  132 </span>  <span class="decl"><span class="istickedoff">counit (Holistic (Formal f, fd))  = f fd</span></span>
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>-- | Sharpen: extract the value from a holistic observation,
+<span class="lineno">  135 </span>-- forgetting the field. The dual of 'rebroaden' at the value
+<span class="lineno">  136 </span>-- level; together they witness the basic correspondence
+<span class="lineno">  137 </span>--
+<span class="lineno">  138 </span>-- @groundIn (Holistic (a, fd)) ≡ runFormal (rebroaden a) fd ≡ a@
+<span class="lineno">  139 </span>--
+<span class="lineno">  140 </span>-- __Status (Phase A consolidation):__ documentation-only; production
+<span class="lineno">  141 </span>-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
+<span class="lineno">  142 </span>groundIn :: Holistic a -&gt; a
+<span class="lineno">  143 </span><span class="decl"><span class="istickedoff">groundIn (Holistic (a, _fd)) = a</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>-- | Broaden: lift a bare value to a formal strategy that ignores
+<span class="lineno">  146 </span>-- the field on which it is evaluated.
+<span class="lineno">  147 </span>--
+<span class="lineno">  148 </span>-- __Status (Phase A consolidation):__ documentation-only; production
+<span class="lineno">  149 </span>-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
+<span class="lineno">  150 </span>rebroaden :: a -&gt; Formal a
+<span class="lineno">  151 </span><span class="decl"><span class="istickedoff">rebroaden a = Formal (\_fd -&gt; a)</span></span>
+<span class="lineno">  152 </span>
+<span class="lineno">  153 </span>-- | Evaluate a formal commitment under a probe field without
+<span class="lineno">  154 </span>-- baking it into a particular call site.
+<span class="lineno">  155 </span>--
+<span class="lineno">  156 </span>-- This is just 'runFormal'; the alias exists to mark observational
+<span class="lineno">  157 </span>-- (diagnostic) uses distinct from genuine grounding. Production
+<span class="lineno">  158 </span>-- code should generally go through 'rightAdjunct' rather than call
+<span class="lineno">  159 </span>-- 'probe' directly.
+<span class="lineno">  160 </span>--
+<span class="lineno">  161 </span>-- __Status (Phase A consolidation):__ documentation-only; production
+<span class="lineno">  162 </span>-- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
+<span class="lineno">  163 </span>probe :: Formal a -&gt; Field -&gt; a
+<span class="lineno">  164 </span><span class="decl"><span class="istickedoff">probe = runFormal</span></span>
+
+</pre>
+</body>
+</html>

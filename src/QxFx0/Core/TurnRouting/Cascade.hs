@@ -66,11 +66,12 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
       familyAfterPrincipled =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
-          Nothing -> applyPrincipledFamilyModulated salience rpPrincipledModeResult familyAfterIntuition
+          Nothing -> applyPrincipledFamilyModulated familyDivergenceEnabled salience rpPrincipledModeResult familyAfterIntuition
       guardReportPre = buildGuardReport (ssLastGuardReport systemState) (ssEgo systemState) rpPreEgo
-      familyAfterGuard = applyGuardGatingModulated salience guardReportPre familyAfterPrincipled
+      familyAfterGuard = applyGuardGatingModulated familyDivergenceEnabled salience guardReportPre familyAfterPrincipled
       familyCascade = fromMaybe familyAfterGuard (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterGuard)
       finalFamily = if isNixBlocked then CMRepair else familyCascade
+      familyDivergenceEnabled = False
    in FamilyCascade
         { fcFamilyAfterIdentity = familyAfterIdentity
         , fcFamilyAfterNarrative = familyAfterNarrative
@@ -105,11 +106,11 @@ applyPrincipledFamily mode family =
 -- Threshold sourced from 'defaultSalienceModulation'; Phase 7
 -- calibration goes through that single record rather than this
 -- function.
-applyPrincipledFamilyModulated :: Salience -> Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
-applyPrincipledFamilyModulated salience mode family =
+applyPrincipledFamilyModulated :: Bool -> Salience -> Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
+applyPrincipledFamilyModulated familyDivergenceEnabled salience mode family =
   case salienceDriver salience of
-    DrivenByConatusGate -> family
-    _ | salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
+    DrivenByConatusGate -> applyPrincipledFamily mode family
+    _ | familyDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
     _ -> applyPrincipledFamily mode family
 
 applyGuardGating :: IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
@@ -135,10 +136,10 @@ applyGuardGating guardReport family
 -- turns apply the full guard cascade.
 --
 -- Threshold sourced from 'defaultSalienceModulation'.
-applyGuardGatingModulated :: Salience -> IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
-applyGuardGatingModulated salience guard family
+applyGuardGatingModulated :: Bool -> Salience -> IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
+applyGuardGatingModulated familyDivergenceEnabled salience guard family
   | salienceDriver salience == DrivenByConatusGate = applyGuardGating guard family
-  | salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
+  | familyDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
       if GuardAgencyCollapse `elem` igrWarnings guard then CMRepair else family
   | otherwise = applyGuardGating guard family
 

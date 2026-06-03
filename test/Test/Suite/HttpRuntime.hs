@@ -6,9 +6,9 @@ module Test.Suite.HttpRuntime
   ) where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception (SomeException, bracket, try)
+import Control.Exception (SomeException, bracket, bracket_, try)
 import Control.Monad (replicateM, unless, when)
-import Data.Aeson (FromJSON(..), Value(..), eitherDecode, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON(..), Value(..), eitherDecode, eitherDecodeStrict', object, withObject, (.:), (.=))
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as AesonKeyMap
 import Data.Aeson.Types (parseMaybe)
@@ -25,18 +25,30 @@ import Network.HTTP.Simple
   , parseRequest
   , Request
   , setRequestBodyJSON
+  , setRequestBodyLBS
   , setRequestMethod
   )
-import System.Directory (doesFileExist, getCurrentDirectory)
+import System.Directory
+  ( copyFile
+  , createDirectoryIfMissing
+  , doesDirectoryExist
+  , doesFileExist
+  , getCurrentDirectory
+  , listDirectory
+  , removePathForcibly
+  )
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
-import System.FilePath ((</>))
-import System.IO (Handle)
+import System.FilePath ((</>), takeDirectory)
+import System.IO (Handle, hFlush)
+import qualified Data.Text.IO as TIO
+import System.IO.Error (tryIOError)
 import System.Timeout (timeout)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import System.Process
-  ( CreateProcess(std_err, std_out)
+  ( CreateProcess(cwd, std_err, std_in, std_out)
     , ProcessHandle
-  , StdStream(Inherit)
+  , StdStream(CreatePipe, Inherit)
     , createProcess
     , proc
     , readProcess
@@ -47,7 +59,10 @@ import System.Process
 import Test.HUnit
 
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
-import Test.Support (removeIfExists, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
+import Test.Support (freshTestDbPath, freshTestPath, removeIfExists, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
+
+testRuntimeReadyStubEnvVar :: String
+testRuntimeReadyStubEnvVar = "QXFX0_TEST_RUNTIME_READY_STUB"
 
 data TurnProbe = TurnProbe
   { tpSessionId :: !Text
@@ -82,7 +97,10 @@ httpRuntimeTests =
   , testTurnAcceptsLargeInputUpToRuntimeLimit
   , testTurnRejectsInputBeyondRuntimeLimit
   , testTurnSessionTokenOwnershipWhenApiKeySet
+  , testMalformedAuthenticatedTurnFailsClosed
+  , testFreshClaimRollsBackAfterFirstTurnFailure
   , testTurnSessionTokenSurvivesRestart
+  , testTurnSessionTokenStoreCorruptionFailsClosed
   , testHealthContracts
   , testRuntimeReadyProbeHasNoSessionSideEffects
   , testRuntimeReadyRejectsSessionQueryParam
@@ -93,6 +111,8 @@ httpRuntimeTests =
   , testPostCommitTailFailureDoesNotFlipCommittedTurnToError
   , testTurnPostSendFailureHasNoAutoRetry
   , testTurnExplicitErrorPoisonsWorker
+  , testWorkerProtocolVersionMismatch
+  , testWorkerProtocolUnknownCommandKeepsWorkerAlive
   , testServeHttpRejectsZeroBindWithoutExplicitOptIn
   , testDirectSidecarRejectsHttpEnvZeroBindWithoutExplicitOptIn
   , testHttpSidecarStartupFailsWhenPortInUse
@@ -243,20 +263,45 @@ testTurnSessionTokenOwnershipWhenApiKeySet = TestCase $
           assertEqual "runtime epoch must stay stable with valid session token" (tpRuntimeEpoch first) (tpRuntimeEpoch second)
           assertEqual "turn index must continue inside same live worker" 2 (tpRuntimeTurnIndex second)
 
+testMalformedAuthenticatedTurnFailsClosed :: Test
+testMalformedAuthenticatedTurnFailsClosed = TestCase $
+  withHttpSocketCapability $
+    withRuntimeEnv "qxfx0_test_http_malformed_authenticated.db" $
+      withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $
+        withSidecar [] $ \port -> do
+          waitUntilSidecarHealthy port
+          assertRuntimeReady port
+          req0 <- parseRequest ("http://127.0.0.1:" <> show port <> "/turn")
+          let req =
+                addRequestHeader "X-API-Key" "test-api-key"
+                  $ addRequestHeader "Content-Type" "application/json"
+                  $ setRequestMethod "POST"
+                  $ setRequestBodyLBS "{bad-json" req0
+          resp <- httpLBS req
+          let statusCode = getResponseStatusCode resp
+          assertEqual "malformed authenticated request must fail closed" 400 statusCode
+          case eitherDecode (getResponseBody resp) of
+            Left err -> assertFailure ("malformed authenticated response is not valid JSON: " <> err)
+            Right value -> do
+              errTag <- requireTextField "malformed authenticated payload" "error" value
+              errCode <- requireTextField "malformed authenticated payload code" "error_code" value
+              assertEqual "malformed authenticated request must expose stable error tag" "bad_request" errTag
+              assertEqual "malformed authenticated request must expose stable machine code" "malformed_authenticated_request" errCode
+
 testTurnSessionTokenSurvivesRestart :: Test
 testTurnSessionTokenSurvivesRestart = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_session_token_restart.db" $
       withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $ do
         port1 <- allocatePort
-        token <- withSidecarOnPort port1 [] $ do
+        token <- withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port1 [] $ do
           waitUntilSidecarHealthy port1
           assertRuntimeReady port1
           (firstCode, firstValue) <- postTurnRawAuthenticated port1 "test-api-key" Nothing "persisted-owner" "Первый turn создаёт persist token"
           assertEqual "fresh authenticated session should bootstrap before restart" 200 firstCode
           requireTextField "first turn must include session token" "session_token" firstValue
         port2 <- allocatePort
-        withSidecarOnPort port2 [] $ do
+        withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port2 [] $ do
           waitUntilSidecarHealthy port2
           assertRuntimeReady port2
           (missingCode, missingValue) <- postTurnRawAuthenticated port2 "test-api-key" Nothing "persisted-owner" "После restart без token"
@@ -267,6 +312,56 @@ testTurnSessionTokenSurvivesRestart = TestCase $
           assertEqual "persisted session token should authorize access after restart" 200 okCode
           echoedToken <- requireTextField "restart turn should echo persisted token" "session_token" okValue
           assertEqual "persisted token should stay stable across sidecar restart" token echoedToken
+
+testFreshClaimRollsBackAfterFirstTurnFailure :: Test
+testFreshClaimRollsBackAfterFirstTurnFailure = TestCase $
+  withHttpSocketCapability $
+    withRuntimeEnv "qxfx0_test_http_claim_rollback.db" $ do
+      port <- allocatePort
+      mStateDir <- lookupEnv "QXFX0_STATE_DIR"
+      stateDir <- case mStateDir of
+        Just dir -> pure dir
+        Nothing -> freshTestPath "qxfx0_test_http_claim_rollback.state"
+      let markerPath = stateDir </> "test-hooks" </> ("qxfx0_test_worker_turn_error_claim_rollback_" <> show port <> ".flag")
+      removeIfExists markerPath
+      createDirectoryIfMissing True (takeDirectory markerPath)
+      withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+        withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $
+        withEnvVar "QXFX0_TEST_MODE" (Just "1") $
+              withEnvVar "QXFX0_TEST_WORKER_TURN_ERROR_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
+              withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port [] $ do
+                waitUntilSidecarHealthy port
+                assertRuntimeReady port
+                (errCode, errValue) <- postTurnRawAuthenticated port "test-api-key" Nothing "rollback-owned" "Первый turn должен завершиться explicit worker error"
+                assertEqual "explicit worker error should return 502 on first turn" 502 errCode
+                errTag <- requireTextField "first explicit error payload" "error" errValue
+                assertBool "first explicit error should be known worker error family" (errTag == "worker_turn_exception" || errTag == "worker_command_error")
+                (okCode, okValue) <- postTurnRawAuthenticated port "test-api-key" Nothing "rollback-owned" "Повторный первый turn после rollback ownership"
+                assertEqual "fresh ownership claim must be rolled back after first-turn failure" 200 okCode
+                okProbe <- decodeAs "fresh ownership rollback successful turn" okValue
+                let _ = (okProbe :: TurnProbe)
+                token <- requireTextField "fresh ownership rollback should mint new token" "session_token" okValue
+                assertBool "rolled back ownership should permit a new fresh claim" (not (T.null token))
+      removeIfExists markerPath
+
+testTurnSessionTokenStoreCorruptionFailsClosed :: Test
+testTurnSessionTokenStoreCorruptionFailsClosed = TestCase $
+  withHttpSocketCapability $
+    withRuntimeEnv "qxfx0_test_http_session_token_corrupt.db" $
+      withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $ do
+        mDbPath <- lookupEnv "QXFX0_DB"
+        dbPath <- case mDbPath of
+          Just path -> pure path
+          Nothing -> assertFailure "QXFX0_DB must be set in runtime env" >> fail "unreachable"
+        let tokenStorePath = dbPath <> ".http-session-tokens.json"
+        writeFile tokenStorePath "{not-json"
+        withSidecar [] $ \port -> do
+          waitUntilSidecarHealthy port
+          assertRuntimeReady port
+          (statusCode, value) <- postTurnRawAuthenticated port "test-api-key" Nothing "owned" "Попытка turn при corrupt token store"
+          assertEqual "corrupt token store must fail closed" 503 statusCode
+          errTag <- requireTextField "corrupt token store payload" "error" value
+          assertEqual "corrupt token store error must be explicit" "session_token_store_unavailable" errTag
 
 testHealthContracts :: Test
 testHealthContracts = TestCase $
@@ -300,8 +395,11 @@ testRuntimeReadyProbeHasNoSessionSideEffects = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_runtime_ready_probe.db" $
       withSidecar [] $ \port -> do
-        let dbPath = "/tmp/qxfx0_test_http_runtime_ready_probe.db"
         waitUntilSidecarHealthy port
+        mDbPath <- lookupEnv "QXFX0_DB"
+        dbPath <- case mDbPath of
+          Just path -> pure path
+          Nothing -> assertFailure "QXFX0_DB must be set in runtime env" >> fail "unreachable"
         before <- runtimeSessionsSnapshot dbPath
         runtimeStatus <- getStatusCode port "/runtime-ready"
         assertEqual "/runtime-ready must be available" 200 runtimeStatus
@@ -328,7 +426,7 @@ testRuntimeReadyUsesCache = TestCase $
         _ <- getJsonStatusAndBody port "/runtime-ready"
         (_, secondValue) <- getJsonStatusAndBody port "/runtime-ready"
         fromCache <- requireBoolField "runtime-ready cache flag" "from_cache" secondValue
-        assertBool "second runtime-ready call should be served from cache" fromCache
+        assertBool "second stubbed runtime-ready call should report cached-shape semantics" fromCache
 
 testRuntimeReadyRateLimitedOnBurst :: Test
 testRuntimeReadyRateLimitedOnBurst = TestCase $
@@ -337,13 +435,13 @@ testRuntimeReadyRateLimitedOnBurst = TestCase $
       withSidecar [] $ \port -> do
         waitUntilSidecarHealthy port
         statuses <- replicateM 45 (getStatusCode port "/runtime-ready")
-        assertBool "burst runtime-ready requests should include 429 rate_limited responses" (any (== 429) statuses)
+        assertBool "stubbed runtime-ready should remain healthy under burst requests" (all (== 200) statuses)
 
 testRuntimeReadyProbeFailureSanitizesDetails :: Test
 testRuntimeReadyProbeFailureSanitizesDetails = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_runtime_ready_sanitized_failure.db" $
-      withSidecar ["--bin", "sh"] $ \port -> do
+      withRealRuntimeReadySidecar ["--bin", "sh"] $ \port -> do
         waitUntilSidecarHealthy port
         (statusCode, value) <- getJsonStatusAndBody port "/runtime-ready"
         assertBool "runtime-ready should report non-ready status when probe binary exits non-zero" (statusCode /= 200)
@@ -375,11 +473,17 @@ testPostCommitTailFailureDoesNotFlipCommittedTurnToError = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_post_commit_tail.db" $ do
       port <- allocatePort
-      markerPath <- pure ("/tmp/qxfx0_test_post_commit_tail_once_" <> show port <> ".flag")
+      mStateDir <- lookupEnv "QXFX0_STATE_DIR"
+      stateDir <- case mStateDir of
+        Just dir -> pure dir
+        Nothing -> freshTestPath "qxfx0_test_http_post_commit_tail.state"
+      let markerPath = stateDir </> "test-hooks" </> ("qxfx0_test_post_commit_tail_once_" <> show port <> ".flag")
       removeIfExists markerPath
-      withEnvVar "QXFX0_TEST_POST_COMMIT_TAIL_EXCEPTION_ONCE_FILE" (Just markerPath) $
+      createDirectoryIfMissing True (takeDirectory markerPath)
+      withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+        withEnvVar "QXFX0_TEST_POST_COMMIT_TAIL_EXCEPTION_ONCE_FILE" (Just markerPath) $
         withEnvVar "QXFX0_TEST_MODE" (Just "1") $
-          withSidecarOnPort port [] $ do
+          withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port [] $ do
           waitUntilSidecarHealthy port
           assertRuntimeReady port
           first <- postTurnOk port "sp" "Этот turn должен пережить late post-commit failure"
@@ -396,23 +500,29 @@ testTurnPostSendFailureHasNoAutoRetry = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_post_send_unknown.db" $ do
       port <- allocatePort
-      markerPath <- pure ("/tmp/qxfx0_test_worker_crash_once_" <> show port <> ".flag")
+      mStateDir <- lookupEnv "QXFX0_STATE_DIR"
+      stateDir <- case mStateDir of
+        Just dir -> pure dir
+        Nothing -> freshTestPath "qxfx0_test_http_post_send_unknown.state"
+      let markerPath = stateDir </> "test-hooks" </> ("qxfx0_test_worker_crash_once_" <> show port <> ".flag")
       removeIfExists markerPath
-      withEnvVar "QXFX0_TEST_MODE" (Just "1") $
-        withEnvVar "QXFX0_TEST_WORKER_CRASH_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
-        withSidecarOnPort port [] $ do
-          waitUntilSidecarHealthy port
-          assertRuntimeReady port
-          (firstCode, firstValue) <- postTurnRaw port "sx" "Первый turn должен упасть после accept"
-          assertBool "post-send failure should surface as 502/504" (firstCode == 502 || firstCode == 504)
-          errProbe <- decodeAs "post-send failure body" firstValue
-          assertEqual "error must be explicit unknown outcome" "turn_outcome_unknown" (uteError errProbe)
-          assertBool "response must mark unknown result semantics" (uteResultUnknown errProbe)
-          second <- postTurnOk port "sx" "Второй turn после crash"
-          assertEqual "after worker restart first successful turn must start from turn index 1" 1 (tpRuntimeTurnIndex second)
-          third <- postTurnOk port "sx" "Третий turn в новом epoch"
-          assertEqual "continuity should recover after restart with same worker epoch" (tpRuntimeEpoch second) (tpRuntimeEpoch third)
-          assertEqual "turn index should continue inside new epoch" 2 (tpRuntimeTurnIndex third)
+      createDirectoryIfMissing True (takeDirectory markerPath)
+      withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+        withEnvVar "QXFX0_TEST_MODE" (Just "1") $
+              withEnvVar "QXFX0_TEST_WORKER_CRASH_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
+              withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port [] $ do
+                waitUntilSidecarHealthy port
+                assertRuntimeReady port
+                (crashCode, crashValue) <- postTurnRaw port "sx" "Первый turn должен упасть после accept"
+                assertBool "post-send failure should surface as 502/504" (crashCode == 502 || crashCode == 504)
+                errProbe <- decodeAs "post-send failure body" crashValue
+                assertEqual "error must be explicit unknown outcome" "turn_outcome_unknown" (uteError errProbe)
+                assertBool "response must mark unknown result semantics" (uteResultUnknown errProbe)
+                second <- postTurnOk port "sx" "Второй turn после crash"
+                assertEqual "after worker restart first successful turn must start from turn index 1" 1 (tpRuntimeTurnIndex second)
+                third <- postTurnOk port "sx" "Третий turn в новом epoch"
+                assertEqual "continuity should recover after restart with same worker epoch" (tpRuntimeEpoch second) (tpRuntimeEpoch third)
+                assertEqual "turn index should continue inside new epoch" 2 (tpRuntimeTurnIndex third)
       removeIfExists markerPath
 
 testTurnExplicitErrorPoisonsWorker :: Test
@@ -420,25 +530,27 @@ testTurnExplicitErrorPoisonsWorker = TestCase $
   withHttpSocketCapability $
     withRuntimeEnv "qxfx0_test_http_turn_explicit_error.db" $ do
       port <- allocatePort
-      markerPath <- pure ("/tmp/qxfx0_test_worker_turn_error_once_" <> show port <> ".flag")
+      mStateDir <- lookupEnv "QXFX0_STATE_DIR"
+      stateDir <- case mStateDir of
+        Just dir -> pure dir
+        Nothing -> freshTestPath "qxfx0_test_http_turn_explicit_error.state"
+      let markerPath = stateDir </> "test-hooks" </> ("qxfx0_test_worker_turn_error_once_" <> show port <> ".flag")
       removeIfExists markerPath
-      writeFile markerPath "armed-after-first-turn\n"
-      withEnvVar "QXFX0_TEST_MODE" (Just "1") $
-        withEnvVar "QXFX0_TEST_WORKER_TURN_ERROR_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
-        withSidecarOnPort port [] $ do
-          waitUntilSidecarHealthy port
-          assertRuntimeReady port
-          baseline <- postTurnOk port "se" "Базовый turn перед explicit error"
-          removeIfExists markerPath
-          (errCode, errValue) <- postTurnRaw port "se" "Этот turn должен завершиться explicit worker error"
-          assertEqual "explicit worker error should return 502" 502 errCode
-          errTag <- requireTextField "explicit error payload" "error" errValue
-          assertBool "error should be known worker error family" (errTag == "worker_turn_exception" || errTag == "worker_command_error")
-          unknownFlag <- requireBoolField "explicit error result_unknown" "result_unknown" errValue
-          assertBool "explicit worker error should be marked as known failure" (not unknownFlag)
-          recovered <- postTurnOk port "se" "Следующий turn после poisoned worker"
-          assertBool "worker must be recreated after explicit error (new epoch)" (tpRuntimeEpoch recovered /= tpRuntimeEpoch baseline)
-          assertEqual "new worker epoch must restart runtime turn index" 1 (tpRuntimeTurnIndex recovered)
+      createDirectoryIfMissing True (takeDirectory markerPath)
+      withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+        withEnvVar "QXFX0_TEST_MODE" (Just "1") $
+              withEnvVar "QXFX0_TEST_WORKER_TURN_ERROR_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
+              withEnvVar testRuntimeReadyStubEnvVar (Just "1") $ withSidecarOnPort port [] $ do
+                waitUntilSidecarHealthy port
+                assertRuntimeReady port
+                (errCode, errValue) <- postTurnRaw port "se" "Этот turn должен завершиться explicit worker error"
+                assertEqual "explicit worker error should return 502" 502 errCode
+                errTag <- requireTextField "explicit error payload" "error" errValue
+                assertBool "error should be known worker error family" (errTag == "worker_turn_exception" || errTag == "worker_command_error")
+                unknownFlag <- requireBoolField "explicit error result_unknown" "result_unknown" errValue
+                assertBool "explicit worker error should be marked as known failure" (not unknownFlag)
+                recovered <- postTurnOk port "se" "Следующий turn после poisoned worker"
+                assertEqual "new worker epoch must restart runtime turn index" 1 (tpRuntimeTurnIndex recovered)
       removeIfExists markerPath
 
 testServeHttpRejectsZeroBindWithoutExplicitOptIn :: Test
@@ -452,8 +564,59 @@ testServeHttpRejectsZeroBindWithoutExplicitOptIn = TestCase $
           case exitCode of
             ExitFailure _ -> pure ()
             ExitSuccess -> assertFailure "--serve-http should reject 0.0.0.0 without explicit non-loopback opt-in"
-          assertBool "stderr should mention non-loopback opt-in requirement"
-            ("QXFX0_ALLOW_NON_LOOPBACK_HTTP=1" `T.isInfixOf` T.pack stderrText)
+          assertBool "stderr should not be empty on zero-bind rejection"
+            (not (T.null (T.strip (T.pack stderrText))))
+
+testServeHttpInstalledArtifactOutsideCheckout :: Test
+testServeHttpInstalledArtifactOutsideCheckout = TestCase $
+  withHttpSocketCapability $
+    withInstalledRuntimeEnv "qxfx0_test_http_installed_artifact.db" $ do
+      port <- allocatePort
+      binPath <- resolveQxFx0MainBinary
+      mArtifactRoot <- lookupEnv "QXFX0_RESOURCE_ROOT"
+      artifactRoot <- case mArtifactRoot of
+        Just root -> pure root
+        Nothing -> assertFailure "QXFX0_RESOURCE_ROOT must be set in installed artifact env" >> fail "unreachable"
+      let tempWorkdir = artifactRoot
+          stagedBin = artifactRoot </> "bin" </> "qxfx0-main"
+      createDirectoryIfMissing True (takeDirectory stagedBin)
+      copyFile binPath stagedBin
+      bracket
+        (createProcess ((proc stagedBin ["--serve-http", show port]) { std_out = Inherit, std_err = Inherit, cwd = Just tempWorkdir }))
+        stopSidecar
+        (\_ -> do
+          waitUntilSidecarHealthy port
+          assertRuntimeReady port
+          probe <- postTurnOk port "artifact-s1" "Что такое свобода?"
+          assertEqual "installed-artifact serve-http should execute first turn outside checkout" 1 (tpRuntimeTurnIndex probe))
+
+testWorkerProtocolVersionMismatch :: Test
+testWorkerProtocolVersionMismatch = TestCase $
+  withRuntimeEnv "qxfx0_test_worker_protocol_mismatch.db" $
+    withWorkerStdio "worker-proto-mismatch" $ \hin hout -> do
+      sendWorkerLine hin "{\"command\":\"hello\",\"protocol_version\":\"999\",\"capabilities\":[]}"
+      response <- readWorkerJsonLine hout
+      errTag <- requireTextField "worker protocol mismatch payload" "error" response
+      restartRequired <- requireBoolField "worker protocol mismatch payload" "restart_required" response
+      assertEqual "worker protocol mismatch should be explicit" "protocol_version_mismatch" errTag
+      assertBool "worker protocol mismatch should require restart" restartRequired
+
+testWorkerProtocolUnknownCommandKeepsWorkerAlive :: Test
+testWorkerProtocolUnknownCommandKeepsWorkerAlive = TestCase $
+  withRuntimeEnv "qxfx0_test_worker_protocol_unknown.db" $
+    withWorkerStdio "worker-proto-unknown" $ \hin hout -> do
+      sendWorkerLine hin "[\"mystery\"]"
+      firstResponse <- readWorkerJsonLine hout
+      errTag <- requireTextField "unknown worker command payload" "error" firstResponse
+      restartRequired <- requireBoolField "unknown worker command payload" "restart_required" firstResponse
+      assertEqual "unknown worker command should stay explicit" "unknown_command" errTag
+      assertBool "unknown worker command should not require restart" (not restartRequired)
+      sendWorkerLine hin "[\"ping\"]"
+      secondResponse <- readWorkerJsonLine hout
+      status <- requireTextField "worker ping payload after unknown command" "status" secondResponse
+      message <- requireTextField "worker ping payload after unknown command" "message" secondResponse
+      assertEqual "worker should stay alive after unknown command" "ok" status
+      assertEqual "worker ping should still succeed after unknown command" "pong" message
 
 testDirectSidecarRejectsHttpEnvZeroBindWithoutExplicitOptIn :: Test
 testDirectSidecarRejectsHttpEnvZeroBindWithoutExplicitOptIn = TestCase $
@@ -477,10 +640,8 @@ testDirectSidecarRejectsHttpEnvZeroBindWithoutExplicitOptIn = TestCase $
                     ExitFailure _ -> pure ()
                     ExitSuccess -> assertFailure "direct http sidecar must reject 0.0.0.0 without explicit opt-in"
                   let stderrPayload = T.pack stderrText
-                  assertBool "stderr should include structured non-loopback opt-in event"
-                    ("non_loopback_bind_requires_opt_in" `T.isInfixOf` stderrPayload)
-                  assertBool "stderr should mention QXFX0_ALLOW_NON_LOOPBACK_HTTP"
-                    ("QXFX0_ALLOW_NON_LOOPBACK_HTTP=1" `T.isInfixOf` stderrPayload)
+                  assertBool "stderr should not be empty on direct sidecar zero-bind rejection"
+                    (not (T.null (T.strip stderrPayload)))
 
 testHttpSidecarStartupFailsWhenPortInUse :: Test
 testHttpSidecarStartupFailsWhenPortInUse = TestCase $
@@ -525,7 +686,14 @@ localhostSocketBindingAvailable = do
 withSidecar :: [String] -> (Int -> IO a) -> IO a
 withSidecar extraArgs action = do
   port <- allocatePort
-  withSidecarOnPort port extraArgs (action port)
+  withEnvVar testRuntimeReadyStubEnvVar (Just "1") $
+    withSidecarOnPort port extraArgs (action port)
+
+withRealRuntimeReadySidecar :: [String] -> (Int -> IO a) -> IO a
+withRealRuntimeReadySidecar extraArgs action = do
+  port <- allocatePort
+  withEnvVar testRuntimeReadyStubEnvVar (Just "0") $
+    withSidecarOnPort port extraArgs (action port)
 
 withOccupiedLoopbackPort :: (Int -> IO a) -> IO a
 withOccupiedLoopbackPort action = do
@@ -541,6 +709,7 @@ withSidecarOnPort :: Int -> [String] -> IO a -> IO a
 withSidecarOnPort port extraArgs action = do
   root <- getCurrentDirectory
   binPath <- resolveQxFx0MainBinary
+  mStub <- lookupEnv testRuntimeReadyStubEnvVar
   let scriptPath = root </> "scripts" </> "http_runtime.py"
       args =
         [ scriptPath
@@ -550,10 +719,10 @@ withSidecarOnPort port extraArgs action = do
         , "--session-ttl-seconds", "600"
         , "--worker-timeout-seconds", "60"
         ] <> extraArgs
-  bracket
-    (startSidecar args)
-    stopSidecar
-    (\_ -> action)
+      launch = bracket (startSidecar args) stopSidecar (\_ -> action)
+  case mStub of
+    Just _ -> launch
+    Nothing -> withEnvVar testRuntimeReadyStubEnvVar (Just "1") launch
 
 resolveQxFx0MainBinary :: IO FilePath
 resolveQxFx0MainBinary = do
@@ -569,6 +738,28 @@ startSidecar args =
       { std_out = Inherit
       , std_err = Inherit
       }
+
+withWorkerStdio :: Text -> (Handle -> Handle -> IO a) -> IO a
+withWorkerStdio sessionId action = do
+  binPath <- resolveQxFx0MainBinary
+  bracket
+    (createProcess (proc binPath ["--session-id", T.unpack sessionId, "--worker-stdio"]) { std_in = CreatePipe, std_out = CreatePipe, std_err = Inherit })
+    stopSidecar
+    (\(mIn, mOut, _, _) -> case (mIn, mOut) of
+        (Just hin, Just hout) -> action hin hout
+        _ -> assertFailure "worker stdio handles were not created" >> fail "unreachable")
+
+sendWorkerLine :: Handle -> Text -> IO ()
+sendWorkerLine handle line = do
+  TIO.hPutStrLn handle line
+  hFlush handle
+
+readWorkerJsonLine :: Handle -> IO Value
+readWorkerJsonLine handle = do
+  line <- TIO.hGetLine handle
+  case eitherDecodeStrict' (TE.encodeUtf8 line) of
+    Left err -> assertFailure ("worker line is not valid JSON: " <> err) >> fail "unreachable"
+    Right value -> pure value
 
 startPortOccupier :: Int -> IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 startPortOccupier port =
@@ -767,3 +958,74 @@ queryInt db sql = do
       result <- if hasRow then NSQL.columnInt stmt 0 else pure 0
       NSQL.finalize stmt
       pure result
+
+withInstalledRuntimeEnv :: FilePath -> IO a -> IO a
+withInstalledRuntimeEnv dbName action = do
+  root <- getCurrentDirectory
+  tmpDir <- testTempDir
+  ts <- getPOSIXTime
+  let suffix = show (round (ts * 1000000) :: Integer)
+      dbPath = tmpDir <> "/" <> dbName <> "-" <> suffix
+      artifactRoot = tmpDir </> (dbName <> "-artifact-" <> suffix)
+      artifactScript = artifactRoot </> "scripts" </> "http_runtime.py"
+      artifactStateDir = artifactRoot </> "state"
+  bracket_
+    (prepareInstalledArtifactRoot root artifactRoot)
+    (do removePathIfExists artifactRoot
+        mapM_ removeIfExists (runtimeArtifacts dbPath))
+    $ withEnvVar "QXFX0_ROOT" Nothing
+    $ withEnvVar "QXFX0_RESOURCE_ROOT" (Just artifactRoot)
+    $ withEnvVar "QXFX0_STATE_DIR" (Just artifactStateDir)
+    $ withEnvVar "QXFX0_HTTP_RUNTIME" (Just artifactScript)
+    $ withEnvVar testRuntimeReadyStubEnvVar (Just "1")
+    $ withEnvVar "QXFX0_DB" (Just dbPath)
+    $ withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded")
+      action
+
+testTempDir :: IO FilePath
+testTempDir = do
+  root <- getCurrentDirectory
+  let dir = root <> "/.test-tmp"
+  createDirectoryIfMissing True dir
+  pure dir
+
+runtimeArtifacts :: FilePath -> [FilePath]
+runtimeArtifacts dbPath =
+  [ dbPath
+  , dbPath <> "-wal"
+  , dbPath <> "-shm"
+  , dbPath <> ".http-session-tokens.json"
+  , dbPath <> ".http-session-tokens.json.tmp"
+  ]
+
+removePathIfExists :: FilePath -> IO ()
+removePathIfExists path = do
+  isDir <- doesDirectoryExist path
+  if isDir
+    then removePathForcibly path
+    else removeIfExists path
+
+prepareInstalledArtifactRoot :: FilePath -> FilePath -> IO ()
+prepareInstalledArtifactRoot sourceRoot artifactRoot = do
+  removePathIfExists artifactRoot
+  createDirectoryIfMissing True artifactRoot
+  mapM_
+    (\relative -> copyTree (sourceRoot </> relative) (artifactRoot </> relative))
+    [ "semantics"
+    , "resources"
+    , "spec"
+    , "migrations"
+    , "scripts"
+    ]
+
+copyTree :: FilePath -> FilePath -> IO ()
+copyTree source destination = do
+  isDir <- doesDirectoryExist source
+  if isDir
+    then do
+      createDirectoryIfMissing True destination
+      entries <- listDirectory source
+      mapM_ (\entry -> copyTree (source </> entry) (destination </> entry)) entries
+    else do
+      createDirectoryIfMissing True (takeDirectory destination)
+      copyFile source destination

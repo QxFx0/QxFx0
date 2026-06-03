@@ -39,12 +39,13 @@ in {
         QXFX0_CONCEPTS_PATH = cfg.conceptsPath;
       };
     in
+    {
       description = "QxFx0 Philosophical Dialogue Thinking System";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
+      path = [ pkgs.python3 ];
 
       environment = {
-        QXFX0_ROOT = "/var/lib/qxfx0";
         QXFX0_DB = cfg.dbPath;
         QXFX0_HTTP_PORT = toString cfg.port;
         QXFX0_HTTP_HOST = "127.0.0.1";
@@ -93,7 +94,7 @@ in {
 
         LimitNOFILE = 1024;
         Restart = "on-failure";
-        RestartSec = "5s";
+      RestartSec = "5s";
       };
     };
 

@@ -1,0 +1,363 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>module QxFx0.Semantic.Input.Lexicon
+<span class="lineno">    4 </span>  ( guessPartOfSpeech
+<span class="lineno">    5 </span>  , guessMorphFeatures
+<span class="lineno">    6 </span>  , semanticClassesForToken
+<span class="lineno">    7 </span>  , semanticClassesForLemmaAndPos
+<span class="lineno">    8 </span>  , discourseFunctionsForToken
+<span class="lineno">    9 </span>  , lemmaForToken
+<span class="lineno">   10 </span>  , isFunctionWord
+<span class="lineno">   11 </span>  , isWorldNoun
+<span class="lineno">   12 </span>  , isMentalNoun
+<span class="lineno">   13 </span>  , isCapabilityLemma
+<span class="lineno">   14 </span>  , isAssistanceLemma
+<span class="lineno">   15 </span>  , isIdentityLemma
+<span class="lineno">   16 </span>  , isGenerativeRequestLemma
+<span class="lineno">   17 </span>  , inputGeneratedLexiconAuthorityClass
+<span class="lineno">   18 </span>  , inputGeneratedLexiconProvenanceTag
+<span class="lineno">   19 </span>  ) where
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>import Data.Text (Text)
+<span class="lineno">   22 </span>import qualified Data.Text as T
+<span class="lineno">   23 </span>import Data.Maybe (fromMaybe)
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>import QxFx0.Types.Observability (AuthorityClass(..))
+<span class="lineno">   26 </span>import QxFx0.Semantic.Input.Model
+<span class="lineno">   27 </span>import QxFx0.Semantic.Input.GeneratedLexicon (generatedFormToLemma, generatedLemmaToPos, generatedLemmaToSem)
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>inputGeneratedLexiconAuthorityClass :: AuthorityClass
+<span class="lineno">   30 </span><span class="decl"><span class="nottickedoff">inputGeneratedLexiconAuthorityClass = AuthorityGeneratedArtifact</span></span>
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>inputGeneratedLexiconProvenanceTag :: Text
+<span class="lineno">   33 </span><span class="decl"><span class="istickedoff">inputGeneratedLexiconProvenanceTag = &quot;generated_input_lexicon_compat&quot;</span></span>
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>guessPartOfSpeech :: Text -&gt; InputPartOfSpeech
+<span class="lineno">   36 </span><span class="decl"><span class="istickedoff">guessPartOfSpeech token =</span>
+<span class="lineno">   37 </span><span class="spaces">  </span><span class="istickedoff">case posOverride (lemmaForToken token) of</span>
+<span class="lineno">   38 </span><span class="spaces">    </span><span class="istickedoff">Just forcedPos -&gt; forcedPos</span>
+<span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">case generatedLemmaToPos (lemmaForToken token) of</span>
+<span class="lineno">   41 </span><span class="spaces">        </span><span class="istickedoff">Just pos -&gt; pos</span>
+<span class="lineno">   42 </span><span class="spaces">        </span><span class="istickedoff">Nothing</span>
+<span class="lineno">   43 </span><span class="spaces">          </span><span class="istickedoff">| token `elem` prepositions -&gt; PosPreposition</span>
+<span class="lineno">   44 </span><span class="spaces">          </span><span class="istickedoff">| token `elem` conjunctions -&gt; PosConjunction</span>
+<span class="lineno">   45 </span><span class="spaces">          </span><span class="istickedoff">| token `elem` particles -&gt; PosParticle</span>
+<span class="lineno">   46 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlyfalse">token `elem` interjections</span> -&gt; <span class="nottickedoff">PosInterjection</span></span>
+<span class="lineno">   47 </span><span class="spaces">          </span><span class="istickedoff">| token `elem` pronouns -&gt; PosPronoun</span>
+<span class="lineno">   48 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlyfalse">token `elem` numerals</span> -&gt; <span class="nottickedoff">PosNumeral</span></span>
+<span class="lineno">   49 </span><span class="spaces">          </span><span class="istickedoff">| isVerbLike token -&gt; PosVerb</span>
+<span class="lineno">   50 </span><span class="spaces">          </span><span class="istickedoff">| isAdjectiveLike token -&gt; PosAdjective</span>
+<span class="lineno">   51 </span><span class="spaces">          </span><span class="istickedoff">| isAdverbLike token -&gt; PosAdverb</span>
+<span class="lineno">   52 </span><span class="spaces">          </span><span class="istickedoff">| isNounLike token -&gt; PosNoun</span>
+<span class="lineno">   53 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt; PosUnknown</span></span>
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>guessMorphFeatures :: Text -&gt; [InputMorphFeature]
+<span class="lineno">   56 </span><span class="decl"><span class="istickedoff">guessMorphFeatures token =</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">concat</span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">[ if token == &quot;не&quot; then [FeatNegated] else []</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` firstPerson then [FeatPerson1] else []</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` secondPerson then [FeatPerson2] else []</span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` pluralHints then [FeatNumberPlur] else []</span>
+<span class="lineno">   62 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` singularHints then [FeatNumberSing] else []</span>
+<span class="lineno">   63 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>semanticClassesForToken :: Text -&gt; [InputSemanticClass]
+<span class="lineno">   66 </span><span class="decl"><span class="nottickedoff">semanticClassesForToken token =</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="nottickedoff">semanticClassesForLemmaAndPos token (lemmaForToken token) (guessPartOfSpeech token)</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>semanticClassesForLemmaAndPos :: Text -&gt; Text -&gt; InputPartOfSpeech -&gt; [InputSemanticClass]
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">semanticClassesForLemmaAndPos token lemma pos =</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">let genSem = generatedLemmaToSem lemma</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="istickedoff">in case semanticOverride lemma of</span>
+<span class="lineno">   73 </span><span class="spaces">       </span><span class="istickedoff">Just forcedSem -&gt; forcedSem</span>
+<span class="lineno">   74 </span><span class="spaces">       </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   75 </span><span class="spaces">         </span><span class="istickedoff">if not (null genSem) then genSem else</span>
+<span class="lineno">   76 </span><span class="spaces">           </span><span class="istickedoff">if <span class="tickonlyfalse">token `elem` selfReferenceTokens</span> then <span class="nottickedoff">[SemSelfReference]</span></span>
+<span class="lineno">   77 </span><span class="spaces">           </span><span class="istickedoff">else if token `elem` userReferenceTokens then [SemUserReference]</span>
+<span class="lineno">   78 </span><span class="spaces">           </span><span class="istickedoff">else if <span class="tickonlyfalse">isIdentityLemma lemma</span> then <span class="nottickedoff">[SemIdentity]</span></span>
+<span class="lineno">   79 </span><span class="spaces">           </span><span class="istickedoff">else if isWorldNoun lemma || isWorldNoun token then [SemWorldObject]</span>
+<span class="lineno">   80 </span><span class="spaces">           </span><span class="istickedoff">else if isMentalNoun lemma || isMentalNoun token then [SemMentalObject]</span>
+<span class="lineno">   81 </span><span class="spaces">           </span><span class="istickedoff">else if lemma `elem` knowledgeTokens || token `elem` knowledgeTokens then [SemKnowledge]</span>
+<span class="lineno">   82 </span><span class="spaces">           </span><span class="istickedoff">else if lemma `elem` comparisonTokens || token `elem` comparisonTokens then [SemComparison]</span>
+<span class="lineno">   83 </span><span class="spaces">           </span><span class="istickedoff">else if lemma `elem` causeTokens || token `elem` causeTokens then [SemCause]</span>
+<span class="lineno">   84 </span><span class="spaces">           </span><span class="istickedoff">else if <span class="tickonlyfalse">lemma `elem` invitationTokens || token `elem` invitationTokens</span> then <span class="nottickedoff">[SemDialogueInvitation]</span></span>
+<span class="lineno">   85 </span><span class="spaces">           </span><span class="istickedoff">else if lemma `elem` repairTokens || token `elem` repairTokens then [SemDialogueRepair]</span>
+<span class="lineno">   86 </span><span class="spaces">           </span><span class="istickedoff">else if lemma `elem` contemplativeTokens || token `elem` contemplativeTokens then [SemContemplative]</span>
+<span class="lineno">   87 </span><span class="spaces">           </span><span class="istickedoff">else case pos of</span>
+<span class="lineno">   88 </span><span class="spaces">             </span><span class="istickedoff">PosVerb -&gt; [SemAction]</span>
+<span class="lineno">   89 </span><span class="spaces">             </span><span class="istickedoff">PosAdjective -&gt; [SemState, SemQualityProperty]</span>
+<span class="lineno">   90 </span><span class="spaces">             </span><span class="istickedoff">PosAdverb -&gt; [SemState]</span>
+<span class="lineno">   91 </span><span class="spaces">             </span><span class="istickedoff">PosNoun</span>
+<span class="lineno">   92 </span><span class="spaces">               </span><span class="istickedoff">| isAbstractNounLike lemma -&gt; [SemAbstractConcept]</span>
+<span class="lineno">   93 </span><span class="spaces">               </span><span class="istickedoff">| <span class="tickonlyfalse">isPhysicalNounLike lemma</span> -&gt; <span class="nottickedoff">[SemPhysicalObject, SemWorldObject]</span></span>
+<span class="lineno">   94 </span><span class="spaces">               </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> -&gt; [SemUnknown]</span>
+<span class="lineno">   95 </span><span class="spaces">             </span><span class="istickedoff">PosPronoun -&gt; [<span class="nottickedoff">SemUnknown</span>]</span>
+<span class="lineno">   96 </span><span class="spaces">             </span><span class="istickedoff">PosNumeral -&gt; <span class="nottickedoff">[SemUnknown]</span></span>
+<span class="lineno">   97 </span><span class="spaces">             </span><span class="istickedoff">PosPreposition -&gt; [SemRelation]</span>
+<span class="lineno">   98 </span><span class="spaces">             </span><span class="istickedoff">PosConjunction -&gt; [SemUnknown]</span>
+<span class="lineno">   99 </span><span class="spaces">             </span><span class="istickedoff">PosParticle -&gt; [SemUnknown]</span>
+<span class="lineno">  100 </span><span class="spaces">             </span><span class="istickedoff">PosInterjection -&gt; <span class="nottickedoff">[SemDialogueInvitation]</span></span>
+<span class="lineno">  101 </span><span class="spaces">             </span><span class="istickedoff">PosUnknown -&gt; [SemUnknown]</span></span>
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>posOverride :: Text -&gt; Maybe InputPartOfSpeech
+<span class="lineno">  104 </span><span class="decl"><span class="istickedoff">posOverride lemma =</span>
+<span class="lineno">  105 </span><span class="spaces">  </span><span class="istickedoff">case lemma of</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">&quot;привет&quot; -&gt; Just PosInterjection</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">&quot;здравствуй&quot; -&gt; <span class="nottickedoff">Just PosInterjection</span></span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">&quot;здравствуйте&quot; -&gt; <span class="nottickedoff">Just PosInterjection</span></span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">&quot;салют&quot; -&gt; <span class="nottickedoff">Just PosInterjection</span></span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">&quot;хай&quot; -&gt; <span class="nottickedoff">Just PosInterjection</span></span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; Nothing</span></span>
+<span class="lineno">  112 </span>
+<span class="lineno">  113 </span>semanticOverride :: Text -&gt; Maybe [InputSemanticClass]
+<span class="lineno">  114 </span><span class="decl"><span class="istickedoff">semanticOverride lemma</span>
+<span class="lineno">  115 </span><span class="spaces">  </span><span class="istickedoff">| lemma `elem` [&quot;привет&quot;, &quot;здравствуй&quot;, &quot;здравствуйте&quot;, &quot;салют&quot;, &quot;хай&quot;] =</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">Just [SemDialogueInvitation]</span>
+<span class="lineno">  117 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = Nothing</span></span>
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>discourseFunctionsForToken :: Text -&gt; [InputDiscourseFunction]
+<span class="lineno">  120 </span><span class="decl"><span class="istickedoff">discourseFunctionsForToken token =</span>
+<span class="lineno">  121 </span><span class="spaces">  </span><span class="istickedoff">concat</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">[ if token == &quot;не&quot; then [DiscNegation] else []</span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` questionMarkers then [DiscQuestion] else []</span>
+<span class="lineno">  124 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` contrastMarkers then [DiscContrast] else []</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` conditionMarkers then [DiscCondition] else []</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` causeMarkers then [DiscCause] else []</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` resultMarkers then [DiscResult] else []</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` invitationTokens then [DiscInvitation] else []</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` clarifyMarkers then [DiscClarification] else []</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="istickedoff">, if token `elem` emphasisMarkers then [DiscEmphasis] else []</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>lemmaForToken :: Text -&gt; Text
+<span class="lineno">  134 </span><span class="decl"><span class="istickedoff">lemmaForToken token =</span>
+<span class="lineno">  135 </span><span class="spaces">  </span><span class="istickedoff">fromMaybe (fallbackLemma token) (generatedFormToLemma token)</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>fallbackLemma :: Text -&gt; Text
+<span class="lineno">  138 </span><span class="decl"><span class="istickedoff">fallbackLemma token =</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">case token of</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">&quot;мне&quot; -&gt; <span class="nottickedoff">&quot;я&quot;</span></span>
+<span class="lineno">  141 </span><span class="spaces">    </span><span class="istickedoff">&quot;меня&quot; -&gt; <span class="nottickedoff">&quot;я&quot;</span></span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="istickedoff">&quot;мной&quot; -&gt; <span class="nottickedoff">&quot;я&quot;</span></span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="istickedoff">&quot;тобой&quot; -&gt; <span class="nottickedoff">&quot;ты&quot;</span></span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">&quot;тебе&quot; -&gt; <span class="nottickedoff">&quot;ты&quot;</span></span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">&quot;тебя&quot; -&gt; <span class="nottickedoff">&quot;ты&quot;</span></span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">&quot;нас&quot; -&gt; <span class="nottickedoff">&quot;мы&quot;</span></span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="istickedoff">&quot;вами&quot; -&gt; <span class="nottickedoff">&quot;вы&quot;</span></span>
+<span class="lineno">  148 </span><span class="spaces">    </span><span class="istickedoff">&quot;солнца&quot; -&gt; <span class="nottickedoff">&quot;солнце&quot;</span></span>
+<span class="lineno">  149 </span><span class="spaces">    </span><span class="istickedoff">&quot;мысли&quot; -&gt; <span class="nottickedoff">&quot;мысль&quot;</span></span>
+<span class="lineno">  150 </span><span class="spaces">    </span><span class="istickedoff">&quot;логике&quot; -&gt; <span class="nottickedoff">&quot;логика&quot;</span></span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="istickedoff">&quot;умею&quot; -&gt; <span class="nottickedoff">&quot;уметь&quot;</span></span>
+<span class="lineno">  152 </span><span class="spaces">    </span><span class="istickedoff">&quot;умеешь&quot; -&gt; &quot;уметь&quot;</span>
+<span class="lineno">  153 </span><span class="spaces">    </span><span class="istickedoff">&quot;умеет&quot; -&gt; <span class="nottickedoff">&quot;уметь&quot;</span></span>
+<span class="lineno">  154 </span><span class="spaces">    </span><span class="istickedoff">&quot;умеем&quot; -&gt; <span class="nottickedoff">&quot;уметь&quot;</span></span>
+<span class="lineno">  155 </span><span class="spaces">    </span><span class="istickedoff">&quot;умеют&quot; -&gt; <span class="nottickedoff">&quot;уметь&quot;</span></span>
+<span class="lineno">  156 </span><span class="spaces">    </span><span class="istickedoff">&quot;могу&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  157 </span><span class="spaces">    </span><span class="istickedoff">&quot;можешь&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="istickedoff">&quot;может&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="istickedoff">&quot;можем&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="istickedoff">&quot;можете&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">&quot;могут&quot; -&gt; <span class="nottickedoff">&quot;мочь&quot;</span></span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">&quot;помогу&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff">&quot;поможешь&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="istickedoff">&quot;поможет&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">&quot;поможем&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">&quot;поможете&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">&quot;помогут&quot; -&gt; <span class="nottickedoff">&quot;помочь&quot;</span></span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">&quot;являешься&quot; -&gt; <span class="nottickedoff">&quot;являться&quot;</span></span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">&quot;являюсь&quot; -&gt; <span class="nottickedoff">&quot;являться&quot;</span></span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">&quot;является&quot; -&gt; <span class="nottickedoff">&quot;являться&quot;</span></span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">&quot;такой&quot; -&gt; <span class="nottickedoff">&quot;такой&quot;</span></span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">&quot;такая&quot; -&gt; <span class="nottickedoff">&quot;такой&quot;</span></span>
+<span class="lineno">  173 </span><span class="spaces">    </span><span class="istickedoff">&quot;такое&quot; -&gt; <span class="nottickedoff">&quot;такой&quot;</span></span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="istickedoff">&quot;такие&quot; -&gt; <span class="nottickedoff">&quot;такой&quot;</span></span>
+<span class="lineno">  175 </span><span class="spaces">    </span><span class="istickedoff">&quot;логичное&quot; -&gt; &quot;логичный&quot;</span>
+<span class="lineno">  176 </span><span class="spaces">    </span><span class="istickedoff">&quot;логичная&quot; -&gt; <span class="nottickedoff">&quot;логичный&quot;</span></span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="istickedoff">&quot;логичный&quot; -&gt; <span class="nottickedoff">&quot;логичный&quot;</span></span>
+<span class="lineno">  178 </span><span class="spaces">    </span><span class="istickedoff">&quot;логично&quot; -&gt; <span class="nottickedoff">&quot;логичный&quot;</span></span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">&quot;интересную&quot; -&gt; &quot;интересный&quot;</span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff">&quot;интересная&quot; -&gt; &quot;интересный&quot;</span>
+<span class="lineno">  181 </span><span class="spaces">    </span><span class="istickedoff">&quot;интересное&quot; -&gt; <span class="nottickedoff">&quot;интересный&quot;</span></span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="istickedoff">&quot;новую&quot; -&gt; &quot;новый&quot;</span>
+<span class="lineno">  183 </span><span class="spaces">    </span><span class="istickedoff">&quot;другую&quot; -&gt; <span class="nottickedoff">&quot;другой&quot;</span></span>
+<span class="lineno">  184 </span><span class="spaces">    </span><span class="istickedoff">&quot;купил&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  185 </span><span class="spaces">    </span><span class="istickedoff">&quot;купила&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="istickedoff">&quot;купили&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  187 </span><span class="spaces">    </span><span class="istickedoff">&quot;куплю&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  188 </span><span class="spaces">    </span><span class="istickedoff">&quot;купишь&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  189 </span><span class="spaces">    </span><span class="istickedoff">&quot;купит&quot; -&gt; <span class="nottickedoff">&quot;купить&quot;</span></span>
+<span class="lineno">  190 </span><span class="spaces">    </span><span class="istickedoff">&quot;живу&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  191 </span><span class="spaces">    </span><span class="istickedoff">&quot;живешь&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">&quot;живёт&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="istickedoff">&quot;живет&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="istickedoff">&quot;живем&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  195 </span><span class="spaces">    </span><span class="istickedoff">&quot;живём&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  196 </span><span class="spaces">    </span><span class="istickedoff">&quot;живете&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">&quot;живёте&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">&quot;живут&quot; -&gt; <span class="nottickedoff">&quot;жить&quot;</span></span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="istickedoff">&quot;оказался&quot; -&gt; <span class="nottickedoff">&quot;оказаться&quot;</span></span>
+<span class="lineno">  200 </span><span class="spaces">    </span><span class="istickedoff">&quot;оказалась&quot; -&gt; <span class="nottickedoff">&quot;оказаться&quot;</span></span>
+<span class="lineno">  201 </span><span class="spaces">    </span><span class="istickedoff">&quot;оказалось&quot; -&gt; <span class="nottickedoff">&quot;оказаться&quot;</span></span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="istickedoff">&quot;оказались&quot; -&gt; <span class="nottickedoff">&quot;оказаться&quot;</span></span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">&quot;оказывается&quot; -&gt; <span class="nottickedoff">&quot;оказаться&quot;</span></span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">&quot;голубая&quot; -&gt; <span class="nottickedoff">&quot;голубой&quot;</span></span>
+<span class="lineno">  205 </span><span class="spaces">    </span><span class="istickedoff">&quot;голубое&quot; -&gt; <span class="nottickedoff">&quot;голубой&quot;</span></span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="istickedoff">&quot;голубые&quot; -&gt; <span class="nottickedoff">&quot;голубой&quot;</span></span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">&quot;голубого&quot; -&gt; <span class="nottickedoff">&quot;голубой&quot;</span></span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">&quot;голубому&quot; -&gt; <span class="nottickedoff">&quot;голубой&quot;</span></span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">&quot;дома&quot; -&gt; <span class="nottickedoff">&quot;дом&quot;</span></span>
+<span class="lineno">  210 </span><span class="spaces">    </span><span class="istickedoff">&quot;говорим&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  211 </span><span class="spaces">    </span><span class="istickedoff">&quot;говоришь&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  212 </span><span class="spaces">    </span><span class="istickedoff">&quot;говорит&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  213 </span><span class="spaces">    </span><span class="istickedoff">&quot;говорю&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">&quot;говорят&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="istickedoff">&quot;говорите&quot; -&gt; <span class="nottickedoff">&quot;говорить&quot;</span></span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff">&quot;разговариваем&quot; -&gt; <span class="nottickedoff">&quot;разговаривать&quot;</span></span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">&quot;разговариваешь&quot; -&gt; <span class="nottickedoff">&quot;разговаривать&quot;</span></span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">&quot;разговаривает&quot; -&gt; <span class="nottickedoff">&quot;разговаривать&quot;</span></span>
+<span class="lineno">  219 </span><span class="spaces">    </span><span class="istickedoff">&quot;разговаривают&quot; -&gt; <span class="nottickedoff">&quot;разговаривать&quot;</span></span>
+<span class="lineno">  220 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; token</span></span>
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>isFunctionWord :: Text -&gt; Bool
+<span class="lineno">  223 </span><span class="decl"><span class="istickedoff">isFunctionWord token =</span>
+<span class="lineno">  224 </span><span class="spaces">  </span><span class="istickedoff">token `elem` (prepositions &lt;&gt; conjunctions &lt;&gt; particles &lt;&gt; questionMarkers &lt;&gt; contrastMarkers &lt;&gt; causeMarkers)</span></span>
+<span class="lineno">  225 </span>
+<span class="lineno">  226 </span>isWorldNoun :: Text -&gt; Bool
+<span class="lineno">  227 </span><span class="decl"><span class="istickedoff">isWorldNoun token = token `elem` worldNouns</span></span>
+<span class="lineno">  228 </span>
+<span class="lineno">  229 </span>isMentalNoun :: Text -&gt; Bool
+<span class="lineno">  230 </span><span class="decl"><span class="istickedoff">isMentalNoun token = token `elem` mentalNouns</span></span>
+<span class="lineno">  231 </span>
+<span class="lineno">  232 </span>isCapabilityLemma :: Text -&gt; Bool
+<span class="lineno">  233 </span><span class="decl"><span class="istickedoff">isCapabilityLemma lemma = lemma `elem` [&quot;уметь&quot;, &quot;мочь&quot;]</span></span>
+<span class="lineno">  234 </span>
+<span class="lineno">  235 </span>isAssistanceLemma :: Text -&gt; Bool
+<span class="lineno">  236 </span><span class="decl"><span class="istickedoff">isAssistanceLemma lemma = lemma `elem` [&quot;помочь&quot;, &quot;помощь&quot;]</span></span>
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>isIdentityLemma :: Text -&gt; Bool
+<span class="lineno">  239 </span><span class="decl"><span class="istickedoff">isIdentityLemma lemma = lemma `elem` [&quot;кто&quot;, &quot;что&quot;, &quot;быть&quot;, &quot;являться&quot;, &quot;такой&quot;]</span></span>
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>isGenerativeRequestLemma :: Text -&gt; Bool
+<span class="lineno">  242 </span><span class="decl"><span class="istickedoff">isGenerativeRequestLemma lemma = lemma `elem` [&quot;сказать&quot;, &quot;скажи&quot;, &quot;дать&quot;, &quot;дай&quot;, &quot;сформулировать&quot;, &quot;сформулируй&quot;]</span></span>
+<span class="lineno">  243 </span>
+<span class="lineno">  244 </span>isVerbLike :: Text -&gt; Bool
+<span class="lineno">  245 </span><span class="decl"><span class="istickedoff">isVerbLike token =</span>
+<span class="lineno">  246 </span><span class="spaces">  </span><span class="istickedoff">token `elem` commonVerbs</span>
+<span class="lineno">  247 </span><span class="spaces">    </span><span class="istickedoff">|| any (`T.isSuffixOf` token)</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;ть&quot;, &quot;ти&quot;, &quot;чь&quot;</span>
+<span class="lineno">  249 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ю&quot;, &quot;у&quot;, &quot;ем&quot;, &quot;ешь&quot;, &quot;ет&quot;, &quot;ют&quot;, &quot;ут&quot;, &quot;ешься&quot;, &quot;ется&quot;, &quot;емся&quot;, &quot;етесь&quot;</span>
+<span class="lineno">  250 </span><span class="spaces">      </span><span class="istickedoff">, &quot;ил&quot;, &quot;ила&quot;, &quot;или&quot;, &quot;ал&quot;, &quot;ала&quot;, &quot;али&quot;, &quot;ался&quot;, &quot;алась&quot;, &quot;алось&quot;, &quot;ались&quot;</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">]</span></span>
+<span class="lineno">  252 </span>
+<span class="lineno">  253 </span>isAdjectiveLike :: Text -&gt; Bool
+<span class="lineno">  254 </span><span class="decl"><span class="istickedoff">isAdjectiveLike token =</span>
+<span class="lineno">  255 </span><span class="spaces">  </span><span class="istickedoff">any (`T.isSuffixOf` token)</span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;ый&quot;, &quot;ий&quot;, &quot;ой&quot;, &quot;ая&quot;, &quot;яя&quot;, &quot;ое&quot;, &quot;ее&quot;, &quot;ые&quot;, &quot;ие&quot;</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">, &quot;ого&quot;, &quot;ему&quot;, &quot;ыми&quot;, &quot;ых&quot;</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  259 </span>
+<span class="lineno">  260 </span>isAdverbLike :: Text -&gt; Bool
+<span class="lineno">  261 </span><span class="decl"><span class="istickedoff">isAdverbLike token =</span>
+<span class="lineno">  262 </span><span class="spaces">  </span><span class="istickedoff">token `elem` adverbs</span>
+<span class="lineno">  263 </span><span class="spaces">    </span><span class="istickedoff">|| any (`T.isSuffixOf` token) [&quot;о&quot;, &quot;е&quot;]</span></span>
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>isNounLike :: Text -&gt; Bool
+<span class="lineno">  266 </span><span class="decl"><span class="istickedoff">isNounLike token =</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">token `elem` worldNouns</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">|| token `elem` mentalNouns</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">|| any (`T.isSuffixOf` token)</span>
+<span class="lineno">  270 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;а&quot;, &quot;я&quot;, &quot;о&quot;, &quot;е&quot;, &quot;и&quot;, &quot;ы&quot;, &quot;ь&quot;, &quot;ие&quot;, &quot;ия&quot;, &quot;ость&quot;, &quot;ение&quot;, &quot;изм&quot; ]</span></span>
+<span class="lineno">  271 </span>
+<span class="lineno">  272 </span>isAbstractNounLike :: Text -&gt; Bool
+<span class="lineno">  273 </span><span class="decl"><span class="istickedoff">isAbstractNounLike lemma =</span>
+<span class="lineno">  274 </span><span class="spaces">  </span><span class="istickedoff">any (`T.isSuffixOf` lemma)</span>
+<span class="lineno">  275 </span><span class="spaces">    </span><span class="istickedoff">[ &quot;ость&quot;, &quot;есть&quot;, &quot;ение&quot;, &quot;ание&quot;, &quot;изм&quot;, &quot;ция&quot;, &quot;ность&quot;, &quot;ство&quot;, &quot;смысл&quot;, &quot;логика&quot; ]</span></span>
+<span class="lineno">  276 </span>
+<span class="lineno">  277 </span>isPhysicalNounLike :: Text -&gt; Bool
+<span class="lineno">  278 </span><span class="decl"><span class="istickedoff">isPhysicalNounLike lemma =</span>
+<span class="lineno">  279 </span><span class="spaces">  </span><span class="istickedoff">isWorldNoun lemma</span>
+<span class="lineno">  280 </span><span class="spaces">    </span><span class="istickedoff">|| any (`T.isSuffixOf` lemma)</span>
+<span class="lineno">  281 </span><span class="spaces">      </span><span class="istickedoff">[ &quot;дом&quot;, &quot;город&quot;, &quot;лес&quot;, &quot;камень&quot;, &quot;река&quot;, &quot;море&quot;, &quot;стол&quot;, &quot;свет&quot;, &quot;ветер&quot; ]</span></span>
+<span class="lineno">  282 </span>
+<span class="lineno">  283 </span>prepositions, conjunctions, particles, interjections, pronouns, numerals :: [Text]
+<span class="lineno">  284 </span><span class="decl"><span class="istickedoff">prepositions =</span>
+<span class="lineno">  285 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;в&quot;, &quot;во&quot;, &quot;на&quot;, &quot;к&quot;, &quot;ко&quot;, &quot;у&quot;, &quot;о&quot;, &quot;об&quot;, &quot;обо&quot;, &quot;от&quot;, &quot;до&quot;, &quot;по&quot;, &quot;из&quot;, &quot;изо&quot;, &quot;с&quot;, &quot;со&quot;, &quot;без&quot;, &quot;для&quot;, &quot;при&quot;, &quot;перед&quot;, &quot;между&quot;, &quot;про&quot;, &quot;над&quot;, &quot;под&quot; ]</span></span>
+<span class="lineno">  286 </span><span class="decl"><span class="istickedoff">conjunctions =</span>
+<span class="lineno">  287 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;и&quot;, &quot;или&quot;, &quot;а&quot;, &quot;но&quot;, &quot;если&quot;, &quot;чтобы&quot;, &quot;потому&quot;, &quot;потому-что&quot;, &quot;когда&quot;, &quot;хотя&quot;, &quot;либо&quot; ]</span></span>
+<span class="lineno">  288 </span><span class="decl"><span class="istickedoff">particles =</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;не&quot;, &quot;ни&quot;, &quot;ли&quot;, &quot;же&quot;, &quot;бы&quot;, &quot;вот&quot;, &quot;только&quot;, &quot;лишь&quot;, &quot;даже&quot;, &quot;пусть&quot;, &quot;давай&quot;, &quot;разве&quot;, &quot;неужели&quot; ]</span></span>
+<span class="lineno">  290 </span><span class="decl"><span class="istickedoff">interjections = [&quot;эй&quot;, &quot;ах&quot;, &quot;ох&quot;, &quot;увы&quot;, &quot;ого&quot;, &quot;ну&quot;]</span></span>
+<span class="lineno">  291 </span><span class="decl"><span class="istickedoff">pronouns =</span>
+<span class="lineno">  292 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;я&quot;, &quot;ты&quot;, &quot;он&quot;, &quot;она&quot;, &quot;оно&quot;, &quot;мы&quot;, &quot;вы&quot;, &quot;они&quot;</span>
+<span class="lineno">  293 </span><span class="spaces">  </span><span class="istickedoff">, &quot;мне&quot;, &quot;меня&quot;, &quot;мной&quot;, &quot;тебя&quot;, &quot;тебе&quot;, &quot;тобой&quot;, &quot;нас&quot;, &quot;вам&quot;, &quot;вами&quot;, &quot;вас&quot;</span>
+<span class="lineno">  294 </span><span class="spaces">  </span><span class="istickedoff">, &quot;мой&quot;, &quot;твой&quot;, &quot;наш&quot;, &quot;ваш&quot;, &quot;себя&quot;, &quot;это&quot;, &quot;этот&quot;, &quot;эта&quot;, &quot;эти&quot;, &quot;кто&quot;, &quot;что&quot;</span>
+<span class="lineno">  295 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  296 </span><span class="decl"><span class="istickedoff">numerals = [&quot;ноль&quot;, &quot;один&quot;, &quot;два&quot;, &quot;три&quot;, &quot;четыре&quot;, &quot;пять&quot;, &quot;десять&quot;, &quot;сто&quot;, &quot;первый&quot;, &quot;второй&quot;, &quot;третий&quot;]</span></span>
+<span class="lineno">  297 </span>
+<span class="lineno">  298 </span>questionMarkers, contrastMarkers, conditionMarkers, causeMarkers, resultMarkers, clarifyMarkers, emphasisMarkers :: [Text]
+<span class="lineno">  299 </span><span class="decl"><span class="istickedoff">questionMarkers = [&quot;что&quot;, &quot;кто&quot;, &quot;где&quot;, &quot;когда&quot;, &quot;почему&quot;, &quot;зачем&quot;, &quot;как&quot;, &quot;ли&quot;]</span></span>
+<span class="lineno">  300 </span><span class="decl"><span class="istickedoff">contrastMarkers = [&quot;но&quot;, &quot;а&quot;, &quot;однако&quot;, &quot;зато&quot;]</span></span>
+<span class="lineno">  301 </span><span class="decl"><span class="istickedoff">conditionMarkers = [&quot;если&quot;, &quot;когда&quot;]</span></span>
+<span class="lineno">  302 </span><span class="decl"><span class="istickedoff">causeMarkers = [&quot;потому&quot;, &quot;поскольку&quot;, &quot;из-за&quot;, &quot;оттого&quot;]</span></span>
+<span class="lineno">  303 </span><span class="decl"><span class="istickedoff">resultMarkers = [&quot;поэтому&quot;, &quot;значит&quot;, &quot;следовательно&quot;, &quot;итак&quot;]</span></span>
+<span class="lineno">  304 </span><span class="decl"><span class="istickedoff">clarifyMarkers = [&quot;уточни&quot;, &quot;поясни&quot;, &quot;разъясни&quot;, &quot;что-значит&quot;, &quot;что значит&quot;]</span></span>
+<span class="lineno">  305 </span><span class="decl"><span class="istickedoff">emphasisMarkers = [&quot;именно&quot;, &quot;как-раз&quot;, &quot;точно&quot;, &quot;ведь&quot;, &quot;же&quot;, &quot;вот&quot;]</span></span>
+<span class="lineno">  306 </span>
+<span class="lineno">  307 </span>invitationTokens, repairTokens, contemplativeTokens, knowledgeTokens, comparisonTokens, causeTokens :: [Text]
+<span class="lineno">  308 </span><span class="decl"><span class="istickedoff">invitationTokens = [&quot;поговорим&quot;, &quot;обсудим&quot;, &quot;рассмотрим&quot;, &quot;давай&quot;, &quot;говорить&quot;, &quot;говорим&quot;, &quot;говоришь&quot;, &quot;разговаривать&quot;, &quot;разговариваем&quot;]</span></span>
+<span class="lineno">  309 </span><span class="decl"><span class="istickedoff">repairTokens = [&quot;не&quot;, &quot;понимаю&quot;, &quot;разрыв&quot;, &quot;контакт&quot;, &quot;потерян&quot;, &quot;потеря&quot;, &quot;сбой&quot;]</span></span>
+<span class="lineno">  310 </span><span class="decl"><span class="istickedoff">contemplativeTokens = [&quot;тишина&quot;, &quot;дом&quot;, &quot;любовь&quot;, &quot;смерть&quot;, &quot;время&quot;, &quot;смысл&quot;, &quot;душа&quot;, &quot;свобода&quot;, &quot;страх&quot;, &quot;память&quot;, &quot;я&quot;]</span></span>
+<span class="lineno">  311 </span><span class="decl"><span class="istickedoff">knowledgeTokens = [&quot;знаешь&quot;, &quot;знание&quot;, &quot;известно&quot;, &quot;понимаешь&quot;, &quot;понятие&quot;, &quot;определение&quot;, &quot;значит&quot;]</span></span>
+<span class="lineno">  312 </span><span class="decl"><span class="istickedoff">comparisonTokens = [&quot;или&quot;, &quot;логичнее&quot;, &quot;вероятнее&quot;, &quot;естественнее&quot;, &quot;правильнее&quot;, &quot;лучше&quot;, &quot;хуже&quot;]</span></span>
+<span class="lineno">  313 </span><span class="decl"><span class="istickedoff">causeTokens = [&quot;почему&quot;, &quot;причина&quot;, &quot;следствие&quot;, &quot;из-за&quot;, &quot;поэтому&quot;, &quot;потому&quot;]</span></span>
+<span class="lineno">  314 </span>
+<span class="lineno">  315 </span>worldNouns, mentalNouns, adverbs, commonVerbs, selfReferenceTokens, userReferenceTokens, firstPerson, secondPerson, pluralHints, singularHints :: [Text]
+<span class="lineno">  316 </span><span class="decl"><span class="istickedoff">worldNouns =</span>
+<span class="lineno">  317 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;солнце&quot;, &quot;земля&quot;, &quot;мир&quot;, &quot;дождь&quot;, &quot;вода&quot;, &quot;огонь&quot;, &quot;время&quot;, &quot;пространство&quot;</span>
+<span class="lineno">  318 </span><span class="spaces">  </span><span class="istickedoff">, &quot;звезда&quot;, &quot;дом&quot;, &quot;город&quot;, &quot;лес&quot;, &quot;море&quot;, &quot;река&quot;, &quot;камень&quot;, &quot;ветер&quot;, &quot;космос&quot;</span>
+<span class="lineno">  319 </span><span class="spaces">  </span><span class="istickedoff">, &quot;небо&quot;, &quot;осень&quot;, &quot;человек&quot;, &quot;люди&quot;, &quot;бог&quot;, &quot;правда&quot;, &quot;ложь&quot;</span>
+<span class="lineno">  320 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  321 </span><span class="decl"><span class="istickedoff">mentalNouns =</span>
+<span class="lineno">  322 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;мысль&quot;, &quot;идея&quot;, &quot;смысл&quot;, &quot;логика&quot;, &quot;память&quot;, &quot;воображение&quot;, &quot;сознание&quot;, &quot;разум&quot;</span>
+<span class="lineno">  323 </span><span class="spaces">  </span><span class="istickedoff">, &quot;внимание&quot;, &quot;фокус&quot;, &quot;знание&quot;, &quot;понимание&quot;</span>
+<span class="lineno">  324 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  325 </span><span class="decl"><span class="istickedoff">adverbs =</span>
+<span class="lineno">  326 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;быстро&quot;, &quot;медленно&quot;, &quot;сейчас&quot;, &quot;потом&quot;, &quot;здесь&quot;, &quot;там&quot;, &quot;очень&quot;, &quot;почти&quot;, &quot;теперь&quot;, &quot;вчера&quot;, &quot;сегодня&quot; ]</span></span>
+<span class="lineno">  327 </span><span class="decl"><span class="istickedoff">commonVerbs =</span>
+<span class="lineno">  328 </span><span class="spaces">  </span><span class="istickedoff">[ &quot;знаю&quot;, &quot;знаешь&quot;, &quot;знает&quot;, &quot;думать&quot;, &quot;думаю&quot;, &quot;думаешь&quot;, &quot;сказать&quot;, &quot;скажи&quot;, &quot;говорю&quot;, &quot;говоришь&quot;</span>
+<span class="lineno">  329 </span><span class="spaces">  </span><span class="istickedoff">, &quot;работаю&quot;, &quot;работаешь&quot;, &quot;работает&quot;, &quot;поговорим&quot;, &quot;обсудим&quot;, &quot;понимаю&quot;, &quot;понимаешь&quot;</span>
+<span class="lineno">  330 </span><span class="spaces">    </span><span class="istickedoff">, &quot;говорить&quot;, &quot;говорю&quot;, &quot;говоришь&quot;, &quot;говорит&quot;, &quot;говорим&quot;, &quot;говорят&quot;, &quot;говорите&quot;</span>
+<span class="lineno">  331 </span><span class="spaces">    </span><span class="istickedoff">, &quot;разговаривать&quot;, &quot;разговариваю&quot;, &quot;разговариваешь&quot;, &quot;разговаривает&quot;, &quot;разговариваем&quot;, &quot;разговаривают&quot;</span>
+<span class="lineno">  332 </span><span class="spaces">    </span><span class="istickedoff">, &quot;купить&quot;, &quot;купил&quot;, &quot;купила&quot;, &quot;купили&quot;, &quot;жить&quot;, &quot;живу&quot;, &quot;живет&quot;, &quot;живём&quot;, &quot;живут&quot;</span>
+<span class="lineno">  333 </span><span class="spaces">    </span><span class="istickedoff">, &quot;оказаться&quot;, &quot;оказался&quot;, &quot;оказалась&quot;, &quot;оказалось&quot;, &quot;оказались&quot;, &quot;делать&quot;, &quot;делаю&quot;, &quot;делаешь&quot;, &quot;делает&quot;</span>
+<span class="lineno">  334 </span><span class="spaces">  </span><span class="istickedoff">]</span></span>
+<span class="lineno">  335 </span><span class="decl"><span class="istickedoff">selfReferenceTokens = [&quot;я&quot;, &quot;мне&quot;, &quot;меня&quot;, &quot;мой&quot;, &quot;моя&quot;, &quot;моё&quot;, &quot;мы&quot;]</span></span>
+<span class="lineno">  336 </span><span class="decl"><span class="istickedoff">userReferenceTokens = [&quot;ты&quot;, &quot;тебя&quot;, &quot;тебе&quot;, &quot;твой&quot;, &quot;твоя&quot;, &quot;твое&quot;, &quot;вы&quot;, &quot;вас&quot;]</span></span>
+<span class="lineno">  337 </span><span class="decl"><span class="istickedoff">firstPerson = [&quot;я&quot;, &quot;мне&quot;, &quot;меня&quot;, &quot;мы&quot;, &quot;наш&quot;, &quot;мой&quot;]</span></span>
+<span class="lineno">  338 </span><span class="decl"><span class="istickedoff">secondPerson = [&quot;ты&quot;, &quot;тебя&quot;, &quot;тебе&quot;, &quot;вы&quot;, &quot;вас&quot;, &quot;ваш&quot;, &quot;твой&quot;]</span></span>
+<span class="lineno">  339 </span><span class="decl"><span class="istickedoff">pluralHints = [&quot;мы&quot;, &quot;вы&quot;, &quot;они&quot;, &quot;эти&quot;, &quot;люди&quot;]</span></span>
+<span class="lineno">  340 </span><span class="decl"><span class="istickedoff">singularHints = [&quot;я&quot;, &quot;ты&quot;, &quot;он&quot;, &quot;она&quot;, &quot;оно&quot;, &quot;этот&quot;, &quot;эта&quot;, &quot;это&quot;]</span></span>
+
+</pre>
+</body>
+</html>

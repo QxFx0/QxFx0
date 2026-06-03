@@ -1,0 +1,9 @@
+{
+  "status": "ok",
+  "command": "hello_ack",
+  "message": "hello",
+  "protocol_version": "1",
+  "protocol_match": true,
+  "capabilities": ["health", "state", "turn", "shutdown", "ping", "session_affine"],
+  "worker_mode": "persistent_stdio"
+}

@@ -6,6 +6,7 @@ module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , gfMapFallbackReason
   , gfMapProvenanceTag
   , topicToGfLexemeDecision
   , lookupTopicGfLexemeId
@@ -13,19 +14,19 @@ module QxFx0.Lexicon.GfMap
   , lookupGfLexemeForms
   , gfMapLoadStatus
   , loadGfMapFromContent
+  , loadGfMapStatusFromPath
   ) where
 
-import Control.Exception (SomeException, try)
 import Control.Applicative ((<|>))
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
-import qualified Data.Text.IO as TIO
-import GHC.IO.Unsafe (unsafePerformIO)
-import System.Directory (doesFileExist)
-
 import Paths_qxfx0 (getDataFileName)
+import QxFx0.ExceptionPolicy (catchIO)
+import System.Environment (lookupEnv)
+import System.FilePath ((</>))
+import System.IO.Unsafe (unsafePerformIO)
 
 data GfLexemeForms = GfLexemeForms
   { glfNom :: !Text
@@ -68,9 +69,12 @@ topicToGfLexemeId = fst . topicToGfLexemeDecision
 
 topicToGfLexemeDecision :: Text -> (Text, Maybe Text)
 topicToGfLexemeDecision topic =
-  case lookupTopicGfLexemeId topic of
-    Just lexemeId -> (lexemeId, Nothing)
-    Nothing -> (defaultGfLexemeId, Just "gf_default_lexeme")
+  case gfMapFallbackReason gfMapLoadStatus of
+    Just reason -> (defaultGfLexemeId, Just reason)
+    Nothing ->
+      case lookupTopicGfLexemeId topic of
+        Just lexemeId -> (lexemeId, Nothing)
+        Nothing -> (defaultGfLexemeId, Just "gf_default_lexeme")
 
 lookupGfLexemeForms :: Text -> Maybe GfLexemeForms
 lookupGfLexemeForms funId = M.lookup funId (gmdFunToForms gfMapData)
@@ -88,19 +92,12 @@ stripTopicMarker txt =
 normalizeText :: Text -> Text
 normalizeText = T.toLower . T.replace "ё" "е" . T.strip
 
--- | Read-only immutable GF lexicon map loaded once at program start.
---
--- INVARIANT: The underlying 'loadGfMapResult' is total: it catches all
--- IO exceptions (file-not-found, permission-denied, parse errors) and
--- returns 'emptyGfMapData' on any failure, paired with an explicit
--- 'GfMapLoadFailed' reason.  Therefore 'unsafePerformIO' is safe here:
--- the result is deterministic, pure, and never throws.
---
--- If the TSV file changes, a process restart is required to pick up
--- new data (acceptable for a static lexicon resource).
-{-# NOINLINE gfMapLoadResult #-}
+-- | Read-only immutable GF lexicon map loaded once from the canonical
+-- GF lexicon funmap. The runtime surface remains pure while the load
+-- status stays explicit and operator-visible.
 gfMapLoadResult :: (GfMapData, GfMapLoadStatus)
-gfMapLoadResult = unsafePerformIO loadGfMapResult
+gfMapLoadResult = unsafePerformIO loadCanonicalGfMap
+{-# NOINLINE gfMapLoadResult #-}
 
 gfMapData :: GfMapData
 gfMapData = fst gfMapLoadResult
@@ -114,15 +111,11 @@ gfMapProvenanceTag =
     GfMapLoaded count -> "gf_map_loaded:" <> T.pack (show count)
     GfMapLoadFailed reason -> "gf_map_failed:" <> reason
 
-loadGfMapResult :: IO (GfMapData, GfMapLoadStatus)
-loadGfMapResult = do
-  dataPathResult <- try (getDataFileName "spec/gf/lexicon_funmap.tsv") :: IO (Either SomeException FilePath)
-  let bundledPath = either (const "") id dataPathResult
-      fallbackPath = "spec/gf/lexicon_funmap.tsv"
-  mContent <- tryReadPath bundledPath >>= \case
-    Just content -> pure (Just content)
-    Nothing -> tryReadPath fallbackPath
-  pure (loadGfMapFromContent mContent)
+gfMapFallbackReason :: GfMapLoadStatus -> Maybe Text
+gfMapFallbackReason status =
+  case status of
+    GfMapLoaded _ -> Nothing
+    GfMapLoadFailed reason -> Just ("gf_map_unavailable:" <> reason)
 
 -- | Pure, total loader from optional file content.
 -- Separated from IO so the failure paths are unit-testable.
@@ -136,22 +129,49 @@ loadGfMapFromContent (Just content) =
        then (parsed, GfMapLoadFailed "resource_empty_or_unparseable")
        else (parsed, GfMapLoaded entryCount)
 
-tryReadPath :: FilePath -> IO (Maybe Text)
-tryReadPath path
-  | null path = pure Nothing
-  | otherwise = do
-      exists <- doesFileExist path
-      if not exists
-        then pure Nothing
-        else do
-          readResult <- try (TIO.readFile path) :: IO (Either SomeException Text)
-          pure (either (const Nothing) Just readResult)
+loadCanonicalGfMap :: IO (GfMapData, GfMapLoadStatus)
+loadCanonicalGfMap = do
+  mContent <- readCanonicalFunmap
+  pure (loadGfMapFromContent mContent)
+
+loadGfMapStatusFromPath :: FilePath -> IO GfMapLoadStatus
+loadGfMapStatusFromPath path = do
+  mContent <- catchIO (Just . T.pack <$> readFile path) (const (pure Nothing))
+  pure (snd (loadGfMapFromContent mContent))
+
+readCanonicalFunmap :: IO (Maybe Text)
+readCanonicalFunmap = do
+  mResourceRoot <- lookupEnv "QXFX0_RESOURCE_ROOT"
+  mRoot <- lookupEnv "QXFX0_ROOT"
+  let mExplicitRoot = mResourceRoot <|> mRoot
+  explicitContent <- case mExplicitRoot of
+    Just root ->
+      catchIO
+        (Just . T.pack <$> readFile (root </> "spec" </> "gf" </> "lexicon_funmap.tsv"))
+        (const (pure Nothing))
+    Nothing -> pure Nothing
+  case explicitContent of
+    Just content -> pure (Just content)
+    Nothing -> do
+      dataPath <- catchIO (Just <$> getDataFileName "spec/gf/lexicon_funmap.tsv") (const (pure Nothing))
+      case dataPath of
+        Just path ->
+          catchIO
+            (Just . T.pack <$> readFile path)
+            (const readRepoFallback)
+        Nothing ->
+          readRepoFallback
+  where
+    readRepoFallback =
+      catchIO
+        (Just . T.pack <$> readFile ("spec" </> "gf" </> "lexicon_funmap.tsv"))
+        (const (pure Nothing))
 
 parseGfMapData :: Text -> GfMapData
 parseGfMapData content =
   foldl insertRow emptyGfMapData parsedRows
   where
-    parsedRows = mapMaybeRow (drop 1 (T.lines content))
+    parsedRows = mapMaybeRow (T.lines content)
     mapMaybeRow = foldr (\line acc -> maybe acc (:acc) (parseRow line)) []
 
 insertRow :: GfMapData -> (Text, Text, GfLexemeForms) -> GfMapData

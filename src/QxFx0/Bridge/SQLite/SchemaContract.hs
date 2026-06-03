@@ -8,6 +8,9 @@ module QxFx0.Bridge.SQLite.SchemaContract
   ( currentSchemaVersion
   , schemaContractTables
   , schemaContractColumns
+  , schemaContractIndexes
+  , schemaContractTriggers
+  , schemaContractFTS
   , SchemaContractResult(..)
   , SchemaVersionStatus(..)
   , checkSchemaContract

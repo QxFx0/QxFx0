@@ -1,0 +1,97 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    2 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    3 </span>{-| Geodesic topic routing via Dijkstra shortest path. -}
+<span class="lineno">    4 </span>module QxFx0.Core.TopicTransition
+<span class="lineno">    5 </span>  ( geodesicDistance
+<span class="lineno">    6 </span>  , geodesicRouter
+<span class="lineno">    7 </span>  , GeodesicPlan(..)
+<span class="lineno">    8 </span>  ) where
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import Data.Map.Strict (Map)
+<span class="lineno">   11 </span>import qualified Data.Map.Strict as M
+<span class="lineno">   12 </span>import qualified Data.List as L
+<span class="lineno">   13 </span>import Data.Ord (comparing)
+<span class="lineno">   14 </span>import Data.Text (Text)
+<span class="lineno">   15 </span>import qualified Data.Text as T
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import QxFx0.Types.Observability (GeodesicPlan(..), MeaningGraph(..), MeaningEdge(..), MeaningStateId)
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>buildAdjacency :: MeaningGraph -&gt; Map MeaningStateId (Map MeaningStateId Double)
+<span class="lineno">   20 </span><span class="decl"><span class="istickedoff">buildAdjacency mg =</span>
+<span class="lineno">   21 </span><span class="spaces">  </span><span class="istickedoff">let outgoing = L.foldl' addEdge M.empty (mgEdges mg)</span>
+<span class="lineno">   22 </span><span class="spaces">  </span><span class="istickedoff">in outgoing</span>
+<span class="lineno">   23 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   24 </span><span class="spaces">    </span><span class="istickedoff">addEdge acc e =</span>
+<span class="lineno">   25 </span><span class="spaces">      </span><span class="istickedoff">let w = fromIntegral (meCount e)</span>
+<span class="lineno">   26 </span><span class="spaces">      </span><span class="istickedoff">in M.insertWith <span class="nottickedoff">(M.unionWith (+))</span> (meFromId e) (M.singleton (meToId e) w) acc</span></span>
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>shortestPath :: Map MeaningStateId (Map MeaningStateId Double) -&gt; MeaningStateId -&gt; MeaningStateId -&gt; Double
+<span class="lineno">   29 </span><span class="decl"><span class="istickedoff">shortestPath adj start goal = go M.empty (M.singleton start 0.0)</span>
+<span class="lineno">   30 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   31 </span><span class="spaces">    </span><span class="istickedoff">go visited dists</span>
+<span class="lineno">   32 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlyfalse">M.null unvisited</span> = <span class="nottickedoff">1.0 / 0.0</span></span>
+<span class="lineno">   33 </span><span class="spaces">      </span><span class="istickedoff">| current == goal  = currentDist</span>
+<span class="lineno">   34 </span><span class="spaces">      </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">   35 </span><span class="spaces">          </span><span class="istickedoff">let nbrs = M.findWithDefault <span class="nottickedoff">M.empty</span> current adj</span>
+<span class="lineno">   36 </span><span class="spaces">              </span><span class="istickedoff">visited' = M.insert current currentDist visited</span>
+<span class="lineno">   37 </span><span class="spaces">              </span><span class="istickedoff">dists' = M.delete current dists</span>
+<span class="lineno">   38 </span><span class="spaces">              </span><span class="istickedoff">dists'' = M.foldlWithKey' updateDist dists' nbrs</span>
+<span class="lineno">   39 </span><span class="spaces">          </span><span class="istickedoff">in go visited' dists''</span>
+<span class="lineno">   40 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">   41 </span><span class="spaces">        </span><span class="istickedoff">unvisited = M.difference dists visited</span>
+<span class="lineno">   42 </span><span class="spaces">        </span><span class="istickedoff">(current, currentDist) = L.minimumBy <span class="nottickedoff">(comparing snd)</span> (M.toList unvisited)</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="istickedoff">updateDist d neighbor weight =</span>
+<span class="lineno">   44 </span><span class="spaces">          </span><span class="istickedoff">let edgeDist = 1.0 / max weight 1e-10</span>
+<span class="lineno">   45 </span><span class="spaces">              </span><span class="istickedoff">newDist = currentDist + edgeDist</span>
+<span class="lineno">   46 </span><span class="spaces">          </span><span class="istickedoff">in M.insertWith <span class="nottickedoff">min</span> neighbor newDist d</span></span>
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>geodesicDistance :: MeaningGraph -&gt; Text -&gt; Text -&gt; Double
+<span class="lineno">   49 </span><span class="decl"><span class="istickedoff">geodesicDistance mg fromTopic toTopic</span>
+<span class="lineno">   50 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlyfalse">fromTopic == toTopic</span> = <span class="nottickedoff">0.0</span></span>
+<span class="lineno">   51 </span><span class="spaces">  </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">   52 </span><span class="spaces">      </span><span class="istickedoff">let adj = buildAdjacency mg</span>
+<span class="lineno">   53 </span><span class="spaces">          </span><span class="istickedoff">fromId = T.unpack fromTopic</span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff">toId   = T.unpack toTopic</span>
+<span class="lineno">   55 </span><span class="spaces">      </span><span class="istickedoff">in if <span class="tickonlytrue">M.member fromId adj &amp;&amp; M.member toId adj</span></span>
+<span class="lineno">   56 </span><span class="spaces">         </span><span class="istickedoff">then shortestPath adj fromId toId</span>
+<span class="lineno">   57 </span><span class="spaces">         </span><span class="istickedoff">else <span class="nottickedoff">1.0 / 0.0</span></span></span>
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>geodesicRouter :: MeaningGraph -&gt; Text -&gt; Text -&gt; [Text] -&gt; GeodesicPlan
+<span class="lineno">   60 </span><span class="decl"><span class="istickedoff">geodesicRouter mg fromTopic toTopic recentTopics =</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="istickedoff">let dist = geodesicDistance mg fromTopic toTopic</span>
+<span class="lineno">   62 </span><span class="spaces">      </span><span class="istickedoff">threshold = 3.0</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="istickedoff">in if <span class="tickonlytrue">dist &lt;= threshold || <span class="nottickedoff">isInfinite dist</span></span></span>
+<span class="lineno">   64 </span><span class="spaces">     </span><span class="istickedoff">then DirectJump</span>
+<span class="lineno">   65 </span><span class="spaces">     </span><span class="istickedoff">else <span class="nottickedoff">let adj = buildAdjacency mg</span></span>
+<span class="lineno">   66 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">fromId = T.unpack fromTopic</span></span>
+<span class="lineno">   67 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">toId   = T.unpack toTopic</span></span>
+<span class="lineno">   68 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">fromNeighbors = M.keys (M.findWithDefault M.empty fromId adj)</span></span>
+<span class="lineno">   69 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">bridges = filter (\bridge -&gt; M.member toId (M.findWithDefault M.empty bridge adj)) fromNeighbors</span></span>
+<span class="lineno">   70 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">recentIds = map T.unpack recentTopics</span></span>
+<span class="lineno">   71 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">fresh = filter (`notElem` recentIds) bridges</span></span>
+<span class="lineno">   72 </span><span class="spaces">           </span><span class="istickedoff"><span class="nottickedoff">in if null fresh</span></span>
+<span class="lineno">   73 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">then DirectJump</span></span>
+<span class="lineno">   74 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">else BridgedJump (take 2 (map T.pack fresh))</span></span></span>
+
+</pre>
+</body>
+</html>

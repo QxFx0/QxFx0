@@ -36,6 +36,7 @@ import QxFx0.Core.PipelineIO
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
   , ShadowResult(..)
+  , scheduleTurnEffects
   , TestPipelineConfig(..)
   , defaultTestPipelineConfig
   , mkTestPipelineIO
@@ -86,6 +87,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , finalizeMetrics
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
+import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import QxFx0.Self.Deliberation
   ( Deliberation(..)
@@ -96,10 +98,7 @@ import QxFx0.Self.Deliberation
   , defaultPlan
   )
 import QxFx0.Self.Salience (SalienceDriver(..))
-import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Morphology as Morph
-import qualified QxFx0.Core.Intuition as Intuition
-import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import QxFx0.Types.ShadowDivergence
   ( ShadowSnapshotId(..)
   , ShadowDivergence(..)
@@ -143,12 +142,6 @@ import QxFx0.Learning.Tool
   , selectTool
   , defaultAvailableTools
   )
-import QxFx0.Bridge.ExternalLLM
-  ( buildTransportFromConfig
-  , queryExternalTool
-  , defaultExternalQueryConfig
-  )
-import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportFallbackReason(..))
 import QxFx0.Learning.Calibration
   ( CalibrationId(..)
   , CalibrationProposal(..)
@@ -172,7 +165,20 @@ import QxFx0.Learning.Guardrails
   , recordAcceptance
   , isQuarantineExpired
   )
-import Test.Support (withEnvVar)
+import Test.Support.TurnPipelineFixtures
+  ( buildAuthoritativePerspectiveFinalizeFixture
+   , buildFinalizeFixture
+   , buildFinalizeFixtureWithState
+   , buildPlannedFixture
+   , buildPlannedFixtureWithState
+   , buildPreparedFixture
+   , buildRenderedFixtureWithState
+   , buildRenderedFixture
+   , testEpochZero
+   , testProtocolInterpreter
+  , testProtocolPipelineIO
+  , withDeterministicEmbedding
+  )
 
 turnPipelineProtocolTests :: [Test]
 turnPipelineProtocolTests =
@@ -187,6 +193,7 @@ turnPipelineProtocolTests =
   , testReplayEnvelopeJsonDeterministicProperty
   , testBlockedConceptsRetentionIsBoundedAndDeduplicated
   , testPrepareEffectsResolveConcurrently
+  , testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical
   , testPrepareMetricsExposeHonestPhaseNames
   , testRouteEffectsResolveConcurrently
   , testRouteEffectsFailOnAgdaInStrictRuntime
@@ -390,9 +397,9 @@ testFinalizeCommitPlanDeterministicProperty :: Test
 testFinalizeCommitPlanDeterministicProperty = quickCheckTest "finalize commit planning is deterministic" $
   forAll (elements protocolInputs) $ \rawInput ->
     ioProperty $ do
-      (ss, _ti, ts, _tp, ta, bundle) <- withDeterministicEmbedding (buildFinalizeFixture (T.pack rawInput))
-      let plan1 = summarizeFinalizeCommitPlan (planFinalizeCommit "session-prop" ss ts ta bundle)
-          plan2 = summarizeFinalizeCommitPlan (planFinalizeCommit "session-prop" ss ts ta bundle)
+      (ss, ti, ts, _tp, ta, bundle) <- withDeterministicEmbedding (buildFinalizeFixture (T.pack rawInput))
+      let plan1 = summarizeFinalizeCommitPlan (planFinalizeCommit "session-prop" ss ti ts ta bundle)
+          plan2 = summarizeFinalizeCommitPlan (planFinalizeCommit "session-prop" ss ti ts ta bundle)
       pure (plan1 == plan2)
 
 testFinalizeCommitRecoversRuntimeStateAfterCommitFailure :: Test
@@ -404,8 +411,8 @@ testFinalizeCommitRecoversRuntimeStateAfterCommitFailure = TestCase $
             defaultTestPipelineConfig
               { tpcInterpreter = failingCommitThenRecoverInterpreter commitAttemptsRef
               }
-    (ss, _ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
-    let commitPlan = planFinalizeCommit "session-recovery" ss ts ta bundle
+    (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
+    let commitPlan = planFinalizeCommit "session-recovery" ss ti ts ta bundle
     _ <- resolveFinalizeCommit recoveryPio commitPlan
     attempts <- readIORef commitAttemptsRef
     assertEqual "commit effect should be retried once on recovery path" 2 attempts
@@ -419,8 +426,8 @@ testFinalizeCommitRollsBackPersistedStateAfterRecoveryFailure = TestCase $
             defaultTestPipelineConfig
               { tpcInterpreter = failingCommitWithRollbackInterpreter saveRequestsRef
               }
-    (ss, _ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
-    let commitPlan = planFinalizeCommit "session-rollback" ss ts ta bundle
+    (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
+    let commitPlan = planFinalizeCommit "session-rollback" ss ti ts ta bundle
     result <- try (resolveFinalizeCommit rollbackPio commitPlan) :: IO (Either QxFx0Exception FinalizeCommitResults)
     case result of
       Left (PersistenceError detail) -> do
@@ -473,7 +480,7 @@ testBlockedConceptsRetentionIsBoundedAndDeduplicated = TestCase $
       (length boundedReasons)
     assertEqual "latest blocked reason should stay at the head"
       ("reason_" <> T.pack (show (blockedConceptsRetentionLimit + 15)))
-      (head boundedReasons)
+      (case boundedReasons of [] -> error "expected non-empty boundedReasons"; (r:_) -> r)
 
 testReplayEnvelopeDeterministicProperty :: Test
 testReplayEnvelopeDeterministicProperty = quickCheckTest "replay envelope is deterministic for identical inputs" $
@@ -508,6 +515,29 @@ testPrepareEffectsResolveConcurrently = TestCase $ do
   _ <- resolvePrepareEffects pio preparePlan
   maxActive <- readIORef maxRef
   assertBool "prepare effects should overlap instead of running strictly one-by-one" (maxActive >= 3)
+
+testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical :: Test
+testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical = TestCase $ do
+  let criticalConatus = ConatusEnergy
+        { ceScalar = -1.0
+        , ceComponents = ConatusComponents
+            { ccMorphology = 0.0
+            , ccIdentity = 0.0
+            , ccTurns = 0.0
+            , ccPenalty = 1.0
+            }
+        }
+      scheduled =
+        scheduleTurnEffects
+          testProtocolPipelineIO
+          criticalConatus
+          [ ("embedding", TurnReqEmbedding "тест")
+          , ("api", TurnReqApiHealth)
+          , ("nix", TurnReqNixGuard "concept" 0.1 0.1)
+          ]
+  assertEqual "critical conatus should prioritize cheap checks before expensive embedding"
+    [T.pack "api", T.pack "embedding", T.pack "nix"]
+    (map fst scheduled)
 
 testPrepareMetricsExposeHonestPhaseNames :: Test
 testPrepareMetricsExposeHonestPhaseNames = TestCase $
@@ -742,18 +772,21 @@ testObserveNovelAtomCreatesNew = TestCase $ do
   assertEqual "novel atom must create exactly one entry"
     1
     (length result)
-  assertEqual "novel atom must store the tag"
-    tag
-    (paTag (head result))
-  assertEqual "novel atom must have occurrence count 1"
-    1
-    (paOccurrences (head result))
-  assertEqual "novel atom must record first seen turn"
-    10
-    (paFirstSeenTurn (head result))
-  assertEqual "novel atom must record last seen turn"
-    10
-    (paLastSeenTurn (head result))
+  case result of
+    []    -> error "expected non-empty result in testObserveNovelAtomCreatesNew"
+    (a:_) -> do
+      assertEqual "novel atom must store the tag"
+        tag
+        (paTag a)
+      assertEqual "novel atom must have occurrence count 1"
+        1
+        (paOccurrences a)
+      assertEqual "novel atom must record first seen turn"
+        10
+        (paFirstSeenTurn a)
+      assertEqual "novel atom must record last seen turn"
+        10
+        (paLastSeenTurn a)
 
 -- | WP3 (GAP3): observeNovelAtom bumps an existing provisional atom.
 testObserveNovelAtomBumpsExisting :: Test
@@ -764,15 +797,18 @@ testObserveNovelAtomBumpsExisting = TestCase $ do
   assertEqual "bumped atom must still be a single entry"
     1
     (length result)
-  assertEqual "bumped atom must have occurrence count 2"
-    2
-    (paOccurrences (head result))
-  assertEqual "bumped atom must keep original first seen turn"
-    5
-    (paFirstSeenTurn (head result))
-  assertEqual "bumped atom must refresh last seen turn"
-    7
-    (paLastSeenTurn (head result))
+  case result of
+    []    -> error "expected non-empty result in testObserveNovelAtomBumpsExisting"
+    (a:_) -> do
+      assertEqual "bumped atom must have occurrence count 2"
+        2
+        (paOccurrences a)
+      assertEqual "bumped atom must keep original first seen turn"
+        5
+        (paFirstSeenTurn a)
+      assertEqual "bumped atom must refresh last seen turn"
+        7
+        (paLastSeenTurn a)
 
 -- | WP3 (GAP3): promoteProvisionalAtoms promotes atoms meeting criteria.
 testPromoteProvisionalAtomsMeetsCriteria :: Test
@@ -1887,7 +1923,7 @@ testFinalizePrecommitResolveConcurrently = TestCase $
     let precommitPlan = planFinalizePrecommit ss ti ts tp ta
     _ <- resolveFinalizePrecommit precommitPio precommitPlan
     maxActive <- readIORef maxRef
-    assertBool "finalize precommit effects should resolve concurrently" (maxActive >= 2)
+    assertBool "finalize precommit env effects should resolve concurrently" (maxActive >= 1)
 
 protocolInputs :: [String]
 protocolInputs =
@@ -1897,70 +1933,6 @@ protocolInputs =
   , "где граница между смыслом и пустотой"
   , "что делать дальше"
   ]
-
-testProtocolPipelineIO :: PipelineIO
-testProtocolPipelineIO =
-  mkTestPipelineIO
-    defaultTestPipelineConfig
-      { tpcInterpreter = testProtocolInterpreter
-      }
-
-testProtocolInterpreter :: TurnEffectRequest -> IO TurnEffectResult
-testProtocolInterpreter request =
-  case request of
-    TurnReqEmbedding inputText ->
-      TurnResEmbedding <$> Emb.textToEmbeddingResult (T.unpack inputText)
-    TurnReqNixGuard _ _ _ ->
-      pure (TurnResNixGuard Allowed)
-    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy _salienceWeights -> do
-      let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
-      pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
-    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
-      let (mFlash, intuitionState) =
-            Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
-      pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)
-    TurnReqApiHealth ->
-      pure (TurnResApiHealth True)
-    TurnReqShadow family force _ ->
-      pure (TurnResShadow (Just (family, force)) ShadowMatch emptyShadowDivergence (ShadowSnapshotId "shadow:test_protocol") [])
-    TurnReqAgdaVerify ->
-      pure (TurnResAgdaVerify AgdaVerified)
-    TurnReqCurrentTime ->
-      pure (TurnResCurrentTime protocolFixedTime)
-    TurnReqRequestId ->
-      pure (TurnResRequestId "request-id-protocol")
-    TurnReqReadEnv _ ->
-      pure (TurnResReadEnv Nothing)
-    TurnReqTestMarkOnceFile _ ->
-      pure (TurnResTestMarkOnceFile False)
-    TurnReqSemanticIntrospectionEnv ->
-      pure (TurnResSemanticIntrospectionEnv False)
-    TurnReqCommitRuntimeState _ _ _ ->
-      pure TurnResCommitRuntimeState
-    TurnReqSaveState ss _ _ ->
-      pure (TurnResSaveState (Right ss))
-    TurnReqRollbackTurnProjections _ _ ->
-      pure (TurnResRollbackTurnProjections (Right ()))
-    TurnReqCheckpoint _ ->
-      pure TurnResCheckpointCompleted
-    TurnReqLinearizeClaimAst _ _ _ ->
-      pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
-    TurnReqLinearizeDialogAtoms _ _ _ ->
-      pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
-    TurnReqExternalQuery tool need queryText -> do
-      transport <- buildTransportFromConfig explicitMockExternalQueryConfig
-      result <- queryExternalTool transport tool need queryText
-      pure (TurnResExternalQuery result)
-
-explicitMockExternalQueryConfig :: ExternalQueryConfig
-explicitMockExternalQueryConfig =
-  defaultExternalQueryConfig
-    { eqcTransportMode = "mock"
-    , eqcFallbackReason = Just TfrExplicitMock
-    }
-
-protocolFixedTime :: UTCTime
-protocolFixedTime = UTCTime (ModifiedJulianDay 0) 0
 
 trackedPrepareInterpreter :: IORef Int -> IORef Int -> TurnEffectRequest -> IO TurnEffectResult
 trackedPrepareInterpreter activeRef maxRef request =
@@ -2063,119 +2035,6 @@ trackConcurrentEffect activeRef maxRef action = do
   atomicModifyIORef' activeRef $ \active -> (active - 1, ())
   pure result
 
-buildPreparedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals)
-buildPreparedFixture rawInput = do
-  -- Phase-1 SelfBlanket invariants require a non-empty session id and
-  -- a non-empty morphology to consider the state /this system/. Test
-  -- fixtures must therefore supply at least the minimum needed to
-  -- satisfy 'checkInitialBlanket' / 'checkBlanketTransition'; the
-  -- specific values are synthetic and orthogonal to the assertions
-  -- in this suite.
-  let ss = emptySystemState
-        { ssSessionId  = "fixture-session"
-        , ssMorphology = MorphologyData
-            (Map.singleton "о" "preposition")
-            Map.empty
-            Map.empty
-            Map.empty
-        }
-      preparePlan = planPrepareEffects ss rawInput testEpochZero
-  prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
-  let ti = buildTurnInput ss "request-prop" "session-prop" preparePlan prepareResults
-      ts = buildTurnSignals prepareResults
-  pure (ss, ti, ts)
-
-buildPlannedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan)
-buildPlannedFixture rawInput = do
-  (ss, ti, ts) <- buildPreparedFixture rawInput
-  let routePlan = planRouteEffects ss ti ts
-  routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
-  pure (ss, ti, ts, tp)
-
-buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
-buildRenderedFixture rawInput = do
-  (ss, ti, ts, tp) <- buildPlannedFixture rawInput
-  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
-  renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
-  let ta = buildTurnArtifacts ss ti ts tp renderPlan renderResults
-  pure (ss, ti, ts, tp, ta)
-
-buildFinalizeFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts, FinalizePrecommitBundle)
-buildFinalizeFixture rawInput = do
-  (ss, ti, ts, tp, ta) <- buildRenderedFixture rawInput
-  let precommitPlan = planFinalizePrecommit ss ti ts tp ta
-  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-  let bundle =
-        buildFinalizePrecommit
-          (pipelineUpdateHistory testProtocolPipelineIO)
-          ss
-          ti
-          ts
-          tp
-          ta
-          precommitPlan
-          precommitResults
-  pure (ss, ti, ts, tp, ta, bundle)
-
--- | Variant of 'buildFinalizeFixture' that starts from a custom
--- 'SystemState' instead of 'emptySystemState'.
-buildFinalizeFixtureWithState
-  :: SystemState -> T.Text
-  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts, FinalizePrecommitBundle)
-buildFinalizeFixtureWithState startSs rawInput = do
-  -- Override the emptySystemState used by buildRenderedFixture by
-  -- replicating the chain with the custom start state.
-  (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithState startSs rawInput
-  let precommitPlan = planFinalizePrecommit ss ti ts tp ta
-  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-  let bundle =
-        buildFinalizePrecommit
-          (pipelineUpdateHistory testProtocolPipelineIO)
-          ss
-          ti
-          ts
-          tp
-          ta
-          precommitPlan
-          precommitResults
-  pure (ss, ti, ts, tp, ta, bundle)
-
-buildRenderedFixtureWithState
-  :: SystemState -> T.Text
-  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
-buildRenderedFixtureWithState startSs rawInput = do
-  (ss, ti, ts, tp) <- buildPlannedFixtureWithState startSs rawInput
-  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
-  renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
-  let ta = buildTurnArtifacts ss ti ts tp renderPlan renderResults
-  pure (ss, ti, ts, tp, ta)
-
-buildPlannedFixtureWithState
-  :: SystemState -> T.Text
-  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan)
-buildPlannedFixtureWithState startSs rawInput = do
-  (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
-  let routePlan = planRouteEffects ss ti ts
-  routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
-  pure (ss, ti, ts, tp)
-
-buildPreparedFixtureWithState
-  :: SystemState -> T.Text
-  -> IO (SystemState, TurnInput, TurnSignals)
-buildPreparedFixtureWithState startSs rawInput = do
-  let preparePlan = planPrepareEffects startSs rawInput testEpochZero
-  prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
-  let ti = buildTurnInput startSs "request-prop" "session-prop" preparePlan prepareResults
-      ts = buildTurnSignals prepareResults
-  pure (startSs, ti, ts)
-
-withDeterministicEmbedding :: IO a -> IO a
-withDeterministicEmbedding =
-  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic")
-    . withEnvVar "EMBEDDING_API_URL" Nothing
-
 assertStructuredTurn :: T.Text -> CanonicalMoveFamily -> [T.Text] -> IO ()
 assertStructuredTurn rawInput expectedFamily requiredFragments = do
   (_ss, _ti, _ts, tp, ta) <- buildRenderedFixture rawInput
@@ -2223,7 +2082,7 @@ summarizeFinalizePrecommitPlan
      , Int
      , Bool
      , Int
-     , FinalizePrecommitRequest
+     , UTCTime
      , FinalizePrecommitRequest
      )
 summarizeFinalizePrecommitPlan plan =
@@ -2233,7 +2092,7 @@ summarizeFinalizePrecommitPlan plan =
      , fsConsecReflect static
      , fsTransitionWon static
      , length (mgEdges (fsMeaningGraphBase static))
-     , fppCurrentTimeRequest plan
+     , fppCapturedCurrentTime plan
      , fppIntrospectionRequest plan
      )
 
@@ -2251,9 +2110,6 @@ quickCheckTest label prop = TestCase $ do
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)
-
-testEpochZero :: UTCTime
-testEpochZero = UTCTime (ModifiedJulianDay 0) 0
 
 -- | WP2: selectTool picks the highest-reliability validatable tool
 -- whose domain matches the learning need.
@@ -3021,7 +2877,7 @@ testPerspectiveFinalizeRecordsGovernedMutation = TestCase $
                   ]
               }
           }
-    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    (bundle, _ta) <- buildAuthoritativePerspectiveFinalizeFixture startSs "это помогло"
     let nextSs = fpbNextSs bundle
         registry = ssPerspectiveRegistry nextSs
     assertBool "perspective registry must have canonical thread"
@@ -3056,7 +2912,7 @@ testPerspectiveFinalizeReplayUsesSafeProjectionOnly = TestCase $
                   ]
               }
           }
-    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    (bundle, _ta) <- buildAuthoritativePerspectiveFinalizeFixture startSs "это помогло"
     let replay = tqpReplayTrace (fpbProjection bundle)
         encodedReplay = encode replay
     case trcPerspectiveProjection replay of

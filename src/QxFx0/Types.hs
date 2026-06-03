@@ -13,7 +13,7 @@ module QxFx0.Types
   , module QxFx0.Types.TurnProjection
   , module QxFx0.Types.Vec
   , module QxFx0.Types.ExternalQuery
-  , module QxFx0.Semantic.Sense
+  , module QxFx0.Types.Sense
   ) where
 
 import QxFx0.Types.Domain
@@ -29,4 +29,4 @@ import QxFx0.Types.Recovery
 import QxFx0.Types.TurnProjection
 import QxFx0.Types.Vec
 import QxFx0.Types.ExternalQuery
-import QxFx0.Semantic.Sense
+import QxFx0.Types.Sense

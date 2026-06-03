@@ -101,13 +101,21 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       formalFamily   = fcFinalFamily
       holisticFamily = if familyDivergenceEnabled then nearestHolistic fcFinalFamily else fcFinalFamily
       renderStrategy = rpChosenStrategy
+      atmosphereTone =
+        let a = fieldAtmosphere preparedField
+            dm = defaultDeliberationModulation
+        in if atmosphereArousal a > dmToneArousalFloor dm && atmosphereValence a >= dmToneValenceNeutral dm
+             then NarrativeWarm
+           else if atmosphereArousal a > dmToneArousalFloor dm && atmosphereValence a < dmToneValenceNeutral dm
+             then NarrativeTerse
+           else NarrativeNeutral
 
       baseStyle =
         let styleIdentitySignal = buildIdentitySignalSimple rpOrbitalPhase rpEncounterMode rpPrevDirective
                                   (asRegister atomSet) (usNeedLayer nextUserState) fcFinalFamily (forceForFamily fcFinalFamily)
             styleSemanticInput  = buildSemanticInputSimple input atomSet frame fcFinalFamily (asRegister atomSet) (usNeedLayer nextUserState)
             styleSemanticAnchor = deriveSemanticAnchor (ssSemanticAnchor ss) styleSemanticInput currentTopic (ssTurnCount ss + 1)
-         in renderStyleFromDecision renderStrategy rpPrincipledModeResult styleIdentitySignal styleSemanticAnchor styleSemanticInput
+         in renderStyleFromDecision renderStrategy rpPrincipledModeResult atmosphereTone styleIdentitySignal styleSemanticAnchor styleSemanticInput
       salienceStyle = applySalienceToStyle (ssSalienceWeights ss) routingSalience preparedField baseStyle
 
       -- Contract status: bounded causal contour. Narrative tone is not
@@ -126,14 +134,7 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       holisticPlan = defaultPlan
         { planFamily      = holisticFamily
         , planRenderStyle = salienceStyle
-        , planNarrativeTone =
-            let a = fieldAtmosphere preparedField
-                dm = defaultDeliberationModulation
-             in if atmosphereArousal a > dmToneArousalFloor dm && atmosphereValence a >= dmToneValenceNeutral dm
-                   then NarrativeWarm
-                 else if atmosphereArousal a > dmToneArousalFloor dm && atmosphereValence a < dmToneValenceNeutral dm
-                   then NarrativeTerse
-                   else NarrativeNeutral
+        , planNarrativeTone = atmosphereTone
         , planConfidence  = salienceConfidence routingSalience
         }
       -- Package D: formal hemisphere probes the field; holistic

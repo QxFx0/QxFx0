@@ -122,7 +122,8 @@ import GHC.Generics (Generic)
 -- conversational window. Range @[0, 1]@: 0 = topic shift,
 -- 1 = exact echo. @k@ is a Phase-5 tunable.
 newtype Resonance = Resonance { unResonance :: Double }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Two-dimensional affective summary on the valence\/arousal axis.
 --
@@ -131,26 +132,30 @@ newtype Resonance = Resonance { unResonance :: Double }
 data Atmosphere = Atmosphere
   { atmosphereValence :: !Double
   , atmosphereArousal :: !Double
-  } deriving stock (Eq, Show)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Internal-coherence score in @[0, 1]@: @1@ = all signals agree,
 -- @0@ = signals are mutually contradictory and any decision drawn
 -- from this 'Field' is suspect.
 newtype FieldConfidence = FieldConfidence { unFieldConfidence :: Double }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Narrative-integration scalar in @[0, 1]@: how much of the
 -- recent conversation has been digested into the system's running
 -- model. Genuinely temporal — its value at turn @n@ depends on
 -- the trajectory through turns @1..n@, not just the current turn.
 newtype Consolidation = Consolidation { unConsolidation :: Double }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Diversity of plausible alternative interpretations of the
 -- current turn, normalised to @[0, 1]@. High = posterior was
 -- spread; low = posterior was peaked.
 newtype Counterfactual = Counterfactual { unCounterfactual :: Double }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- ---------------------------------------------------------------------------
 -- Smart constructors
@@ -195,7 +200,8 @@ data Field = Field
   , fieldConfidence     :: !FieldConfidence
   , fieldConsolidation  :: !Consolidation
   , fieldCounterfactual :: !Counterfactual
-  } deriving stock (Eq, Show)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | The \"no observation yet\" zero. Per ADR-0009 §4.4,
 -- 'fieldConfidence' is set to @1.0@: a system that has not yet

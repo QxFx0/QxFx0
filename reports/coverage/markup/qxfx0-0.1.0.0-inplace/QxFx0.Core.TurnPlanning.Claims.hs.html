@@ -1,0 +1,42 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>{-| Identity-claim integration and confidence filtering for planning context. -}
+<span class="lineno">    4 </span>module QxFx0.Core.TurnPlanning.Claims
+<span class="lineno">    5 </span>  ( integrateIdentityClaims
+<span class="lineno">    6 </span>  ) where
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>import Data.Text (Text)
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>import QxFx0.Core.ClaimBuilder (deduplicateClaims, scoreClaims, selectTopClaims)
+<span class="lineno">   11 </span>import QxFx0.Types
+<span class="lineno">   12 </span>import QxFx0.Types.Thresholds (minIdentityClaimConfidence)
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>integrateIdentityClaims :: [IdentityClaimRef] -&gt; CanonicalMoveFamily -&gt; Text -&gt; [IdentityClaimRef]
+<span class="lineno">   15 </span><span class="decl"><span class="istickedoff">integrateIdentityClaims claims _family topic =</span>
+<span class="lineno">   16 </span><span class="spaces">  </span><span class="istickedoff">let scored = scoreClaims claims topic</span>
+<span class="lineno">   17 </span><span class="spaces">      </span><span class="istickedoff">topClaims = selectTopClaims 5 scored</span>
+<span class="lineno">   18 </span><span class="spaces">      </span><span class="istickedoff">deduped = deduplicateClaims topClaims</span>
+<span class="lineno">   19 </span><span class="spaces">   </span><span class="istickedoff">in filter (\claim -&gt; icrConfidence claim &gt;= minIdentityClaimConfidence) deduped</span></span>
+
+</pre>
+</body>
+</html>

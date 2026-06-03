@@ -337,13 +337,7 @@ else
 fi
 
 echo "[7/10] Embedded SQL sync ..."
-if ! command -v python3 &>/dev/null; then
-  echo "  FAIL (python3 is required for SQL sync verification)"
-  exit 1
-elif [ ! -f "$ROOT/scripts/sync_embedded_sql.py" ]; then
-  echo "  FAIL (scripts/sync_embedded_sql.py is missing)"
-  exit 1
-elif python3 "$ROOT/scripts/sync_embedded_sql.py" --check >/dev/null 2>&1; then
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1); then
   echo "  OK"
 else
   echo "  FAIL (EmbeddedSQL.hs or migration drifted from spec/sql)"
@@ -351,13 +345,7 @@ else
 fi
 
 echo "[8/10] Migration cumulative schema consistency ..."
-if ! command -v python3 &>/dev/null; then
-  echo "  FAIL (python3 is required for schema consistency verification)"
-  exit 1
-elif [ ! -f "$ROOT/scripts/check_schema_consistency.py" ]; then
-  echo "  FAIL (scripts/check_schema_consistency.py is missing)"
-  exit 1
-elif python3 "$ROOT/scripts/check_schema_consistency.py" >/dev/null 2>&1; then
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-schema-consistency >/dev/null 2>&1); then
   echo "  OK"
 else
   echo "  FAIL (cumulative migrations do not match canonical schema.sql)"
@@ -365,13 +353,7 @@ else
 fi
 
 echo "[8b/10] Runtime schema contract manifest ..."
-if ! command -v python3 &>/dev/null; then
-  echo "  FAIL (python3 is required for runtime schema contract verification)"
-  exit 1
-elif [ ! -f "$ROOT/scripts/check_schema_contract.py" ]; then
-  echo "  FAIL (scripts/check_schema_contract.py is missing)"
-  exit 1
-elif python3 "$ROOT/scripts/check_schema_contract.py" >/dev/null 2>&1; then
+if (cd "$ROOT" && cabal run qxfx0-main -- --check-schema-contract >/dev/null 2>&1); then
   echo "  OK"
 else
   echo "  FAIL (runtime schema contract manifest drifted from schema.sql or SchemaContract.hs)"

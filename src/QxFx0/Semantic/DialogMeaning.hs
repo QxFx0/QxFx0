@@ -15,13 +15,13 @@ import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Core.TruthContract (capByTruthContract)
 import QxFx0.Types.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Runtime.GF.Morphology (genitiveForm, prepositionalForm, accusativeForm)
 import QxFx0.Semantic.DialogAtom
 import QxFx0.Semantic.Input.Parse (ParsedInput(..), ParsedToken(..))
 import QxFx0.Types hiding (AtomTag)
 import QxFx0.Types.SemanticConfig (SemanticConfig(..))
+import QxFx0.Types.TruthContract (capByTruthContract)
 
 buildDialogAtoms :: InputPropositionFrame -> ResponseMeaningPlan -> SystemState
                   -> MorphologyData -> ParsedInput -> Maybe ConsciousnessNarrative

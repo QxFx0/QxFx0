@@ -150,16 +150,19 @@ applyCalibrationGated
   -> (Bool, CalibrationDecision)
 applyCalibrationGated cfg signal snapshots =
   let s = unCalibrationSignal signal
+      nonFinite = isNaN s || isInfinite s
       absS = abs s
       -- Rate limit: count recent CdApplySignal within window
       recentApplies = length (filter (\cs -> csDecision cs == CdApplySignal)
                               (take (spcApplyWindow cfg) snapshots))
       rateLimitOk = recentApplies < spcApplyRateLimit cfg
-  in if absS < spcMinConfidence cfg
+  in if nonFinite
        then (False, CdHoldLowConfidence)
-     else if not rateLimitOk
-       then (False, CdHoldGuardrails)
-     else (True, CdApplySignal)
+     else if absS < spcMinConfidence cfg
+        then (False, CdHoldLowConfidence)
+      else if not rateLimitOk
+        then (False, CdHoldGuardrails)
+      else (True, CdApplySignal)
 
 -- | Compute the bounded calibration signal.
 --
@@ -208,7 +211,10 @@ computeCalibrationSignal needState counterfactual loopCount windowSize tree =
 
       -- 4. Branch health trend: inverted so decay -> positive signal
       avgHealth = branchHealthTrend tree
-      branchHealthTrend' = clampUnit (-avgHealth * 2.0)
+      branchHealthTrend' =
+        if isNaN avgHealth || isInfinite avgHealth
+          then 0.0
+          else clampUnit (-avgHealth * 2.0)
 
       comps = SignalComponents
         { scConatusTrend = conatusTrend
@@ -228,7 +234,11 @@ computeCalibrationSignal needState counterfactual loopCount windowSize tree =
   in (signal, comps)
 
 clampUnit :: Double -> Double
-clampUnit x = max (-1.0) (min 1.0 x)
+clampUnit x
+  | isNaN x || isInfinite x = 0.0
+  | otherwise = max (-1.0) (min 1.0 x)
 
 clampRange :: Double -> Double -> Double -> Double
-clampRange lo hi x = max lo (min hi x)
+clampRange lo hi x
+  | isNaN x || isInfinite x = 0.0
+  | otherwise = max lo (min hi x)

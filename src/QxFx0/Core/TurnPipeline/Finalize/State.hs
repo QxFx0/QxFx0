@@ -36,6 +36,7 @@ import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
+import QxFx0.Semantic.Proposition (parseProposition)
 import QxFx0.Self.Salience
   ( Salience (..)
   , SalienceWeights(..)
@@ -261,7 +262,7 @@ quarantinePromotionMutationRecords turn promotedCount
 appendCalibrationEntries :: Int -> CalibrationLog -> [Maybe CalibrationProposal] -> CalibrationLog
 appendCalibrationEntries turn (CalibrationLog existing) proposals =
   let concrete = [ proposal | Just proposal <- proposals ]
-      nextBase = maybe 1 ((+ 1) . unCalibrationId . ceId) (safeLast existing)
+      nextBase = maybe 1 ((+ 1) . unCalibrationId . ceId) (safeLastEntry existing)
       prevId = currentCalibrationVersion (CalibrationLog existing)
       step (entries, nextId, previous) proposal =
         let (entry, CalibrationId nextRaw) = acceptProposal (CalibrationId nextId) proposal turn previous
@@ -269,8 +270,8 @@ appendCalibrationEntries turn (CalibrationLog existing) proposals =
       (newEntries, _, _) = foldl step ([], nextBase, prevId) concrete
   in CalibrationLog (existing ++ newEntries)
   where
-    safeLast [] = Nothing
-    safeLast xs = Just (last xs)
+    safeLastEntry [] = Nothing
+    safeLastEntry xs = foldl (\_ entry -> Just entry) Nothing xs
 
 calibrationMutationRecord :: Int -> CalibrationDecision -> Double -> SignalComponents -> AdaptiveMutationRecord
 calibrationMutationRecord turn decision signal comps = AdaptiveMutationRecord
@@ -518,9 +519,9 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                 (asAtoms canonicalSet)
               decayed = decayProvisionalAtoms currentTurn observed
               (remaining, _promoted) = promoteProvisionalAtoms currentTurn decayed
-          in resolveCollisions canonicalSet remaining
+          in take maxProvisionalAtoms (resolveCollisions canonicalSet remaining)
       , ssLearningNeedState = newLearningNeedState
-      , ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) executedOutcome
+       , ssDialogueThread = advanceDialogueThreadAfterTurn (tiDialogueThread ti) (tpRmpAfterLegit tp) executedOutcome
       , ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) executedOutcome
       , ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) executedOutcome
       , ssTruthContractStatus = etoTruthContractStatus executedOutcome
@@ -538,6 +539,9 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       in ( nextWithLog
     , commitmentTrigger
     )
+
+maxProvisionalAtoms :: Int
+maxProvisionalAtoms = 1000
 
 buildTurnProjection
   :: Text
@@ -557,6 +561,14 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       executedForce = etoForce executedOutcome
       parserConfidence = ipfConfidence (tiFrame ti)
       parserErrors = if parserConfidence < parserLowConfidenceThreshold then ["low_confidence"] else []
+      parserBackend = "local_rule_based"
+      parserStatus
+        | tiFrame ti == parseProposition (ipfRawText (tiFrame ti)) = "ok"
+        | otherwise = "degraded"
+      parserDegradationReason
+        | parserStatus == "ok" = Nothing
+        | otherwise = Just "frame_runtime_mismatch"
+      parserLatencyMs = 0
       scenePressure
         | asLoad (tiAtomSet ti) <= scenePressureLowThreshold = PressureLow
         | asLoad (tiAtomSet ti) <= scenePressureMediumThreshold = PressureMedium
@@ -635,8 +647,12 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcFinalForce = executedForce
           , trcDecisionDisposition = loDisposition legitimacyOutcome
           , trcLegitimacyReason = legitimacyReason
-          , trcParserConfidence = parserConfidence
-          , trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)
+           , trcParserConfidence = parserConfidence
+           , trcParserBackend = parserBackend
+           , trcParserStatus = parserStatus
+           , trcParserDegradationReason = parserDegradationReason
+           , trcParserLatencyMs = parserLatencyMs
+           , trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)
           , trcClaimAst = taClaimAst ta
           , trcPreSafetyRenderedRaw = taPreSafetyRendered ta
           , trcRenderedAfterRebind = taRendered ta
@@ -648,12 +664,15 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcAuthorityClass = Just (etoAuthorityClass executedOutcome)
           , trcTruthContractStatus = etoTruthContractStatus executedOutcome
           , trcAssemblyPath = Just (etoAssemblyPath executedOutcome)
-          , trcArtifactManifest = Just (etoArtifactManifest executedOutcome)
-           , trcReplayProvenanceStatus = normalizedReplayProvenanceStatus (replayProvenanceStatusForOutcome executedOutcome) (etoAuthorityClass executedOutcome)
-          , trcDerivationTags = taDerivationTags ta
-           , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
-           , trcSalienceHolisticBias = salienceHolisticBias traceSalience
-           , trcSalienceConfidence = salienceConfidence traceSalience
+           , trcArtifactManifest = Just (etoArtifactManifest executedOutcome)
+            , trcReplayProvenanceStatus = normalizedReplayProvenanceStatus (replayProvenanceStatusForOutcome executedOutcome) (etoAuthorityClass executedOutcome)
+           , trcDerivationTags = taDerivationTags ta
+           , trcConatusEnergy = tiConatusEnergy ti
+           , trcConatusGateFired = tiConatusGateFired ti
+           , trcField = tiField ti
+            , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
+            , trcSalienceHolisticBias = salienceHolisticBias traceSalience
+            , trcSalienceConfidence = salienceConfidence traceSalience
            , trcDeliberationRule =
                tpDeliberation tp >>= \d ->
                  Just (renderReconcileRule (dtRule (delibTrace d)))
@@ -698,6 +717,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , trcDialogueCommitmentCount = length (dclItems (tiDialogueCommitmentLedger ti))
             , trcDialogueCommitmentCountBefore = length (dclItems (tiDialogueCommitmentLedger ti))
             , trcDialogueCommitmentCountAfter = length (dclItems (ssDialogueCommitmentLedger nextSs))
+            , trcIdentityClaims = ssIdentityClaims nextSs
             , trcMicroPlanMoves = mpRhetoricalMoves (rmpMicroPlan (tpRmpAfterLegit tp))
             , trcMicroPlanExplicitness = mpExplicitness (rmpMicroPlan (tpRmpAfterLegit tp))
             , trcPerspectiveProjection =
@@ -736,12 +756,12 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       , tqpDivergence = tpShadowDivergence tp
       }
 
-buildFinalOutput :: Bool -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
-buildFinalOutput wantIntrospection ss baseSurface nextSs =
+buildFinalOutput :: Bool -> Maybe TurnReplayTrace -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
+buildFinalOutput wantIntrospection mReplayTrace ss baseSurface nextSs =
   let preIntrospectionSurface =
         if wantIntrospection
           then
-            let introspectionText = renderSemanticIntrospection nextSs
+            let introspectionText = renderSemanticIntrospection nextSs mReplayTrace
             in baseSurface
                 { Guard.gsRenderedText = Guard.gsRenderedText baseSurface <> "\n" <> introspectionText
                 , Guard.gsSegments = Guard.gsSegments baseSurface <> [Guard.RenderSegment Guard.SegmentIntrospection introspectionText]
@@ -778,8 +798,8 @@ finalizeMetrics ti ta outcomeFamily decision savedSs apiHealthy finalSafetyStatu
       !metricsFinal = addPhase (recordPhase "total" (tiStartTime ti) tSave1) metrics5
   in metricsFinal
 
-advanceDialogueThreadAfterTurn :: DialogueThread -> ExecutedTurnOutcome -> DialogueThread
-advanceDialogueThreadAfterTurn thread outcome =
+advanceDialogueThreadAfterTurn :: DialogueThread -> ResponseMeaningPlan -> ExecutedTurnOutcome -> DialogueThread
+advanceDialogueThreadAfterTurn thread meaningPlan outcome =
   let family = etoFamily outcome
       currentFocus = dtCurrentFocus thread
       chooseNonEmpty primary fallback = if T.null primary then fallback else primary
@@ -804,6 +824,11 @@ advanceDialogueThreadAfterTurn thread outcome =
           CMRepair -> chooseNonEmpty (dtPhaseScope thread) nextFocus
           CMConfront -> chooseNonEmpty (dtPhaseScope thread) nextFocus
           _ -> chooseNonEmpty nextFocus (dtPhaseScope thread)
+      nextStructuralScope =
+        case etoAuthorityClass outcome of
+          AuthorityCanonical -> rmpScope meaningPlan <|> dtStructuralScope thread
+          AuthorityAssembled -> rmpScope meaningPlan <|> dtStructuralScope thread
+          _ -> dtStructuralScope thread
   in thread
       { dtCurrentFocus = nextFocus
       , dtPhaseScope = nextScope
@@ -813,6 +838,7 @@ advanceDialogueThreadAfterTurn thread outcome =
           CMRepair -> min 1.0 (dtResistance thread + 0.15)
           CMGround -> max 0.0 (dtResistance thread - 0.10)
           _ -> dtResistance thread
+      , dtStructuralScope = nextStructuralScope
       }
 
 advanceDialogueLedgerAfterTurn :: DialogueCommitmentLedger -> ExecutedTurnOutcome -> DialogueCommitmentLedger

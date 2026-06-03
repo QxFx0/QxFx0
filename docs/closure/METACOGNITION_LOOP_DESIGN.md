@@ -10,7 +10,7 @@
   - `docs/closure/REPLAY_GATE_SPEC.md` (Package 3)
   - `docs/closure/COGNITIVE_MEMORY_DESIGN.md` (Package 7)
   - `docs/closure/BOUNDED_LEARNING_DESIGN.md` (Package 8)
-  - `docs/closure/adr-0013-role-split.md` (Package 1)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (Package 1)
 
 ## 0. Why this design exists
 
@@ -263,7 +263,7 @@ Metacognition is subject to the replay gate:
   The `EvaluationUncalibrated` branch is a single level of
   meta; further levels are a research problem.
 - **Cross-session metacognition.** Deferred per
-  `docs/adr/proposed/0013-cross-session-essence-persistence.md`.
+  `docs/adr/proposed/0041-cross-session-essence-persistence.md`.
 - **LLM-driven metacognition.** The LLM is supplier-flag-off
   (per `AUTHORITY_MAP.md`). The metacognitive loop is pure
   Haskell; it does not consult the LLM.

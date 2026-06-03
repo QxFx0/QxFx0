@@ -9,10 +9,9 @@ module QxFx0.Core.TurnPipeline.Finalize.Precommit
   , buildFinalizePrecommit
   ) where
 
-import Control.Concurrent.Async (concurrently)
+import Control.Concurrent.Async (forConcurrently)
 import Data.Sequence (Seq)
 import Data.Text (Text)
-import Data.Time.Clock (UTCTime)
 
 import QxFx0.Core.MeaningGraph (recordTransition)
 import QxFx0.Core.PipelineIO
@@ -22,6 +21,7 @@ import QxFx0.Core.PipelineIO
   , pipelineRuntimeMode
   , pipelineRuntimeModeText
   , pipelineShadowPolicy
+  , scheduleTurnEffects
   , resolveTurnEffect
   , shadowPolicyText
   )
@@ -39,10 +39,6 @@ import QxFx0.Core.TurnPipeline.Finalize.State
 import QxFx0.Learning.Loop (applyExternalLearning)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
-import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(PersistenceError)
-  , throwQxFx0
-  )
 import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types
@@ -73,24 +69,35 @@ planFinalizePrecommit systemState _turnInput _turnSignals turnPlan turnArtifacts
           , fsTransitionWon = transitionWon
           , fsMeaningGraphBase = meaningGraphBase
           }
-   in FinalizePrecommitPlan
+    in FinalizePrecommitPlan
         { fppStatic = static
-        , fppCurrentTimeRequest = FinalizeReqCurrentTime
+        , fppCapturedCurrentTime = tiStartTime _turnInput
+        , fppConatusEnergy = tiConatusEnergy _turnInput
         , fppIntrospectionRequest = FinalizeReqSemanticIntrospectionEnv
         }
 
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit pipelineIO plan = do
-  (currentTime, (semanticIntrospectionEnabled, warnMorphologyFallbackEnabled)) <-
-    concurrently
-      (resolveCurrentTime pipelineIO plan)
-      ( concurrently
-          (resolveIntrospectionEnv pipelineIO plan)
-          (resolveWarnMorphologyFallbackEnv pipelineIO plan)
-      )
+  let scheduledRequests :: [(Text, TurnEffectRequest)]
+      scheduledRequests =
+        scheduleTurnEffects pipelineIO (fppConatusEnergy plan)
+          [ ("semantic_introspection", TurnReqSemanticIntrospectionEnv)
+          , ("warn_morphology", TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
+          ]
+  resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
+    result <- resolveTurnEffect pipelineIO request
+    pure (label, result)
+  let semanticIntrospectionEnabled =
+        case firstMatch (\(label, _) -> label == "semantic_introspection") resolved of
+          Just (_, TurnResSemanticIntrospectionEnv hasIntrospectionEnv) -> hasIntrospectionEnv
+          _ -> False
+      warnMorphologyFallbackEnabled =
+        case firstMatch (\(label, _) -> label == "warn_morphology") resolved of
+          Just (_, TurnResReadEnv (Just "1")) -> True
+          _ -> False
   pure
     FinalizePrecommitResults
-      { fprCurrentTime = currentTime
+      { fprCurrentTime = fppCapturedCurrentTime plan
       , fprRuntimeMode = pipelineRuntimeModeText (pipelineRuntimeMode pipelineIO)
       , fprShadowPolicy = shadowPolicyText (pipelineShadowPolicy pipelineIO)
       , fprLocalRecoveryPolicy = localRecoveryPolicyText (pipelineLocalRecoveryPolicy pipelineIO)
@@ -149,7 +156,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
         fprSemanticIntrospectionEnabled precommitResults
           || ssOutputMode systemState == SemanticIntrospectionOutput
       (outputWithIntrospection, finalSafetyStatus) =
-        buildFinalOutput wantIntrospection systemState (taGuardSurface turnArtifacts) nextSystemState
+        buildFinalOutput wantIntrospection (Just (tqpReplayTrace projection)) systemState (taGuardSurface turnArtifacts) nextSystemState
    in FinalizePrecommitBundle
         { fpbNextSs = nextSystemState
         , fpbProjection = projection
@@ -167,42 +174,10 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
          , fpbCommitmentTrigger = commitmentTrigger
          }
 
-resolveCurrentTime :: PipelineIO -> FinalizePrecommitPlan -> IO UTCTime
-resolveCurrentTime pipelineIO plan =
-  case finalizePrecommitRequestToTurnEffect (fppCurrentTimeRequest plan) of
-    Just _ -> do
-      result <- resolveTurnEffect pipelineIO TurnReqCurrentTime
-      case result of
-        TurnResCurrentTime currentTime -> pure currentTime
-        _ -> throwQxFx0 (PersistenceError "current time effect returned unexpected result")
-    Nothing ->
-      throwQxFx0 (PersistenceError "missing current time request")
-
-resolveIntrospectionEnv :: PipelineIO -> FinalizePrecommitPlan -> IO Bool
-resolveIntrospectionEnv pipelineIO plan =
-  case finalizePrecommitRequestToTurnEffect (fppIntrospectionRequest plan) of
-    Just _ -> do
-      result <- resolveTurnEffect pipelineIO TurnReqSemanticIntrospectionEnv
-      case result of
-        TurnResSemanticIntrospectionEnv hasIntrospectionEnv -> pure hasIntrospectionEnv
-        _ -> pure False
-    Nothing ->
-      pure False
-
-resolveWarnMorphologyFallbackEnv :: PipelineIO -> FinalizePrecommitPlan -> IO Bool
-resolveWarnMorphologyFallbackEnv pipelineIO plan =
-  case finalizePrecommitRequestToTurnEffect (fppIntrospectionRequest plan) of
-    Just _ -> do
-      result <- resolveTurnEffect pipelineIO (TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
-      case result of
-        TurnResReadEnv (Just "1") -> pure True
-        TurnResReadEnv _ -> pure False
-        _ -> pure False
-    Nothing ->
-      pure False
-
-finalizePrecommitRequestToTurnEffect :: FinalizePrecommitRequest -> Maybe TurnEffectRequest
-finalizePrecommitRequestToTurnEffect request =
-  case request of
-    FinalizeReqCurrentTime -> Just TurnReqCurrentTime
-    FinalizeReqSemanticIntrospectionEnv -> Just TurnReqSemanticIntrospectionEnv
+firstMatch :: (a -> Bool) -> [a] -> Maybe a
+firstMatch predicate = go
+  where
+    go [] = Nothing
+    go (x:xs)
+      | predicate x = Just x
+      | otherwise = go xs

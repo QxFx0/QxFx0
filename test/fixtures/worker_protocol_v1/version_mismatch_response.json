@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "error": "protocol_version_mismatch",
+  "message": "Unsupported worker protocol version",
+  "protocol_version": "1",
+  "requested_protocol_version": "999",
+  "result_unknown": false,
+  "session_valid": true,
+  "restart_required": true
+}

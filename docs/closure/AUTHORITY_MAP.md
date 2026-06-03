@@ -5,7 +5,7 @@
 - **Refines**: `docs/AUTHORITY_BOUNDARY.md` (2026-05-26), AGENTS.md, ADRs 0007–0012
 - **Related**:
   - `docs/closure/SELF_LAYER_STATUS.md`
-  - `docs/closure/adr-0013-role-split.md` (proposed)
+  - `docs/adr/proposed/0034-self-core-role-split.md` (proposed)
   - `docs/closure/TECH_DEBT_CLOSURE_INDEX.md`
 
 ## 0. Why this document exists
@@ -210,7 +210,7 @@ Package 1 is closed when:
 
 - [x] `docs/closure/AUTHORITY_MAP.md` (this file) exists and is
       consistent with `docs/AUTHORITY_BOUNDARY.md` (2026-05-26).
-- [ ] `docs/closure/adr-0013-role-split.md` (proposed) exists and
+- [ ] `docs/adr/proposed/0034-self-core-role-split.md` (proposed) exists and
       carries the role split decision with no per-module
       contradiction.
 - [ ] `docs/closure/SELF_LAYER_STATUS.md` completes the per-file

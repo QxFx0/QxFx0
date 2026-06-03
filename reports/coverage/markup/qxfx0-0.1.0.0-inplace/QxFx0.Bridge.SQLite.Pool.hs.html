@@ -1,0 +1,194 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE ScopedTypeVariables #-}
+<span class="lineno">    3 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>{-| Connection and pool lifecycle helpers for the runtime SQLite backend. -}
+<span class="lineno">    6 </span>module QxFx0.Bridge.SQLite.Pool
+<span class="lineno">    7 </span>  ( QxFx0DB(..)
+<span class="lineno">    8 </span>  , WorkerDBPool
+<span class="lineno">    9 </span>  , newDBPool
+<span class="lineno">   10 </span>  , closeDBPool
+<span class="lineno">   11 </span>  , withDB
+<span class="lineno">   12 </span>  , withPooledDB
+<span class="lineno">   13 </span>  , execOrThrow
+<span class="lineno">   14 </span>  ) where
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
+<span class="lineno">   17 </span>import Control.Exception (finally, mask, mask_, onException, throwIO)
+<span class="lineno">   18 </span>import Data.Text (Text)
+<span class="lineno">   19 </span>import qualified Data.Text as T
+<span class="lineno">   20 </span>import qualified QxFx0.Bridge.NativeSQLite as NSQL
+<span class="lineno">   21 </span>import QxFx0.ExceptionPolicy
+<span class="lineno">   22 </span>  ( QxFx0Exception(PersistenceTxError, SQLiteError)
+<span class="lineno">   23 </span>  , catchIO
+<span class="lineno">   24 </span>  , tryAsync
+<span class="lineno">   25 </span>  , tryQxFx0
+<span class="lineno">   26 </span>  , throwQxFx0
+<span class="lineno">   27 </span>  )
+<span class="lineno">   28 </span>import System.Timeout (timeout)
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>data QxFx0DB = QxFx0DB
+<span class="lineno">   31 </span>  { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">qdbPath</span></span></span> :: !FilePath
+<span class="lineno">   32 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">qdbConn</span></span></span> :: !NSQL.Database
+<span class="lineno">   33 </span>  }
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>data WorkerDBPool = WorkerDBPool
+<span class="lineno">   36 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">poolMVar</span></span></span> :: !(MVar [NSQL.Database])
+<span class="lineno">   37 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">poolPath</span></span></span> :: !FilePath
+<span class="lineno">   38 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">poolSize</span></span></span> :: !Int
+<span class="lineno">   39 </span>  }
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>newDBPool :: FilePath -&gt; Int -&gt; IO WorkerDBPool
+<span class="lineno">   42 </span><span class="decl"><span class="istickedoff">newDBPool path size = do</span>
+<span class="lineno">   43 </span><span class="spaces">  </span><span class="istickedoff">conns &lt;- buildPoolConnections size []</span>
+<span class="lineno">   44 </span><span class="spaces">  </span><span class="istickedoff">mvar &lt;- newMVar conns</span>
+<span class="lineno">   45 </span><span class="spaces">  </span><span class="istickedoff">pure WorkerDBPool {poolMVar = mvar, poolPath = path, poolSize = size}</span>
+<span class="lineno">   46 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   47 </span><span class="spaces">    </span><span class="istickedoff">buildPoolConnections 0 acc = pure (reverse acc)</span>
+<span class="lineno">   48 </span><span class="spaces">    </span><span class="istickedoff">buildPoolConnections n acc = do</span>
+<span class="lineno">   49 </span><span class="spaces">      </span><span class="istickedoff">openResult &lt;- tryAsync (openInitializedConnection path)</span>
+<span class="lineno">   50 </span><span class="spaces">      </span><span class="istickedoff">case openResult of</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="istickedoff">Right db -&gt;</span>
+<span class="lineno">   52 </span><span class="spaces">          </span><span class="istickedoff">buildPoolConnections (n - 1) (db : acc)</span>
+<span class="lineno">   53 </span><span class="spaces">        </span><span class="istickedoff">Left ex -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">   54 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">mapM_ safeClose acc</span></span>
+<span class="lineno">   55 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">throwIO ex</span></span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>closeDBPool :: WorkerDBPool -&gt; IO ()
+<span class="lineno">   58 </span><span class="decl"><span class="istickedoff">closeDBPool pool = mask_ $ do</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">conns &lt;- takeMVar (poolMVar pool)</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="istickedoff">finally</span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">(mapM_ NSQL.close conns)</span>
+<span class="lineno">   62 </span><span class="spaces">    </span><span class="istickedoff">(putMVar (poolMVar pool) [])</span></span>
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>withDB :: FilePath -&gt; (NSQL.Database -&gt; IO a) -&gt; IO (Either Text a)
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">withDB path action = do</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="istickedoff">mDb &lt;- NSQL.open path</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="istickedoff">case mDb of</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">pure (Left err)</span></span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">Right db -&gt;</span>
+<span class="lineno">   70 </span><span class="spaces">      </span><span class="istickedoff">finally</span>
+<span class="lineno">   71 </span><span class="spaces">        </span><span class="istickedoff">(catchIO</span>
+<span class="lineno">   72 </span><span class="spaces">          </span><span class="istickedoff">(do</span>
+<span class="lineno">   73 </span><span class="spaces">            </span><span class="istickedoff">qxfx0Result &lt;- tryQxFx0 $ do</span>
+<span class="lineno">   74 </span><span class="spaces">              </span><span class="istickedoff">execOrThrow db &quot;PRAGMA journal_mode=WAL;&quot;</span>
+<span class="lineno">   75 </span><span class="spaces">              </span><span class="istickedoff">execOrThrow db &quot;PRAGMA foreign_keys=ON;&quot;</span>
+<span class="lineno">   76 </span><span class="spaces">              </span><span class="istickedoff">action db</span>
+<span class="lineno">   77 </span><span class="spaces">            </span><span class="istickedoff">case qxfx0Result of</span>
+<span class="lineno">   78 </span><span class="spaces">              </span><span class="istickedoff">Right value -&gt; pure (Right <span class="nottickedoff">value</span>)</span>
+<span class="lineno">   79 </span><span class="spaces">              </span><span class="istickedoff">Left ex -&gt; pure (Left (renderDbActionFailure ex)))</span>
+<span class="lineno">   80 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(\err -&gt; pure (Left (&quot;db action failed: &quot; &lt;&gt; T.pack (show err))))</span>)</span>
+<span class="lineno">   81 </span><span class="spaces">        </span><span class="istickedoff">(safeClose db)</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>renderDbActionFailure :: QxFx0Exception -&gt; Text
+<span class="lineno">   84 </span><span class="decl"><span class="istickedoff">renderDbActionFailure ex =</span>
+<span class="lineno">   85 </span><span class="spaces">  </span><span class="istickedoff">case ex of</span>
+<span class="lineno">   86 </span><span class="spaces">    </span><span class="istickedoff">SQLiteError msg -&gt; &quot;db action failed: &quot; &lt;&gt; msg</span>
+<span class="lineno">   87 </span><span class="spaces">    </span><span class="istickedoff">PersistenceTxError stage msg -&gt;</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&quot;db action failed: stage=&quot; &lt;&gt; T.pack (show stage) &lt;&gt; &quot;: &quot; &lt;&gt; msg</span></span>
+<span class="lineno">   89 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">&quot;db action failed&quot;</span></span></span>
+<span class="lineno">   90 </span>
+<span class="lineno">   91 </span>withPooledDB :: WorkerDBPool -&gt; (NSQL.Database -&gt; IO a) -&gt; IO a
+<span class="lineno">   92 </span><span class="decl"><span class="istickedoff">withPooledDB pool action = mask $ \restore -&gt; do</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">mConns &lt;- timeout poolAcquireTimeoutMicros (takeMVar (poolMVar pool))</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">conns &lt;-</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">case mConns of</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   97 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0</span></span>
+<span class="lineno">   98 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">(SQLiteError</span></span>
+<span class="lineno">   99 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">(&quot;timed out waiting for SQLite pool connection (pool_size=&quot;</span></span>
+<span class="lineno">  100 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; T.pack (show (poolSize pool))</span></span>
+<span class="lineno">  101 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">&lt;&gt; &quot;)&quot;))</span></span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">Just available -&gt; pure available</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">withConnections restore conns</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  105 </span><span class="spaces">    </span><span class="istickedoff">poolAcquireTimeoutMicros :: Int</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">poolAcquireTimeoutMicros = 5000000</span>
+<span class="lineno">  107 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">withConnections restore [] = do</span>
+<span class="lineno">  109 </span><span class="spaces">      </span><span class="istickedoff">db &lt;- openInitializedConnection (poolPath pool)</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">finally</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff">(restore (action db))</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">(safeClose db `finally` putMVar (poolMVar pool) [])</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">withConnections restore (db : dbs) =</span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">finally</span>
+<span class="lineno">  115 </span><span class="spaces">        </span><span class="istickedoff">(restore (action db))</span>
+<span class="lineno">  116 </span><span class="spaces">        </span><span class="istickedoff">(restorePooledConnection db dbs)</span>
+<span class="lineno">  117 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  118 </span><span class="spaces">    </span><span class="istickedoff">restorePooledConnection db dbs = do</span>
+<span class="lineno">  119 </span><span class="spaces">      </span><span class="istickedoff">mDb &lt;- sanitizeForPool db</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">case mDb of</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">Just cleanDb -&gt;</span>
+<span class="lineno">  122 </span><span class="spaces">          </span><span class="istickedoff">putMVar (poolMVar pool) (cleanDb : dbs)</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">  124 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">putMVar (poolMVar pool) dbs</span></span>
+<span class="lineno">  125 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">sanitizeForPool db = do</span>
+<span class="lineno">  127 </span><span class="spaces">      </span><span class="istickedoff">rollbackResult &lt;- NSQL.execSql db &quot;ROLLBACK;&quot;</span>
+<span class="lineno">  128 </span><span class="spaces">      </span><span class="istickedoff">case rollbackResult of</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">Right _ -&gt;</span>
+<span class="lineno">  130 </span><span class="spaces">          </span><span class="istickedoff">pure (Just db)</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">Left err</span>
+<span class="lineno">  132 </span><span class="spaces">          </span><span class="istickedoff">| <span class="tickonlytrue">isNoActiveTransactionError err</span> -&gt;</span>
+<span class="lineno">  133 </span><span class="spaces">              </span><span class="istickedoff">pure (Just db)</span>
+<span class="lineno">  134 </span><span class="spaces">          </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span> -&gt; <span class="nottickedoff">do</span></span>
+<span class="lineno">  135 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">safeClose db</span></span>
+<span class="lineno">  136 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">replacement &lt;- tryAsync (openInitializedConnection (poolPath pool))</span></span>
+<span class="lineno">  137 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">case replacement of</span></span>
+<span class="lineno">  138 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">Right freshDb -&gt; pure (Just freshDb)</span></span>
+<span class="lineno">  139 </span><span class="spaces">                </span><span class="istickedoff"><span class="nottickedoff">Left _ -&gt; pure Nothing</span></span></span>
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>isNoActiveTransactionError :: Text -&gt; Bool
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">isNoActiveTransactionError err =</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">&quot;no transaction is active&quot; `T.isInfixOf` T.toLower err</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>openInitializedConnection :: FilePath -&gt; IO NSQL.Database
+<span class="lineno">  146 </span><span class="decl"><span class="istickedoff">openInitializedConnection path = do</span>
+<span class="lineno">  147 </span><span class="spaces">  </span><span class="istickedoff">mDb &lt;- NSQL.open path</span>
+<span class="lineno">  148 </span><span class="spaces">  </span><span class="istickedoff">case mDb of</span>
+<span class="lineno">  149 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  150 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0 (SQLiteError err)</span></span>
+<span class="lineno">  151 </span><span class="spaces">    </span><span class="istickedoff">Right db -&gt;</span>
+<span class="lineno">  152 </span><span class="spaces">      </span><span class="istickedoff">(do</span>
+<span class="lineno">  153 </span><span class="spaces">          </span><span class="istickedoff">execOrThrow db &quot;PRAGMA journal_mode=WAL;&quot;</span>
+<span class="lineno">  154 </span><span class="spaces">          </span><span class="istickedoff">execOrThrow db &quot;PRAGMA synchronous=NORMAL;&quot;</span>
+<span class="lineno">  155 </span><span class="spaces">          </span><span class="istickedoff">execOrThrow db &quot;PRAGMA foreign_keys=ON;&quot;</span>
+<span class="lineno">  156 </span><span class="spaces">          </span><span class="istickedoff">pure db)</span>
+<span class="lineno">  157 </span><span class="spaces">      </span><span class="istickedoff">`onException` <span class="nottickedoff">safeClose db</span></span></span>
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>safeClose :: NSQL.Database -&gt; IO ()
+<span class="lineno">  160 </span><span class="decl"><span class="istickedoff">safeClose db = do</span>
+<span class="lineno">  161 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- tryAsync (NSQL.close db)</span>
+<span class="lineno">  162 </span><span class="spaces">  </span><span class="istickedoff">pure <span class="nottickedoff">()</span></span></span>
+<span class="lineno">  163 </span>
+<span class="lineno">  164 </span>execOrThrow :: NSQL.Database -&gt; Text -&gt; IO ()
+<span class="lineno">  165 </span><span class="decl"><span class="istickedoff">execOrThrow db sql = do</span>
+<span class="lineno">  166 </span><span class="spaces">  </span><span class="istickedoff">result &lt;- NSQL.execSql db sql</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">case result of</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">Left err -&gt;</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">throwQxFx0</span></span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">(SQLiteError (&quot;sqlite exec failed for `&quot; &lt;&gt; sql &lt;&gt; &quot;`: &quot; &lt;&gt; err))</span></span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">Right _ -&gt; pure <span class="nottickedoff">()</span></span></span>
+
+</pre>
+</body>
+</html>

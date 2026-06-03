@@ -21,15 +21,17 @@ import qualified Data.Char as Char
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Control.Applicative ((<|>))
 import Data.Char (isAlpha)
-import QxFx0.Core.TruthContract (truthContractAllowsHardKnowledgeTone)
 import QxFx0.Types
+import QxFx0.Types.TruthContract (truthContractAllowsHardKnowledgeTone)
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
   , defaultGfLexemeId
+  , gfMapFallbackReason
   , gfMapLoadStatus
   , lookupTopicGfLexemeId
   , lookupGfLexemeForms
+  , topicToGfLexemeDecision
   )
 import QxFx0.Lexicon.Inflection (genitiveForm, prepositionalForm, toNominative)
 import QxFx0.Types.Text (finalizeForce)
@@ -46,6 +48,7 @@ import QxFx0.Semantic.MeaningDecompose (factBySubject)
 import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
 import QxFx0.Types.State.System (ssDiscourse)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
+import QxFx0.Semantic.Embedding.Fallback (stableHash)
 import QxFx0.Policy.RenderLexicon
   ( stanceExplore, stanceTentative, stanceFirm, stanceHonest
   , stanceHoldBack, stanceCurated
@@ -191,7 +194,7 @@ renderDialogueUtterance rmp rcp topic claims morph =
 
 renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> DialogueRenderArtifact
 renderDialogueArtifact frame rmp rcp topic claims morph =
-  case renderStructuredDialogueArtifact frame rmp (rcpStyle rcp) morph of
+  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph of
     Just artifact -> artifact
     Nothing ->
       let fallbackReason =
@@ -263,15 +266,17 @@ hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
 hasStructuredDialogueSurface frame =
   maybe False structuredDialogueType (propositionTypeFromText (ipfPropositionType frame))
 
-renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> Maybe DialogueRenderArtifact
-renderStructuredDialogueArtifact frame rmp renderStyle morph = do
+renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> Maybe DialogueRenderArtifact
+renderStructuredDialogueArtifact frame rmp rcp renderStyle morph = do
   propositionType <- propositionTypeFromText (ipfPropositionType frame)
   if not (structuredDialogueType propositionType)
     then Nothing
     else
       let (body0, claimAst, mLang, linearizationOk, fallbackReason) =
             structuredBody propositionType frame rmp renderStyle morph
-          body = applyMicroPlanToStructuredBody rmp renderStyle body0
+          body1 = applyMicroPlanToStructuredBody rmp renderStyle body0
+          continuationText = structuredContinuationText frame rmp rcp morph
+          body = appendContinuation (rmpMicroPlan rmp) body1 continuationText
           rendered = finalizeForce IFAssert (T.strip body)
           contractProv = contractProvenanceForArtifact fallbackReason claimAst
           surfaceProv = surfaceProvenanceForArtifact fallbackReason claimAst
@@ -465,13 +470,13 @@ structuredBody propositionType frame rmp renderStyle morph =
             else if isLikelyBrokenGenitive topicNom topicGen
               then "темы " <> openGuillemet <> topicRef <> closeGuillemet
               else topicGen
-          topicFunId = resolveTopicLexeme topicNom
+          (topicFunId, topicLexemeFallback) = topicToGfLexemeDecision topicNom
           ast = claimAstOrFallback (MovePurpose (MkNP topicFunId)) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           claim = linFn "purpose" ast renderStyle morph (rmpPrimaryClaim rmp)
           purposeClaimText
             | isEn = "The function of " <> topicNom <> " reveals itself through repeatable roles in action."
-            | topicFunId == defaultGfLexemeId =
+            | topicLexemeFallback == Just "gf_default_lexeme" =
                 "Функция " <> purposeTopicGenitive topicNom topicGen <> " проявляется через повторяемую роль в действии."
             | otherwise = clText claim
           bodyText = if isEn then "If we analyze the function of " <> topicPhrase
@@ -633,35 +638,51 @@ linearizeOrFallback =
 
 linearizeOrFallbackTagged :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
 linearizeOrFallbackTagged reasonTag ast renderStyle morph fallbackText =
-  case linearizeClaimAstRus ast renderStyle morph of
-    Just txt ->
-      ClaimLinearization
-        { clText = txt
-        , clOk = True
-        , clFallbackReason = Nothing
-        }
-    Nothing ->
+  case gfMapFallbackReason gfMapLoadStatus of
+    Just reason ->
       ClaimLinearization
         { clText = fallbackText
         , clOk = False
-        , clFallbackReason = Just ("gf_linearization_failed:" <> reasonTag)
+        , clFallbackReason = Just reason
         }
+    Nothing ->
+      case linearizeClaimAstRus ast renderStyle morph of
+        Just txt ->
+          ClaimLinearization
+            { clText = txt
+            , clOk = True
+            , clFallbackReason = Nothing
+            }
+        Nothing ->
+          ClaimLinearization
+            { clText = fallbackText
+            , clOk = False
+            , clFallbackReason = Just ("gf_linearization_failed:" <> reasonTag)
+            }
 
 linearizeOrFallbackTaggedEn :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
 linearizeOrFallbackTaggedEn reasonTag ast _renderStyle _morph fallbackText =
-  case linearizeClaimAstEn ast of
-    Just txt ->
-      ClaimLinearization
-        { clText = txt
-        , clOk = True
-        , clFallbackReason = Nothing
-        }
-    Nothing ->
+  case gfMapFallbackReason gfMapLoadStatus of
+    Just reason ->
       ClaimLinearization
         { clText = fallbackText
         , clOk = False
-        , clFallbackReason = Just ("gf_en_linearization_failed:" <> reasonTag)
+        , clFallbackReason = Just reason
         }
+    Nothing ->
+      case linearizeClaimAstEn ast of
+        Just txt ->
+          ClaimLinearization
+            { clText = txt
+            , clOk = True
+            , clFallbackReason = Nothing
+            }
+        Nothing ->
+          ClaimLinearization
+            { clText = fallbackText
+            , clOk = False
+            , clFallbackReason = Just ("gf_en_linearization_failed:" <> reasonTag)
+            }
 
 linearizeClaimAstRus :: ClaimAst -> RenderStyle -> MorphologyData -> Maybe Text
 linearizeClaimAstRus ast renderStyle morph =
@@ -896,6 +917,14 @@ structuredMicroPrefix rmp =
     "contest_bound" -> "Коротко: сначала зафиксирую границу возражения."
     _ -> ""
 
+structuredContinuationText :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> MorphologyData -> Text
+structuredContinuationText frame rmp rcp morph
+  | rmpImplicationDirection rmp /= "forward" =
+      moveToText (rcpContinuation rcp) topic morph
+  | otherwise = ""
+  where
+    topic = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
+
 moveToText :: ContentMove -> Text -> MorphologyData -> Text
 moveToText MoveGroundKnown topic md      = moveGroundKnownPrefix <> withPrep md topic <> "."
 moveToText MoveGroundBasis topic md      = moveGroundBasisPrefix <> toNominative md topic <> "."
@@ -1064,14 +1093,8 @@ selfStateDirectSurface frame
 pickDeterministic :: Text -> [Text] -> Text
 pickDeterministic _ [] = ""
 pickDeterministic seed variants =
-  let idx = stableHash (T.unpack seed) `mod` length variants
+  let idx = stableHash seed `mod` length variants
   in fromMaybe "" (listToMaybe (drop idx variants))
-
-stableHash :: String -> Int
-stableHash = go 0
-  where
-    go acc [] = abs acc
-    go acc (c:cs) = go ((acc * 33 + fromEnum c) `mod` 2147483647) cs
 
 asksThoughtCapacityQuestion :: InputPropositionFrame -> Bool
 asksThoughtCapacityQuestion frame =
@@ -1093,10 +1116,7 @@ selfKnowledgeFallbackAst frame =
       MoveDescribe (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) "смысл")))
 
 resolveTopicLexeme :: Text -> Text
-resolveTopicLexeme topic =
-  case lookupTopicGfLexemeId topic of
-    Just funId -> funId
-    Nothing -> "ponyatie_N"
+resolveTopicLexeme = fst . topicToGfLexemeDecision
 
 selfKnowledgeSurfaceByTarget :: Text -> Text -> Text
 selfKnowledgeSurfaceByTarget target claimText =
@@ -1510,9 +1530,20 @@ artifactDerivationTags propositionType linearizationOk fallbackReason mClaimAst 
 
 claimAstDerivationTags :: ClaimAst -> [Text]
 claimAstDerivationTags ast =
-  [ "gf_default_lexeme"
-  | any (== defaultGfLexemeId) (claimAstLexemes ast)
-  ]
+  let hasDefaultLexeme = any (== defaultGfLexemeId) (claimAstLexemes ast)
+      hasExplicitDefaultFallback = claimAstHasMarker "GfDefaultLexeme" ast
+  in [ "gf_default_lexeme"
+     | hasDefaultLexeme || hasExplicitDefaultFallback
+     ]
+     ++ [ "gf_default_lexeme_explicit"
+        | hasExplicitDefaultFallback
+        ]
+
+claimAstHasMarker :: Text -> ClaimAst -> Bool
+claimAstHasMarker marker ast =
+  case ast of
+    StanceWrapped wrapped inner -> wrapped == marker || claimAstHasMarker marker inner
+    _ -> False
 
 claimAstLexemes :: ClaimAst -> [Text]
 claimAstLexemes ast =

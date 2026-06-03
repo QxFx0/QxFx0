@@ -54,6 +54,7 @@ import QxFx0.Types.State.AdaptiveMutation
   , AdaptiveMutationRecord(..)
   , EvidenceStrength(..)
   )
+import QxFx0.Types.State.Perspective (PerspectiveScope(..))
 
 data DialoguePhase
   = Exploring
@@ -77,9 +78,10 @@ data DialogueThread = DialogueThread
   , dtResistance :: !Double
   , dtClarifiedItems :: ![Text]
   , dtUnclarifiedItems :: ![Text]
+  , dtStructuralScope :: !(Maybe PerspectiveScope)
   , dtPhaseScope :: !Text
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
+    deriving anyclass (NFData, ToJSON)
 
 emptyDialogueThread :: DialogueThread
 emptyDialogueThread = DialogueThread
@@ -93,8 +95,25 @@ emptyDialogueThread = DialogueThread
   , dtResistance = 0.0
   , dtClarifiedItems = []
   , dtUnclarifiedItems = []
+  , dtStructuralScope = Nothing
   , dtPhaseScope = ""
   }
+
+instance FromJSON DialogueThread where
+  parseJSON = withObject "DialogueThread" $ \o ->
+    DialogueThread
+      <$> o .: "dtCurrentFocus"
+      <*> o .:? "dtActiveQuestion"
+      <*> o .:? "dtUserGoal"
+      <*> o .:? "dtIntentHypothesis"
+      <*> o .: "dtOpenLoops"
+      <*> o .: "dtAcceptedTerms"
+      <*> o .: "dtTopicConfidence"
+      <*> o .: "dtResistance"
+      <*> o .: "dtClarifiedItems"
+      <*> o .: "dtUnclarifiedItems"
+      <*> o .:? "dtStructuralScope" .!= Nothing
+      <*> o .: "dtPhaseScope"
 
 data CommitmentStatus
   = CsAccepted

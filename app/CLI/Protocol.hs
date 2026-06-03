@@ -4,7 +4,13 @@
 module CLI.Protocol
   ( RuntimeOutputMode(..)
   , WorkerCommand(..)
+  , WorkerProtocolError(..)
+  , workerProtocolErrorCode
+  , workerProtocolErrorMessage
+  , decodeWorkerMessage
   , decodeWorkerCommand
+  , workerProtocolVersion
+  , workerProtocolCapabilities
   , healthJsonPairs
   , stateJsonPairs
   ) where
@@ -16,12 +22,29 @@ import Data.Text (Text)
 import QxFx0.CLI.Parser
   ( RuntimeOutputMode(..)
   , WorkerCommand(..)
+  , WorkerProtocolError(..)
+  , workerProtocolErrorCode
+  , workerProtocolErrorMessage
+  , decodeWorkerMessage
   , decodeWorkerCommand
   )
 import QxFx0.Render.Text (textShow)
 
 import qualified QxFx0.Runtime as Runtime
 import QxFx0.Types.State (ssTurnCount, ssEgo, egoAgency, egoTension, ssLastFamily, ssLastTopic)
+
+workerProtocolVersion :: Text
+workerProtocolVersion = "1"
+
+workerProtocolCapabilities :: [Text]
+workerProtocolCapabilities =
+  [ "health"
+  , "state"
+  , "turn"
+  , "shutdown"
+  , "ping"
+  , "session_affine"
+  ]
 
 healthJsonPairs :: Runtime.SystemHealth -> Text -> Text -> [Pair]
 healthJsonPairs health sessionId dbPath =
@@ -43,6 +66,7 @@ healthJsonPairs health sessionId dbPath =
   , "embed_explicit" .= Runtime.shEmbeddingExplicit health
   , "embed_backend" .= Runtime.shEmbeddingBackend health
   , "embed_quality" .= Runtime.shEmbeddingQuality health
+  , "embed_issues" .= Runtime.shEmbeddingIssues health
   , "morph_backend" .= Runtime.shMorphBackend health
   , "morph_backend_local" .= Runtime.shMorphBackendLocal health
   , "decision_path_local_only" .= Runtime.shDecisionPathLocalOnly health

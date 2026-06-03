@@ -4,6 +4,10 @@
 module QxFx0.CLI.Parser
   ( RuntimeOutputMode(..)
   , WorkerCommand(..)
+  , WorkerProtocolError(..)
+  , workerProtocolErrorCode
+  , workerProtocolErrorMessage
+  , decodeWorkerMessage
   , decodeWorkerCommand
   , parseWorkerArgs
   , parseMode
@@ -12,8 +16,13 @@ module QxFx0.CLI.Parser
   ) where
 
 import Data.Char (isHexDigit, digitToInt, chr)
+import Data.Aeson (Value(..), eitherDecodeStrict')
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AesonKeyMap
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import qualified Data.Vector as V
 import Text.ParserCombinators.ReadP
   ( ReadP
   , readP_to_S
@@ -31,25 +40,74 @@ data RuntimeOutputMode = DialogueMode | SemanticIntrospectionMode
   deriving stock (Eq, Show)
 
 data WorkerCommand
-  = WorkerShutdown
+  = WorkerHello !Text ![Text]
+  | WorkerShutdown
   | WorkerPing
   | WorkerHealth !Text
   | WorkerState !Text
   | WorkerTurn !Text !RuntimeOutputMode !Text
   deriving stock (Eq, Show)
 
+data WorkerProtocolError
+  = WorkerMalformedCommand !Text
+  | WorkerUnknownCommand !Text
+  | WorkerUnsupportedWorkerMode !Text
+  deriving stock (Eq, Show)
+
+workerProtocolErrorCode :: WorkerProtocolError -> Text
+workerProtocolErrorCode err = case err of
+  WorkerMalformedCommand _ -> "malformed_command"
+  WorkerUnknownCommand _ -> "unknown_command"
+  WorkerUnsupportedWorkerMode _ -> "unsupported_output_mode"
+
+workerProtocolErrorMessage :: WorkerProtocolError -> Text
+workerProtocolErrorMessage err = case err of
+  WorkerMalformedCommand detail -> detail
+  WorkerUnknownCommand cmd -> "Unsupported worker command: " <> cmd
+  WorkerUnsupportedWorkerMode modeTxt -> "Unsupported worker mode: " <> modeTxt
+
+decodeWorkerMessage :: Text -> Either WorkerProtocolError WorkerCommand
+decodeWorkerMessage line =
+  case eitherDecodeStrict' (TE.encodeUtf8 line) of
+    Right (Object obj) -> parseWorkerObject obj
+    _ -> decodeWorkerArray line
+
 decodeWorkerCommand :: Text -> Either Text WorkerCommand
-decodeWorkerCommand line =
+decodeWorkerCommand = first workerProtocolErrorMessage . decodeWorkerMessage
+
+decodeWorkerArray :: Text -> Either WorkerProtocolError WorkerCommand
+decodeWorkerArray line =
   case parseJsonStringArray line of
     Just values -> parseWorkerArgs values
     Nothing ->
       case readMaybe (T.unpack line) :: Maybe [String] of
         Just legacy -> parseWorkerArgs (map T.pack legacy)
-        Nothing -> Left "Malformed worker command: expected JSON array command"
+        Nothing -> Left (WorkerMalformedCommand "Malformed worker command: expected JSON array command or hello object")
 
-parseWorkerArgs :: [Text] -> Either Text WorkerCommand
+parseWorkerObject :: AesonKeyMap.KeyMap Value -> Either WorkerProtocolError WorkerCommand
+parseWorkerObject obj =
+  case lookupText "command" of
+    Nothing -> Left (WorkerMalformedCommand "Malformed worker command: object is missing command")
+    Just "hello" ->
+      case lookupText "protocol_version" of
+        Nothing -> Left (WorkerMalformedCommand "Malformed hello command: missing protocol_version")
+        Just version -> Right (WorkerHello version (lookupTextList "capabilities"))
+    Just other -> Left (WorkerUnknownCommand other)
+  where
+    lookupText key =
+      case AesonKeyMap.lookup (AesonKey.fromText key) obj of
+        Just (String txt) -> Just txt
+        _ -> Nothing
+    lookupTextList key =
+      case AesonKeyMap.lookup (AesonKey.fromText key) obj of
+        Just (Array values) ->
+          [ txt | String txt <- V.toList values ]
+        _ -> []
+
+parseWorkerArgs :: [Text] -> Either WorkerProtocolError WorkerCommand
 parseWorkerArgs values =
   case values of
+    ["hello", version] -> Right (WorkerHello version [])
     ["shutdown"] -> Right WorkerShutdown
     ["ping"] -> Right WorkerPing
     ["health", sid] -> Right (WorkerHealth sid)
@@ -58,14 +116,15 @@ parseWorkerArgs values =
       case parseMode modeTxt of
         Right mode -> Right (WorkerTurn sid mode inputTxt)
         Left err -> Left err
-    _ -> Left "Malformed worker command: unsupported shape"
+    command : _ -> Left (WorkerUnknownCommand command)
+    [] -> Left (WorkerMalformedCommand "Malformed worker command: empty command payload")
 
-parseMode :: Text -> Either Text RuntimeOutputMode
+parseMode :: Text -> Either WorkerProtocolError RuntimeOutputMode
 parseMode modeTxt =
   case T.toLower (T.strip modeTxt) of
     "semantic" -> Right SemanticIntrospectionMode
     "dialogue" -> Right DialogueMode
-    other -> Left ("Unsupported worker mode: " <> other)
+    other -> Left (WorkerUnsupportedWorkerMode other)
 
 parseJsonStringArray :: Text -> Maybe [Text]
 parseJsonStringArray raw =
@@ -125,3 +184,8 @@ extractSessionArgs defaultSid args = case args of
   ("--session-id":sid:rest) | not (null sid) -> (T.pack sid, rest)
   ("--session":sid:rest) | not (null sid)     -> (T.pack sid, rest)
   _ -> (defaultSid, args)
+
+first :: (a -> b) -> Either a c -> Either b c
+first f value = case value of
+  Left err -> Left (f err)
+  Right ok -> Right ok

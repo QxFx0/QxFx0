@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module QxFx0.Bridge.AgdaWitness
   ( AgdaWitnessReport(..)
@@ -16,7 +17,8 @@ import QxFx0.Bridge.AgdaR5
   ( AgdaVerificationResult(..)
   , verifyR5WithAgda
   )
-import QxFx0.ExceptionPolicy (QxFx0Exception(RuntimeInitError), throwQxFx0)
+import QxFx0.ExceptionPolicy (QxFx0Exception(RuntimeInitError), catchIO, throwQxFx0, tryQxFx0)
+import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Resources
   ( ResourcePaths(..)
   , resolveResourcePaths
@@ -31,6 +33,8 @@ import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as Map
+import Control.Exception (IOException)
+import Control.Monad (filterM)
 import Data.List (sortOn)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -38,9 +42,10 @@ import qualified Data.Text as T
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Numeric (showHex)
-import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.Directory (canonicalizePath, createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
 import System.Environment (lookupEnv)
-import System.FilePath ((</>), normalise, takeDirectory)
+import System.FilePath ((</>), normalise, takeDirectory, takeFileName)
+import System.Directory (renameFile)
 
 data AgdaWitness = AgdaWitness
   { awVersion :: !Int
@@ -63,10 +68,31 @@ resolveAgdaWitnessPath :: IO FilePath
 resolveAgdaWitnessPath = do
   mExplicit <- lookupEnv "QXFX0_AGDA_WITNESS"
   case fmap normalise mExplicit of
-    Just path -> pure path
+    Just path -> do
+      canonicalDir <- canonicalizePath (takeDirectory path)
+      let canonical = canonicalDir </> takeFileName path
+      trustedRoots <- resolveAgdaWitnessTrustedRoots
+      trustedMatches <- mapM (`isPathWithin` canonical) trustedRoots
+      if or trustedMatches
+        then pure canonical
+        else throwQxFx0 (RuntimeInitError ("QXFX0_AGDA_WITNESS outside trusted roots: " <> T.pack canonical))
     Nothing -> do
       stateDir <- resolveQxFx0StateDir
       pure (stateDir </> "agda-witness.json")
+
+resolveAgdaWitnessTrustedRoots :: IO [FilePath]
+resolveAgdaWitnessTrustedRoots = do
+  stateDir <- resolveQxFx0StateDir
+  mEnvRoot <- lookupEnv "QXFX0_ROOT"
+  paths <- resolveResourcePaths
+  let candidates =
+        [ stateDir
+        , "/tmp"
+        , rpResourceDir paths
+        ] <> maybe [] (pure . normalise) mEnvRoot
+  existing <- filterM doesDirectoryExist candidates
+  canonicalized <- mapM canonicalizePath existing
+  pure canonicalized
 
 writeAgdaWitness :: IO FilePath
 writeAgdaWitness = do
@@ -77,7 +103,7 @@ writeAgdaWitness = do
       hashes <- currentWitnessHashes paths
       witnessPath <- resolveAgdaWitnessPath
       createDirectoryIfMissing True (takeDirectory witnessPath)
-      BL.writeFile witnessPath (encode AgdaWitness { awVersion = witnessVersion, awFiles = hashes })
+      atomicWriteWitness witnessPath AgdaWitness { awVersion = witnessVersion, awFiles = hashes }
       pure witnessPath
     other ->
       throwQxFx0 (RuntimeInitError ("Cannot write Agda witness: " <> T.pack (renderAgdaFailure other)))
@@ -87,7 +113,13 @@ writeStubAgdaWitness witnessPath = do
   paths <- resolveResourcePaths
   hashes <- currentWitnessHashes paths
   createDirectoryIfMissing True (takeDirectory witnessPath)
-  BL.writeFile witnessPath (encode AgdaWitness { awVersion = witnessVersion, awFiles = hashes })
+  atomicWriteWitness witnessPath AgdaWitness { awVersion = witnessVersion, awFiles = hashes }
+
+atomicWriteWitness :: FilePath -> AgdaWitness -> IO ()
+atomicWriteWitness witnessPath witness = do
+  let tmpPath = witnessPath <> ".tmp"
+  BL.writeFile tmpPath (encode witness)
+  renameFile tmpPath witnessPath
 
 verifyAgdaWitnessFresh :: IO Bool
 verifyAgdaWitnessFresh = awrFresh <$> readAgdaWitnessReport
@@ -95,24 +127,28 @@ verifyAgdaWitnessFresh = awrFresh <$> readAgdaWitnessReport
 readAgdaWitnessReport :: IO AgdaWitnessReport
 readAgdaWitnessReport = do
   witnessPath <- resolveAgdaWitnessPath
-  witnessExists <- doesFileExist witnessPath
-  if not witnessExists
-    then pure AgdaWitnessReport
-      { awrPath = witnessPath
-      , awrStatus = AgdaMissingWitness
-      , awrFresh = False
-      , awrIssues = ["missing_witness"]
-      }
-    else do
-      body <- BL.readFile witnessPath
+  bodyResult <- catchIO (Right <$> BL.readFile witnessPath) (\(_ :: IOException) -> pure (Left "missing_witness"))
+  case bodyResult of
+    Left issueTag ->
+      pure AgdaWitnessReport
+        { awrPath = witnessPath
+        , awrStatus = AgdaMissingWitness
+        , awrFresh = False
+        , awrIssues = [issueTag]
+        }
+    Right body ->
       case eitherDecode body of
-        Left err ->
-          pure AgdaWitnessReport
-            { awrPath = witnessPath
-            , awrStatus = AgdaDecodeFailed
-            , awrFresh = False
-            , awrIssues = ["decode_failed:" <> T.pack err]
-            }
+        Left err -> do
+          recovery <- tryQxFx0 writeAgdaWitness
+          case recovery of
+            Right _ -> readAgdaWitnessReport
+            Left _ ->
+              pure AgdaWitnessReport
+                { awrPath = witnessPath
+                , awrStatus = AgdaDecodeFailed
+                , awrFresh = False
+                , awrIssues = ["decode_failed:" <> T.pack err]
+                }
         Right witness
           | awVersion witness /= witnessVersion ->
               pure AgdaWitnessReport

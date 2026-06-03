@@ -587,9 +587,9 @@ syntacticScoreForRoute clauseType routeType =
 
 embeddingScoreForTag :: Text -> [Text] -> Double
 embeddingScoreForTag normalizedText prototypes =
-  let inputVec = fallbackEmbedding (T.unpack normalizedText)
+  let inputVec = fallbackEmbedding normalizedText
       similarities =
-        [ (realToFrac (cosineSimilarity inputVec (fallbackEmbedding (T.unpack prototype))) + 1.0) / 2.0
+        [ (realToFrac (cosineSimilarity inputVec (fallbackEmbedding prototype)) + 1.0) / 2.0
         | prototype <- prototypes
         ]
   in case similarities of

@@ -1,0 +1,214 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module QxFx0.CLI.Parser
+<span class="lineno">    5 </span>  ( RuntimeOutputMode(..)
+<span class="lineno">    6 </span>  , WorkerCommand(..)
+<span class="lineno">    7 </span>  , WorkerProtocolError(..)
+<span class="lineno">    8 </span>  , workerProtocolErrorCode
+<span class="lineno">    9 </span>  , workerProtocolErrorMessage
+<span class="lineno">   10 </span>  , decodeWorkerMessage
+<span class="lineno">   11 </span>  , decodeWorkerCommand
+<span class="lineno">   12 </span>  , parseWorkerArgs
+<span class="lineno">   13 </span>  , parseMode
+<span class="lineno">   14 </span>  , parseJsonStringArray
+<span class="lineno">   15 </span>  , extractSessionArgs
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import Data.Char (isHexDigit, digitToInt, chr)
+<span class="lineno">   19 </span>import Data.Aeson (Value(..), eitherDecodeStrict')
+<span class="lineno">   20 </span>import qualified Data.Aeson.Key as AesonKey
+<span class="lineno">   21 </span>import qualified Data.Aeson.KeyMap as AesonKeyMap
+<span class="lineno">   22 </span>import Data.Text (Text)
+<span class="lineno">   23 </span>import qualified Data.Text as T
+<span class="lineno">   24 </span>import qualified Data.Text.Encoding as TE
+<span class="lineno">   25 </span>import qualified Data.Vector as V
+<span class="lineno">   26 </span>import Text.ParserCombinators.ReadP
+<span class="lineno">   27 </span>  ( ReadP
+<span class="lineno">   28 </span>  , readP_to_S
+<span class="lineno">   29 </span>  , char
+<span class="lineno">   30 </span>  , satisfy
+<span class="lineno">   31 </span>  , many
+<span class="lineno">   32 </span>  , sepBy
+<span class="lineno">   33 </span>  , skipSpaces
+<span class="lineno">   34 </span>  , eof
+<span class="lineno">   35 </span>  , (&lt;++)
+<span class="lineno">   36 </span>  )
+<span class="lineno">   37 </span>import Text.Read (readMaybe)
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>data RuntimeOutputMode = DialogueMode | SemanticIntrospectionMode
+<span class="lineno">   40 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>data WorkerCommand
+<span class="lineno">   43 </span>  = WorkerHello !Text ![Text]
+<span class="lineno">   44 </span>  | WorkerShutdown
+<span class="lineno">   45 </span>  | WorkerPing
+<span class="lineno">   46 </span>  | WorkerHealth !Text
+<span class="lineno">   47 </span>  | WorkerState !Text
+<span class="lineno">   48 </span>  | WorkerTurn !Text !RuntimeOutputMode !Text
+<span class="lineno">   49 </span>  deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>data WorkerProtocolError
+<span class="lineno">   52 </span>  = WorkerMalformedCommand !Text
+<span class="lineno">   53 </span>  | WorkerUnknownCommand !Text
+<span class="lineno">   54 </span>  | WorkerUnsupportedWorkerMode !Text
+<span class="lineno">   55 </span>  deriving stock (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>)
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>workerProtocolErrorCode :: WorkerProtocolError -&gt; Text
+<span class="lineno">   58 </span><span class="decl"><span class="nottickedoff">workerProtocolErrorCode err = case err of</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="nottickedoff">WorkerMalformedCommand _ -&gt; &quot;malformed_command&quot;</span>
+<span class="lineno">   60 </span><span class="spaces">  </span><span class="nottickedoff">WorkerUnknownCommand _ -&gt; &quot;unknown_command&quot;</span>
+<span class="lineno">   61 </span><span class="spaces">  </span><span class="nottickedoff">WorkerUnsupportedWorkerMode _ -&gt; &quot;unsupported_output_mode&quot;</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>workerProtocolErrorMessage :: WorkerProtocolError -&gt; Text
+<span class="lineno">   64 </span><span class="decl"><span class="nottickedoff">workerProtocolErrorMessage err = case err of</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="nottickedoff">WorkerMalformedCommand detail -&gt; detail</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="nottickedoff">WorkerUnknownCommand cmd -&gt; &quot;Unsupported worker command: &quot; &lt;&gt; cmd</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="nottickedoff">WorkerUnsupportedWorkerMode modeTxt -&gt; &quot;Unsupported worker mode: &quot; &lt;&gt; modeTxt</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>decodeWorkerMessage :: Text -&gt; Either WorkerProtocolError WorkerCommand
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">decodeWorkerMessage line =</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="istickedoff">case eitherDecodeStrict' (TE.encodeUtf8 line) of</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">Right (Object obj) -&gt; parseWorkerObject obj</span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="istickedoff">_ -&gt; decodeWorkerArray line</span></span>
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>decodeWorkerCommand :: Text -&gt; Either Text WorkerCommand
+<span class="lineno">   76 </span><span class="decl"><span class="istickedoff">decodeWorkerCommand = first <span class="nottickedoff">workerProtocolErrorMessage</span> . decodeWorkerMessage</span></span>
+<span class="lineno">   77 </span>
+<span class="lineno">   78 </span>decodeWorkerArray :: Text -&gt; Either WorkerProtocolError WorkerCommand
+<span class="lineno">   79 </span><span class="decl"><span class="istickedoff">decodeWorkerArray line =</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="istickedoff">case parseJsonStringArray line of</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">Just values -&gt; parseWorkerArgs values</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt;</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">case readMaybe (T.unpack line) :: Maybe [String] of</span></span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Just legacy -&gt; parseWorkerArgs (map T.pack legacy)</span></span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff"><span class="nottickedoff">Nothing -&gt; Left (WorkerMalformedCommand &quot;Malformed worker command: expected JSON array command or hello object&quot;)</span></span></span>
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>parseWorkerObject :: AesonKeyMap.KeyMap Value -&gt; Either WorkerProtocolError WorkerCommand
+<span class="lineno">   88 </span><span class="decl"><span class="istickedoff">parseWorkerObject obj =</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">case lookupText &quot;command&quot; of</span>
+<span class="lineno">   90 </span><span class="spaces">    </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">Left (WorkerMalformedCommand &quot;Malformed worker command: object is missing command&quot;)</span></span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">Just &quot;hello&quot; -&gt;</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">case lookupText &quot;protocol_version&quot; of</span>
+<span class="lineno">   93 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; <span class="nottickedoff">Left (WorkerMalformedCommand &quot;Malformed hello command: missing protocol_version&quot;)</span></span>
+<span class="lineno">   94 </span><span class="spaces">        </span><span class="istickedoff">Just version -&gt; Right (WorkerHello version (lookupTextList &quot;capabilities&quot;))</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="istickedoff">Just other -&gt; <span class="nottickedoff">Left (WorkerUnknownCommand other)</span></span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="istickedoff">lookupText key =</span>
+<span class="lineno">   98 </span><span class="spaces">      </span><span class="istickedoff">case AesonKeyMap.lookup (AesonKey.fromText key) obj of</span>
+<span class="lineno">   99 </span><span class="spaces">        </span><span class="istickedoff">Just (String txt) -&gt; Just txt</span>
+<span class="lineno">  100 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">lookupTextList key =</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">case AesonKeyMap.lookup (AesonKey.fromText key) obj of</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="istickedoff">Just (Array values) -&gt;</span>
+<span class="lineno">  104 </span><span class="spaces">          </span><span class="istickedoff">[ txt | String txt &lt;- V.toList values ]</span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="istickedoff">_ -&gt; <span class="nottickedoff">[]</span></span></span>
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span>parseWorkerArgs :: [Text] -&gt; Either WorkerProtocolError WorkerCommand
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">parseWorkerArgs values =</span>
+<span class="lineno">  109 </span><span class="spaces">  </span><span class="istickedoff">case values of</span>
+<span class="lineno">  110 </span><span class="spaces">    </span><span class="istickedoff">[&quot;hello&quot;, version] -&gt; <span class="nottickedoff">Right (WorkerHello version [])</span></span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">[&quot;shutdown&quot;] -&gt; Right WorkerShutdown</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">[&quot;ping&quot;] -&gt; <span class="nottickedoff">Right WorkerPing</span></span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">[&quot;health&quot;, sid] -&gt; Right (WorkerHealth sid)</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">[&quot;state&quot;, sid] -&gt; Right (WorkerState sid)</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">[&quot;turn&quot;, sid, modeTxt, inputTxt] -&gt;</span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">case parseMode modeTxt of</span>
+<span class="lineno">  117 </span><span class="spaces">        </span><span class="istickedoff">Right mode -&gt; Right (WorkerTurn sid mode inputTxt)</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">Left err</span></span>
+<span class="lineno">  119 </span><span class="spaces">    </span><span class="istickedoff">command : _ -&gt; Left (WorkerUnknownCommand command)</span>
+<span class="lineno">  120 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">Left (WorkerMalformedCommand &quot;Malformed worker command: empty command payload&quot;)</span></span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>parseMode :: Text -&gt; Either WorkerProtocolError RuntimeOutputMode
+<span class="lineno">  123 </span><span class="decl"><span class="istickedoff">parseMode modeTxt =</span>
+<span class="lineno">  124 </span><span class="spaces">  </span><span class="istickedoff">case T.toLower (T.strip modeTxt) of</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="istickedoff">&quot;semantic&quot; -&gt; Right SemanticIntrospectionMode</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="istickedoff">&quot;dialogue&quot; -&gt; Right DialogueMode</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="istickedoff">other -&gt; <span class="nottickedoff">Left (WorkerUnsupportedWorkerMode other)</span></span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>parseJsonStringArray :: Text -&gt; Maybe [Text]
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">parseJsonStringArray raw =</span>
+<span class="lineno">  131 </span><span class="spaces">  </span><span class="istickedoff">case readP_to_S parser (T.unpack raw) of</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">[] -&gt; Nothing</span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">xs -&gt; case [values | (values, rest) &lt;- xs, <span class="tickonlytrue">null rest</span>] of</span>
+<span class="lineno">  134 </span><span class="spaces">            </span><span class="istickedoff">[] -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  135 </span><span class="spaces">            </span><span class="istickedoff">(c:_) -&gt; Just c</span>
+<span class="lineno">  136 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">parser = skipSpaces *&gt; jsonStringArrayP &lt;* skipSpaces &lt;* eof</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>jsonStringArrayP :: ReadP [Text]
+<span class="lineno">  140 </span><span class="decl"><span class="istickedoff">jsonStringArrayP = do</span>
+<span class="lineno">  141 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- char '['</span>
+<span class="lineno">  142 </span><span class="spaces">  </span><span class="istickedoff">skipSpaces</span>
+<span class="lineno">  143 </span><span class="spaces">  </span><span class="istickedoff">values &lt;- jsonStringP `sepBy` jsonCommaP</span>
+<span class="lineno">  144 </span><span class="spaces">  </span><span class="istickedoff">skipSpaces</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- char ']'</span>
+<span class="lineno">  146 </span><span class="spaces">  </span><span class="istickedoff">pure values</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>jsonCommaP :: ReadP ()
+<span class="lineno">  149 </span><span class="decl"><span class="istickedoff">jsonCommaP = skipSpaces *&gt; char ',' *&gt; skipSpaces</span></span>
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>jsonStringP :: ReadP Text
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">jsonStringP = do</span>
+<span class="lineno">  153 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- char '&quot;'</span>
+<span class="lineno">  154 </span><span class="spaces">  </span><span class="istickedoff">chars &lt;- many jsonStringCharP</span>
+<span class="lineno">  155 </span><span class="spaces">  </span><span class="istickedoff">_ &lt;- char '&quot;'</span>
+<span class="lineno">  156 </span><span class="spaces">  </span><span class="istickedoff">pure (T.pack chars)</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>jsonStringCharP :: ReadP Char
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">jsonStringCharP = escaped &lt;++ plain</span>
+<span class="lineno">  160 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="istickedoff">plain = satisfy (\c -&gt; c /= '&quot;' &amp;&amp; c /= '\\' &amp;&amp; c &gt;= ' ')</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="istickedoff">escaped = char '\\' *&gt; <span class="nottickedoff">parseEscape</span></span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">parseEscape =</span></span>
+<span class="lineno">  164 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">(char '&quot;' &gt;&gt; pure '&quot;')</span></span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char '\\' &gt;&gt; pure '\\')</span></span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char '/' &gt;&gt; pure '/')</span></span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char 'b' &gt;&gt; pure '\b')</span></span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char 'f' &gt;&gt; pure '\f')</span></span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char 'n' &gt;&gt; pure '\n')</span></span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char 'r' &gt;&gt; pure '\r')</span></span>
+<span class="lineno">  171 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ (char 't' &gt;&gt; pure '\t')</span></span>
+<span class="lineno">  172 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">&lt;++ parseUnicodeEscape</span></span>
+<span class="lineno">  173 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">parseUnicodeEscape = do</span></span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">_ &lt;- char 'u'</span></span>
+<span class="lineno">  175 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">a &lt;- hexDigitP</span></span>
+<span class="lineno">  176 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">b &lt;- hexDigitP</span></span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">c &lt;- hexDigitP</span></span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">d &lt;- hexDigitP</span></span>
+<span class="lineno">  179 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">pure (chr ((((a * 16) + b) * 16 + c) * 16 + d))</span></span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">hexDigitP = digitToInt &lt;$&gt; satisfy isHexDigit</span></span></span>
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>extractSessionArgs :: Text -&gt; [String] -&gt; (Text, [String])
+<span class="lineno">  183 </span><span class="decl"><span class="istickedoff">extractSessionArgs defaultSid args = case args of</span>
+<span class="lineno">  184 </span><span class="spaces">  </span><span class="istickedoff">(&quot;--session-id&quot;:sid:rest) | <span class="tickonlytrue">not (null sid)</span> -&gt; (T.pack sid, rest)</span>
+<span class="lineno">  185 </span><span class="spaces">  </span><span class="istickedoff">(&quot;--session&quot;:sid:rest) | <span class="nottickedoff">not (null sid)</span>     -&gt; <span class="nottickedoff">(T.pack sid, rest)</span></span>
+<span class="lineno">  186 </span><span class="spaces">  </span><span class="istickedoff">_ -&gt; (defaultSid, args)</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>first :: (a -&gt; b) -&gt; Either a c -&gt; Either b c
+<span class="lineno">  189 </span><span class="decl"><span class="istickedoff">first f value = case value of</span>
+<span class="lineno">  190 </span><span class="spaces">  </span><span class="istickedoff">Left err -&gt; <span class="nottickedoff">Left (f err)</span></span>
+<span class="lineno">  191 </span><span class="spaces">  </span><span class="istickedoff">Right ok -&gt; Right ok</span></span>
+
+</pre>
+</body>
+</html>

@@ -51,7 +51,7 @@ import QxFx0.Runtime.Wiring.Context
   , withRuntimeDb
   )
 import QxFx0.Runtime.Wiring.Readiness (checkNixWithCache, wireVerifyAgda)
-import QxFx0.Semantic.Embedding (textToEmbeddingResult)
+import QxFx0.Semantic.Embedding (textToEmbeddingResultWithManager)
 import QxFx0.Bridge.ExternalLLM (buildTransportFromEnvWithManager, queryExternalTool)
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (r5Family, r5Force)
@@ -66,7 +66,7 @@ handleTurnEffect :: RuntimeContext -> TurnEffectRequest -> IO TurnEffectResult
 handleTurnEffect ctx request =
   case request of
     TurnReqEmbedding inputText ->
-      TurnResEmbedding <$> textToEmbeddingResult (T.unpack inputText)
+      TurnResEmbedding <$> textToEmbeddingResultWithManager (rtwHttpManager (rcWorkers ctx)) inputText
     TurnReqNixGuard concept agency tension -> do
       nixPath <- resolveNixPath ctx
       status <- checkNixWithCache (rtcNix (rcCaches ctx)) nixPath concept agency tension
@@ -190,8 +190,10 @@ resolveAbsoluteMarkerPath canonicalTmp canonicalStateDir absoluteCandidate = do
     else do
       canonicalParent <- canonicalizePath parentDir
       let canonicalCandidate = canonicalParent </> markerName
+      withinTmp <- isPathWithin canonicalTmp canonicalCandidate
+      withinState <- isPathWithin canonicalStateDir canonicalCandidate
       pure $
-        if isPathWithin canonicalTmp canonicalCandidate || isPathWithin canonicalStateDir canonicalCandidate
+        if withinTmp || withinState
           then Just canonicalCandidate
           else Nothing
 

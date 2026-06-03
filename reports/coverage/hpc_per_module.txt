@@ -1,0 +1,2385 @@
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Main>-----
+ 98% expressions used (78/79)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (0/0)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.ArchitectureInvariants>-----
+ 88% expressions used (88/100)
+ 33% boolean coverage (1/3)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+       0% qualifiers (0/2), 1 always True, 1 always False
+100% alternatives used (2/2)
+100% local declarations used (2/2)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.CoreBehavior>-----
+ 87% expressions used (6203/7086)
+ 42% boolean coverage (3/7)
+      75% guards (3/4), 1 always True
+       0% 'if' conditions (0/2), 2 always False
+       0% qualifiers (0/1), 1 always True
+ 49% alternatives used (59/119)
+ 98% local declarations used (461/468)
+100% top-level declarations used (274/274)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.DialogueDevelopment>-----
+ 86% expressions used (334/387)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+ 94% local declarations used (17/18)
+100% top-level declarations used (13/13)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.EgoRead>-----
+ 89% expressions used (41/46)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.Guardrails>-----
+ 86% expressions used (204/236)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+ 93% local declarations used (14/15)
+100% top-level declarations used (10/10)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.HttpRuntime>-----
+ 76% expressions used (2009/2619)
+  0% boolean coverage (0/5)
+     100% guards (0/0)
+       0% 'if' conditions (0/5), 1 always True, 4 unevaluated
+     100% qualifiers (0/0)
+ 42% alternatives used (33/78)
+ 71% local declarations used (23/32)
+ 75% top-level declarations used (68/90)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.KnowledgeTree>-----
+ 83% expressions used (382/458)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+ 92% local declarations used (25/27)
+100% top-level declarations used (12/12)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.LearningLoop>-----
+ 85% expressions used (2347/2756)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 44% alternatives used (29/65)
+ 95% local declarations used (197/207)
+100% top-level declarations used (79/79)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.LegalAdapter>-----
+ 79% expressions used (94/118)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (5/10)
+100% local declarations used (0/0)
+100% top-level declarations used (7/7)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.LexiconTests>-----
+ 89% expressions used (620/692)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 2 always False
+     100% qualifiers (0/0)
+ 50% alternatives used (6/12)
+100% local declarations used (47/47)
+100% top-level declarations used (18/18)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.LongSessionCorpus>-----
+ 76% expressions used (103/135)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (4/8)
+100% local declarations used (6/6)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.ModelComparison>-----
+ 83% expressions used (602/722)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+ 61% alternatives used (11/18)
+100% local declarations used (29/29)
+100% top-level declarations used (22/22)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.P5Governance>-----
+ 89% expressions used (1354/1509)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (8/16)
+100% local declarations used (54/54)
+100% top-level declarations used (37/37)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.PerspectiveRegistry>-----
+ 86% expressions used (553/638)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (31/31)
+100% top-level declarations used (19/19)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.PhaseM2d>-----
+ 87% expressions used (146/166)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (2/4)
+100% local declarations used (12/12)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.ReliabilityHardening>-----
+ 81% expressions used (638/787)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (7/14)
+ 95% local declarations used (45/47)
+100% top-level declarations used (41/41)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.RenderDialogueCoverage>-----
+ 58% expressions used (133/227)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (6/6)
+100% top-level declarations used (14/14)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.RuntimeInfrastructure>-----
+ 86% expressions used (3723/4283)
+ 25% boolean coverage (1/4)
+     100% guards (0/0)
+      25% 'if' conditions (1/4), 2 always True, 1 always False
+     100% qualifiers (0/0)
+ 46% alternatives used (44/94)
+100% local declarations used (77/77)
+100% top-level declarations used (69/69)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.RussianQuality>-----
+ 82% expressions used (255/308)
+  0% boolean coverage (0/2)
+       0% guards (0/2), 1 always True, 1 always False
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+ 93% local declarations used (31/33)
+100% top-level declarations used (10/10)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfAdjunction>-----
+ 91% expressions used (333/363)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (16/16)
+100% top-level declarations used (17/17)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfBlanket>-----
+ 93% expressions used (227/242)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (20/20)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfConatus>-----
+ 82% expressions used (381/460)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (2/4)
+100% local declarations used (46/46)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfDeliberation>-----
+ 84% expressions used (423/501)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (33/33)
+ 92% top-level declarations used (13/14)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfEssence>-----
+ 89% expressions used (552/614)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 60% alternatives used (6/10)
+100% local declarations used (29/29)
+100% top-level declarations used (27/27)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfEssenceCommit>-----
+ 89% expressions used (587/656)
+ 66% boolean coverage (2/3)
+     100% guards (0/0)
+      66% 'if' conditions (2/3), 1 always True
+     100% qualifiers (0/0)
+ 62% alternatives used (15/24)
+ 97% local declarations used (35/36)
+100% top-level declarations used (25/25)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfField>-----
+ 92% expressions used (946/1022)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (18/18)
+ 97% top-level declarations used (44/45)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfPerspective>-----
+ 85% expressions used (404/474)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (2/4)
+ 91% local declarations used (32/35)
+100% top-level declarations used (11/11)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SelfSalience>-----
+ 92% expressions used (1005/1086)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 50% alternatives used (4/8)
+100% local declarations used (52/52)
+100% top-level declarations used (48/48)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.SemanticCorpus>-----
+ 76% expressions used (431/564)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 1 always True, 1 always False
+     100% qualifiers (0/0)
+ 50% alternatives used (6/12)
+100% local declarations used (13/13)
+ 80% top-level declarations used (25/31)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.StatePersistence>-----
+ 80% expressions used (1341/1663)
+  0% boolean coverage (0/6)
+       0% guards (0/1), 1 always True
+       0% 'if' conditions (0/5), 5 always True
+     100% qualifiers (0/0)
+ 47% alternatives used (47/98)
+100% local declarations used (57/57)
+ 96% top-level declarations used (30/31)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.TrainingCycle>-----
+ 67% expressions used (588/874)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (3/6)
+ 95% local declarations used (40/42)
+100% top-level declarations used (13/13)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.TurnPipelineProtocol>-----
+ 89% expressions used (4873/5435)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+ 58% alternatives used (53/91)
+ 97% local declarations used (321/330)
+100% top-level declarations used (161/161)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Suite.VecProperties>-----
+ 89% expressions used (117/131)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (2/2)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Support>-----
+ 90% expressions used (332/367)
+ 66% boolean coverage (2/3)
+     100% guards (0/0)
+      66% 'if' conditions (2/3), 1 always True
+     100% qualifiers (0/0)
+ 75% alternatives used (12/16)
+100% local declarations used (13/13)
+ 92% top-level declarations used (13/14)
+-----<module qxfx0-0.1.0.0-inplace-qxfx0-test/Test.Support.TurnPipelineFixtures>-----
+ 87% expressions used (396/455)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 61% alternatives used (13/21)
+ 96% local declarations used (32/33)
+ 90% top-level declarations used (19/21)
+-----<module qxfx0-0.1.0.0-inplace/Paths_qxfx0>-----
+ 30% expressions used (23/75)
+  0% boolean coverage (0/2)
+       0% guards (0/2), 1 always True, 1 always False
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 20% alternatives used (1/5)
+100% local declarations used (0/0)
+ 33% top-level declarations used (6/18)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaR5>-----
+ 54% expressions used (158/288)
+ 11% boolean coverage (1/9)
+       0% guards (0/5), 2 always True, 1 always False, 2 unevaluated
+      25% 'if' conditions (1/4), 1 always True, 1 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 62% alternatives used (18/29)
+ 93% local declarations used (14/15)
+ 44% top-level declarations used (4/9)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.AgdaWitness>-----
+ 73% expressions used (321/437)
+ 18% boolean coverage (3/16)
+       0% guards (0/9), 2 always True, 4 always False, 3 unevaluated
+      50% 'if' conditions (2/4), 1 always True, 1 always False
+      33% qualifiers (1/3), 2 always False
+ 47% alternatives used (16/34)
+100% local declarations used (12/12)
+ 47% top-level declarations used (25/53)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Datalog.Compare>-----
+100% expressions used (42/42)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (6/6)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Datalog.Runtime>-----
+ 60% expressions used (328/544)
+ 15% boolean coverage (2/13)
+       0% guards (0/3), 1 always True, 2 unevaluated
+      20% 'if' conditions (2/10), 4 always True, 4 unevaluated
+     100% qualifiers (0/0)
+ 56% alternatives used (34/60)
+ 81% local declarations used (13/16)
+ 78% top-level declarations used (15/19)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Datalog.Support>-----
+ 74% expressions used (282/381)
+  0% boolean coverage (0/3)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 1 always True, 1 always False
+       0% qualifiers (0/1), 1 always True
+ 43% alternatives used (24/55)
+100% local declarations used (13/13)
+ 79% top-level declarations used (19/24)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Datalog.Types>-----
+100% expressions used (15/15)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 54% top-level declarations used (6/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.EmbeddedSQL>-----
+100% expressions used (8/8)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.ExternalLLM>-----
+ 59% expressions used (692/1167)
+ 37% boolean coverage (9/24)
+      16% guards (2/12), 4 always True, 3 always False, 3 unevaluated
+      58% 'if' conditions (7/12), 1 always True, 4 unevaluated
+     100% qualifiers (0/0)
+ 50% alternatives used (66/131)
+ 68% local declarations used (15/22)
+ 49% top-level declarations used (59/119)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.Morphology>-----
+  4% expressions used (10/236)
+  0% boolean coverage (0/3)
+       0% guards (0/3), 3 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+  4% alternatives used (1/22)
+  0% local declarations used (0/5)
+  6% top-level declarations used (2/32)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NativeSQLite>-----
+ 72% expressions used (319/441)
+ 27% boolean coverage (6/22)
+      25% guards (1/4), 2 always True, 1 always False
+      27% 'if' conditions (5/18), 5 always True, 8 always False
+     100% qualifiers (0/0)
+ 63% alternatives used (29/46)
+100% local declarations used (3/3)
+ 88% top-level declarations used (23/26)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixCache>-----
+ 48% expressions used (85/175)
+  0% boolean coverage (0/4)
+       0% guards (0/2), 2 unevaluated
+       0% 'if' conditions (0/2), 1 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 26% alternatives used (5/19)
+ 44% local declarations used (4/9)
+ 33% top-level declarations used (7/21)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.NixGuard>-----
+ 74% expressions used (282/379)
+ 46% boolean coverage (7/15)
+      20% guards (2/10), 3 always True, 4 always False, 1 unevaluated
+     100% 'if' conditions (5/5)
+     100% qualifiers (0/0)
+ 44% alternatives used (30/68)
+100% local declarations used (7/7)
+100% top-level declarations used (12/12)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.Bootstrap>-----
+ 60% expressions used (334/550)
+ 45% boolean coverage (5/11)
+      66% guards (2/3), 1 always True
+      37% 'if' conditions (3/8), 2 always True, 1 always False, 2 unevaluated
+     100% qualifiers (0/0)
+ 53% alternatives used (30/56)
+ 66% local declarations used (2/3)
+ 77% top-level declarations used (21/27)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.Pool>-----
+ 69% expressions used (175/251)
+  0% boolean coverage (0/2)
+       0% guards (0/2), 1 always True, 1 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 57% alternatives used (15/26)
+100% local declarations used (5/5)
+ 78% top-level declarations used (11/14)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.Queries>-----
+ 90% expressions used (257/284)
+ 71% boolean coverage (5/7)
+     100% guards (0/0)
+      71% 'if' conditions (5/7), 2 always False
+     100% qualifiers (0/0)
+ 81% alternatives used (18/22)
+100% local declarations used (15/15)
+100% top-level declarations used (11/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.SQLite.SchemaContract>-----
+ 73% expressions used (315/430)
+ 25% boolean coverage (3/12)
+       0% guards (0/2), 1 always True, 1 always False
+      30% 'if' conditions (3/10), 2 always False, 5 unevaluated
+     100% qualifiers (0/0)
+ 45% alternatives used (27/60)
+100% local declarations used (6/6)
+ 64% top-level declarations used (20/31)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.StatePersistence>-----
+ 77% expressions used (673/866)
+ 66% boolean coverage (4/6)
+       0% guards (0/2), 1 always True, 1 always False
+     100% 'if' conditions (4/4)
+     100% qualifiers (0/0)
+ 57% alternatives used (27/47)
+ 91% local declarations used (22/24)
+ 78% top-level declarations used (18/23)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Bridge.TxStatement>-----
+ 42% expressions used (74/173)
+  0% boolean coverage (0/7)
+       0% guards (0/7), 1 always True, 1 always False, 5 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 36% alternatives used (4/11)
+100% local declarations used (0/0)
+ 72% top-level declarations used (8/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.CLI.Parser>-----
+ 53% expressions used (156/294)
+  0% boolean coverage (0/3)
+       0% guards (0/2), 1 always True, 1 unevaluated
+     100% 'if' conditions (0/0)
+       0% qualifiers (0/1), 1 always True
+ 48% alternatives used (21/43)
+ 62% local declarations used (5/8)
+ 50% top-level declarations used (15/30)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.BackgroundProcess>-----
+ 72% expressions used (188/261)
+ 33% boolean coverage (4/12)
+      33% guards (3/9), 4 always True, 1 always False, 1 unevaluated
+      33% 'if' conditions (1/3), 1 always True, 1 always False
+     100% qualifiers (0/0)
+ 63% alternatives used (14/22)
+100% local declarations used (11/11)
+ 41% top-level declarations used (30/73)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Bayesian>-----
+ 53% expressions used (151/280)
+  0% boolean coverage (0/9)
+     100% guards (0/0)
+       0% 'if' conditions (0/3), 1 always True, 1 always False, 1 unevaluated
+       0% qualifiers (0/6), 6 unevaluated
+ 44% alternatives used (8/18)
+ 65% local declarations used (17/26)
+ 57% top-level declarations used (4/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.ClaimBuilder>-----
+ 98% expressions used (74/75)
+ 66% boolean coverage (2/3)
+     100% guards (0/0)
+      66% 'if' conditions (2/3), 1 always False
+     100% qualifiers (0/0)
+ 83% alternatives used (5/6)
+100% local declarations used (6/6)
+100% top-level declarations used (6/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Consciousness.Kernel.Init>-----
+ 46% expressions used (29/63)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 33% alternatives used (2/6)
+100% local declarations used (1/1)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Consciousness.Kernel.Pulse>-----
+ 69% expressions used (410/591)
+ 43% boolean coverage (25/57)
+      41% guards (23/55), 6 always True, 2 always False, 24 unevaluated
+     100% 'if' conditions (2/2)
+     100% qualifiers (0/0)
+ 59% alternatives used (42/71)
+ 66% local declarations used (22/33)
+ 81% top-level declarations used (13/16)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Consciousness.Narrative>-----
+ 64% expressions used (152/235)
+  0% boolean coverage (0/4)
+       0% guards (0/3), 1 always True, 2 unevaluated
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 33% alternatives used (4/12)
+ 68% local declarations used (15/22)
+ 75% top-level declarations used (6/8)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Consciousness.Types>-----
+ 50% expressions used (39/77)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 60% alternatives used (12/20)
+100% local declarations used (0/0)
+ 11% top-level declarations used (33/284)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.ConsciousnessLoop>-----
+ 70% expressions used (115/163)
+  0% boolean coverage (0/6)
+       0% guards (0/2), 1 always True, 1 always False
+       0% 'if' conditions (0/4), 4 unevaluated
+     100% qualifiers (0/0)
+  9% alternatives used (1/11)
+ 76% local declarations used (19/25)
+ 30% top-level declarations used (15/49)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.DialogueThread>-----
+ 88% expressions used (287/325)
+ 61% boolean coverage (11/18)
+      46% guards (6/13), 3 always True, 3 always False, 1 unevaluated
+     100% 'if' conditions (4/4)
+     100% qualifiers (1/1)
+ 73% alternatives used (28/38)
+100% local declarations used (19/19)
+100% top-level declarations used (14/14)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.DreamDynamics>-----
+ 72% expressions used (232/318)
+ 38% boolean coverage (5/13)
+      40% guards (4/10), 3 always True, 1 always False, 2 unevaluated
+       0% 'if' conditions (0/1), 1 unevaluated
+      50% qualifiers (1/2), 1 always False
+ 58% alternatives used (7/12)
+ 86% local declarations used (31/36)
+ 75% top-level declarations used (6/8)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Ego>-----
+ 94% expressions used (146/155)
+  0% boolean coverage (0/5)
+     100% guards (0/0)
+       0% 'if' conditions (0/5), 1 always True, 4 always False
+     100% qualifiers (0/0)
+ 72% alternatives used (21/29)
+100% local declarations used (16/16)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Guard.Checks>-----
+ 94% expressions used (174/184)
+ 72% boolean coverage (8/11)
+      50% guards (1/2), 1 always True
+      75% 'if' conditions (6/8), 1 always True, 1 always False
+     100% qualifiers (1/1)
+ 90% alternatives used (19/21)
+100% local declarations used (16/16)
+100% top-level declarations used (12/12)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Guard.Recovery>-----
+100% expressions used (12/12)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Guard.Types>-----
+100% expressions used (5/5)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 40% top-level declarations used (10/25)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentityGuard>-----
+100% expressions used (53/53)
+ 85% boolean coverage (6/7)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (2/2)
+     100% qualifiers (3/3)
+100% alternatives used (6/6)
+100% local declarations used (5/5)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.IdentitySignal>-----
+ 69% expressions used (25/36)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 34% top-level declarations used (11/32)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Intuition>-----
+ 71% expressions used (250/352)
+ 46% boolean coverage (7/15)
+      50% guards (6/12), 3 always True, 3 unevaluated
+      33% 'if' conditions (1/3), 1 always True, 1 always False
+     100% qualifiers (0/0)
+ 50% alternatives used (15/30)
+ 74% local declarations used (20/27)
+ 76% top-level declarations used (19/25)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Legitimacy.Policy>-----
+ 92% expressions used (48/52)
+ 75% boolean coverage (6/8)
+      71% guards (5/7), 2 always True
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+ 71% alternatives used (10/14)
+100% local declarations used (0/0)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Legitimacy.Scoring>-----
+ 97% expressions used (43/44)
+ 75% boolean coverage (3/4)
+     100% guards (0/0)
+      75% 'if' conditions (3/4), 1 always True
+     100% qualifiers (0/0)
+ 87% alternatives used (7/8)
+100% local declarations used (7/7)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.MeaningGraph>-----
+ 85% expressions used (234/273)
+ 53% boolean coverage (7/13)
+      50% guards (4/8), 3 always True, 1 always False
+      60% 'if' conditions (3/5), 1 always True, 1 unevaluated
+     100% qualifiers (0/0)
+ 88% alternatives used (30/34)
+ 85% local declarations used (12/14)
+ 93% top-level declarations used (14/15)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.Observability>-----
+ 91% expressions used (175/192)
+ 50% boolean coverage (1/2)
+     100% guards (0/0)
+      50% 'if' conditions (1/2), 1 always True
+     100% qualifiers (0/0)
+ 60% alternatives used (6/10)
+100% local declarations used (2/2)
+ 70% top-level declarations used (24/34)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.PipelineIO.Internal>-----
+ 74% expressions used (37/50)
+ 33% boolean coverage (1/3)
+      33% guards (1/3), 1 always True, 1 always False
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (11/22)
+100% local declarations used (2/2)
+ 44% top-level declarations used (13/29)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.PipelineIO.Operations>-----
+ 31% expressions used (43/138)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 26% alternatives used (4/15)
+100% local declarations used (2/2)
+ 47% top-level declarations used (9/19)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.PipelineIO.Test>-----
+ 17% expressions used (31/175)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 unevaluated
+     100% qualifiers (0/0)
+  0% alternatives used (0/21)
+ 16% local declarations used (1/6)
+ 77% top-level declarations used (7/9)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.PrincipledCore>-----
+ 56% expressions used (91/162)
+ 33% boolean coverage (3/9)
+       0% guards (0/3), 1 always True, 2 always False
+      50% 'if' conditions (3/6), 2 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 45% alternatives used (15/33)
+ 85% local declarations used (12/14)
+ 11% top-level declarations used (9/79)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.R5Dynamics>-----
+ 77% expressions used (167/215)
+ 71% boolean coverage (5/7)
+      71% guards (5/7), 2 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 69% alternatives used (27/39)
+100% local declarations used (13/13)
+ 25% top-level declarations used (9/35)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.SensePlan>-----
+ 84% expressions used (226/268)
+ 75% boolean coverage (6/8)
+      60% guards (3/5), 2 always True
+     100% 'if' conditions (3/3)
+     100% qualifiers (0/0)
+ 67% alternatives used (55/82)
+100% local declarations used (17/17)
+100% top-level declarations used (12/12)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.SessionLock>-----
+ 90% expressions used (277/305)
+ 33% boolean coverage (1/3)
+       0% guards (0/2), 2 always True
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+ 80% alternatives used (20/25)
+100% local declarations used (8/8)
+ 80% top-level declarations used (20/25)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TopicTransition>-----
+ 64% expressions used (97/150)
+ 12% boolean coverage (1/8)
+      20% guards (1/5), 2 always True, 2 always False
+       0% 'if' conditions (0/3), 2 always True, 1 unevaluated
+     100% qualifiers (0/0)
+ 45% alternatives used (5/11)
+ 70% local declarations used (17/24)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnLegitimacy.Output>-----
+100% expressions used (19/19)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (3/3)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnLegitimacy.Plans>-----
+ 97% expressions used (34/35)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+100% alternatives used (4/4)
+100% local declarations used (6/6)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnModulation.Narrative>-----
+ 87% expressions used (87/99)
+ 46% boolean coverage (7/15)
+      33% guards (1/3), 2 always True
+      50% 'if' conditions (6/12), 6 always False
+     100% qualifiers (0/0)
+ 78% alternatives used (22/28)
+100% local declarations used (3/3)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnModulation.Tension>-----
+100% expressions used (22/22)
+100% boolean coverage (2/2)
+     100% guards (0/0)
+     100% 'if' conditions (2/2)
+     100% qualifiers (0/0)
+100% alternatives used (4/4)
+100% local declarations used (4/4)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Effects>-----
+ 88% expressions used (213/241)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 33% alternatives used (2/6)
+ 96% local declarations used (28/29)
+ 58% top-level declarations used (28/48)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Finalize.Commit>-----
+ 66% expressions used (240/361)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 2 always True
+     100% qualifiers (0/0)
+ 45% alternatives used (14/31)
+ 85% local declarations used (6/7)
+100% top-level declarations used (10/10)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Finalize.Dream>-----
+ 92% expressions used (138/150)
+ 50% boolean coverage (4/8)
+      33% guards (1/3), 1 always True, 1 always False
+      50% 'if' conditions (2/4), 2 always False
+     100% qualifiers (1/1)
+ 72% alternatives used (8/11)
+100% local declarations used (10/10)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Finalize.Precommit>-----
+ 97% expressions used (202/207)
+ 66% boolean coverage (2/3)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+ 66% alternatives used (6/9)
+100% local declarations used (19/19)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Finalize.State>-----
+ 58% expressions used (986/1682)
+ 29% boolean coverage (14/48)
+      33% guards (9/27), 8 always True, 1 always False, 9 unevaluated
+      21% 'if' conditions (4/19), 1 always True, 3 always False, 11 unevaluated
+      50% qualifiers (1/2), 1 unevaluated
+ 50% alternatives used (78/153)
+ 69% local declarations used (71/102)
+ 64% top-level declarations used (18/28)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Finalize.Types>-----
+ 97% expressions used (36/37)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 52% top-level declarations used (37/70)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Prepare.Build>-----
+ 95% expressions used (142/149)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 66% alternatives used (4/6)
+100% local declarations used (16/16)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Prepare.Resolve>-----
+ 91% expressions used (242/265)
+ 50% boolean coverage (1/2)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 66% alternatives used (12/18)
+100% local declarations used (15/15)
+ 80% top-level declarations used (8/10)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Prepare.Types>-----
+100% expressions used (26/26)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (26/26)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Protocol>-----
+ 93% expressions used (134/143)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (11/11)
+ 91% top-level declarations used (21/23)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Build>-----
+ 85% expressions used (370/433)
+ 69% boolean coverage (16/23)
+      58% guards (10/17), 2 always True, 5 always False
+     100% 'if' conditions (6/6)
+     100% qualifiers (0/0)
+ 81% alternatives used (26/32)
+ 91% local declarations used (32/35)
+ 60% top-level declarations used (3/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Effects>-----
+ 83% expressions used (158/189)
+ 50% boolean coverage (1/2)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 36% alternatives used (4/11)
+ 87% local declarations used (14/16)
+ 83% top-level declarations used (5/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Render>-----
+ 71% expressions used (1429/1996)
+ 47% boolean coverage (30/63)
+      41% guards (15/36), 8 always True, 6 always False, 7 unevaluated
+      55% 'if' conditions (15/27), 2 always True, 6 always False, 4 unevaluated
+     100% qualifiers (0/0)
+ 51% alternatives used (135/262)
+ 88% local declarations used (115/130)
+ 70% top-level declarations used (60/85)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Shadow>-----
+ 72% expressions used (219/304)
+ 33% boolean coverage (5/15)
+      14% guards (1/7), 2 always True, 1 always False, 3 unevaluated
+       0% 'if' conditions (0/3), 2 always False, 1 unevaluated
+      80% qualifiers (4/5), 1 always False
+ 53% alternatives used (16/30)
+ 88% local declarations used (16/18)
+100% top-level declarations used (15/15)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Route.Types>-----
+100% expressions used (7/7)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 47% top-level declarations used (8/17)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPipeline.Types>-----
+ 87% expressions used (125/143)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (0/0)
+ 90% top-level declarations used (100/111)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPlanning.Builders>-----
+ 76% expressions used (612/798)
+ 58% boolean coverage (25/43)
+      64% guards (20/31), 10 always True, 1 always False
+      41% 'if' conditions (5/12), 1 always True, 5 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 71% alternatives used (125/174)
+ 85% local declarations used (30/35)
+ 92% top-level declarations used (23/25)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPlanning.Claims>-----
+100% expressions used (15/15)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (3/3)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPlanning.Modulation>-----
+ 69% expressions used (98/142)
+ 33% boolean coverage (3/9)
+     100% guards (0/0)
+      33% 'if' conditions (3/9), 6 always False
+     100% qualifiers (0/0)
+ 56% alternatives used (23/41)
+ 77% local declarations used (7/9)
+ 81% top-level declarations used (9/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnPlanning.Templates>-----
+ 68% expressions used (162/235)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRender.Anchor>-----
+ 96% expressions used (85/88)
+ 60% boolean coverage (3/5)
+      50% guards (1/2), 1 always True
+      66% 'if' conditions (2/3), 1 always False
+     100% qualifiers (0/0)
+ 93% alternatives used (15/16)
+100% local declarations used (6/6)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRender.Cache>-----
+100% expressions used (15/15)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (1/1)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRender.Prefix>-----
+ 44% expressions used (15/34)
+ 50% boolean coverage (1/2)
+     100% guards (0/0)
+      50% 'if' conditions (1/2), 1 unevaluated
+     100% qualifiers (0/0)
+ 42% alternatives used (6/14)
+  0% local declarations used (0/1)
+ 66% top-level declarations used (2/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRender.Strategy>-----
+ 73% expressions used (159/216)
+ 66% boolean coverage (2/3)
+      66% guards (2/3), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 73% alternatives used (41/56)
+100% local declarations used (8/8)
+ 82% top-level declarations used (14/17)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting>-----
+ 89% expressions used (176/197)
+ 33% boolean coverage (1/3)
+     100% guards (0/0)
+      33% 'if' conditions (1/3), 2 always False
+     100% qualifiers (0/0)
+ 36% alternatives used (4/11)
+100% local declarations used (25/25)
+ 50% top-level declarations used (1/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting.Cascade>-----
+ 69% expressions used (139/200)
+ 16% boolean coverage (3/18)
+       6% guards (1/15), 3 always True, 3 always False, 8 unevaluated
+      66% 'if' conditions (2/3), 1 unevaluated
+     100% qualifiers (0/0)
+ 52% alternatives used (21/40)
+100% local declarations used (11/11)
+100% top-level declarations used (6/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting.Phase>-----
+ 77% expressions used (258/331)
+ 52% boolean coverage (9/17)
+      57% guards (4/7), 3 always True
+      50% 'if' conditions (5/10), 4 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 61% alternatives used (37/60)
+ 97% local declarations used (36/37)
+100% top-level declarations used (7/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Core.TurnRouting.Types>-----
+  0% expressions used (0/23)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+  0% top-level declarations used (0/23)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Evaluation.ModelComparison>-----
+ 77% expressions used (549/712)
+ 60% boolean coverage (3/5)
+     100% guards (0/0)
+      60% 'if' conditions (3/5), 2 always True
+     100% qualifiers (0/0)
+ 67% alternatives used (23/34)
+ 94% local declarations used (50/53)
+ 22% top-level declarations used (36/158)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.ExceptionPolicy>-----
+ 58% expressions used (29/50)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 46% alternatives used (6/13)
+100% local declarations used (0/0)
+ 64% top-level declarations used (9/14)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Governance.Replay>-----
+ 71% expressions used (201/283)
+ 27% boolean coverage (3/11)
+      12% guards (1/8), 3 always True, 1 always False, 3 unevaluated
+      66% 'if' conditions (2/3), 1 always False
+     100% qualifiers (0/0)
+ 55% alternatives used (20/36)
+100% local declarations used (11/11)
+ 84% top-level declarations used (11/13)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Internal.FilePath>-----
+100% expressions used (14/14)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (2/2)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Calibration>-----
+ 51% expressions used (151/296)
+ 10% boolean coverage (2/19)
+      16% guards (2/12), 3 always True, 1 always False, 6 unevaluated
+       0% 'if' conditions (0/7), 7 unevaluated
+     100% qualifiers (0/0)
+ 27% alternatives used (10/37)
+ 60% local declarations used (3/5)
+ 43% top-level declarations used (41/95)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.DialogueDevelopment>-----
+ 80% expressions used (739/922)
+ 56% boolean coverage (18/32)
+      60% guards (9/15), 5 always True, 1 always False
+      52% 'if' conditions (9/17), 4 always True, 3 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 54% alternatives used (61/112)
+ 98% local declarations used (57/58)
+100% top-level declarations used (39/39)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.GameTheory.LP>-----
+ 76% expressions used (264/347)
+ 13% boolean coverage (2/15)
+       0% guards (0/7), 3 always True, 4 always False
+      28% 'if' conditions (2/7), 1 always True, 3 always False, 1 unevaluated
+       0% qualifiers (0/1), 1 always True
+ 62% alternatives used (22/35)
+ 76% local declarations used (26/34)
+100% top-level declarations used (7/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Guardrails>-----
+ 96% expressions used (195/203)
+100% boolean coverage (2/2)
+     100% guards (0/0)
+     100% 'if' conditions (2/2)
+     100% qualifiers (0/0)
+ 83% alternatives used (5/6)
+100% local declarations used (5/5)
+ 68% top-level declarations used (26/38)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.KnowledgeTree>-----
+ 90% expressions used (559/620)
+ 22% boolean coverage (2/9)
+       0% guards (0/6), 3 always True, 1 always False, 2 unevaluated
+      66% 'if' conditions (2/3), 1 always True
+     100% qualifiers (0/0)
+ 71% alternatives used (10/14)
+ 97% local declarations used (34/35)
+ 52% top-level declarations used (51/97)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Loop>-----
+ 51% expressions used (315/615)
+ 33% boolean coverage (2/6)
+       0% guards (0/1), 1 unevaluated
+      50% 'if' conditions (2/4), 1 always True, 1 always False
+       0% qualifiers (0/1), 1 unevaluated
+ 39% alternatives used (27/69)
+ 67% local declarations used (42/62)
+ 43% top-level declarations used (16/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Need>-----
+ 95% expressions used (361/379)
+ 94% boolean coverage (17/18)
+      66% guards (2/3), 1 always True
+     100% 'if' conditions (15/15)
+     100% qualifiers (0/0)
+ 92% alternatives used (36/39)
+100% local declarations used (19/19)
+ 43% top-level declarations used (38/88)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Parser>-----
+ 69% expressions used (116/166)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (1/1)
+ 53% alternatives used (7/13)
+ 50% local declarations used (2/4)
+ 85% top-level declarations used (6/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Sandbox>-----
+ 86% expressions used (149/172)
+ 50% boolean coverage (3/6)
+     100% guards (0/0)
+      50% 'if' conditions (3/6), 3 always False
+     100% qualifiers (0/0)
+ 61% alternatives used (11/18)
+100% local declarations used (15/15)
+ 12% top-level declarations used (10/83)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Signal>-----
+ 91% expressions used (167/182)
+ 11% boolean coverage (1/9)
+       0% guards (0/4), 2 always True, 2 always False
+      20% 'if' conditions (1/5), 1 always True, 3 always False
+     100% qualifiers (0/0)
+ 62% alternatives used (10/16)
+100% local declarations used (14/14)
+ 21% top-level declarations used (22/103)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Tool>-----
+ 83% expressions used (130/155)
+ 50% boolean coverage (4/8)
+      50% guards (2/4), 2 always True
+      50% 'if' conditions (2/4), 1 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 68% alternatives used (17/25)
+100% local declarations used (13/13)
+ 23% top-level declarations used (10/43)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.TrainingCycle>-----
+ 86% expressions used (535/618)
+ 25% boolean coverage (3/12)
+      28% guards (2/7), 1 always True, 4 always False
+      20% 'if' conditions (1/5), 3 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 60% alternatives used (28/46)
+ 94% local declarations used (56/59)
+ 22% top-level declarations used (54/241)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Learning.Validator>-----
+ 71% expressions used (186/259)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 35% alternatives used (5/14)
+ 80% local declarations used (4/5)
+ 17% top-level declarations used (11/62)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Legal.Adapter>-----
+ 97% expressions used (82/84)
+ 33% boolean coverage (1/3)
+      33% guards (1/3), 1 always True, 1 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 66% alternatives used (2/3)
+100% local declarations used (2/2)
+ 64% top-level declarations used (9/14)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Analyze>-----
+ 94% expressions used (16/17)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+       0% qualifiers (0/2), 2 always True
+100% alternatives used (0/0)
+100% local declarations used (1/1)
+ 50% top-level declarations used (1/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Generated>-----
+ 46% expressions used (139811/301751)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 66% top-level declarations used (2/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.GfMap>-----
+ 82% expressions used (251/303)
+ 50% boolean coverage (1/2)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+       0% qualifiers (0/1), 1 always True
+ 73% alternatives used (17/23)
+ 93% local declarations used (15/16)
+ 75% top-level declarations used (28/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Inflection>-----
+ 58% expressions used (88/151)
+  0% boolean coverage (0/9)
+       0% guards (0/8), 8 unevaluated
+       0% 'if' conditions (0/1), 1 unevaluated
+     100% qualifiers (0/0)
+ 48% alternatives used (16/33)
+  0% local declarations used (0/5)
+ 40% top-level declarations used (8/20)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Loader>-----
+ 81% expressions used (67/82)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (1/2)
+100% local declarations used (6/6)
+ 33% top-level declarations used (1/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Resolver>-----
+ 82% expressions used (69/84)
+ 50% boolean coverage (3/6)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (0/0)
+      50% qualifiers (2/4), 1 always True, 1 unevaluated
+ 92% alternatives used (13/14)
+100% local declarations used (4/4)
+ 83% top-level declarations used (5/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Runtime>-----
+ 23% expressions used (8/34)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 16% alternatives used (1/6)
+100% local declarations used (0/0)
+ 33% top-level declarations used (2/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Lexicon.Types>-----
+ 83% expressions used (10/12)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+  5% top-level declarations used (7/127)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.Consciousness.Interpretation>-----
+ 14% expressions used (12/85)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 32% top-level declarations used (12/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.Consciousness.Ontology>-----
+ 20% expressions used (2/10)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 20% top-level declarations used (2/10)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.Consciousness.Profiles>-----
+ 55% expressions used (85/153)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 69% top-level declarations used (36/52)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.Consciousness.Signals>-----
+ 22% expressions used (11/49)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 24% top-level declarations used (11/45)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.Contracts>-----
+ 65% expressions used (138/211)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 42% top-level declarations used (14/33)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.ParserKeywords>-----
+ 97% expressions used (520/533)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 93% top-level declarations used (44/47)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.RenderLexicon>-----
+ 62% expressions used (48/77)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 62% top-level declarations used (48/77)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Policy.SemanticScoring>-----
+ 87% expressions used (54/62)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 83% alternatives used (10/12)
+100% local declarations used (0/0)
+ 89% top-level declarations used (43/48)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Render.Dialogue>-----
+ 51% expressions used (2129/4154)
+ 16% boolean coverage (38/232)
+      23% guards (23/97), 19 always True, 37 always False, 18 unevaluated
+       9% 'if' conditions (13/132), 1 always True, 63 always False, 55 unevaluated
+      66% qualifiers (2/3), 1 always True
+ 40% alternatives used (261/644)
+ 66% local declarations used (175/264)
+ 74% top-level declarations used (81/109)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Render.Semantic>-----
+ 96% expressions used (130/135)
+ 33% boolean coverage (1/3)
+      33% guards (1/3), 1 always True, 1 always False
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 66% alternatives used (2/3)
+100% local declarations used (10/10)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Resources.Morphology>-----
+ 63% expressions used (159/249)
+ 50% boolean coverage (1/2)
+     100% guards (0/0)
+      50% 'if' conditions (1/2), 1 always False
+     100% qualifiers (0/0)
+ 53% alternatives used (14/26)
+ 66% local declarations used (2/3)
+ 80% top-level declarations used (8/10)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Resources.Paths>-----
+ 46% expressions used (404/874)
+ 13% boolean coverage (3/22)
+       0% guards (0/7), 1 always False, 6 unevaluated
+      20% 'if' conditions (3/15), 2 always True, 10 unevaluated
+     100% qualifiers (0/0)
+ 37% alternatives used (34/91)
+ 44% local declarations used (12/27)
+ 62% top-level declarations used (28/45)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Resources.Readiness>-----
+ 64% expressions used (172/268)
+ 38% boolean coverage (5/13)
+       0% guards (0/1), 1 always True
+      25% 'if' conditions (2/8), 6 unevaluated
+      75% qualifiers (3/4), 1 always True
+ 55% alternatives used (16/29)
+ 60% local declarations used (6/10)
+ 40% top-level declarations used (13/32)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Engine>-----
+ 44% expressions used (127/285)
+ 20% boolean coverage (1/5)
+       0% guards (0/3), 1 always True, 1 always False, 1 unevaluated
+      50% 'if' conditions (1/2), 1 unevaluated
+     100% qualifiers (0/0)
+ 29% alternatives used (10/34)
+ 72% local declarations used (8/11)
+ 80% top-level declarations used (4/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.GF.Map>-----
+  0% expressions used (0/3)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+  0% top-level declarations used (0/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.GF.Morphology>-----
+ 23% expressions used (151/647)
+  8% boolean coverage (5/57)
+       8% guards (5/57), 2 always True, 3 always False, 47 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 17% alternatives used (21/119)
+ 30% local declarations used (4/13)
+ 21% top-level declarations used (10/46)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Gate>-----
+ 71% expressions used (197/275)
+ 20% boolean coverage (2/10)
+      40% guards (2/5), 1 always True, 1 always False, 1 unevaluated
+       0% 'if' conditions (0/5), 3 always True, 2 always False
+     100% qualifiers (0/0)
+ 43% alternatives used (10/23)
+100% local declarations used (2/2)
+ 36% top-level declarations used (4/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Health>-----
+ 77% expressions used (363/471)
+ 50% boolean coverage (5/10)
+      50% guards (2/4), 2 always True
+      50% 'if' conditions (3/6), 3 always True
+     100% qualifiers (0/0)
+ 56% alternatives used (23/41)
+100% local declarations used (32/32)
+ 78% top-level declarations used (50/64)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Mode>-----
+ 91% expressions used (21/23)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 80% alternatives used (8/10)
+100% local declarations used (0/0)
+ 50% top-level declarations used (4/8)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.PGF>-----
+ 32% expressions used (182/556)
+  0% boolean coverage (0/8)
+       0% guards (0/4), 1 always True, 3 unevaluated
+       0% 'if' conditions (0/4), 1 always False, 3 unevaluated
+     100% qualifiers (0/0)
+ 25% alternatives used (16/63)
+ 33% local declarations used (2/6)
+ 59% top-level declarations used (13/22)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Paths>-----
+ 55% expressions used (36/65)
+  0% boolean coverage (0/1)
+       0% guards (0/1), 1 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (5/10)
+100% local declarations used (0/0)
+ 50% top-level declarations used (1/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Session.Bootstrap>-----
+ 64% expressions used (231/358)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 2 always False
+     100% qualifiers (0/0)
+ 53% alternatives used (16/30)
+100% local declarations used (5/5)
+ 83% top-level declarations used (5/6)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Session.Types>-----
+ 13% expressions used (5/38)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+  0% alternatives used (0/13)
+100% local declarations used (0/0)
+ 21% top-level declarations used (6/28)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Session.UI>-----
+ 22% expressions used (179/790)
+  0% boolean coverage (0/15)
+       0% guards (0/12), 4 always True, 1 always False, 7 unevaluated
+       0% 'if' conditions (0/1), 1 unevaluated
+       0% qualifiers (0/2), 1 always True, 1 unevaluated
+ 11% alternatives used (11/92)
+ 11% local declarations used (5/45)
+ 27% top-level declarations used (11/40)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Wiring.Context>-----
+ 74% expressions used (231/310)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 2 always True
+     100% qualifiers (0/0)
+ 52% alternatives used (10/19)
+100% local declarations used (4/4)
+ 89% top-level declarations used (33/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Wiring.Handlers>-----
+ 45% expressions used (185/404)
+  0% boolean coverage (0/8)
+       0% guards (0/1), 1 unevaluated
+       0% 'if' conditions (0/7), 1 always True, 1 always False, 5 unevaluated
+     100% qualifiers (0/0)
+ 46% alternatives used (19/41)
+ 44% local declarations used (4/9)
+ 36% top-level declarations used (4/11)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Wiring.Pipeline>-----
+ 90% expressions used (18/20)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (4/4)
+100% local declarations used (0/0)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Runtime.Wiring.Readiness>-----
+ 83% expressions used (142/171)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 58% alternatives used (7/12)
+100% local declarations used (0/0)
+ 76% top-level declarations used (23/30)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Adjunction>-----
+ 95% expressions used (22/23)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 65% top-level declarations used (13/20)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Blanket>-----
+100% expressions used (27/27)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Conatus>-----
+100% expressions used (142/142)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (12/12)
+ 27% top-level declarations used (24/86)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Deliberation>-----
+ 96% expressions used (295/305)
+ 70% boolean coverage (7/10)
+      70% guards (7/10), 2 always True, 1 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 90% alternatives used (46/51)
+100% local declarations used (23/23)
+ 36% top-level declarations used (46/125)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Essence>-----
+ 83% expressions used (479/573)
+ 71% boolean coverage (15/21)
+      66% guards (10/15), 4 always True, 1 always False
+      83% 'if' conditions (5/6), 1 always True
+     100% qualifiers (0/0)
+ 73% alternatives used (50/68)
+100% local declarations used (28/28)
+ 32% top-level declarations used (91/281)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Field>-----
+ 97% expressions used (412/423)
+100% boolean coverage (4/4)
+     100% guards (0/0)
+     100% 'if' conditions (4/4)
+     100% qualifiers (0/0)
+ 84% alternatives used (11/13)
+100% local declarations used (28/28)
+ 50% top-level declarations used (50/99)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Invariants>-----
+100% expressions used (55/55)
+100% boolean coverage (5/5)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (5/5)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Perspective>-----
+ 58% expressions used (935/1608)
+ 17% boolean coverage (11/64)
+      16% guards (10/60), 8 always True, 15 always False, 27 unevaluated
+      33% 'if' conditions (1/3), 1 always False, 1 unevaluated
+       0% qualifiers (0/1), 1 always True
+ 39% alternatives used (57/143)
+ 65% local declarations used (58/88)
+ 61% top-level declarations used (49/80)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Perspective.Reduce>-----
+ 85% expressions used (491/575)
+ 25% boolean coverage (5/20)
+      26% guards (5/19), 7 always True, 2 always False, 5 unevaluated
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 58% alternatives used (25/43)
+ 96% local declarations used (26/27)
+ 95% top-level declarations used (21/22)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Salience>-----
+ 91% expressions used (294/320)
+ 45% boolean coverage (5/11)
+      33% guards (3/9), 4 always True, 2 always False
+     100% 'if' conditions (2/2)
+     100% qualifiers (0/0)
+ 89% alternatives used (26/29)
+100% local declarations used (18/18)
+ 44% top-level declarations used (42/94)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Self.Types>-----
+ 23% expressions used (19/81)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 40% alternatives used (2/5)
+100% local declarations used (0/0)
+ 20% top-level declarations used (6/29)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.AtomAccretion>-----
+ 98% expressions used (102/104)
+ 25% boolean coverage (1/4)
+       0% guards (0/2), 1 always True, 1 always False
+      50% 'if' conditions (1/2), 1 always True
+     100% qualifiers (0/0)
+ 71% alternatives used (5/7)
+100% local declarations used (2/2)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.DialogAssembly>-----
+ 19% expressions used (401/2064)
+ 35% boolean coverage (13/37)
+      65% guards (13/20), 2 always True, 3 always False, 2 unevaluated
+       0% 'if' conditions (0/17), 1 always True, 4 always False, 12 unevaluated
+     100% qualifiers (0/0)
+ 35% alternatives used (53/148)
+ 35% local declarations used (33/92)
+ 30% top-level declarations used (18/60)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.DialogAtom>-----
+ 10% expressions used (31/308)
+  0% boolean coverage (0/2)
+       0% guards (0/1), 1 unevaluated
+       0% 'if' conditions (0/1), 1 unevaluated
+     100% qualifiers (0/0)
+  5% alternatives used (1/20)
+  0% local declarations used (0/1)
+  9% top-level declarations used (9/96)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.DialogMeaning>-----
+ 55% expressions used (617/1116)
+ 31% boolean coverage (6/19)
+      41% guards (5/12), 5 always True, 2 always False
+      14% 'if' conditions (1/7), 1 always True, 5 always False
+     100% qualifiers (0/0)
+ 67% alternatives used (60/89)
+ 95% local declarations used (19/20)
+100% top-level declarations used (33/33)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Embedding.Fallback>-----
+ 90% expressions used (127/141)
+ 11% boolean coverage (1/9)
+      25% guards (1/4), 2 always True, 1 always False
+       0% 'if' conditions (0/5), 2 always True, 2 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 50% alternatives used (8/16)
+100% local declarations used (11/11)
+100% top-level declarations used (4/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Embedding.Runtime>-----
+ 29% expressions used (147/506)
+  5% boolean coverage (1/18)
+       0% guards (0/7), 2 always True, 2 always False, 3 unevaluated
+      11% 'if' conditions (1/9), 2 always False, 6 unevaluated
+       0% qualifiers (0/2), 2 unevaluated
+ 32% alternatives used (21/64)
+ 40% local declarations used (6/15)
+ 35% top-level declarations used (10/28)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Embedding.Support>-----
+100% expressions used (1/1)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Embedding.Types>-----
+ 86% expressions used (19/22)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 75% alternatives used (9/12)
+100% local declarations used (0/0)
+ 37% top-level declarations used (14/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Assemble>-----
+ 81% expressions used (4385/5401)
+ 62% boolean coverage (120/192)
+      59% guards (77/129), 11 always True, 30 always False, 11 unevaluated
+      74% 'if' conditions (29/39), 1 always True, 4 always False, 5 unevaluated
+      58% qualifiers (14/24), 7 always True, 1 always False, 2 unevaluated
+ 63% alternatives used (179/280)
+ 81% local declarations used (111/136)
+ 91% top-level declarations used (110/120)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Classify>-----
+ 95% expressions used (131/137)
+ 81% boolean coverage (9/11)
+      81% guards (9/11), 2 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (19/19)
+100% local declarations used (9/9)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.GeneratedLexicon>-----
+ 12% expressions used (1006/7886)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 12% alternatives used (494/3926)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Lexicon>-----
+ 88% expressions used (809/915)
+ 78% boolean coverage (33/42)
+      62% guards (10/16), 3 always True, 3 always False
+      88% 'if' conditions (23/26), 3 always False
+     100% qualifiers (0/0)
+ 48% alternatives used (83/170)
+100% local declarations used (1/1)
+ 96% top-level declarations used (51/53)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Model>-----
+ 24% expressions used (30/123)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 10% top-level declarations used (44/413)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Normalize>-----
+ 92% expressions used (88/95)
+ 66% boolean coverage (2/3)
+      66% guards (2/3), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 71% alternatives used (5/7)
+100% local declarations used (6/6)
+ 57% top-level declarations used (8/14)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Input.Parse>-----
+ 49% expressions used (98/197)
+  0% boolean coverage (0/16)
+       0% guards (0/15), 1 always True, 1 always False, 13 unevaluated
+       0% 'if' conditions (0/1), 1 always True
+     100% qualifiers (0/0)
+ 16% alternatives used (2/12)
+ 85% local declarations used (12/14)
+ 20% top-level declarations used (8/39)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.KeywordMatch>-----
+ 85% expressions used (30/35)
+ 50% boolean coverage (1/2)
+      50% guards (1/2), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (2/2)
+ 75% top-level declarations used (3/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Lexicon.RuntimeParadigms>-----
+  1% expressions used (16/956)
+  0% boolean coverage (0/22)
+       0% guards (0/11), 11 unevaluated
+       0% 'if' conditions (0/11), 11 unevaluated
+     100% qualifiers (0/0)
+  0% alternatives used (0/130)
+  2% local declarations used (1/35)
+  2% top-level declarations used (4/152)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Logic>-----
+ 95% expressions used (162/169)
+ 50% boolean coverage (2/4)
+      50% guards (2/4), 2 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 96% alternatives used (26/27)
+100% local declarations used (5/5)
+100% top-level declarations used (7/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningAssembly>-----
+  4% expressions used (58/1289)
+  0% boolean coverage (0/17)
+       0% guards (0/9), 1 always True, 8 unevaluated
+       0% 'if' conditions (0/8), 8 unevaluated
+     100% qualifiers (0/0)
+  6% alternatives used (7/105)
+  6% local declarations used (5/81)
+ 12% top-level declarations used (8/62)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningAtom>-----
+ 18% expressions used (10/53)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+  0% alternatives used (0/2)
+100% local declarations used (0/0)
+  3% top-level declarations used (3/86)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningAtoms>-----
+ 95% expressions used (414/435)
+ 84% boolean coverage (22/26)
+      80% guards (16/20), 2 always True, 2 always False
+     100% 'if' conditions (6/6)
+     100% qualifiers (0/0)
+ 75% alternatives used (42/56)
+100% local declarations used (18/18)
+ 94% top-level declarations used (17/18)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningDecompose.Core>-----
+ 87% expressions used (14/16)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 75% alternatives used (3/4)
+100% local declarations used (0/0)
+100% top-level declarations used (1/1)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.MeaningDecompose.Domains>-----
+ 26% expressions used (2218/8368)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 58% top-level declarations used (99/168)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Morphology>-----
+ 77% expressions used (363/471)
+ 54% boolean coverage (17/31)
+      48% guards (13/27), 5 always True, 1 always False, 8 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (4/4)
+ 65% alternatives used (32/49)
+100% local declarations used (21/21)
+  8% top-level declarations used (19/218)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Proposition>-----
+ 78% expressions used (3339/4280)
+ 20% boolean coverage (74/366)
+      19% guards (68/355), 36 always True, 248 always False, 3 unevaluated
+      54% 'if' conditions (6/11), 4 always False, 1 unevaluated
+     100% qualifiers (0/0)
+ 50% alternatives used (298/585)
+ 85% local declarations used (94/110)
+ 77% top-level declarations used (81/105)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticInput>-----
+100% expressions used (13/13)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 34% top-level declarations used (8/23)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.SemanticScene>-----
+ 30% expressions used (26/84)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 unevaluated
+     100% qualifiers (0/0)
+ 16% alternatives used (1/6)
+ 30% local declarations used (3/10)
+ 75% top-level declarations used (3/4)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Sense.Adjacency>-----
+ 62% expressions used (30/48)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 45% alternatives used (5/11)
+100% local declarations used (0/0)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Sense.Extract>-----
+ 90% expressions used (142/157)
+ 50% boolean coverage (2/4)
+      50% guards (1/2), 1 always True
+      50% 'if' conditions (1/2), 1 always False
+     100% qualifiers (0/0)
+ 85% alternatives used (30/35)
+100% local declarations used (10/10)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Semantic.Syntax.Combinators>-----
+  1% expressions used (19/1199)
+  0% boolean coverage (0/12)
+       0% guards (0/6), 6 unevaluated
+       0% 'if' conditions (0/6), 6 unevaluated
+     100% qualifiers (0/0)
+  0% alternatives used (1/202)
+  0% local declarations used (0/29)
+  3% top-level declarations used (5/159)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Bayesian>-----
+ 73% expressions used (14/19)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 19% top-level declarations used (8/42)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.ClaimAst>-----
+ 21% expressions used (6/28)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+  7% top-level declarations used (8/112)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Decision>-----
+100% expressions used (29/29)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (14/14)
+100% local declarations used (0/0)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Domain>-----
+100% expressions used (2/2)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Dream>-----
+ 68% expressions used (65/95)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 64% alternatives used (9/14)
+100% local declarations used (0/0)
+100% top-level declarations used (10/10)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Identity>-----
+100% expressions used (3/3)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Observability>-----
+100% expressions used (2/2)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (2/2)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.Orbital>-----
+100% expressions used (5/5)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.SemanticScene>-----
+ 71% expressions used (20/28)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 20% top-level declarations used (1/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Config.State>-----
+100% expressions used (13/13)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (5/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Consciousness>-----
+100% expressions used (6/6)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 40% top-level declarations used (6/15)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Enums.Conversation>-----
+  4% expressions used (4/98)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 25% alternatives used (4/16)
+100% local declarations used (0/0)
+  2% top-level declarations used (5/213)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Enums.Governance>-----
+ 17% expressions used (17/96)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 53% alternatives used (7/13)
+100% local declarations used (0/0)
+  5% top-level declarations used (11/190)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Enums.Render>-----
+ 25% expressions used (31/123)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 72% alternatives used (16/22)
+100% local declarations used (0/0)
+ 15% top-level declarations used (24/155)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Enums.Support>-----
+ 78% expressions used (11/14)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+100% top-level declarations used (3/3)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Family>-----
+ 95% expressions used (81/85)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 95% alternatives used (80/84)
+100% local declarations used (0/0)
+100% top-level declarations used (7/7)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Decision.Model>-----
+ 29% expressions used (111/376)
+ 57% boolean coverage (4/7)
+      57% guards (4/7), 1 always True, 2 always False
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 71% alternatives used (5/7)
+100% local declarations used (1/1)
+ 29% top-level declarations used (63/217)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Domain.Atoms>-----
+ 57% expressions used (263/460)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 55% alternatives used (34/61)
+100% local declarations used (3/3)
+ 22% top-level declarations used (77/347)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Domain.R5>-----
+ 46% expressions used (75/163)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (47/47)
+100% local declarations used (0/0)
+ 18% top-level declarations used (59/315)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Domain.User>-----
+ 95% expressions used (163/170)
+ 42% boolean coverage (3/7)
+      50% guards (3/6), 2 always True, 1 always False
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 85% alternatives used (12/14)
+100% local declarations used (10/10)
+ 47% top-level declarations used (31/65)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Dream>-----
+ 82% expressions used (53/64)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 18% top-level declarations used (35/192)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.ExternalQuery>-----
+ 61% expressions used (50/81)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 21% alternatives used (3/14)
+100% local declarations used (0/0)
+ 19% top-level declarations used (15/76)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.IdentityGuard>-----
+ 83% expressions used (10/12)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 16% top-level declarations used (14/86)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Intuition>-----
+ 86% expressions used (80/93)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (1/1)
+ 16% top-level declarations used (11/65)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Observability>-----
+ 75% expressions used (250/330)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 30% alternatives used (3/10)
+100% local declarations used (3/3)
+ 20% top-level declarations used (161/798)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Orbital>-----
+ 85% expressions used (23/27)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 23% top-level declarations used (34/145)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Persistence>-----
+ 14% expressions used (10/68)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 11% alternatives used (2/17)
+100% local declarations used (1/1)
+ 23% top-level declarations used (4/17)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Readiness>-----
+ 11% expressions used (5/44)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 15% alternatives used (3/19)
+100% local declarations used (0/0)
+ 10% top-level declarations used (3/29)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Recovery>-----
+ 56% expressions used (17/30)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 45% alternatives used (11/24)
+100% local declarations used (0/0)
+ 14% top-level declarations used (7/48)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.SemanticConfig>-----
+ 76% expressions used (233/306)
+  0% boolean coverage (0/2)
+       0% guards (0/2), 2 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+  0% alternatives used (0/7)
+100% local declarations used (0/0)
+ 27% top-level declarations used (10/37)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Sense>-----
+ 63% expressions used (46/72)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 40% alternatives used (10/25)
+100% local declarations used (0/0)
+ 10% top-level declarations used (23/222)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.ShadowDivergence>-----
+ 93% expressions used (141/151)
+ 80% boolean coverage (4/5)
+     100% guards (0/0)
+      80% 'if' conditions (4/5), 1 always False
+     100% qualifiers (0/0)
+ 72% alternatives used (18/25)
+100% local declarations used (10/10)
+ 42% top-level declarations used (39/92)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.AdaptiveMutation>-----
+ 47% expressions used (62/131)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 48% alternatives used (24/50)
+100% local declarations used (0/0)
+ 22% top-level declarations used (32/142)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Dialogue>-----
+ 92% expressions used (46/50)
+100% boolean coverage (1/1)
+     100% guards (0/0)
+     100% 'if' conditions (1/1)
+     100% qualifiers (0/0)
+100% alternatives used (2/2)
+100% local declarations used (1/1)
+ 51% top-level declarations used (17/33)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.DialogueDevelopment>-----
+ 77% expressions used (313/402)
+  0% boolean coverage (0/4)
+     100% guards (0/0)
+       0% 'if' conditions (0/4), 2 always True, 2 unevaluated
+     100% qualifiers (0/0)
+ 11% alternatives used (3/27)
+  0% local declarations used (0/1)
+ 33% top-level declarations used (121/360)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Discourse>-----
+ 64% expressions used (22/34)
+  0% boolean coverage (0/2)
+       0% guards (0/2), 1 always True, 1 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 33% alternatives used (1/3)
+100% local declarations used (2/2)
+ 10% top-level declarations used (8/76)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Governance>-----
+ 73% expressions used (972/1327)
+ 35% boolean coverage (10/28)
+      20% guards (3/15), 6 always True, 4 always False, 2 unevaluated
+      53% 'if' conditions (7/13), 1 always True, 5 always False
+     100% qualifiers (0/0)
+ 52% alternatives used (90/173)
+ 86% local declarations used (38/44)
+ 23% top-level declarations used (249/1082)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Identity>-----
+ 48% expressions used (38/79)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 30% top-level declarations used (30/99)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Perspective>-----
+ 82% expressions used (298/363)
+  0% boolean coverage (0/1)
+     100% guards (0/0)
+       0% 'if' conditions (0/1), 1 always False
+     100% qualifiers (0/0)
+ 27% alternatives used (5/18)
+100% local declarations used (2/2)
+ 40% top-level declarations used (207/509)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.Semantic>-----
+ 18% expressions used (25/132)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 42% top-level declarations used (12/28)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.State.System>-----
+ 88% expressions used (918/1040)
+ 89% boolean coverage (17/19)
+      50% guards (2/4), 2 always True
+     100% 'if' conditions (15/15)
+     100% qualifiers (0/0)
+ 80% alternatives used (37/46)
+ 87% local declarations used (7/8)
+ 62% top-level declarations used (72/115)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Text>-----
+ 54% expressions used (27/50)
+  0% boolean coverage (0/2)
+     100% guards (0/0)
+       0% 'if' conditions (0/2), 2 always False
+     100% qualifiers (0/0)
+ 50% alternatives used (8/16)
+100% local declarations used (2/2)
+ 80% top-level declarations used (4/5)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Common>-----
+ 90% expressions used (29/32)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 93% top-level declarations used (27/29)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Consciousness>-----
+ 54% expressions used (17/31)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 54% top-level declarations used (17/31)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Dream>-----
+ 83% expressions used (15/18)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 83% top-level declarations used (15/18)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Intuition>-----
+ 74% expressions used (23/31)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 74% top-level declarations used (23/31)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Legitimacy>-----
+ 82% expressions used (28/34)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 82% top-level declarations used (28/34)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Orbital>-----
+ 91% expressions used (32/35)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 90% top-level declarations used (29/32)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Routing>-----
+ 74% expressions used (23/31)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 74% top-level declarations used (23/31)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Thresholds.Types>-----
+ 12% expressions used (11/86)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 26% alternatives used (6/23)
+100% local declarations used (0/0)
+  4% top-level declarations used (5/106)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.TruthContract>-----
+ 72% expressions used (67/93)
+ 25% boolean coverage (3/12)
+      25% guards (3/12), 3 always True, 3 always False, 3 unevaluated
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+ 50% alternatives used (14/28)
+100% local declarations used (1/1)
+ 91% top-level declarations used (11/12)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.TurnProjection>-----
+ 39% expressions used (41/104)
+100% boolean coverage (0/0)
+     100% guards (0/0)
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (0/0)
+100% local declarations used (0/0)
+ 37% top-level declarations used (45/121)
+-----<module qxfx0-0.1.0.0-inplace/QxFx0.Types.Vec>-----
+ 99% expressions used (176/177)
+ 66% boolean coverage (2/3)
+      66% guards (2/3), 1 always True
+     100% 'if' conditions (0/0)
+     100% qualifiers (0/0)
+100% alternatives used (3/3)
+100% local declarations used (1/1)
+ 48% top-level declarations used (15/31)

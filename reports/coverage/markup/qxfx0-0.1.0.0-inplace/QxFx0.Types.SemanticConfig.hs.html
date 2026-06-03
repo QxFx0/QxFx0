@@ -1,0 +1,127 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DeriveAnyClass #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DeriveGeneric #-}
+<span class="lineno">    3 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    4 </span>{-# LANGUAGE OverloadedStrings #-}
+<span class="lineno">    5 </span>{-# LANGUAGE StrictData #-}
+<span class="lineno">    6 </span>module QxFx0.Types.SemanticConfig
+<span class="lineno">    7 </span>  ( SemanticConfig(..)
+<span class="lineno">    8 </span>  , emptySemanticConfig
+<span class="lineno">    9 </span>  , defaultSemanticConfig
+<span class="lineno">   10 </span>  ) where
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>import Control.DeepSeq (NFData)
+<span class="lineno">   13 </span>import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON, defaultOptions, fieldLabelModifier)
+<span class="lineno">   14 </span>import Data.Char (toLower)
+<span class="lineno">   15 </span>import Data.Text (Text)
+<span class="lineno">   16 </span>import GHC.Generics (Generic)
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>data SemanticConfig = SemanticConfig
+<span class="lineno">   19 </span>  { <span class="istickedoff"><span class="decl"><span class="istickedoff">scBayesianDefineLemmas</span></span></span>     :: ![Text]
+<span class="lineno">   20 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scBayesianCompareLemmas</span></span></span>    :: ![Text]
+<span class="lineno">   21 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scBayesianConfrontLemmas</span></span></span>   :: ![Text]
+<span class="lineno">   22 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scBayesianSupportLemmas</span></span></span>  :: ![Text]
+<span class="lineno">   23 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scBayesianConfusedLemmas</span></span></span>   :: ![Text]
+<span class="lineno">   24 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scTensionDistressLemmas</span></span></span>    :: ![Text]
+<span class="lineno">   25 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scDialogModifierKeywords</span></span></span>   :: ![Text]
+<span class="lineno">   26 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scDialogAgreementKeywords</span></span></span>  :: ![Text]
+<span class="lineno">   27 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scDialogDisagreementKeywords</span></span></span> :: ![Text]
+<span class="lineno">   28 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scDialogNegationKeywords</span></span></span>   :: ![Text]
+<span class="lineno">   29 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scParsePronouns</span></span></span>            :: ![Text]
+<span class="lineno">   30 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scParsePrepositions</span></span></span>        :: ![Text]
+<span class="lineno">   31 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scParseParticles</span></span></span>           :: ![Text]
+<span class="lineno">   32 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scParseAdverbs</span></span></span>             :: ![Text]
+<span class="lineno">   33 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scParseConjunctions</span></span></span>        :: ![Text]
+<span class="lineno">   34 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scParseAdjEndings</span></span></span>          :: ![Text]
+<span class="lineno">   35 </span>  , <span class="istickedoff"><span class="decl"><span class="istickedoff">scParseVerbEndings</span></span></span>         :: ![Text]
+<span class="lineno">   36 </span>  , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">scColloquialMode</span></span></span>           :: !Bool
+<span class="lineno">   37 </span>  } deriving stock (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Generic</span></span></span></span>)
+<span class="lineno">   38 </span>    deriving anyclass (<span class="decl"><span class="nottickedoff">NFData</span></span>)
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">ToJSON SemanticConfig</span></span></span></span></span></span></span></span> where
+<span class="lineno">   41 </span>  <span class="decl"><span class="nottickedoff">toJSON = genericToJSON defaultOptions</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="nottickedoff">{ fieldLabelModifier = \lbl -&gt; case lbl of</span>
+<span class="lineno">   43 </span><span class="spaces">        </span><span class="nottickedoff">('s':'c':rest) -&gt; drop 1 (camelToSnake rest)</span>
+<span class="lineno">   44 </span><span class="spaces">        </span><span class="nottickedoff">_              -&gt; map toLower lbl</span>
+<span class="lineno">   45 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>instance <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">FromJSON SemanticConfig</span></span></span></span> where
+<span class="lineno">   48 </span>  <span class="decl"><span class="nottickedoff">parseJSON = genericParseJSON defaultOptions</span>
+<span class="lineno">   49 </span><span class="spaces">    </span><span class="nottickedoff">{ fieldLabelModifier = \lbl -&gt; case lbl of</span>
+<span class="lineno">   50 </span><span class="spaces">        </span><span class="nottickedoff">('s':'c':rest) -&gt; drop 1 (camelToSnake rest)</span>
+<span class="lineno">   51 </span><span class="spaces">        </span><span class="nottickedoff">_              -&gt; map toLower lbl</span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>camelToSnake :: String -&gt; String
+<span class="lineno">   55 </span><span class="decl"><span class="nottickedoff">camelToSnake [] = []</span>
+<span class="lineno">   56 </span><span class="spaces"></span><span class="nottickedoff">camelToSnake (c:cs)</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="nottickedoff">| c `elem` ['A'..'Z'] = '_' : toLower c : camelToSnake cs</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="nottickedoff">| otherwise = c : camelToSnake cs</span></span>
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>emptySemanticConfig :: SemanticConfig
+<span class="lineno">   61 </span><span class="decl"><span class="nottickedoff">emptySemanticConfig = SemanticConfig</span>
+<span class="lineno">   62 </span><span class="spaces">  </span><span class="nottickedoff">{ scBayesianDefineLemmas     = []</span>
+<span class="lineno">   63 </span><span class="spaces">  </span><span class="nottickedoff">, scBayesianCompareLemmas    = []</span>
+<span class="lineno">   64 </span><span class="spaces">  </span><span class="nottickedoff">, scBayesianConfrontLemmas   = []</span>
+<span class="lineno">   65 </span><span class="spaces">  </span><span class="nottickedoff">, scBayesianSupportLemmas  = []</span>
+<span class="lineno">   66 </span><span class="spaces">  </span><span class="nottickedoff">, scBayesianConfusedLemmas   = []</span>
+<span class="lineno">   67 </span><span class="spaces">  </span><span class="nottickedoff">, scTensionDistressLemmas    = []</span>
+<span class="lineno">   68 </span><span class="spaces">  </span><span class="nottickedoff">, scDialogModifierKeywords   = []</span>
+<span class="lineno">   69 </span><span class="spaces">  </span><span class="nottickedoff">, scDialogAgreementKeywords  = []</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="nottickedoff">, scDialogDisagreementKeywords = []</span>
+<span class="lineno">   71 </span><span class="spaces">  </span><span class="nottickedoff">, scDialogNegationKeywords   = []</span>
+<span class="lineno">   72 </span><span class="spaces">  </span><span class="nottickedoff">, scParsePronouns            = []</span>
+<span class="lineno">   73 </span><span class="spaces">  </span><span class="nottickedoff">, scParsePrepositions        = []</span>
+<span class="lineno">   74 </span><span class="spaces">  </span><span class="nottickedoff">, scParseParticles           = []</span>
+<span class="lineno">   75 </span><span class="spaces">  </span><span class="nottickedoff">, scParseAdverbs             = []</span>
+<span class="lineno">   76 </span><span class="spaces">  </span><span class="nottickedoff">, scParseConjunctions        = []</span>
+<span class="lineno">   77 </span><span class="spaces">  </span><span class="nottickedoff">, scParseAdjEndings          = []</span>
+<span class="lineno">   78 </span><span class="spaces">  </span><span class="nottickedoff">, scParseVerbEndings         = []</span>
+<span class="lineno">   79 </span><span class="spaces">  </span><span class="nottickedoff">, scColloquialMode           = True</span>
+<span class="lineno">   80 </span><span class="spaces">  </span><span class="nottickedoff">}</span></span>
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>-- | Same values as the shipped resources/semantics/keywords.json,
+<span class="lineno">   83 </span>--   inlined so tests and pure contexts have a sensible default.
+<span class="lineno">   84 </span>defaultSemanticConfig :: SemanticConfig
+<span class="lineno">   85 </span><span class="decl"><span class="istickedoff">defaultSemanticConfig = SemanticConfig</span>
+<span class="lineno">   86 </span><span class="spaces">  </span><span class="istickedoff">{ scBayesianDefineLemmas     = [&quot;что&quot;,&quot;такое&quot;,&quot;определение&quot;,&quot;значит&quot;,&quot;определи&quot;]</span>
+<span class="lineno">   87 </span><span class="spaces">  </span><span class="istickedoff">, scBayesianCompareLemmas    = [&quot;разница&quot;,&quot;отличие&quot;,&quot;сравни&quot;,&quot;различие&quot;,&quot;похоже&quot;,&quot;сходство&quot;]</span>
+<span class="lineno">   88 </span><span class="spaces">  </span><span class="istickedoff">, scBayesianConfrontLemmas   = [&quot;неправильно&quot;,&quot;ошибка&quot;,&quot;неверно&quot;,&quot;спорно&quot;,&quot;возражаю&quot;,&quot;нет&quot;]</span>
+<span class="lineno">   89 </span><span class="spaces">  </span><span class="istickedoff">, scBayesianSupportLemmas  = [&quot;помоги&quot;,&quot;поддержи&quot;,&quot;одиноко&quot;,&quot;один&quot;,&quot;трудно&quot;,&quot;грустно&quot;,&quot;тяжело&quot;]</span>
+<span class="lineno">   90 </span><span class="spaces">  </span><span class="istickedoff">, scBayesianConfusedLemmas   = [&quot;непонятно&quot;,&quot;запутался&quot;,&quot;запуталась&quot;,&quot;объясни&quot;,&quot;не понимаю&quot;,&quot;неясно&quot;]</span>
+<span class="lineno">   91 </span><span class="spaces">  </span><span class="istickedoff">, scTensionDistressLemmas    = [&quot;грустно&quot;,&quot;тоскливо&quot;,&quot;страшно&quot;,&quot;тревожно&quot;,&quot;плохо&quot;,&quot;одиноко&quot;,&quot;устал&quot;,&quot;устала&quot;,&quot;больно&quot;,&quot;тяжело&quot;,&quot;бесит&quot;,&quot;раздражает&quot;]</span>
+<span class="lineno">   92 </span><span class="spaces">  </span><span class="istickedoff">, scDialogModifierKeywords   = [&quot;коротко&quot;,&quot;подробно&quot;,&quot;только&quot;,&quot;конкретно&quot;,&quot;ещё&quot;,&quot;еще&quot;,&quot;просто&quot;,&quot;иначе&quot;]</span>
+<span class="lineno">   93 </span><span class="spaces">  </span><span class="istickedoff">, scDialogAgreementKeywords  = [&quot;верно&quot;,&quot;согласен&quot;,&quot;согласна&quot;,&quot;именно&quot;,&quot;точно&quot;,&quot;правильно&quot;]</span>
+<span class="lineno">   94 </span><span class="spaces">  </span><span class="istickedoff">, scDialogDisagreementKeywords = [&quot;неверно&quot;,&quot;не согласен&quot;,&quot;не согласна&quot;,&quot;ошибаешься&quot;,&quot;спорно&quot;]</span>
+<span class="lineno">   95 </span><span class="spaces">  </span><span class="istickedoff">, scDialogNegationKeywords   = [&quot;не&quot;]</span>
+<span class="lineno">   96 </span><span class="spaces">  </span><span class="istickedoff">, scParsePronouns            = [&quot;я&quot;,&quot;ты&quot;,&quot;он&quot;,&quot;она&quot;,&quot;оно&quot;,&quot;мы&quot;,&quot;вы&quot;,&quot;они&quot;,&quot;меня&quot;,&quot;тебя&quot;,&quot;его&quot;,&quot;её&quot;,&quot;ее&quot;,&quot;нас&quot;,&quot;вас&quot;,&quot;их&quot;,&quot;мой&quot;,&quot;твой&quot;,&quot;свой&quot;,&quot;наш&quot;,&quot;ваш&quot;,&quot;этот&quot;,&quot;тот&quot;,&quot;кто&quot;,&quot;что&quot;,&quot;какой&quot;,&quot;который&quot;,&quot;где&quot;,&quot;куда&quot;,&quot;откуда&quot;,&quot;мне&quot;,&quot;тебе&quot;,&quot;ему&quot;,&quot;ей&quot;,&quot;нам&quot;,&quot;вам&quot;,&quot;им&quot;]</span>
+<span class="lineno">   97 </span><span class="spaces">  </span><span class="istickedoff">, scParsePrepositions        = [&quot;в&quot;,&quot;на&quot;,&quot;с&quot;,&quot;у&quot;,&quot;за&quot;,&quot;по&quot;,&quot;от&quot;,&quot;до&quot;,&quot;к&quot;,&quot;под&quot;,&quot;про&quot;,&quot;для&quot;,&quot;о&quot;,&quot;об&quot;,&quot;при&quot;,&quot;из&quot;,&quot;со&quot;,&quot;над&quot;,&quot;между&quot;,&quot;перед&quot;]</span>
+<span class="lineno">   98 </span><span class="spaces">  </span><span class="istickedoff">, scParseParticles           = [&quot;не&quot;,&quot;ни&quot;,&quot;нет&quot;,&quot;бы&quot;,&quot;ли&quot;,&quot;же&quot;,&quot;только&quot;,&quot;даже&quot;,&quot;вот&quot;,&quot;уже&quot;]</span>
+<span class="lineno">   99 </span><span class="spaces">  </span><span class="istickedoff">, scParseAdverbs             = [&quot;коротко&quot;,&quot;подробно&quot;,&quot;конкретно&quot;,&quot;ещё&quot;,&quot;еще&quot;,&quot;просто&quot;,&quot;иначе&quot;,&quot;грустно&quot;,&quot;тоскливо&quot;,&quot;страшно&quot;,&quot;тревожно&quot;,&quot;плохо&quot;,&quot;одиноко&quot;,&quot;больно&quot;,&quot;тяжело&quot;,&quot;непонятно&quot;,&quot;неясно&quot;,&quot;верно&quot;,&quot;точно&quot;,&quot;правильно&quot;,&quot;неверно&quot;]</span>
+<span class="lineno">  100 </span><span class="spaces">  </span><span class="istickedoff">, scParseConjunctions        = [&quot;и&quot;,&quot;а&quot;,&quot;но&quot;,&quot;или&quot;,&quot;что&quot;,&quot;чтобы&quot;,&quot;как&quot;,&quot;если&quot;,&quot;когда&quot;,&quot;потому&quot;,&quot;поэтому&quot;]</span>
+<span class="lineno">  101 </span><span class="spaces">  </span><span class="istickedoff">, scParseAdjEndings          = [&quot;ый&quot;,&quot;ий&quot;,&quot;ая&quot;,&quot;ое&quot;,&quot;ие&quot;,&quot;ые&quot;,&quot;ого&quot;,&quot;его&quot;,&quot;ой&quot;,&quot;ей&quot;,&quot;ому&quot;,&quot;ему&quot;,&quot;ых&quot;,&quot;их&quot;,&quot;им&quot;,&quot;ыми&quot;,&quot;ими&quot;,&quot;ом&quot;,&quot;ем&quot;]</span>
+<span class="lineno">  102 </span><span class="spaces">  </span><span class="istickedoff">, scParseVerbEndings         = [&quot;ть&quot;,&quot;ти&quot;,&quot;чь&quot;,&quot;ться&quot;,&quot;тся&quot;,&quot;л&quot;,&quot;ла&quot;,&quot;ло&quot;,&quot;ли&quot;,&quot;те&quot;,&quot;й&quot;,&quot;ь&quot;,&quot;у&quot;,&quot;ю&quot;,&quot;ем&quot;,&quot;им&quot;,&quot;ят&quot;,&quot;ут&quot;,&quot;ют&quot;,&quot;ешь&quot;,&quot;ешься&quot;,&quot;ет&quot;,&quot;ется&quot;,&quot;ишь&quot;,&quot;ит&quot;,&quot;ится&quot;]</span>
+<span class="lineno">  103 </span><span class="spaces">  </span><span class="istickedoff">, scColloquialMode           = True</span>
+<span class="lineno">  104 </span><span class="spaces">  </span><span class="istickedoff">}</span></span>
+
+</pre>
+</body>
+</html>

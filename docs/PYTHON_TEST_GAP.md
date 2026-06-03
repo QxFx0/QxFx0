@@ -1,27 +1,35 @@
 # Python Test Coverage — Verified Gap
 
-**Status:** NOT PROVEN (no Python unit-test suite exists).
+**Status:** PARTIALLY CLOSED.
 
-**Verified fact:** The CI workflow (`.github/workflows/ci.yml`) and the
-`scripts/ci_gate_contract.sh` aggregate runner execute three Python
-check scripts as gate steps:
+**Verified fact:** The CI workflow (`.github/workflows/ci.yml`) runs the
+canonical Python unit-test command:
+
+`python3 -m unittest discover -s test -p 'test_*.py'`
+
+CI and the aggregate gate also execute five Python check scripts:
 
 | Script | Purpose | Exit code in CI |
 |--------|---------|-----------------|
 | `scripts/sync_embedded_sql.py --check` | `EmbeddedSQL.hs` ↔ `spec/sql` sync | 0 |
 | `scripts/check_schema_consistency.py` | Migration files ↔ canonical schema | 0 |
 | `scripts/check_schema_contract.py` | Runtime schema contract manifest ↔ `SchemaContract.hs` | 0 |
+| `scripts/check_runtime_contract.py` | Runtime/deployment docs ↔ workflow/tests/resources drift gate | 0 |
+| `scripts/check_concepts_schema.py` | `concepts.nix` schema / family / layer / prohibitedIf contract | 0 |
 
-These are **lint/validation scripts**, not a formal unit-test contour.
-There are no `test_*.py` / `*_test.py` files in the repository.
+These scripts are **lint/validation scripts**, distinct from the Python
+unit-test contour. The repository currently contains Python tests under
+`test/test_*.py`, but coverage is still narrow compared with the Haskell
+runtime surface.
 
 **What would be needed to close the gap:**
-- A `tests/python/` directory with `pytest`-based tests for:
+- Additional Python tests for:
   - `scripts/compute_ab_metrics.py` (statistical correctness)
   - `scripts/score_blind_pairs.py` (judge schema compliance)
   - `scripts/wave*_soak.py` (telemetry schema validation)
   - `scripts/export_lexicon.py` (output format correctness)
-- A CI step `python3 -m pytest tests/python/` with fail-on-error.
+- Expansion of the current `unittest discover` contour to the remaining
+  operational Python surfaces.
 
 **Why this is not a regression:**
 - The Haskell test suite (`qxfx0-test-fast`, 629 cases) provides full
