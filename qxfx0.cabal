@@ -83,6 +83,8 @@ library
     QxFx0.Types.Vec
     QxFx0.Types.ExternalQuery
     QxFx0.Types.RuntimeRegime
+    QxFx0.Observability.Logging
+    QxFx0.Observability.Metrics
     QxFx0.ExceptionPolicy
     QxFx0.Self.Types
     QxFx0.Self.Blanket

@@ -5,23 +5,70 @@ module QxFx0.ExceptionPolicy
   , tryQxFx0
   , catchIO
   , QxFx0Exception(..)
+  , PersistenceErrorDetails(..)
+  , RuntimeInitErrorDetails(..)
+  , EmbeddingErrorDetails(..)
+  , SQLiteErrorDetails(..)
   , renderQxFx0ExceptionForLog
   , throwQxFx0
+  , toErrorCode
+  , toLogMessage
+  , mkPersistenceError
+  , mkRuntimeInitError
+  , mkEmbeddingError
+  , mkSQLiteError
   ) where
 
 import Control.Exception (IOException, SomeException, AsyncException, try, catch, fromException, throwIO, Exception)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Types.Persistence (PersistenceStage)
 
+-- | Structured error details for persistence failures
+data PersistenceErrorDetails = PersistenceErrorDetails
+  { pedStage :: !PersistenceStage
+  , pedOperation :: !Text
+  , pedContext :: !(Map Text Text)
+  , pedErrorCode :: !Text
+  } deriving stock (Eq, Show)
+
+-- | Structured error details for runtime initialization failures
+data RuntimeInitErrorDetails = RuntimeInitErrorDetails
+  { riedComponent :: !Text
+  , riedOperation :: !Text
+  , riedContext :: !(Map Text Text)
+  , riedErrorCode :: !Text
+  } deriving stock (Eq, Show)
+
+-- | Structured error details for embedding backend failures
+data EmbeddingErrorDetails = EmbeddingErrorDetails
+  { eedBackend :: !Text
+  , eedOperation :: !Text
+  , eedContext :: !(Map Text Text)
+  , eedErrorCode :: !Text
+  } deriving stock (Eq, Show)
+
+-- | Structured error details for SQLite failures
+data SQLiteErrorDetails = SQLiteErrorDetails
+  { sedOperation :: !Text
+  , sedContext :: !(Map Text Text)
+  , sedErrorCode :: !Text
+  } deriving stock (Eq, Show)
+
 data QxFx0Exception
   = PersistenceError Text
+  | PersistenceErrorStructured !PersistenceErrorDetails
   | PersistenceTxError !PersistenceStage !Text
   | PersistenceConflict !Text !Int !Int !Int
   | SQLiteError Text
+  | SQLiteErrorStructured !SQLiteErrorDetails
   | RuntimeInitError Text
+  | RuntimeInitErrorStructured !RuntimeInitErrorDetails
   | EmbeddingError Text
+  | EmbeddingErrorStructured !EmbeddingErrorDetails
   | ThresholdParseError Text
   | AgdaGateError Text
   | IdentityRupture !Text
@@ -48,10 +95,77 @@ instance Exception QxFx0Exception
 throwQxFx0 :: QxFx0Exception -> IO a
 throwQxFx0 = throwIO
 
+-- | Extract error code from exception for structured logging
+toErrorCode :: QxFx0Exception -> Text
+toErrorCode ex =
+  case ex of
+    PersistenceError _ -> T.pack "PERSISTENCE_ERROR"
+    PersistenceErrorStructured details -> pedErrorCode details
+    PersistenceTxError _ _ -> T.pack "PERSISTENCE_TX_ERROR"
+    PersistenceConflict _ _ _ _ -> T.pack "PERSISTENCE_CONFLICT"
+    SQLiteError _ -> T.pack "SQLITE_ERROR"
+    SQLiteErrorStructured details -> sedErrorCode details
+    RuntimeInitError _ -> T.pack "RUNTIME_INIT_ERROR"
+    RuntimeInitErrorStructured details -> riedErrorCode details
+    EmbeddingError _ -> T.pack "EMBEDDING_ERROR"
+    EmbeddingErrorStructured details -> eedErrorCode details
+    ThresholdParseError _ -> T.pack "THRESHOLD_PARSE_ERROR"
+    AgdaGateError _ -> T.pack "AGDA_GATE_ERROR"
+    IdentityRupture _ -> T.pack "IDENTITY_RUPTURE"
+    EssenceRupture _ -> T.pack "ESSENCE_RUPTURE"
+
+-- | Extract human-readable log message from exception
+toLogMessage :: QxFx0Exception -> Text
+toLogMessage = renderQxFx0ExceptionForLog
+
+-- | Helper: create structured persistence error
+mkPersistenceError :: PersistenceStage -> Text -> Text -> Map Text Text -> QxFx0Exception
+mkPersistenceError stage operation errorCode context =
+  PersistenceErrorStructured $ PersistenceErrorDetails
+    { pedStage = stage
+    , pedOperation = operation
+    , pedContext = context
+    , pedErrorCode = errorCode
+    }
+
+-- | Helper: create structured runtime init error
+mkRuntimeInitError :: Text -> Text -> Text -> Map Text Text -> QxFx0Exception
+mkRuntimeInitError component operation errorCode context =
+  RuntimeInitErrorStructured $ RuntimeInitErrorDetails
+    { riedComponent = component
+    , riedOperation = operation
+    , riedContext = context
+    , riedErrorCode = errorCode
+    }
+
+-- | Helper: create structured embedding error
+mkEmbeddingError :: Text -> Text -> Text -> Map Text Text -> QxFx0Exception
+mkEmbeddingError backend operation errorCode context =
+  EmbeddingErrorStructured $ EmbeddingErrorDetails
+    { eedBackend = backend
+    , eedOperation = operation
+    , eedContext = context
+    , eedErrorCode = errorCode
+    }
+
+-- | Helper: create structured SQLite error
+mkSQLiteError :: Text -> Text -> Map Text Text -> QxFx0Exception
+mkSQLiteError operation errorCode context =
+  SQLiteErrorStructured $ SQLiteErrorDetails
+    { sedOperation = operation
+    , sedContext = context
+    , sedErrorCode = errorCode
+    }
+
 renderQxFx0ExceptionForLog :: QxFx0Exception -> Text
 renderQxFx0ExceptionForLog ex =
   case ex of
     PersistenceError _ -> T.pack "PersistenceError(<redacted>)"
+    PersistenceErrorStructured details ->
+      T.pack "PersistenceError(stage=" <> T.pack (show (pedStage details))
+      <> T.pack ", operation=" <> pedOperation details
+      <> T.pack ", code=" <> pedErrorCode details
+      <> T.pack ", context=<redacted>)"
     PersistenceTxError stage _ -> T.pack "PersistenceTxError(stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>)"
     PersistenceConflict sid expected actual priorTurn ->
       T.pack "PersistenceConflict(session=" <> sid
@@ -60,8 +174,22 @@ renderQxFx0ExceptionForLog ex =
       <> T.pack ", expected_prior_turn=" <> T.pack (show priorTurn)
       <> T.pack ")"
     SQLiteError _ -> T.pack "SQLiteError(<redacted>)"
+    SQLiteErrorStructured details ->
+      T.pack "SQLiteError(operation=" <> sedOperation details
+      <> T.pack ", code=" <> sedErrorCode details
+      <> T.pack ", context=<redacted>)"
     RuntimeInitError _ -> T.pack "RuntimeInitError(<redacted>)"
+    RuntimeInitErrorStructured details ->
+      T.pack "RuntimeInitError(component=" <> riedComponent details
+      <> T.pack ", operation=" <> riedOperation details
+      <> T.pack ", code=" <> riedErrorCode details
+      <> T.pack ", context=<redacted>)"
     EmbeddingError _ -> T.pack "EmbeddingError(<redacted>)"
+    EmbeddingErrorStructured details ->
+      T.pack "EmbeddingError(backend=" <> eedBackend details
+      <> T.pack ", operation=" <> eedOperation details
+      <> T.pack ", code=" <> eedErrorCode details
+      <> T.pack ", context=<redacted>)"
     ThresholdParseError _ -> T.pack "ThresholdParseError(<redacted>)"
     AgdaGateError _ -> T.pack "AgdaGateError(<redacted>)"
     IdentityRupture _ -> T.pack "IdentityRupture(<redacted>)"
