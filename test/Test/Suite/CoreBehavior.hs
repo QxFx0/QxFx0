@@ -83,7 +83,7 @@ import QxFx0.Self.Deliberation
 import QxFx0.Core.TurnPipeline (RoutingDecision(..))
 import qualified QxFx0.Core.MeaningGraph as MeaningGraph
 import qualified QxFx0.Core.TopicTransition as TopicTransition
-import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
+import QxFx0.Core.Consciousness ()
 import QxFx0.Core.PrincipledCore (detectPressure)
 import qualified QxFx0.Semantic.Input.Parse as InputParse
 import QxFx0.Semantic.Proposition

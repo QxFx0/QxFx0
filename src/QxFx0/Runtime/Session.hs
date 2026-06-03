@@ -15,6 +15,7 @@ module QxFx0.Runtime.Session
   , StateOrigin(..)
   , printHelp
   , printStateSummary
+  , stateSummaryLines
   , governanceSummaryLines
   , governanceAuthorityStatus
   ) where
@@ -26,6 +27,7 @@ import QxFx0.Runtime.Session.Types
 import QxFx0.Runtime.Session.UI
   ( printHelp
   , printStateSummary
+  , stateSummaryLines
   , governanceSummaryLines
   , governanceAuthorityStatus
   )

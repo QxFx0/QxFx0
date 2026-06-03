@@ -22,7 +22,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
 import QxFx0.Types
-import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
+import QxFx0.Types.Readiness ()
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , TestPipelineConfig(..)
@@ -56,8 +56,8 @@ import QxFx0.Core.TurnPipeline.Protocol
 import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import qualified QxFx0.Core.Intuition as Intuition
 import qualified QxFx0.Semantic.Embedding as Emb
-import QxFx0.Types.Domain.Atoms (MorphologyData(..))
-import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportFallbackReason(..))
+import QxFx0.Types.Domain.Atoms ()
+import QxFx0.Types.ExternalQuery ()
 import QxFx0.Types.ShadowDivergence (ShadowSnapshotId(..), emptyShadowDivergence)
 import QxFx0.Bridge.ExternalLLM
   ( buildTransportFromConfig

@@ -4,6 +4,7 @@
 module QxFx0.Runtime.Session.UI
   ( printHelp
   , printStateSummary
+  , stateSummaryLines
   , governanceSummaryLines
   , governanceAuthorityStatus
   ) where

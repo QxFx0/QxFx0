@@ -70,6 +70,8 @@ library
     QxFx0.Types.State.Discourse
     QxFx0.Types.State.DialogueDevelopment
     QxFx0.Types.State.Perspective
+    QxFx0.Types.State.SemanticCommitment
+    QxFx0.Types.State.System
     QxFx0.Types.State.Governance
     QxFx0.Types.Thresholds
     QxFx0.Types.Orbital
@@ -80,6 +82,7 @@ library
     QxFx0.Types.TurnProjection
     QxFx0.Types.Vec
     QxFx0.Types.ExternalQuery
+    QxFx0.Types.RuntimeRegime
     QxFx0.ExceptionPolicy
     QxFx0.Self.Types
     QxFx0.Self.Blanket
@@ -237,6 +240,8 @@ library
      QxFx0.Semantic.Sense.Adjacency
      QxFx0.Semantic.SemanticScene
      QxFx0.Semantic.SemanticInput
+     QxFx0.Semantic.AuthorityParse
+     QxFx0.Semantic.Retrieve
      QxFx0.Core.DialogueThread
      QxFx0.Core.SensePlan
      QxFx0.Render.Authority
@@ -294,17 +299,14 @@ library
     QxFx0.Types.Domain.R5
     QxFx0.Types.Domain.User
     QxFx0.Types.State.Identity
-    QxFx0.Types.State.SemanticCommitment
     QxFx0.Types.DreamPressure
     QxFx0.Types.State.Dialogue
     QxFx0.Types.State.Semantic
-    QxFx0.Types.State.System
     QxFx0.Self.Perspective.Reduce
     QxFx0.Types.Text
     QxFx0.Types.Sense
     QxFx0.Types.TruthContract
     QxFx0.Types.Thresholds.Types
-    QxFx0.Types.RuntimeRegime
     QxFx0.Types.Thresholds.Common
     QxFx0.Types.Thresholds.Legitimacy
     QxFx0.Types.Thresholds.Intuition
@@ -472,6 +474,7 @@ common test-common
     Test.Suite.Guardrails
     Test.Suite.KnowledgeTree
     Test.Suite.DialogueDevelopment
+    Test.Suite.DreamPressure
     Test.Suite.TurnPipelineProtocol
     Test.Suite.RuntimeInfrastructure
     Test.Suite.StatePersistence
@@ -504,6 +507,8 @@ common test-common
     Test.Suite.TrainingCycle
     Test.Suite.ModelComparison
     Test.Suite.ReliabilityHardening
+    Test.Suite.M5Regime
+    Test.Suite.M6Witness
 
 test-suite qxfx0-test-unit
   import:        test-common

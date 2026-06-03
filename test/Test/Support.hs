@@ -197,8 +197,8 @@ removeDirIfExists dirPath = do
   exists <- doesDirectoryExist dirPath
   if exists then removePathForcibly dirPath else pure ()
 
-withCleanFiles :: [FilePath] -> IO a -> IO a
-withCleanFiles paths =
+_withCleanFiles :: [FilePath] -> IO a -> IO a
+_withCleanFiles paths =
   bracket_
     (mapM_ removeIfExists paths)
     (mapM_ removeIfExists paths)

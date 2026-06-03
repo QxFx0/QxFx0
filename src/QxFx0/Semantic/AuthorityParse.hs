@@ -22,7 +22,6 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import qualified PGF2 as PGF
 import System.Directory (doesFileExist)
-import System.IO.Unsafe (unsafePerformIO)
 import Prelude
 
 import QxFx0.Runtime.PGF (gfExprToClaimAst)

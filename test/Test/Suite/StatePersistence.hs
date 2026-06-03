@@ -792,6 +792,26 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcMicroPlanExplicitness = 0.5
     , trcPerspectiveProjection = Nothing
     , trcPerspectiveProjections = []
+    , trcResponseSurfaceKind = Nothing
+    , trcExternalActionReason = Nothing
+    , trcExternalActionNeed = Nothing
+    , trcPreActorFailureEvent = Nothing
+    , trcDreamPressureDatalogClass = Nothing
+    , trcDreamPressureIntuitionClass = Nothing
+    , trcDreamPressureAgreement = Nothing
+    , trcDreamPressureStrength = Nothing
+    , trcDreamPressureCandidateThresholdFired = Nothing
+    , trcDreamPressureCandidateKinds = []
+    , trcDreamPressureBiasApplied = Nothing
+    , trcDreamCandidateLifecycleStatuses = []
+    , trcDreamCandidateDecisionReasons = []
+    , trcDreamCandidateApplied = Nothing
+    , trcEpisodicEncoding = []
+    , trcEpisodicRetrieval = Nothing
+    , trcEpisodicForgetting = (0, Nothing)
+    , trcRegimeVersion = 1
+    , trcFamilyDivergenceActive = False
+    , trcSemanticCommitmentCount = 0
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

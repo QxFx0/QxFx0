@@ -8,6 +8,7 @@ module QxFx0.Runtime
   , checkSessionReadiness
   , printHelp
   , printStateSummary
+  , stateSummaryLines
   , resolveDbPath
   , resolveSessionId
   , resolveRuntimeMode
@@ -64,4 +65,5 @@ import QxFx0.Runtime.Session
   , StateOrigin(..)
   , printHelp
   , printStateSummary
+  , stateSummaryLines
   )

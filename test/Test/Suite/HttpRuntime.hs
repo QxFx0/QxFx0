@@ -32,7 +32,7 @@ import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
 import System.IO (Handle)
-import System.IO.Error (tryIOError)
+import System.IO.Error ()
 import System.Timeout (timeout)
 import System.Process
   ( CreateProcess(std_err, std_out)
@@ -278,7 +278,7 @@ testTurnSessionTokenStoreCorruptionFailsClosed = TestCase $
       withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $ do
         mDbPath <- lookupEnv "QXFX0_DB"
         dbPath <- case mDbPath of
-          Just path -> pure path
+          Just dbPath' -> pure dbPath'
           Nothing -> assertFailure "QXFX0_DB must be set in runtime env" >> fail "unreachable"
         let tokenStorePath = dbPath <> ".http-session-tokens.json"
         writeFile tokenStorePath "{not-json"

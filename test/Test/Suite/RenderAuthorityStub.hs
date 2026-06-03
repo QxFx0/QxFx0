@@ -30,7 +30,7 @@ testCase :: String -> IO () -> TestCase
 testCase = TestCase
 
 assertBool :: String -> Bool -> IO ()
-assertBool msg True  = pure ()
+assertBool _msg True  = pure ()
 assertBool msg False = error ("FAIL: " ++ msg)
 
 (@?=) :: (Eq a, Show a) => a -> a -> IO ()
