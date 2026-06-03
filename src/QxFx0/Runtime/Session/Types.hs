@@ -29,6 +29,9 @@ data RuntimeOutputMode
 data StateOrigin
   = FreshOrigin
   | RestoredOrigin
+  -- | Reserved for a future bounded degraded-recovery contour.
+  -- Current bootstrap handling fails closed on corrupt persisted state
+  -- instead of materializing a recovered-corrupt session shell.
   | RecoveredCorruptOrigin
   deriving stock (Eq, Show)
 
@@ -51,6 +54,7 @@ data Session = Session
   , sessSessionId :: !Text
   , sessDbPath :: !FilePath
   , sessStateOrigin :: !StateOrigin
+  , sessStateRevision :: !Int
   , sessReadinessMode :: !ReadinessMode
   , sessRuntime :: !RuntimeContext
   }

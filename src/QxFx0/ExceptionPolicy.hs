@@ -18,6 +18,7 @@ import QxFx0.Types.Persistence (PersistenceStage)
 data QxFx0Exception
   = PersistenceError Text
   | PersistenceTxError !PersistenceStage !Text
+  | PersistenceConflict !Text !Int !Int !Int
   | SQLiteError Text
   | RuntimeInitError Text
   | EmbeddingError Text
@@ -52,6 +53,12 @@ renderQxFx0ExceptionForLog ex =
   case ex of
     PersistenceError _ -> T.pack "PersistenceError(<redacted>)"
     PersistenceTxError stage _ -> T.pack "PersistenceTxError(stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>)"
+    PersistenceConflict sid expected actual priorTurn ->
+      T.pack "PersistenceConflict(session=" <> sid
+      <> T.pack ", expected_revision=" <> T.pack (show expected)
+      <> T.pack ", actual_revision=" <> T.pack (show actual)
+      <> T.pack ", expected_prior_turn=" <> T.pack (show priorTurn)
+      <> T.pack ")"
     SQLiteError _ -> T.pack "SQLiteError(<redacted>)"
     RuntimeInitError _ -> T.pack "RuntimeInitError(<redacted>)"
     EmbeddingError _ -> T.pack "EmbeddingError(<redacted>)"

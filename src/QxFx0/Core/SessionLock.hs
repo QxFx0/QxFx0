@@ -17,7 +17,6 @@ import Control.Monad (replicateM)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.List (sortOn)
-import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import System.Environment (lookupEnv)
@@ -130,7 +129,7 @@ nextAccessStamp mgr = atomically $ do
 evictFreeTrackedLock :: SessionLockManager -> Text -> MVar () -> Int -> IO (Maybe (MVar ()))
 evictFreeTrackedLock mgr sessionId newLock stamp = do
   snapshot <- atomically $ readTVar (slmLocks mgr)
-  let candidates = reverse (sortOn (sleLastUsed . snd) (Map.toList snapshot))
+  let candidates = sortOn (sleLastUsed . snd) (Map.toList snapshot)
   tryCandidates candidates
   where
     tryCandidates [] = pure Nothing
@@ -159,7 +158,7 @@ pickOverflowShard mgr sessionId =
   in shards !! idx
 
 sessionLockOverflowShardCount :: Int
-sessionLockOverflowShardCount = 8
+sessionLockOverflowShardCount = 64
 
 sessionLockOverflowShardIndex :: Text -> Int
 sessionLockOverflowShardIndex = T.foldl' step 5381

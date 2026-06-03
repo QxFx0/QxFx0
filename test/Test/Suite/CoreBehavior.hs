@@ -86,7 +86,200 @@ import qualified QxFx0.Core.TopicTransition as TopicTransition
 import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
 import QxFx0.Core.PrincipledCore (detectPressure)
 import qualified QxFx0.Semantic.Input.Parse as InputParse
-import QxFx0.Semantic.Proposition (parseProposition, propositionToFamily, PropositionType(..))
+import QxFx0.Semantic.Proposition
+  ( parseProposition
+  , parsePropositionWithTruthContract
+  , propositionToFamily
+  , PropositionType(..)
+  , detectKeywordFallbackType
+  , collectRawContactTriggers
+  , collectRawKeywordFallbackDecisions
+  )
+import QxFx0.Core.PropositionPhraseDecisionAdmission
+  ( admitPropositionPhraseDecisions )
+import QxFx0.Core.PropositionContactAdmission
+  ( admitPropositionContactTriggers )
+import QxFx0.Core.PropositionConfrontAdmission
+  ( admitPropositionConfrontTriggers )
+import QxFx0.Core.PropositionNextStepAdmission
+  ( admitPropositionNextStepTriggers )
+import QxFx0.Core.PropositionOperationalStatusAdmission
+  ( admitPropositionOperationalStatusTriggers )
+import QxFx0.Core.PropositionOperationalCauseAdmission
+  ( admitPropositionOperationalCauseTriggers )
+import QxFx0.Core.PropositionSystemLogicAdmission
+  ( admitPropositionSystemLogicTriggers )
+import QxFx0.Core.PropositionDistinctionAdmission
+  ( admitPropositionDistinctionTriggers )
+import QxFx0.Core.PropositionAffectiveSupportPhraseAdmission
+  ( admitPropositionAffectiveSupportPhraseTriggers )
+import QxFx0.Core.PropositionAffectiveSupportProbeAdmission
+  ( admitPropositionAffectiveSupportProbeTriggers )
+import QxFx0.Core.PropositionSelfKnowledgeAdmission
+  ( admitPropositionSelfKnowledgeTriggers )
+import QxFx0.Core.PropositionPurposeAdmission
+  ( admitPropositionPurposeTriggers )
+import QxFx0.Core.PropositionConceptKnowledgeAdmission
+  ( admitPropositionConceptKnowledgeTriggers )
+import QxFx0.Core.PropositionMisunderstandingAdmission
+  ( admitPropositionMisunderstandingTriggers )
+import QxFx0.Core.PropositionWorldCauseAdmission
+  ( admitPropositionWorldCauseTriggers )
+import QxFx0.Core.PropositionLocationFormationAdmission
+  ( admitPropositionLocationFormationTriggers )
+import QxFx0.Core.PropositionExploratoryPromptAdmission
+  ( admitPropositionExploratoryPromptTriggers )
+import QxFx0.Core.PropositionDialogueInvitationAdmission
+  ( admitPropositionDialogueInvitationTriggers )
+import QxFx0.Core.PropositionContemplativeTopicAdmission
+  ( admitPropositionContemplativeTopicTriggers )
+import QxFx0.Core.PropositionGenerativePromptAdmission
+  ( admitPropositionGenerativePromptTriggers )
+import QxFx0.Core.PropositionComparisonPlausibilityAdmission
+  ( admitPropositionComparisonPlausibilityTriggers )
+import QxFx0.Core.PropositionSelfStateAdmission
+  ( admitPropositionSelfStateTriggers )
+import QxFx0.Core.PropositionRepairDirectiveAdmission
+  ( admitPropositionRepairDirectiveTriggers )
+import QxFx0.Types.PropositionFallbackAdmission
+  ( PropositionPhraseDecisionAdmissionInput(..)
+  , PropositionPhraseDecisionAdmissionDecision(..)
+  , RawPropositionPhraseDecision(..)
+  , AdmittedPropositionPhraseDecisions(..)
+  , RawPropositionKeywordFallbackDecision(..)
+  )
+import QxFx0.Types.PropositionContactAdmission
+  ( PropositionContactAdmissionInput(..)
+  , PropositionContactAdmissionDecision(..)
+  , RawPropositionContactTrigger(..)
+  , AdmittedPropositionContactTriggers(..)
+  )
+import QxFx0.Types.PropositionConfrontAdmission
+  ( PropositionConfrontAdmissionInput(..)
+  , PropositionConfrontAdmissionDecision(..)
+  , RawPropositionConfrontTrigger(..)
+  , AdmittedPropositionConfrontTriggers(..)
+  )
+import QxFx0.Types.PropositionNextStepAdmission
+  ( PropositionNextStepAdmissionInput(..)
+  , PropositionNextStepAdmissionDecision(..)
+  , RawPropositionNextStepTrigger(..)
+  , AdmittedPropositionNextStepTriggers(..)
+  )
+import QxFx0.Types.PropositionOperationalStatusAdmission
+  ( PropositionOperationalStatusAdmissionInput(..)
+  , PropositionOperationalStatusAdmissionDecision(..)
+  , RawPropositionOperationalStatusTrigger(..)
+  , AdmittedPropositionOperationalStatusTriggers(..)
+  )
+import QxFx0.Types.PropositionOperationalCauseAdmission
+  ( PropositionOperationalCauseAdmissionInput(..)
+  , PropositionOperationalCauseAdmissionDecision(..)
+  , RawPropositionOperationalCauseTrigger(..)
+  , AdmittedPropositionOperationalCauseTriggers(..)
+  )
+import QxFx0.Types.PropositionSystemLogicAdmission
+  ( PropositionSystemLogicAdmissionInput(..)
+  , PropositionSystemLogicAdmissionDecision(..)
+  , RawPropositionSystemLogicTrigger(..)
+  , AdmittedPropositionSystemLogicTriggers(..)
+  )
+import QxFx0.Types.PropositionDistinctionAdmission
+  ( PropositionDistinctionAdmissionInput(..)
+  , PropositionDistinctionAdmissionDecision(..)
+  , RawPropositionDistinctionTrigger(..)
+  , AdmittedPropositionDistinctionTriggers(..)
+  )
+import QxFx0.Types.PropositionAffectiveSupportPhraseAdmission
+  ( PropositionAffectiveSupportPhraseAdmissionInput(..)
+  , PropositionAffectiveSupportPhraseAdmissionDecision(..)
+  , RawPropositionAffectiveSupportPhraseTrigger(..)
+  , AdmittedPropositionAffectiveSupportPhraseTriggers(..)
+  )
+import QxFx0.Types.PropositionAffectiveSupportProbeAdmission
+  ( PropositionAffectiveSupportProbeAdmissionInput(..)
+  , PropositionAffectiveSupportProbeAdmissionDecision(..)
+  , RawPropositionAffectiveSupportProbeTrigger(..)
+  , AdmittedPropositionAffectiveSupportProbeTriggers(..)
+  )
+import QxFx0.Types.PropositionSelfKnowledgeAdmission
+  ( PropositionSelfKnowledgeAdmissionInput(..)
+  , PropositionSelfKnowledgeAdmissionDecision(..)
+  , RawPropositionSelfKnowledgeTrigger(..)
+  , AdmittedPropositionSelfKnowledgeTriggers(..)
+  )
+import QxFx0.Types.PropositionPurposeAdmission
+  ( PropositionPurposeAdmissionInput(..)
+  , PropositionPurposeAdmissionDecision(..)
+  , RawPropositionPurposeTrigger(..)
+  , AdmittedPropositionPurposeTriggers(..)
+  )
+import QxFx0.Types.PropositionConceptKnowledgeAdmission
+  ( PropositionConceptKnowledgeAdmissionInput(..)
+  , PropositionConceptKnowledgeAdmissionDecision(..)
+  , RawPropositionConceptKnowledgeTrigger(..)
+  , AdmittedPropositionConceptKnowledgeTriggers(..)
+  )
+import QxFx0.Types.PropositionMisunderstandingAdmission
+  ( PropositionMisunderstandingAdmissionInput(..)
+  , PropositionMisunderstandingAdmissionDecision(..)
+  , RawPropositionMisunderstandingTrigger(..)
+  , AdmittedPropositionMisunderstandingTriggers(..)
+  )
+import QxFx0.Types.PropositionWorldCauseAdmission
+  ( PropositionWorldCauseAdmissionInput(..)
+  , PropositionWorldCauseAdmissionDecision(..)
+  , RawPropositionWorldCauseTrigger(..)
+  , AdmittedPropositionWorldCauseTriggers(..)
+  )
+import QxFx0.Types.PropositionLocationFormationAdmission
+  ( PropositionLocationFormationAdmissionInput(..)
+  , PropositionLocationFormationAdmissionDecision(..)
+  , RawPropositionLocationFormationTrigger(..)
+  , AdmittedPropositionLocationFormationTriggers(..)
+  )
+import QxFx0.Types.PropositionExploratoryPromptAdmission
+  ( PropositionExploratoryPromptAdmissionInput(..)
+  , PropositionExploratoryPromptAdmissionDecision(..)
+  , RawPropositionExploratoryPromptTrigger(..)
+  , AdmittedPropositionExploratoryPromptTriggers(..)
+  )
+import QxFx0.Types.PropositionDialogueInvitationAdmission
+  ( PropositionDialogueInvitationAdmissionInput(..)
+  , PropositionDialogueInvitationAdmissionDecision(..)
+  , RawPropositionDialogueInvitationTrigger(..)
+  , AdmittedPropositionDialogueInvitationTriggers(..)
+  )
+import QxFx0.Types.PropositionContemplativeTopicAdmission
+  ( PropositionContemplativeTopicAdmissionInput(..)
+  , PropositionContemplativeTopicAdmissionDecision(..)
+  , RawPropositionContemplativeTopicTrigger(..)
+  , AdmittedPropositionContemplativeTopicTriggers(..)
+  )
+import QxFx0.Types.PropositionGenerativePromptAdmission
+  ( PropositionGenerativePromptAdmissionInput(..)
+  , PropositionGenerativePromptAdmissionDecision(..)
+  , RawPropositionGenerativePromptTrigger(..)
+  , AdmittedPropositionGenerativePromptTriggers(..)
+  )
+import QxFx0.Types.PropositionComparisonPlausibilityAdmission
+  ( PropositionComparisonPlausibilityAdmissionInput(..)
+  , PropositionComparisonPlausibilityAdmissionDecision(..)
+  , RawPropositionComparisonPlausibilityTrigger(..)
+  , AdmittedPropositionComparisonPlausibilityTriggers(..)
+  )
+import QxFx0.Types.PropositionSelfStateAdmission
+  ( PropositionSelfStateAdmissionInput(..)
+  , PropositionSelfStateAdmissionDecision(..)
+  , RawPropositionSelfStateTrigger(..)
+  , AdmittedPropositionSelfStateTriggers(..)
+  )
+import QxFx0.Types.PropositionRepairDirectiveAdmission
+  ( PropositionRepairDirectiveAdmissionInput(..)
+  , PropositionRepairDirectiveAdmissionDecision(..)
+  , RawPropositionRepairDirectiveTrigger(..)
+  , AdmittedPropositionRepairDirectiveTriggers(..)
+  )
 import QxFx0.Types.SemanticConfig (defaultSemanticConfig)
 import qualified QxFx0.Render.Dialogue as Dialogue
 import qualified QxFx0.Render.Semantic as RenderSemantic
@@ -103,16 +296,7 @@ import qualified QxFx0.Core.ClaimBuilder as ClaimBuilder
 import qualified QxFx0.Runtime.PGF as RuntimePGF
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import qualified QxFx0.Bridge.NixGuard as NixGuard
-import QxFx0.CLI.Parser
-  ( decodeWorkerCommand
-  , decodeWorkerMessage
-  , parseMode
-  , parseJsonStringArray
-  , extractSessionArgs
-  , RuntimeOutputMode(..)
-  , WorkerCommand(..)
-  , WorkerProtocolError(..)
-  )
+import QxFx0.CLI.Parser (decodeWorkerCommand, parseMode, parseJsonStringArray, extractSessionArgs, RuntimeOutputMode(..), WorkerCommand(..))
 import Test.Support (withEnvVar)
 
 dummyConatusEnergy :: ConatusEnergy
@@ -159,6 +343,7 @@ coreBehaviorTests =
     , testTextToEmbeddingSourceWithoutEndpoint
     , testTextToEmbeddingSourceIgnoresUrlWithoutExplicitRemoteBackend
     , testTextToEmbeddingSourceRemoteFailure
+    , testTextToEmbeddingSourceRemoteBlockedHostFailsClosed
     , testTextToEmbeddingSourceRemoteMissingUrlFailsClosed
     , testSafetyChecks
     , testSafetyToxicityUsesTokenBoundaries
@@ -290,9 +475,6 @@ coreBehaviorTests =
     , testDecodeWorkerCommandHealth
     , testDecodeWorkerCommandState
     , testDecodeWorkerCommandTurn
-    , testDecodeWorkerCommandHelloObject
-    , testDecodeWorkerCommandHelloObjectIgnoresExtraField
-    , testDecodeWorkerCommandUnknown
     , testParseModeSemantic
     , testParseJsonStringArray
     , testExtractSessionArgsOverride
@@ -391,16 +573,87 @@ coreBehaviorTests =
     , testParsePropositionSelfKnowledgeTellAboutSelfQuestion
     , testParsePropositionSelfKnowledgeCapabilityQuestion
     , testParsePropositionSelfKnowledgeHelpQuestion
-    , testParsePropositionSelfKnowledgeUserIdentityQuestion
-    , testParsePropositionKeywordFallbackOperationalCause
-    , testParsePropositionConceptKnowledgeBeingSmartVariant
+     , testParsePropositionSelfKnowledgeUserIdentityQuestion
+     , testParsePropositionKeywordFallbackOperationalCause
+     , testConstitutionAdmissiblePropositionKeywordFallbackPreservesRawDecisions
+     , testNonAuthoritativePropositionKeywordFallbackSuppressesStrongDecisions
+     , testParsePropositionConceptKnowledgeBeingSmartVariant
     , testParsePropositionConceptKnowledgeWhoIsGod
     , testParsePropositionConceptKnowledgeWhatIsSense
     , testParsePropositionRouteScoresAreTraced
     , testParsePropositionDialogueInvitationWithoutTopicFallsBackToDialogue
     , testParsePropositionEverydayStatementKeepsHighParserConfidence
-    , testParsePropositionFarewellSignal
-    , testParsePropositionGratitudeSignal
+     , testParsePropositionFarewellSignal
+     , testParsePropositionGratitudeSignal
+     , testConstitutionAdmissiblePropositionContactPreservesRawTriggers
+     , testNonAuthoritativePropositionContactSuppressesStrongTriggers
+     , testParsePropositionWithWeakContourSuppressesContactGreeting
+     , testConstitutionAdmissiblePropositionConfrontPreservesRawTriggers
+     , testNonAuthoritativePropositionConfrontSuppressesStrongTriggers
+     , testOperationalStatusRemainsUnchangedUnderConfrontSlice
+     , testConstitutionAdmissiblePropositionNextStepPreservesRawTriggers
+     , testNonAuthoritativePropositionNextStepSuppressesStrongTriggers
+     , testAffectiveHelpRemainsUnchangedUnderNextStepSlice
+     , testConstitutionAdmissibleOperationalStatusPreservesRawTriggers
+     , testNonAuthoritativeOperationalStatusSuppressesStrongTriggers
+     , testOperationalCauseRemainsUnchangedUnderOperationalStatusSlice
+     , testConstitutionAdmissibleOperationalCausePreservesRawTriggers
+     , testNonAuthoritativeOperationalCauseSuppressesStrongTriggers
+     , testOperationalStatusRemainsUnchangedUnderOperationalCauseSlice
+     , testConstitutionAdmissibleSystemLogicPreservesRawTriggers
+     , testNonAuthoritativeSystemLogicSuppressesStrongTriggers
+     , testOperationalStatusRemainsUnchangedUnderSystemLogicSlice
+     , testConstitutionAdmissibleDistinctionPreservesRawTriggers
+     , testNonAuthoritativeDistinctionSuppressesStrongTriggers
+     , testSystemLogicRemainsUnchangedUnderDistinctionSlice
+     , testConstitutionAdmissibleAffectiveSupportPhrasePreservesRawTriggers
+     , testNonAuthoritativeAffectiveSupportPhraseSuppressesStrongTriggers
+     , testNextStepRemainsUnchangedUnderAffectivePhraseSlice
+     , testConstitutionAdmissibleAffectiveSupportProbePreservesRawTriggers
+     , testNonAuthoritativeAffectiveSupportProbeSuppressesStrongTriggers
+     , testPhraseTriggerHalfRemainsUnchangedUnderAffectiveProbeSlice
+     , testConstitutionAdmissibleSelfKnowledgePreservesRawTriggers
+     , testNonAuthoritativeSelfKnowledgeSuppressesStrongTriggers
+     , testPurposeRemainsUnchangedUnderSelfKnowledgeSlice
+     , testConstitutionAdmissiblePurposePreservesRawTriggers
+     , testNonAuthoritativePurposeSuppressesStrongTriggers
+     , testSelfKnowledgeRemainsUnchangedUnderPurposeSlice
+     , testConstitutionAdmissibleConceptKnowledgePreservesRawTriggers
+     , testNonAuthoritativeConceptKnowledgeSuppressesStrongTriggers
+     , testWorldCauseRemainsUnchangedUnderConceptKnowledgeSlice
+     , testConstitutionAdmissibleMisunderstandingPreservesRawTriggers
+     , testNonAuthoritativeMisunderstandingSuppressesStrongTriggers
+     , testRepairDirectiveRemainsUnchangedUnderMisunderstandingSlice
+     , testConstitutionAdmissibleWorldCausePreservesRawTriggers
+     , testNonAuthoritativeWorldCauseSuppressesStrongTriggers
+     , testLocationFormationRemainsUnchangedUnderWorldCauseSlice
+     , testConstitutionAdmissibleLocationFormationPreservesRawTriggers
+     , testNonAuthoritativeLocationFormationSuppressesStrongTriggers
+     , testSelfStateRemainsUnchangedUnderLocationFormationSlice
+     , testConstitutionAdmissibleExploratoryPromptPreservesRawTriggers
+     , testNonAuthoritativeExploratoryPromptSuppressesStrongTriggers
+     , testDialogueInvitationRemainsUnchangedUnderExploratoryPromptSlice
+     , testConstitutionAdmissibleDialogueInvitationPreservesRawTriggers
+     , testNonAuthoritativeDialogueInvitationSuppressesStrongTriggers
+     , testContemplativeTopicRemainsUnchangedUnderDialogueInvitationSlice
+     , testConstitutionAdmissibleContemplativeTopicPreservesRawTriggers
+     , testNonAuthoritativeContemplativeTopicSuppressesStrongKeywordStream
+     , testNonAuthoritativeContemplativeTopicPreservesAmbiguousBareSelfPronoun
+     , testGenerativePromptRemainsUnchangedUnderContemplativeTopicSlice
+     , testConstitutionAdmissibleGenerativePromptPreservesRawTriggers
+     , testNonAuthoritativeGenerativePromptSuppressesStrongTriggers
+    , testSelfStateRemainsUnchangedUnderGenerativePromptSlice
+    , testConstitutionAdmissibleComparisonPlausibilityPreservesRawTriggers
+    , testNonAuthoritativeComparisonPlausibilitySuppressesStrongTriggers
+    , testDistinctionRemainsUnchangedUnderComparisonPlausibilitySlice
+    , testConstitutionAdmissibleSelfStatePreservesRawTriggers
+    , testNonAuthoritativeSelfStateSuppressesStrongTriggersButPreservesGuards
+    , testSelfKnowledgeRemainsUnchangedUnderSelfStateSlice
+    , testSystemLogicRemainsUnchangedUnderSelfStateSlice
+    , testConstitutionAdmissibleRepairDirectivePreservesRawTriggers
+    , testNonAuthoritativeRepairDirectiveSuppressesStrongTriggersButPreservesComplaints
+    , testMisunderstandingRemainsUnchangedUnderRepairDirectiveSlice
+    , testApologyRouteHintRemainsUnchangedUnderRepairDirectiveSlice
     , testParsePropositionApologySignal
     , testParsePropositionAgreementSignal
     , testParsePropositionDisagreementSignal
@@ -492,6 +745,20 @@ testTextToEmbeddingSourceRemoteFailure = TestCase $
           assertFailure ("expected EmbeddingError for explicit remote backend failure, got: " <> show other)
         Right ok ->
           assertFailure ("expected explicit remote backend failure, got: " <> show (Emb.erSource ok))
+
+testTextToEmbeddingSourceRemoteBlockedHostFailsClosed :: Test
+testTextToEmbeddingSourceRemoteBlockedHostFailsClosed = TestCase $
+  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
+    withEnvVar "EMBEDDING_API_URL" (Just "https://evil.example/embeddings") $ do
+      result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
+      case result of
+        Left (EmbeddingError detail) ->
+          assertBool "Explicit remote backend should reject untrusted remote hosts before network I/O"
+            ("remote_embedding_host_blocked" `T.isInfixOf` detail)
+        Left other ->
+          assertFailure ("expected EmbeddingError for blocked remote embedding host, got: " <> show other)
+        Right ok ->
+          assertFailure ("expected explicit remote backend host block, got: " <> show (Emb.erSource ok))
 
 testTextToEmbeddingSourceRemoteMissingUrlFailsClosed :: Test
 testTextToEmbeddingSourceRemoteMissingUrlFailsClosed = TestCase $
@@ -1909,10 +2176,10 @@ testRenderSemanticIntrospectionFormat = TestCase $ do
     (T.isInfixOf "turn:" rendered)
   assertBool "output should contain ema field"
     (T.isInfixOf "ema:" rendered)
-  assertBool "output should contain truth contract field"
-    (T.isInfixOf "truth_contract:" rendered)
-  assertBool "output should contain authority class field"
-    (T.isInfixOf "authority_class:" rendered)
+  assertBool "output should contain truth contract cap field"
+    (T.isInfixOf "truth_contract_cap:" rendered || T.isInfixOf "truth_contract:" rendered)
+  assertBool "output should contain response authority class field"
+    (T.isInfixOf "response_authority_class:" rendered || T.isInfixOf "authority_class:" rendered)
   assertBool "output should contain replay provenance field"
     (T.isInfixOf "replay_provenance_status:" rendered)
 
@@ -2062,23 +2329,6 @@ testDecodeWorkerCommandTurn :: Test
 testDecodeWorkerCommandTurn = TestCase $ do
   let result = decodeWorkerCommand "[\"turn\", \"s1\", \"dialogue\", \"Привет\"]"
   assertBool "turn command should parse as WorkerTurn" $ case result of Right (WorkerTurn sid _ txt) -> sid == "s1" && txt == "Привет"; _ -> False
-
-testDecodeWorkerCommandHelloObject :: Test
-testDecodeWorkerCommandHelloObject = TestCase $ do
-  let result = decodeWorkerMessage "{\"command\":\"hello\",\"protocol_version\":\"1\",\"capabilities\":[\"health\",\"turn\"]}"
-  assertEqual "hello object should parse" (Right (WorkerHello "1" ["health", "turn"])) result
-
-testDecodeWorkerCommandHelloObjectIgnoresExtraField :: Test
-testDecodeWorkerCommandHelloObjectIgnoresExtraField = TestCase $ do
-  let result = decodeWorkerMessage "{\"command\":\"hello\",\"protocol_version\":\"1\",\"capabilities\":[],\"extra\":\"ignored\"}"
-  assertEqual "hello object should tolerate unknown optional fields" (Right (WorkerHello "1" [])) result
-
-testDecodeWorkerCommandUnknown :: Test
-testDecodeWorkerCommandUnknown = TestCase $ do
-  let result = decodeWorkerMessage "[\"mystery\"]"
-  case result of
-    Left (WorkerUnknownCommand "mystery") -> pure ()
-    _ -> assertFailure "unknown worker command should stay classified as WorkerUnknownCommand"
 
 testParseModeSemantic :: Test
 testParseModeSemantic = TestCase $ do
@@ -2936,6 +3186,42 @@ testParsePropositionKeywordFallbackOperationalCause = TestCase $ do
   assertEqual "Keyword fallback operational cause should map to CMGround"
     CMGround (ipfCanonicalFamily frame)
 
+testConstitutionAdmissiblePropositionKeywordFallbackPreservesRawDecisions :: Test
+testConstitutionAdmissiblePropositionKeywordFallbackPreservesRawDecisions = TestCase $ do
+  let rawFallbacks = collectRawKeywordFallbackDecisions ["почему", "система", "не", "отвечает"]
+      rawPhraseDecisions = concatMap toPhraseDecisions rawFallbacks
+      admitted = admitPropositionPhraseDecisions (PropositionPhraseDecisionAdmissionInput CanonicalSurfacePreserved) rawPhraseDecisions
+  assertBool "authoritative contour should preserve proposition fallback raw phrase decisions"
+    (not (null rawPhraseDecisions) && rawPhraseDecisions == appdDecisions admitted)
+  assertEqual "authoritative proposition fallback admission should be explicit"
+    PpddAdmitRaw
+    (appdDecision admitted)
+  where
+    toPhraseDecisions rawFallback =
+      [ RawPropositionPhraseDecision (rpkfdPropositionType rawFallback) phrase True
+      | phrase <- rpkfdMatchedPhrases rawFallback
+      ]
+
+testNonAuthoritativePropositionKeywordFallbackSuppressesStrongDecisions :: Test
+testNonAuthoritativePropositionKeywordFallbackSuppressesStrongDecisions = TestCase $ do
+  let rawFallbacks = collectRawKeywordFallbackDecisions ["почему", "система", "не", "отвечает"]
+      rawPhraseDecisions = concatMap toPhraseDecisions rawFallbacks
+      admitted = admitPropositionPhraseDecisions (PropositionPhraseDecisionAdmissionInput LegacyIncompleteSurface) rawPhraseDecisions
+      result = detectKeywordFallbackType LegacyIncompleteSurface ["почему", "система", "не", "отвечает"]
+  assertBool "non-authoritative contour should suppress strong proposition fallback phrase decisions"
+    (not (null rawPhraseDecisions) && all (not . rppdMatched) (appdDecisions admitted))
+  assertEqual "non-authoritative proposition fallback admission should be explicit"
+    PpddSuppressStrongDecisions
+    (appdDecision admitted)
+  assertEqual "fallback proposition type should derive from admitted decisions and disappear under weak contour"
+    Nothing
+    result
+  where
+    toPhraseDecisions rawFallback =
+      [ RawPropositionPhraseDecision (rpkfdPropositionType rawFallback) phrase True
+      | phrase <- rpkfdMatchedPhrases rawFallback
+      ]
+
 testParsePropositionConceptKnowledgeBeingSmartVariant :: Test
 testParsePropositionConceptKnowledgeBeingSmartVariant = TestCase $ do
   let frame = parseProposition "что значит быть умным?"
@@ -3003,6 +3289,908 @@ testParsePropositionGratitudeSignal = TestCase $ do
     "ContactSignal" (ipfPropositionType frame)
   assertEqual "Gratitude should map to CMContact"
     CMContact (ipfCanonicalFamily frame)
+
+testConstitutionAdmissiblePropositionContactPreservesRawTriggers :: Test
+testConstitutionAdmissiblePropositionContactPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionContactTrigger "how_are_you" True
+        , RawPropositionContactTrigger "exclude_how_you_work" False
+        ]
+      admitted = admitPropositionContactTriggers (PropositionContactAdmissionInput CanonicalSurfacePreserved) rawTriggers
+      AdmittedPropositionContactTriggers _ admittedTriggerList admittedDecision = admitted
+  assertEqual "authoritative contour should preserve raw proposition contact triggers"
+    rawTriggers
+    admittedTriggerList
+  assertEqual "authoritative proposition contact admission should be explicit"
+    PcadAdmitRaw
+    admittedDecision
+
+testNonAuthoritativePropositionContactSuppressesStrongTriggers :: Test
+testNonAuthoritativePropositionContactSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionContactTrigger "how_are_you" True
+        , RawPropositionContactTrigger "farewell" True
+        ]
+      admitted = admitPropositionContactTriggers (PropositionContactAdmissionInput LegacyIncompleteSurface) rawTriggers
+      AdmittedPropositionContactTriggers _ admittedTriggerList admittedDecision = admitted
+  assertEqual "non-authoritative contour should suppress strong proposition contact triggers while preserving safe ones"
+    [ RawPropositionContactTrigger "how_are_you" False
+    , RawPropositionContactTrigger "farewell" True
+    ]
+    admittedTriggerList
+  assertEqual "non-authoritative proposition contact admission should be explicit"
+    PcadSuppressStrongTriggers
+    admittedDecision
+
+testParsePropositionWithWeakContourSuppressesContactGreeting :: Test
+testParsePropositionWithWeakContourSuppressesContactGreeting = TestCase $ do
+  let rawTriggers = collectRawContactTriggers "как дела?" ["как", "дела"]
+      admitted = admitPropositionContactTriggers (PropositionContactAdmissionInput LegacyIncompleteSurface) rawTriggers
+      AdmittedPropositionContactTriggers _ admittedTriggerList _ = admitted
+  assertBool "weak contour should stop raw contact greeting trigger from being sufficient by implication"
+    (all isSuppressedGreeting admittedTriggerList)
+  where
+    isSuppressedGreeting (RawPropositionContactTrigger triggerLabel triggerMatched) =
+      triggerLabel /= "how_are_you" || not triggerMatched
+
+testConstitutionAdmissiblePropositionConfrontPreservesRawTriggers :: Test
+testConstitutionAdmissiblePropositionConfrontPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionConfrontTrigger "disagree_masc" True
+        , RawPropositionConfrontTrigger "doubt_marker" False
+        ]
+      admitted = admitPropositionConfrontTriggers (PropositionConfrontAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw proposition confront triggers"
+    rawTriggers
+    (apconfTriggers admitted)
+  assertEqual "authoritative proposition confront admission should be explicit"
+    PcondAdmitRaw
+    (apconfDecision admitted)
+
+testNonAuthoritativePropositionConfrontSuppressesStrongTriggers :: Test
+testNonAuthoritativePropositionConfrontSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionConfrontTrigger "disagree_masc" True
+        , RawPropositionConfrontTrigger "doubt_marker" True
+        ]
+      admitted = admitPropositionConfrontTriggers (PropositionConfrontAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong confront triggers while preserving safer ones"
+    [ RawPropositionConfrontTrigger "disagree_masc" False
+    , RawPropositionConfrontTrigger "doubt_marker" True
+    ]
+    (apconfTriggers admitted)
+  assertEqual "non-authoritative proposition confront admission should be explicit"
+    PcondSuppressStrongTriggers
+    (apconfDecision admitted)
+
+testOperationalStatusRemainsUnchangedUnderConfrontSlice :: Test
+testOperationalStatusRemainsUnchangedUnderConfrontSlice = TestCase $ do
+  let frame = parseProposition "ты не работаешь?"
+  assertEqual "operational status should remain unchanged by confront-only seam"
+    "OperationalStatusQ" (ipfPropositionType frame)
+
+testConstitutionAdmissiblePropositionNextStepPreservesRawTriggers :: Test
+testConstitutionAdmissiblePropositionNextStepPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionNextStepTrigger "what_next" True
+        , RawPropositionNextStepTrigger "direct_text_short" False
+        ]
+      admitted = admitPropositionNextStepTriggers (PropositionNextStepAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw proposition next-step triggers"
+    rawTriggers
+    (apnstTriggers admitted)
+  assertEqual "authoritative proposition next-step admission should be explicit"
+    PnsdAdmitRaw
+    (apnstDecision admitted)
+
+testNonAuthoritativePropositionNextStepSuppressesStrongTriggers :: Test
+testNonAuthoritativePropositionNextStepSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionNextStepTrigger "what_next" True
+        , RawPropositionNextStepTrigger "direct_text_short" True
+        ]
+      admitted = admitPropositionNextStepTriggers (PropositionNextStepAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong next-step triggers while preserving safer ones"
+    [ RawPropositionNextStepTrigger "what_next" False
+    , RawPropositionNextStepTrigger "direct_text_short" True
+    ]
+    (apnstTriggers admitted)
+  assertEqual "non-authoritative proposition next-step admission should be explicit"
+    PnsdSuppressStrongTriggers
+    (apnstDecision admitted)
+
+testAffectiveHelpRemainsUnchangedUnderNextStepSlice :: Test
+testAffectiveHelpRemainsUnchangedUnderNextStepSlice = TestCase $ do
+  let frame = parseProposition "что делать если грустно?"
+  assertEqual "affective-help routing should remain unchanged by next-step-only seam"
+    "NextStepQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleOperationalStatusPreservesRawTriggers :: Test
+testConstitutionAdmissibleOperationalStatusPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionOperationalStatusTrigger "work_text_cue" True
+        , RawPropositionOperationalStatusTrigger "subject_present" True
+        , RawPropositionOperationalStatusTrigger "why_guard_clear" True
+        ]
+      admitted = admitPropositionOperationalStatusTriggers (PropositionOperationalStatusAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw operational-status triggers"
+    rawTriggers
+    (apostTriggers admitted)
+  assertEqual "authoritative operational-status admission should be explicit"
+    PosdAdmitRaw
+    (apostDecision admitted)
+
+testNonAuthoritativeOperationalStatusSuppressesStrongTriggers :: Test
+testNonAuthoritativeOperationalStatusSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionOperationalStatusTrigger "work_text_cue" True
+        , RawPropositionOperationalStatusTrigger "subject_present" True
+        , RawPropositionOperationalStatusTrigger "why_guard_clear" True
+        ]
+      admitted = admitPropositionOperationalStatusTriggers (PropositionOperationalStatusAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong operational-status triggers while preserving safer ones"
+    [ RawPropositionOperationalStatusTrigger "work_text_cue" False
+    , RawPropositionOperationalStatusTrigger "subject_present" True
+    , RawPropositionOperationalStatusTrigger "why_guard_clear" False
+    ]
+    (apostTriggers admitted)
+  assertEqual "non-authoritative operational-status admission should be explicit"
+    PosdSuppressStrongTriggers
+    (apostDecision admitted)
+
+testOperationalCauseRemainsUnchangedUnderOperationalStatusSlice :: Test
+testOperationalCauseRemainsUnchangedUnderOperationalStatusSlice = TestCase $ do
+  let frame = parseProposition "почему система не отвечает?"
+  assertEqual "operational cause should remain unchanged by operational-status-only seam"
+    "OperationalCauseQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleOperationalCausePreservesRawTriggers :: Test
+testConstitutionAdmissibleOperationalCausePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionOperationalCauseTrigger "why_phrase" True
+        , RawPropositionOperationalCauseTrigger "work_text_cue" True
+        , RawPropositionOperationalCauseTrigger "subject_present" True
+        ]
+      admitted = admitPropositionOperationalCauseTriggers (PropositionOperationalCauseAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw operational-cause triggers"
+    rawTriggers
+    (apocTriggers admitted)
+  assertEqual "authoritative operational-cause admission should be explicit"
+    PocdAdmitRaw
+    (apocDecision admitted)
+
+testNonAuthoritativeOperationalCauseSuppressesStrongTriggers :: Test
+testNonAuthoritativeOperationalCauseSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionOperationalCauseTrigger "why_phrase" True
+        , RawPropositionOperationalCauseTrigger "work_text_cue" True
+        , RawPropositionOperationalCauseTrigger "subject_present" True
+        ]
+      admitted = admitPropositionOperationalCauseTriggers (PropositionOperationalCauseAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong operational-cause triggers while preserving safer ones"
+    [ RawPropositionOperationalCauseTrigger "why_phrase" False
+    , RawPropositionOperationalCauseTrigger "work_text_cue" False
+    , RawPropositionOperationalCauseTrigger "subject_present" True
+    ]
+    (apocTriggers admitted)
+  assertEqual "non-authoritative operational-cause admission should be explicit"
+    PocdSuppressStrongTriggers
+    (apocDecision admitted)
+
+testOperationalStatusRemainsUnchangedUnderOperationalCauseSlice :: Test
+testOperationalStatusRemainsUnchangedUnderOperationalCauseSlice = TestCase $ do
+  let frame = parseProposition "ты не работаешь?"
+  assertEqual "operational status should remain unchanged by operational-cause-only seam"
+    "OperationalStatusQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleSystemLogicPreservesRawTriggers :: Test
+testConstitutionAdmissibleSystemLogicPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSystemLogicTrigger "how_you_will" True
+        , RawPropositionSystemLogicTrigger "subject_present" True
+        ]
+      admitted = admitPropositionSystemLogicTriggers (PropositionSystemLogicAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw system-logic triggers"
+    rawTriggers
+    (apslTriggers admitted)
+  assertEqual "authoritative system-logic admission should be explicit"
+    PsldAdmitRaw
+    (apslDecision admitted)
+
+testNonAuthoritativeSystemLogicSuppressesStrongTriggers :: Test
+testNonAuthoritativeSystemLogicSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSystemLogicTrigger "how_you_will" True
+        , RawPropositionSystemLogicTrigger "subject_present" True
+        ]
+      admitted = admitPropositionSystemLogicTriggers (PropositionSystemLogicAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong system-logic triggers while preserving safer ones"
+    [ RawPropositionSystemLogicTrigger "how_you_will" False
+    , RawPropositionSystemLogicTrigger "subject_present" True
+    ]
+    (apslTriggers admitted)
+  assertEqual "non-authoritative system-logic admission should be explicit"
+    PsldSuppressStrongTriggers
+    (apslDecision admitted)
+
+testOperationalStatusRemainsUnchangedUnderSystemLogicSlice :: Test
+testOperationalStatusRemainsUnchangedUnderSystemLogicSlice = TestCase $ do
+  let frame = parseProposition "ты не работаешь?"
+  assertEqual "operational status should remain unchanged by system-logic-only seam"
+    "OperationalStatusQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleDistinctionPreservesRawTriggers :: Test
+testConstitutionAdmissibleDistinctionPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionDistinctionTrigger "how_distinguish_phrase" True
+        , RawPropositionDistinctionTrigger "from_token_present" True
+        ]
+      admitted = admitPropositionDistinctionTriggers (PropositionDistinctionAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw distinction triggers"
+    rawTriggers
+    (apdtTriggers admitted)
+  assertEqual "authoritative distinction admission should be explicit"
+    PdadAdmitRaw
+    (apdtDecision admitted)
+
+testNonAuthoritativeDistinctionSuppressesStrongTriggers :: Test
+testNonAuthoritativeDistinctionSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionDistinctionTrigger "how_distinguish_phrase" True
+        , RawPropositionDistinctionTrigger "from_token_present" True
+        ]
+      admitted = admitPropositionDistinctionTriggers (PropositionDistinctionAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong distinction triggers while preserving safer ones"
+    [ RawPropositionDistinctionTrigger "how_distinguish_phrase" False
+    , RawPropositionDistinctionTrigger "from_token_present" True
+    ]
+    (apdtTriggers admitted)
+  assertEqual "non-authoritative distinction admission should be explicit"
+    PdadSuppressStrongTriggers
+    (apdtDecision admitted)
+
+testSystemLogicRemainsUnchangedUnderDistinctionSlice :: Test
+testSystemLogicRemainsUnchangedUnderDistinctionSlice = TestCase $ do
+  let frame = parseProposition "В чём твоя логика?"
+  assertEqual "system logic should remain unchanged by distinction-only seam"
+    "SystemLogicQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleAffectiveSupportPhrasePreservesRawTriggers :: Test
+testConstitutionAdmissibleAffectiveSupportPhrasePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" True
+        , RawPropositionAffectiveSupportPhraseTrigger "no_strength" False
+        ]
+      admitted = admitPropositionAffectiveSupportPhraseTriggers (PropositionAffectiveSupportPhraseAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw affective-support phrase triggers"
+    rawTriggers
+    (apaspTriggers admitted)
+  assertEqual "authoritative affective-support phrase admission should be explicit"
+    PaspadAdmitRaw
+    (apaspDecision admitted)
+
+testNonAuthoritativeAffectiveSupportPhraseSuppressesStrongTriggers :: Test
+testNonAuthoritativeAffectiveSupportPhraseSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" True
+        , RawPropositionAffectiveSupportPhraseTrigger "no_strength" True
+        ]
+      admitted = admitPropositionAffectiveSupportPhraseTriggers (PropositionAffectiveSupportPhraseAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong affective-support phrase triggers while preserving safer ones"
+    [ RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" False
+    , RawPropositionAffectiveSupportPhraseTrigger "no_strength" True
+    ]
+    (apaspTriggers admitted)
+  assertEqual "non-authoritative affective-support phrase admission should be explicit"
+    PaspadSuppressStrongTriggers
+    (apaspDecision admitted)
+
+testNextStepRemainsUnchangedUnderAffectivePhraseSlice :: Test
+testNextStepRemainsUnchangedUnderAffectivePhraseSlice = TestCase $ do
+  let frame = parseProposition "что делать если грустно?"
+  assertEqual "next-step path should remain unchanged by phrase-only affective seam"
+    "NextStepQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleAffectiveSupportProbePreservesRawTriggers :: Test
+testConstitutionAdmissibleAffectiveSupportProbePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionAffectiveSupportProbeTrigger "question_gate" True
+        , RawPropositionAffectiveSupportProbeTrigger "affective_lexeme_probe" True
+        , RawPropositionAffectiveSupportProbeTrigger "relaxed_regulation_probe" False
+        ]
+      admitted = admitPropositionAffectiveSupportProbeTriggers (PropositionAffectiveSupportProbeAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw affective-support probe triggers"
+    rawTriggers
+    (apasprTriggers admitted)
+  assertEqual "authoritative affective-support probe admission should be explicit"
+    PasprAdmitRaw
+    (apasprDecision admitted)
+
+testNonAuthoritativeAffectiveSupportProbeSuppressesStrongTriggers :: Test
+testNonAuthoritativeAffectiveSupportProbeSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionAffectiveSupportProbeTrigger "question_gate" True
+        , RawPropositionAffectiveSupportProbeTrigger "affective_lexeme_probe" True
+        , RawPropositionAffectiveSupportProbeTrigger "relaxed_regulation_probe" True
+        ]
+      admitted = admitPropositionAffectiveSupportProbeTriggers (PropositionAffectiveSupportProbeAdmissionInput LegacyIncompleteSurface) rawTriggers
+      frame = parsePropositionWithTruthContract LegacyIncompleteSurface "тревожно?"
+  assertEqual "non-authoritative contour should suppress strong affective-support probe triggers while preserving the question gate"
+    [ RawPropositionAffectiveSupportProbeTrigger "question_gate" True
+    , RawPropositionAffectiveSupportProbeTrigger "affective_lexeme_probe" False
+    , RawPropositionAffectiveSupportProbeTrigger "relaxed_regulation_probe" False
+    ]
+    (apasprTriggers admitted)
+  assertEqual "non-authoritative affective-support probe admission should be explicit"
+    PasprSuppressStrongProbe
+    (apasprDecision admitted)
+  assertBool "weak contour should stop raw affective-support probe from being sufficient by implication"
+    (ipfPropositionType frame /= "ContactSignal")
+
+testPhraseTriggerHalfRemainsUnchangedUnderAffectiveProbeSlice :: Test
+testPhraseTriggerHalfRemainsUnchangedUnderAffectiveProbeSlice = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" True
+        , RawPropositionAffectiveSupportPhraseTrigger "no_strength" True
+        ]
+      admitted = admitPropositionAffectiveSupportPhraseTriggers (PropositionAffectiveSupportPhraseAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "direct phrase-trigger half should remain unchanged by probe-only seam"
+    [ RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" False
+    , RawPropositionAffectiveSupportPhraseTrigger "no_strength" True
+    ]
+    (apaspTriggers admitted)
+
+testConstitutionAdmissibleSelfKnowledgePreservesRawTriggers :: Test
+testConstitutionAdmissibleSelfKnowledgePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSelfKnowledgeTrigger "who_are_you_ru" True
+        , RawPropositionSelfKnowledgeTrigger "single_thought_subject_guard" False
+        ]
+      admitted = admitPropositionSelfKnowledgeTriggers (PropositionSelfKnowledgeAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw self-knowledge triggers"
+    rawTriggers
+    (apskTriggers admitted)
+  assertEqual "authoritative self-knowledge admission should be explicit"
+    PskdAdmitRaw
+    (apskDecision admitted)
+
+testNonAuthoritativeSelfKnowledgeSuppressesStrongTriggers :: Test
+testNonAuthoritativeSelfKnowledgeSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSelfKnowledgeTrigger "who_are_you_ru" True
+        , RawPropositionSelfKnowledgeTrigger "single_thought_subject_guard" True
+        ]
+      admitted = admitPropositionSelfKnowledgeTriggers (PropositionSelfKnowledgeAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong self-knowledge triggers while preserving safer guards"
+    [ RawPropositionSelfKnowledgeTrigger "who_are_you_ru" False
+    , RawPropositionSelfKnowledgeTrigger "single_thought_subject_guard" True
+    ]
+    (apskTriggers admitted)
+  assertEqual "non-authoritative self-knowledge admission should be explicit"
+    PskdSuppressStrongTriggers
+    (apskDecision admitted)
+  assertBool "weak contour should stop raw self-knowledge trigger from being sufficient by implication"
+    (all (\trigger -> rpskLabel trigger /= "who_are_you_ru" || not (rpskMatched trigger)) (apskTriggers admitted))
+
+testPurposeRemainsUnchangedUnderSelfKnowledgeSlice :: Test
+testPurposeRemainsUnchangedUnderSelfKnowledgeSlice = TestCase $ do
+  let frame = parseProposition "зачем ты нужен?"
+  assertEqual "purpose contour should remain unchanged by self-knowledge-only seam"
+    "PurposeQ" (ipfPropositionType frame)
+
+testConstitutionAdmissiblePurposePreservesRawTriggers :: Test
+testConstitutionAdmissiblePurposePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionPurposeTrigger "why_phrase" True
+        , RawPropositionPurposeTrigger "purpose_subject_guard" False
+        ]
+      admitted = admitPropositionPurposeTriggers (PropositionPurposeAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw purpose triggers"
+    rawTriggers
+    (apptTriggers admitted)
+  assertEqual "authoritative purpose admission should be explicit"
+    PpadAdmitRaw
+    (apptDecision admitted)
+
+testNonAuthoritativePurposeSuppressesStrongTriggers :: Test
+testNonAuthoritativePurposeSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionPurposeTrigger "why_phrase" True
+        , RawPropositionPurposeTrigger "purpose_subject_guard" True
+        ]
+      admitted = admitPropositionPurposeTriggers (PropositionPurposeAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong purpose triggers while preserving safer guards"
+    [ RawPropositionPurposeTrigger "why_phrase" False
+    , RawPropositionPurposeTrigger "purpose_subject_guard" True
+    ]
+    (apptTriggers admitted)
+  assertEqual "non-authoritative purpose admission should be explicit"
+    PpadSuppressStrongTriggers
+    (apptDecision admitted)
+
+testSelfKnowledgeRemainsUnchangedUnderPurposeSlice :: Test
+testSelfKnowledgeRemainsUnchangedUnderPurposeSlice = TestCase $ do
+  let frame = parseProposition "кто ты?"
+  assertEqual "self-knowledge contour should remain unchanged by purpose-only seam"
+    "SelfKnowledgeQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleConceptKnowledgePreservesRawTriggers :: Test
+testConstitutionAdmissibleConceptKnowledgePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionConceptKnowledgeTrigger "what_is_text" True
+        , RawPropositionConceptKnowledgeTrigger "concept_like_noun_guard" False
+        ]
+      admitted = admitPropositionConceptKnowledgeTriggers (PropositionConceptKnowledgeAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw concept-knowledge triggers"
+    rawTriggers
+    (apckTriggers admitted)
+  assertEqual "authoritative concept-knowledge admission should be explicit"
+    PckdAdmitRaw
+    (apckDecision admitted)
+
+testNonAuthoritativeConceptKnowledgeSuppressesStrongTriggers :: Test
+testNonAuthoritativeConceptKnowledgeSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionConceptKnowledgeTrigger "what_is_text" True
+        , RawPropositionConceptKnowledgeTrigger "concept_like_noun_guard" True
+        , RawPropositionConceptKnowledgeTrigger "question_suffix_guard" True
+        ]
+      admitted = admitPropositionConceptKnowledgeTriggers (PropositionConceptKnowledgeAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong concept-knowledge triggers while preserving safer guards"
+    [ RawPropositionConceptKnowledgeTrigger "what_is_text" False
+    , RawPropositionConceptKnowledgeTrigger "concept_like_noun_guard" True
+    , RawPropositionConceptKnowledgeTrigger "question_suffix_guard" True
+    ]
+    (apckTriggers admitted)
+  assertEqual "non-authoritative concept-knowledge admission should be explicit"
+    PckdSuppressStrongTriggers
+    (apckDecision admitted)
+
+testWorldCauseRemainsUnchangedUnderConceptKnowledgeSlice :: Test
+testWorldCauseRemainsUnchangedUnderConceptKnowledgeSlice = TestCase $ do
+  let frame = parseProposition "почему идет дождь?"
+  assertEqual "world-cause contour should remain unchanged by concept-knowledge-only seam"
+    "WorldCauseQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleMisunderstandingPreservesRawTriggers :: Test
+testConstitutionAdmissibleMisunderstandingPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionMisunderstandingTrigger "not_understand_ru" True
+        , RawPropositionMisunderstandingTrigger "apology_tokens" False
+        ]
+      admitted = admitPropositionMisunderstandingTriggers (PropositionMisunderstandingAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw misunderstanding triggers"
+    rawTriggers
+    (apmtTriggers admitted)
+  assertEqual "authoritative misunderstanding admission should be explicit"
+    PmAdmitRaw
+    (apmtDecision admitted)
+
+testNonAuthoritativeMisunderstandingSuppressesStrongTriggers :: Test
+testNonAuthoritativeMisunderstandingSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionMisunderstandingTrigger "not_understand_ru" True
+        , RawPropositionMisunderstandingTrigger "apology_tokens" True
+        , RawPropositionMisunderstandingTrigger "contact_lost_ru" True
+        ]
+      admitted = admitPropositionMisunderstandingTriggers (PropositionMisunderstandingAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong misunderstanding triggers while preserving apology/contact-loss cues"
+    [ RawPropositionMisunderstandingTrigger "not_understand_ru" False
+    , RawPropositionMisunderstandingTrigger "apology_tokens" True
+    , RawPropositionMisunderstandingTrigger "contact_lost_ru" True
+    ]
+    (apmtTriggers admitted)
+  assertEqual "non-authoritative misunderstanding admission should be explicit"
+    PmSuppressStrongTriggers
+    (apmtDecision admitted)
+
+testRepairDirectiveRemainsUnchangedUnderMisunderstandingSlice :: Test
+testRepairDirectiveRemainsUnchangedUnderMisunderstandingSlice = TestCase $ do
+  let frame = parseProposition "объясни проще"
+  assertEqual "repair directive should remain unchanged by misunderstanding-only seam"
+    "RepairSignal" (ipfPropositionType frame)
+
+testConstitutionAdmissibleWorldCausePreservesRawTriggers :: Test
+testConstitutionAdmissibleWorldCausePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionWorldCauseTrigger "why_phrase" True
+        , RawPropositionWorldCauseTrigger "world_noun_guard" True
+        ]
+      admitted = admitPropositionWorldCauseTriggers (PropositionWorldCauseAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw world-cause triggers"
+    rawTriggers
+    (apwcTriggers admitted)
+  assertEqual "authoritative world-cause admission should be explicit"
+    PwcAdmitRaw
+    (apwcDecision admitted)
+
+testNonAuthoritativeWorldCauseSuppressesStrongTriggers :: Test
+testNonAuthoritativeWorldCauseSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionWorldCauseTrigger "why_phrase" True
+        , RawPropositionWorldCauseTrigger "world_noun_guard" True
+        ]
+      admitted = admitPropositionWorldCauseTriggers (PropositionWorldCauseAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong world-cause triggers while preserving the noun guard"
+    [ RawPropositionWorldCauseTrigger "why_phrase" False
+    , RawPropositionWorldCauseTrigger "world_noun_guard" True
+    ]
+    (apwcTriggers admitted)
+  assertEqual "non-authoritative world-cause admission should be explicit"
+    PwcSuppressStrongTriggers
+    (apwcDecision admitted)
+
+testLocationFormationRemainsUnchangedUnderWorldCauseSlice :: Test
+testLocationFormationRemainsUnchangedUnderWorldCauseSlice = TestCase $ do
+  let frame = parseProposition "где формируется мысль?"
+  assertEqual "location-formation contour should remain unchanged by world-cause-only seam"
+    "LocationFormationQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleLocationFormationPreservesRawTriggers :: Test
+testConstitutionAdmissibleLocationFormationPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionLocationFormationTrigger "where_phrase" True
+        , RawPropositionLocationFormationTrigger "mental_noun_guard" True
+        ]
+      admitted = admitPropositionLocationFormationTriggers (PropositionLocationFormationAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw location-formation triggers"
+    rawTriggers
+    (aplfTriggers admitted)
+  assertEqual "authoritative location-formation admission should be explicit"
+    PlfdAdmitRaw
+    (aplfDecision admitted)
+
+testNonAuthoritativeLocationFormationSuppressesStrongTriggers :: Test
+testNonAuthoritativeLocationFormationSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionLocationFormationTrigger "where_phrase" True
+        , RawPropositionLocationFormationTrigger "mental_noun_guard" True
+        ]
+      admitted = admitPropositionLocationFormationTriggers (PropositionLocationFormationAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong location-formation triggers while preserving the mental-noun guard"
+    [ RawPropositionLocationFormationTrigger "where_phrase" False
+    , RawPropositionLocationFormationTrigger "mental_noun_guard" True
+    ]
+    (aplfTriggers admitted)
+  assertEqual "non-authoritative location-formation admission should be explicit"
+    PlfdSuppressStrongTriggers
+    (aplfDecision admitted)
+
+testSelfStateRemainsUnchangedUnderLocationFormationSlice :: Test
+testSelfStateRemainsUnchangedUnderLocationFormationSlice = TestCase $ do
+  let frame = parseProposition "о чём ты думаешь?"
+  assertEqual "self-state contour should remain unchanged by location-formation-only seam"
+    "SelfStateQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleExploratoryPromptPreservesRawTriggers :: Test
+testConstitutionAdmissibleExploratoryPromptPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionExploratoryPromptTrigger "explorat_keyword_infix_match" True
+        ]
+      admitted = admitPropositionExploratoryPromptTriggers (PropositionExploratoryPromptAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw exploratory-prompt triggers"
+    rawTriggers
+    (apeptTriggers admitted)
+  assertEqual "authoritative exploratory-prompt admission should be explicit"
+    PpeptdAdmitRaw
+    (apeptDecision admitted)
+
+testNonAuthoritativeExploratoryPromptSuppressesStrongTriggers :: Test
+testNonAuthoritativeExploratoryPromptSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionExploratoryPromptTrigger "explorat_keyword_infix_match" True
+        ]
+      admitted = admitPropositionExploratoryPromptTriggers (PropositionExploratoryPromptAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong exploratory-prompt triggers"
+    [ RawPropositionExploratoryPromptTrigger "explorat_keyword_infix_match" False
+    ]
+    (apeptTriggers admitted)
+  assertEqual "non-authoritative exploratory-prompt admission should be explicit"
+    PpeptdSuppressStrongTriggers
+    (apeptDecision admitted)
+
+testDialogueInvitationRemainsUnchangedUnderExploratoryPromptSlice :: Test
+testDialogueInvitationRemainsUnchangedUnderExploratoryPromptSlice = TestCase $ do
+  let frame = parseProposition "давай поговорим о смысле"
+  assertEqual "dialogue-invitation contour should remain unchanged by exploratory-prompt-only seam"
+    "DialogueInvitationQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleDialogueInvitationPreservesRawTriggers :: Test
+testConstitutionAdmissibleDialogueInvitationPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionDialogueInvitationTrigger "let_us_talk_phrase" True
+        , RawPropositionDialogueInvitationTrigger "discuss_phrase" False
+        , RawPropositionDialogueInvitationTrigger "can_talk_phrase" False
+        , RawPropositionDialogueInvitationTrigger "want_talk_phrase" False
+        , RawPropositionDialogueInvitationTrigger "want_meet_compound" False
+        ]
+      admitted = admitPropositionDialogueInvitationTriggers (PropositionDialogueInvitationAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw dialogue-invitation triggers"
+    rawTriggers
+    (apdiTriggers admitted)
+  assertEqual "authoritative dialogue-invitation admission should be explicit"
+    PpdiadAdmitRaw
+    (apdiDecision admitted)
+
+testNonAuthoritativeDialogueInvitationSuppressesStrongTriggers :: Test
+testNonAuthoritativeDialogueInvitationSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionDialogueInvitationTrigger "let_us_talk_phrase" True
+        , RawPropositionDialogueInvitationTrigger "discuss_phrase" True
+        , RawPropositionDialogueInvitationTrigger "can_talk_phrase" False
+        , RawPropositionDialogueInvitationTrigger "want_talk_phrase" False
+        , RawPropositionDialogueInvitationTrigger "want_meet_compound" True
+        ]
+      admitted = admitPropositionDialogueInvitationTriggers (PropositionDialogueInvitationAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong dialogue-invitation triggers"
+    [ RawPropositionDialogueInvitationTrigger "let_us_talk_phrase" False
+    , RawPropositionDialogueInvitationTrigger "discuss_phrase" False
+    , RawPropositionDialogueInvitationTrigger "can_talk_phrase" False
+    , RawPropositionDialogueInvitationTrigger "want_talk_phrase" False
+    , RawPropositionDialogueInvitationTrigger "want_meet_compound" False
+    ]
+    (apdiTriggers admitted)
+  assertEqual "non-authoritative dialogue-invitation admission should be explicit"
+    PpdiadSuppressStrongTriggers
+    (apdiDecision admitted)
+
+testContemplativeTopicRemainsUnchangedUnderDialogueInvitationSlice :: Test
+testContemplativeTopicRemainsUnchangedUnderDialogueInvitationSlice = TestCase $ do
+  let frame = parseProposition "я"
+  assertEqual "contemplative-topic contour should remain unchanged by dialogue-invitation-only seam"
+    "ContemplativeTopic" (ipfPropositionType frame)
+
+testConstitutionAdmissibleContemplativeTopicPreservesRawTriggers :: Test
+testConstitutionAdmissibleContemplativeTopicPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionContemplativeTopicTrigger "keyword_stream_match" True
+        , RawPropositionContemplativeTopicTrigger "bare_self_pronoun" False
+        ]
+      admitted = admitPropositionContemplativeTopicTriggers (PropositionContemplativeTopicAdmissionInput CanonicalSurfacePreserved) rawTriggers
+      AdmittedPropositionContemplativeTopicTriggers _ admittedTriggerList admittedDecision = admitted
+  assertEqual "authoritative contour should preserve raw contemplative-topic triggers"
+    rawTriggers
+    admittedTriggerList
+  assertEqual "authoritative contemplative-topic admission should be explicit"
+    PpctdAdmitRaw
+    admittedDecision
+
+testNonAuthoritativeContemplativeTopicSuppressesStrongKeywordStream :: Test
+testNonAuthoritativeContemplativeTopicSuppressesStrongKeywordStream = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionContemplativeTopicTrigger "keyword_stream_match" True
+        , RawPropositionContemplativeTopicTrigger "bare_self_pronoun" True
+        ]
+      admitted = admitPropositionContemplativeTopicTriggers (PropositionContemplativeTopicAdmissionInput LegacyIncompleteSurface) rawTriggers
+      AdmittedPropositionContemplativeTopicTriggers _ admittedTriggerList admittedDecision = admitted
+  assertEqual "non-authoritative contour should suppress strong keyword-stream but preserve bare-self-pronoun"
+    [ RawPropositionContemplativeTopicTrigger "keyword_stream_match" False
+    , RawPropositionContemplativeTopicTrigger "bare_self_pronoun" True
+    ]
+    admittedTriggerList
+  assertEqual "non-authoritative contemplative-topic admission with strong trigger should be explicit"
+    PpctdSuppressStrongTriggers
+    admittedDecision
+
+testNonAuthoritativeContemplativeTopicPreservesAmbiguousBareSelfPronoun :: Test
+testNonAuthoritativeContemplativeTopicPreservesAmbiguousBareSelfPronoun = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionContemplativeTopicTrigger "keyword_stream_match" False
+        , RawPropositionContemplativeTopicTrigger "bare_self_pronoun" True
+        ]
+      admitted = admitPropositionContemplativeTopicTriggers (PropositionContemplativeTopicAdmissionInput LegacyIncompleteSurface) rawTriggers
+      AdmittedPropositionContemplativeTopicTriggers _ admittedTriggerList admittedDecision = admitted
+  assertEqual "non-authoritative contour with only bare-self-pronoun should preserve raw"
+    rawTriggers
+    admittedTriggerList
+  assertEqual "non-authoritative contemplative-topic admission with only safe trigger should be PreserveAmbiguous"
+    PpctdPreserveAmbiguous
+    admittedDecision
+
+testGenerativePromptRemainsUnchangedUnderContemplativeTopicSlice :: Test
+testGenerativePromptRemainsUnchangedUnderContemplativeTopicSlice = TestCase $ do
+  let frame = parseProposition "скажи любую мысль"
+  assertEqual "generative-prompt contour should remain unchanged by contemplative-topic-only seam"
+    "GenerativePrompt" (ipfPropositionType frame)
+
+testConstitutionAdmissibleGenerativePromptPreservesRawTriggers :: Test
+testConstitutionAdmissibleGenerativePromptPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionGenerativePromptTrigger "say_thought_request" True
+        , RawPropositionGenerativePromptTrigger "give_thought_request" False
+        , RawPropositionGenerativePromptTrigger "more_thought_request" False
+        , RawPropositionGenerativePromptTrigger "say_something_quality" False
+        , RawPropositionGenerativePromptTrigger "say_any_infix" False
+        , RawPropositionGenerativePromptTrigger "thesis_logical" False
+        ]
+      admitted = admitPropositionGenerativePromptTriggers (PropositionGenerativePromptAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw generative-prompt triggers"
+    rawTriggers
+    (apgpTriggers admitted)
+  assertEqual "authoritative generative-prompt admission should be explicit"
+    PpgpdAdmitRaw
+    (apgpDecision admitted)
+
+testNonAuthoritativeGenerativePromptSuppressesStrongTriggers :: Test
+testNonAuthoritativeGenerativePromptSuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionGenerativePromptTrigger "say_thought_request" True
+        , RawPropositionGenerativePromptTrigger "give_thought_request" False
+        , RawPropositionGenerativePromptTrigger "more_thought_request" False
+        , RawPropositionGenerativePromptTrigger "say_something_quality" False
+        , RawPropositionGenerativePromptTrigger "say_any_infix" True
+        , RawPropositionGenerativePromptTrigger "thesis_logical" False
+        ]
+      admitted = admitPropositionGenerativePromptTriggers (PropositionGenerativePromptAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong generative-prompt triggers"
+    [ RawPropositionGenerativePromptTrigger "say_thought_request" False
+    , RawPropositionGenerativePromptTrigger "give_thought_request" False
+    , RawPropositionGenerativePromptTrigger "more_thought_request" False
+    , RawPropositionGenerativePromptTrigger "say_something_quality" False
+    , RawPropositionGenerativePromptTrigger "say_any_infix" False
+    , RawPropositionGenerativePromptTrigger "thesis_logical" False
+    ]
+    (apgpTriggers admitted)
+  assertEqual "non-authoritative generative-prompt admission should be explicit"
+    PpgpdSuppressStrongTriggers
+    (apgpDecision admitted)
+
+testSelfStateRemainsUnchangedUnderGenerativePromptSlice :: Test
+testSelfStateRemainsUnchangedUnderGenerativePromptSlice = TestCase $ do
+  let frame = parseProposition "о чём ты думаешь?"
+  assertEqual "self-state contour should remain unchanged by generative-prompt-only seam"
+    "SelfStateQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleComparisonPlausibilityPreservesRawTriggers :: Test
+testConstitutionAdmissibleComparisonPlausibilityPreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionComparisonPlausibilityTrigger "comparative_or_phrase" True
+        , RawPropositionComparisonPlausibilityTrigger "difference_between_text" False
+        , RawPropositionComparisonPlausibilityTrigger "distinguish_text" False
+        , RawPropositionComparisonPlausibilityTrigger "compare_text" False
+        , RawPropositionComparisonPlausibilityTrigger "what_is_difference_text" False
+        ]
+      admitted = admitPropositionComparisonPlausibilityTriggers (PropositionComparisonPlausibilityAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw comparison-plausibility triggers"
+    rawTriggers
+    (acppTriggers admitted)
+  assertEqual "authoritative comparison-plausibility admission should be explicit"
+    PcpadAdmitRaw
+    (acppDecision admitted)
+
+testNonAuthoritativeComparisonPlausibilitySuppressesStrongTriggers :: Test
+testNonAuthoritativeComparisonPlausibilitySuppressesStrongTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionComparisonPlausibilityTrigger "comparative_or_phrase" True
+        , RawPropositionComparisonPlausibilityTrigger "difference_between_text" False
+        , RawPropositionComparisonPlausibilityTrigger "distinguish_text" True
+        , RawPropositionComparisonPlausibilityTrigger "compare_text" False
+        , RawPropositionComparisonPlausibilityTrigger "what_is_difference_text" False
+        ]
+      admitted = admitPropositionComparisonPlausibilityTriggers (PropositionComparisonPlausibilityAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong comparison-plausibility triggers"
+    [ RawPropositionComparisonPlausibilityTrigger "comparative_or_phrase" False
+    , RawPropositionComparisonPlausibilityTrigger "difference_between_text" False
+    , RawPropositionComparisonPlausibilityTrigger "distinguish_text" False
+    , RawPropositionComparisonPlausibilityTrigger "compare_text" False
+    , RawPropositionComparisonPlausibilityTrigger "what_is_difference_text" False
+    ]
+    (acppTriggers admitted)
+  assertEqual "non-authoritative comparison-plausibility admission should be explicit"
+    PcpadSuppressStrongTriggers
+    (acppDecision admitted)
+
+testDistinctionRemainsUnchangedUnderComparisonPlausibilitySlice :: Test
+testDistinctionRemainsUnchangedUnderComparisonPlausibilitySlice = TestCase $ do
+  let frame = parseProposition "как отличить ложь от правды?"
+  assertEqual "distinguish-family routing should remain unchanged by comparison-plausibility-only seam"
+    CMDistinguish (ipfCanonicalFamily frame)
+
+testConstitutionAdmissibleSelfStatePreservesRawTriggers :: Test
+testConstitutionAdmissibleSelfStatePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSelfStateTrigger "generic_what_you_prefix" True
+        , RawPropositionSelfStateTrigger "generic_self_state_verb" True
+        , RawPropositionSelfStateTrigger "guard_about_what_plain" False
+        , RawPropositionSelfStateTrigger "guard_about_what_stressed" False
+        , RawPropositionSelfStateTrigger "guard_capability_knowhow" False
+        , RawPropositionSelfStateTrigger "guard_capability_can" False
+        , RawPropositionSelfStateTrigger "guard_self_knowledge" False
+        , RawPropositionSelfStateTrigger "guard_identity" False
+        ]
+      admitted = admitPropositionSelfStateTriggers (PropositionSelfStateAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw self-state triggers"
+    rawTriggers
+    (apssTriggers admitted)
+  assertEqual "authoritative self-state admission should be explicit"
+    PssadAdmitRaw
+    (apssDecision admitted)
+
+testNonAuthoritativeSelfStateSuppressesStrongTriggersButPreservesGuards :: Test
+testNonAuthoritativeSelfStateSuppressesStrongTriggersButPreservesGuards = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionSelfStateTrigger "generic_what_you_prefix" True
+        , RawPropositionSelfStateTrigger "generic_self_state_verb" True
+        , RawPropositionSelfStateTrigger "guard_about_what_plain" False
+        , RawPropositionSelfStateTrigger "guard_about_what_stressed" False
+        , RawPropositionSelfStateTrigger "guard_capability_knowhow" True
+        , RawPropositionSelfStateTrigger "guard_capability_can" False
+        , RawPropositionSelfStateTrigger "guard_self_knowledge" False
+        , RawPropositionSelfStateTrigger "guard_identity" False
+        ]
+      admitted = admitPropositionSelfStateTriggers (PropositionSelfStateAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong self-state triggers while preserving guard labels"
+    [ RawPropositionSelfStateTrigger "generic_what_you_prefix" True
+    , RawPropositionSelfStateTrigger "generic_self_state_verb" True
+    , RawPropositionSelfStateTrigger "guard_about_what_plain" False
+    , RawPropositionSelfStateTrigger "guard_about_what_stressed" False
+    , RawPropositionSelfStateTrigger "guard_capability_knowhow" True
+    , RawPropositionSelfStateTrigger "guard_capability_can" False
+    , RawPropositionSelfStateTrigger "guard_self_knowledge" False
+    , RawPropositionSelfStateTrigger "guard_identity" False
+    ]
+    (apssTriggers admitted)
+  assertEqual "guard-only self-state admission should be PreserveAmbiguous"
+    PssadPreserveAmbiguous
+    (apssDecision admitted)
+
+testSelfKnowledgeRemainsUnchangedUnderSelfStateSlice :: Test
+testSelfKnowledgeRemainsUnchangedUnderSelfStateSlice = TestCase $ do
+  let frame = parseProposition "что ты знаешь о себе?"
+  assertEqual "self-knowledge contour should remain unchanged by self-state-only seam"
+    "SelfKnowledgeQ" (ipfPropositionType frame)
+
+testSystemLogicRemainsUnchangedUnderSelfStateSlice :: Test
+testSystemLogicRemainsUnchangedUnderSelfStateSlice = TestCase $ do
+  let frame = parseProposition "как ты формируешь ответ?"
+  assertEqual "system-logic contour should remain unchanged by self-state-only seam"
+    "SelfKnowledgeQ" (ipfPropositionType frame)
+
+testConstitutionAdmissibleRepairDirectivePreservesRawTriggers :: Test
+testConstitutionAdmissibleRepairDirectivePreservesRawTriggers = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionRepairDirectiveTrigger "simplify_phrase" True
+        , RawPropositionRepairDirectiveTrigger "unclear_token_bag" False
+        , RawPropositionRepairDirectiveTrigger "confused_en" False
+        ]
+      admitted = admitPropositionRepairDirectiveTriggers (PropositionRepairDirectiveAdmissionInput CanonicalSurfacePreserved) rawTriggers
+  assertEqual "authoritative contour should preserve raw repair-directive triggers"
+    rawTriggers
+    (aprdTriggers admitted)
+  assertEqual "authoritative repair-directive admission should be explicit"
+    PrdadAdmitRaw
+    (aprdDecision admitted)
+
+testNonAuthoritativeRepairDirectiveSuppressesStrongTriggersButPreservesComplaints :: Test
+testNonAuthoritativeRepairDirectiveSuppressesStrongTriggersButPreservesComplaints = TestCase $ do
+  let rawTriggers =
+        [ RawPropositionRepairDirectiveTrigger "simplify_phrase" True
+        , RawPropositionRepairDirectiveTrigger "unclear_token_bag" True
+        , RawPropositionRepairDirectiveTrigger "confused_en" True
+        ]
+      admitted = admitPropositionRepairDirectiveTriggers (PropositionRepairDirectiveAdmissionInput LegacyIncompleteSurface) rawTriggers
+  assertEqual "non-authoritative contour should suppress strong repair directives while preserving ambiguous complaints"
+    [ RawPropositionRepairDirectiveTrigger "simplify_phrase" False
+    , RawPropositionRepairDirectiveTrigger "unclear_token_bag" True
+    , RawPropositionRepairDirectiveTrigger "confused_en" True
+    ]
+    (aprdTriggers admitted)
+  assertEqual "non-authoritative repair-directive admission should be explicit"
+    PrdadSuppressStrongTriggers
+    (aprdDecision admitted)
+
+testMisunderstandingRemainsUnchangedUnderRepairDirectiveSlice :: Test
+testMisunderstandingRemainsUnchangedUnderRepairDirectiveSlice = TestCase $ do
+  let frame = parseProposition "я не понимаю тебя"
+  assertEqual "misunderstanding contour should remain unchanged by repair-directive-only seam"
+    "MisunderstandingReport" (ipfPropositionType frame)
+
+testApologyRouteHintRemainsUnchangedUnderRepairDirectiveSlice :: Test
+testApologyRouteHintRemainsUnchangedUnderRepairDirectiveSlice = TestCase $ do
+  let frame = parseProposition "извини, я был резок"
+  assertEqual "apology route-hint path should remain unchanged by repair-directive-only seam"
+    "RepairSignal" (ipfPropositionType frame)
+
 
 testParsePropositionApologySignal :: Test
 testParsePropositionApologySignal = TestCase $ do

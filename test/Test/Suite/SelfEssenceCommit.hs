@@ -295,7 +295,7 @@ arbitraryEssenceCommitment = do
     { ecMode        = mode
     , ecTrigger     = trigger
     , ecCommittedAt = turnOrd
-    , ecWitnessHash = TrajectoryHash "sha256:test-fixture"
+    , ecWitnessHash = TrajectoryHash 0
     }
 
 -- ---------------------------------------------------------------------------
@@ -464,7 +464,7 @@ testFlagOnRuptureThrows = do
         { ecMode = EssenceContemplative
         , ecTrigger = TriggerAngstThreshold
         , ecCommittedAt = 1
-        , ecWitnessHash = TrajectoryHash "sha256:test-rupture"
+        , ecWitnessHash = TrajectoryHash 0
         }
       -- A Plan with family CMContact is NOT admissible for Contemplative
       badPlan = defaultPlan { planFamily = CMContact }

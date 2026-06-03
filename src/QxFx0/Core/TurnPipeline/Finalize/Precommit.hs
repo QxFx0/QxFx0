@@ -30,10 +30,10 @@ import QxFx0.Core.TurnPipeline.Effects
   , TurnEffectResult(..)
   )
 import QxFx0.Core.TurnPipeline.Finalize.Dream (applyDreamDynamics)
+import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
 import QxFx0.Core.TurnPipeline.Finalize.State
   ( buildFinalOutput
   , buildNextSystemState
-  , buildTurnProjection
   , computeEssenceValidation
   )
 import QxFx0.Learning.Loop (applyExternalLearning)

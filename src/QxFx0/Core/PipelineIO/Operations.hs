@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-{-| Public operations over `PipelineIO`, including effect dispatch and typed adapters. -}
+{-|
+Description : supplier
+Public operations over `PipelineIO`, including effect dispatch and typed adapters. -}
 module QxFx0.Core.PipelineIO.Operations
   ( pipelineRuntimeMode
   , pipelineRuntimeModeText
@@ -130,9 +132,9 @@ verifyPipelineAgda pio = do
     TurnResAgdaVerify agdaStatus -> pure agdaStatus
     _ -> pure AgdaInvalid
 
-savePipelineState :: PipelineIO -> SystemState -> Text -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
-savePipelineState pio ss sid mProj = do
-  result <- resolveTurnEffect pio (TurnReqSaveState ss sid mProj)
+savePipelineState :: PipelineIO -> SystemState -> Text -> Int -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
+savePipelineState pio ss sid expectedRevision mProj = do
+  result <- resolveTurnEffect pio (TurnReqSaveState ss sid expectedRevision mProj)
   case result of
     TurnResSaveState saved -> pure saved
     _ -> pure (Left (PdSaveFailed StageUnknown (Just "savePipelineState") (Just "unexpected_save_state_effect_result")))

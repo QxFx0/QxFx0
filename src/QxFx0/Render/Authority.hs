@@ -1,119 +1,229 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
 {-|
-Module      : QxFx0.Render.Authority
-Description : Package 4 (GF round-trip) — @AuthoritySurface@ stub.
+Description : canonical — Authority surface parser and renderer (F-11).
 
-A stub implementation of the 'AuthoritySurface' newtype and the
-two functions ('parseAuthoritySurface', 'renderAuthoritySurface')
-required by @docs\/closure\/GF_AUTHORITY_SUBSET.md@. The real
-implementation is gated on the Haskell-side parser extension
-described in §2 of the GF subset document. Until that parser is
-landed, the round-trip is intentionally a no-op: the parser returns
-'Nothing' for any input, and the renderer produces a fixed
-placeholder.
+'parseAuthoritySurface' uses a two-stage approach:
 
-== Why a stub now
+  1. GF-backed parsing via 'QxFx0.Runtime.PGF.parseClaimAstGf' — uses the
+     same @spec\/gf\/QxFx0Syntax.pgf@ grammar as the linearizer so that the
+     full round-trip @ast → linearize → parse → ast@ is closed.
+  2. Pattern-matching fallback for the four canonical commitment-statement
+     forms (en\/ru UserIs, en\/ru TopicIs) when GF parsing fails or is
+     unavailable.
 
-The closure plan's Package 4 has two acceptance criteria:
-
-  1. The Haskell @AuthoritySurface@ newtype exists, with
-     'parseAuthoritySurface' and 'renderAuthoritySurface' as
-     pure, replay-visible functions.
-  2. A round-trip property
-     @roundTripProperty :: AuthoritySurface -> Bool@ exists, but
-     the real implementation depends on the GF Haskell parser,
-     which is not yet in the dependency closure.
-
-This module satisfies criterion 1 fully and criterion 2 partially:
-the property is well-typed and trivially holds (since no surface
-is parseable yet). When the real parser is landed, the only change
-is to 'parseAuthoritySurface'; the type and the property remain.
-
-== Round-trip property
-
-@roundTripProperty@ is the stub identity. When the real parser is
-landed, the property becomes
-
-  @forall s. parseAuthoritySurface (renderAuthoritySurface s) == Just s@,
-
-i.e. total round-trip. Coverage (the fraction of natural-language
-surfaces that round-trip) is the metric tracked in §3 of the GF
-subset document; the target is ≥ 0.99.
+The GF path handles the full 'ClaimAst' vocabulary; the pattern-matching
+path is a bounded compatibility layer for the initial authority subset.
 -}
-
 module QxFx0.Render.Authority
-  ( -- * The authority surface
-    AuthoritySurface
+  ( AuthoritySurface(..)
   , emptyAuthoritySurface
   , isStubAuthoritySurface
-
-    -- * Stub parser / renderer
   , parseAuthoritySurface
+  , parseAuthoritySurfaceIO
+  , parseAuthoritySurfacePattern
+  , claimAstToFactualClaim
   , renderAuthoritySurface
-
-    -- * Round-trip property
   , roundTripProperty
   ) where
 
-import           Data.Eq (Eq)
-import           Data.Function (($))
-import           Data.Maybe (Maybe (..))
-import           GHC.Generics (Generic)
-import           Prelude (Bool (..), Show, String)
+import Control.Applicative ((<|>))
+import Data.Aeson (FromJSON, ToJSON)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Text (Text)
+import qualified Data.Text as T
+import GHC.Generics (Generic)
+import System.IO.Unsafe (unsafePerformIO)
+import Prelude (Bool(..), Eq(..), IO, Show, (&&), ($), (++), (==), (>>=), (<>) , not, null, otherwise, pure, id, either, Either(..))
 
--- | An authority-bearing GF render of a 'QxFx0.Self.Salience.SalienceDecision'
--- or related decision contour. The stub is a single byte; the real
--- implementation is a structured 'Text' with five fields (per
--- @docs\/closure\/GF_AUTHORITY_SUBSET.md@ §2).
+import QxFx0.Types.State.SemanticCommitment
+  ( FactualClaimPayload(..)
+  , CommitmentOrigin(..)
+  , TurnSeq(..)
+  )
+import QxFx0.Types (ClaimAst(..))
+import QxFx0.Runtime.PGF (parseClaimAstGf)
+
 newtype AuthoritySurface = AuthoritySurface
-  { unAuthoritySurface :: String
+  { unAuthoritySurface :: Text
   }
   deriving stock (Eq, Show, Generic)
+  deriving newtype (ToJSON, FromJSON)
 
--- | The empty surface — the renderer always produces this until the
--- real parser is in. Using 'emptyAuthoritySurface' rather than
--- building the newtype directly is the only supported way to
--- construct a stub surface.
 emptyAuthoritySurface :: AuthoritySurface
-emptyAuthoritySurface = AuthoritySurface "STUB"
+emptyAuthoritySurface = AuthoritySurface ""
 
--- | Whether a surface is the stub. The property tests rely on
--- this to make the stub-ness of the current implementation
--- visible to the replay gate.
 isStubAuthoritySurface :: AuthoritySurface -> Bool
-isStubAuthoritySurface s = unAuthoritySurface s == unAuthoritySurface emptyAuthoritySurface
+isStubAuthoritySurface s = T.null (unAuthoritySurface s)
 
--- | The stub parser: returns 'Nothing' for any input. The real
--- parser will be added when the GF Haskell parser is in the
--- dependency closure. Until then, the round-trip is intentionally
--- trivial: there is no surface that parses.
-parseAuthoritySurface :: String -> Maybe AuthoritySurface
-parseAuthoritySurface _ = Nothing
-
--- | The stub renderer: always produces 'emptyAuthoritySurface'.
--- The real renderer will accept a 'QxFx0.Self.Salience.SalienceDecision'
--- (or related decision) and produce a five-field structured surface.
-renderAuthoritySurface :: a -> AuthoritySurface
-renderAuthoritySurface _ = emptyAuthoritySurface
-
--- | The stub round-trip property: trivially 'True' because
--- 'parseAuthoritySurface' is total 'Nothing'. The real
--- implementation (per the GF subset doc) becomes
+-- | Parse a rendered authority surface back to a typed factual claim.
 --
--- @
--- roundTripProperty s =
---   case parseAuthoritySurface (renderAuthoritySurface s) of
---     Just s' -> s == s'
---     Nothing -> False
--- @
+-- Stage 1: attempt GF-backed parsing via 'parseClaimAstGf' (uses the live
+-- @spec\/gf\/QxFx0Syntax.pgf@ grammar). Wraps the IO call with
+-- 'unsafePerformIO' — safe because the PGF parser is deterministic and
+-- referentially transparent for a fixed grammar file and input string.
 --
--- once the parser is landed. The current stub keeps the
--- signature stable so the property test can be added without
--- a follow-up signature change.
-roundTripProperty :: AuthoritySurface -> Bool
-roundTripProperty _ = True
+-- Stage 2: fall back to pattern-matching on the four canonical
+-- commitment-statement forms (en\/ru UserIs, en\/ru TopicIs).
+--
+-- Returns @Nothing@ for non-authority surfaces (local recovery, questions,
+-- greetings, etc.).
+{-# NOINLINE parseAuthoritySurface #-}
+parseAuthoritySurface :: AuthoritySurface -> Maybe FactualClaimPayload
+parseAuthoritySurface s@(AuthoritySurface txt)
+  | T.null (T.strip txt) = Nothing
+  | otherwise =
+      -- Stage 1: GF-backed parse (real bidirectional parser, F-11)
+      let gfResult = unsafePerformIO (parseClaimAstGf Nothing txt)
+      in case gfResult of
+           Right ast -> Just (claimAstToFactualClaim txt ast)
+           Left _    -> parseAuthoritySurfacePattern s
+
+-- | IO variant for contexts where IO is available (preferred over the
+-- unsafePerformIO wrapper when possible).
+parseAuthoritySurfaceIO :: AuthoritySurface -> IO (Maybe FactualClaimPayload)
+parseAuthoritySurfaceIO (AuthoritySurface txt)
+  | T.null (T.strip txt) = pure Nothing
+  | otherwise = do
+      result <- parseClaimAstGf Nothing txt
+      case result of
+        Right ast -> pure (Just (claimAstToFactualClaim txt ast))
+        Left _    -> pure (parseAuthoritySurfacePattern (AuthoritySurface txt))
+
+-- | Convert a parsed 'ClaimAst' to a 'FactualClaimPayload'.
+-- The @fcpStatement@ is the original surface text; the @fcpOrigin@ records
+-- that the GF parser produced this claim.
+claimAstToFactualClaim :: Text -> ClaimAst -> FactualClaimPayload
+claimAstToFactualClaim surface ast =
+  FactualClaimPayload
+    { fcpStatement  = surface
+    , fcpConfidence = 0.90
+    , fcpOrigin     = OriginParser ("gf:pgf2:" <> claimAstTag ast)
+    , fcpTurnSeq    = TurnSeq 0
+    , fcpDeps       = []
+    }
+  where
+    claimAstTag (MoveGround _)          = "ground"
+    claimAstTag (MoveDefine _ _ _)      = "define"
+    claimAstTag (MoveContact _)         = "contact"
+    claimAstTag (MoveReflect _)         = "reflect"
+    claimAstTag (MoveDescribe _)        = "describe"
+    claimAstTag (MoveDeepen _)          = "deepen"
+    claimAstTag (MoveConfront _)        = "confront"
+    claimAstTag (MoveAnchor _)          = "anchor"
+    claimAstTag (MoveClarify _)         = "clarify"
+    claimAstTag (MovePurpose _)         = "purpose"
+    claimAstTag (MoveHypothesis _)      = "hypothesis"
+    claimAstTag (MoveContemplative _)   = "contemplative"
+    claimAstTag (MoveCompare _ _)       = "compare"
+    claimAstTag (MoveDistinguish _ _)   = "distinguish"
+    claimAstTag MoveMisunderstanding    = "misunderstanding"
+    claimAstTag (MoveNextStepLocal _)   = "next_step"
+    claimAstTag MoveSelfState           = "self_state"
+    claimAstTag MoveSystemLogic         = "system_logic"
+    claimAstTag MoveOperationalStatus   = "operational_status"
+    claimAstTag MoveOperationalCause    = "operational_cause"
+    claimAstTag MoveGenerativeThought   = "generative"
+    claimAstTag (ClaimPurpose _)        = "claim_purpose"
+    claimAstTag ClaimSelfState          = "claim_self"
+    claimAstTag (ClaimComparison _ _)   = "claim_compare"
+    claimAstTag (MoveInvite _ _ _)      = "invite"
+    claimAstTag (MoveCause _ _)         = "cause"
+    claimAstTag (StanceWrapped _ inner) = "stance:" <> claimAstTag inner
+
+-- | Pattern-matching fallback parser for the four canonical
+-- commitment-statement forms. Used when the GF parser is unavailable.
+parseAuthoritySurfacePattern :: AuthoritySurface -> Maybe FactualClaimPayload
+parseAuthoritySurfacePattern (AuthoritySurface txt) =
+  let trimmed = T.strip txt
+  in parseEnUserRole trimmed
+     <|> parseRuUserRole trimmed
+     <|> parseEnTopic trimmed
+     <|> parseRuTopic trimmed
+
+parseEnUserRole :: Text -> Maybe FactualClaimPayload
+parseEnUserRole txt = do
+  rest <- T.stripPrefix "User is " txt
+  let role = maybe rest id (T.stripSuffix "." rest)
+  guard (not (T.null role))
+  pure FactualClaimPayload
+    { fcpStatement = txt
+    , fcpConfidence = 0.95
+    , fcpOrigin = OriginParser "en:UserIs"
+    , fcpTurnSeq = TurnSeq 0
+    , fcpDeps = []
+    }
+
+parseRuUserRole :: Text -> Maybe FactualClaimPayload
+parseRuUserRole txt = do
+  rest <- T.stripPrefix "Пользователь — " txt
+  let role = maybe rest id (T.stripSuffix "." rest)
+  guard (not (T.null role))
+  pure FactualClaimPayload
+    { fcpStatement = txt
+    , fcpConfidence = 0.95
+    , fcpOrigin = OriginParser "ru:UserIs"
+    , fcpTurnSeq = TurnSeq 0
+    , fcpDeps = []
+    }
+
+parseEnTopic :: Text -> Maybe FactualClaimPayload
+parseEnTopic txt = do
+  rest <- T.stripPrefix "Topic is " txt
+  let topic = maybe rest id (T.stripSuffix "." rest)
+  guard (not (T.null topic))
+  pure FactualClaimPayload
+    { fcpStatement = txt
+    , fcpConfidence = 0.95
+    , fcpOrigin = OriginParser "en:TopicIs"
+    , fcpTurnSeq = TurnSeq 0
+    , fcpDeps = []
+    }
+
+parseRuTopic :: Text -> Maybe FactualClaimPayload
+parseRuTopic txt = do
+  rest <- T.stripPrefix "Тема — " txt
+  let topic = maybe rest id (T.stripSuffix "." rest)
+  guard (not (T.null topic))
+  pure FactualClaimPayload
+    { fcpStatement = txt
+    , fcpConfidence = 0.95
+    , fcpOrigin = OriginParser "ru:TopicIs"
+    , fcpTurnSeq = TurnSeq 0
+    , fcpDeps = []
+    }
+
+guard :: Bool -> Maybe ()
+guard True  = Just ()
+guard False = Nothing
+
+-- | Render a factual claim payload as an authority-bearing surface.
+renderAuthoritySurface :: FactualClaimPayload -> AuthoritySurface
+renderAuthoritySurface payload =
+  let originTag = case fcpOrigin payload of
+        OriginParser tag -> tag
+        _ -> "en:Canonical"
+  in AuthoritySurface $ case originTag of
+       "en:UserIs" -> "User is " <> renderRole (fcpStatement payload) <> "."
+       "ru:UserIs" -> "Пользователь — " <> renderRole (fcpStatement payload) <> "."
+       "en:TopicIs" -> "Topic is " <> renderTopic (fcpStatement payload) <> "."
+       "ru:TopicIs" -> "Тема — " <> renderTopic (fcpStatement payload) <> "."
+       _ -> fcpStatement payload
+
+renderRole :: Text -> Text
+renderRole = id
+
+renderTopic :: Text -> Text
+renderTopic = id
+
+-- | Round-trip property: parse ∘ render == id on the canonical subset.
+roundTripProperty :: FactualClaimPayload -> Bool
+roundTripProperty p =
+  case parseAuthoritySurface (renderAuthoritySurface p) of
+    Just p' -> fcpStatement p == fcpStatement p' && fcpOrigin p == fcpOrigin p'
+    Nothing -> False

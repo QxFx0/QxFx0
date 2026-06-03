@@ -1,6 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 module QxFx0.Semantic.MeaningAtoms
-  ( collectAtoms
+  ( RawClusterPhraseDecision(..)
+  , RawLexicalPhraseDecision(..)
+  , RawLexicalClusterPhraseDecisions(..)
+  , RawClusterPhraseContainment(..)
+  , LexicalPhraseContainmentClass(..)
+  , RawLexicalPhraseContainment(..)
+  , RawLexicalClusterPhraseContainment(..)
+  , RawClusterHit(..)
+  , RawLexicalHit(..)
+  , RawLexicalClusterHits(..)
+  , RawLexicalClusterMatches(..)
+  , RawAtomFindings(..)
+  , clusterPhraseDecisionTag
+  , lexicalPhraseDecisionTag
+  , collectRawLexicalClusterPhraseDecisions
+  , buildRawLexicalClusterPhraseContainmentFromDecisions
+  , clusterPhraseContainmentTag
+  , lexicalPhraseContainmentTag
+  , collectRawLexicalClusterPhraseContainment
+  , buildRawLexicalClusterHitsFromPhraseContainment
+  , collectRawLexicalClusterHits
+  , buildRawLexicalClusterMatchesFromHits
+  , collectRawLexicalClusterMatches
+  , collectStructuralAtoms
+  , buildRawAtomFindingsFromMatches
+  , collectRawAtomFindings
+  , buildAtomSetFromFindings
+  , collectAtoms
   , updateTrace
   , extractObjectFromAtom
   ) where
@@ -21,18 +48,209 @@ import QxFx0.Policy.SemanticScoring
   )
 import QxFx0.Types.Text (textShow)
 
+data RawAtomFindings = RawAtomFindings
+  { rafClusterAtoms :: ![MeaningAtom]
+  , rafLexicalAtoms :: ![MeaningAtom]
+  , rafStructuralAtoms :: ![MeaningAtom]
+  } deriving (Eq, Show)
+
+data RawLexicalClusterMatches = RawLexicalClusterMatches
+  { rlmClusterAtoms :: ![MeaningAtom]
+  , rlmLexicalAtoms :: ![MeaningAtom]
+  } deriving (Eq, Show)
+
+data RawClusterPhraseDecision = RawClusterPhraseDecision
+  { rcpdClusterName :: !Text
+  , rcpdPhrase :: !Text
+  , rcpdMatched :: !Bool
+  } deriving (Eq, Show)
+
+data RawClusterPhraseContainment = RawClusterPhraseContainment
+  { rcpcClusterName :: !Text
+  , rcpcMatchedKeywords :: ![Text]
+  } deriving (Eq, Show)
+
+data LexicalPhraseContainmentClass
+  = LpcExhaustion
+  | LpcNegatedExhaustion
+  | LpcModalAbilityContrast
+  | LpcNeedContact
+  | LpcNeedMeaning
+  | LpcAgencyLost
+  deriving (Eq, Show)
+
+data RawLexicalPhraseContainment = RawLexicalPhraseContainment
+  { rlpcClass :: !LexicalPhraseContainmentClass
+  , rlpcMatchedLexemes :: ![Text]
+  } deriving (Eq, Show)
+
+data RawLexicalPhraseDecision = RawLexicalPhraseDecision
+  { rlpdClass :: !LexicalPhraseContainmentClass
+  , rlpdPhrase :: !Text
+  , rlpdMatched :: !Bool
+  } deriving (Eq, Show)
+
+data RawLexicalClusterPhraseDecisions = RawLexicalClusterPhraseDecisions
+  { rlcpdInputLower :: !Text
+  , rlcpdClusterDecisions :: ![RawClusterPhraseDecision]
+  , rlcpdLexicalDecisions :: ![RawLexicalPhraseDecision]
+  } deriving (Eq, Show)
+
+data RawLexicalClusterPhraseContainment = RawLexicalClusterPhraseContainment
+  { rlcpcInputLower :: !Text
+  , rlcpcClusterContainment :: ![RawClusterPhraseContainment]
+  , rlcpcLexicalContainment :: ![RawLexicalPhraseContainment]
+  } deriving (Eq, Show)
+
+data RawClusterHit = RawClusterHit
+  { rchTag :: !AtomTag
+  , rchMatchedKeywords :: ![Text]
+  } deriving (Eq, Show)
+
+data RawLexicalHit = RawLexicalHit
+  { rlhTag :: !AtomTag
+  , rlhMatchedLexemes :: ![Text]
+  } deriving (Eq, Show)
+
+data RawLexicalClusterHits = RawLexicalClusterHits
+  { rlchInputLower :: !Text
+  , rlchClusterHits :: ![RawClusterHit]
+  , rlchLexicalHits :: ![RawLexicalHit]
+  } deriving (Eq, Show)
+
 collectAtoms :: Text -> [ClusterDef] -> AtomSet
 collectAtoms input clusters =
   let inputLower = T.toLower input
       inputTokens = tokenizeKeywordText input
-      suppressedExhaustion = shouldSuppressExhaustion inputTokens
-      foundAtoms0 = concatMap (matchCluster inputLower inputTokens) clusters
-      foundAtoms = if suppressedExhaustion then filter (not . isExhaustionAtom) foundAtoms0 else foundAtoms0
-      lexical = lexicalAtoms inputLower inputTokens
+      rawMatches = collectRawLexicalClusterMatches input clusters
+      foundAtoms = rlmClusterAtoms rawMatches
+      lexical = rlmLexicalAtoms rawMatches
       structural = if containsAnyKeywordPhrase inputTokens ["\1095\1090\1086", "\1082\1072\1082", "\1087\1086\1095\1077\1084\1091"] || T.isSuffixOf "?" (T.strip input)
                    then [MeaningAtom (extractObject input) (Searching (extractObject input)) (fallbackEmbedding inputLower)]
                    else []
       allFound = foundAtoms ++ lexical ++ structural
+      load = L.foldl' (\acc a -> acc + atomIntensity a) 0.0 allFound
+  in AtomSet
+    { asAtoms    = allFound
+    , asLoad     = min 1.0 load
+    , asRegister = inferRegister allFound
+    }
+
+collectRawAtomFindings :: Text -> [ClusterDef] -> RawAtomFindings
+collectRawAtomFindings input clusters =
+  buildRawAtomFindingsFromMatches (collectRawLexicalClusterMatches input clusters) (collectStructuralAtoms input)
+
+collectRawLexicalClusterMatches :: Text -> [ClusterDef] -> RawLexicalClusterMatches
+collectRawLexicalClusterMatches input clusters =
+  buildRawLexicalClusterMatchesFromHits (collectRawLexicalClusterHits input clusters)
+
+collectRawLexicalClusterPhraseDecisions :: Text -> [ClusterDef] -> RawLexicalClusterPhraseDecisions
+collectRawLexicalClusterPhraseDecisions input clusters =
+  let inputLower = T.toLower input
+      inputTokens = tokenizeKeywordText input
+  in RawLexicalClusterPhraseDecisions
+      { rlcpdInputLower = inputLower
+      , rlcpdClusterDecisions = concatMap (collectRawClusterPhraseDecisions inputTokens) clusters
+      , rlcpdLexicalDecisions = collectRawLexicalPhraseDecisions inputTokens
+      }
+
+buildRawLexicalClusterPhraseContainmentFromDecisions :: RawLexicalClusterPhraseDecisions -> RawLexicalClusterPhraseContainment
+buildRawLexicalClusterPhraseContainmentFromDecisions rawDecisions =
+  RawLexicalClusterPhraseContainment
+    { rlcpcInputLower = rlcpdInputLower rawDecisions
+    , rlcpcClusterContainment = buildRawClusterPhraseContainmentFromDecisions (rlcpdClusterDecisions rawDecisions)
+    , rlcpcLexicalContainment = buildRawLexicalPhraseContainmentFromDecisions (rlcpdLexicalDecisions rawDecisions)
+    }
+
+collectRawLexicalClusterPhraseContainment :: Text -> [ClusterDef] -> RawLexicalClusterPhraseContainment
+collectRawLexicalClusterPhraseContainment input clusters =
+  buildRawLexicalClusterPhraseContainmentFromDecisions (collectRawLexicalClusterPhraseDecisions input clusters)
+
+collectRawLexicalClusterHits :: Text -> [ClusterDef] -> RawLexicalClusterHits
+collectRawLexicalClusterHits input clusters =
+  buildRawLexicalClusterHitsFromPhraseContainment (collectRawLexicalClusterPhraseContainment input clusters)
+
+buildRawLexicalClusterHitsFromPhraseContainment :: RawLexicalClusterPhraseContainment -> RawLexicalClusterHits
+buildRawLexicalClusterHitsFromPhraseContainment rawContainment =
+  let suppressedExhaustion = any suppressesExhaustion (rlcpcLexicalContainment rawContainment)
+      rawClusterHits0 = concatMap buildRawClusterHitsFromPhraseContainment (rlcpcClusterContainment rawContainment)
+      rawClusterHits
+        | suppressedExhaustion = filter (not . rawClusterHitIsExhaustion) rawClusterHits0
+        | otherwise = rawClusterHits0
+  in RawLexicalClusterHits
+      { rlchInputLower = rlcpcInputLower rawContainment
+      , rlchClusterHits = rawClusterHits
+      , rlchLexicalHits = buildRawLexicalHitsFromPhraseContainment (rlcpcLexicalContainment rawContainment)
+      }
+  where
+    suppressesExhaustion rawLexicalContainment =
+      rlpcClass rawLexicalContainment == LpcNegatedExhaustion
+        || rlpcClass rawLexicalContainment == LpcModalAbilityContrast
+
+rawClusterHitIsExhaustion :: RawClusterHit -> Bool
+rawClusterHitIsExhaustion rawHit =
+  case rchTag rawHit of
+    Exhaustion _ -> True
+    _ -> False
+
+clusterPhraseContainmentTag :: RawClusterPhraseContainment -> AtomTag
+clusterPhraseContainmentTag rawContainment =
+  tagFromCluster
+    (rcpcClusterName rawContainment)
+    (T.intercalate ", " (rcpcMatchedKeywords rawContainment))
+
+clusterPhraseDecisionTag :: RawClusterPhraseDecision -> AtomTag
+clusterPhraseDecisionTag rawDecision =
+  tagFromCluster
+    (rcpdClusterName rawDecision)
+    (rcpdPhrase rawDecision)
+
+lexicalPhraseContainmentTag :: RawLexicalPhraseContainment -> Maybe AtomTag
+lexicalPhraseContainmentTag rawContainment =
+  case rlpcClass rawContainment of
+    LpcExhaustion -> Just (Exhaustion "\1083\1077\1082\1089\1080\1082\1072")
+    LpcNeedContact -> Just (NeedContact "\1083\1077\1082\1089\1080\1082\1072")
+    LpcNeedMeaning -> Just (NeedMeaning "\1083\1077\1082\1089\1080\1082\1072")
+    LpcAgencyLost -> Just (AgencyLost semanticLexicalAgencyLostStrength)
+    LpcNegatedExhaustion -> Nothing
+    LpcModalAbilityContrast -> Nothing
+
+lexicalPhraseDecisionTag :: RawLexicalPhraseDecision -> Maybe AtomTag
+lexicalPhraseDecisionTag rawDecision =
+  case rlpdClass rawDecision of
+    LpcExhaustion -> Just (Exhaustion "\1083\1077\1082\1089\1080\1082\1072")
+    LpcNeedContact -> Just (NeedContact "\1083\1077\1082\1089\1080\1082\1072")
+    LpcNeedMeaning -> Just (NeedMeaning "\1083\1077\1082\1089\1080\1082\1072")
+    LpcAgencyLost -> Just (AgencyLost semanticLexicalAgencyLostStrength)
+    LpcNegatedExhaustion -> Nothing
+    LpcModalAbilityContrast -> Nothing
+
+buildRawLexicalClusterMatchesFromHits :: RawLexicalClusterHits -> RawLexicalClusterMatches
+buildRawLexicalClusterMatchesFromHits rawHits =
+  RawLexicalClusterMatches
+    { rlmClusterAtoms = emitClusterHits (rlchInputLower rawHits) (rlchClusterHits rawHits)
+    , rlmLexicalAtoms = emitLexicalHits (rlchInputLower rawHits) (rlchLexicalHits rawHits)
+    }
+
+collectStructuralAtoms :: Text -> [MeaningAtom]
+collectStructuralAtoms input =
+  let inputLower = T.toLower input
+      inputTokens = tokenizeKeywordText input
+  in if containsAnyKeywordPhrase inputTokens ["что", "как", "почему"] || T.isSuffixOf "?" (T.strip input)
+       then [MeaningAtom (extractObject input) (Searching (extractObject input)) (fallbackEmbedding inputLower)]
+       else []
+
+buildRawAtomFindingsFromMatches :: RawLexicalClusterMatches -> [MeaningAtom] -> RawAtomFindings
+buildRawAtomFindingsFromMatches matches structural =
+  RawAtomFindings
+    { rafClusterAtoms = rlmClusterAtoms matches
+    , rafLexicalAtoms = rlmLexicalAtoms matches
+    , rafStructuralAtoms = structural
+    }
+
+buildAtomSetFromFindings :: RawAtomFindings -> AtomSet
+buildAtomSetFromFindings findings =
+  let allFound = rafClusterAtoms findings ++ rafLexicalAtoms findings ++ rafStructuralAtoms findings
       load = L.foldl' (\acc a -> acc + atomIntensity a) 0.0 allFound
   in AtomSet
     { asAtoms    = allFound
@@ -51,32 +269,129 @@ isExhaustionAtom atom =
 
 matchCluster :: Text -> [Text] -> ClusterDef -> [MeaningAtom]
 matchCluster inp inpTokens cd =
-  let keywords = map T.toLower (cdKeywords cd)
-      hits = filter (containsKeywordPhrase inpTokens) keywords
-  in if not (null hits)
-     then [MeaningAtom (T.intercalate ", " hits) (tagFromCluster (T.toLower $ cdName cd) (T.intercalate ", " hits)) (fallbackEmbedding inp)]
-     else []
+  emitClusterHits inp (collectRawClusterHits inpTokens cd)
+
+collectRawClusterPhraseDecisions :: [Text] -> ClusterDef -> [RawClusterPhraseDecision]
+collectRawClusterPhraseDecisions inpTokens cd =
+  let clusterName = T.toLower (cdName cd)
+      keywords = map T.toLower (cdKeywords cd)
+  in map
+       (\phrase -> RawClusterPhraseDecision clusterName phrase (containsKeywordPhrase inpTokens phrase))
+       keywords
+
+buildRawClusterPhraseContainmentFromDecisions :: [RawClusterPhraseDecision] -> [RawClusterPhraseContainment]
+buildRawClusterPhraseContainmentFromDecisions rawDecisions =
+  let matchedDecisions = filter rcpdMatched rawDecisions
+      clusterNames = L.nub (map rcpdClusterName matchedDecisions)
+      buildClusterContainment clusterName =
+        RawClusterPhraseContainment
+          clusterName
+          [ rcpdPhrase decision
+          | decision <- matchedDecisions
+          , rcpdClusterName decision == clusterName
+          ]
+  in map buildClusterContainment clusterNames
+
+collectRawClusterPhraseContainment :: [Text] -> ClusterDef -> [RawClusterPhraseContainment]
+collectRawClusterPhraseContainment inpTokens cd =
+  buildRawClusterPhraseContainmentFromDecisions (collectRawClusterPhraseDecisions inpTokens cd)
+
+collectRawClusterHits :: [Text] -> ClusterDef -> [RawClusterHit]
+collectRawClusterHits inpTokens cd =
+  concatMap buildRawClusterHitsFromPhraseContainment (collectRawClusterPhraseContainment inpTokens cd)
+
+buildRawClusterHitsFromPhraseContainment :: RawClusterPhraseContainment -> [RawClusterHit]
+buildRawClusterHitsFromPhraseContainment rawContainment =
+  [ RawClusterHit
+      (clusterPhraseContainmentTag rawContainment)
+      (rcpcMatchedKeywords rawContainment)
+  ]
+
+emitClusterHits :: Text -> [RawClusterHit] -> [MeaningAtom]
+emitClusterHits inputLower = map emitClusterHit
+  where
+    emitClusterHit rawHit =
+      MeaningAtom
+        (T.intercalate ", " (rchMatchedKeywords rawHit))
+        (rchTag rawHit)
+        (fallbackEmbedding inputLower)
 
 lexicalAtoms :: Text -> [Text] -> [MeaningAtom]
 lexicalAtoms inputLower inputTokens =
+  emitLexicalHits inputLower (collectRawLexicalHits inputTokens)
+
+collectRawLexicalPhraseDecisions :: [Text] -> [RawLexicalPhraseDecision]
+collectRawLexicalPhraseDecisions inputTokens =
   concat
-    [ detectUnless suppressedExhaustion (Exhaustion "\1083\1077\1082\1089\1080\1082\1072") exhaustionLexemes
-    , detect (NeedContact "\1083\1077\1082\1089\1080\1082\1072") contactLexemes
-    , detect (NeedMeaning "\1083\1077\1082\1089\1080\1082\1072") meaningLexemes
-    , detect (AgencyLost semanticLexicalAgencyLostStrength) agencyLostLexemes
+    [ detect LpcExhaustion exhaustionLexemes
+    , detect LpcNegatedExhaustion negatedExhaustionLexemes
+    , detect LpcModalAbilityContrast modalAbilityContrastLexemes
+    , detect LpcNeedContact contactLexemes
+    , detect LpcNeedMeaning meaningLexemes
+    , detect LpcAgencyLost agencyLostLexemes
     ]
   where
-    suppressedExhaustion = shouldSuppressExhaustion inputTokens
+    detect :: LexicalPhraseContainmentClass -> [Text] -> [RawLexicalPhraseDecision]
+    detect decisionClass lexemes =
+      map
+        (\phrase -> RawLexicalPhraseDecision decisionClass phrase (containsKeywordPhrase inputTokens phrase))
+        lexemes
 
-    detect :: AtomTag -> [Text] -> [MeaningAtom]
-    detect tag lexemes =
-      if containsAnyKeywordPhrase inputTokens lexemes
-        then [MeaningAtom "\1083\1077\1082\1089\1080\1082\1072" tag (fallbackEmbedding inputLower)]
-        else []
+collectRawLexicalPhraseContainment :: [Text] -> [RawLexicalPhraseContainment]
+collectRawLexicalPhraseContainment inputTokens =
+  buildRawLexicalPhraseContainmentFromDecisions (collectRawLexicalPhraseDecisions inputTokens)
 
-    detectUnless :: Bool -> AtomTag -> [Text] -> [MeaningAtom]
-    detectUnless suppressed tag lexemes =
-      if suppressed then [] else detect tag lexemes
+buildRawLexicalPhraseContainmentFromDecisions :: [RawLexicalPhraseDecision] -> [RawLexicalPhraseContainment]
+buildRawLexicalPhraseContainmentFromDecisions rawDecisions =
+  let lexicalClasses =
+        [ LpcExhaustion
+        , LpcNegatedExhaustion
+        , LpcModalAbilityContrast
+        , LpcNeedContact
+        , LpcNeedMeaning
+        , LpcAgencyLost
+        ]
+      matchedPhrases decisionClass =
+        [ rlpdPhrase decision
+        | decision <- rawDecisions
+        , rlpdClass decision == decisionClass
+        , rlpdMatched decision
+        ]
+      buildContainment decisionClass =
+        case matchedPhrases decisionClass of
+          [] -> []
+          hits -> [RawLexicalPhraseContainment decisionClass hits]
+  in concatMap buildContainment lexicalClasses
+
+collectRawLexicalHits :: [Text] -> [RawLexicalHit]
+collectRawLexicalHits inputTokens =
+  buildRawLexicalHitsFromPhraseContainment (collectRawLexicalPhraseContainment inputTokens)
+
+buildRawLexicalHitsFromPhraseContainment :: [RawLexicalPhraseContainment] -> [RawLexicalHit]
+buildRawLexicalHitsFromPhraseContainment rawContainments =
+  concatMap emitLexicalContainment rawContainments
+  where
+    suppressedExhaustion = any suppressesExhaustion rawContainments
+
+    emitLexicalContainment rawContainment =
+      case lexicalPhraseContainmentTag rawContainment of
+        Just tag
+          | rlpcClass rawContainment == LpcExhaustion && suppressedExhaustion -> []
+          | otherwise -> [RawLexicalHit tag (rlpcMatchedLexemes rawContainment)]
+        Nothing -> []
+
+    suppressesExhaustion rawContainment =
+      rlpcClass rawContainment == LpcNegatedExhaustion
+        || rlpcClass rawContainment == LpcModalAbilityContrast
+
+emitLexicalHits :: Text -> [RawLexicalHit] -> [MeaningAtom]
+emitLexicalHits inputLower = map emitLexicalHit
+  where
+    emitLexicalHit rawHit =
+      MeaningAtom
+        "\1083\1077\1082\1089\1080\1082\1072"
+        (rlhTag rawHit)
+        (fallbackEmbedding inputLower)
 
 exhaustionLexemes :: [Text]
 exhaustionLexemes =

@@ -6,17 +6,6 @@
 {-| Canonical top-level persisted system state plus compatibility accessors. -}
 module QxFx0.Types.State.System
   ( SystemState(..)
-  , PersistenceDomain(..)
-  , PersistenceDomainClass(..)
-  , StatePersistenceSnapshot(..)
-  , persistenceDomainClass
-  , persistenceDomainCanonicalFields
-  , persistenceDomainProjectionFields
-  , persistenceDomainTransientFields
-  , preparePersistenceSnapshot
-  , persistedCanonicalState
-  , runtimeContinuationState
-  , sanitizeForPersistence
   , ssHistory
   , ssRawInputHistory
   , ssTurnCount
@@ -53,6 +42,9 @@ module QxFx0.Types.State.System
   , ssFieldHeuristics
   , ssLearningNeedState
   , ssGovernanceRuntimeFault
+  , ssSemanticCommitments
+  , ssMetacognition
+  , ssCurrentRegime
   , appendAdaptiveMutationRecord
   , appendAdaptiveMutationRecords
   , commitGovernedPerspectiveProjection
@@ -169,21 +161,10 @@ import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
 import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
-
-data PersistenceDomain
-  = PdCoreConversation
-  | PdAdaptiveLearning
-  | PdDialogueDevelopment
-  | PdGovernanceCanonical
-  | PdGovernanceDerived
-  | PdSessionTransient
-  deriving stock (Eq, Show)
-
-data PersistenceDomainClass
-  = PdcCanonicalTruth
-  | PdcRebuildableProjection
-  | PdcRuntimeTransient
-  deriving stock (Eq, Show)
+import QxFx0.Types.State.SemanticCommitment (SemanticCommitmentStore)
+import QxFx0.Policy.Metacognition (MetacognitionContour)
+import QxFx0.Memory.Episodic (EpisodicStore)
+import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -276,14 +257,21 @@ data SystemState = SystemState
     -- ^ P5: append-only canonical governance history for high-impact
     --   governed mutations. Initialised to '[]'.
   , ssGovernanceRuntimeFault :: !(Maybe GovernanceRuntimeFault)
-    -- ^ Surfaced fail-closed governance fault marker. A populated value
-    --   means the last governed mutation attempt was non-authoritative.
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
-data StatePersistenceSnapshot = StatePersistenceSnapshot
-  { spsCanonicalState :: !SystemState
-  , spsRuntimeContinuation :: !SystemState
+  , ssSemanticCommitments :: !(Maybe SemanticCommitmentStore)
+    -- ^ P2: typed commitment store for semantic authority.  @Nothing@
+    --   means Package 2 has not yet initialised the store; @Just@ means
+    --   commitments can be created, revised, retracted, and contradicted.
+  , ssMetacognition :: !(Maybe MetacognitionContour)
+    -- ^ P9: metacognitive correction loop state.  @Nothing@ until the
+    --   first turn; @Just@ after the first runMetacognitionLoop call.
+  , ssEpisodic :: !(Maybe EpisodicStore)
+    -- ^ P7: episodic memory store.  @Nothing@ until the first turn's
+    --   encode call; @Just@ after the first encode.
+  , ssCurrentRegime :: !RuntimeRegime
+    -- ^ M5: the runtime regime active for this session. Records which
+    --   math version and feature flags are in effect, making governance
+    --   machine-visible. Initialised to 'defaultRuntimeRegime' on
+    --   bootstrap; updated when a promotion ADR is executed.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -344,7 +332,11 @@ instance ToJSON SystemState where
          , "beliefStore" .= ssBeliefStore ss
          , "governanceHistory" .= ssGovernanceHistory ss
          , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
-         ]
+          , "semanticCommitments" .= ssSemanticCommitments ss
+           , "metacognition" .= ssMetacognition ss
+           , "episodic" .= ssEpisodic ss
+           , "currentRegime" .= ssCurrentRegime ss
+           ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -437,6 +429,10 @@ instance FromJSON SystemState where
             <*> pure emptyGovernanceProjection
             <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "governanceHistory" else o .:? "governanceHistory" .!= [])
             <*> o .:? "governanceRuntimeFault" .!= Nothing
+            <*> o .:? "semanticCommitments" .!= Nothing
+            <*> o .:? "metacognition" .!= Nothing
+            <*> o .:? "episodic" .!= Nothing
+            <*> o .:? "currentRegime" .!= defaultRuntimeRegime
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -483,6 +479,8 @@ ssIdentityClaims = idsIdentityClaims . ssIdentity
 ssOrbitalMemory :: SystemState -> OrbitalMemory
 ssOrbitalMemory = idsOrbitalMemory . ssIdentity
 
+-- | Legacy persisted shapes may omit or null this field; both decode to
+-- Nothing and runtime repopulates it opportunistically per turn.
 ssLastGuardReport :: SystemState -> Maybe IdentityGuardReport
 ssLastGuardReport = idsLastGuardReport . ssIdentity
 
@@ -580,96 +578,6 @@ appendGovernanceEventRecord event ss = do
   history <- appendGovernanceEventToHistory event (ssGovernanceHistory ss)
   pure ss { ssGovernanceHistory = history }
 
-persistenceDomainClass :: PersistenceDomain -> PersistenceDomainClass
-persistenceDomainClass domain =
-  case domain of
-    PdGovernanceDerived -> PdcRebuildableProjection
-    PdSessionTransient -> PdcRuntimeTransient
-    _ -> PdcCanonicalTruth
-
-persistenceDomainCanonicalFields :: PersistenceDomain -> [Text]
-persistenceDomainCanonicalFields domain = case domain of
-  PdCoreConversation ->
-    [ "ssDialogue"
-    , "ssIdentity"
-    , "ssSemantic"
-    , "ssSessionId"
-    , "ssMorphology"
-    , "ssObservability"
-    , "ssEssence"
-    , "ssTruthContractStatus"
-    ]
-  PdAdaptiveLearning ->
-    [ "ssSalienceWeights"
-    , "ssFieldHeuristics"
-    , "ssShadowVetoState"
-    , "ssProvisionalAtoms"
-    , "ssLearningNeedState"
-    , "ssGuardrailState"
-    , "ssCalibrationLog"
-    , "ssKnowledgeTree"
-    , "ssToolReliability"
-    , "ssCalibrationSnapshots"
-    , "ssAdaptiveMutationLog"
-    ]
-  PdDialogueDevelopment ->
-    [ "ssDialogueOutcomeLearning"
-    , "ssDialogueThread"
-    , "ssDialogueCommitmentLedger"
-    , "ssDialoguePhase"
-    , "ssSpeechPolicyState"
-    , "ssBeliefStore"
-    ]
-  PdGovernanceCanonical ->
-    [ "ssGovernanceHistory" ]
-  _ -> []
-
-persistenceDomainProjectionFields :: PersistenceDomain -> [Text]
-persistenceDomainProjectionFields domain = case domain of
-  PdGovernanceDerived ->
-    [ "ssPerspectiveRegistry"
-    , "ssGovernanceProjection"
-    ]
-  _ -> []
-
-persistenceDomainTransientFields :: PersistenceDomain -> [Text]
-persistenceDomainTransientFields domain = case domain of
-  PdSessionTransient ->
-    [ "ssGovernanceRuntimeFault"
-    , "ssOutputMode"
-    ]
-  _ -> []
-
-persistedCanonicalState :: Text -> SystemState -> SystemState
-persistedCanonicalState sessionId ss =
-  ss
-    { ssSessionId = sessionId
-    , ssOutputMode = DialogueOutput
-    , ssTruthContractStatus = persistenceCanonicalTruthStatus (ssTruthContractStatus ss)
-    , ssPerspectiveRegistry = emptyPerspectiveRegistry
-    , ssGovernanceProjection = emptyGovernanceProjection
-    , ssGovernanceRuntimeFault = Nothing
-    }
-
-persistenceCanonicalTruthStatus :: TruthContractStatus -> TruthContractStatus
-persistenceCanonicalTruthStatus status
-  | status `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = status
-  | otherwise = AssembledSurfacePreserved
-
-runtimeContinuationState :: Text -> SystemState -> SystemState
-runtimeContinuationState sessionId ss =
-  ss { ssSessionId = sessionId }
-
-preparePersistenceSnapshot :: Text -> SystemState -> StatePersistenceSnapshot
-preparePersistenceSnapshot sessionId ss =
-  StatePersistenceSnapshot
-    { spsCanonicalState = persistedCanonicalState sessionId ss
-    , spsRuntimeContinuation = runtimeContinuationState sessionId ss
-    }
-
-sanitizeForPersistence :: Text -> SystemState -> SystemState
-sanitizeForPersistence = persistedCanonicalState
-
 emptySystemState :: SystemState
 emptySystemState = SystemState
   { ssDialogue = emptyDialogueState
@@ -702,6 +610,10 @@ emptySystemState = SystemState
   , ssGovernanceProjection = emptyGovernanceProjection
   , ssGovernanceHistory = []
   , ssGovernanceRuntimeFault = Nothing
+  , ssSemanticCommitments = Nothing
+  , ssMetacognition = Nothing
+  , ssEpisodic = Nothing
+  , ssCurrentRegime = defaultRuntimeRegime
   }
 
 emptyGovernanceProjection :: GovernanceProjection

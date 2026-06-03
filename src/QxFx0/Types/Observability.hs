@@ -7,6 +7,7 @@ module QxFx0.Types.Observability
   ( LogicalBond
   , AuthorityClass(..)
   , TruthContractStatus(..)
+  , ResponseSurfaceKind(..)
   , AssemblyPath(..)
   , ReplayProvenanceStatus(..)
   , ArtifactManifest(..)
@@ -111,6 +112,17 @@ data TruthContractStatus
 instance ToJSON TruthContractStatus where toJSON = genericToJSON defaultOptions
 instance FromJSON TruthContractStatus where parseJSON = genericParseJSON defaultOptions
 
+data ResponseSurfaceKind
+  = SurfaceAuthoritative
+  | SurfaceAdvisory
+  | SurfaceDegraded
+  | SurfaceFallback
+  | SurfaceObservationalOnly
+  deriving stock (Eq, Ord, Show, Read, Generic, Bounded, Enum)
+  deriving anyclass (NFData)
+instance ToJSON ResponseSurfaceKind where toJSON = genericToJSON defaultOptions
+instance FromJSON ResponseSurfaceKind where parseJSON = genericParseJSON defaultOptions
+
 data AssemblyPath
   = DialogueAssemblyRoute
   | FactualAssemblyRoute
@@ -163,6 +175,7 @@ data ExecutedTurnOutcome = ExecutedTurnOutcome
   , etoForce :: !IllocutionaryForce
   , etoAuthorityClass :: !AuthorityClass
   , etoTruthContractStatus :: !TruthContractStatus
+  , etoResponseSurfaceKind :: !ResponseSurfaceKind
   , etoContractProvenance :: !ContractProvenance
   , etoSurfaceProvenance :: !SurfaceProvenance
   , etoAssemblyPath :: !AssemblyPath
@@ -186,6 +199,7 @@ mkExecutedTurnOutcome family force authority contractProv surfaceProv assemblyPa
   let bad condition msg = if condition then Left msg else Right ()
       transitionWon = authority `elem` [AuthorityCanonical, AuthorityAssembled]
       truthStatus = truthContractStatusForAuthority authority assemblyPath
+      responseSurfaceKind = responseSurfaceKindFor authority truthStatus
   bad (assemblyPath == RussianCompatShimRoute && authority /= AuthorityShim)
       "executed_outcome_invalid:russian_compat_must_be_shim"
   bad (assemblyPath == GuardRecoveryRoute && transitionWon)
@@ -197,6 +211,7 @@ mkExecutedTurnOutcome family force authority contractProv surfaceProv assemblyPa
     , etoForce = force
     , etoAuthorityClass = authority
     , etoTruthContractStatus = truthStatus
+    , etoResponseSurfaceKind = responseSurfaceKind
     , etoContractProvenance = contractProv
     , etoSurfaceProvenance = surfaceProv
     , etoAssemblyPath = assemblyPath
@@ -215,6 +230,18 @@ truthContractStatusForAuthority authority assemblyPath =
     (AuthorityDefault, _) -> DefaultedSurface
     (AuthorityGeneratedArtifact, _) -> GeneratedArtifactSurface
     (AuthorityLegacyIncomplete, _) -> LegacyIncompleteSurface
+
+responseSurfaceKindFor :: AuthorityClass -> TruthContractStatus -> ResponseSurfaceKind
+responseSurfaceKindFor authority truthStatus =
+  case authority of
+    AuthorityCanonical -> SurfaceAuthoritative
+    AuthorityAssembled -> SurfaceAdvisory
+    AuthorityRecovery -> SurfaceDegraded
+    AuthorityFallback -> SurfaceFallback
+    AuthorityShim -> SurfaceDegraded
+    AuthorityDefault -> SurfaceAdvisory
+    AuthorityGeneratedArtifact -> SurfaceObservationalOnly
+    AuthorityLegacyIncomplete -> SurfaceObservationalOnly
 
 data ContractProvenance
   = BuiltClaim | FallbackRoute | RecoveryRoute

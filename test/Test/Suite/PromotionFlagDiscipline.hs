@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
 Module      : Test.Suite.PromotionFlagDiscipline
@@ -12,13 +12,14 @@ defines 4 gates (G1-G4) for promoting a
 canonical-flag-off contour to the runtime path.
 The 5 promotion candidates are:
 
-  * **Essence** (ADR-0018 proposed) —
+  * **Essence** (ADR-0036 proposed) —
     @essenceCommitmentEnabled@ (env var
     @QXFX0_ESSENCE_COMMITMENT_ENABLED@, not in
     code at the Haskell level)
-  * **Family Divergence** (ADR-0019 proposed) —
-    @familyDivergenceEnabled = False@ literal at
+  * **Family Divergence** (ADR-0019 accepted 2026-06-02) —
+    @familyDivergenceEnabled = True@ literal at
     @src/QxFx0/Core/TurnRouting/Cascade.hs:74@
+    **PROMOTED** — flag is now in the live authority path.
   * **Perspective Operator** (ADR-0020 proposed) —
     @QXFX0_PERSPECTIVE_OPERATOR_ENABLED@ (env
     var, flag not yet in code per AGENTS.md P4)
@@ -33,27 +34,25 @@ discipline. The discipline says:
 
   * a flag flips to @True@ **only** via the
     playbook's G3 release event;
-  * the current state of every flag is
-    @off@ (either @False@ literal or absent);
+  * flags not yet promoted remain @off@
+    (either @False@ literal or absent);
   * the documentation ('PROMOTION_PLAYBOOK.md',
     'AUTHORITY_MAP.md §6', the per-ADR §N) is
     consistent with the code.
 
 == What this test does
 
-For each of the 5 promotion candidates:
+For each of the 4 not-yet-promoted candidates:
 
   1. search 'src/' for the flag name;
   2. assert the flag is either absent (not yet
      in code) or set to @False@ literal;
   3. assert no @= True@ literal exists in
-     production code (only the test file may
-     reference it, and only in comments).
+     production code.
 
-For Family Divergence (the most concrete case),
-the test additionally asserts that the
-@familyDivergenceEnabled = False@ literal is at
-the **documented location** (Cascade.hs:74).
+For Family Divergence (ADR-0019, **promoted**), the
+test asserts that the @familyDivergenceEnabled = True@
+literal is at the documented location (Cascade.hs:74).
 
 == What this test does NOT do
 
@@ -62,11 +61,6 @@ It does not assert that the env vars
 time — those are runtime concerns. The test
 locks the **code-level discipline**, not the
 **runtime configuration**.
-
-It does not assert that the G1-G4 gates have
-been completed for any flag. That is the
-playbook's responsibility; the test only
-ensures the flag is not flipped prematurely.
 -}
 module Test.Suite.PromotionFlagDiscipline
   ( promotionFlagDisciplineTests
@@ -75,33 +69,27 @@ module Test.Suite.PromotionFlagDiscipline
 import Test.HUnit (Test (..), assertFailure, assertBool)
 
 import Control.Exception (SomeException, catch)
-import Prelude (Bool (..), Eq, FilePath, IO, Show, String, all, filter, lines, mapM, not, null, unlines, (.))
+import Prelude
 
+import Data.List (isInfixOf, isPrefixOf)
 import qualified Data.List as L
 import qualified System.Directory as D
 import qualified System.FilePath as FP
 
--- | The 5 promotion candidates. Each tuple is
--- (contour name, primary flag identifier,
--- fallback env var, documented location, is in
--- code). The 'isInCode' flag distinguishes
--- "literal in code" from "env var only".
---
--- Adding a promotion candidate: append a tuple.
+-- | A promotion candidate that is NOT YET promoted.
+-- Flag must be absent or False in src/.
 data PromotionCandidate = PromotionCandidate
   { pcName        :: !String
   , pcFlagName    :: !String     -- primary identifier in code
   , pcEnvVar      :: !String     -- env var name (may be same as pcFlagName)
-  , pcDocLocation :: !String     -- documented location (e.g. "Cascade.hs:74")
+  , pcDocLocation :: !String     -- documented location
   , pcInCode      :: !Bool       -- True if the flag is a Haskell-level literal
   }
   deriving stock (Eq, Show)
 
--- | The 5 promotion candidates. Order matches
--- the playbook. The 'pcInCode' field is True
--- only for Family Divergence (the only flag
--- currently a Haskell literal); the other 4
--- are env-var-only per AGENTS.md.
+-- | The 4 not-yet-promoted candidates (Family Divergence is now promoted).
+-- Order matches the playbook. The 'pcInCode' field is True
+-- only for flags that are Haskell literals; env-var-only flags are False.
 promotionCandidates :: [PromotionCandidate]
 promotionCandidates =
   [ PromotionCandidate
@@ -110,13 +98,6 @@ promotionCandidates =
       , pcEnvVar      = "QXFX0_ESSENCE_COMMITMENT_ENABLED"
       , pcDocLocation = "integration level (env var, not in Haskell)"
       , pcInCode      = False
-      }
-  , PromotionCandidate
-      { pcName        = "Family Divergence"
-      , pcFlagName    = "familyDivergenceEnabled"
-      , pcEnvVar      = "QXFX0_FAMILY_DIVERGENCE_ENABLED"
-      , pcDocLocation = "src/QxFx0/Core/TurnRouting/Cascade.hs:74"
-      , pcInCode      = True
       }
   , PromotionCandidate
       { pcName        = "Perspective Operator"
@@ -145,9 +126,7 @@ promotionCandidates =
 readFileOrEmpty :: FilePath -> IO String
 readFileOrEmpty path = (readFile path) `catch` (\(_ :: SomeException) -> return "")
 
--- | Walk 'src/' recursively. Returns all .hs
--- files. Shallow + recursive is fine for the
--- 5K-file codebase.
+-- | Walk 'src/' recursively. Returns all .hs files.
 listHsFilesRecursive :: FilePath -> IO [FilePath]
 listHsFilesRecursive dir = do
   exists <- D.doesDirectoryExist dir
@@ -164,19 +143,13 @@ listHsFilesRecursive dir = do
         then listHsFilesRecursive entryPath
         else return [entryPath | FP.takeExtension entry == ".hs"]
 
--- | For a single promotion candidate, search
--- 'src/' for the flag name and assert:
---   * no @= True@ literal exists in production code;
---   * if 'pcInCode' is True, at least one
---     @= False@ literal exists at the documented
---     location.
+-- | For a single not-yet-promoted candidate, assert the off-state.
 assertCandidateOffState :: PromotionCandidate -> IO [String]
 assertCandidateOffState pc = do
   files <- listHsFilesRecursive "src"
   contents <- mapM (\f -> do
                       c <- readFileOrEmpty f
                       return (f, c)) files
-  -- Find any line that references the flag.
   let referencing = concat
         [ [ f <> ":" <> show lineNo <> ": " <> line
           | (lineNo, line) <- zip [1 :: Int ..] (L.lines c)
@@ -184,10 +157,7 @@ assertCandidateOffState pc = do
           ]
         | (f, c) <- contents
         ]
-  -- 1. No "= True" literal for the flag.
   let trueLiterals = filter (L.isInfixOf "= True") referencing
-  -- 2. If the flag is in code, at least one
-  --    "= False" literal exists.
   let falseLiterals = filter (L.isInfixOf "= False") referencing
   let failures = concat
         [ [ pcName pc <> ": " <> pcFlagName pc
@@ -205,10 +175,9 @@ assertCandidateOffState pc = do
         ]
   return failures
 
--- | The runtime check: for each of the 5
--- promotion candidates, assert the off-state.
+-- | The runtime check: the 4 not-yet-promoted candidates are at off-state.
 promotionFlagOffState :: Test
-promotionFlagOffState = TestLabel "all 5 promotion candidates are at their documented off-state" $
+promotionFlagOffState = TestLabel "4 not-yet-promoted candidates are at their documented off-state" $
   TestCase $ do
     allFailures <- mapM assertCandidateOffState promotionCandidates
     let flat = concat allFailures
@@ -220,22 +189,21 @@ promotionFlagOffState = TestLabel "all 5 promotion candidates are at their docum
           : flat
         ))
 
--- | The Family Divergence location check: the
--- @= False@ literal must be at the documented
--- location (Cascade.hs:74).
-familyDivergenceLocationCheck :: Test
-familyDivergenceLocationCheck = TestLabel "Family Divergence flag is at the documented location (Cascade.hs:74)" $
+-- | Family Divergence promoted check: the @= True@ literal must be at
+-- Cascade.hs:74 (ADR-0019 accepted 2026-06-02).
+familyDivergencePromotedCheck :: Test
+familyDivergencePromotedCheck = TestLabel "Family Divergence flag is promoted (= True) at Cascade.hs:74 (ADR-0019)" $
   TestCase $ do
     let path = "src/QxFx0/Core/TurnRouting/Cascade.hs"
     contents <- readFileOrEmpty path
-    let linesWithFlag = filter
-          (\line -> "familyDivergenceEnabled = False" `L.isInfixOf` line)
+    let linesWithTrue = filter
+          (\line -> "familyDivergenceEnabled = True" `L.isInfixOf` line)
           (L.lines contents)
     assertBool
-      ("Family Divergence flag not found at documented location "
-       <> "(" <> path <> ", expected 'familyDivergenceEnabled = False' literal): "
-       <> "the file is missing the literal, or the literal is not '= False'.")
-      (not (null linesWithFlag))
+      ("Family Divergence flag not found at promoted state "
+       <> "(" <> path <> ", expected 'familyDivergenceEnabled = True' literal): "
+       <> "ADR-0019 was accepted 2026-06-02; the flag should be True.")
+      (not (null linesWithTrue))
 
 -- ---------------------------------------------------------------------------
 -- The test group
@@ -244,5 +212,6 @@ familyDivergenceLocationCheck = TestLabel "Family Divergence flag is at the docu
 promotionFlagDisciplineTests :: [Test]
 promotionFlagDisciplineTests =
   [ promotionFlagOffState
-  , familyDivergenceLocationCheck
+  , familyDivergencePromotedCheck
   ]
+

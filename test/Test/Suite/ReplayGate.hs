@@ -44,7 +44,7 @@ import Test.HUnit (Test (..), assertBool, (@?=))
 
 import Data.Function (($))
 import Data.Text (Text)
-import Prelude (Bool (..), Eq, Show, not, null, show)
+import Prelude
 
 import QxFx0.Self.Conatus
   ( ConatusEnergy (..)
@@ -105,7 +105,7 @@ p1Serializable = TestLabel "P1: every canonical contour is serializable" $
     assertBool ("P1: show (ReplayField f) is empty: " <> s2)
                (not (null s2))
     -- Salience
-    let s3 = show (ReplaySalience s)
+    let s3 = show (ReplaySalience (s f))
     assertBool ("P1: show (ReplaySalience s) is empty: " <> s3)
                (not (null s3))
 
@@ -134,8 +134,8 @@ p2Replayable = TestLabel "P2: compute functions are deterministic" $
         f2 = combineField CombineMaxima emptyField emptyField
     f1 @?= f2
     -- Salience
-    let s1 = computeSalience defaultSalienceWeights ce1
-        s2 = computeSalience defaultSalienceWeights ce1
+    let s1 = computeSalience defaultSalienceWeights ce1 emptyField
+        s2 = computeSalience defaultSalienceWeights ce1 emptyField
     s1 @?= s2
 
 -- ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ replayContour :: ReplaySnapshot -> ReplayGateOutput
 replayContour (ReplaySnapshot b w _) =
   let ce = computeConatusEnergy b []
       s  = computeSalience w ce
-  in ReplaySalience s  -- the salience is the "final" output; conatus is an intermediate
+  in ReplaySalience (s emptyField)
 
 p3Reconstructable :: Test
 p3Reconstructable = TestLabel "P3: replay from snapshot is total" $
@@ -204,18 +204,18 @@ p4TraceExplainable = TestLabel "P4: every canonical contour has a named trc* fie
     -- visible in the docs).
     let conatusField = "trcConatusEnergy" :: Text
         fieldField   = "trcField"         :: Text
-        salienceField = "trcSalienceVerdict" :: Text
-        deliberationField = "trcDeliberationOutcome" :: Text
-        identityField = "trcIdentityClaim" :: Text
+        salienceField = "trcSalienceDriver" :: Text
+        deliberationField = "trcDeliberationRule" :: Text
+        identityField = "trcIdentityClaims" :: Text
     assertBool ("P4: trcConatusEnergy is empty: " <> show conatusField)
                (not (null (show conatusField)))
     assertBool ("P4: trcField is empty: " <> show fieldField)
                (not (null (show fieldField)))
-    assertBool ("P4: trcSalienceVerdict is empty: " <> show salienceField)
+    assertBool ("P4: trcSalienceDriver is empty: " <> show salienceField)
                (not (null (show salienceField)))
-    assertBool ("P4: trcDeliberationOutcome is empty: " <> show deliberationField)
+    assertBool ("P4: trcDeliberationRule is empty: " <> show deliberationField)
                (not (null (show deliberationField)))
-    assertBool ("P4: trcIdentityClaim is empty: " <> show identityField)
+    assertBool ("P4: trcIdentityClaims is empty: " <> show identityField)
                (not (null (show identityField)))
 
 -- ---------------------------------------------------------------------------

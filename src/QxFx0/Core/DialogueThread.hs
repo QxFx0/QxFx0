@@ -1,7 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Core.DialogueThread
-  ( deriveDialogueThread
+  ( CommitmentAdmissionInput(..)
+  , CommitmentAdmissionDecision(..)
+  , deriveDialogueCommitmentCandidate
+  , admitDialogueCommitmentCandidate
+  , admitDialogueCommitmentLedger
+  , deriveDialogueThread
   , deriveDialogueCommitmentLedger
   , deriveDialoguePhase
   , commitmentAllowsAdvance
@@ -12,10 +17,24 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.Input.Model
 import QxFx0.Types.State.DialogueDevelopment
 import QxFx0.Types.State.Dialogue
 import QxFx0.Types.State.Perspective (PerspectiveScope(..))
+import QxFx0.Types (TruthContractStatus)
+
+data CommitmentAdmissionInput = CommitmentAdmissionInput
+  { caiTruthContractStatus :: !TruthContractStatus
+  , caiConatusGateFired :: !Bool
+  } deriving (Eq, Show)
+
+data CommitmentAdmissionDecision
+  = CadAdmitCanonical
+  | CadCapUnresolved
+  | CadPreserveContested
+  | CadSuspendStrengthening
+  deriving (Eq, Show)
 
 deriveDialogueThread :: DialogueThread -> DialogueCommitmentLedger -> DialogueState -> UtteranceSemanticFrame -> DialogueThread
 deriveDialogueThread previous ledger dialogue frame =
@@ -71,15 +90,49 @@ deriveStructuralScope previous ledger frame focus =
     normalizeScopeKey = T.unwords . T.words . T.toLower . T.strip
 
 deriveDialogueCommitmentLedger :: DialogueCommitmentLedger -> UtteranceSemanticFrame -> DialogueCommitmentLedger
-deriveDialogueCommitmentLedger (DialogueCommitmentLedger existing) frame =
+deriveDialogueCommitmentLedger existing frame =
+  mergeDialogueCommitmentCandidate existing (deriveDialogueCommitmentCandidate frame)
+
+deriveDialogueCommitmentCandidate :: UtteranceSemanticFrame -> Maybe DialogueCommitment
+deriveDialogueCommitmentCandidate frame =
+  -- This stage builds a semantic commitment candidate from local dialogue
+  -- content only. Constitutional contours (truth contract, conatus gate,
+  -- recovery/non-authoritative state, route legality, and post-turn
+  -- admissibility) still govern whether that candidate later strengthens,
+  -- stays unresolved, is contested, or is suspended inside canonical
+  -- commitment state.
   let currentClaim = firstNonEmpty [usfTopic frame, usfFocus frame, usfRawText frame]
-      nextItem
-        | T.null currentClaim = Nothing
-        | usfSpeechAct frame == ActAsk = Just (DialogueCommitment currentClaim CsUnresolved 0)
-        | usfPolarity frame == PolarityNegative = Just (DialogueCommitment currentClaim CsContested 0)
-        | otherwise = Just (DialogueCommitment currentClaim CsAccepted 0)
-      merged = take 16 (existing ++ maybe [] pure nextItem)
-  in DialogueCommitmentLedger merged
+  in if T.null currentClaim
+       then Nothing
+       else if usfSpeechAct frame == ActAsk
+         then Just (DialogueCommitment currentClaim CsUnresolved 0)
+         else if usfPolarity frame == PolarityNegative
+           then Just (DialogueCommitment currentClaim CsContested 0)
+           else Just (DialogueCommitment currentClaim CsAccepted 0)
+
+mergeDialogueCommitmentCandidate :: DialogueCommitmentLedger -> Maybe DialogueCommitment -> DialogueCommitmentLedger
+mergeDialogueCommitmentCandidate (DialogueCommitmentLedger existing) mCandidate =
+  DialogueCommitmentLedger (take 16 (existing ++ maybe [] pure mCandidate))
+
+admitDialogueCommitmentCandidate :: CommitmentAdmissionInput -> DialogueCommitment -> (DialogueCommitment, CommitmentAdmissionDecision)
+admitDialogueCommitmentCandidate input candidate
+  | caiConatusGateFired input =
+      case dcStatus candidate of
+        CsAccepted -> (candidate { dcStatus = CsSuspended }, CadSuspendStrengthening)
+        CsContested -> (candidate { dcStatus = CsSuspended }, CadSuspendStrengthening)
+        CsSuspended -> (candidate, CadSuspendStrengthening)
+        CsUnresolved -> (candidate, CadCapUnresolved)
+  | not (truthContractIsAuthoritative (caiTruthContractStatus input)) =
+      case dcStatus candidate of
+        CsAccepted -> (candidate { dcStatus = CsUnresolved }, CadCapUnresolved)
+        CsContested -> (candidate, CadPreserveContested)
+        CsSuspended -> (candidate, CadSuspendStrengthening)
+        CsUnresolved -> (candidate, CadCapUnresolved)
+  | otherwise = (candidate, CadAdmitCanonical)
+
+admitDialogueCommitmentLedger :: CommitmentAdmissionInput -> DialogueCommitmentLedger -> Maybe DialogueCommitment -> DialogueCommitmentLedger
+admitDialogueCommitmentLedger input priorLedger mCandidate =
+  mergeDialogueCommitmentCandidate priorLedger (fmap (fst . admitDialogueCommitmentCandidate input) mCandidate)
 
 deriveDialoguePhase :: DialogueThread -> DialogueCommitmentLedger -> UtteranceSemanticFrame -> DialoguePhase
 deriveDialoguePhase thread ledger frame

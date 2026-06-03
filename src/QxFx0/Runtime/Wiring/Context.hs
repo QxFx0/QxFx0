@@ -53,7 +53,7 @@ import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..), ResponseObservation,
 import QxFx0.Core.Intuition (IntuitiveState, defaultIntuitiveState)
 import QxFx0.Core.SessionLock (SessionLockManager, newSessionLockManager, withSessionLock)
 import QxFx0.Resources (getNixGuardPath)
-import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
+import QxFx0.Runtime.Mode (RuntimeMode, resolveRuntimeMode)
 import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealthWithManager, checkEmbeddingHealthWithManager)
 import QxFx0.Types (SystemState, ssIntuitionState, ssTurnCount)
 import Network.HTTP.Client (Manager, closeManager, newManager)
@@ -171,7 +171,7 @@ buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager tim
 
 withRuntimeSession :: RuntimeContext -> Text -> IO a -> IO a
 withRuntimeSession ctx sessionId action = do
-  lockEnabled <- readSessionLockFlag (rcMode ctx)
+  lockEnabled <- readSessionLockFlag
   if lockEnabled
     then withSessionLock (rtlSession (rcLocks ctx)) sessionId action
     else action
@@ -254,15 +254,15 @@ resolveSouffleExecutableCached ctx = do
       modifyMVar_ (rtrSoufflePath (rcTurn ctx)) $ \_ -> pure (Just result)
       pure result
 
-readSessionLockFlag :: RuntimeMode -> IO Bool
-readSessionLockFlag runtimeMode = do
+readSessionLockFlag :: IO Bool
+readSessionLockFlag = do
   mVal <- lookupEnv "QXFX0_SESSION_LOCK"
   pure $ case mVal of
     Nothing -> True
     Just raw ->
       case map Char.toLower raw of
-        "off" -> runtimeMode /= StrictRuntime
-        "0" -> runtimeMode /= StrictRuntime
+        "off" -> False
+        "0" -> False
         "on" -> True
         "1" -> True
         _ -> True

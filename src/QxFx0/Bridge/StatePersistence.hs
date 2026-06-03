@@ -1,9 +1,12 @@
 {-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData, RankNTypes #-}
 module QxFx0.Bridge.StatePersistence
   ( saveState
+  , saveStateExpected
   , saveStateWithProjection
+  , saveStateWithProjectionExpected
   , rollbackTurnProjections
   , loadState
+  , loadStateRevision
   , stateBlobDiagnostics
   -- Re-exported from QxFx0.Types.Persistence for backward compatibility
   , PersistenceDiagnostic(..)
@@ -12,13 +15,10 @@ module QxFx0.Bridge.StatePersistence
   , renderPersistenceDiagnostics
   ) where
 
-import QxFx0.Types.State
-  ( StatePersistenceSnapshot(..)
-  , SystemState(..)
-  , preparePersistenceSnapshot
-  , runtimeContinuationState
-  , ssTurnCount
-  )
+import QxFx0.Types.State (SystemState(..), emptySystemState, ssTurnCount)
+import QxFx0.Types.State.Perspective (emptyPerspectiveRegistry)
+import QxFx0.Types.State.Identity (IdentityState(..))
+import QxFx0.Types.State.Semantic (SemanticState(..))
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
@@ -26,8 +26,10 @@ import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
 import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
 import QxFx0.Types.Persistence
   ( PersistenceDiagnostic(..)
+  , PersistenceEnvelope(..)
   , PersistenceStage(..)
   , LoadStateResult(..)
+  , currentPersistenceEnvelopeVersion
   , renderPersistenceDiagnostics
   )
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree(..))
@@ -47,9 +49,9 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
-import Control.Exception (evaluate, finally, mask, onException)
+import Control.Exception (finally, mask, onException)
 import Control.Exception (try)
-import Data.Text.Encoding.Error (UnicodeException)
+import Data.Text.Encoding.Error (UnicodeException, lenientDecode)
 import Control.Monad (when)
 import System.IO (hPutStrLn, stderr)
 
@@ -83,23 +85,45 @@ logPersistenceCounts label ss = do
 saveState :: DbRunner -> SystemState -> Text -> IO (Either PersistenceDiagnostic SystemState)
 saveState withDb ss sessionId = saveStateWithProjection withDb ss sessionId Nothing
 
+saveStateExpected :: DbRunner -> SystemState -> Text -> Int -> IO (Either PersistenceDiagnostic SystemState)
+saveStateExpected withDb ss sessionId expectedRevision = saveStateWithProjectionExpected withDb ss sessionId expectedRevision Nothing
+
 saveStateWithProjection :: DbRunner -> SystemState -> Text -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
 saveStateWithProjection withDb ss sessionId mProjection = do
+  expectedRevision <- loadStateRevision withDb sessionId
+  saveStateWithProjectionExpected withDb ss sessionId expectedRevision mProjection
+
+saveStateWithProjectionExpected :: DbRunner -> SystemState -> Text -> Int -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
+saveStateWithProjectionExpected withDb ss sessionId expectedRevision mProjection = do
   logPersistenceCounts "pre_save" ss
-  let persistenceSnapshot = preparePersistenceSnapshot sessionId ss
-      persistedState = spsCanonicalState persistenceSnapshot
-      runtimeState = spsRuntimeContinuation persistenceSnapshot
+  let liveState = ss { ssSessionId = sessionId }
+      persistedState = canonicalizePersistedState liveState
+      _envelope = PersistenceEnvelope
+        { peVersion = currentPersistenceEnvelopeVersion
+        , peState = persistedState
+        }
   result <- tryQxFx0 $ withDb $ \db -> do
     withImmediateTransaction db $ do
+      let jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState
+      bumpStateRevisionCas db sessionId expectedRevision (ssTurnCount ss - 1)
       touchRuntimeSessionActivity db sessionId
-      persistSystemBlob db sessionId persistedState
-      persistTurnArtifacts db sessionId mProjection
+      saveKV db sessionId "__system_state__" jsonBlob
 
-      pure runtimeState
+      case mProjection of
+        Nothing -> pure ()
+        Just projection -> do
+          persistTurnQuality db sessionId projection
+          when (tqpDivergence projection) $
+            persistShadowDivergence db sessionId projection
+
+      pure liveState
   case result of
     Left (PersistenceTxError stage msg) -> do
       hPutStrLn stderr $ "[persistence_debug] save_tx_error session=" <> T.unpack sessionId <> " stage=" <> show stage <> " detail=" <> T.unpack msg
       pure (Left (diagnoseSave stage (Just msg)))
+    Left (PersistenceConflict sid expected actual priorTurn) -> do
+      hPutStrLn stderr $ "[persistence_debug] save_conflict session=" <> T.unpack sid <> " expected_revision=" <> show expected <> " actual_revision=" <> show actual <> " expected_prior_turn=" <> show priorTurn
+      pure (Left (PdStateRevisionConflict sid expected actual priorTurn))
     Left other -> do
       hPutStrLn stderr $ "[persistence_debug] save_unknown_qxfx0_exception session=" <> T.unpack sessionId <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog other)
       pure (Left (PdSaveFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))
@@ -159,6 +183,18 @@ touchRuntimeSessionActivity db sessionId = do
   bindTextOrFail ts 1 sessionId
   stepOrFail ts
 
+bumpStateRevisionCas :: NSQL.Database -> Text -> Int -> Int -> IO ()
+bumpStateRevisionCas db sessionId expectedRevision expectedPriorTurn = do
+  let sql = "UPDATE runtime_sessions SET state_revision = state_revision + 1 WHERE id = ? AND state_revision = ?"
+  ts <- prepareTx db "state_revision_cas" sql
+  bindTextOrFail ts 1 sessionId
+  bindIntOrFail ts 2 expectedRevision
+  stepOrFail ts
+  changed <- sqliteChanges db
+  when (changed /= 1) $ do
+    actualRevision <- loadStateRevisionDirect db sessionId
+    throwQxFx0 (PersistenceConflict sessionId expectedRevision actualRevision expectedPriorTurn)
+
 loadState :: DbRunner -> Text -> IO LoadStateResult
 loadState withDb sessionId = withDb $ \db -> do
   mBlobResult <- try (loadKV db sessionId "__system_state__") :: IO (Either UnicodeException (Maybe Text))
@@ -169,42 +205,30 @@ loadState withDb sessionId = withDb $ \db -> do
     Right mBlob ->
       case mBlob of
         Just blob ->
-          case Aeson.eitherDecodeStrict (TE.encodeUtf8 blob) of
+          case decodePersistedState blob of
             Right ss ->
-              if persistedTruthIsAuthoritative (ssTruthContractStatus ss)
-                then do
-                  case rebuildGovernedSystemState ss of
-                    Right rebuilt -> do
-                      let restored = runtimeContinuationState sessionId rebuilt
-                      logPersistenceCounts "post_load" restored
-                      pure (LoadStateRestored restored)
-                    Left err -> do
-                      hPutStrLn stderr $ "[persistence_debug] governance_rebuild_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack err
-                      pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["governance_rebuild_failed:" <> err]])
-                else do
-                  hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
-                  pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["non_authoritative_persisted_state"]])
+              case rebuildDerivedViewsAfterLoad ss of
+                Right rebuilt -> do
+                  when (not (persistedTruthIsAuthoritative (ssTruthContractStatus ss))) $
+                    hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
+                  logPersistenceCounts "post_load" rebuilt
+                  pure (LoadStateRestored rebuilt)
+                Left err -> do
+                  hPutStrLn stderr $ "[persistence_debug] governance_rebuild_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack err
+                  pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["governance_rebuild_failed:" <> err]])
             Left decodeErr -> do
               hPutStrLn stderr $ "[persistence_debug] decode_failed session=" <> T.unpack sessionId <> " detail=" <> decodeErr
               pure (LoadStateCorrupt (PdCorruptDecode : stateBlobDiagnostics blob))
         Nothing -> pure LoadStateMissing
 
+loadStateRevision :: DbRunner -> Text -> IO Int
+loadStateRevision withDb sessionId = withDb $ \db -> loadStateRevisionDirect db sessionId
+
 stateBlobDiagnostics :: Text -> [PersistenceDiagnostic]
 stateBlobDiagnostics blob =
   case Aeson.decode (BL.fromStrict (TE.encodeUtf8 blob)) :: Maybe Aeson.Object of
     Nothing -> []
-    Just obj ->
-      let optionalSystemFields =
-            [ "lastGuardReport"
-            , "dreamState"
-            , "intuitionState"
-            , "semanticAnchor"
-            , "lastTurnDecision"
-            ]
-          missing = filter (\k -> not (KM.member (AK.fromText k) obj)) optionalSystemFields
-      in if null missing
-           then []
-           else [PdSchemaMissingFields missing]
+    Just _obj -> []
 
 loadKV :: NSQL.Database -> Text -> Text -> IO (Maybe Text)
 loadKV db sessionId k = do
@@ -214,15 +238,12 @@ loadKV db sessionId k = do
     _ <- NSQL.bindText stmt 2 k
     hasRow <- NSQL.stepRow stmt
     if hasRow
-      then do
-        value <- NSQL.columnText stmt 0
-        _ <- evaluate (T.length value)
-        pure (Just value)
+      then Just <$> NSQL.columnTextLenient stmt 0
       else pure Nothing
 
 persistTurnQuality :: NSQL.Database -> Text -> TurnProjection -> IO ()
 persistTurnQuality db sessionId p = do
-  let sql = "INSERT OR REPLACE INTO turn_quality(session_id, turn, parser_mode, parser_confidence, parser_errors, planner_mode, planner_decision, atom_register, atom_load, scene_pressure, scene_request, scene_stance, render_lane, render_style, legitimacy_status, legitimacy_reason, warranted_mode, decision_disposition, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message, replay_trace_json, divergence) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  let sql = "INSERT INTO turn_quality(session_id, turn, parser_mode, parser_confidence, parser_errors, planner_mode, planner_decision, atom_register, atom_load, scene_pressure, scene_request, scene_stance, render_lane, render_style, legitimacy_status, legitimacy_reason, warranted_mode, decision_disposition, owner_family, owner_force, shadow_status, shadow_snapshot_id, shadow_divergence_kind, shadow_family, shadow_force, shadow_message, replay_trace_json, divergence) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       replayTrace0 = tqpReplayTrace p
       replayAuthority = fromMaybe AuthorityLegacyIncomplete (trcAuthorityClass replayTrace0)
       replayTrace =
@@ -261,18 +282,6 @@ persistTurnQuality db sessionId p = do
   bindTextOrFail ts 27 replayTraceJson
   bindIntOrFail ts 28 (if tqpDivergence p then 1 else 0)
   stepOrFail ts
-
-persistSystemBlob :: NSQL.Database -> Text -> SystemState -> IO ()
-persistSystemBlob db sessionId persistedState = do
-  let jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState
-  saveKV db sessionId "__system_state__" jsonBlob
-
-persistTurnArtifacts :: NSQL.Database -> Text -> Maybe TurnProjection -> IO ()
-persistTurnArtifacts _ _ Nothing = pure ()
-persistTurnArtifacts db sessionId (Just projection) = do
-  persistTurnQuality db sessionId projection
-  when (tqpDivergence projection) $
-    persistShadowDivergence db sessionId projection
 
 persistShadowDivergence :: NSQL.Database -> Text -> TurnProjection -> IO ()
 persistShadowDivergence db sessionId p = do
@@ -336,6 +345,79 @@ persistedTruthIsAuthoritative :: TruthContractStatus -> Bool
 persistedTruthIsAuthoritative CanonicalSurfacePreserved = True
 persistedTruthIsAuthoritative AssembledSurfacePreserved = True
 persistedTruthIsAuthoritative _ = False
+
+-- | Persisted state keeps only canonical authority plus compatibility-retained
+-- fields. Derived governance views and runtime-local carry-over are stripped.
+canonicalizePersistedState :: SystemState -> SystemState
+canonicalizePersistedState ss =
+  ss
+    { ssIdentity = canonicalizePersistedIdentityState (ssIdentity ss)
+    , ssSemantic = canonicalizePersistedSemanticState (ssSemantic ss)
+    , ssPerspectiveRegistry = emptyPerspectiveRegistry
+    , ssGovernanceProjection = ssGovernanceProjection emptySystemState
+    }
+
+-- | Compatibility-only identity fields are cleared before persistence.
+-- Canonical identity authority lives in ego/claims/orbital memory; the last
+-- guard report is runtime-local carry-over and not persisted as authority.
+canonicalizePersistedIdentityState :: IdentityState -> IdentityState
+canonicalizePersistedIdentityState ids =
+  ids { idsLastGuardReport = Nothing }
+
+-- | Semantic anchor and last turn decision are restart-safe only under
+-- authoritative truth contours. They may remain in persisted storage for
+-- compatibility/observability, but non-authoritative restart admission must
+-- not let them re-enter first-turn behavior as if they were canonical truth.
+canonicalizePersistedSemanticState :: SemanticState -> SemanticState
+canonicalizePersistedSemanticState = id
+
+-- | Rebuild only fields with an explicit canonical source. Today that is the
+-- governance-derived view layer reconstructed from authoritative history.
+-- Semantic carry-forward fields without a canonical rebuild source are demoted
+-- on non-authoritative restart contours so they do not regain restart
+-- authority through bootstrap/hydration.
+rebuildDerivedViewsAfterLoad :: SystemState -> Either Text SystemState
+rebuildDerivedViewsAfterLoad ss
+  | persistedTruthIsAuthoritative (ssTruthContractStatus ss) =
+      rebuildGovernedSystemState ss
+  | otherwise =
+      Right (demoteNonAuthoritativeRestartCarry ss)
+
+demoteNonAuthoritativeRestartCarry :: SystemState -> SystemState
+demoteNonAuthoritativeRestartCarry ss =
+  ss
+    { ssSemantic =
+        (ssSemantic ss)
+          { semSemanticAnchor = Nothing
+          , semLastTurnDecision = Nothing
+          }
+    }
+
+decodePersistedState :: Text -> Either String SystemState
+decodePersistedState blob =
+  let bytes = TE.encodeUtf8 blob
+  -- Canonical write shape is raw top-level SystemState. PersistenceEnvelope
+  -- remains accepted only as a tolerated legacy read shape during contract
+  -- consolidation and must not be described as current canonical persistence.
+  in case Aeson.eitherDecodeStrict bytes of
+       Right (PersistenceEnvelope _ ss) -> Right ss
+       Left _ -> Aeson.eitherDecodeStrict bytes
+
+loadStateRevisionDirect :: NSQL.Database -> Text -> IO Int
+loadStateRevisionDirect db sessionId = do
+  let sql = "SELECT state_revision FROM runtime_sessions WHERE id = ?"
+  withPreparedStatement db sql ("loadStateRevision session=" <> sessionId) $ \stmt -> do
+    _ <- NSQL.bindText stmt 1 sessionId
+    hasRow <- NSQL.stepRow stmt
+    if hasRow
+      then NSQL.columnInt stmt 0
+      else pure 0
+
+sqliteChanges :: NSQL.Database -> IO Int
+sqliteChanges db =
+  withPreparedStatement db "SELECT changes()" "sqlite_changes" $ \stmt -> do
+    hasRow <- NSQL.stepRow stmt
+    if hasRow then NSQL.columnInt stmt 0 else pure 0
 
 normalizeReplayProvenanceStatus :: ReplayProvenanceStatus -> AuthorityClass -> ReplayProvenanceStatus
 normalizeReplayProvenanceStatus replayStatus authority

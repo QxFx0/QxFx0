@@ -33,7 +33,7 @@ invalidBody = "this is not json"
 
 degradingBody :: Text
 degradingBody =
-  "{\"proposition\":\"тест\",\"word\":\"тест\",\"definition\":\"длинное определение для прохождения валидации\",\"source\":\"llm\",\"conatusDelta\":-0.5,\"predictiveDelta\":0.0,\"morphology\":{\"gender\":\"feminine\",\"declension\":\"first\"}}"
+  "{\"proposition\":\"тест\",\"word\":\"тест\",\"definition\":\"alpha beta gamma\",\"source\":\"llm\",\"conatusDelta\":999.0,\"predictiveDelta\":999.0}"
 
 -- | Build a mock table covering all first-word prefixes used by
 -- 'deterministicCorpus'.  Each row maps a prefix to a response.

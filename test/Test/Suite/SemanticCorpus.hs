@@ -21,7 +21,7 @@ import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.Semantic.Logic (runSemanticLogic)
 import QxFx0.Semantic.MeaningAtoms (collectAtoms)
 import QxFx0.Semantic.Proposition (PropositionType(..), detectKeywordFallbackType, parseProposition)
-import QxFx0.Types (ClusterDef(..), NixGuardStatus(..), ipfCanonicalFamily, ipfFocusEntity, ipfFocusNominative)
+import QxFx0.Types (ClusterDef(..), NixGuardStatus(..), TruthContractStatus(..), ipfCanonicalFamily, ipfFocusEntity, ipfFocusNominative)
 
 data SemanticCorpusCase = SemanticCorpusCase
   { sccId :: !Text
@@ -115,7 +115,7 @@ testFallbackMatcherInventoryHasBreadth = do
         , ["counterexample"]  -- ConfrontQ
         , ["truth"]           -- EpistemicQ
         ]
-      results = mapMaybe detectKeywordFallbackType inputs
+      results = mapMaybe (detectKeywordFallbackType CanonicalSurfacePreserved) inputs
       distinct = Set.size (Set.fromList results)
   assertBool
     ( "detectKeywordFallbackType matcher inventory regressed; expected at "

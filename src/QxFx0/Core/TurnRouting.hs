@@ -2,6 +2,7 @@
 {-| Facade for routing-phase synthesis, family hints, and guard-aware cascade. -}
 module QxFx0.Core.TurnRouting
   ( routeFamily
+  , routeFamilyWithSelfVerdict
   , mergeFamilySignals
   , preferFamily
   , semanticInputFamilyHint
@@ -41,13 +42,20 @@ import QxFx0.Self.Deliberation
 import QxFx0.Self.Field (Field, emptyField, fieldAtmosphere, Atmosphere(..))
 import QxFx0.Self.Salience
   ( Salience(..)
-  , computeSalience
+  , computeSelfVerdict
+  , SelfVerdict(..)
+  , SalienceVerdict(..)
   )
 import QxFx0.Core.TurnRouting.Cascade
   ( applyGuardGating
   , applyPrincipledFamily
   , buildGuardReport
   , runFamilyCascade
+  )
+import QxFx0.Core.FamilyAdmission
+  ( FamilyAdmissionInput(..)
+  , AdmittedFamily(..)
+  , admitFamilyCrystallization
   )
 import QxFx0.Core.TurnRouting.Phase
   ( computeRoutingPhase
@@ -71,6 +79,10 @@ nearestHolistic CMClarify     = CMHypothesis
 nearestHolistic CMNextStep    = CMPurpose
 nearestHolistic other         = other
 
+supportsHolisticFamilyDivergence :: CanonicalMoveFamily -> Bool
+supportsHolisticFamilyDivergence family =
+  family `elem` [CMAnchor, CMDistinguish, CMClarify]
+
 
 
 -- | Phase 6 (M6) + Phase 5.5d: 'routeFamily' takes the per-turn
@@ -88,8 +100,30 @@ routeFamily :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserSt
             -> Maybe (Plan -> Bool)
             -> RoutingDecision
 routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField mCourtesy =
+  routeFamilyWithSelfVerdict
+    recommendedFamily
+    frame
+    atomSet
+    nextUserState
+    ss
+    history
+    input
+    isNixBlocked
+    currentTopic
+    mNarrative
+    intuitPosterior
+    preparedField
+    (computeSelfVerdict (ssSalienceWeights ss) conatusEnergy preparedField)
+    mCourtesy
+
+routeFamilyWithSelfVerdict :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
+                          -> SystemState -> [Text] -> Text -> Bool -> Text
+                          -> Maybe ConsciousnessNarrative -> Double -> Field -> SelfVerdict
+                          -> Maybe (Plan -> Bool)
+                          -> RoutingDecision
+routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior preparedField selfVerdict mCourtesy =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
-      routingSalience = computeSalience (ssSalienceWeights ss) conatusEnergy preparedField
+      routingSalience = svSalience selfVerdict
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience
       FamilyCascade{..} = cascade
 
@@ -97,7 +131,11 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       -- Package D: family divergence is feature-flagged (default
       -- False) so baseline behaviour is preserved while the
       -- adjunction mapping is corrected.
-      familyDivergenceEnabled = False
+      familyDivergenceEnabled =
+        case svVerdict selfVerdict of
+          PreferHolistic _ -> supportsHolisticFamilyDivergence fcFinalFamily
+          PreferFormal _   -> False
+          Tied             -> False
       formalFamily   = fcFinalFamily
       holisticFamily = if familyDivergenceEnabled then nearestHolistic fcFinalFamily else fcFinalFamily
       renderStrategy = rpChosenStrategy
@@ -142,7 +180,12 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
       -- into the Plan, so the wrapper is field-independent.
       deliberation = reconcile mCourtesy routingSalience (holisticProposal holisticPlan emptyField) (formalProposal (\_fd -> formalPlan)) preparedField
       reconciledPlan = delibReconciled deliberation
-      reconciledFamily = planFamily reconciledPlan
+      rawReconciledFamily = planFamily reconciledPlan
+      admittedFamily = admitFamilyCrystallization
+        (FamilyAdmissionInput (ssTruthContractStatus ss) selfVerdict)
+        rawReconciledFamily
+        frame
+      reconciledFamily = afFamily admittedFamily
       reconciledStyle  = planRenderStyle reconciledPlan
 
       -- Recompute downstream context if the reconciled family

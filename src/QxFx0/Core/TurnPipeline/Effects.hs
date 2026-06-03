@@ -17,9 +17,20 @@ import QxFx0.Types.ShadowDivergence
   , ShadowSnapshotId
   )
 import QxFx0.Semantic.Embedding (EmbeddingResult)
-import QxFx0.Semantic.MeaningAtoms (collectAtoms, updateTrace, extractObjectFromAtom)
+import QxFx0.Semantic.MeaningAtoms
+  ( buildAtomSetFromFindings
+  , buildRawAtomFindingsFromMatches
+  , buildRawLexicalClusterPhraseContainmentFromDecisions
+  , buildRawLexicalClusterHitsFromPhraseContainment
+  , buildRawLexicalClusterMatchesFromHits
+  , collectRawLexicalClusterPhraseDecisions
+  , collectRawLexicalClusterPhraseContainment
+  , collectStructuralAtoms
+  , updateTrace
+  , extractObjectFromAtom
+  )
 import QxFx0.Semantic.Logic (runSemanticLogic)
-import QxFx0.Semantic.Proposition (parseProposition)
+import QxFx0.Semantic.Proposition (parsePropositionWithFrame)
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.Consciousness (ConsciousnessNarrative)
@@ -40,15 +51,107 @@ import QxFx0.Self.Field
   , computeAtmosphere
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
-import QxFx0.Self.Salience (SalienceWeights, conatusGateFires)
+import QxFx0.Self.Salience
+  ( SalienceWeights
+  , SelfVerdict
+  , computeSelfVerdict
+  , conatusGateFires
+  )
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Learning.Tool (ExternalTool)
 import QxFx0.Learning.Need (LearningNeed)
 import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
 import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame)
+import QxFx0.Semantic.Input.Model (UtteranceSemanticFrame(..))
 import QxFx0.Semantic.Sense (SenseVector)
 import QxFx0.Semantic.Sense.Extract (extractSenseVector)
-import QxFx0.Core.DialogueThread (deriveDialogueCommitmentLedger, deriveDialoguePhase, deriveDialogueThread)
+import QxFx0.Core.DialogueThread
+  ( CommitmentAdmissionInput(..)
+  , admitDialogueCommitmentLedger
+  , deriveDialogueCommitmentCandidate
+  , deriveDialoguePhase
+  , deriveDialogueThread
+  )
+import QxFx0.Core.InterpretationAdmission
+  ( InterpretationAdmissionInput(..)
+  , AdmittedInterpretation(..)
+  , admitInterpretationCandidate
+  )
+import QxFx0.Core.PropositionAdmission
+  ( PropositionAdmissionInput(..)
+  , AdmittedPropositionFrame(..)
+  , admitPropositionFrame
+  )
+import QxFx0.Core.SenseVectorAdmission
+  ( SenseVectorAdmissionInput(..)
+  , AdmittedSenseVector(..)
+  , admitSenseVector
+  )
+import QxFx0.Core.RouteHintAdmission
+  ( RouteHintAdmissionInput(..)
+  , AdmittedRouteHint(..)
+  , admitRouteHint
+  )
+import QxFx0.Core.EarlyFamilyAdmission
+  ( EarlyFamilyAdmissionInput(..)
+  , AdmittedEarlyFamily(..)
+  , admitEarlyFamilyRecommendation
+  )
+import QxFx0.Core.AtomContributionAdmission
+  ( AtomContributionAdmissionInput(..)
+  , AdmittedAtomContributions(..)
+  , admitAtomContributions
+  )
+import QxFx0.Core.AtomExtractionAdmission
+  ( AtomExtractionAdmissionInput(..)
+  , AdmittedAtomAvailability(..)
+  , admitAtomAvailability
+  )
+import QxFx0.Core.AtomFindingAdmission
+  ( AtomFindingAdmissionInput(..)
+  , AdmittedAtomFindings(..)
+  , admitAtomFindings
+  )
+import QxFx0.Core.StructuralAtomAdmission
+  ( StructuralAtomAdmissionInput(..)
+  , AdmittedStructuralAtoms(..)
+  , admitStructuralAtoms
+  )
+import QxFx0.Core.LexicalClusterPhraseDecisionAdmission
+  ( LexicalClusterPhraseDecisionAdmissionInput(..)
+  , AdmittedLexicalClusterPhraseDecisions(..)
+  , admitLexicalClusterPhraseDecisions
+  )
+import QxFx0.Core.LexicalClusterPhraseAdmission
+  ( LexicalClusterPhraseAdmissionInput(..)
+  , AdmittedLexicalClusterPhraseContainment(..)
+  , admitLexicalClusterPhraseContainment
+  )
+import QxFx0.Core.LexicalClusterHitAdmission
+  ( LexicalClusterHitAdmissionInput(..)
+  , AdmittedLexicalClusterHits(..)
+  , admitLexicalClusterHits
+  )
+import QxFx0.Core.LexicalClusterMatchAdmission
+  ( LexicalClusterMatchAdmissionInput(..)
+  , AdmittedLexicalClusterMatches(..)
+  , admitLexicalClusterMatches
+  )
+import QxFx0.Core.SemanticContributionAdmission
+  ( SemanticContributionAdmissionInput(..)
+  , AdmittedSemanticContributions(..)
+  , admitSemanticContributions
+  )
+import QxFx0.Core.SemanticLogicAdmission
+  ( SemanticLogicAdmissionInput(..)
+  , AdmittedSemanticLogic(..)
+  , admitSemanticLogicWeighting
+  )
+import QxFx0.Core.SemanticFrameAdmission
+  ( SemanticFrameAdmissionInput(..)
+  , AdmittedSemanticFrame(..)
+  , admitSemanticFrame
+  )
 import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread, emptyDialogueCommitmentLedger, emptyDialogueThread)
 
 import Data.Text (Text)
@@ -71,7 +174,7 @@ data TurnEffectRequest
   | TurnReqTestMarkOnceFile !Text
   | TurnReqSemanticIntrospectionEnv
   | TurnReqCommitRuntimeState !ConsciousnessLoop !IntuitiveState !ResponseObservation
-  | TurnReqSaveState !SystemState !Text !(Maybe TurnProjection)
+  | TurnReqSaveState !SystemState !Text !Int !(Maybe TurnProjection)
   | TurnReqRollbackTurnProjections !Text !Int
   | TurnReqCheckpoint !Int
   | TurnReqLinearizeClaimAst !(Maybe FilePath) !Text !ClaimAst
@@ -108,7 +211,13 @@ data PrepareStatic = PrepareStatic
   , psNewTrace :: !AtomTrace
   , psNextUserState :: !UserState
   , psRecommendedFamily :: !CanonicalMoveFamily
+    -- ^ Constitution-admitted interpretation family used downstream for route
+    --   crystallization. The raw semantic recommendation is formed earlier in
+    --   prepare but may be narrowed before becoming `TurnInput`.
   , psFrame :: !InputPropositionFrame
+    -- ^ Constitution-admitted proposition frame used downstream. Raw parser
+    --   output remains intact locally during prepare; this field carries the
+    --   admitted interpretation surface after the bounded CTS-02 seam.
   , psConceptToCheck :: !Text
   , psBestTopic :: !Text
   , psResonance :: !Double
@@ -156,6 +265,11 @@ data PrepareStatic = PrepareStatic
     -- ^ Phase 6.7: heuristics used to build 'psField'.
     --   Threaded through 'TurnInput' so downstream stages
     --   (e.g. salience computation) can read the same record.
+  , psSelfVerdict :: !SelfVerdict
+    -- ^ Canonical aggregated self-layer verdict for the pre-turn state.
+    --   Computed once from the same 'ConatusEnergy' and 'Field' carried
+    --   in this record so route/finalize stages do not recompute salience
+    --   and its discrete dispatch classification independently.
   , psCurrentTime :: !UTCTime
     -- ^ Phase C: deterministic time injection point.
     --   Captured at prepare-stage entry so 'buildTurnInput' can
@@ -194,20 +308,35 @@ data PrepareEffectPlan = PrepareEffectPlan
 
 buildPrepareEffectPlan :: SystemState -> Text -> UTCTime -> PrepareEffectPlan
 buildPrepareEffectPlan ss input currentTime =
-  let atomSet = collectAtoms input (ssClusters ss)
+  let rawPhraseDecisions = collectRawLexicalClusterPhraseDecisions input (ssClusters ss)
+      admittedPhraseDecisions = admitLexicalClusterPhraseDecisions (LexicalClusterPhraseDecisionAdmissionInput (ssTruthContractStatus ss)) rawPhraseDecisions
+      rawPhraseContainment = buildRawLexicalClusterPhraseContainmentFromDecisions (alcpdDecisions admittedPhraseDecisions)
+      admittedPhraseContainment = admitLexicalClusterPhraseContainment (LexicalClusterPhraseAdmissionInput (ssTruthContractStatus ss)) rawPhraseContainment
+      rawHits = buildRawLexicalClusterHitsFromPhraseContainment (alcpContainment admittedPhraseContainment)
+      admittedHits = admitLexicalClusterHits (LexicalClusterHitAdmissionInput (ssTruthContractStatus ss)) rawHits
+      rawMatches = buildRawLexicalClusterMatchesFromHits (alchHits admittedHits)
+      admittedMatches = admitLexicalClusterMatches (LexicalClusterMatchAdmissionInput (ssTruthContractStatus ss)) rawMatches
+      rawFindings = buildRawAtomFindingsFromMatches (alcmMatches admittedMatches) (collectStructuralAtoms input)
+      admittedStructural = admitStructuralAtoms (StructuralAtomAdmissionInput (ssTruthContractStatus ss)) rawFindings
+      admittedFindings = admitAtomFindings (AtomFindingAdmissionInput (ssTruthContractStatus ss)) (asaFindings admittedStructural)
+      atomSet = buildAtomSetFromFindings (aafFindings admittedFindings)
       newTrace = updateTrace (ssTrace ss) (ssTurnCount ss) atomSet
       nextUserState = inferUserState (ssClusters ss) input
-      logicResults = runSemanticLogic atomSet
+      admittedAtomExtraction = admitAtomAvailability (AtomExtractionAdmissionInput (ssTruthContractStatus ss)) atomSet
+      semanticAtomSet = atomSet { asAtoms = aaaAtoms admittedAtomExtraction }
+      admittedAtomInput = AtomContributionAdmissionInput
+        { acaiTruthContractStatus = ssTruthContractStatus ss
+        }
+      admittedAtomContributions = admitAtomContributions admittedAtomInput semanticAtomSet
+      logicAtomSet = semanticAtomSet { asAtoms = aacAtoms admittedAtomContributions }
+      logicResults = runSemanticLogic logicAtomSet
       sortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) logicResults
-      recommendedFamily = case sortedLogic of
+      rawRecommendedFamily = case sortedLogic of
         ((fam, _):_) -> fam
         [] -> CMGround
-      semanticFrame = buildUtteranceSemanticFrame input
-      frame = parseProposition input
-      senseVector = extractSenseVector semanticFrame
-      dialogueLedger = deriveDialogueCommitmentLedger (ssDialogueCommitmentLedger ss) semanticFrame
-      dialogueThread = deriveDialogueThread (ssDialogueThread ss) dialogueLedger (ssDialogue ss) semanticFrame
-      dialoguePhase = deriveDialoguePhase dialogueThread dialogueLedger semanticFrame
+      rawSemanticFrame = buildUtteranceSemanticFrame input
+      rawSenseVector = extractSenseVector rawSemanticFrame
+      rawCommitmentCandidate = deriveDialogueCommitmentCandidate rawSemanticFrame
       atomFocus = case asAtoms atomSet of
         (a:_) -> extractObjectFromAtom a
         [] -> ""
@@ -222,14 +351,6 @@ buildPrepareEffectPlan ss input currentTime =
       bestTopic = if T.null focus then ssLastTopic ss else focus
       resonance = atCurrentLoad newTrace
       atomLoad = asLoad atomSet
-      semanticInput =
-        buildSemanticInputSimple
-          input
-          atomSet
-          frame
-          recommendedFamily
-          (ipfRegisterHint frame)
-          (ipfSemanticLayer frame)
       blanket = computeSelfBlanket ss
       violations = checkInitialBlanket blanket
       conatusEnergy = computeConatusEnergy blanket violations
@@ -255,13 +376,86 @@ buildPrepareEffectPlan ss input currentTime =
       preparedField = preparedField0
         { fieldConfidence = deriveFieldConfidence preparedField0
         }
+      selfVerdict = computeSelfVerdict (ssSalienceWeights ss) conatusEnergy preparedField
+      commitmentAdmissionInput = CommitmentAdmissionInput
+        { caiTruthContractStatus = ssTruthContractStatus ss
+        , caiConatusGateFired = conatusGateFired
+        }
+      semanticFrameAdmissionInput = SemanticFrameAdmissionInput
+        { sfaiTruthContractStatus = ssTruthContractStatus ss
+        , sfaiConatusGateFired = conatusGateFired
+        }
+      admittedSemantic = admitSemanticFrame semanticFrameAdmissionInput rawSemanticFrame
+      admittedSemanticFrame = asfFrame admittedSemantic
+      routeHintAdmissionInput = RouteHintAdmissionInput
+        { rhaiTruthContractStatus = ssTruthContractStatus ss
+        , rhaiConatusGateFired = conatusGateFired
+        , rhaiRawText = input
+        }
+      admittedRouteHint = admitRouteHint routeHintAdmissionInput (usfRouteHint admittedSemanticFrame)
+      routeHintAdmittedSemanticFrame = admittedSemanticFrame { usfRouteHint = arhHint admittedRouteHint }
+      frame = parsePropositionWithFrame input routeHintAdmittedSemanticFrame
+      propositionAdmissionInput = PropositionAdmissionInput
+        { paiTruthContractStatus = ssTruthContractStatus ss
+        , paiConatusGateFired = conatusGateFired
+        }
+      admittedProposition = admitPropositionFrame propositionAdmissionInput frame
+      admittedBaseFrame = apfFrame admittedProposition
+      semanticContributionAdmissionInput = SemanticContributionAdmissionInput
+        { scaiTruthContractStatus = ssTruthContractStatus ss
+        , scaiConatusGateFired = conatusGateFired
+        , scaiFrame = admittedBaseFrame
+        }
+      admittedSemanticContributions = admitSemanticContributions semanticContributionAdmissionInput logicResults
+      admittedLogicResults = ascFamilies admittedSemanticContributions
+      admittedSortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) admittedLogicResults
+      semanticLogicAdmissionInput = SemanticLogicAdmissionInput
+        { slaiTruthContractStatus = ssTruthContractStatus ss
+        , slaiConatusGateFired = conatusGateFired
+        , slaiFrame = admittedBaseFrame
+        }
+      admittedSemanticLogic = admitSemanticLogicWeighting semanticLogicAdmissionInput admittedSortedLogic
+      admittedLogicFamilies = aslFamilies admittedSemanticLogic
+      recommendedFamily = case admittedLogicFamilies of
+        ((fam, _):_) -> fam
+        [] -> CMGround
+      earlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
+        { efaiTruthContractStatus = ssTruthContractStatus ss
+        , efaiConatusGateFired = conatusGateFired
+        }
+      admittedEarlyFamily = admitEarlyFamilyRecommendation earlyFamilyAdmissionInput recommendedFamily admittedBaseFrame
+      admittedRecommendedFamily = aefFamily admittedEarlyFamily
+      interpretationAdmissionInput = InterpretationAdmissionInput
+        { iaiTruthContractStatus = ssTruthContractStatus ss
+        , iaiConatusGateFired = conatusGateFired
+        }
+      admittedInterpretation = admitInterpretationCandidate interpretationAdmissionInput admittedRecommendedFamily admittedBaseFrame
+      admittedFamily = aiRecommendedFamily admittedInterpretation
+      admittedFrame = aiFrame admittedInterpretation
+      senseVectorAdmissionInput = SenseVectorAdmissionInput
+        { svaiTruthContractStatus = ssTruthContractStatus ss
+        , svaiConatusGateFired = conatusGateFired
+        }
+      admittedSense = admitSenseVector senseVectorAdmissionInput rawSenseVector
+      admittedSenseVector = asvVector admittedSense
+      semanticInput =
+        buildSemanticInputSimple
+          input
+          atomSet
+          frame
+          admittedRecommendedFamily
+          (ipfRegisterHint frame)
+          (ipfSemanticLayer frame)
+      dialogueLedger = admitDialogueCommitmentLedger commitmentAdmissionInput (ssDialogueCommitmentLedger ss) rawCommitmentCandidate
+      dialogueThread = deriveDialogueThread (ssDialogueThread ss) dialogueLedger (ssDialogue ss) rawSemanticFrame
+      dialoguePhase = deriveDialoguePhase dialogueThread dialogueLedger rawSemanticFrame
       static = PrepareStatic
         { psInputText = input
         , psAtomSet = atomSet
         , psNewTrace = newTrace
         , psNextUserState = nextUserState
-        , psRecommendedFamily = recommendedFamily
-        , psFrame = frame
+        , psRecommendedFamily = admittedFamily
+        , psFrame = admittedFrame
         , psConceptToCheck = conceptToCheck
         , psBestTopic = bestTopic
         , psResonance = resonance
@@ -274,10 +468,11 @@ buildPrepareEffectPlan ss input currentTime =
         -- ^ Phase 6.7: heuristics used to build 'psField'.
         --   Threaded through 'TurnInput' so downstream stages
         --   (e.g. salience computation) can read the same record.
-      , psCurrentTime = currentTime
-      , psSenseVector = senseVector
+       , psSelfVerdict = selfVerdict
+       , psCurrentTime = currentTime
+       , psSenseVector = admittedSenseVector
       , psDialogueThread = dialogueThread
-      , psDialogueCommitmentLedger = dialogueLedger
+       , psDialogueCommitmentLedger = dialogueLedger
       , psDialoguePhase = dialoguePhase
       , psTruthContractStatus = ssTruthContractStatus ss
       , psEssence = ssEssence ss

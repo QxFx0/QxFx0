@@ -2,7 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
-{-| Finalize-stage persistence commit, runtime state commit, and post-commit hooks. -}
+{-|
+Description : observer — Finalize-stage persistence commit, runtime state commit, and post-commit hooks. -}
 module QxFx0.Core.TurnPipeline.Finalize.Commit
   ( planFinalizeCommit
   , resolveFinalizeCommit
@@ -61,8 +62,8 @@ planFinalizeCommit sessionId previousState turnInput turnSignals turnArtifacts b
     , fcpEssenceValidation = fpbEssenceValidation bundle
     }
 
-resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
-resolveFinalizeCommit pipelineIO commitPlan = do
+resolveFinalizeCommit :: PipelineIO -> Int -> FinalizeCommitPlan -> IO FinalizeCommitResults
+resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
   unless (fcpRewireEventsCount commitPlan == 0) $
     hPutStrLnWarning ("Dream rewiring: " <> T.pack (show (fcpRewireEventsCount commitPlan)) <> " edges adjusted")
 
@@ -89,7 +90,7 @@ resolveFinalizeCommit pipelineIO commitPlan = do
   saveResult <-
     resolveTurnEffect
       pipelineIO
-      (TurnReqSaveState (fcpSaveState commitPlan) (fcpSessionId commitPlan) (Just (fcpProjection commitPlan)))
+      (TurnReqSaveState (fcpSaveState commitPlan) (fcpSessionId commitPlan) expectedRevision (Just (fcpProjection commitPlan)))
   savedState <-
     case saveResult of
       TurnResSaveState (Right savedSystemState) -> pure savedSystemState
@@ -116,7 +117,7 @@ resolveFinalizeCommit pipelineIO commitPlan = do
           unless projectionsRollbackSucceeded $
             hPutStrLnWarning
               "[warn] rollback of persisted turn projections failed after commit/recovery failure"
-          stateRollbackSucceeded <- attemptRollbackPersistedState pipelineIO commitPlan
+          stateRollbackSucceeded <- attemptRollbackPersistedState pipelineIO (expectedRevision + 1) commitPlan
           unless stateRollbackSucceeded $
             hPutStrLnWarning
               "[warn] rollback to previous persisted state failed after commit/recovery failure"
@@ -215,13 +216,13 @@ attemptRollbackPersistedProjections pipelineIO commitPlan = do
     Right _ ->
       pure False
 
-attemptRollbackPersistedState :: PipelineIO -> FinalizeCommitPlan -> IO Bool
-attemptRollbackPersistedState pipelineIO commitPlan = do
+attemptRollbackPersistedState :: PipelineIO -> Int -> FinalizeCommitPlan -> IO Bool
+attemptRollbackPersistedState pipelineIO expectedRevision commitPlan = do
   rollbackAttempt <-
     tryAsync
       (resolveTurnEffect
         pipelineIO
-        (TurnReqSaveState (fcpPreviousState commitPlan) (fcpSessionId commitPlan) Nothing))
+        (TurnReqSaveState (fcpPreviousState commitPlan) (fcpSessionId commitPlan) expectedRevision Nothing))
   case rollbackAttempt of
     Left _ ->
       pure False

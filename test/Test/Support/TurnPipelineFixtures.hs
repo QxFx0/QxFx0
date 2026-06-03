@@ -214,7 +214,7 @@ testProtocolInterpreter request =
       pure (TurnResSemanticIntrospectionEnv False)
     TurnReqCommitRuntimeState _ _ _ ->
       pure TurnResCommitRuntimeState
-    TurnReqSaveState ss _ _ ->
+    TurnReqSaveState ss _ _ _ ->
       pure (TurnResSaveState (Right ss))
     TurnReqRollbackTurnProjections _ _ ->
       pure (TurnResRollbackTurnProjections (Right ()))

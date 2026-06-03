@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-| Route effect planning and concurrent effect resolution. -}
+{-|
+Description : observer — Route effect planning and concurrent effect resolution. -}
 module QxFx0.Core.TurnPipeline.Route.Effects
   ( planRouteEffects
   , resolveRouteEffects
@@ -36,7 +37,7 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnInput(..)
   , TurnSignals(..)
   )
-import QxFx0.Core.TurnPolicy (routeFamily)
+import QxFx0.Core.TurnPolicy (routeFamilyWithSelfVerdict)
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0)
 import QxFx0.Self.Essence (Essence(..), validatePlan)
 import QxFx0.Types
@@ -59,7 +60,7 @@ planRouteEffects ss ti ts =
           EssenceUncommitted _ -> Nothing
       courtesyPred = fmap (\c p -> case validatePlan c p of Right _ -> True; Left _ -> False) mCommitment
       rd =
-        routeFamily
+        routeFamilyWithSelfVerdict
           recommendedFamily
           frame
           atomSet
@@ -71,8 +72,8 @@ planRouteEffects ss ti ts =
           (tiBestTopic ti)
           (tsCurrentNarrative ts)
           intuitPosterior
-          (tiConatusEnergy ti)
           (tiField ti)
+          (tiSelfVerdict ti)
           courtesyPred
       family = rdFamily rd
       atomTags = map maTag (asAtoms atomSet)

@@ -6,7 +6,7 @@
 
 {-|
 Module      : QxFx0.Self.Salience
-Description : Phase-5 salience controller (pure).
+Description : canonical — Phase-5 salience controller (pure).
 
 A typed, pure realisation of the salience controller pinned by
 @docs\/adr\/0010-salience-controller.md@.
@@ -93,6 +93,7 @@ module QxFx0.Self.Salience
     Salience (..)
   , SalienceDriver (..)
   , SalienceVerdict (..)
+  , SelfVerdict(..)
     -- * Tunable weights
   , SalienceWeights (..)
   , defaultSalienceWeights
@@ -101,6 +102,7 @@ module QxFx0.Self.Salience
   , defaultSalienceModulation
     -- * Controller
   , computeSalience
+  , computeSelfVerdict
   , salienceVerdict
     -- * Adjunction-aware dispatch
   , chooseBranch
@@ -192,6 +194,17 @@ data SalienceVerdict
   = PreferHolistic !Double  -- ^ Magnitude in @(0, 1]@.
   | PreferFormal   !Double  -- ^ Magnitude in @(0, 1]@.
   | Tied
+  deriving stock (Eq, Show)
+
+-- | Aggregated pre-turn self decision surface.
+--
+-- Keeps the continuous 'Salience' payload together with its discrete
+-- dispatch verdict so pipeline stages can read one canonical self-layer
+-- verdict instead of recomputing and reclassifying locally.
+data SelfVerdict = SelfVerdict
+  { svSalience :: !Salience
+  , svVerdict  :: !SalienceVerdict
+  }
   deriving stock (Eq, Show)
 
 -- ---------------------------------------------------------------------------
@@ -322,10 +335,19 @@ computeSalience w ce f
             - contribFieldConfidence cs
           bias = sigmoid (raw / sigmoidTemperature w)
        in Salience
-            { salienceHolisticBias = bias
-            , salienceConfidence   = computeConfidence cs
-            , salienceDriver       = dominantDriver cs
-            }
+             { salienceHolisticBias = bias
+             , salienceConfidence   = computeConfidence cs
+             , salienceDriver       = dominantDriver cs
+             }
+
+-- | Compute the aggregated self-layer verdict for a single turn.
+computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> SelfVerdict
+computeSelfVerdict w ce f =
+  let salience = computeSalience w ce f
+  in SelfVerdict
+       { svSalience = salience
+       , svVerdict = salienceVerdict w salience
+       }
 
 -- | Dispatch a 'Salience' to a 'SalienceVerdict' using the
 -- @verdictThreshold@ from the weights as the dead-band half-width.

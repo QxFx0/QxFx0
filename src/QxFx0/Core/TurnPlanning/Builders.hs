@@ -12,7 +12,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.TruthContract (capCommitmentStrengthByTruthContract)
-import QxFx0.Lexicon.GfMap (topicToGfLexemeDecision)
+import QxFx0.Lexicon.GfMap (lookupTopicGfLexemeId)
 import QxFx0.Core.SensePlan (familySenseBundle)
 import QxFx0.Core.TurnPlanning.Modulation
   ( feralDegradation
@@ -225,8 +225,7 @@ claimAstFromFrame truthStatus frame fallback ego =
   let subject0 = nonEmptyOr (ipfSemanticSubject frame) fallback
       scopedSubject = if truthStatus `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] then subject0 else fallback
       topicNP = mkTopicNP scopedSubject
-      familyFallback = markDefaultLexemeFallback scopedSubject (fallbackAstForFamily (ipfCanonicalFamily frame) topicNP)
-      withTopicFallback = markDefaultLexemeFallback scopedSubject
+      familyFallback = fallbackAstForFamily (ipfCanonicalFamily frame) topicNP
   in case propositionTypeFromText (ipfPropositionType frame) of
       Just DialogueInvitationQ ->
         let gfMod = if egoTension ego > 0.5 then ModStrictly else ModFirst
@@ -234,17 +233,17 @@ claimAstFromFrame truthStatus frame fallback ego =
             gfAction = if egoAgency ego > 0.6
                        then ActDefine "granitsa_N"
                        else ActMaintain gfNum "ramka_N"
-        in Just (withTopicFallback (MoveInvite topicNP gfMod gfAction))
+        in Just (MoveInvite topicNP gfMod gfAction)
       Just ConceptKnowledgeQ ->
-        Just (withTopicFallback (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N")))
+        Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
       Just WorldCauseQ ->
-        Just (withTopicFallback (MoveCause topicNP MechParse))
+        Just (MoveCause topicNP MechParse)
       Just PurposeQ ->
-        Just (withTopicFallback (MovePurpose topicNP))
+        Just (MovePurpose topicNP)
       Just SelfStateQ ->
         Just MoveSelfState
       Just ComparisonPlausibilityQ ->
-        Just (withTopicFallback (buildComparisonAst frame topicNP))
+        Just (buildComparisonAst frame topicNP)
       Just OperationalStatusQ ->
         Just MoveOperationalStatus
       Just OperationalCauseQ ->
@@ -256,74 +255,65 @@ claimAstFromFrame truthStatus frame fallback ego =
       Just GenerativePrompt ->
         Just MoveGenerativeThought
       Just ContemplativeTopic ->
-        Just (withTopicFallback (MoveContemplative topicNP))
+        Just (MoveContemplative topicNP)
       Just ContactSignal ->
-        Just (withTopicFallback (MoveContact topicNP))
+        Just (MoveContact topicNP)
       Just ExploratoryPrompt ->
         Just familyFallback
       Just AffectiveQ ->
-        Just (withTopicFallback (MoveContact topicNP))
+        Just (MoveContact topicNP)
       Just ReflectiveQ ->
-        Just (withTopicFallback (MoveReflect topicNP))
+        Just (MoveReflect topicNP)
       Just DefinitionalQ ->
-        Just (withTopicFallback (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N")))
+        Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
       Just DistinctionQ ->
-        Just (withTopicFallback (buildComparisonAst frame topicNP))
+        Just (buildComparisonAst frame topicNP)
       Just GroundQ ->
-        Just (withTopicFallback (MoveGround topicNP))
+        Just (MoveGround topicNP)
       Just SelfDescQ ->
-        Just (withTopicFallback (MoveDescribe topicNP))
+        Just (MoveDescribe topicNP)
       Just HypotheticalQ ->
-        Just (withTopicFallback (MoveHypothesis topicNP))
+        Just (MoveHypothesis topicNP)
       Just RepairSignal ->
         Just MoveMisunderstanding
       Just AnchorSignal ->
-        Just (withTopicFallback (MoveAnchor topicNP))
+        Just (MoveAnchor topicNP)
       Just ClarifyQ ->
-        Just (withTopicFallback (MoveClarify topicNP))
+        Just (MoveClarify topicNP)
       Just DeepenQ ->
-        Just (withTopicFallback (MoveDeepen topicNP))
+        Just (MoveDeepen topicNP)
       Just ConfrontQ ->
-        Just (withTopicFallback (MoveConfront topicNP))
+        Just (MoveConfront topicNP)
       Just NextStepQ ->
-        Just (withTopicFallback (MoveNextStepLocal topicNP))
+        Just (MoveNextStepLocal topicNP)
       Just PlainAssert ->
-        Just (withTopicFallback (MoveGround topicNP))
+        Just (MoveGround topicNP)
       Just EpistemicQ ->
-        Just (withTopicFallback (MoveClarify topicNP))
+        Just (MoveClarify topicNP)
       Just RequestQ ->
-        Just (withTopicFallback (MoveClarify topicNP))
+        Just (MoveClarify topicNP)
       Just EvaluationQ ->
-        Just (withTopicFallback (buildComparisonAst frame topicNP))
+        Just (buildComparisonAst frame topicNP)
       Just NarrativeQ ->
-        Just (withTopicFallback (MoveDescribe topicNP))
+        Just (MoveDescribe topicNP)
       Just SelfKnowledgeQ ->
-        Just (withTopicFallback (MoveDescribe topicNP))
+        Just (MoveDescribe topicNP)
       Just LocationFormationQ ->
-        Just (withTopicFallback (MoveGround topicNP))
+        Just (MoveGround topicNP)
       Nothing ->
         Just familyFallback
 
 mkTopicNP :: Text -> GfNP
 mkTopicNP topic =
-  MkNP (fst (topicToGfLexemeDecision topic))
-
-markDefaultLexemeFallback :: Text -> ClaimAst -> ClaimAst
-markDefaultLexemeFallback topic ast =
-  case topicToGfLexemeDecision topic of
-    (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
-    _ -> ast
+  MkNP $ case lookupTopicGfLexemeId topic of
+    Just funId -> funId
+    Nothing -> "ponyatie_N"
 
 buildComparisonAst :: InputPropositionFrame -> GfNP -> ClaimAst
 buildComparisonAst frame fallbackTopic =
   case ipfSemanticCandidates frame of
     left : right : _ ->
-      let ast = MoveDistinguish (mkTopicNP left) (mkTopicNP right)
-      in case topicToGfLexemeDecision left of
-           (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
-           _ -> case topicToGfLexemeDecision right of
-                  (_, Just "gf_default_lexeme") -> StanceWrapped "GfDefaultLexeme" ast
-                  _ -> ast
+      MoveDistinguish (mkTopicNP left) (mkTopicNP right)
     _ ->
       MoveCompare fallbackTopic (MkNP "ponyatie_N")
 

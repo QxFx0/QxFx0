@@ -25,7 +25,7 @@ import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(Writ
 import System.Posix.Types (FileMode)
 
 import QxFx0.Bridge.SQLite (maybeCheckpoint)
-import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProjection)
+import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProjectionExpected)
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoopWithSalience)
@@ -132,8 +132,8 @@ handleTurnEffect ctx request =
       case envResult of
         TurnResReadEnv value -> pure (TurnResSemanticIntrospectionEnv (maybe False (const True) value))
         _ -> pure (TurnResSemanticIntrospectionEnv False)
-    TurnReqSaveState ss sid mProj ->
-      TurnResSaveState <$> saveStateWithProjection (withRuntimeDb ctx) ss sid mProj
+    TurnReqSaveState ss sid expectedRevision mProj ->
+      TurnResSaveState <$> saveStateWithProjectionExpected (withRuntimeDb ctx) ss sid expectedRevision mProj
     TurnReqRollbackTurnProjections sid stableTurn ->
       TurnResRollbackTurnProjections <$> rollbackTurnProjections (withRuntimeDb ctx) sid stableTurn
     TurnReqCheckpoint turnCount -> do

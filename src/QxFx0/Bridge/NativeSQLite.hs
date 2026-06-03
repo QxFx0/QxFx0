@@ -15,6 +15,7 @@ module QxFx0.Bridge.NativeSQLite
   , bindInt64
   , bindDouble
   , columnText
+  , columnTextLenient
   , columnInt
   , columnDouble
   , columnIsNull
@@ -35,6 +36,7 @@ import Foreign hiding (void)
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.C.String (CString, withCString, peekCString)
 import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(SQLiteError))
+import Data.Text.Encoding.Error (lenientDecode)
 
 data CDatabase
 data CStatement
@@ -128,19 +130,16 @@ close db = do
 
 prepare :: Database -> Text -> IO (Either Text Statement)
 prepare db sql = alloca $ \ppStmt -> alloca $ \ppTail -> do
-  if T.any (== '\0') sql
-    then pure (Left "prepare failed: embedded_nul")
-    else do
-      let sqlBs = TE.encodeUtf8 sql
-      rc <- BS.useAsCString sqlBs $ \cSql ->
-        c_sqlite3_prepare_v2 db cSql (-1) ppStmt ppTail
-      if rc == sqlOk
-        then do stmt <- peek ppStmt
-                if stmt == nullPtr
-                  then return (Left "sqlite3_prepare_v2 returned null statement")
-                  else return (Right stmt)
-        else do errMsg <- getErrMsg db
-                return (Left $ "prepare failed: " <> errMsg)
+  let sqlBs = TE.encodeUtf8 sql
+  rc <- BS.useAsCString sqlBs $ \cSql ->
+    c_sqlite3_prepare_v2 db cSql (-1) ppStmt ppTail
+  if rc == sqlOk
+    then do stmt <- peek ppStmt
+            if stmt == nullPtr
+              then return (Left "sqlite3_prepare_v2 returned null statement")
+              else return (Right stmt)
+    else do errMsg <- getErrMsg db
+            return (Left $ "prepare failed: " <> errMsg)
 
 getErrMsg :: Database -> IO Text
 getErrMsg db = do
@@ -218,6 +217,19 @@ columnText stmt idx = do
           bs <- BS.packCStringLen (cStr, fromIntegral cLen)
           pure (TE.decodeUtf8 bs)
 
+columnTextLenient :: Statement -> CInt -> IO Text
+columnTextLenient stmt idx = do
+  cStr <- c_sqlite3_column_text stmt idx
+  if cStr == nullPtr
+    then return ""
+    else do
+      cLen <- c_sqlite3_column_bytes stmt idx
+      if cLen < 0
+        then throwQxFx0 (SQLiteError ("columnTextLenient failed: negative_length " <> T.pack (show cLen)))
+        else do
+          bs <- BS.packCStringLen (cStr, fromIntegral cLen)
+          pure (TE.decodeUtf8With lenientDecode bs)
+
 columnInt :: Statement -> CInt -> IO Int
 columnInt stmt idx = fromIntegral <$> c_sqlite3_column_int stmt idx
 
@@ -238,16 +250,13 @@ finalize stmt = do
 
 execSql :: Database -> Text -> IO (Either Text ())
 execSql db sql = do
-  if T.any (== '\0') sql
-    then pure (Left "exec failed: embedded_nul")
-    else do
-      let sqlBs = TE.encodeUtf8 sql
-      rc <- BS.useAsCString sqlBs $ \cSql ->
-        c_sqlite3_exec db cSql nullPtr nullPtr nullPtr
-      if rc == sqlOk
-        then return (Right ())
-        else do errMsg <- getErrMsg db
-                return (Left $ "exec failed: " <> errMsg)
+  let sqlBs = TE.encodeUtf8 sql
+  rc <- BS.useAsCString sqlBs $ \cSql ->
+    c_sqlite3_exec db cSql nullPtr nullPtr nullPtr
+  if rc == sqlOk
+    then return (Right ())
+    else do errMsg <- getErrMsg db
+            return (Left $ "exec failed: " <> errMsg)
 
 withStatement :: Database -> Text -> (Statement -> IO a) -> IO (Either Text a)
 withStatement db sql action = do

@@ -63,6 +63,10 @@ resolvePrepareEffects pio effectPlan = do
   resolved <- forConcurrently scheduledPairs $ \(label, turnRequest) -> do
     result <- resolveTurnEffect pio turnRequest
     pure (label, result)
+  -- Prepare-stage missing or unexpected effect results are intentionally
+  -- classified as degraded continuation rather than fail-closed termination:
+  -- local embedding, nix-blocked, default intuition/consciousness, and
+  -- apiHealthy=False keep the turn moving while reducing epistemic strength.
   let embeddingResult =
         fromMaybe fallbackEmbeddingResult $ do
           (_, TurnResEmbedding value) <- firstMatch (\(label, result) -> label == "embedding" && isEmbeddingResult result) resolved

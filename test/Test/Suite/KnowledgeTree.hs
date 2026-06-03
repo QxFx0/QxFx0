@@ -17,8 +17,8 @@ knowledgeTreeTests :: [Test]
 knowledgeTreeTests =
   [ TestLabel "KnowledgeTree graft creates branch and count" testGraftFruitCreatesBranchAndCount
   , TestLabel "KnowledgeTree quarantine tracks anti-dogmatism" testQuarantineFruitTracksAntiDogmatism
-  , TestLabel "KnowledgeTree promotes only ripe non-negative fruit" testPromoteFromQuarantinePromotesOnlyNonNegativeFruit
-  , TestLabel "KnowledgeTree prunes invalid fruit and quarantine junk" testPruneFruitsDropsInvalidAndNegative
+  , TestLabel "KnowledgeTree promotes only ripe authoritative non-negative fruit" testPromoteFromQuarantinePromotesOnlyNonNegativeFruit
+  , TestLabel "KnowledgeTree prunes invalid fruit and authoritative-negative quarantine junk" testPruneFruitsDropsInvalidAndNegative
   , TestLabel "KnowledgeTree prunes persistently unhealthy branches" testPruneBranchesDropsPersistentlyUnhealthy
   , TestLabel "KnowledgeTree root stress reflects quarantine and decay" testRootStressSignalReflectsQuarantineAndDecay
   , TestLabel "KnowledgeTree known-term check uses word and proposition fallback" testKnownTermChecksWordAndFallbackProposition
@@ -152,13 +152,11 @@ testKnowledgeTreeRoundTripsJson = TestCase $ do
   assertEqual "knowledge tree must round-trip through JSON"
     (Just tree) decoded
 
--- | Regression lock for audit-round3 P0 #3 (partial mitigation): the
--- 'pruneFruits' pass must drain unvalidated quarantine entries even
--- when the quarantine has accreted in bulk.  Without this cleanup,
--- @ktQuarantine@ grows without bound across long-running sessions.
--- The current code path keeps validated entries (still a known
--- residual gap requiring a hard cap), but unvalidated entries must
--- not survive a single prune cycle regardless of how many accumulate.
+-- | Regression lock for audit-round3 P0 #3: the 'pruneFruits' pass must
+-- drain unvalidated quarantine entries even when the quarantine has accreted
+-- in bulk.  'quarantineFruit' enforces a hard cap of 'maxKnowledgeQuarantineSize'
+-- (200), so bulk insertion beyond the cap is silently capped at insertion time.
+-- The prune pass must then drop all remaining unvalidated entries.
 testPruneFruitsCleansUnvalidatedQuarantineUnderBulkInsertion :: Test
 testPruneFruitsCleansUnvalidatedQuarantineUnderBulkInsertion = TestCase $ do
   let bulkUnvalidated =
@@ -166,11 +164,12 @@ testPruneFruitsCleansUnvalidatedQuarantineUnderBulkInsertion = TestCase $ do
         | i <- [1 .. 500 :: Int]
         ]
       tree0 = foldl' (flip quarantineFruit) emptyKnowledgeTree bulkUnvalidated
-  assertEqual "bulk insertion must accrete in quarantine before prune"
-    500 (length (ktQuarantine tree0))
+  -- quarantineFruit caps at maxKnowledgeQuarantineSize (200); bulk beyond cap is dropped at insertion
+  assertEqual "bulk insertion is capped at maxKnowledgeQuarantineSize"
+    maxKnowledgeQuarantineSize (length (ktQuarantine tree0))
   let (tree1, dropped) = pruneFruits 100 tree0
-  assertEqual "all unvalidated quarantine entries must be dropped on prune"
-    500 dropped
+  assertEqual "all capped unvalidated quarantine entries must be dropped on prune"
+    maxKnowledgeQuarantineSize dropped
   assertEqual "no unvalidated quarantine entries must remain after prune"
     [] (ktQuarantine tree1)
 

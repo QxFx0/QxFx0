@@ -4,25 +4,52 @@
 {-# LANGUAGE StrictData #-}
 module QxFx0.Types.TurnProjection
   ( TurnReplayTrace(..)
+  , PreActorFailureKind(..)
+  , PreActorFailureEvent(..)
   , TurnProjection(..)
   ) where
 
-import QxFx0.Types.Domain (CanonicalMoveFamily(..), IdentityClaimRef, IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
+import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
-import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, SurfaceProvenance, TruthContractStatus)
+import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, ResponseSurfaceKind, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
-import QxFx0.Self.Conatus (ConatusEnergy)
-import QxFx0.Self.Field (Field)
 import QxFx0.Types.State.Perspective (PerspectiveProjection)
 import QxFx0.Types.Sense (SenseAxis, SenseOperator)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
+import QxFx0.Types.Domain.User (IdentityClaimRef)
+import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.Field (Field)
+import QxFx0.Memory.Episodic
+  ( EpisodicQuery
+  , EpisodicId
+  , ReuseAnnotation
+  )
 import Data.Aeson (ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
+data PreActorFailureKind
+  = PreActorTransportFailure
+  | PreActorFallbackNonAuthoritative
+  | PreActorNoExecutableTool
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON)
+
+data PreActorFailureEvent = PreActorFailureEvent
+  { pafeKind :: !PreActorFailureKind
+  , pafeActionKind :: !Text
+  , pafeReason :: !Text
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON)
+
+-- | Canonical replay/projection envelope for a turn.
+-- Rich replay visibility does not imply that every field carries canonical
+-- authority: this record intentionally mixes canonical truth caps,
+-- projection-truth classifications, observational fields, and
+-- compatibility/shim markers in one replay plane.
 data TurnReplayTrace = TurnReplayTrace
   { trcRequestId :: !Text
   , trcSessionId :: !Text
@@ -62,16 +89,23 @@ data TurnReplayTrace = TurnReplayTrace
   , trcFallbackReason :: !(Maybe Text)
   , trcContractProvenance :: !(Maybe ContractProvenance)
   , trcSurfaceProvenance :: !(Maybe SurfaceProvenance)
-  , trcAuthorityClass :: !(Maybe AuthorityClass)
-  , trcTruthContractStatus :: !TruthContractStatus
-  , trcAssemblyPath :: !(Maybe AssemblyPath)
-  , trcArtifactManifest :: !(Maybe ArtifactManifest)
+   , trcAuthorityClass :: !(Maybe AuthorityClass)
+     -- ^ Response/projection authority classification for the executed turn.
+     --   This is not itself the canonical authority root; it is a typed
+     --   outcome classification persisted in the replay plane.
+   , trcTruthContractStatus :: !TruthContractStatus
+     -- ^ Canonical truth-contract cap mirrored into replay. Replay persistence
+     --   does not upgrade this field beyond the authoritative state machine.
+   , trcResponseSurfaceKind :: !(Maybe ResponseSurfaceKind)
+   , trcAssemblyPath :: !(Maybe AssemblyPath)
+   , trcArtifactManifest :: !(Maybe ArtifactManifest)
+     -- ^ Provenance/audit manifest for the rendered surface. It is a replay
+     --   and operator-facing proof aid, not a standalone source-of-truth root.
    , trcReplayProvenanceStatus :: !ReplayProvenanceStatus
-   , trcDerivationTags :: ![Text]
-   , trcConatusEnergy :: !ConatusEnergy
-   , trcConatusGateFired :: !Bool
-   , trcField :: !Field
-   , trcSalienceDriver :: !Text
+     -- ^ Replay completeness / trustworthiness warning surface. This status is
+     --   about replay/provenance quality, not canonical runtime authority.
+  , trcDerivationTags :: ![Text]
+  , trcSalienceDriver :: !Text
     -- ^ Phase 5.5e: rendered snake_case tag for the dominant
     --   'QxFx0.Self.Salience.SalienceDriver' on this turn.
     --   Closed enum tag; stable across builds.
@@ -117,6 +151,14 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ Phase 8: turn number when the fruit was grafted (if accepted).
   , trcLearningRejectReason :: !(Maybe Text)
     -- ^ Phase 8: human-readable reject reason for audit.
+  , trcExternalActionReason :: !(Maybe Text)
+    -- ^ AS1-03: typed allow/deny/no-action rationale rendered into a stable text tag.
+  , trcExternalActionNeed :: !(Maybe Text)
+    -- ^ AS1-03: active learning need associated with the outbound action decision.
+  , trcPreActorFailureEvent :: !(Maybe PreActorFailureEvent)
+    -- ^ AS1-04: typed failure event for outbound attempts that failed before
+    --   any executed actor identity existed. Denied/no-action paths remain
+    --   actor-clean without fabricating this event.
   , trcSenseAnchor :: !Text
   , trcSenseOperator :: !(Maybe SenseOperator)
   , trcSensePreservedAxes :: ![SenseAxis]
@@ -126,18 +168,65 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDialoguePhase :: !DialoguePhase
   , trcDialoguePhaseBefore :: !DialoguePhase
   , trcDialoguePhaseAfter :: !DialoguePhase
-   , trcDialogueCommitmentCount :: !Int
-   , trcDialogueCommitmentCountBefore :: !Int
+  , trcDialogueCommitmentCount :: !Int
+  , trcDialogueCommitmentCountBefore :: !Int
    , trcDialogueCommitmentCountAfter :: !Int
-   , trcIdentityClaims :: ![IdentityClaimRef]
    , trcMicroPlanMoves :: ![Text]
-  , trcMicroPlanExplicitness :: !Double
-  , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)
-    -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate
+   , trcMicroPlanExplicitness :: !Double
+   , trcDreamPressureDatalogClass :: !(Maybe Text)
+   , trcDreamPressureIntuitionClass :: !(Maybe Text)
+   , trcDreamPressureAgreement :: !(Maybe Text)
+   , trcDreamPressureStrength :: !(Maybe Double)
+   , trcDreamPressureCandidateThresholdFired :: !(Maybe Bool)
+   , trcDreamPressureCandidateKinds :: ![Text]
+   , trcDreamPressureBiasApplied :: !(Maybe Bool)
+   , trcDreamCandidateLifecycleStatuses :: ![Text]
+   , trcDreamCandidateDecisionReasons :: ![Text]
+   , trcDreamCandidateApplied :: !(Maybe Bool)
+   , trcPerspectiveProjection :: !(Maybe PerspectiveProjection)
+     -- ^ P4: runtime-safe endorsed perspective projection. Raw candidate
     --   internals and registry lineage are not exposed to render/replay.
   , trcPerspectiveProjections :: ![PerspectiveProjection]
     -- ^ P4: bounded list of active safe projections, preserving the fact
     --   that the canonical registry may contain multiple active scopes.
+  , trcConatusEnergy :: !ConatusEnergy
+    -- ^ P3: full ConatusEnergy record (ceScalar + ceComponents) from the
+    --   current turn's PrepareStatic. Replay can reconstruct the scalar
+    --   and per-axis decomposition from this field alone.
+  , trcConatusGateFired :: !Bool
+    -- ^ P3: True when the structural-energy gate fired this turn
+    --   (conatusGateFires). Together with trcConatusEnergy enables
+    --   replay-time explanation of Conatus-driven behaviour.
+  , trcField :: !Field
+    -- ^ P3: full Field Σ-type (resonance, atmosphere, confidence,
+    --   consolidation, counterfactual) from the current turn.
+    --   Carries all five components so replay has full reconstructability.
+  , trcIdentityClaims :: ![IdentityClaimRef]
+    -- ^ P3: identity claim references active at turn time,
+    --   sourced from ssIdentityClaims. Enables replay-time inspection
+    --   of which identity claims were in play.
+  , trcEpisodicEncoding :: ![EpisodicId]
+    -- ^ P7: EpisodicIds encoded on this turn, empty if no encode was
+    --   performed. Enables replay-time explanation of what was recorded.
+  , trcEpisodicRetrieval :: !(Maybe (EpisodicQuery, Int))
+    -- ^ P7: the query and result count for any episodic retrieval this
+    --   turn. @Nothing@ if no retrieval was performed.
+  , trcEpisodicForgetting :: !(Int, Maybe EpisodicId)
+    -- ^ P7: (count of forgotten events, maybe the last forgotten id).
+    --   Enables replay-time explanation of forgetting that occurred.
+  , trcRegimeVersion :: !Int
+    -- ^ M5: math version active during this turn (from
+    --   'QxFx0.Types.RuntimeRegime.currentMathVersion').
+    --   Replay can use this to select the correct calibration corpus.
+  , trcFamilyDivergenceActive :: !Bool
+    -- ^ M5: whether holistic-formal family divergence modulation was active
+    --   during this turn (ADR-0019). Replay needs this to reconstruct
+    --   salience-modulated routing decisions.
+  , trcSemanticCommitmentCount :: !Int
+    -- ^ C3 (Package 2): number of active semantic commitments in
+    --   'ssSemanticCommitments' at turn completion. Zero when the store
+    --   is Nothing (Package 2 not yet initialised). Non-zero indicates
+    --   typed domain commitments are accumulating.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 

@@ -26,6 +26,7 @@ module QxFx0.Learning.KnowledgeTree
   , KnowledgeTree(..)
   , emptyKnowledgeTree
   , defaultRootStressThreshold
+  , maxKnowledgeQuarantineSize
   , rootStressSignal
   , graftFruit
   , quarantineFruit
@@ -69,8 +70,9 @@ data KnowledgeFruit = KnowledgeFruit
   , kfConatusDelta    :: !Double
     -- ^ Estimated impact on Conatus energy.  Positive = strengthening.
   , kfPredictiveDelta :: !Double
-    -- ^ Estimated impact on repair-loop / uncertainty reduction.
-    --   Positive = improves prediction quality.
+    -- ^ Locally derived impact on repair-loop / uncertainty reduction.
+    --   Positive = improves prediction quality. This is not a raw remote
+    --   self-reporting field.
   , kfGraftedTurn     :: !(Maybe Int)
     -- ^ Turn when grafted into a branch (Nothing if still quarantined).
   , kfObservedTurn    :: !Int
@@ -190,6 +192,10 @@ emptyKnowledgeTree = KnowledgeTree
 defaultRootStressThreshold :: Double
 defaultRootStressThreshold = 0.7
 
+-- | Maximum number of fruits in quarantine (bounded memory).
+maxKnowledgeQuarantineSize :: Int
+maxKnowledgeQuarantineSize = 200
+
 -- | Compute a root stress signal in [0, 1].
 -- High stress means many valid fruits are sitting in quarantine
 -- (not grafting) or branches are systemically unhealthy — a signal
@@ -236,11 +242,13 @@ graftFruit rule fruit t =
        }
 
 -- | Place a fruit into quarantine (anti-dogmatism).
+-- Enforces bounded quarantine size with oldest-first eviction.
 quarantineFruit :: KnowledgeFruit -> KnowledgeTree -> KnowledgeTree
 quarantineFruit fruit t =
-  t { ktQuarantine = fruit : ktQuarantine t
-    , ktQuarantinedCount = ktQuarantinedCount t + 1
-    }
+  let quarantine' = take maxKnowledgeQuarantineSize (fruit : ktQuarantine t)
+  in t { ktQuarantine = quarantine'
+       , ktQuarantinedCount = ktQuarantinedCount t + 1
+       }
 
 -- | Promote quarantined fruits that have aged enough and show
 -- positive deltas.  Returns (updated tree, promoted count, remaining
@@ -254,12 +262,13 @@ promoteFromQuarantine
 promoteFromQuarantine currentTurn minAge rule t =
   let (ripe, stillQuarantined) =
         partitionQuarantine currentTurn minAge (ktQuarantine t)
-      -- Only promote validated fruits with non-negative net delta
+      -- Only promote validated fruits with non-negative authoritative net delta.
       (promotable, reject) =
-        span (\f -> kfValidated f && netDelta f >= 0.0) ripe
-      netDelta f = kfConatusDelta f + kfPredictiveDelta f
+        span (\f -> kfValidated f && authoritativeNetDelta f >= 0.0) ripe
+      -- Enforce bounded quarantine: keep only newest entries if size exceeds limit
+      quarantine' = take maxKnowledgeQuarantineSize (stillQuarantined ++ reject)
       t' = foldl' (\acc f -> graftFruit rule f acc)
-              (t { ktQuarantine = stillQuarantined ++ reject
+              (t { ktQuarantine = quarantine'
                  , ktQuarantinedCount = max 0 (ktQuarantinedCount t - length promotable)
                  })
               promotable
@@ -307,7 +316,7 @@ partitionBranches currentTurn threshold minAge bs =
 pruneFruits :: Int -> KnowledgeTree -> (KnowledgeTree, Int)
 pruneFruits _currentTurn t =
   let pruneBranch b =
-        let kept = filter (\f -> kfValidated f && netDelta f >= (-0.3)) (brFruits b)
+        let kept = filter (\f -> kfValidated f && authoritativeNetDelta f >= (-0.3)) (brFruits b)
             dropped = length (brFruits b) - length kept
             health' = brHealth b - 0.05 * fromIntegral dropped
         in (b { brFruits = kept, brHealth = max (-1.0) health' }, dropped)
@@ -322,10 +331,11 @@ pruneFruits _currentTurn t =
          , ktQuarantine = cleanQuarantine
          , ktPrunedCount = ktPrunedCount t + totalDropped + quarantineDropped
          }
-     , totalDropped + quarantineDropped
-     )
-  where
-    netDelta f = kfConatusDelta f + kfPredictiveDelta f
+      , totalDropped + quarantineDropped
+      )
+
+authoritativeNetDelta :: KnowledgeFruit -> Double
+authoritativeNetDelta f = kfConatusDelta f + kfPredictiveDelta f
 
 -- | Trend of average branch health over the tree.
 branchHealthTrend :: KnowledgeTree -> Double

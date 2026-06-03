@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
 Module      : Test.Suite.ObserverDiscipline
@@ -50,7 +50,7 @@ module Test.Suite.ObserverDiscipline
 import Test.HUnit (Test (..), assertFailure)
 
 import Control.Exception (SomeException, catch)
-import Prelude (Bool (..), Eq, FilePath, IO, Show, String, filter, mapM, not, null, unlines, (.))
+import Prelude
 
 import qualified Data.List as L
 import qualified System.Directory as D
@@ -77,7 +77,7 @@ collectSourceFiles root = do
     else do
       entries <- D.listDirectory coreDir
       let hsFiles = filter (L.isSuffixOf ".hs") entries
-      mapM (readSourceFile (coreDir FP.</>)) hsFiles
+      mapM (\f -> readSourceFile coreDir f) hsFiles
 
 -- | Read a source file and extract the Haddock
 -- 'Description' line. If the file does not exist or

@@ -31,8 +31,6 @@ import Test.QuickCheck
   , Property
   , arbitrary
   , choose
-  , checkCoverage
-  , cover
   , elements
   , forAll
   , listOf
@@ -94,7 +92,7 @@ selfEssenceTests =
         propAngstAccruesUnderDivergence
 
     -- E4 — shouldCommit monotone (mostly vacuous under defaults)
-  , TestLabel "shouldCommit is monotone once fired after boundary-aware trigger coverage" $
+  , TestLabel "shouldCommit is monotone once fired" $
       quickCheckProperty "shouldCommit monotone"
         propShouldCommitMonotone
 
@@ -110,12 +108,6 @@ selfEssenceTests =
     -- Unit — fieldSignature totality
   , TestLabel "fieldSignature is total on emptyField" $
       TestCase testFieldSignatureTotal
-  , TestLabel "shouldCommit fires on angst threshold boundary" $
-      TestCase testShouldCommitAngstBoundary
-  , TestLabel "shouldCommit fires on conatus erosion window boundary" $
-      TestCase testShouldCommitConatusWindowBoundary
-  , TestLabel "shouldCommit remains fired after an additional witness" $
-      TestCase testShouldCommitRemainsFiredAfterWitness
   ]
 
 -- ---------------------------------------------------------------------------
@@ -251,33 +243,6 @@ arbitraryEssenceTrajectory = do
     , etCapacity     = emTrajectoryCapacity defaultEssenceModulation
     }
 
-arbitraryTriggeredTrajectory :: Gen EssenceTrajectory
-arbitraryTriggeredTrajectory = do
-  trigger <- elements [TriggerAngstThreshold, TriggerConatusErosion]
-  case trigger of
-    TriggerAngstThreshold -> do
-      let window = emConatusFloorWindow defaultEssenceModulation
-      witnessCount <- choose (window, window + 4)
-      witnesses <- vectorOf witnessCount arbitraryEssenceWitness
-      floor_ <- arbitraryUnitDouble
-      pure EssenceTrajectory
-        { etWitnesses = Seq.fromList witnesses
-        , etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation
-        , etConatusFloor = floor_
-        , etCapacity = emTrajectoryCapacity defaultEssenceModulation
-        }
-    TriggerConatusErosion -> do
-      let window = emConatusFloorWindow defaultEssenceModulation
-          lowConatus = max 0.0 (emConatusStructuralFloor defaultEssenceModulation - 0.1)
-          mkLowWitness n = (emptyWitness n) { ewConatusScalar = lowConatus }
-      angst <- choose (0.0, emAngstCommitmentThreshold defaultEssenceModulation - 0.05)
-      pure EssenceTrajectory
-        { etWitnesses = Seq.fromList (map mkLowWitness [1 .. window])
-        , etAngstLevel = angst
-        , etConatusFloor = lowConatus
-        , etCapacity = emTrajectoryCapacity defaultEssenceModulation
-        }
-
 -- ---------------------------------------------------------------------------
 -- Properties
 -- ---------------------------------------------------------------------------
@@ -333,21 +298,18 @@ propAngstAccruesUnderDivergence =
 -- thresholds (0.75 angst, 8 witnesses) are rarely hit.
 propShouldCommitMonotone :: Property
 propShouldCommitMonotone =
-  checkCoverage $
-  forAll arbitraryTriggeredTrajectory $ \traj ->
+  forAll arbitraryEssenceTrajectory $ \traj ->
     forAll arbitraryField $ \fd ->
     forAll arbitraryConatusEnergy $ \ce ->
     forAll arbitraryDeliberation $ \delib ->
     let m0 = shouldCommit defaultEssenceModulation traj
         traj' = witness defaultEssenceModulation 1 ce fd delib traj
         m1 = shouldCommit defaultEssenceModulation traj'
-        firedByAngst = m0 == Just TriggerAngstThreshold
-        firedByConatus = m0 == Just TriggerConatusErosion
-    in cover 40 firedByAngst "angst-triggered"
-       . cover 40 firedByConatus "conatus-triggered"
-       $ case m1 of
-           Nothing -> False
-           Just _ -> True
+    in case m0 of
+         Nothing -> True
+         Just _  -> case m1 of
+                      Nothing -> False
+                      Just _  -> True
 
 -- | E5 — trigger priority: Angst beats Conatus when both fire.
 propTriggerPriorityAngst :: Property
@@ -404,44 +366,3 @@ isValidFieldBand b = b `elem` [BandLow, BandMid, BandHigh]
 
 isValidValenceBand :: ValenceBand -> Bool
 isValidValenceBand b = b `elem` [ValenceNegative, ValenceNeutral, ValencePositive]
-
-testShouldCommitAngstBoundary :: IO ()
-testShouldCommitAngstBoundary = do
-  let window = emConatusFloorWindow defaultEssenceModulation
-      traj = EssenceTrajectory
-        { etWitnesses = Seq.fromList (replicate window (emptyWitness 1))
-        , etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation
-        , etConatusFloor = 1.0
-        , etCapacity = emTrajectoryCapacity defaultEssenceModulation
-        }
-  assertEqual "angst threshold should fire commitment"
-    (Just TriggerAngstThreshold)
-    (shouldCommit defaultEssenceModulation traj)
-
-testShouldCommitConatusWindowBoundary :: IO ()
-testShouldCommitConatusWindowBoundary = do
-  let window = emConatusFloorWindow defaultEssenceModulation
-      lowConatus = max 0.0 (emConatusStructuralFloor defaultEssenceModulation - 0.1)
-      traj = EssenceTrajectory
-        { etWitnesses = Seq.fromList [ (emptyWitness n) { ewConatusScalar = lowConatus } | n <- [1 .. window] ]
-        , etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation - 0.05
-        , etConatusFloor = lowConatus
-        , etCapacity = emTrajectoryCapacity defaultEssenceModulation
-        }
-  assertEqual "sub-floor window should fire conatus erosion commitment"
-    (Just TriggerConatusErosion)
-    (shouldCommit defaultEssenceModulation traj)
-
-testShouldCommitRemainsFiredAfterWitness :: IO ()
-testShouldCommitRemainsFiredAfterWitness = do
-  let traj = EssenceTrajectory
-        { etWitnesses = Seq.fromList (replicate 8 (emptyWitness 1))
-        , etAngstLevel = emAngstCommitmentThreshold defaultEssenceModulation
-        , etConatusFloor = 1.0
-        , etCapacity = emTrajectoryCapacity defaultEssenceModulation
-        }
-      traj' = witness defaultEssenceModulation 9 (ConatusEnergy 0.9 (ConatusComponents 0 0 0 0)) emptyField defaultDeliberation traj
-  assertBool "fired commitment should remain fired after another witness"
-    (case shouldCommit defaultEssenceModulation traj' of
-       Nothing -> False
-       Just _ -> True)

@@ -1,4 +1,6 @@
-{-| High-level turn-pipeline facade over prepare/plan/render/finalize phases. -}
+{-|
+Description : supplier
+High-level turn-pipeline facade over prepare/plan/render/finalize phases. -}
 module QxFx0.Core.TurnPipeline
   ( RoutingDecision(..)
   , TurnInput(..)

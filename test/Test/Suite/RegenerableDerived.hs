@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
 Module      : Test.Suite.RegenerableDerived
@@ -69,7 +69,7 @@ module Test.Suite.RegenerableDerived
 import Test.HUnit (Test (..), assertFailure)
 
 import Control.Exception (SomeException, catch)
-import Prelude (Bool (..), Eq, FilePath, IO, Show, String, all, filter, lines, mapM, not, null, unlines, (.))
+import Prelude
 
 import qualified Data.List as L
 import qualified System.Directory as D
@@ -111,7 +111,13 @@ extractReferencedScript marker
       let rest = dropWhile (/= 's') (dropWhile (/= 's') marker)  -- not robust
           -- A robust extraction: find "scripts/" and
           -- take the longest run of [a-zA-Z0-9._/-].
-          afterScripts = snd (L.breakOnEnd "scripts/" marker)
+          afterScripts = 
+            let pat = "scripts/"
+                go [] = marker
+                go s@(_:xs)
+                  | pat `L.isPrefixOf` s = drop (length pat) s
+                  | otherwise = go xs
+            in go marker
       in Just (FP.takeBaseName afterScripts <> ".py")
   | "qxfx0 --sync-embedded-sql" `L.isInfixOf` marker =
       -- The EmbeddedSQL marker references a CLI
@@ -138,7 +144,7 @@ collectDerivedModules root = do
                    && ("Generated" `L.isInfixOf` f
                        || "Auto" `L.isInfixOf` f))
             entries
-      mapM (readDerivedModule (srcDir FP.</>)) hsFiles
+      mapM (readDerivedModule srcDir) hsFiles
 
 -- | Read a source file and extract its marker.
 -- If the file does not exist or has no marker,

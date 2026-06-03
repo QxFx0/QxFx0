@@ -1,4 +1,5 @@
-{-| Public protocol surface for turn-pipeline phase data and effect contracts. -}
+{-|
+Description : observer — Public protocol surface for turn-pipeline phase data and effect contracts. -}
 module QxFx0.Core.TurnPipeline.Protocol
   ( RoutingDecision(..)
   , TurnInput(..)
@@ -11,6 +12,10 @@ module QxFx0.Core.TurnPipeline.Protocol
   , PrepareStatic(..)
   , PrepareEffectRequest(..)
   , PrepareEffectPlan(..)
+  , InterpretationAdmissionInput(..)
+  , InterpretationAdmissionDecision(..)
+  , AdmittedInterpretation(..)
+  , admitInterpretationCandidate
   , PrepareEffectResults(..)
   , RouteStatic(..)
   , RouteEffectRequest(..)
@@ -73,6 +78,12 @@ import QxFx0.Core.TurnPipeline.Effects
   , PrepareEffectRequest(..)
   , PrepareEffectPlan(..)
   , buildPrepareEffectPlan
+  )
+import QxFx0.Core.InterpretationAdmission
+  ( InterpretationAdmissionInput(..)
+  , InterpretationAdmissionDecision(..)
+  , AdmittedInterpretation(..)
+  , admitInterpretationCandidate
   )
 import QxFx0.Core.TurnPipeline.Types
   ( RoutingDecision(..)
@@ -168,7 +179,7 @@ buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
 planFinalizeCommit = Finalize.planFinalizeCommit
 
-resolveFinalizeCommit :: PipelineIO -> FinalizeCommitPlan -> IO FinalizeCommitResults
+resolveFinalizeCommit :: PipelineIO -> Int -> FinalizeCommitPlan -> IO FinalizeCommitResults
 resolveFinalizeCommit = Finalize.resolveFinalizeCommit
 
 buildFinalizeTurnResult :: RenderedTurn -> FinalizePrecommitBundle -> FinalizeCommitResults -> TurnResult
@@ -211,13 +222,13 @@ renderTurn pio ss (PlannedTurn ti ts tp) = do
   let ta = Route.buildTurnArtifacts ss ti ts tp renderEffects renderResults
   pure (RenderedTurn ti ts tp ta)
 
-finalizeTurn :: PipelineIO -> SystemState -> Text -> Text -> RenderedTurn -> IO TurnResult
-finalizeTurn pio ss sessionId _requestId (RenderedTurn ti ts tp ta) = do
+finalizeTurn :: PipelineIO -> SystemState -> Text -> Int -> Text -> RenderedTurn -> IO TurnResult
+finalizeTurn pio ss sessionId expectedRevision _requestId (RenderedTurn ti ts tp ta) = do
   let precommitPlan = Finalize.planFinalizePrecommit ss ti ts tp ta
   precommitResults <- Finalize.resolveFinalizePrecommit pio precommitPlan
   let precommitBundle = Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
       commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
-  commitResults <- Finalize.resolveFinalizeCommit pio commitPlan
+  commitResults <- Finalize.resolveFinalizeCommit pio expectedRevision commitPlan
   let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults
   Finalize.resolveFinalizePostCommit (trMetrics turnResult)
   pure turnResult

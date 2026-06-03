@@ -1,5 +1,11 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+
 module QxFx0.Types.Config.Dream
-  ( dreamFamilyBiasProfile
+  ( DreamPressureRegime(..)
+  , defaultDreamPressureRegime
+  , dreamFamilyBiasProfile
   , dreamDriftHalfLifeHours
   , dreamBiasRelaxAlphaPerHourDefault
   , dreamBiasDeltaCapPerCycleDefault
@@ -11,8 +17,33 @@ module QxFx0.Types.Config.Dream
   , dreamMaxCatchupHoursDefault
   ) where
 
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
+import GHC.Generics (Generic)
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 import QxFx0.Types.Vec (CoreVec(..))
+
+data DreamPressureRegime = DreamPressureRegime
+  { dprDatalogWeight :: !Double
+  , dprIntuitionWeight :: !Double
+  , dprAgreementBonus :: !Double
+  , dprConflictPenalty :: !Double
+  , dprMaxStrength :: !Double
+  , dprMaxBiasNorm :: !Double
+  , dprCandidateThreshold :: !Double
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
+
+defaultDreamPressureRegime :: DreamPressureRegime
+defaultDreamPressureRegime = DreamPressureRegime
+  { dprDatalogWeight = 0.55
+  , dprIntuitionWeight = 0.45
+  , dprAgreementBonus = 0.10
+  , dprConflictPenalty = 0.15
+  , dprMaxStrength = 1.0
+  , dprMaxBiasNorm = 0.08
+  , dprCandidateThreshold = 0.35
+  }
 
 dreamDriftHalfLifeHours :: Double
 dreamDriftHalfLifeHours = 7.0

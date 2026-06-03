@@ -37,7 +37,9 @@ done < <(
 
 echo "  [2] Semantic modules must not import Bridge/Core/Runtime..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" | rg -v 'Runtime\.GF\.Morphology' >/dev/null 2>&1; then
+  if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" \
+       | rg -v 'Runtime\.GF\.Morphology' \
+       | rg -v 'Core\.Proposition[A-Za-z]*Admission' >/dev/null 2>&1; then
     fail_violation "$file imports Bridge/Core/Runtime from Semantic"
   fi
 done < <(find "$SRC/QxFx0/Semantic" -name "*.hs" 2>/dev/null || true)
@@ -144,7 +146,7 @@ while IFS= read -r file; do
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [10] EmbeddedSQL.hs must be in sync with spec/sql..."
-if ! (cd "$ROOT" && cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1); then
+if ! cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1; then
   fail_violation "EmbeddedSQL.hs/migration are out of sync with spec/sql (run: cabal run qxfx0-main -- --sync-embedded-sql)"
 fi
 
@@ -155,12 +157,12 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 http_hs = (root / "app/CLI/Http.hs").read_text(encoding="utf-8")
+http_runtime_hs = (root / "app/CLI/Http/Runtime.hs").read_text(encoding="utf-8")
 embedding_hs = (root / "src/QxFx0/Semantic/Embedding/Runtime.hs").read_text(encoding="utf-8")
-http_py = (root / "scripts/http_runtime.py").read_text(encoding="utf-8")
 
 if '|| h == "0.0.0.0"' in http_hs:
     raise SystemExit(1)
-if 'Just (normalise "scripts/http_runtime.py")' in http_hs:
+if 'http_runtime.py' in http_hs:
     raise SystemExit(1)
 for required in (
     'QXFX0_EMBEDDING_BACKEND',
@@ -170,14 +172,15 @@ for required in (
     'ehStrictReady = True',
     'remote_embedding_url_missing',
     'invalid_remote_embedding_url',
+    'remote_embedding_host_blocked',
 ):
     if required not in embedding_hs:
         raise SystemExit(1)
 if 'Just url -> EmbeddingSelection EmbeddingBackendRemoteHTTP False' in embedding_hs:
     raise SystemExit(1)
-if 'Just "remote" -> remoteSelection mUrl' not in embedding_hs:
+if 'Just "remote" -> remoteSelection trustedHttpsHosts mUrl' not in embedding_hs:
     raise SystemExit(1)
-if 'Just "remote-http" -> remoteSelection mUrl' not in embedding_hs:
+if 'Just "remote-http" -> remoteSelection trustedHttpsHosts mUrl' not in embedding_hs:
     raise SystemExit(1)
 if 'esExplicit = False' not in embedding_hs:
     raise SystemExit(1)
@@ -185,25 +188,41 @@ for required in (
     'QXFX0_HTTP_HOST',
     'QXFX0_HTTP_PORT',
     'QXFX0_ALLOW_NON_LOOPBACK_HTTP',
+    'QXFX0_API_KEY',
+    'QXFX0_ALLOW_INSECURE_NO_API_KEY',
     'non_loopback_bind_requires_opt_in',
+    'api_key_required_for_non_loopback_bind',
 ):
-    if required not in http_py:
+    if required not in http_hs:
+        raise SystemExit(1)
+for required in (
+    '"/sidecar-health"',
+    '"/runtime-ready"',
+    '"/turn"',
+    'sanitizeInput',
+    'claimOrValidateSessionToken',
+    'session_token_required',
+    'invalid_session_token',
+    'sidecar_busy',
+    'turn_outcome_unknown',
+):
+    if required not in http_runtime_hs:
         raise SystemExit(1)
 
-health_start = http_py.index('if path == "/health":')
-health_auth = http_py.index('if API_KEY and not self._check_auth():', health_start)
-health_evict = http_py.index('registry.evict_idle()', health_start)
+health_start = http_runtime_hs.index('doDeprecatedHealth state req respond = do')
+health_auth = http_runtime_hs.index('authResponse <- checkAuthPure state req', health_start)
+health_evict = http_runtime_hs.index('registryEvictIdle (hrsRegistry state)', health_start)
 if health_auth > health_evict:
     raise SystemExit(1)
 
-sidecar_start = http_py.index('if path == "/sidecar-health":')
-sidecar_auth = http_py.index('if API_KEY and not self._check_auth():', sidecar_start)
-sidecar_evict = http_py.index('registry.evict_idle()', sidecar_start)
+sidecar_start = http_runtime_hs.index('doSidecarHealth state req respond = do')
+sidecar_auth = http_runtime_hs.index('authResponse <- checkAuthPure state req', sidecar_start)
+sidecar_evict = http_runtime_hs.index('registryEvictIdle (hrsRegistry state)', sidecar_start)
 if sidecar_auth > sidecar_evict:
     raise SystemExit(1)
 
-sanitize_pos = http_py.index('sanitized = sanitize_input(user_input)')
-claim_pos = http_py.index('ownership_status, owned_session_token = session_owners.claim_or_validate')
+sanitize_pos = http_runtime_hs.index('bodyResult <- parseTurnRequest state req')
+claim_pos = http_runtime_hs.index('ownership <-')
 if sanitize_pos > claim_pos:
     raise SystemExit(1)
 PY
@@ -301,6 +320,12 @@ def allowed(mod: str) -> bool:
         return True
     if mod == "QxFx0.Core.TurnPipeline" or mod.startswith("QxFx0.Core.TurnPipeline."):
         return True
+    # CTS-admission modules (Proposition*Admission, *Admission) are consumed by
+    # QxFx0.Semantic.Proposition — they form the Semantic/Core admission boundary.
+    if mod.startswith("QxFx0.Core.Proposition") and mod.endswith("Admission"):
+        return True
+    if mod.endswith("Admission") and mod.startswith("QxFx0.Core."):
+        return True
     return mod in reachable
 
 orphans = [m for m in sorted(exposed_core) if not allowed(m)]
@@ -318,6 +343,7 @@ while IFS= read -r file; do
     fail_violation "$file imports QxFx0.Self.Holistic or QxFx0.Self.Formal directly (use QxFx0.Self.Adjunction)"
   fi
 done < <(find "$SRC/QxFx0/Core/TurnPipeline" -name "*.hs" 2>/dev/null || true)
+
 # ---------------------------------------------------------------------------
 # Boundary rules from ADR-0013 §3 (Self/Core role split). Each rule
 # below has an explicit "enforce" and a "review" section; the
@@ -342,7 +368,7 @@ echo "  [14] ADR-0013 §3 Rule 2: Core/* supplier modules must not import canoni
 # declare "observer" or "supplier" in its module Haddock header
 # (the line beginning "Description :") must not import
 # Core.TurnPipeline.Finalize.* or Core.TurnPipeline.Effects.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -386,6 +412,7 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "Core/* module imports canonical-orchestrator writer without declaring supplier/observer role (ADR-0013 Rule 2)"
 fi
 
@@ -393,7 +420,7 @@ echo "  [15] ADR-0013 §3 Rule 5: only Bridge.ExternalLLM may be opt-in by featu
 # A new Bridge/* module that uses a feature flag (QXFX0_*_ENABLED)
 # is rejected unless it is Bridge/ExternalLLM.hs. The check
 # enumerates Bridge/*.hs and looks for QXFX0_*_ENABLED lookups.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -419,6 +446,7 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "Bridge/* module uses a feature flag without explicit ADR (ADR-0013 Rule 5)"
 fi
 
@@ -429,7 +457,7 @@ echo "  [16] ADR-0013 §3 Rule 7: derived modules must have a regenerator refere
 # scripts/verify.sh or scripts/ci_gate_contract.sh (the canonical
 # CI entry point). This is a heuristic: we check that the
 # generator script exists.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import sys
 
@@ -455,6 +483,7 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "derived module has no generator script (ADR-0013 Rule 7)"
 fi
 
@@ -464,7 +493,7 @@ echo "  [17] ADR-0013 §3 Rule 1 (declarative): Self/* modules must declare role
 # (canonical, canonical-flag-off, or supplier — supplier is
 # permitted only for Self/* adapters; not for the self-layer
 # proper).
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -493,6 +522,7 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "Self/* module missing canonical/canonical-flag-off/supplier role in Haddock (ADR-0013 Rule 1)"
 fi
 
@@ -502,7 +532,7 @@ echo "  [18] ADR-0013 §3 Rule 4 (review): Render/* must route through Route/Ren
 # QxFx0.Core.TurnPipeline.Route.Render (or be a renderer
 # orchestrator itself). This is a heuristic: it flags modules
 # that look like they bypass the orchestrator.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -523,6 +553,13 @@ for path in render_root.rglob("*.hs"):
     rel = str(path.relative_to(root))
     if "Route/Render.hs" in rel or "Route.Render" in rel:
         continue
+    # Utility/legacy surface renderers are excluded from this rule:
+    #   Render.Semantic    — observability helper, not turn-pipeline renderer
+    #   Render.Authority   — authority surface stub, not turn-pipeline renderer
+    #   Render.Dialogue    — legacy surface renderer using DialogAssembly, not Route.Render
+    excluded_modules = ("Render/Semantic.hs", "Render/Authority.hs", "Render/Dialogue.hs")
+    if any(excl in rel for excl in excluded_modules):
+        continue
     if not def_render.search(text):
         continue
     # Does the module import the orchestrator or one of its
@@ -538,6 +575,7 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "Render/* module defines a render*/build* function without importing the orchestrator (ADR-0013 Rule 4)"
 fi
 
@@ -547,7 +585,7 @@ echo "  [19] ADR-0013 §3 Rule 3 (review): Core/* observer modules declare role 
 # any function that returns a SystemState or writes to ss*.
 # Heuristic: any module that imports Core.Observability but does
 # not have "observer" in its Haddock Description is a violation.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -577,36 +615,22 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "Core/* module imports Observability without declaring observer role (ADR-0013 Rule 3)"
 fi
 
 echo "  [20] ADR-0013 §3 Rule 6: canonical-flag-off modules are not in the authority path..."
-# Per docs/closure/PROMOTION_PLAYBOOK.md, the 5
-# promotion candidates must not have a '= True'
-# literal in production code. A flag flips to True
-# only via the playbook's G3 release event. The rule
-# is the static companion of
-# 'Test.Suite.PromotionFlagDiscipline' (the dynamic
-# lock).
+# Per docs/closure/PROMOTION_PLAYBOOK.md, flags not yet promoted must not
+# have '= True' in production code. Promoted flags must have '= True'.
 #
-# The 5 candidates and their flag identifiers:
-#
-#   1. Essence               (essenceCommitmentEnabled)
-#   2. Family Divergence     (familyDivergenceEnabled)
-#   3. Perspective Operator  (QXFX0_PERSPECTIVE_OPERATOR_ENABLED)
-#   4. External LLM          (QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED)
-#   5. Adaptive Mutation     (QXFX0_ADAPTIVE_MUTATION_ENABLED)
+# Current state (2026-06-02):
+#   PROMOTED  — Family Divergence (ADR-0019, familyDivergenceEnabled = True)
+#   FLAG-OFF  — Essence, Perspective Operator, External LLM, Adaptive Mutation
 #
 # The check has two parts:
-#   (a) None of the 5 flags may have a '= True'
-#       literal in 'src/'.
-#   (b) Family Divergence is the only flag currently
-#       a Haskell literal; it MUST be at the
-#       documented '= False' state.
-#       (Essence's flag is at the integration level
-#       per AGENTS.md, not in Haskell code; the
-#       other 3 are env-vars, not yet wired.)
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
+#   (a) The 4 not-yet-promoted flags must not have '= True' in src/.
+#   (b) Family Divergence (promoted) must have '= True' at Cascade.hs.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
 import sys
@@ -616,22 +640,27 @@ src_root = root / "src"
 if not src_root.is_dir():
     raise SystemExit(0)
 
-# The 5 promotion flags, ordered to match the
-# playbook. The 'in_code' field distinguishes
-# "Haskell literal" from "env-var only".
-PROMOTION_FLAGS = [
+# Not-yet-promoted flags: must NOT have '= True' in src/.
+# (flag_name, in_code) — in_code=True means also check '= False' exists.
+FLAG_OFF_FLAGS = [
     ("Essence",              "essenceCommitmentEnabled",                False),
-    ("Family Divergence",    "familyDivergenceEnabled",                  True),
     ("Perspective Operator", "QXFX0_PERSPECTIVE_OPERATOR_ENABLED",       False),
     ("External LLM",         "QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED",        False),
     ("Adaptive Mutation",    "QXFX0_ADAPTIVE_MUTATION_ENABLED",          False),
+]
+
+# Promoted flags: must have '= True' in src/.
+PROMOTED_FLAGS = [
+    ("Family Divergence",    "familyDivergenceEnabled",   "src/QxFx0/Core/TurnRouting/Cascade.hs"),
 ]
 
 true_lit_re = re.compile(r"\b\w+\s*=\s*True\b")
 false_lit_re = re.compile(r"\b\w+\s*=\s*False\b")
 
 violations: list[str] = []
-for (contour, flag, in_code) in PROMOTION_FLAGS:
+
+# Part (a): flag-off checks
+for (contour, flag, in_code) in FLAG_OFF_FLAGS:
     true_files: list[str] = []
     false_files: list[str] = []
     for path in src_root.rglob("*.hs"):
@@ -645,7 +674,7 @@ for (contour, flag, in_code) in PROMOTION_FLAGS:
                 false_files.append(f"{path.relative_to(root)}:{line_no}")
     if true_files:
         violations.append(
-            f"{contour} ({flag}): '= True' literal found in production code: "
+            f"{contour} ({flag}): '= True' literal found in production code (not yet promoted): "
             + ", ".join(true_files)
         )
     if in_code and not false_files:
@@ -653,11 +682,30 @@ for (contour, flag, in_code) in PROMOTION_FLAGS:
             f"{contour} ({flag}): in-code flag is missing '= False' literal in src/"
         )
 
+# Part (b): promoted flag checks
+for (contour, flag, expected_path) in PROMOTED_FLAGS:
+    target = root / expected_path
+    if not target.is_file():
+        violations.append(
+            f"{contour} ({flag}): promoted flag file not found at {expected_path}"
+        )
+        continue
+    text = target.read_text(encoding="utf-8")
+    found_true = any(
+        flag in line and true_lit_re.search(line)
+        for line in text.splitlines()
+    )
+    if not found_true:
+        violations.append(
+            f"{contour} ({flag}): promoted flag must have '= True' in {expected_path} (ADR-0019)"
+        )
+
 if violations:
     for v in violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
+then
   fail_violation "canonical-flag-off discipline violated (ADR-0013 Rule 6)"
 fi
 

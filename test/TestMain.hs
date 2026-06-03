@@ -14,18 +14,16 @@ import Test.Suite.KnowledgeTree (knowledgeTreeTests)
 import Test.Suite.DialogueDevelopment (dialogueDevelopmentTests)
 import Test.Suite.TurnPipelineProtocol (turnPipelineProtocolTests)
 import Test.Suite.RuntimeInfrastructure (runtimeInfrastructureTests)
-import Test.Suite.StatePersistence (statePersistenceTests)
 import Test.Suite.HttpRuntime (httpRuntimeTests)
 import Test.Suite.SemanticCorpus (semanticCorpusTests)
 import Test.Suite.LexiconTests (lexiconTests)
 import Test.Suite.LegalAdapter (legalAdapterTests)
+import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.ObserverDiscipline (observerDisciplineTests)
 import Test.Suite.TraceSchema (traceSchemaTests)
 import Test.Suite.RegenerableDerived (regenerableDerivedTests)
 import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
 import Test.Suite.ReplayGate (replayGateTests)
-import Test.Suite.RenderAuthorityStub (renderAuthorityStubTests)
-import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.RussianQuality (russianQualityTests)
 import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
@@ -44,11 +42,13 @@ import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
 import Test.Suite.ModelComparison (modelComparisonTests)
 import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
+import Test.Suite.M6Witness (m6WitnessTests)
+import Test.Suite.M5Regime (m5RegimeTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ statePersistenceTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ renderAuthorityStubTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

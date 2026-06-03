@@ -7,8 +7,9 @@ module QxFx0.Core.TurnPipeline.Finalize.Dream
   ( applyDreamDynamics
   ) where
 
+import QxFx0.Core.Dream.Pressure
 import QxFx0.Types
-import QxFx0.Types.Config.Dream (dreamFamilyBiasProfile)
+import QxFx0.Types.Config.Dream (defaultDreamPressureRegime, dreamFamilyBiasProfile, dreamMaxAttractorNormDefault)
 import QxFx0.Types.Thresholds
   ( dreamAttractorDirectivenessPenalty
   , dreamAttractorNormScale
@@ -35,7 +36,8 @@ import Data.Time.Clock (UTCTime)
 applyDreamDynamics :: UTCTime -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> MeaningGraph -> (Dream.DreamState, MeaningGraph, Int)
 applyDreamDynamics now ss ti ts tp ta baseGraph =
   let currentDreamState = semDreamState (ssSemantic ss)
-      evidence = buildDreamThemeEvidence ti ts tp ta
+      dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
+      evidence = buildDreamThemeEvidence dreamOutcome ti ts tp ta
       (dreamState', cycleLogs) =
         Dream.runDreamCatchup Dream.defaultDreamConfig evidence now currentDreamState
       edgeDeltas =
@@ -51,20 +53,25 @@ applyDreamDynamics now ss ti ts tp ta baseGraph =
           then (baseGraph, [])
           else rewireMeaningGraphForDreamCycle now edgeDeltas baseGraph
       attractor = Dream.dsBiasAttractor dreamState'
-  in (dreamState', rewired, length cycleLogs + length rewireEvents)
+   in (dreamState', rewired, length cycleLogs + length rewireEvents)
 
-buildDreamThemeEvidence :: TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> [Dream.DreamThemeEvidence]
-buildDreamThemeEvidence ti ts tp ta =
+buildDreamThemeEvidence :: DreamOutcome -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> [Dream.DreamThemeEvidence]
+buildDreamThemeEvidence dreamOutcome ti ts tp ta =
   [ Dream.DreamThemeEvidence
       { Dream.dteTheme = dreamThemeLabel
-      , Dream.dteBias = dreamFamilyBiasProfile (tdFamily (taDecision ta))
+      , Dream.dteBias =
+          clampVecNorm dreamMaxAttractorNormDefault
+            ( vecAdd
+                (dreamFamilyBiasProfile (tdFamily (taDecision ta)))
+                (vecAdd (doBias dreamOutcome) (doAppliedBias dreamOutcome))
+            )
       , Dream.dteExperienceWeight =
           min 1.0
             ( dreamExperienceWeightBase
             + tsIntuitPosterior ts * dreamExperienceWeightIntuitionScale
             + asLoad (tiAtomSet ti) * dreamExperienceWeightLoadScale
             )
-      , Dream.dteQualityWeight = qualityWeight
+      , Dream.dteQualityWeight = min 1.0 (qualityWeight + candidateBonus (doCandidateDecisions dreamOutcome))
       , Dream.dteBiographyPermission = not (tpShadowGateTriggered tp)
       }
   ]
@@ -80,6 +87,15 @@ buildDreamThemeEvidence ti ts tp ta =
           max dreamQualityWeightShadowDivergedFloor
             (tpLegitScore tp * dreamQualityWeightShadowDivergedScale)
       | otherwise = min 1.0 (tpLegitScore tp + dreamQualityWeightStableBonus)
+    candidateBonus [] = 0.0
+    candidateBonus decisions =
+      let acceptedStrengths =
+            [ dccStrength (dceCandidate (adcEnvelope accepted))
+            | DreamCandidateAccepted accepted <- decisions
+            ]
+      in case acceptedStrengths of
+           [] -> 0.0
+           _ -> min 0.15 (maximum acceptedStrengths * 0.1)
 
 dreamEdgeDelta :: CoreVec -> MeaningEdge -> Double
 dreamEdgeDelta attractor edge =

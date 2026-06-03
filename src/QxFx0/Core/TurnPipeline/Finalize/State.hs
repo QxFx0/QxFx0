@@ -2,10 +2,10 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 
-{-| Finalize-stage construction of persisted state, projection, output, and final metrics. -}
+{-|
+Description : observer — Finalize-stage construction of persisted state, projection, output, and final metrics. -}
 module QxFx0.Core.TurnPipeline.Finalize.State
   ( buildNextSystemState
-  , buildTurnProjection
   , buildFinalOutput
   , finalizeMetrics
   , computeEssenceValidation
@@ -13,42 +13,44 @@ module QxFx0.Core.TurnPipeline.Finalize.State
 
 import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
-import QxFx0.Types.ExternalQuery (renderExternalQueryError)
+import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
+import QxFx0.Semantic.Commitment (commitObservation)
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore)
+import QxFx0.Render.Authority (parseAuthoritySurface, AuthoritySurface(..))
+import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
+import QxFx0.Memory.Episodic
+  ( EpisodicStore(..)
+  , EpisodicKind(..)
+  , EpisodicContent(..)
+  , EpisodicId(..)
+  , emptyIndex
+  , encode
+  , enforceCapacity
+  , enforceAgeWindow
+  )
+import QxFx0.Self.Deliberation (Agreement(..))
 import QxFx0.Types.Thresholds
   ( legitimacyPassThreshold
   , legitimacyRecoveryThreshold
-  , parserLowConfidenceThreshold
-  , scenePressureLowThreshold
-  , scenePressureMediumThreshold
-  , ScenePressure(..)
-  , LegitimacyStatus(..)
   , blockedConceptsRetentionLimit
   , recentFamiliesLimit
   , rawInputHistoryLimit
   )
 import QxFx0.Core.TurnPipeline.Types
+import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection, turnInputSalience)
 import QxFx0.Core.TurnRender (updateStateNixCache)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.TurnLegitimacy (safeOutputText)
 import QxFx0.Core.Observability
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative, replayProvenanceStatusForOutcome, normalizedReplayProvenanceStatus)
-import QxFx0.Core.Intuition (IntuitiveFlash(..))
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
-import QxFx0.Semantic.Embedding (embeddingQualityText)
-import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
-import QxFx0.Semantic.Proposition (parseProposition)
 import QxFx0.Self.Salience
-  ( Salience (..)
+  ( SelfVerdict(..)
   , SalienceWeights(..)
-  , renderSalienceDriver
-  , salienceFromConatusEnergy
+  , salienceHolisticBias
   , isHolisticFamily
   )
 import QxFx0.Self.Deliberation
-  ( renderAgreement
-  , renderReconcileRule
-  , renderNarrativeTone
-  , Deliberation(..)
+  ( Deliberation(..)
   , DeliberationTrace(..)
   , Plan(..)
   , defaultDeliberation
@@ -69,7 +71,6 @@ import QxFx0.Self.Essence
   , witness
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
-import QxFx0.Self.Perspective (buildActivePerspectiveProjections)
 import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..))
 import QxFx0.Learning.Need
   ( detectLearningNeedWithPressure
@@ -131,22 +132,14 @@ import QxFx0.Types.State.DialogueDevelopment
   )
 
 import Data.Maybe (fromMaybe)
-import Control.Applicative ((<|>))
-import Data.Sequence (Seq)
+import Control.Applicative ((<$>), (<*>), (<|>))
+import Data.Sequence (Seq, empty)
 import qualified Data.Foldable as F
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
-
--- | Local helper: derive the canonical pre-turn Salience verdict
--- from a 'TurnInput'.  Used by both 'buildNextSystemState' (for
--- 'dsLastSalienceBias' on the persisted state) and
--- 'buildTurnProjection' (for the @trcSalience*@ trace fields).
--- Computed identically in both call sites; centralised here so
--- they cannot drift.
-turnInputSalience :: TurnInput -> Salience
-turnInputSalience ti = salienceFromConatusEnergy (tiConatusEnergy ti) (tiField ti)
+import qualified Data.HashSet as HS
 
 -- | WP1 (contour closure): validate the reconciled 'Plan' against a
 -- pre-turn committed essence.  Only runs when the pre-turn state
@@ -536,225 +529,63 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       , ssCalibrationSnapshots = calibrationSnapshots
       }
       nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext
-      in ( nextWithLog
+      -- P4: parse the rendered authority surface; commit if recognised.
+      -- Nothing parse is silently skipped (non-authority surface).
+      turnSeq = TurnSeq (ssTurnCount ss + 1)
+      renderedSurface = AuthoritySurface (taFinalRendered ta)
+      mClaimPayload = parseAuthoritySurface renderedSurface
+      store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments nextWithLog)
+      -- C3: additionally commit a typed anchor observation when SemanticAnchor
+      -- is established this turn. This makes the anchor machine-visible in the
+      -- SemanticCommitmentStore alongside the surface-parsed claim.
+      store1 = case tpSemanticAnchor tp of
+        Nothing -> store0
+        Just anchor ->
+          let anchorPayload = anchorToFactualClaim anchor turnSeq
+          in commitObservation anchorPayload store0
+      nextWithCommitments = case mClaimPayload of
+        Just claimPayload -> nextWithLog
+          { ssSemanticCommitments =
+              Just (commitObservation claimPayload { fcpTurnSeq = turnSeq } store1) }
+        Nothing -> nextWithLog { ssSemanticCommitments = Just store1 }
+      -- P9: metacognitive correction loop (post-hoc, pure)
+      mContour = case ssMetacognition nextWithCommitments of
+        Just c  -> Just c
+        Nothing -> Just emptyMetacognitionContour
+      rawText = ipfRawText (tiFrame ti)
+      agreement = case tpDeliberation tp of
+        Just d  -> agreementToDouble (dtAgreement (delibTrace d))
+        Nothing -> 0.5
+      inRecovery = maybe False (const True)
+        (tpDeliberation tp >>= \d ->
+           planRecoveryCause (delibReconciled d))
+      nextWithMeta = nextWithCommitments
+        { ssMetacognition = runMetacognitionLoop
+            <$> mContour
+            <*> pure turnSeq
+            <*> pure rawText
+            <*> pure agreement
+            <*> pure inRecovery
+        }
+      -- P7: episodic memory encoding
+      episodic0 = case ssEpisodic nextWithMeta of
+        Just store' -> store'
+        Nothing     -> EpisodicStore empty emptyIndex HS.empty 0
+      userInputEncoded = encode turnSeq EpisodicUserInput (EpisodicUserText rawText) [] episodic0
+      decisionKind = EpisodicSystemDecision
+      decisionContent = EpisodicFamilyDecision outcomeFamily
+      episodic1 = encode turnSeq decisionKind decisionContent [] userInputEncoded
+      episodic2 = enforceCapacity episodic1
+      episodic3 = enforceAgeWindow turnSeq episodic2
+      nextWithEpisodic = nextWithMeta
+        { ssEpisodic = Just episodic3
+        }
+      in ( nextWithEpisodic
     , commitmentTrigger
     )
 
 maxProvisionalAtoms :: Int
 maxProvisionalAtoms = 1000
-
-buildTurnProjection
-  :: Text
-  -> Text
-  -> Text
-  -> Bool
-  -> Bool
-  -> SystemState
-  -> TurnInput
-  -> TurnSignals
-  -> TurnPlan
-  -> TurnArtifacts
-  -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled nextSs ti ts tp ta =
-  let decision = taDecision ta
-      executedFamily = etoFamily executedOutcome
-      executedForce = etoForce executedOutcome
-      parserConfidence = ipfConfidence (tiFrame ti)
-      parserErrors = if parserConfidence < parserLowConfidenceThreshold then ["low_confidence"] else []
-      parserBackend = "local_rule_based"
-      parserStatus
-        | tiFrame ti == parseProposition (ipfRawText (tiFrame ti)) = "ok"
-        | otherwise = "degraded"
-      parserDegradationReason
-        | parserStatus == "ok" = Nothing
-        | otherwise = Just "frame_runtime_mismatch"
-      parserLatencyMs = 0
-      scenePressure
-        | asLoad (tiAtomSet ti) <= scenePressureLowThreshold = PressureLow
-        | asLoad (tiAtomSet ti) <= scenePressureMediumThreshold = PressureMedium
-        | otherwise = PressureHigh
-      legitScore = tpLegitScore tp
-      legitimacyStatus
-        | legitScore >= legitimacyPassThreshold = LegitimacyPass
-        | legitScore >= legitimacyRecoveryThreshold = LegitimacyDegraded
-        | otherwise = LegitimacyRecovery
-      legitimacyReason
-        | tpShadowGateTriggered tp = ReasonShadowDivergence
-        | tpShadowStatus tp == ShadowUnavailable = ReasonShadowUnavailable
-        | parserConfidence < parserLowConfidenceThreshold = ReasonLowParserConfidence
-        | otherwise = ReasonOk
-      ownerFamily = executedFamily
-      ownerForce = executedForce
-      warrantedMode = warrantedForFamily ownerFamily
-      legitimacyOutcome = classifyLegitimacyOutcome legitimacyStatus legitimacyReason warrantedMode (tpShadowStatus tp) (tpShadowDivergenceSeverity tp)
-      requestId = tmRequestId (tiMetrics ti)
-      sessionId = tmSessionId (tiMetrics ti)
-      intuitionHint = ifDirective <$> tsFlash ts
-      (recoveryCause, recoveryStrategy, recoveryEvidence) =
-        case taLocalRecoveryCause ta of
-          Just cause ->
-            (Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)
-          Nothing
-            | runtimeMode == "degraded" ->
-                (Nothing, Nothing, ["runtime_mode=degraded"])
-          Nothing ->
-            (Nothing, Nothing, [])
-      -- Canonical trace Salience.  The Conatus and Field values
-      -- are the pre-turn snapshot (single source of truth from
-      -- 'PrepareStatic') so the trace reflects the actual signals
-      -- that drove the routing decision.
-      traceSalience   = turnInputSalience ti
-      postEssence = ssEssence nextSs
-      perspectiveProjections = buildActivePerspectiveProjections (ssPerspectiveRegistry nextSs)
-      learningVerdict = deriveLearningReplayVerdict nextSs ta
-      (modeTag, committedFlag, angst, triggerTag) = case postEssence of
-        EssenceUncommitted t ->
-          ( Just (renderEssenceMode EssenceWitnessing)
-          , Just False
-          , Just (etAngstLevel t)
-          , Nothing
-          )
-        EssenceCommitted t c ->
-          ( Just (renderEssenceMode (ecMode c))
-          , Just True
-          , Just (etAngstLevel t)
-          , Just (renderCommitmentTrigger (ecTrigger c))
-          )
-      executedOutcome = taExecutedOutcome ta
-      replayTrace =
-        TurnReplayTrace
-          { trcRequestId = requestId
-          , trcSessionId = sessionId
-          , trcRuntimeMode = runtimeMode
-          , trcShadowPolicy = shadowPolicy
-          , trcLocalRecoveryPolicy = localRecoveryPolicy
-          , trcRecoveryCause = recoveryCause
-          , trcRecoveryStrategy = recoveryStrategy
-          , trcRecoveryEvidence = recoveryEvidence
-          , trcSemanticIntrospectionEnabled = semanticIntrospectionEnabled
-          , trcWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled
-          , trcRequestedFamily = tiRecommendedFamily ti
-          , trcStrategyFamily = tpStrategyFamily tp
-          , trcNarrativeHint = tsNarrativeFragment ts
-          , trcIntuitionHint = intuitionHint
-          , trcPreShadowFamily = tpPreShadowFamily tp
-          , trcShadowSnapshotId = tpShadowSnapshotId tp
-          , trcShadowStatus = tpShadowStatus tp
-          , trcShadowDivergenceKind = tpShadowDivergenceKind tp
-          , trcShadowDivergenceSeverity = tpShadowDivergenceSeverity tp
-          , trcShadowResolvedFamily = tpFamily tp
-          , trcFinalFamily = executedFamily
-          , trcFinalForce = executedForce
-          , trcDecisionDisposition = loDisposition legitimacyOutcome
-          , trcLegitimacyReason = legitimacyReason
-           , trcParserConfidence = parserConfidence
-           , trcParserBackend = parserBackend
-           , trcParserStatus = parserStatus
-           , trcParserDegradationReason = parserDegradationReason
-           , trcParserLatencyMs = parserLatencyMs
-           , trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)
-          , trcClaimAst = taClaimAst ta
-          , trcPreSafetyRenderedRaw = taPreSafetyRendered ta
-          , trcRenderedAfterRebind = taRendered ta
-          , trcLinearizationLang = taLinearizationLang ta
-          , trcLinearizationOk = taLinearizationOk ta
-          , trcFallbackReason = taLinearizationFallbackReason ta
-          , trcContractProvenance = Just (etoContractProvenance executedOutcome)
-          , trcSurfaceProvenance = Just (etoSurfaceProvenance executedOutcome)
-          , trcAuthorityClass = Just (etoAuthorityClass executedOutcome)
-          , trcTruthContractStatus = etoTruthContractStatus executedOutcome
-          , trcAssemblyPath = Just (etoAssemblyPath executedOutcome)
-           , trcArtifactManifest = Just (etoArtifactManifest executedOutcome)
-            , trcReplayProvenanceStatus = normalizedReplayProvenanceStatus (replayProvenanceStatusForOutcome executedOutcome) (etoAuthorityClass executedOutcome)
-           , trcDerivationTags = taDerivationTags ta
-           , trcConatusEnergy = tiConatusEnergy ti
-           , trcConatusGateFired = tiConatusGateFired ti
-           , trcField = tiField ti
-            , trcSalienceDriver = renderSalienceDriver (salienceDriver traceSalience)
-            , trcSalienceHolisticBias = salienceHolisticBias traceSalience
-            , trcSalienceConfidence = salienceConfidence traceSalience
-           , trcDeliberationRule =
-               tpDeliberation tp >>= \d ->
-                 Just (renderReconcileRule (dtRule (delibTrace d)))
-           , trcDeliberationAgreement =
-               tpDeliberation tp >>= \d ->
-                 Just (renderAgreement (dtAgreement (delibTrace d)))
-           , trcDeliberationDivergence =
-               tpDeliberation tp >>= \d ->
-                 Just (dtDivergence (delibTrace d))
-            , trcDeliberationNarrativeTone =
-                tpDeliberation tp >>= \d ->
-                  Just (renderNarrativeTone (planNarrativeTone (delibReconciled d)))
-            , trcEssenceMode = modeTag
-            , trcEssenceCommitted = committedFlag
-            , trcEssenceAngstLevel = angst
-            , trcEssenceTrigger = triggerTag
-            , trcLearningQueryType =
-                case (taExternalQueryResult ta, taExploratoryQueryResult ta) of
-                  (Nothing, Nothing)       -> Nothing
-                  (Just _, Nothing)        -> Just "request_concept"
-                  (Nothing, Just _)        -> Just "exploratory"
-                  (Just _, Just _)         -> Just "both"
-            , trcExternalTool =
-                case taExternalQueryResult ta of
-                  Just (Right resp) -> Just (eqrToolName resp)
-                  _ -> case taExploratoryQueryResult ta of
-                         Just (Right resp) -> Just (eqrToolName resp)
-                         _ -> Nothing
-            , trcLearningValidationStatus = Just (lrvStatus learningVerdict)
-            , trcLearningSandboxResult = lrvSandboxResult learningVerdict
-            , trcLearningGraftTurn = lrvGraftTurn learningVerdict
-            , trcLearningRejectReason = lrvRejectReason learningVerdict
-            , trcSenseAnchor = unSemanticNodeId (svAnchor (rspInputVector (rmpSensePlan (tpRmpAfterLegit tp))))
-            , trcSenseOperator = Just (rspChosenOperator (rmpSensePlan (tpRmpAfterLegit tp)))
-            , trcSensePreservedAxes = rspPreservedAxes (rmpSensePlan (tpRmpAfterLegit tp))
-            , trcDialogueFocus = dtCurrentFocus (tiDialogueThread ti)
-            , trcDialogueFocusBefore = dtCurrentFocus (tiDialogueThread ti)
-            , trcDialogueFocusAfter = dtCurrentFocus (ssDialogueThread nextSs)
-            , trcDialoguePhase = tiDialoguePhase ti
-            , trcDialoguePhaseBefore = tiDialoguePhase ti
-            , trcDialoguePhaseAfter = ssDialoguePhase nextSs
-            , trcDialogueCommitmentCount = length (dclItems (tiDialogueCommitmentLedger ti))
-            , trcDialogueCommitmentCountBefore = length (dclItems (tiDialogueCommitmentLedger ti))
-            , trcDialogueCommitmentCountAfter = length (dclItems (ssDialogueCommitmentLedger nextSs))
-            , trcIdentityClaims = ssIdentityClaims nextSs
-            , trcMicroPlanMoves = mpRhetoricalMoves (rmpMicroPlan (tpRmpAfterLegit tp))
-            , trcMicroPlanExplicitness = mpExplicitness (rmpMicroPlan (tpRmpAfterLegit tp))
-            , trcPerspectiveProjection =
-                case perspectiveProjections of
-                  projection:_ -> Just projection
-                  [] -> Nothing
-            , trcPerspectiveProjections = perspectiveProjections
-            }
-  in TurnProjection
-      { tqpTurn = ssTurnCount nextSs
-      , tqpParserMode = ParserFrameV1
-      , tqpParserConfidence = parserConfidence
-      , tqpParserErrors = parserErrors
-      , tqpPlannerMode = case tpPrincipledModePair tp of Just _ -> PrincipledPlanner; Nothing -> DefaultPlanner
-      , tqpPlannerDecision = executedFamily
-      , tqpAtomRegister = asRegister (tiAtomSet ti)
-      , tqpAtomLoad = asLoad (tiAtomSet ti)
-      , tqpScenePressure = scenePressure
-      , tqpSceneRequest = tiBestTopic ti
-      , tqpSceneStance = usNeedLayer (tiNextUserState ti)
-      , tqpRenderLane = rsMove (tdRenderStrategy decision)
-      , tqpRenderStyle = tdRenderStyle decision
-      , tqpLegitimacyStatus = legitimacyStatus
-      , tqpLegitimacyReason = legitimacyReason
-      , tqpWarrantedMode = warrantedMode
-      , tqpDecisionDisposition = loDisposition legitimacyOutcome
-      , tqpOwnerFamily = ownerFamily
-      , tqpOwnerForce = ownerForce
-      , tqpShadowStatus = tpShadowStatus tp
-      , tqpShadowSnapshotId = tpShadowSnapshotId tp
-      , tqpShadowDivergenceKind = tpShadowDivergenceKind tp
-      , tqpShadowFamily = tpShadowFamily tp
-      , tqpShadowForce = tpShadowForce tp
-      , tqpShadowMessage = tpShadowMessage tp
-      , tqpReplayTrace = replayTrace
-      , tqpDivergence = tpShadowDivergence tp
-      }
 
 buildFinalOutput :: Bool -> Maybe TurnReplayTrace -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
 buildFinalOutput wantIntrospection mReplayTrace ss baseSurface nextSs =
@@ -882,51 +713,14 @@ downgradeCommitmentStatus status =
     CsContested -> CsSuspended
     other -> other
 
-data LearningReplayVerdict = LearningReplayVerdict
-  { lrvStatus :: !Text
-  , lrvSandboxResult :: !(Maybe Text)
-  , lrvGraftTurn :: !(Maybe Int)
-  , lrvRejectReason :: !(Maybe Text)
-  }
-
-deriveLearningReplayVerdict :: SystemState -> TurnArtifacts -> LearningReplayVerdict
-deriveLearningReplayVerdict nextSs ta =
-  case firstAttempt of
-    Nothing -> LearningReplayVerdict "not_attempted" Nothing Nothing Nothing
-    Just (Left err) ->
-      LearningReplayVerdict
-        { lrvStatus = case err of
-            EqeFallback _ -> "fallback_non_authoritative"
-            _ -> "transport_error"
-        , lrvSandboxResult = Nothing
-        , lrvGraftTurn = Nothing
-        , lrvRejectReason = Just (renderExternalQueryError err)
-        }
-    Just (Right _) ->
-      case () of
-        _ | not authoritativeTurn -> LearningReplayVerdict "observed_non_authoritative" (firstCauseEvidence "sandbox_accept") Nothing (Just "truth_contract_ceiling_non_authoritative")
-          | any isGraft currentTurnRecords -> LearningReplayVerdict "accept" (firstCauseEvidence "sandbox_accept") (Just currentTurn) Nothing
-          | any isSandboxReject currentTurnRecords -> LearningReplayVerdict "sandbox_reject" (firstMutationEvidence "external_learning:sandbox_reject") Nothing (firstMutationEvidence "external_learning:sandbox_reject")
-          | any isValidationReject currentTurnRecords -> LearningReplayVerdict "validation_reject" Nothing Nothing (firstMutationEvidence "external_learning:validation_reject")
-          | any isParserReject currentTurnRecords -> LearningReplayVerdict "invalid_response" Nothing Nothing (Just "parser_rejected_schema_or_text")
-          | otherwise -> LearningReplayVerdict "observed_non_authoritative" Nothing Nothing (Just "learning_outcome_unresolved")
-  where
-    authoritativeTurn = truthContractIsAuthoritative (taTruthContractStatus ta)
-    currentTurn = ssTurnCount nextSs
-    currentTurnRecords = filter ((== currentTurn) . amrTurnId) (ssAdaptiveMutationLog nextSs)
-    firstAttempt = taExternalQueryResult ta <|> taExploratoryQueryResult ta
-    isGraft record = amrCause record == "external_learning:graft" && amrDecision record == AdaptiveAccepted
-    isSandboxReject record = amrCause record == "external_learning:sandbox_reject"
-    isValidationReject record = amrCause record == "external_learning:validation_reject"
-    isParserReject record = amrCause record == "tool_reliability:rejected" && any (== "reason=parser_rejected_schema_or_text") (amrEvidence record)
-    firstMutationEvidence cause =
-      case [ evidence | record <- currentTurnRecords, amrCause record == cause, evidence:_ <- [amrEvidence record] ] of
-        value:_ -> Just value
-        [] -> Nothing
-    firstCauseEvidence reason =
-      case [ evidence | record <- currentTurnRecords, any (== ("reason=" <> reason)) (amrEvidence record), evidence:_ <- [amrEvidence record] ] of
-        value:_ -> Just value
-        [] -> Nothing
+agreementToDouble :: Agreement -> Double
+agreementToDouble a = case a of
+  Agree             -> 1.0
+  DivergeOnFamily   -> 0.3
+  DivergeOnStyle    -> 0.4
+  DivergeOnRecovery -> 0.2
+  DivergeOnTone     -> 0.5
+  DivergeMultiple   -> 0.1
 
 retainBlockedConcepts :: Text -> [Text] -> [Text]
 retainBlockedConcepts latestReason existing =
@@ -939,3 +733,21 @@ dedupePreservingOrder = go Set.empty
     go seen (value : rest)
       | value `Set.member` seen = go seen rest
       | otherwise = value : go (Set.insert value seen) rest
+
+-- | Convert a 'SemanticAnchor' to a 'FactualClaimPayload' for commitment.
+-- The anchor captures which dialogue channel is dominant at a turn; the
+-- payload records this as a factual observation about the dialogue state
+-- so that the 'SemanticCommitmentStore' reflects anchor continuity.
+anchorToFactualClaim :: SemanticAnchor -> TurnSeq -> FactualClaimPayload
+anchorToFactualClaim anchor tseq =
+  let channel = dominantChannelText (saDominantChannel anchor)
+      stmt = "Dialogue channel: " <> channel
+             <> " (established at turn " <> T.pack (show (saEstablishedAtTurn anchor)) <> ")"
+      conf = min 1.0 (saStrength anchor * saStability anchor)
+  in FactualClaimPayload
+       { fcpStatement  = stmt
+       , fcpConfidence = conf
+       , fcpOrigin     = OriginParser ("anchor:" <> channel)
+       , fcpTurnSeq    = tseq
+       , fcpDeps       = []
+       }

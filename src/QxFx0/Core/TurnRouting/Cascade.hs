@@ -71,7 +71,7 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
       familyAfterGuard = applyGuardGatingModulated familyDivergenceEnabled salience guardReportPre familyAfterPrincipled
       familyCascade = fromMaybe familyAfterGuard (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterGuard)
       finalFamily = if isNixBlocked then CMRepair else familyCascade
-      familyDivergenceEnabled = False
+      familyDivergenceEnabled = True
    in FamilyCascade
         { fcFamilyAfterIdentity = familyAfterIdentity
         , fcFamilyAfterNarrative = familyAfterNarrative

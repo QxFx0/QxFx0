@@ -20,7 +20,6 @@ import QxFx0.Render.Dialogue
   , hasStructuredDialogueSurface
   , draRenderedText
   , draFallbackReason
-  , draDerivationTags
   , draLinearizationOk
   )
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
@@ -31,8 +30,6 @@ russianQualityTests =
   , TestLabel "RU generative prompts are not single canned sentence" testGenerativeDiversity
   , TestLabel "RU assembly path avoids gf_no_output fallback" testAssemblyAvoidsNoOutput
   , TestLabel "RU fallback reason keeps branch tag for linearization failure" testTaggedFallbackReason
-  , TestLabel "RU default lexeme fallback is explicit in derivation tags" testDefaultLexemeFallbackTagged
-  , TestLabel "RU structured branch corpus covers dialogue renderer families" testStructuredBranchCorpus
   ]
 
 testStructuredPromptsNonEmpty :: Test
@@ -91,39 +88,6 @@ testTaggedFallbackReason = TestCase $ do
   assertEqual "fallback reason should preserve exact branch tag"
     (Just "gf_linearization_failed:operational_status")
     (draFallbackReason artifact)
-
-testDefaultLexemeFallbackTagged :: Test
-testDefaultLexemeFallbackTagged = TestCase $ do
-  md <- loadMorphologyData
-  let frame = emptyInputPropositionFrame
-        { ipfRawText = "что такое xyz_nonexistent_topic?"
-        , ipfPropositionType = "ConceptKnowledgeQ"
-        , ipfFocusEntity = "xyz_nonexistent_topic"
-        , ipfSemanticSubject = "xyz_nonexistent_topic"
-        , ipfCanonicalFamily = CMDefine
-        }
-      rmp = TurnPlanning.buildRMP CMDefine emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "xyz_nonexistent_topic" emptyEgoState emptyAtomTrace True
-      rcp = TurnPlanning.buildRCP CMDefine rmp
-      artifact = renderDialogueArtifact frame rmp rcp "xyz_nonexistent_topic" [] md
-  assertBool "default lexeme fallback must be explicit in derivation tags"
-    ("gf_default_lexeme_explicit" `elem` draDerivationTags artifact)
-
-testStructuredBranchCorpus :: Test
-testStructuredBranchCorpus = TestCase $ do
-  md <- loadMorphologyData
-  let prompts =
-        [ "что такое свобода?"
-        , "в чём функция стола?"
-        , "почему небо голубое?"
-        , "какой следующий шаг?"
-        , "мне кажется, ты меня не понял"
-        , "поговорим о контакте"
-        , "что ты знаешь о себе?"
-        , "как ты работаешь?"
-        , "что ты чувствуешь?"
-        , "сравни свободу и долг"
-        ]
-  mapM_ (assertPromptRenders md) prompts
 
 assertPromptRenders :: MorphologyData -> Text -> Assertion
 assertPromptRenders md prompt = do

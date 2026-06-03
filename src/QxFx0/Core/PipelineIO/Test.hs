@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
-{-| Deterministic `PipelineIO` test harness and default in-memory effect interpreter. -}
+{-|
+Description : supplier
+Deterministic `PipelineIO` test harness and default in-memory effect interpreter. -}
 module QxFx0.Core.PipelineIO.Test
   ( TestPipelineConfig(..)
   , defaultTestPipelineConfig
@@ -131,7 +133,7 @@ defaultTestInterpreter request =
       pure (TurnResSemanticIntrospectionEnv False)
     TurnReqCommitRuntimeState _ _ _ ->
       pure TurnResCommitRuntimeState
-    TurnReqSaveState _ _ _ ->
+    TurnReqSaveState _ _ _ _ ->
       pure (TurnResSaveState (Left (PdSaveFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))
     TurnReqRollbackTurnProjections _ _ ->
       pure (TurnResRollbackTurnProjections (Left (PdRollbackFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))

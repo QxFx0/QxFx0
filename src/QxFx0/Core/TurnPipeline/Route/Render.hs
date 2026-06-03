@@ -3,7 +3,8 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
-{-| Route-stage rendering plan, effect resolution, and artifact assembly. -}
+{-|
+Description : observer — Route-stage rendering plan, effect resolution, and artifact assembly. -}
 module QxFx0.Core.TurnPipeline.Route.Render
   ( RenderStatic(..)
   , LocalRecoveryPlan(..)
@@ -47,7 +48,13 @@ import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
 import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, defaultAvailableTools, updateToolReliability)
-import QxFx0.Learning.Guardrails (canSubmitProposal)
+import QxFx0.Learning.Guardrails
+  ( ExternalActionDecision(..)
+  , ExternalActionDecisionReason(..)
+  , ExternalActionDecisionTrace(..)
+  , ExternalActionKind(..)
+  , canIssueExternalAction
+  )
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse)
 import qualified QxFx0.Learning.Guardrails as Guardrails
 import QxFx0.Self.Blanket (computeSelfBlanket)
@@ -126,6 +133,10 @@ data RenderEffectPlan = RenderEffectPlan
   , repExternalQuerySkipReason :: !(Maybe Text)
     -- ^ WP3 dedup telemetry: reason why external query was skipped
     --   (already_known_morphology / already_known_tree).
+  , repExternalActionDecision :: !(Maybe ExternalActionDecision)
+    -- ^ AS1: shared pre-effect decision for request/exploratory outbound actions.
+  , repExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
+    -- ^ AS1-03: typed reason model for allow/deny/no-action on outbound actions.
   }
 
 data RenderTimeline = RenderTimeline
@@ -146,6 +157,7 @@ data RenderEffectResults = RenderEffectResults
     --   'Nothing' means no exploratory query was attempted this turn.
   , rerExternalQuerySkipReason :: !(Maybe Text)
     -- ^ WP3 dedup telemetry: mirrors repExternalQuerySkipReason.
+  , rerExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
   }
   deriving stock (Eq, Show)
 
@@ -259,11 +271,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             case localRecoveryPlan of
               Just plan | isRequestStrategy (lrpStrategy plan) ->
                 let need = lnsCurrentNeed (ssLearningNeedState ss)
-                    mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
-                    queryText = buildExternalQueryText need (tiBestTopic ti)
-                in case mTool of
-                     Just tool -> Just (tool, need, queryText)
-                     Nothing   -> Nothing
+                in buildExternalActionRequest
+                    RequestDrivenExternalAction
+                    need
+                    (buildExternalQueryText need (tiBestTopic ti))
               _ -> Nothing
       -- Phase 9: autonomous exploratory learning query.
       -- Triggered when:
@@ -271,6 +282,8 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       --   2. Learning need is active (not NeedNone)
       --   3. Guardrails allow (rate limit, circuit breaker)
       --   4. A suitable tool is available
+      exploratoryDecision =
+        canIssueExternalAction (ssGuardrailState ss) ExploratoryExternalAction (ssTurnCount ss)
       mExploratoryQueryRequest =
         case mDedupSkipReason of
           Just _ -> Nothing
@@ -279,20 +292,51 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
               Just _ -> Nothing  -- request-driven query takes priority
               Nothing ->
                 let need = lnsCurrentNeed (ssLearningNeedState ss)
-                    lns = ssLearningNeedState ss
-                    toolRel = ssToolReliability ss
-                    guard = ssGuardrailState ss
-                    currentTurn = ssTurnCount ss
                 in if need == NeedNone
                       then Nothing
-                      else if not (canSubmitProposal guard currentTurn)
-                        then Nothing
-                        else
-                          let mTool = selectToolWithReliability need toolRel defaultAvailableTools
-                              queryText = buildExploratoryQueryText need (tiBestTopic ti)
-                          in case mTool of
-                               Just tool | etReliability tool >= 0.3 -> Just (tool, need, queryText)
-                               _ -> Nothing
+                      else case exploratoryDecision of
+                        ExternalActionDenied _ -> Nothing
+                        ExternalActionAllowed ->
+                          buildExternalActionRequest
+                            ExploratoryExternalAction
+                            need
+                            (buildExploratoryQueryText need (tiBestTopic ti))
+      mExternalActionDecision
+        | mExternalQueryRequest /= Nothing = Just ExternalActionAllowed
+        | repLikeExploratory = Just exploratoryDecision
+        | isRequestRecovery = Just (canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss))
+        | otherwise = Nothing
+      mExternalActionDecisionTrace
+        | mExternalQueryRequest /= Nothing =
+            Just (ExternalActionDecisionTrace RequestDrivenExternalAction AllowedRequestDriven (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
+        | mExploratoryQueryRequest /= Nothing =
+            Just (ExternalActionDecisionTrace ExploratoryExternalAction AllowedExploratory (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
+        | isRequestRecovery =
+            case canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss) of
+              ExternalActionDenied _ ->
+                Just (deniedTrace RequestDrivenExternalAction (lnsCurrentNeed (ssLearningNeedState ss)) (canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss)))
+              ExternalActionAllowed ->
+                Just (ExternalActionDecisionTrace RequestDrivenExternalAction DeniedNoExecutableTool (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
+        | repLikeExploratory =
+            if lnsCurrentNeed (ssLearningNeedState ss) == NeedNone
+              then Just (ExternalActionDecisionTrace ExploratoryExternalAction DeniedNoEligibleNeed Nothing)
+              else case exploratoryDecision of
+                     ExternalActionDenied _ -> Just (deniedTrace ExploratoryExternalAction (lnsCurrentNeed (ssLearningNeedState ss)) exploratoryDecision)
+                     ExternalActionAllowed -> Just (ExternalActionDecisionTrace ExploratoryExternalAction DeniedNoExecutableTool (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
+        | otherwise = Just (ExternalActionDecisionTrace RequestDrivenExternalAction DeniedNoActionSelected Nothing)
+      externalQuerySkipReason =
+        case mDedupSkipReason of
+          Just reason -> Just reason
+          Nothing ->
+            case mExternalActionDecision of
+              Just (ExternalActionDenied reason) -> Just reason
+              _ -> Nothing
+      repLikeExploratory =
+        mExternalQueryRequest == Nothing && lnsCurrentNeed (ssLearningNeedState ss) /= NeedNone
+      isRequestRecovery =
+        case localRecoveryPlan of
+          Just plan -> isRequestStrategy (lrpStrategy plan)
+          Nothing -> False
     in RenderEffectPlan
         { repRenderStatic = RenderStatic
            { rsRenderWithBg = renderWithBg
@@ -328,8 +372,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repKnowledgeTopic = bestTopic
       , repExternalQueryRequest = mExternalQueryRequest
       , repExploratoryQueryRequest = mExploratoryQueryRequest
-      , repExternalQuerySkipReason = mDedupSkipReason
-       }
+      , repExternalQuerySkipReason = externalQuerySkipReason
+      , repExternalActionDecision = mExternalActionDecision
+      , repExternalActionDecisionTrace = mExternalActionDecisionTrace
+        }
   where
     isRequestStrategy StrategyRequestCalibration = True
     isRequestStrategy StrategyRequestRule        = True
@@ -355,6 +401,40 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
            NeedKeywordEnrichment   -> T.concat ["Explore keywords for ", topicText]
            NeedSalienceCalibration -> T.concat ["Explore salience calibration for ", topicText]
            NeedNone                -> ""
+
+    buildExternalActionRequest :: ExternalActionKind -> LearningNeed -> Text -> Maybe (ExternalTool, LearningNeed, Text)
+    buildExternalActionRequest actionKind need queryText =
+      let mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
+          decision = canIssueExternalAction (ssGuardrailState ss) actionKind (ssTurnCount ss)
+      in case (decision, mTool) of
+           (ExternalActionAllowed, Just tool) | etReliability tool >= 0.3 -> Just (tool, need, queryText)
+           _ -> Nothing
+    deniedTrace kind need decision =
+      ExternalActionDecisionTrace kind (decisionReason kind need decision) (Just (renderNeedTag need))
+    decisionReason kind need decision =
+      case decision of
+        ExternalActionAllowed ->
+          case kind of
+            RequestDrivenExternalAction -> AllowedRequestDriven
+            ExploratoryExternalAction -> AllowedExploratory
+        ExternalActionDenied reason
+          | reason == "guardrail_rate_limit" -> DeniedGuardrailRateLimit
+          | reason == "guardrail_circuit_breaker" -> DeniedGuardrailCircuitBreaker
+          | need == NeedNone -> DeniedNoEligibleNeed
+          | otherwise -> DeniedNoExecutableTool
+    reasonText reason =
+      Just $ case reason of
+        AllowedRequestDriven -> "allowed_request_driven"
+        AllowedExploratory -> "allowed_exploratory"
+        DeniedGuardrailRateLimit -> "guardrail_rate_limit"
+        DeniedGuardrailCircuitBreaker -> "guardrail_circuit_breaker"
+        DeniedNoEligibleNeed -> "no_eligible_need"
+        DeniedNoExecutableTool -> "no_executable_tool"
+        DeniedNoActionSelected -> "no_action_selected"
+    renderNeedTag NeedSalienceCalibration = "NeedSalienceCalibration"
+    renderNeedTag NeedKeywordEnrichment = "NeedKeywordEnrichment"
+    renderNeedTag NeedLexiconExtension = "NeedLexiconExtension"
+    renderNeedTag NeedNone = "NeedNone"
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
@@ -406,6 +486,7 @@ resolveRenderEffects pio effectPlan = do
     , rerExternalQueryResult = mExternalQueryResult
     , rerExploratoryQueryResult = mExploratoryQueryResult
     , rerExternalQuerySkipReason = repExternalQuerySkipReason effectPlan
+    , rerExternalActionDecisionTrace = repExternalActionDecisionTrace effectPlan
     }
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
@@ -449,14 +530,6 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       assemblyPath = deriveAssemblyPath renderStatic templateArtifact finalizeSurfaceProv
       authorityClass = deriveAuthorityClass renderStatic contractProv surfaceProv assemblyPath
       artifactManifest = deriveArtifactManifest renderStatic templateArtifact assemblyPath authorityClass
-      derivationTags =
-        draDerivationTags templateArtifact
-          <> [ "surface_provenance=" <> T.pack (show surfaceProv)
-             , "contract_provenance=" <> T.pack (show contractProv)
-             , "assembly_path=" <> T.pack (show assemblyPath)
-             , "authority_class=" <> T.pack (show authorityClass)
-             ]
-          <> if finalizeSurfaceProv == FromRecovery then ["finalize=guard_blocked_non_expansive"] else ["finalize=preserve_upstream_surface"]
       rendered = Guard.gsRenderedText renderedSurface
       (recoveryCause, recoveryStrategy, recoveryEvidence) =
         case surfaceProv of
@@ -492,6 +565,15 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , tdSemanticAnchor = tpSemanticAnchor tp
         }
       executedOutcome = safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assemblyPath artifactManifest
+      derivationTags =
+        draDerivationTags templateArtifact
+          <> [ "surface_provenance=" <> T.pack (show surfaceProv)
+             , "contract_provenance=" <> T.pack (show contractProv)
+             , "assembly_path=" <> T.pack (show assemblyPath)
+             , "authority_class=" <> T.pack (show authorityClass)
+             , "response_surface_kind=" <> T.pack (show (etoResponseSurfaceKind executedOutcome))
+             ]
+          <> if finalizeSurfaceProv == FromRecovery then ["finalize=guard_blocked_non_expansive"] else ["finalize=preserve_upstream_surface"]
       executedDecision =
         decision
           { tdFamily = etoFamily executedOutcome
@@ -525,7 +607,8 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , taExternalQueryResult = rerExternalQueryResult effectResults
        , taExploratoryQueryResult = rerExploratoryQueryResult effectResults
        , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
-       }
+       , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
+        }
 
 deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath
 deriveAssemblyPath renderStatic artifact finalizeSurfaceProv
@@ -596,6 +679,7 @@ safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assembl
             , etoForce = IFOffer
             , etoAuthorityClass = AuthorityRecovery
             , etoTruthContractStatus = NonExpansiveRecoverySurface
+            , etoResponseSurfaceKind = SurfaceDegraded
             , etoContractProvenance = RecoveryRoute
             , etoSurfaceProvenance = FromRecovery
             , etoAssemblyPath = GuardRecoveryRoute
@@ -809,10 +893,10 @@ renderGradientFragment (Just (m, c, t)) =
            ]
 
 renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> [Text] -> Text
-renderLocalRecoverySurface gfLang _cause strategy topic evidence =
+renderLocalRecoverySurface gfLang cause strategy topic evidence =
   let baseSurface =
         if gfLangTelemetryTag gfLang == "en"
-          then renderLocalRecoverySurfaceEn strategy topic
+          then renderLocalRecoverySurfaceEn cause strategy topic
           else renderLocalRecoverySurfaceRu strategy topic
       gradientFrag = renderGradientFragment (parseGradient evidence)
   in if T.null gradientFrag
@@ -822,7 +906,20 @@ renderLocalRecoverySurface gfLang _cause strategy topic evidence =
 renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceRu strategy topic =
   let topicText = if T.null topic then "этот вопрос" else topic
-      header = "Локальный режим восстановления."
+      header = case strategy of
+        StrategyAskClarification -> "Локальный режим восстановления. Режим advisory."
+        StrategyDistinguishCandidates -> "Локальный режим восстановления. Режим advisory."
+        StrategyExposeUncertainty -> "Локальный режим восстановления. Режим advisory."
+        StrategyDefineKnownTerms -> "Локальный режим восстановления. Режим fallback."
+        StrategyNarrowScope -> "Локальный режим восстановления. Режим degraded."
+        StrategySafeRecovery -> "Локальный режим восстановления. Режим degraded recovery."
+        StrategyMorphologyExpansion -> "Локальный режим восстановления. Режим degraded recovery."
+        StrategyIdentityReinforcement -> "Локальный режим восстановления. Режим degraded recovery."
+        StrategyTemporalDeepening -> "Локальный режим восстановления. Режим degraded recovery."
+        StrategyRequestCalibration -> "Локальный режим восстановления. Режим fallback."
+        StrategyRequestRule -> "Локальный режим восстановления. Режим fallback."
+        StrategyRequestConcept -> "Локальный режим восстановления. Режим fallback."
+        StrategyExternalDialogue -> "Локальный режим восстановления. Режим fallback."
    in case strategy of
         StrategyAskClarification ->
           header <> " Уточни, тебе нужно определение, различение или пример по теме: " <> topicText <> "?"
@@ -851,10 +948,19 @@ renderLocalRecoverySurfaceRu strategy topic =
         StrategyExternalDialogue ->
           header <> " Инициирую внешний диалог для автономного исследования: " <> topicText <> "."
 
-renderLocalRecoverySurfaceEn :: LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurfaceEn strategy topic =
+renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceEn cause strategy topic =
   let topicText = if T.null topic then "this question" else topic
-      header = "Local recovery mode."
+      header = case cause of
+        RecoveryConatusGate -> "Degraded recovery mode."
+        RecoveryRuntimeDegraded -> "Degraded mode."
+        RecoveryRenderBlocked -> "Degraded recovery mode."
+        RecoveryShadowUnavailable -> "Advisory mode."
+        RecoveryShadowDivergence -> "Advisory mode."
+        RecoveryParserLowConfidence -> "Advisory mode."
+        RecoveryLowLegitimacy -> "Advisory mode."
+        RecoveryUnknownTopic -> "Fallback mode."
+        RecoveryLearningNeed -> "Fallback mode."
    in case strategy of
         StrategyAskClarification ->
           header <> " Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."

@@ -1,5 +1,6 @@
 {-# LANGUAGE StrictData #-}
-{-| Shared turn-pipeline phase types for input/signals/plans/artifacts/results. -}
+{-|
+Description : observer — Shared turn-pipeline phase types for input/signals/plans/artifacts/results. -}
 module QxFx0.Core.TurnPipeline.Types
   ( TurnInput(..)
   , TurnSignals(..)
@@ -36,6 +37,7 @@ import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Deliberation (Deliberation)
 import QxFx0.Self.Field (Field, FieldHeuristics)
+import QxFx0.Self.Salience (SelfVerdict)
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
@@ -43,6 +45,7 @@ import QxFx0.Semantic.Sense (SenseVector)
 import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
+import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -116,6 +119,11 @@ data TurnInput = TurnInput
     --   'tiField'.  Mirrors 'psFieldHeuristics' from
     --   'PrepareStatic' so downstream stages can read the
     --   same record without reconstructing defaults.
+  , tiSelfVerdict :: !SelfVerdict
+    -- ^ Canonical aggregated self-layer verdict, computed once in the
+    --   prepare stage from 'tiConatusEnergy' and 'tiField'. Downstream
+    --   route/finalize stages should consume this instead of rebuilding
+    --   salience and its discrete verdict ad hoc.
   , tiSenseVector :: !SenseVector
     -- ^ Canonical sense-layer bridge extracted from the same semantic
     --   interpretation that produced 'tiFrame'. Used to constrain
@@ -239,6 +247,8 @@ data TurnArtifacts = TurnArtifacts
     -- ^ WP3 dedup telemetry: populated when an external query was
     --   suppressed because the term was already known in morphology
     --   or knowledge tree.
+  , taExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
+    -- ^ AS1-03: typed rationale for allow/deny/no-action on outbound actions.
   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts

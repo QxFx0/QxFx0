@@ -18,6 +18,11 @@ Prevents runaway learning loops by enforcing:
 module QxFx0.Learning.Guardrails
   ( GuardrailState(..)
   , emptyGuardrailState
+  , ExternalActionKind(..)
+  , ExternalActionDecisionReason(..)
+  , ExternalActionDecisionTrace(..)
+  , ExternalActionDecision(..)
+  , canIssueExternalAction
   , canSubmitProposal
   , recordProposalSubmission
   , recordRejection
@@ -40,6 +45,36 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationProposal(..))
+
+data ExternalActionKind
+  = RequestDrivenExternalAction
+  | ExploratoryExternalAction
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
+
+data ExternalActionDecisionReason
+  = AllowedRequestDriven
+  | AllowedExploratory
+  | DeniedGuardrailRateLimit
+  | DeniedGuardrailCircuitBreaker
+  | DeniedNoEligibleNeed
+  | DeniedNoExecutableTool
+  | DeniedNoActionSelected
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
+
+data ExternalActionDecisionTrace = ExternalActionDecisionTrace
+  { eadtKind :: !ExternalActionKind
+  , eadtReason :: !ExternalActionDecisionReason
+  , eadtNeedTag :: !(Maybe Text)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
+
+data ExternalActionDecision
+  = ExternalActionAllowed
+  | ExternalActionDenied !Text
+  deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
 
 -- | Guardrail configuration (hard-coded for determinism).
 maxProposalsPerWindow :: Int
@@ -114,6 +149,12 @@ canSubmitProposal :: GuardrailState -> Int -> Bool
 canSubmitProposal gs turn =
   not (circuitBreakerOpen gs turn) && not (rateLimitExceeded gs turn)
 
+canIssueExternalAction :: GuardrailState -> ExternalActionKind -> Int -> ExternalActionDecision
+canIssueExternalAction gs _kind turn
+  | circuitBreakerOpen gs turn = ExternalActionDenied "guardrail_circuit_breaker"
+  | rateLimitExceeded gs turn = ExternalActionDenied "guardrail_rate_limit"
+  | otherwise = ExternalActionAllowed
+
 -- | Record a new proposal submission, updating counters and window.
 recordProposalSubmission :: GuardrailState -> Int -> CalibrationId -> GuardrailState
 recordProposalSubmission gs turn proposalId =
@@ -161,9 +202,9 @@ isQuarantineExpired gs turn proposalId =
     swap (a, b) = (b, a)
 
 pruneQuarantine :: Int -> [(Int, CalibrationId)] -> [(Int, CalibrationId)]
-pruneQuarantine turn =
-  take maxQuarantineEntries
-    . filter (\(submittedTurn, _) -> turn - submittedTurn <= minQuarantineTurns)
+pruneQuarantine turn entries =
+  let stillActive = filter (\(submittedTurn, _) -> turn - submittedTurn < minQuarantineTurns) entries
+  in take maxQuarantineEntries stillActive
 
 -- Internal helpers
 

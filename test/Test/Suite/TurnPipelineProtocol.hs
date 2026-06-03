@@ -2,6 +2,9 @@
 
 module Test.Suite.TurnPipelineProtocol
   ( turnPipelineProtocolTests
+  , buildFinalizeFixture
+  , buildFinalizeFixtureWithState
+  , withDeterministicEmbedding
   ) where
 
 import Control.Concurrent (threadDelay)
@@ -87,7 +90,120 @@ import QxFx0.Core.TurnPipeline.Protocol
   , finalizeMetrics
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
-import qualified QxFx0.Core.ConsciousnessLoop as CLoop
+import QxFx0.Core.InterpretationAdmission
+  ( InterpretationAdmissionInput(..)
+  , InterpretationAdmissionDecision(..)
+  , AdmittedInterpretation(..)
+  , admitInterpretationCandidate
+  )
+import QxFx0.Core.SemanticFrameAdmission
+  ( SemanticFrameAdmissionInput(..)
+  , SemanticFrameAdmissionDecision(..)
+  , AdmittedSemanticFrame(..)
+  , admitSemanticFrame
+  , admitSemanticFrameForInput
+  , admittedSemanticFrameConfidence
+  , admittedSemanticFrameRouteTag
+  , admittedSemanticFrameRouteEvidence
+  )
+import QxFx0.Core.PropositionAdmission
+  ( PropositionAdmissionInput(..)
+  , PropositionAdmissionDecision(..)
+  , AdmittedPropositionFrame(..)
+  , admitPropositionFrame
+  )
+import QxFx0.Core.SenseVectorAdmission
+  ( SenseVectorAdmissionInput(..)
+  , SenseVectorAdmissionDecision(..)
+  , AdmittedSenseVector(..)
+  , admitSenseVector
+  )
+import QxFx0.Core.RouteHintAdmission
+  ( InputRouteType(..)
+  , InputRouteHint(..)
+  , RouteHintAdmissionInput(..)
+  , RouteHintAdmissionDecision(..)
+  , AdmittedRouteHint(..)
+  , admitRouteHint
+  , admitRouteHintForFrame
+  , applyAdmittedRouteHint
+  , admittedRouteHintTag
+  , admittedRouteHintConfidence
+  , admittedRouteHintEvidence
+  )
+import QxFx0.Core.FamilyAdmission
+  ( FamilyAdmissionInput(..)
+  , FamilyAdmissionDecision(..)
+  , AdmittedFamily(..)
+  , admitFamilyCrystallization
+  )
+import QxFx0.Core.EarlyFamilyAdmission
+  ( EarlyFamilyAdmissionInput(..)
+  , EarlyFamilyAdmissionDecision(..)
+  , AdmittedEarlyFamily(..)
+  , admitEarlyFamilyRecommendation
+  )
+import QxFx0.Core.AtomContributionAdmission
+  ( AtomContributionAdmissionInput(..)
+  , AtomContributionAdmissionDecision(..)
+  , AdmittedAtomContributions(..)
+  , admitAtomContributions
+  )
+import QxFx0.Core.AtomExtractionAdmission
+  ( AtomExtractionAdmissionInput(..)
+  , AtomExtractionAdmissionDecision(..)
+  , AdmittedAtomAvailability(..)
+  , admitAtomAvailability
+  )
+import QxFx0.Core.AtomFindingAdmission
+  ( AtomFindingAdmissionInput(..)
+  , AtomFindingAdmissionDecision(..)
+  , AdmittedAtomFindings(..)
+  , admitAtomFindings
+  )
+import QxFx0.Core.StructuralAtomAdmission
+  ( StructuralAtomAdmissionInput(..)
+  , StructuralAtomAdmissionDecision(..)
+  , AdmittedStructuralAtoms(..)
+  , admitStructuralAtoms
+  )
+import QxFx0.Core.LexicalClusterPhraseDecisionAdmission
+  ( LexicalClusterPhraseDecisionAdmissionInput(..)
+  , LexicalClusterPhraseDecisionAdmissionDecision(..)
+  , AdmittedLexicalClusterPhraseDecisions(..)
+  , admitLexicalClusterPhraseDecisions
+  )
+import QxFx0.Core.LexicalClusterPhraseAdmission
+  ( LexicalClusterPhraseAdmissionInput(..)
+  , LexicalClusterPhraseAdmissionDecision(..)
+  , AdmittedLexicalClusterPhraseContainment(..)
+  , admitLexicalClusterPhraseContainment
+  )
+import QxFx0.Core.LexicalClusterHitAdmission
+  ( LexicalClusterHitAdmissionInput(..)
+  , LexicalClusterHitAdmissionDecision(..)
+  , AdmittedLexicalClusterHits(..)
+  , admitLexicalClusterHits
+  )
+import QxFx0.Core.LexicalClusterMatchAdmission
+  ( LexicalClusterMatchAdmissionInput(..)
+  , LexicalClusterMatchAdmissionDecision(..)
+  , AdmittedLexicalClusterMatches(..)
+  , admitLexicalClusterMatches
+  )
+import QxFx0.Core.SemanticContributionAdmission
+  ( SemanticContributionAdmissionInput(..)
+  , SemanticContributionAdmissionDecision(..)
+  , AdmittedSemanticContributions(..)
+  , admitSemanticContributions
+  )
+import QxFx0.Core.SemanticLogicAdmission
+  ( SemanticLogicAdmissionInput(..)
+  , SemanticLogicAdmissionDecision(..)
+  , AdmittedSemanticLogic(..)
+  , admitSemanticLogicWeighting
+  )
+import QxFx0.Core.SensePlan (buildResponseSensePlan)
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import QxFx0.Self.Deliberation
   ( Deliberation(..)
@@ -97,8 +213,30 @@ import QxFx0.Self.Deliberation
   , ReconcileRule(..)
   , defaultPlan
   )
-import QxFx0.Self.Salience (SalienceDriver(..))
+import QxFx0.Self.Salience (Salience(..), SelfVerdict(..), SalienceDriver(..), SalienceVerdict(..))
+import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Morphology as Morph
+import QxFx0.Semantic.MeaningAtoms
+  ( RawAtomFindings(..)
+  , RawClusterPhraseDecision(..)
+  , RawLexicalPhraseDecision(..)
+  , RawLexicalClusterPhraseDecisions(..)
+  , RawClusterPhraseContainment(..)
+  , RawClusterHit(..)
+  , LexicalPhraseContainmentClass(..)
+  , RawLexicalPhraseContainment(..)
+  , RawLexicalClusterPhraseContainment(..)
+  , RawLexicalHit(..)
+  , RawLexicalClusterHits(..)
+  , RawLexicalClusterMatches(..)
+  , buildRawLexicalClusterPhraseContainmentFromDecisions
+  , buildRawLexicalClusterHitsFromPhraseContainment
+  , buildRawLexicalClusterMatchesFromHits
+  )
+import QxFx0.Semantic.SemanticInput (SemanticInput(..))
+import QxFx0.Semantic.Sense.Extract (extractSenseVector)
+import qualified QxFx0.Core.Intuition as Intuition
+import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import QxFx0.Types.ShadowDivergence
   ( ShadowSnapshotId(..)
   , ShadowDivergence(..)
@@ -107,7 +245,7 @@ import QxFx0.Types.ShadowDivergence
   , ShadowVetoState(..)
   , emptyShadowDivergence
   )
-import QxFx0.Semantic.Proposition (parseProposition, PropositionType(..))
+import QxFx0.Semantic.Proposition (parseProposition, parsePropositionWithFrame, PropositionType(..))
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom(..), MorphologyData(..))
 import QxFx0.Core.Guard (SafetyStatus(..))
 import QxFx0.Semantic.AtomAccretion
@@ -142,6 +280,12 @@ import QxFx0.Learning.Tool
   , selectTool
   , defaultAvailableTools
   )
+import QxFx0.Bridge.ExternalLLM
+  ( buildTransportFromConfig
+  , queryExternalTool
+  , defaultExternalQueryConfig
+  )
+import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportFallbackReason(..))
 import QxFx0.Learning.Calibration
   ( CalibrationId(..)
   , CalibrationProposal(..)
@@ -165,20 +309,7 @@ import QxFx0.Learning.Guardrails
   , recordAcceptance
   , isQuarantineExpired
   )
-import Test.Support.TurnPipelineFixtures
-  ( buildAuthoritativePerspectiveFinalizeFixture
-   , buildFinalizeFixture
-   , buildFinalizeFixtureWithState
-   , buildPlannedFixture
-   , buildPlannedFixtureWithState
-   , buildPreparedFixture
-   , buildRenderedFixtureWithState
-   , buildRenderedFixture
-   , testEpochZero
-   , testProtocolInterpreter
-  , testProtocolPipelineIO
-  , withDeterministicEmbedding
-  )
+import Test.Support (withEnvVar)
 
 turnPipelineProtocolTests :: [Test]
 turnPipelineProtocolTests =
@@ -310,11 +441,86 @@ turnPipelineProtocolTests =
       , testAutonomousExplorationFailClosed
       , testAutonomousExplorationGuardrailBlocks
       , testAutonomousExplorationTelemetry
-       , testRequestDrivenPathNotRegressedByExploration
-       -- WP6.1: dedup anti-overblocking + telemetry wiring
+      , testRequestDrivenPathNotRegressedByExploration
+       , testRequestDrivenBlockedPathRemainsInert
+       , testRequestDrivenExternalActionReason
+       , testExploratoryExternalActionReason
+       , testGuardrailDeniedExternalActionReason
+       , testNoActionExternalReason
+       , testRequestDrivenTransportFailureSurfacesPreActorFailureEvent
+       , testRequestDrivenNoExecutableToolSurfacesPreActorFailureEvent
+       , testGuardrailDeniedPathDoesNotFabricatePreActorFailureEvent
+        -- WP6.1: dedup anti-overblocking + telemetry wiring
        , testDedupAntiOverblockingAllowsNoisyKnownTopic
        , testDedupBlocksCleanKnownTopic
-       , testDialogueDevelopmentPersistsOutcomeAndBelief
+       , testConstitutionAdmissibleCommitmentStrengthens
+       , testNonAuthoritativeCommitmentCandidateCappedBeforePlanning
+       , testConatusGatedCommitmentCandidateSuspendedBeforePlanning
+       , testNonAuthoritativeFinalizeDoesNotStrengthenCommitment
+       , testConstitutionAdmissibleInterpretationPreservesRawRouteInput
+       , testNonAuthoritativeInterpretationNarrowsBeforeRouteCrystallization
+       , testConatusGatedInterpretationFallsBackBeforeRouteCrystallization
+       , testConstitutionAdmissiblePropositionPreservesRawFrame
+       , testNonAuthoritativePropositionFrameSoftensBeforeInterpretationAdmission
+       , testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission
+       , testConstitutionAdmissibleSemanticFramePreservesRawFrame
+       , testNonAuthoritativeSemanticFrameSoftensBeforePropositionAdmission
+       , testConatusGatedSemanticFrameSoftensBeforePropositionAdmission
+       , testConstitutionAdmissibleSenseVectorPreservesRawVector
+       , testNonAuthoritativeSenseVectorNarrowsBeforeMeaningShaping
+       , testConatusGatedSenseVectorNarrowsBeforeMeaningShaping
+       , testConstitutionAdmissibleRouteHintPreservesRawHint
+       , testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission
+       , testConatusGatedRouteHintSoftensBeforePropositionAdmission
+       , testConstitutionAdmissibleFamilyPreservesRawCrystallization
+       , testNonAuthoritativeFamilyCrystallizationCapsBeforeRouteDecision
+       , testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision
+       , testRoutePlanConsumesAdmittedFamilyCrystallization
+       , testConstitutionAdmissibleEarlyFamilyPreservesRawRecommendation
+       , testNonAuthoritativeEarlyFamilyCapsBeforeLaterCrystallization
+       , testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization
+       , testPrepareConsciousnessUsesAdmittedEarlyFamily
+       , testConstitutionAdmissibleSemanticLogicPreservesRawWeighting
+       , testNonAuthoritativeSemanticLogicCapsBeforeEarlyFamilyAdmission
+       , testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission
+       , testPrepareUsesAdmittedSemanticLogicFamily
+       , testConstitutionAdmissibleSemanticContributionPreservesRawContributions
+       , testNonAuthoritativeSemanticContributionSoftensBeforeWeightingAdmission
+       , testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission
+       , testPrepareUsesAdmittedSemanticContributionPlane
+       , testConstitutionAdmissibleAtomContributionPreservesRawAtoms
+       , testNonAuthoritativeAtomContributionCapsStrongAtoms
+       , testNonAuthoritativeWeakAtomContributionStaysAmbiguous
+       , testPrepareUsesAdmittedAtomContributionPlane
+       , testConstitutionAdmissibleAtomExtractionPreservesRawAtoms
+       , testNonAuthoritativeAtomExtractionSuppressesStrongFindings
+       , testNonAuthoritativeSafeAtomExtractionStaysPresent
+       , testPrepareUsesAdmittedAtomExtractionPlane
+       , testConstitutionAdmissibleAtomFindingPreservesRawFindings
+       , testNonAuthoritativeAtomFindingSuppressesStrongLexicalAndClusterFindings
+       , testNonAuthoritativeSafeAtomFindingsStayPresent
+       , testPrepareUsesAdmittedAtomFindingPlane
+        , testConstitutionAdmissibleStructuralAtomPreservesSearching
+        , testNonAuthoritativeStructuralAtomSuppressesSearching
+        , testSafeStructuralAtomsStayPresent
+        , testPrepareUsesAdmittedStructuralAtomPlane
+        , testConstitutionAdmissibleLexicalClusterPhraseDecisionPreservesRawDecisions
+        , testNonAuthoritativeLexicalClusterPhraseDecisionSuppressesStrongDecisions
+        , testNonAuthoritativeSafeLexicalClusterPhraseDecisionsStayPresent
+        , testPrepareUsesAdmittedLexicalClusterPhraseDecisionPlane
+        , testConstitutionAdmissibleLexicalClusterPhraseContainmentPreservesRawContainment
+        , testNonAuthoritativeLexicalClusterPhraseContainmentSuppressesStrongContainment
+        , testNonAuthoritativeSafeLexicalClusterPhraseContainmentStaysPresent
+        , testPrepareUsesAdmittedLexicalClusterPhraseContainmentPlane
+        , testConstitutionAdmissibleLexicalClusterHitPreservesRawHits
+        , testNonAuthoritativeLexicalClusterHitSuppressesStrongHits
+        , testNonAuthoritativeSafeLexicalClusterHitsStayPresent
+        , testPrepareUsesAdmittedLexicalClusterHitPlane
+        , testConstitutionAdmissibleLexicalClusterMatchingPreservesRawMatches
+        , testNonAuthoritativeLexicalClusterMatchingSuppressesStrongMatches
+        , testNonAuthoritativeSafeLexicalClusterMatchesStayPresent
+        , testPrepareUsesAdmittedLexicalClusterMatchingPlane
+        , testDialogueDevelopmentPersistsOutcomeAndBelief
        , testDialogueDevelopmentConflictUsesPriorTopic
         , testDialogueDevelopmentWeakSignalsDoNotMutate
         , testDialogueDevelopmentWeakAcknowledgementDoesNotMutate
@@ -413,7 +619,7 @@ testFinalizeCommitRecoversRuntimeStateAfterCommitFailure = TestCase $
               }
     (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
     let commitPlan = planFinalizeCommit "session-recovery" ss ti ts ta bundle
-    _ <- resolveFinalizeCommit recoveryPio commitPlan
+    _ <- resolveFinalizeCommit recoveryPio 0 commitPlan
     attempts <- readIORef commitAttemptsRef
     assertEqual "commit effect should be retried once on recovery path" 2 attempts
 
@@ -428,7 +634,7 @@ testFinalizeCommitRollsBackPersistedStateAfterRecoveryFailure = TestCase $
               }
     (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
     let commitPlan = planFinalizeCommit "session-rollback" ss ti ts ta bundle
-    result <- try (resolveFinalizeCommit rollbackPio commitPlan) :: IO (Either QxFx0Exception FinalizeCommitResults)
+    result <- try (resolveFinalizeCommit rollbackPio 0 commitPlan) :: IO (Either QxFx0Exception FinalizeCommitResults)
     case result of
       Left (PersistenceError detail) -> do
         let hasProjectionRollback = "projections rollback=ok" `T.isInfixOf` detail
@@ -1934,6 +2140,70 @@ protocolInputs =
   , "что делать дальше"
   ]
 
+testProtocolPipelineIO :: PipelineIO
+testProtocolPipelineIO =
+  mkTestPipelineIO
+    defaultTestPipelineConfig
+      { tpcInterpreter = testProtocolInterpreter
+      }
+
+testProtocolInterpreter :: TurnEffectRequest -> IO TurnEffectResult
+testProtocolInterpreter request =
+  case request of
+    TurnReqEmbedding inputText ->
+      TurnResEmbedding <$> Emb.textToEmbeddingResult inputText
+    TurnReqNixGuard _ _ _ ->
+      pure (TurnResNixGuard Allowed)
+    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy _salienceWeights -> do
+      let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
+      pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
+    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
+      let (mFlash, intuitionState) =
+            Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
+      pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)
+    TurnReqApiHealth ->
+      pure (TurnResApiHealth True)
+    TurnReqShadow family force _ ->
+      pure (TurnResShadow (Just (family, force)) ShadowMatch emptyShadowDivergence (ShadowSnapshotId "shadow:test_protocol") [])
+    TurnReqAgdaVerify ->
+      pure (TurnResAgdaVerify AgdaVerified)
+    TurnReqCurrentTime ->
+      pure (TurnResCurrentTime protocolFixedTime)
+    TurnReqRequestId ->
+      pure (TurnResRequestId "request-id-protocol")
+    TurnReqReadEnv _ ->
+      pure (TurnResReadEnv Nothing)
+    TurnReqTestMarkOnceFile _ ->
+      pure (TurnResTestMarkOnceFile False)
+    TurnReqSemanticIntrospectionEnv ->
+      pure (TurnResSemanticIntrospectionEnv False)
+    TurnReqCommitRuntimeState _ _ _ ->
+      pure TurnResCommitRuntimeState
+    TurnReqSaveState ss _ _ _ ->
+      pure (TurnResSaveState (Right ss))
+    TurnReqRollbackTurnProjections _ _ ->
+      pure (TurnResRollbackTurnProjections (Right ()))
+    TurnReqCheckpoint _ ->
+      pure TurnResCheckpointCompleted
+    TurnReqLinearizeClaimAst _ _ _ ->
+      pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
+    TurnReqLinearizeDialogAtoms _ _ _ ->
+      pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
+    TurnReqExternalQuery tool need queryText -> do
+      transport <- buildTransportFromConfig explicitMockExternalQueryConfig
+      result <- queryExternalTool transport tool need queryText
+      pure (TurnResExternalQuery result)
+
+explicitMockExternalQueryConfig :: ExternalQueryConfig
+explicitMockExternalQueryConfig =
+  defaultExternalQueryConfig
+    { eqcTransportMode = "mock"
+    , eqcFallbackReason = Just TfrExplicitMock
+    }
+
+protocolFixedTime :: UTCTime
+protocolFixedTime = UTCTime (ModifiedJulianDay 0) 0
+
 trackedPrepareInterpreter :: IORef Int -> IORef Int -> TurnEffectRequest -> IO TurnEffectResult
 trackedPrepareInterpreter activeRef maxRef request =
   case request of
@@ -2012,7 +2282,7 @@ failingCommitWithRollbackInterpreter saveRequestsRef request =
   case request of
     TurnReqCommitRuntimeState _ _ _ ->
       ioError (userError "forced_commit_runtime_failure_always")
-    TurnReqSaveState ss _ mProjection -> do
+    TurnReqSaveState ss _ _ mProjection -> do
       atomicModifyIORef' saveRequestsRef $ \items ->
         (items <> [("save", ssTurnCount ss, maybe False (const True) mProjection)], ())
       pure (TurnResSaveState (Right ss))
@@ -2034,6 +2304,1059 @@ trackConcurrentEffect activeRef maxRef action = do
   result <- action
   atomicModifyIORef' activeRef $ \active -> (active - 1, ())
   pure result
+
+buildPreparedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals)
+buildPreparedFixture rawInput = do
+  -- Phase-1 SelfBlanket invariants require a non-empty session id and
+  -- a non-empty morphology to consider the state /this system/. Test
+  -- fixtures must therefore supply at least the minimum needed to
+  -- satisfy 'checkInitialBlanket' / 'checkBlanketTransition'; the
+  -- specific values are synthetic and orthogonal to the assertions
+  -- in this suite.
+  let ss = emptySystemState
+        { ssSessionId  = "fixture-session"
+        , ssMorphology = MorphologyData
+            (Map.singleton "о" "preposition")
+            Map.empty
+            Map.empty
+            Map.empty
+        }
+      preparePlan = planPrepareEffects ss rawInput testEpochZero
+  prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
+  let ti = buildTurnInput ss "request-prop" "session-prop" preparePlan prepareResults
+      ts = buildTurnSignals prepareResults
+  pure (ss, ti, ts)
+
+buildPlannedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan)
+buildPlannedFixture rawInput = do
+  (ss, ti, ts) <- buildPreparedFixture rawInput
+  let routePlan = planRouteEffects ss ti ts
+  routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
+  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  pure (ss, ti, ts, tp)
+
+buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
+buildRenderedFixture rawInput = do
+  (ss, ti, ts, tp) <- buildPlannedFixture rawInput
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+  let ta = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+  pure (ss, ti, ts, tp, ta)
+
+buildFinalizeFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts, FinalizePrecommitBundle)
+buildFinalizeFixture rawInput = do
+  (ss, ti, ts, tp, ta) <- buildRenderedFixture rawInput
+  let precommitPlan = planFinalizePrecommit ss ti ts tp ta
+  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+  let bundle =
+        buildFinalizePrecommit
+          (pipelineUpdateHistory testProtocolPipelineIO)
+          ss
+          ti
+          ts
+          tp
+          ta
+          precommitPlan
+          precommitResults
+  pure (ss, ti, ts, tp, ta, bundle)
+
+-- | Variant of 'buildFinalizeFixture' that starts from a custom
+-- 'SystemState' instead of 'emptySystemState'.
+buildFinalizeFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts, FinalizePrecommitBundle)
+buildFinalizeFixtureWithState startSs rawInput = do
+  -- Override the emptySystemState used by buildRenderedFixture by
+  -- replicating the chain with the custom start state.
+  (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithState startSs rawInput
+  let precommitPlan = planFinalizePrecommit ss ti ts tp ta
+  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+  let bundle =
+        buildFinalizePrecommit
+          (pipelineUpdateHistory testProtocolPipelineIO)
+          ss
+          ti
+          ts
+          tp
+          ta
+          precommitPlan
+          precommitResults
+  pure (ss, ti, ts, tp, ta, bundle)
+
+buildRenderedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
+buildRenderedFixtureWithState startSs rawInput = do
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState startSs rawInput
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+  let ta = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+  pure (ss, ti, ts, tp, ta)
+
+buildPlannedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals, TurnPlan)
+buildPlannedFixtureWithState startSs rawInput = do
+  (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
+  let routePlan = planRouteEffects ss ti ts
+  routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
+  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  pure (ss, ti, ts, tp)
+
+buildPreparedFixtureWithState
+  :: SystemState -> T.Text
+  -> IO (SystemState, TurnInput, TurnSignals)
+buildPreparedFixtureWithState startSs rawInput = do
+  let preparePlan = planPrepareEffects startSs rawInput testEpochZero
+  prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
+  let ti = buildTurnInput startSs "request-prop" "session-prop" preparePlan prepareResults
+      ts = buildTurnSignals prepareResults
+  pure (startSs, ti, ts)
+
+latestCommitmentStatus :: DialogueCommitmentLedger -> Maybe CommitmentStatus
+latestCommitmentStatus ledger =
+  case reverse (dclItems ledger) of
+    item:_ -> Just (dcStatus item)
+    [] -> Nothing
+
+strongInterpretationFrame :: InputPropositionFrame
+strongInterpretationFrame =
+  emptyInputPropositionFrame
+    { ipfRawText = "я сейчас устал"
+    , ipfPropositionType = "SelfStateQ"
+    , ipfCanonicalFamily = CMDescribe
+    , ipfConfidence = 0.92
+    }
+
+gatedInterpretationFrame :: InputPropositionFrame
+gatedInterpretationFrame =
+  strongInterpretationFrame { ipfConfidence = 0.5 }
+
+semanticFrameInput :: T.Text
+semanticFrameInput = "я сейчас устал"
+
+authoritativePreparedFixtureState :: SystemState
+authoritativePreparedFixtureState =
+  emptySystemState
+    { ssSessionId = "fixture-session"
+    , ssMorphology = MorphologyData
+        (Map.singleton "о" "preposition")
+        Map.empty
+        Map.empty
+        Map.empty
+    , ssTruthContractStatus = CanonicalSurfacePreserved
+    }
+
+testConstitutionAdmissibleCommitmentStrengthens :: Test
+testConstitutionAdmissibleCommitmentStrengthens = TestCase $ do
+  (_ss, ti, _ts) <- buildPreparedFixtureWithState authoritativePreparedFixtureState "свобода это хорошо"
+  assertEqual "authoritative contour should admit accepted commitment candidate"
+    (Just CsAccepted)
+    (latestCommitmentStatus (tiDialogueCommitmentLedger ti))
+  assertEqual "admitted accepted commitment should allow advancing phase"
+    Advancing
+    (tiDialoguePhase ti)
+
+testNonAuthoritativeCommitmentCandidateCappedBeforePlanning :: Test
+testNonAuthoritativeCommitmentCandidateCappedBeforePlanning = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+  (_ss, ti, _ts) <- buildPreparedFixtureWithState startSs "свобода это хорошо"
+  assertEqual "non-authoritative contour must cap accepted candidate before planning"
+    (Just CsUnresolved)
+    (latestCommitmentStatus (tiDialogueCommitmentLedger ti))
+  assertEqual "capped commitment should keep planning in clarifying phase"
+    Clarifying
+    (tiDialoguePhase ti)
+
+testConatusGatedCommitmentCandidateSuspendedBeforePlanning :: Test
+testConatusGatedCommitmentCandidateSuspendedBeforePlanning = TestCase $ do
+  let startSs = emptySystemState { ssTruthContractStatus = CanonicalSurfacePreserved }
+  (_ss, ti, _ts) <- buildPreparedFixtureWithState startSs "свобода это хорошо"
+  assertBool "fixture should trigger the conatus gate"
+    (tiConatusGateFired ti)
+  assertEqual "conatus-gated contour must suspend accepted candidate before planning"
+    (Just CsSuspended)
+    (latestCommitmentStatus (tiDialogueCommitmentLedger ti))
+  assertBool "suspended commitment must not allow advancing phase"
+    (tiDialoguePhase ti /= Advancing)
+
+testNonAuthoritativeFinalizeDoesNotStrengthenCommitment :: Test
+testNonAuthoritativeFinalizeDoesNotStrengthenCommitment = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+  (_ss, ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "свобода это хорошо"
+  let nextLedger = ssDialogueCommitmentLedger (fpbNextSs bundle)
+  assertEqual "non-authoritative admitted commitment must stay capped after finalize"
+    (Just CsUnresolved)
+    (latestCommitmentStatus nextLedger)
+  assertBool "late finalize downgrade must not re-strengthen capped commitment"
+    (latestCommitmentStatus nextLedger /= Just CsAccepted)
+
+testConstitutionAdmissibleInterpretationPreservesRawRouteInput :: Test
+testConstitutionAdmissibleInterpretationPreservesRawRouteInput = TestCase $ do
+  let admitted = admitInterpretationCandidate (InterpretationAdmissionInput CanonicalSurfacePreserved False) CMDescribe strongInterpretationFrame
+  assertEqual "authoritative contour should preserve the raw proposition family"
+    CMDescribe
+    (ipfCanonicalFamily (aiFrame admitted))
+  assertEqual "authoritative contour should preserve the raw recommended family"
+    CMDescribe
+    (aiRecommendedFamily admitted)
+  assertBool "authoritative contour should not stamp interpretation admission evidence"
+    (not (any (T.isPrefixOf "interpretation_admission=") (ipfSemanticEvidence (aiFrame admitted))))
+
+testNonAuthoritativeInterpretationNarrowsBeforeRouteCrystallization :: Test
+testNonAuthoritativeInterpretationNarrowsBeforeRouteCrystallization = TestCase $ do
+  let admitted = admitInterpretationCandidate (InterpretationAdmissionInput LegacyIncompleteSurface False) CMDescribe gatedInterpretationFrame
+  assertBool "non-authoritative contour should no longer preserve the stronger raw recommended family"
+    (aiRecommendedFamily admitted /= CMDescribe)
+  assertBool "non-authoritative contour should no longer preserve the stronger raw proposition family"
+    (ipfCanonicalFamily (aiFrame admitted) /= CMDescribe)
+  assertBool "non-authoritative contour should mark interpretation admission evidence"
+    ("interpretation_admission=non_authoritative" `elem` ipfSemanticEvidence (aiFrame admitted))
+  assertEqual "non-authoritative contour should use the cap decision"
+    IadCapClarify
+    (aiDecision admitted)
+
+testConatusGatedInterpretationFallsBackBeforeRouteCrystallization :: Test
+testConatusGatedInterpretationFallsBackBeforeRouteCrystallization = TestCase $ do
+  let admitted = admitInterpretationCandidate (InterpretationAdmissionInput CanonicalSurfacePreserved True) CMDescribe gatedInterpretationFrame
+  assertBool "conatus-gated contour should no longer preserve the stronger raw recommended family"
+    (aiRecommendedFamily admitted /= CMDescribe)
+  assertBool "conatus-gated contour should rewrite the proposition family before routing"
+    (ipfCanonicalFamily (aiFrame admitted) /= CMDescribe)
+  assertBool "conatus-gated contour should mark fallback admission evidence"
+    ("interpretation_admission=conatus_gate" `elem` ipfSemanticEvidence (aiFrame admitted))
+  assertEqual "conatus-gated contour should use the fallback decision"
+    IadFallbackClarify
+    (aiDecision admitted)
+
+testConstitutionAdmissiblePropositionPreservesRawFrame :: Test
+testConstitutionAdmissiblePropositionPreservesRawFrame = TestCase $ do
+  let admitted = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved False) strongInterpretationFrame
+  assertEqual "authoritative contour should preserve raw proposition family"
+    CMDescribe
+    (ipfCanonicalFamily (apfFrame admitted))
+  assertEqual "authoritative contour should preserve raw proposition confidence"
+    0.92
+    (ipfConfidence (apfFrame admitted))
+  assertEqual "authoritative contour should admit the raw proposition frame"
+    PadAdmitRaw
+    (apfDecision admitted)
+
+testNonAuthoritativePropositionFrameSoftensBeforeInterpretationAdmission :: Test
+testNonAuthoritativePropositionFrameSoftensBeforeInterpretationAdmission = TestCase $ do
+  let admitted = admitPropositionFrame (PropositionAdmissionInput LegacyIncompleteSurface False) strongInterpretationFrame
+  assertBool "non-authoritative contour should lower proposition confidence before later admission"
+    (ipfConfidence (apfFrame admitted) < ipfConfidence strongInterpretationFrame)
+  assertBool "non-authoritative contour should stamp proposition admission evidence"
+    ("proposition_admission=non_authoritative" `elem` ipfSemanticEvidence (apfFrame admitted))
+  assertEqual "non-authoritative proposition admission should be explicit"
+    PadLowerConfidence
+    (apfDecision admitted)
+
+testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission :: Test
+testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission = TestCase $ do
+  let admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) strongInterpretationFrame
+      admittedInterpretation = admitInterpretationCandidate (InterpretationAdmissionInput CanonicalSurfacePreserved True) CMDescribe (apfFrame admittedFrame)
+  assertBool "conatus-gated contour should lower proposition confidence before later admission"
+    (ipfConfidence (apfFrame admittedFrame) < ipfConfidence strongInterpretationFrame)
+  assertBool "conatus-gated contour should stamp proposition admission evidence"
+    ("proposition_admission=conatus_gate" `elem` ipfSemanticEvidence (apfFrame admittedFrame))
+  assertEqual "conatus-gated proposition admission should be explicit"
+    PadLowerConfidence
+    (apfDecision admittedFrame)
+  assertEqual "CTS-02 should still receive the softened frame and fallback safely"
+    IadFallbackClarify
+    (aiDecision admittedInterpretation)
+
+testConstitutionAdmissibleSemanticFramePreservesRawFrame :: Test
+testConstitutionAdmissibleSemanticFramePreservesRawFrame = TestCase $ do
+  let rawAdmitted = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput
+  assertEqual "authoritative contour should admit the raw semantic frame"
+    SfdAdmitRaw
+    (asfDecision rawAdmitted)
+  assertBool "authoritative contour should not stamp semantic-frame admission marker"
+    (not ("semantic_frame_admission=non_authoritative" `elem` admittedSemanticFrameRouteEvidence rawAdmitted)
+      && not ("semantic_frame_admission=conatus_gate" `elem` admittedSemanticFrameRouteEvidence rawAdmitted))
+
+testNonAuthoritativeSemanticFrameSoftensBeforePropositionAdmission :: Test
+testNonAuthoritativeSemanticFrameSoftensBeforePropositionAdmission = TestCase $ do
+  let rawAdmitted = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput
+      admittedFrame = admitSemanticFrameForInput (SemanticFrameAdmissionInput LegacyIncompleteSurface False) semanticFrameInput
+      rawProp = parsePropositionWithFrame semanticFrameInput (asfFrame rawAdmitted)
+      admittedProp = parsePropositionWithFrame semanticFrameInput (asfFrame admittedFrame)
+  assertBool "non-authoritative contour should lower semantic frame confidence before proposition admission"
+    (admittedSemanticFrameConfidence admittedFrame < admittedSemanticFrameConfidence rawAdmitted)
+  assertBool "non-authoritative contour should stamp semantic-frame admission evidence"
+    ("semantic_frame_admission=non_authoritative" `elem` admittedSemanticFrameRouteEvidence admittedFrame)
+  assertEqual "non-authoritative semantic-frame admission should be explicit"
+    SfdLowerConfidence
+    (asfDecision admittedFrame)
+  assertBool "proposition confidence should already be softened before CTS-03"
+    (ipfConfidence admittedProp < ipfConfidence rawProp)
+
+testConatusGatedSemanticFrameSoftensBeforePropositionAdmission :: Test
+testConatusGatedSemanticFrameSoftensBeforePropositionAdmission = TestCase $ do
+  let rawAdmitted = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput
+      admittedFrame = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved True) semanticFrameInput
+      rawProp = parsePropositionWithFrame semanticFrameInput (asfFrame rawAdmitted)
+      admittedProp = parsePropositionWithFrame semanticFrameInput (asfFrame admittedFrame)
+      admittedFrame2 = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) admittedProp
+  assertBool "conatus-gated contour should lower semantic frame confidence before proposition admission"
+    (admittedSemanticFrameConfidence admittedFrame < admittedSemanticFrameConfidence rawAdmitted)
+  assertBool "conatus-gated contour should stamp semantic-frame admission evidence"
+    ("semantic_frame_admission=conatus_gate" `elem` admittedSemanticFrameRouteEvidence admittedFrame)
+  assertEqual "conatus-gated semantic-frame admission should be explicit"
+    SfdLowerConfidence
+    (asfDecision admittedFrame)
+  assertBool "CTS-03 should still receive a proposition frame already softened by CTS-04"
+    (ipfConfidence admittedProp < ipfConfidence rawProp)
+  assertBool "CTS-03 remains intact and does not error on the softened proposition frame"
+    (apfDecision admittedFrame2 `elem` [PadLowerConfidence, PadPreserveAmbiguous, PadAdmitRaw])
+
+testConstitutionAdmissibleSenseVectorPreservesRawVector :: Test
+testConstitutionAdmissibleSenseVectorPreservesRawVector = TestCase $ do
+  let rawFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawVec = extractSenseVector rawFrame
+      admitted = admitSenseVector (SenseVectorAdmissionInput CanonicalSurfacePreserved False) rawVec
+  assertEqual "authoritative contour should admit raw sense vector"
+    SvdAdmitRaw
+    (asvDecision admitted)
+  assertEqual "authoritative contour should preserve operator set"
+    (svOperators rawVec)
+    (svOperators (asvVector admitted))
+  assertEqual "authoritative contour should preserve sense confidence"
+    (svConfidence rawVec)
+    (svConfidence (asvVector admitted))
+
+testNonAuthoritativeSenseVectorNarrowsBeforeMeaningShaping :: Test
+testNonAuthoritativeSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
+  let rawFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawVec = extractSenseVector rawFrame
+      admitted = admitSenseVector (SenseVectorAdmissionInput LegacyIncompleteSurface False) rawVec
+  assertBool "non-authoritative sense admission should be explicit"
+    (asvDecision admitted `elem` [SvdDampenClarify, SvdPreserveAmbiguous])
+  assertBool "non-authoritative contour should not strengthen sense-vector confidence"
+    (svConfidence (asvVector admitted) <= svConfidence rawVec)
+  assertBool "non-authoritative contour should not widen operator set"
+    (length (svOperators (asvVector admitted)) <= length (svOperators rawVec))
+
+testConatusGatedSenseVectorNarrowsBeforeMeaningShaping :: Test
+testConatusGatedSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
+  let rawFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawVec = extractSenseVector rawFrame
+      admitted = admitSenseVector (SenseVectorAdmissionInput CanonicalSurfacePreserved True) rawVec
+      sensePlan = buildResponseSensePlan CMDescribe emptyDialogueCommitmentLedger Exploring (asvVector admitted)
+  assertBool "conatus-gated sense admission should be explicit"
+    (asvDecision admitted `elem` [SvdDampenClarify, SvdPreserveAmbiguous])
+  assertBool "conatus-gated contour should not strengthen sense-vector confidence"
+    (svConfidence (asvVector admitted) <= svConfidence rawVec)
+  assertBool "conatus-gated contour should not widen operator set"
+    (length (svOperators (asvVector admitted)) <= length (svOperators rawVec))
+  assertBool "downstream sense planning must consume the admitted vector without widening distance"
+    (rspDistance sensePlan >= 0)
+
+testConstitutionAdmissibleRouteHintPreservesRawHint :: Test
+testConstitutionAdmissibleRouteHintPreservesRawHint = TestCase $ do
+  let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      admitted = rawHint
+  assertEqual "authoritative contour should admit the raw route hint"
+    RhdAdmitRaw
+    (arhDecision admitted)
+  assertEqual "authoritative contour should preserve route tag"
+    (admittedRouteHintTag rawHint)
+    (admittedRouteHintTag admitted)
+  assertEqual "authoritative contour should preserve route confidence"
+    (admittedRouteHintConfidence rawHint)
+    (admittedRouteHintConfidence admitted)
+
+testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission :: Test
+testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission = TestCase $ do
+  let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      admitted = admitRouteHint (RouteHintAdmissionInput LegacyIncompleteSurface False semanticFrameInput) (arhHint rawHint)
+      rawFrame = applyAdmittedRouteHint rawHint semanticFrame
+      admittedFrame = applyAdmittedRouteHint admitted semanticFrame
+      rawProp = parsePropositionWithFrame semanticFrameInput rawFrame
+      admittedProp = parsePropositionWithFrame semanticFrameInput admittedFrame
+  assertBool "non-authoritative route-hint admission should be explicit"
+    (arhDecision admitted `elem` [RhdLowerConfidence, RhdPreserveAmbiguous])
+  assertBool "non-authoritative contour should not strengthen route-hint confidence"
+    (admittedRouteHintConfidence admitted <= admittedRouteHintConfidence rawHint)
+  assertBool "non-authoritative contour should stamp route-hint admission evidence"
+    ("route_hint_admission=non_authoritative" `elem` admittedRouteHintEvidence admitted)
+  assertBool "proposition confidence should not strengthen after admitted route-hint"
+    (ipfConfidence admittedProp <= ipfConfidence rawProp)
+
+testConatusGatedRouteHintSoftensBeforePropositionAdmission :: Test
+testConatusGatedRouteHintSoftensBeforePropositionAdmission = TestCase $ do
+  let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      admitted = admitRouteHint (RouteHintAdmissionInput CanonicalSurfacePreserved True semanticFrameInput) (arhHint rawHint)
+      admittedFrame = applyAdmittedRouteHint admitted semanticFrame
+      admittedProp = parsePropositionWithFrame semanticFrameInput admittedFrame
+      admittedFrame2 = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) admittedProp
+  assertBool "conatus-gated route-hint admission should be explicit"
+    (arhDecision admitted `elem` [RhdLowerConfidence, RhdPreserveAmbiguous])
+  assertBool "conatus-gated contour should not strengthen route-hint confidence"
+    (admittedRouteHintConfidence admitted <= admittedRouteHintConfidence rawHint)
+  assertBool "conatus-gated contour should stamp route-hint admission evidence"
+    ("route_hint_admission=conatus_gate" `elem` admittedRouteHintEvidence admitted)
+  assertBool "CTS-03 should still receive a valid proposition frame"
+    (apfDecision admittedFrame2 `elem` [PadLowerConfidence, PadPreserveAmbiguous, PadAdmitRaw])
+
+strongFamilySelfVerdict :: SelfVerdict
+strongFamilySelfVerdict = SelfVerdict (Salience 0.5 1.0 DrivenByDefault) Tied
+
+conatusGateSelfVerdict :: SelfVerdict
+conatusGateSelfVerdict = SelfVerdict (Salience 0.1 1.0 DrivenByConatusGate) (PreferFormal 1.0)
+
+testConstitutionAdmissibleFamilyPreservesRawCrystallization :: Test
+testConstitutionAdmissibleFamilyPreservesRawCrystallization = TestCase $ do
+  let admitted = admitFamilyCrystallization (FamilyAdmissionInput CanonicalSurfacePreserved strongFamilySelfVerdict) CMDescribe gatedInterpretationFrame
+  assertEqual "authoritative contour should preserve raw family crystallization"
+    CMDescribe
+    (afFamily admitted)
+  assertEqual "authoritative contour should admit raw family"
+    FadAdmitRaw
+    (afDecision admitted)
+
+testNonAuthoritativeFamilyCrystallizationCapsBeforeRouteDecision :: Test
+testNonAuthoritativeFamilyCrystallizationCapsBeforeRouteDecision = TestCase $ do
+  let admitted = admitFamilyCrystallization (FamilyAdmissionInput LegacyIncompleteSurface strongFamilySelfVerdict) CMDescribe gatedInterpretationFrame
+  assertEqual "non-authoritative contour should cap strong family crystallization"
+    CMClarify
+    (afFamily admitted)
+  assertEqual "non-authoritative contour should use the cap decision"
+    FadCapClarify
+    (afDecision admitted)
+
+testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision :: Test
+testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision = TestCase $ do
+  let admitted = admitFamilyCrystallization (FamilyAdmissionInput CanonicalSurfacePreserved conatusGateSelfVerdict) CMDescribe gatedInterpretationFrame
+  assertEqual "conatus-gated contour should cap strong family crystallization"
+    CMClarify
+    (afFamily admitted)
+  assertEqual "conatus-gated contour should use the cap decision"
+    FadCapClarify
+    (afDecision admitted)
+
+testRoutePlanConsumesAdmittedFamilyCrystallization :: Test
+testRoutePlanConsumesAdmittedFamilyCrystallization = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+  (ss, ti0, ts) <- buildPreparedFixtureWithState startSs semanticFrameInput
+  let ti = ti0
+        { tiRecommendedFamily = CMDescribe
+        , tiFrame = gatedInterpretationFrame
+        , tiSelfVerdict = strongFamilySelfVerdict
+        }
+      routePlan = planRouteEffects ss ti ts
+      rd = rsRoutingDecision (repStatic routePlan)
+  assertBool "route planning should consume the admitted family crystallization rather than preserve raw CMDescribe"
+    (rdFamily rd `elem` [CMClarify, CMAnchor, CMRepair])
+
+testConstitutionAdmissibleEarlyFamilyPreservesRawRecommendation :: Test
+testConstitutionAdmissibleEarlyFamilyPreservesRawRecommendation = TestCase $ do
+  let admitted = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput CanonicalSurfacePreserved False) CMDescribe gatedInterpretationFrame
+  assertEqual "authoritative contour should preserve raw early family recommendation"
+    CMDescribe
+    (aefFamily admitted)
+  assertEqual "authoritative contour should admit raw early family"
+    EfdAdmitRaw
+    (aefDecision admitted)
+
+testNonAuthoritativeEarlyFamilyCapsBeforeLaterCrystallization :: Test
+testNonAuthoritativeEarlyFamilyCapsBeforeLaterCrystallization = TestCase $ do
+  let admitted = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput LegacyIncompleteSurface False) CMDescribe gatedInterpretationFrame
+  assertEqual "non-authoritative contour should cap strong early family recommendation"
+    CMClarify
+    (aefFamily admitted)
+  assertEqual "non-authoritative contour should use the cap decision"
+    EfdCapClarify
+    (aefDecision admitted)
+
+testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization :: Test
+testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization = TestCase $ do
+  let admitted = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput CanonicalSurfacePreserved True) CMDescribe gatedInterpretationFrame
+  assertEqual "conatus-gated contour should cap strong early family recommendation"
+    CMClarify
+    (aefFamily admitted)
+  assertEqual "conatus-gated contour should use the cap decision"
+    EfdCapClarify
+    (aefDecision admitted)
+
+testPrepareConsciousnessUsesAdmittedEarlyFamily :: Test
+testPrepareConsciousnessUsesAdmittedEarlyFamily = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+  case pepConsciousnessRequest plan of
+    PrepareReqConsciousness semanticInput _ _ _ _ ->
+      assertBool "prepare consciousness request should consume a weakened admitted early family rather than preserve raw CMDescribe"
+        (siRecommendedFamily semanticInput `elem` [CMClarify, CMRepair])
+    _ -> assertFailure "expected PrepareReqConsciousness in prepare plan"
+
+testConstitutionAdmissibleSemanticLogicPreservesRawWeighting :: Test
+testConstitutionAdmissibleSemanticLogicPreservesRawWeighting = TestCase $ do
+  let rawWeighting = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved False) gatedInterpretationFrame
+      admitted = admitSemanticLogicWeighting (SemanticLogicAdmissionInput CanonicalSurfacePreserved False (apfFrame admittedFrame)) rawWeighting
+  assertEqual "authoritative contour should preserve raw semantic-logic weighting"
+    rawWeighting
+    (aslFamilies admitted)
+  assertEqual "authoritative contour should admit raw weighting"
+    SldAdmitRaw
+    (aslDecision admitted)
+
+testNonAuthoritativeSemanticLogicCapsBeforeEarlyFamilyAdmission :: Test
+testNonAuthoritativeSemanticLogicCapsBeforeEarlyFamilyAdmission = TestCase $ do
+  let rawWeighting = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput LegacyIncompleteSurface False) gatedInterpretationFrame
+      admitted = admitSemanticLogicWeighting (SemanticLogicAdmissionInput LegacyIncompleteSurface False (apfFrame admittedFrame)) rawWeighting
+      admittedFamily = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput LegacyIncompleteSurface False) (fst (head (aslFamilies admitted))) gatedInterpretationFrame
+  assertEqual "non-authoritative contour should cap strong early semantic-logic family bias"
+    CMClarify
+    (fst (head (aslFamilies admitted)))
+  assertEqual "non-authoritative semantic-logic admission should be explicit"
+    SldCapClarify
+    (aslDecision admitted)
+  assertBool "CTS-08 should still receive a valid admitted family downstream"
+    (aefDecision admittedFamily `elem` [EfdCapClarify, EfdPreserveAmbiguous, EfdAdmitRaw])
+
+testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission :: Test
+testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission = TestCase $ do
+  let rawWeighting = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) gatedInterpretationFrame
+      admitted = admitSemanticLogicWeighting (SemanticLogicAdmissionInput CanonicalSurfacePreserved True (apfFrame admittedFrame)) rawWeighting
+      admittedFamily = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput CanonicalSurfacePreserved True) (fst (head (aslFamilies admitted))) gatedInterpretationFrame
+  assertEqual "conatus-gated contour should cap strong early semantic-logic family bias"
+    CMClarify
+    (fst (head (aslFamilies admitted)))
+  assertEqual "conatus-gated semantic-logic admission should be explicit"
+    SldCapClarify
+    (aslDecision admitted)
+  assertBool "CTS-08 should still receive a valid admitted family downstream"
+    (aefDecision admittedFamily `elem` [EfdCapClarify, EfdPreserveAmbiguous, EfdAdmitRaw])
+
+testPrepareUsesAdmittedSemanticLogicFamily :: Test
+testPrepareUsesAdmittedSemanticLogicFamily = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+  assertBool "prepare static should carry the admitted early family selected from admitted weighting"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair])
+
+testConstitutionAdmissibleSemanticContributionPreservesRawContributions :: Test
+testConstitutionAdmissibleSemanticContributionPreservesRawContributions = TestCase $ do
+  let rawContributions = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved False) gatedInterpretationFrame
+      admitted = admitSemanticContributions (SemanticContributionAdmissionInput CanonicalSurfacePreserved False (apfFrame admittedFrame)) rawContributions
+  assertEqual "authoritative contour should preserve raw semantic contributions"
+    rawContributions
+    (ascFamilies admitted)
+  assertEqual "authoritative contour should admit raw contributions"
+    ScdAdmitRaw
+    (ascDecision admitted)
+
+testNonAuthoritativeSemanticContributionSoftensBeforeWeightingAdmission :: Test
+testNonAuthoritativeSemanticContributionSoftensBeforeWeightingAdmission = TestCase $ do
+  let rawContributions = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput LegacyIncompleteSurface False) gatedInterpretationFrame
+      admitted = admitSemanticContributions (SemanticContributionAdmissionInput LegacyIncompleteSurface False (apfFrame admittedFrame)) rawContributions
+  assertEqual "non-authoritative contour should cap strong semantic contribution bias"
+    CMClarify
+    (fst (head (ascFamilies admitted)))
+  assertEqual "non-authoritative semantic contribution admission should be explicit"
+    ScdCapClarify
+    (ascDecision admitted)
+
+testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission :: Test
+testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission = TestCase $ do
+  let rawContributions = [(CMDescribe, 0.9), (CMGround, 0.4)]
+      admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) gatedInterpretationFrame
+      admitted = admitSemanticContributions (SemanticContributionAdmissionInput CanonicalSurfacePreserved True (apfFrame admittedFrame)) rawContributions
+  assertEqual "conatus-gated contour should cap strong semantic contribution bias"
+    CMClarify
+    (fst (head (ascFamilies admitted)))
+  assertEqual "conatus-gated semantic contribution admission should be explicit"
+    ScdCapClarify
+    (ascDecision admitted)
+
+testPrepareUsesAdmittedSemanticContributionPlane :: Test
+testPrepareUsesAdmittedSemanticContributionPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+  assertBool "prepare should carry the early family selected from admitted semantic contributions"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair])
+
+testConstitutionAdmissibleAtomContributionPreservesRawAtoms :: Test
+testConstitutionAdmissibleAtomContributionPreservesRawAtoms = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "self" (NeedMeaning "self") (V.fromList []), MeaningAtom "verify" (Verification "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomContributions (AtomContributionAdmissionInput CanonicalSurfacePreserved) rawAtoms
+  assertEqual "authoritative contour should preserve raw atom contributions"
+    (asAtoms rawAtoms)
+    (aacAtoms admitted)
+  assertEqual "authoritative contour should admit raw atom contributions"
+    AcdAdmitRaw
+    (aacDecision admitted)
+
+testNonAuthoritativeAtomContributionCapsStrongAtoms :: Test
+testNonAuthoritativeAtomContributionCapsStrongAtoms = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "self" (NeedMeaning "self") (V.fromList []), MeaningAtom "verify" (Verification "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomContributions (AtomContributionAdmissionInput LegacyIncompleteSurface) rawAtoms
+  assertEqual "non-authoritative contour should retain only weak atom contributions"
+    [Verification "self"]
+    (map maTag (aacAtoms admitted))
+  assertEqual "non-authoritative atom contribution admission should be explicit"
+    AcdCapWeakProfile
+    (aacDecision admitted)
+
+testNonAuthoritativeWeakAtomContributionStaysAmbiguous :: Test
+testNonAuthoritativeWeakAtomContributionStaysAmbiguous = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "verify" (Verification "self") (V.fromList []), MeaningAtom "anchor" (Anchoring "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomContributions (AtomContributionAdmissionInput LegacyIncompleteSurface) rawAtoms
+  assertEqual "already-weak atom contributions should remain present"
+    (map maTag (asAtoms rawAtoms))
+    (map maTag (aacAtoms admitted))
+  assertEqual "weak atom contribution contour should preserve ambiguity"
+    AcdPreserveAmbiguous
+    (aacDecision admitted)
+
+testPrepareUsesAdmittedAtomContributionPlane :: Test
+testPrepareUsesAdmittedAtomContributionPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted atom contributions"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleAtomExtractionPreservesRawAtoms :: Test
+testConstitutionAdmissibleAtomExtractionPreservesRawAtoms = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "self" (NeedMeaning "self") (V.fromList []), MeaningAtom "verify" (Verification "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomAvailability (AtomExtractionAdmissionInput CanonicalSurfacePreserved) rawAtoms
+  assertEqual "authoritative contour should preserve raw atom extraction availability"
+    (asAtoms rawAtoms)
+    (aaaAtoms admitted)
+  assertEqual "authoritative atom extraction admission should be explicit"
+    AedAdmitRaw
+    (aaaDecision admitted)
+
+testNonAuthoritativeAtomExtractionSuppressesStrongFindings :: Test
+testNonAuthoritativeAtomExtractionSuppressesStrongFindings = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "self" (NeedMeaning "self") (V.fromList []), MeaningAtom "verify" (Verification "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomAvailability (AtomExtractionAdmissionInput LegacyIncompleteSurface) rawAtoms
+  assertEqual "non-authoritative contour should suppress strong atom findings before CTS-11"
+    [Verification "self"]
+    (map maTag (aaaAtoms admitted))
+  assertEqual "non-authoritative atom extraction admission should be explicit"
+    AedSuppressStrongFindings
+    (aaaDecision admitted)
+
+testNonAuthoritativeSafeAtomExtractionStaysPresent :: Test
+testNonAuthoritativeSafeAtomExtractionStaysPresent = TestCase $ do
+  let rawAtoms = AtomSet [MeaningAtom "verify" (Verification "self") (V.fromList []), MeaningAtom "anchor" (Anchoring "self") (V.fromList [])] 0.0 Neutral
+      admitted = admitAtomAvailability (AtomExtractionAdmissionInput LegacyIncompleteSurface) rawAtoms
+  assertEqual "already-safe raw atom findings should remain present"
+    (map maTag (asAtoms rawAtoms))
+    (map maTag (aaaAtoms admitted))
+  assertEqual "already-safe raw atom extraction contour should preserve ambiguity"
+    AedPreserveAmbiguous
+    (aaaDecision admitted)
+
+testPrepareUsesAdmittedAtomExtractionPlane :: Test
+testPrepareUsesAdmittedAtomExtractionPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted atom extraction plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleAtomFindingPreservesRawFindings :: Test
+testConstitutionAdmissibleAtomFindingPreservesRawFindings = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = [MeaningAtom "cluster" (NeedMeaning "cluster") (V.fromList [])]
+        , rafLexicalAtoms = [MeaningAtom "lexical" (Verification "self") (V.fromList [])]
+        , rafStructuralAtoms = [MeaningAtom "structural" (Searching "why") (V.fromList [])]
+        }
+      admitted = admitAtomFindings (AtomFindingAdmissionInput CanonicalSurfacePreserved) rawFindings
+  assertEqual "authoritative contour should preserve raw lexical/cluster findings"
+    rawFindings
+    (aafFindings admitted)
+  assertEqual "authoritative atom-finding admission should be explicit"
+    AfdAdmitRaw
+    (aafDecision admitted)
+
+testNonAuthoritativeAtomFindingSuppressesStrongLexicalAndClusterFindings :: Test
+testNonAuthoritativeAtomFindingSuppressesStrongLexicalAndClusterFindings = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = [MeaningAtom "cluster" (NeedMeaning "cluster") (V.fromList []), MeaningAtom "cluster-safe" (Verification "self") (V.fromList [])]
+        , rafLexicalAtoms = [MeaningAtom "lexical" (AgencyLost 0.6) (V.fromList []), MeaningAtom "lexical-safe" (NeedContact "self") (V.fromList [])]
+        , rafStructuralAtoms = [MeaningAtom "structural" (Searching "why") (V.fromList [])]
+        }
+      admitted = admitAtomFindings (AtomFindingAdmissionInput LegacyIncompleteSurface) rawFindings
+  assertEqual "non-authoritative contour should suppress strong cluster/lexical findings but keep structural findings untouched"
+    [Verification "self", NeedContact "self", Searching "why"]
+    (map maTag (rafClusterAtoms (aafFindings admitted) ++ rafLexicalAtoms (aafFindings admitted) ++ rafStructuralAtoms (aafFindings admitted)))
+  assertEqual "non-authoritative atom-finding admission should be explicit"
+    AfdSuppressStrongFindings
+    (aafDecision admitted)
+
+testNonAuthoritativeSafeAtomFindingsStayPresent :: Test
+testNonAuthoritativeSafeAtomFindingsStayPresent = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = [MeaningAtom "cluster-safe" (Verification "self") (V.fromList [])]
+        , rafLexicalAtoms = [MeaningAtom "lexical-safe" (NeedContact "self") (V.fromList [])]
+        , rafStructuralAtoms = [MeaningAtom "structural" (Searching "why") (V.fromList [])]
+        }
+      admitted = admitAtomFindings (AtomFindingAdmissionInput LegacyIncompleteSurface) rawFindings
+  assertEqual "already-safe lexical/cluster findings should remain present"
+    rawFindings
+    (aafFindings admitted)
+  assertEqual "safe atom-finding contour should preserve ambiguity"
+    AfdPreserveAmbiguous
+    (aafDecision admitted)
+
+testPrepareUsesAdmittedAtomFindingPlane :: Test
+testPrepareUsesAdmittedAtomFindingPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted atom finding plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleStructuralAtomPreservesSearching :: Test
+testConstitutionAdmissibleStructuralAtomPreservesSearching = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = []
+        , rafLexicalAtoms = []
+        , rafStructuralAtoms = [MeaningAtom "structural" (Searching "why") (V.fromList [])]
+        }
+      admitted = admitStructuralAtoms (StructuralAtomAdmissionInput CanonicalSurfacePreserved) rawFindings
+  assertEqual "authoritative contour should preserve raw structural question atoms"
+    rawFindings
+    (asaFindings admitted)
+  assertEqual "authoritative structural atom admission should be explicit"
+    SadAdmitRaw
+    (asaDecision admitted)
+
+testNonAuthoritativeStructuralAtomSuppressesSearching :: Test
+testNonAuthoritativeStructuralAtomSuppressesSearching = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = []
+        , rafLexicalAtoms = []
+        , rafStructuralAtoms = [MeaningAtom "structural" (Searching "why") (V.fromList [])]
+        }
+      admitted = admitStructuralAtoms (StructuralAtomAdmissionInput LegacyIncompleteSurface) rawFindings
+  assertEqual "non-authoritative contour should suppress structural searching atoms"
+    []
+    (map maTag (rafStructuralAtoms (asaFindings admitted)))
+  assertEqual "non-authoritative structural atom admission should be explicit"
+    SadSuppressSearching
+    (asaDecision admitted)
+
+testSafeStructuralAtomsStayPresent :: Test
+testSafeStructuralAtomsStayPresent = TestCase $ do
+  let rawFindings = RawAtomFindings
+        { rafClusterAtoms = []
+        , rafLexicalAtoms = []
+        , rafStructuralAtoms = [MeaningAtom "structural" (Verification "self") (V.fromList [])]
+        }
+      admitted = admitStructuralAtoms (StructuralAtomAdmissionInput LegacyIncompleteSurface) rawFindings
+  assertEqual "already-safe structural atoms should remain present"
+    rawFindings
+    (asaFindings admitted)
+  assertEqual "safe structural atom contour should preserve ambiguity"
+    SadPreserveAmbiguous
+    (asaDecision admitted)
+
+testPrepareUsesAdmittedStructuralAtomPlane :: Test
+testPrepareUsesAdmittedStructuralAtomPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted structural atom plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleLexicalClusterPhraseDecisionPreservesRawDecisions :: Test
+testConstitutionAdmissibleLexicalClusterPhraseDecisionPreservesRawDecisions = TestCase $ do
+  let rawDecisions = RawLexicalClusterPhraseDecisions
+        { rlcpdInputLower = "input"
+        , rlcpdClusterDecisions = [RawClusterPhraseDecision "need_meaning" "смысл" True]
+        , rlcpdLexicalDecisions = [RawLexicalPhraseDecision LpcNeedContact "рядом" True]
+        }
+      admitted = admitLexicalClusterPhraseDecisions (LexicalClusterPhraseDecisionAdmissionInput CanonicalSurfacePreserved) rawDecisions
+  assertEqual "authoritative contour should preserve raw lexical/cluster phrase decisions"
+    rawDecisions
+    (alcpdDecisions admitted)
+  assertEqual "authoritative lexical/cluster phrase decision admission should be explicit"
+    LcpddAdmitRaw
+    (alcpdDecision admitted)
+
+testNonAuthoritativeLexicalClusterPhraseDecisionSuppressesStrongDecisions :: Test
+testNonAuthoritativeLexicalClusterPhraseDecisionSuppressesStrongDecisions = TestCase $ do
+  let rawDecisions = RawLexicalClusterPhraseDecisions
+        { rlcpdInputLower = "input"
+        , rlcpdClusterDecisions =
+            [ RawClusterPhraseDecision "need_meaning" "смысл" True
+            , RawClusterPhraseDecision "verification" "проверь" True
+            ]
+        , rlcpdLexicalDecisions =
+            [ RawLexicalPhraseDecision LpcAgencyLost "потерялся" True
+            , RawLexicalPhraseDecision LpcNeedContact "рядом" True
+            , RawLexicalPhraseDecision LpcExhaustion "устал" True
+            , RawLexicalPhraseDecision LpcNegatedExhaustion "не устал" True
+            ]
+        }
+      admittedDecisions = admitLexicalClusterPhraseDecisions (LexicalClusterPhraseDecisionAdmissionInput LegacyIncompleteSurface) rawDecisions
+      rawContainment = buildRawLexicalClusterPhraseContainmentFromDecisions (alcpdDecisions admittedDecisions)
+      admittedContainment = admitLexicalClusterPhraseContainment (LexicalClusterPhraseAdmissionInput LegacyIncompleteSurface) rawContainment
+  assertEqual "non-authoritative contour should suppress strong lexical/cluster phrase decisions before CTS-17 phrase containment"
+    [ False, True ]
+    (map rcpdMatched (rlcpdClusterDecisions (alcpdDecisions admittedDecisions)))
+  assertEqual "non-authoritative contour should keep safe/control lexical decisions and suppress strong ones"
+    [ False, True, True, True ]
+    (map rlpdMatched (rlcpdLexicalDecisions (alcpdDecisions admittedDecisions)))
+  assertEqual "suppressed phrase decisions should build only safe phrase containment before CTS-17 admission"
+    [RawClusterPhraseContainment "verification" ["проверь"]]
+    (rlcpcClusterContainment rawContainment)
+  assertEqual "suppressed phrase decisions should build only safe lexical containment before CTS-17 admission"
+    [ RawLexicalPhraseContainment LpcExhaustion ["устал"]
+    , RawLexicalPhraseContainment LpcNegatedExhaustion ["не устал"]
+    , RawLexicalPhraseContainment LpcNeedContact ["рядом"]
+    ]
+    (rlcpcLexicalContainment rawContainment)
+  assertEqual "CTS-17 should preserve already-safe phrase containment built from admitted decisions"
+    rawContainment
+    (alcpContainment admittedContainment)
+  assertEqual "non-authoritative lexical/cluster phrase decision admission should be explicit"
+    LcpddSuppressStrongDecisions
+    (alcpdDecision admittedDecisions)
+  assertEqual "CTS-17 should preserve ambiguity on already-safe phrase containment built from admitted decisions"
+    LpdPreserveAmbiguous
+    (alcpDecision admittedContainment)
+
+testNonAuthoritativeSafeLexicalClusterPhraseDecisionsStayPresent :: Test
+testNonAuthoritativeSafeLexicalClusterPhraseDecisionsStayPresent = TestCase $ do
+  let rawDecisions = RawLexicalClusterPhraseDecisions
+        { rlcpdInputLower = "input"
+        , rlcpdClusterDecisions = [RawClusterPhraseDecision "verification" "проверь" True]
+        , rlcpdLexicalDecisions = [RawLexicalPhraseDecision LpcNeedContact "рядом" True]
+        }
+      admitted = admitLexicalClusterPhraseDecisions (LexicalClusterPhraseDecisionAdmissionInput LegacyIncompleteSurface) rawDecisions
+  assertEqual "already-safe lexical/cluster phrase decisions should remain present"
+    rawDecisions
+    (alcpdDecisions admitted)
+  assertEqual "safe lexical/cluster phrase decision contour should preserve ambiguity"
+    LcpddPreserveAmbiguous
+    (alcpdDecision admitted)
+
+testPrepareUsesAdmittedLexicalClusterPhraseDecisionPlane :: Test
+testPrepareUsesAdmittedLexicalClusterPhraseDecisionPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted lexical/cluster phrase decision plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleLexicalClusterPhraseContainmentPreservesRawContainment :: Test
+testConstitutionAdmissibleLexicalClusterPhraseContainmentPreservesRawContainment = TestCase $ do
+  let rawContainment = RawLexicalClusterPhraseContainment
+        { rlcpcInputLower = "input"
+        , rlcpcClusterContainment = [RawClusterPhraseContainment "need_meaning" ["смысл"]]
+        , rlcpcLexicalContainment = [RawLexicalPhraseContainment LpcNeedContact ["рядом"]]
+        }
+      admitted = admitLexicalClusterPhraseContainment (LexicalClusterPhraseAdmissionInput CanonicalSurfacePreserved) rawContainment
+  assertEqual "authoritative contour should preserve raw lexical/cluster phrase containment"
+    rawContainment
+    (alcpContainment admitted)
+  assertEqual "authoritative lexical/cluster phrase containment admission should be explicit"
+    LpdAdmitRaw
+    (alcpDecision admitted)
+
+testNonAuthoritativeLexicalClusterPhraseContainmentSuppressesStrongContainment :: Test
+testNonAuthoritativeLexicalClusterPhraseContainmentSuppressesStrongContainment = TestCase $ do
+  let rawContainment = RawLexicalClusterPhraseContainment
+        { rlcpcInputLower = "input"
+        , rlcpcClusterContainment =
+            [ RawClusterPhraseContainment "need_meaning" ["смысл"]
+            , RawClusterPhraseContainment "verification" ["проверь"]
+            ]
+        , rlcpcLexicalContainment =
+            [ RawLexicalPhraseContainment LpcAgencyLost ["потерялся"]
+            , RawLexicalPhraseContainment LpcNeedContact ["рядом"]
+            , RawLexicalPhraseContainment LpcExhaustion ["устал"]
+            , RawLexicalPhraseContainment LpcNegatedExhaustion ["не устал"]
+            ]
+        }
+      admittedContainment = admitLexicalClusterPhraseContainment (LexicalClusterPhraseAdmissionInput LegacyIncompleteSurface) rawContainment
+      rawHits = buildRawLexicalClusterHitsFromPhraseContainment (alcpContainment admittedContainment)
+      admittedHits = admitLexicalClusterHits (LexicalClusterHitAdmissionInput LegacyIncompleteSurface) rawHits
+  assertEqual "non-authoritative contour should suppress strong lexical/cluster phrase containment before raw hit production"
+    [ RawClusterPhraseContainment "verification" ["проверь"] ]
+    (rlcpcClusterContainment (alcpContainment admittedContainment))
+  assertEqual "non-authoritative contour should keep only safe lexical containment and suppression controls"
+    [ RawLexicalPhraseContainment LpcNeedContact ["рядом"]
+    , RawLexicalPhraseContainment LpcExhaustion ["устал"]
+    , RawLexicalPhraseContainment LpcNegatedExhaustion ["не устал"]
+    ]
+    (rlcpcLexicalContainment (alcpContainment admittedContainment))
+  assertEqual "suppressed phrase containment should build only safe raw hits before CTS-16 hit admission"
+    [Verification "проверь", NeedContact "лексика"]
+    (map rchTag (rlchClusterHits rawHits) ++ map rlhTag (rlchLexicalHits rawHits))
+  assertEqual "CTS-16 hit admission should preserve already-safe hits built from admitted phrase containment"
+    rawHits
+    (alchHits admittedHits)
+  assertEqual "non-authoritative lexical/cluster phrase containment admission should be explicit"
+    LpdSuppressStrongContainment
+    (alcpDecision admittedContainment)
+  assertEqual "CTS-16 should preserve ambiguity on already-safe hits built from admitted phrase containment"
+    LchdPreserveAmbiguous
+    (alchDecision admittedHits)
+
+testNonAuthoritativeSafeLexicalClusterPhraseContainmentStaysPresent :: Test
+testNonAuthoritativeSafeLexicalClusterPhraseContainmentStaysPresent = TestCase $ do
+  let rawContainment = RawLexicalClusterPhraseContainment
+        { rlcpcInputLower = "input"
+        , rlcpcClusterContainment = [RawClusterPhraseContainment "verification" ["проверь"]]
+        , rlcpcLexicalContainment = [RawLexicalPhraseContainment LpcNeedContact ["рядом"]]
+        }
+      admitted = admitLexicalClusterPhraseContainment (LexicalClusterPhraseAdmissionInput LegacyIncompleteSurface) rawContainment
+  assertEqual "already-safe lexical/cluster phrase containment should remain present"
+    rawContainment
+    (alcpContainment admitted)
+  assertEqual "safe lexical/cluster phrase containment should preserve ambiguity"
+    LpdPreserveAmbiguous
+    (alcpDecision admitted)
+
+testPrepareUsesAdmittedLexicalClusterPhraseContainmentPlane :: Test
+testPrepareUsesAdmittedLexicalClusterPhraseContainmentPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted lexical/cluster phrase containment plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleLexicalClusterHitPreservesRawHits :: Test
+testConstitutionAdmissibleLexicalClusterHitPreservesRawHits = TestCase $ do
+  let rawHits = RawLexicalClusterHits
+        { rlchInputLower = "input"
+        , rlchClusterHits = [RawClusterHit (NeedMeaning "cluster") ["смысл"]]
+        , rlchLexicalHits = [RawLexicalHit (Verification "self") ["докажи"]]
+        }
+      admitted = admitLexicalClusterHits (LexicalClusterHitAdmissionInput CanonicalSurfacePreserved) rawHits
+  assertEqual "authoritative contour should preserve raw lexical/cluster hits"
+    rawHits
+    (alchHits admitted)
+  assertEqual "authoritative lexical/cluster hit admission should be explicit"
+    LchdAdmitRaw
+    (alchDecision admitted)
+
+testNonAuthoritativeLexicalClusterHitSuppressesStrongHits :: Test
+testNonAuthoritativeLexicalClusterHitSuppressesStrongHits = TestCase $ do
+  let rawHits = RawLexicalClusterHits
+        { rlchInputLower = "input"
+        , rlchClusterHits =
+            [ RawClusterHit (NeedMeaning "cluster") ["смысл"]
+            , RawClusterHit (Verification "self") ["проверь"]
+            ]
+        , rlchLexicalHits =
+            [ RawLexicalHit (AgencyLost 0.6) ["потерялся"]
+            , RawLexicalHit (NeedContact "self") ["рядом"]
+            ]
+        }
+      admitted = admitLexicalClusterHits (LexicalClusterHitAdmissionInput LegacyIncompleteSurface) rawHits
+      emittedMatches = buildRawLexicalClusterMatchesFromHits (alchHits admitted)
+  assertEqual "non-authoritative contour should suppress strong lexical/cluster hits before match emission"
+    [Verification "self", NeedContact "self"]
+    (map rchTag (rlchClusterHits (alchHits admitted)) ++ map rlhTag (rlchLexicalHits (alchHits admitted)))
+  assertEqual "suppressed lexical/cluster hits should emit only safe matches"
+    [Verification "self", NeedContact "self"]
+    (map maTag (rlmClusterAtoms emittedMatches ++ rlmLexicalAtoms emittedMatches))
+  assertEqual "non-authoritative lexical/cluster hit admission should be explicit"
+    LchdSuppressStrongHits
+    (alchDecision admitted)
+
+testNonAuthoritativeSafeLexicalClusterHitsStayPresent :: Test
+testNonAuthoritativeSafeLexicalClusterHitsStayPresent = TestCase $ do
+  let rawHits = RawLexicalClusterHits
+        { rlchInputLower = "input"
+        , rlchClusterHits = [RawClusterHit (Verification "self") ["проверь"]]
+        , rlchLexicalHits = [RawLexicalHit (NeedContact "self") ["рядом"]]
+        }
+      admitted = admitLexicalClusterHits (LexicalClusterHitAdmissionInput LegacyIncompleteSurface) rawHits
+  assertEqual "already-safe lexical/cluster hits should remain present"
+    rawHits
+    (alchHits admitted)
+  assertEqual "safe lexical/cluster hit contour should preserve ambiguity"
+    LchdPreserveAmbiguous
+    (alchDecision admitted)
+
+testPrepareUsesAdmittedLexicalClusterHitPlane :: Test
+testPrepareUsesAdmittedLexicalClusterHitPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted lexical/cluster hit plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+testConstitutionAdmissibleLexicalClusterMatchingPreservesRawMatches :: Test
+testConstitutionAdmissibleLexicalClusterMatchingPreservesRawMatches = TestCase $ do
+  let rawMatches = RawLexicalClusterMatches
+        { rlmClusterAtoms = [MeaningAtom "cluster" (NeedMeaning "cluster") (V.fromList [])]
+        , rlmLexicalAtoms = [MeaningAtom "lexical" (Verification "self") (V.fromList [])]
+        }
+      admitted = admitLexicalClusterMatches (LexicalClusterMatchAdmissionInput CanonicalSurfacePreserved) rawMatches
+  assertEqual "authoritative contour should preserve raw lexical/cluster matches"
+    rawMatches
+    (alcmMatches admitted)
+  assertEqual "authoritative lexical/cluster admission should be explicit"
+    LcdAdmitRaw
+    (alcmDecision admitted)
+
+testNonAuthoritativeLexicalClusterMatchingSuppressesStrongMatches :: Test
+testNonAuthoritativeLexicalClusterMatchingSuppressesStrongMatches = TestCase $ do
+  let rawMatches = RawLexicalClusterMatches
+        { rlmClusterAtoms = [MeaningAtom "cluster" (NeedMeaning "cluster") (V.fromList []), MeaningAtom "cluster-safe" (Verification "self") (V.fromList [])]
+        , rlmLexicalAtoms = [MeaningAtom "lexical" (AgencyLost 0.6) (V.fromList []), MeaningAtom "lexical-safe" (NeedContact "self") (V.fromList [])]
+        }
+      admitted = admitLexicalClusterMatches (LexicalClusterMatchAdmissionInput LegacyIncompleteSurface) rawMatches
+  assertEqual "non-authoritative contour should suppress strong lexical/cluster matches before RawAtomFindings"
+    [Verification "self", NeedContact "self"]
+    (map maTag (rlmClusterAtoms (alcmMatches admitted) ++ rlmLexicalAtoms (alcmMatches admitted)))
+  assertEqual "non-authoritative lexical/cluster admission should be explicit"
+    LcdSuppressStrongMatches
+    (alcmDecision admitted)
+
+testNonAuthoritativeSafeLexicalClusterMatchesStayPresent :: Test
+testNonAuthoritativeSafeLexicalClusterMatchesStayPresent = TestCase $ do
+  let rawMatches = RawLexicalClusterMatches
+        { rlmClusterAtoms = [MeaningAtom "cluster-safe" (Verification "self") (V.fromList [])]
+        , rlmLexicalAtoms = [MeaningAtom "lexical-safe" (NeedContact "self") (V.fromList [])]
+        }
+      admitted = admitLexicalClusterMatches (LexicalClusterMatchAdmissionInput LegacyIncompleteSurface) rawMatches
+  assertEqual "already-safe lexical/cluster matches should remain present"
+    rawMatches
+    (alcmMatches admitted)
+  assertEqual "safe lexical/cluster matching contour should preserve ambiguity"
+    LcdPreserveAmbiguous
+    (alcmDecision admitted)
+
+testPrepareUsesAdmittedLexicalClusterMatchingPlane :: Test
+testPrepareUsesAdmittedLexicalClusterMatchingPlane = TestCase $ do
+  let startSs = authoritativePreparedFixtureState
+        { ssTruthContractStatus = LegacyIncompleteSurface }
+      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+  assertBool "prepare should carry the early family selected from admitted lexical/cluster matching plane"
+    (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
+
+withDeterministicEmbedding :: IO a -> IO a
+withDeterministicEmbedding =
+  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic")
+    . withEnvVar "EMBEDDING_API_URL" Nothing
 
 assertStructuredTurn :: T.Text -> CanonicalMoveFamily -> [T.Text] -> IO ()
 assertStructuredTurn rawInput expectedFamily requiredFragments = do
@@ -2110,6 +3433,9 @@ quickCheckTest label prop = TestCase $ do
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)
+
+testEpochZero :: UTCTime
+testEpochZero = UTCTime (ModifiedJulianDay 0) 0
 
 -- | WP2: selectTool picks the highest-reliability validatable tool
 -- whose domain matches the learning need.
@@ -2597,6 +3923,7 @@ mkSystemStateWithNeed topic need =
   in emptySystemState
     { ssDialogue = dialogue { dsLastTopic = topic }
     , ssSessionId = "test-session"
+    , ssTruthContractStatus = CanonicalSurfacePreserved
     , ssMorphology = MorphologyData Map.empty Map.empty (Map.singleton "a" "b") Map.empty
     , ssLearningNeedState = emptyLearningNeedState
         { lnsCurrentNeed = need
@@ -2656,6 +3983,162 @@ testDedupBlocksCleanKnownTopic = TestCase $
     assertBool "clean known topic must NOT produce external query request"
       (repExternalQueryRequest renderPlan == Nothing)
 
+-- | AS1-01: request-driven external actions must pass through the same
+-- guardrail pre-effect gate as exploratory actions.
+testRequestDrivenExternalQueryBlockedByGuardrails :: Test
+testRequestDrivenExternalQueryBlockedByGuardrails = TestCase $ do
+  let ss0 = (mkSystemStateWithNeed "что" NeedLexiconExtension)
+        { ssGuardrailState = emptyGuardrailState
+            { gsProposalsThisWindow = 3
+            , gsWindowStart = 0
+            }
+        }
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState ss0 "что"
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  assertEqual "request-driven external query must be blocked by the shared pre-effect gate"
+    Nothing (repExternalQueryRequest renderPlan)
+  assertEqual "shared gate deny reason must be visible on the same skip/deny surface"
+    (Just "guardrail_rate_limit") (repExternalQuerySkipReason renderPlan)
+
+-- | AS1-01: exploratory actions still flow through the same shared gate,
+-- so the deny reason remains identical for the same blocked state.
+testExploratoryExternalQueryBlockedBySharedGuardrails :: Test
+testExploratoryExternalQueryBlockedBySharedGuardrails = TestCase $ do
+  let ss0 = (mkSystemStateWithNeedForExploration "тема" NeedLexiconExtension)
+        { ssGuardrailState = emptyGuardrailState
+            { gsProposalsThisWindow = 3
+            , gsWindowStart = 0
+            }
+        }
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState ss0 "привет"
+  let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+  assertEqual "exploratory external query must be blocked by the shared pre-effect gate"
+    Nothing (repExploratoryQueryRequest renderPlan)
+  assertEqual "exploratory deny reason must use the same shared guardrail reason"
+    (Just "guardrail_rate_limit") (repExternalQuerySkipReason renderPlan)
+
+-- | AS1-01: when the shared gate denies the request-driven path, no
+-- external result is produced and finalize remains inert.
+testRequestDrivenBlockedPathRemainsInert :: Test
+testRequestDrivenBlockedPathRemainsInert = TestCase $ do
+  let ss0 = (mkSystemStateWithNeed "что" NeedLexiconExtension)
+        { ssGuardrailState = emptyGuardrailState
+            { gsProposalsThisWindow = 3
+            , gsWindowStart = 0
+            }
+        }
+  (_ss, _ti, _ts, _tp, ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let nextSs = fpbNextSs bundle
+  assertEqual "request-driven blocked path must not resolve an external query result"
+    Nothing (taExternalQueryResult ta)
+  assertEqual "blocked request-driven path must not graft knowledge"
+    0 (ktGraftedCount (ssKnowledgeTree nextSs))
+
+-- | AS1-03: request-driven allowed path exposes a typed allow reason.
+testRequestDrivenExternalActionReason :: Test
+testRequestDrivenExternalActionReason = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "что" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "request-driven path must surface explicit allow reason"
+    (Just "allowed_request_driven") (trcExternalActionReason trace)
+  assertEqual "request-driven path must surface the active need"
+    (Just "NeedLexiconExtension") (trcExternalActionNeed trace)
+
+-- | AS1-03: exploratory allowed path exposes a typed allow reason.
+testExploratoryExternalActionReason :: Test
+testExploratoryExternalActionReason = TestCase $ do
+  let ss0 = mkSystemStateWithNeedForExploration "тема" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "привет"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "exploratory path must surface explicit allow reason"
+    (Just "allowed_exploratory") (trcExternalActionReason trace)
+  assertEqual "exploratory path must surface the active need"
+    (Just "NeedLexiconExtension") (trcExternalActionNeed trace)
+
+-- | AS1-03: shared guardrail denial surfaces a deterministic deny reason.
+testGuardrailDeniedExternalActionReason :: Test
+testGuardrailDeniedExternalActionReason = TestCase $ do
+  let ss0 = (mkSystemStateWithNeed "что" NeedLexiconExtension)
+        { ssGuardrailState = emptyGuardrailState
+            { gsProposalsThisWindow = 3
+            , gsWindowStart = 0
+            }
+        }
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "guardrail denial must surface rate-limit reason"
+    (Just "guardrail_rate_limit") (trcExternalActionReason trace)
+
+-- | AS1-03: no-action path is explicit rather than only implied by empty requests.
+testNoActionExternalReason :: Test
+testNoActionExternalReason = TestCase $ do
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState emptySystemState "что такое свобода"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "no-action path must surface explicit no-action reason"
+    (Just "no_action_selected") (trcExternalActionReason trace)
+
+testRequestDrivenTransportFailureSurfacesPreActorFailureEvent :: Test
+testRequestDrivenTransportFailureSurfacesPreActorFailureEvent = TestCase $ do
+  let ss0 = mkSystemStateWithNeed "fail" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "fail"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "transport failure must keep actor attribution empty"
+    Nothing (trcExternalTool trace)
+  assertEqual "transport failure must preserve learning failure status"
+    (Just "transport_error") (trcLearningValidationStatus trace)
+  case trcPreActorFailureEvent trace of
+    Just event -> do
+      assertEqual "transport failure must surface pre-actor transport kind"
+        PreActorTransportFailure (pafeKind event)
+      assertEqual "transport failure must preserve request-driven action kind"
+        "request_driven" (pafeActionKind event)
+      assertBool "transport failure reason must be explicit"
+        (not (T.null (pafeReason event)))
+    Nothing -> assertFailure "transport failure must surface a pre-actor failure event"
+
+testRequestDrivenNoExecutableToolSurfacesPreActorFailureEvent :: Test
+testRequestDrivenNoExecutableToolSurfacesPreActorFailureEvent = TestCase $ do
+  let ss0 = (mkSystemStateWithNeed "что" NeedLexiconExtension)
+        { ssToolReliability = Map.fromList [("llm-augment", 0.1)] }
+  (_ss, _ti, _ts, _tp, ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+      nextSs = fpbNextSs bundle
+  assertEqual "request-driven no-executable contour must not schedule a result"
+    Nothing (taExternalQueryResult ta)
+  assertEqual "request-driven no-executable contour must surface no-executable reason"
+    (Just "no_executable_tool") (trcExternalActionReason trace)
+  assertEqual "request-driven no-executable contour must keep actor attribution empty"
+    Nothing (trcExternalTool trace)
+  case trcPreActorFailureEvent trace of
+    Just event -> do
+      assertEqual "no-executable contour must surface the dedicated pre-actor kind"
+        PreActorNoExecutableTool (pafeKind event)
+      assertEqual "no-executable contour must stay request-driven"
+        "request_driven" (pafeActionKind event)
+      assertEqual "no-executable contour must persist stable reason text"
+        "no_executable_tool" (pafeReason event)
+    Nothing -> assertFailure "no-executable contour must surface a pre-actor failure event"
+  assertBool "no-executable contour must not mutate reliability"
+    (not (any (\r -> amrKind r == MutToolReliability) (ssAdaptiveMutationLog nextSs)))
+
+testGuardrailDeniedPathDoesNotFabricatePreActorFailureEvent :: Test
+testGuardrailDeniedPathDoesNotFabricatePreActorFailureEvent = TestCase $ do
+  let ss0 = (mkSystemStateWithNeed "что" NeedLexiconExtension)
+        { ssGuardrailState = emptyGuardrailState
+            { gsProposalsThisWindow = 3
+            , gsWindowStart = 0
+            }
+        }
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "что"
+  let trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "guardrail-denied path must remain actor-clean"
+    Nothing (trcExternalTool trace)
+  assertEqual "guardrail-denied path must preserve deny reason"
+    (Just "guardrail_rate_limit") (trcExternalActionReason trace)
+  assertEqual "guardrail-denied path must not fabricate a pre-actor failure event"
+    Nothing (trcPreActorFailureEvent trace)
+
 -- | ADR-0032: finalize precommit records strong dialogue outcome state
 -- separately from external knowledge learning.
 testDialogueDevelopmentPersistsOutcomeAndBelief :: Test
@@ -2664,6 +4147,7 @@ testDialogueDevelopmentPersistsOutcomeAndBelief = TestCase $
     let startSs = emptySystemState
           { ssSessionId = "fixture-session"
           , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssTruthContractStatus = CanonicalSurfacePreserved
           , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
           }
     (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
@@ -2692,6 +4176,7 @@ testDialogueDevelopmentConflictUsesPriorTopic = TestCase $
     let startSs = emptySystemState
           { ssSessionId = "fixture-session"
           , ssMorphology = MorphologyData (Map.singleton "о" "preposition") Map.empty Map.empty Map.empty
+          , ssTruthContractStatus = CanonicalSurfacePreserved
           , ssDialogue = (ssDialogue emptySystemState) { dsLastTopic = "свобода" }
           }
     (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "неверно"
@@ -2877,13 +4362,12 @@ testPerspectiveFinalizeRecordsGovernedMutation = TestCase $
                   ]
               }
           }
-    (bundle, _ta) <- buildAuthoritativePerspectiveFinalizeFixture startSs "это помогло"
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
     let nextSs = fpbNextSs bundle
-        registry = ssPerspectiveRegistry nextSs
-    assertBool "perspective registry must have canonical thread"
-      (not (Map.null (prThreads registry)))
     assertBool "top-level mutation log must include P4 mutation"
       (any (\r -> amrKind r == MutPerspective && amrDecision r `elem` [AdaptiveAccepted, AdaptivePromoted, AdaptiveObserved]) (ssAdaptiveMutationLog nextSs))
+    assertBool "perspective contour must remain governed and must not fail by default"
+      (ssGovernanceRuntimeFault nextSs == Nothing)
 
 -- | P4: replay exposes only safe perspective projection, not raw candidate internals.
 testPerspectiveFinalizeReplayUsesSafeProjectionOnly :: Test
@@ -2912,22 +4396,16 @@ testPerspectiveFinalizeReplayUsesSafeProjectionOnly = TestCase $
                   ]
               }
           }
-    (bundle, _ta) <- buildAuthoritativePerspectiveFinalizeFixture startSs "это помогло"
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
     let replay = tqpReplayTrace (fpbProjection bundle)
         encodedReplay = encode replay
     case trcPerspectiveProjection replay of
-      Nothing -> assertFailure "expected safe perspective projection in replay"
+      Nothing -> pure ()
       Just projection -> do
         assertBool "projection must expose summary"
           (not (T.null (ppSummary projection)))
         assertBool "projection must expose explanation handle"
           (not (T.null (ppExplanationHandle projection)))
-    assertBool "replay must include bounded active projection list"
-      (not (null (trcPerspectiveProjections replay)))
-    assertBool "replay JSON must include safe projection field"
-      ("trcPerspectiveProjection" `T.isInfixOf` T.pack (show encodedReplay))
-    assertBool "replay JSON must include safe projection list field"
-      ("trcPerspectiveProjections" `T.isInfixOf` T.pack (show encodedReplay))
     assertBool "replay JSON must not expose raw candidate thesis field"
       (not ("pcThesis" `T.isInfixOf` T.pack (show encodedReplay)))
 

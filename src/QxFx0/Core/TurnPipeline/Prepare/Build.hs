@@ -1,7 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{-| Prepare-stage construction of `TurnInput` and `TurnSignals` from resolved effects. -}
+{-|
+Description : observer — Prepare-stage construction of `TurnInput` and `TurnSignals` from resolved effects. -}
 module QxFx0.Core.TurnPipeline.Prepare.Build
   ( buildTurnInput
   , buildTurnSignals
@@ -91,7 +92,8 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       , tiConatusGateFired = psConatusGateFired prepareStatic
        , tiField = psField prepareStatic
        , tiFieldHeuristics = psFieldHeuristics prepareStatic
-       , tiSenseVector = psSenseVector prepareStatic
+       , tiSelfVerdict = psSelfVerdict prepareStatic
+        , tiSenseVector = psSenseVector prepareStatic
        , tiDialogueThread = psDialogueThread prepareStatic
        , tiDialogueCommitmentLedger = psDialogueCommitmentLedger prepareStatic
        , tiDialoguePhase = psDialoguePhase prepareStatic

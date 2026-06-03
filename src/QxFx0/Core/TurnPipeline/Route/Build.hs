@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-| Route-plan assembly and render handoff after effect resolution. -}
+{-|
+Description : observer — Route-plan assembly and render handoff after effect resolution. -}
 module QxFx0.Core.TurnPipeline.Route.Build
   ( buildRouteTurnPlan
   , routeTurnPlan

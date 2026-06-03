@@ -22,7 +22,7 @@ module QxFx0.Types.ShadowDivergence
 
 import Data.Bits (xor)
 import Data.Char (ord)
-import Data.Aeson (FromJSON, ToJSON(..))
+import Data.Aeson (FromJSON(..), ToJSON(..), withText)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Numeric (showHex)
@@ -49,10 +49,21 @@ data ShadowDivergenceKind
   | ShadowUnavailableDivergence
   | ShadowBridgeSkew
   | ShadowExecutionError
-  deriving stock (Eq, Show, Read)
+  deriving stock (Eq, Show, Read, Generic)
+  deriving anyclass (NFData)
 
 instance ToJSON ShadowDivergenceKind where
   toJSON = toJSON . shadowDivergenceKindText
+
+instance FromJSON ShadowDivergenceKind where
+  parseJSON = withText "ShadowDivergenceKind" $ \t ->
+    case t of
+      "none" -> pure ShadowNoDivergence
+      "verdict_mismatch" -> pure ShadowVerdictMismatch
+      "shadow_unavailable" -> pure ShadowUnavailableDivergence
+      "bridge_skew" -> pure ShadowBridgeSkew
+      "execution_error" -> pure ShadowExecutionError
+      _ -> fail ("unknown ShadowDivergenceKind: " <> T.unpack t)
 
 data ShadowDivergenceSeverity
   = ShadowSeverityClean
@@ -60,10 +71,21 @@ data ShadowDivergenceSeverity
   | ShadowSeveritySafety
   | ShadowSeverityContract
   | ShadowSeverityUnavailable
-  deriving stock (Eq, Show, Read)
+  deriving stock (Eq, Show, Read, Generic)
+  deriving anyclass (NFData)
 
 instance ToJSON ShadowDivergenceSeverity where
   toJSON = toJSON . shadowDivergenceSeverityText
+
+instance FromJSON ShadowDivergenceSeverity where
+  parseJSON = withText "ShadowDivergenceSeverity" $ \t ->
+    case t of
+      "clean" -> pure ShadowSeverityClean
+      "advisory" -> pure ShadowSeverityAdvisory
+      "safety" -> pure ShadowSeveritySafety
+      "contract" -> pure ShadowSeverityContract
+      "unavailable" -> pure ShadowSeverityUnavailable
+      _ -> fail ("unknown ShadowDivergenceSeverity: " <> T.unpack t)
 
 shadowDivergenceKindText :: ShadowDivergenceKind -> Text
 shadowDivergenceKindText ShadowNoDivergence = "none"
@@ -88,10 +110,14 @@ data ShadowSnapshot = ShadowSnapshot
   } deriving stock (Eq, Show)
 
 newtype ShadowSnapshotId = ShadowSnapshotId { unShadowSnapshotId :: Text }
-  deriving stock (Eq, Show, Read)
+  deriving stock (Eq, Show, Read, Generic)
+  deriving anyclass (NFData)
 
 instance ToJSON ShadowSnapshotId where
   toJSON = toJSON . unShadowSnapshotId
+
+instance FromJSON ShadowSnapshotId where
+  parseJSON = withText "ShadowSnapshotId" (pure . ShadowSnapshotId)
 
 shadowSnapshotIdText :: ShadowSnapshotId -> Text
 shadowSnapshotIdText = unShadowSnapshotId

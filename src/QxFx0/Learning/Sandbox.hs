@@ -17,8 +17,9 @@ relevant state slice and computes delta metrics:
 - Repair-loop frequency over a simulated window
 
 Acceptance rule (fail-closed):
-- 'SandboxAccept' if net score >= 0  (non-regression)
-- 'SandboxAccept' with improvement bonus if both deltas positive
+- derive locally authoritative conatus / predictive deltas from
+  validated content plus current learning-need state
+- 'SandboxAccept' if the authoritative net score stays non-regressive
 - 'SandboxReject' if projected conatus drops below safety floor
   or net score is clearly negative.
 
@@ -32,7 +33,9 @@ module QxFx0.Learning.Sandbox
   , SandboxMetrics(..)
   , SandboxRejectReason(..)
   , SandboxConfig(..)
+  , AdmissionAuthorityDeltas(..)
   , defaultSandboxConfig
+  , deriveAdmissionAuthorityDeltas
   , runSandboxGate
   , runSandboxGateWithConfig
   , renderSandboxRejectReason
@@ -44,8 +47,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Learning.Need (LearningNeedState(..), lnsHistory)
-import QxFx0.Learning.Validator (KnowledgeFruitPayload(..))
+import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), lnsHistory)
+import QxFx0.Learning.Validator (KnowledgeFruitPayload(..), MorphologyPayload(..), minDefinitionWords)
 import QxFx0.Types.State.System (SystemState, ssLearningNeedState)
 
 -- | Outcome of the sandbox simulation.
@@ -66,12 +69,21 @@ data SandboxMetrics = SandboxMetrics
   , sbRepairLoopFreq    :: !Double
     -- ^ Estimated repair-loop frequency over simulated window.
   , sbNetScore          :: !Double
-    -- ^ Weighted composite: 0.5*conatusDelta + 0.5*predictiveDelta.
+    -- ^ Weighted composite of locally authoritative conatus/predictive deltas.
   , sbWindowSize        :: !Int
     -- ^ Simulated window turns (N).
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Locally authoritative learning deltas derived from validated content
+-- and current runtime need state. Remote self-reported benefit values are
+-- parsed for compatibility, but they do not decide admission.
+data AdmissionAuthorityDeltas = AdmissionAuthorityDeltas
+  { aadConatusDelta :: !Double
+  , aadPredictiveDelta :: !Double
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
 
 -- | Human-readable reject reason for telemetry and audit.
 data SandboxRejectReason
@@ -126,27 +138,23 @@ runSandboxGate = runSandboxGateWithConfig defaultSandboxConfig
 --
 -- Acceptance policy (fail-closed):
 -- 1. Strict non-regression: projected conatus >= safetyFloor AND netScore >= minNetScore.
--- 2. Improvement bonus: if both conatusDelta and predictiveDelta are > 0,
---    the netScore threshold is relaxed slightly.
--- 3. Bounded uncertainty increase: if the projected uncertainty rises too far
+-- 2. Bounded uncertainty increase: if the projected uncertainty rises too far
 --    above the current baseline, reject with 'SbrRisingUncertainty'.
 runSandboxGateWithConfig :: SandboxConfig -> SystemState -> KnowledgeFruitPayload -> SandboxResult
 runSandboxGateWithConfig cfg ss payload =
   let needState = ssLearningNeedState ss
+      authorityDeltas = deriveAdmissionAuthorityDeltas ss payload
       -- Current conatus trend from the last 3 history points (or 0 if insufficient)
       currentConatusTrend = conatusTrendFromHistory (lnsHistory needState)
       -- Current uncertainty proxy: amplitude of history oscillation
       currentUncertainty  = historyOscillationWithWindow (scWindowSize cfg) (lnsHistory needState)
-      -- Projected values after applying the fruit deltas
-      projectedConatus  = currentConatusTrend + kfpConatusDelta payload
-      projectedUncertainty = max 0 (currentUncertainty - kfpPredictiveDelta payload)
+      -- Projected values after applying locally authoritative deltas.
+      projectedConatus  = currentConatusTrend + aadConatusDelta authorityDeltas
+      projectedUncertainty = max 0 (currentUncertainty - aadPredictiveDelta authorityDeltas)
       -- Repair-loop frequency proxy: how often history levels exceed a soft threshold
       loopFreq            = repairLoopProxyWithWindow (scWindowSize cfg) (lnsHistory needState)
-      -- Net score: weighted composite with improvement bonus
-      rawNetScore         = 0.5 * kfpConatusDelta payload + 0.5 * kfpPredictiveDelta payload
-      -- Improvement bonus: both deltas positive -> relax threshold by 0.05
-      improvementBonus    = if kfpConatusDelta payload > 0 && kfpPredictiveDelta payload > 0 then 0.05 else 0.0
-      netScore            = rawNetScore + improvementBonus
+      -- Net score: weighted composite of locally authoritative deltas.
+      netScore            = 0.5 * aadConatusDelta authorityDeltas + 0.5 * aadPredictiveDelta authorityDeltas
 
       metrics = SandboxMetrics
         { sbConatusTrend     = projectedConatus
@@ -158,7 +166,7 @@ runSandboxGateWithConfig cfg ss payload =
 
       effectiveMinScore = scMinNetScore cfg
 
-  in if projectedConatus < scSafetyFloor cfg
+  in if projectedConatus <= scSafetyFloor cfg
        then SandboxReject metrics SbrDegradingConatus
       else if projectedUncertainty > currentUncertainty + scMaxUncertaintyIncrease cfg
         then SandboxReject metrics SbrRisingUncertainty
@@ -169,6 +177,61 @@ runSandboxGateWithConfig cfg ss payload =
      else
        -- Non-regression or improvement: accept
        SandboxAccept metrics
+
+deriveAdmissionAuthorityDeltas :: SystemState -> KnowledgeFruitPayload -> AdmissionAuthorityDeltas
+deriveAdmissionAuthorityDeltas ss payload =
+  AdmissionAuthorityDeltas
+    { aadConatusDelta = clampRange (-0.35) 0.40 conatusDelta
+    , aadPredictiveDelta = clampRange (-0.40) 0.50 predictiveDelta
+    }
+  where
+    definitionScore = definitionQualityScore (kfpDefinition payload)
+    morphologyScore = morphologyCoverageScore (kfpMorphology payload)
+    needAlignmentScore = learningNeedAlignmentScore (lnsCurrentNeed (ssLearningNeedState ss))
+    weakDefinitionPenalty = if definitionScore < 0.25 then 1.0 else 0.0
+
+    conatusDelta =
+      0.20 * definitionScore
+      + 0.05 * morphologyScore
+      + 0.05 * needAlignmentScore
+      - 0.35 * weakDefinitionPenalty
+
+    predictiveDelta =
+      0.25 * definitionScore
+      + 0.10 * morphologyScore
+      + 0.10 * needAlignmentScore
+      - 0.45 * weakDefinitionPenalty
+
+definitionQualityScore :: Text -> Double
+definitionQualityScore definitionText =
+  clampRange 0.0 1.0 ((fromIntegral wordCount - fromIntegral minDefinitionWords) / 5.0)
+  where
+    wordCount = length (T.words (T.strip definitionText))
+
+morphologyCoverageScore :: Maybe MorphologyPayload -> Double
+morphologyCoverageScore Nothing = 0.0
+morphologyCoverageScore (Just mp) =
+  clampRange 0.0 1.0 (genderScore + declensionScore + caseScore)
+  where
+    genderScore = maybe 0.0 (const 0.20) (mpGender mp)
+    declensionScore = maybe 0.0 (const 0.20) (mpDeclension mp)
+    caseScore =
+      case mpCases mp of
+        Nothing -> 0.0
+        Just caseMap -> min 0.60 (0.10 * fromIntegral (length caseMap))
+
+learningNeedAlignmentScore :: LearningNeed -> Double
+learningNeedAlignmentScore need =
+  case need of
+    NeedLexiconExtension -> 1.0
+    NeedKeywordEnrichment -> 0.5
+    NeedSalienceCalibration -> 0.25
+    NeedNone -> 0.0
+
+clampRange :: Double -> Double -> Double -> Double
+clampRange lo hi x
+  | isNaN x || isInfinite x = 0.0
+  | otherwise = max lo (min hi x)
 
 -- | Compute conatus trend as average slope over last 3 points.
 conatusTrendFromHistory :: [(Int, Double)] -> Double

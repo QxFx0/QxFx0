@@ -29,10 +29,14 @@ import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
 import Test.Suite.ModelComparison (modelComparisonTests)
 import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
+import Test.Suite.M6Witness (m6WitnessTests)
+import Test.Suite.M5Regime (m5RegimeTests)
+import Test.Suite.SemanticCommitmentCorpus (semanticCommitmentCorpusTests)
+import Test.Suite.AuthoritySurface (authoritySurfaceTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

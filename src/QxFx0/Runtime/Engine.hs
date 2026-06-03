@@ -18,7 +18,8 @@ import QxFx0.Runtime.Gate
   )
 import QxFx0.Runtime.Mode (resolveRuntimeMode, isStrictRuntimeMode)
 import QxFx0.Types.Thresholds (maxInputLength)
-import QxFx0.Runtime.Wiring (RuntimeContext, withRuntimeSession, toPipelineIO)
+import QxFx0.Runtime.Wiring (RuntimeContext, withRuntimeDb, withRuntimeSession, toPipelineIO)
+import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import QxFx0.Runtime.Session
   ( Session(..)
   , RuntimeOutputMode(..)
@@ -37,24 +38,29 @@ import System.IO (hPutStrLn, stderr, hIsEOF, stdin)
 import System.Exit (exitSuccess)
 
 runTurn :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
-runTurn ctx ss input sessionId
+runTurn ctx ss input sessionId = do
+  expectedRevision <- StatePersistence.loadStateRevision (withRuntimeDb ctx) sessionId
+  runTurnWithRevision ctx ss input sessionId expectedRevision
+
+runTurnWithRevision :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
+runTurnWithRevision ctx ss input sessionId expectedRevision
   | T.length input > maxInputLength = return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
   | otherwise = withRuntimeSession ctx sessionId $ do
-      turnResult <- try (runTurnBody ctx ss input sessionId) :: IO (Either QxFx0Exception (SystemState, Text))
+      turnResult <- try (runTurnBody ctx ss input sessionId expectedRevision) :: IO (Either QxFx0Exception (SystemState, Text))
       case turnResult of
         Left (EssenceRupture detail) -> pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
         Left (EmbeddingError detail) -> pure (ss, "Turn blocked: embedding backend [" <> detail <> "]")
         Left err -> throwQxFx0 err
         Right result -> pure result
 
-runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
-runTurnBody ctx ss input sessionId = do
+runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
+runTurnBody ctx ss input sessionId expectedRevision = do
   let pio = toPipelineIO ctx
   reqId <- resolveRequestId pio
   prepared <- prepareTurn pio ss input sessionId reqId
   planned <- planTurn pio ss prepared
   rendered <- renderTurn pio ss planned
-  tr <- finalizeTurn pio ss sessionId reqId rendered
+  tr <- finalizeTurn pio ss sessionId expectedRevision reqId rendered
   pure (trNextSs tr, trOutput tr)
 
 resolveRequestId :: PipelineIO -> IO Text
@@ -87,6 +93,7 @@ runTurnInSession session text = do
       let ss = sessSystemState s
           runtime = sessRuntime s
           sid = sessSessionId s
+          expectedRevision = sessStateRevision s
       if strictMode
         then do
           health <- checkHealth runtime
@@ -97,11 +104,11 @@ runTurnInSession session text = do
                 , renderTurnGateFailure failure
                 )
             Right _ ->
-              continueTurn s readiness ss runtime sid
-        else continueTurn s readiness ss runtime sid
+              continueTurn s readiness ss runtime sid expectedRevision
+        else continueTurn s readiness ss runtime sid expectedRevision
 
-    continueTurn s readiness ss runtime sid = do
-      turnResult <- try (runTurn runtime ss text sid) :: IO (Either QxFx0Exception (SystemState, Text))
+    continueTurn s readiness ss runtime sid expectedRevision = do
+      turnResult <- try (runTurnWithRevision runtime ss text sid expectedRevision) :: IO (Either QxFx0Exception (SystemState, Text))
       case turnResult of
         Left (AgdaGateError detail) ->
           pure
@@ -121,7 +128,7 @@ runTurnInSession session text = do
         Left err ->
           throwQxFx0 err
         Right (nextSs, response) -> do
-          let !session' = s { sessSystemState = nextSs, sessReadinessMode = readiness }
+          let !session' = s { sessSystemState = nextSs, sessStateRevision = expectedRevision + 1, sessReadinessMode = readiness }
           pure (session', response)
 
 loop :: Session -> IO ()

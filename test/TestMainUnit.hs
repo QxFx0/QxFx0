@@ -20,6 +20,10 @@ import Test.Suite.SelfBlanket (selfBlanketTests)
 import Test.Suite.SelfConatus (selfConatusTests)
 import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 import Test.Suite.SelfField (selfFieldTests)
+import Test.Suite.ReplayGate (replayGateTests)
+import Test.Suite.TraceSchema (traceSchemaTests)
+import Test.Suite.RegenerableDerived (regenerableDerivedTests)
+import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
 import Test.Suite.SelfSalience (selfSalienceTests)
 import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.SelfEssence (selfEssenceTests)
@@ -29,46 +33,42 @@ import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
 import Test.Suite.ModelComparison (modelComparisonTests)
-import Test.Suite.ReplayGate (replayGateTests)
-import Test.Suite.TraceSchema (traceSchemaTests)
-import Test.Suite.RegenerableDerived (regenerableDerivedTests)
-import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
-import Test.Suite.RenderAuthorityStub (renderAuthorityStubTests)
+import Test.Suite.DreamPressure (dreamPressureTests)
 
 main :: IO ()
 main = do
   testCounts <-
     runTestTT $
       TestList
-         ( coreBehaviorTests
-         ++ architectureInvariantTests
-         ++ selfPerspectiveTests
-         ++ perspectiveRegistryTests
-         ++ guardrailsTests
-         ++ knowledgeTreeTests
-         ++ dialogueDevelopmentTests
-         ++ turnPipelineProtocolTests
-         ++ lexiconTests
-         ++ vecPropertiesTests
-         ++ egoReadTests
-         ++ selfConatusTests
-         ++ selfBlanketTests
-         ++ selfAdjunctionTests
-          ++ selfFieldTests
-          ++ selfSalienceTests
+        ( coreBehaviorTests
+        ++ architectureInvariantTests
+        ++ selfPerspectiveTests
+        ++ perspectiveRegistryTests
+        ++ guardrailsTests
+        ++ knowledgeTreeTests
+        ++ dialogueDevelopmentTests
+        ++ turnPipelineProtocolTests
+        ++ lexiconTests
+        ++ vecPropertiesTests
+        ++ egoReadTests
+        ++ selfConatusTests
+        ++ selfBlanketTests
+        ++ selfAdjunctionTests
+         ++ selfFieldTests
+         ++ replayGateTests
+         ++ selfSalienceTests
            ++ selfDeliberationTests
-             ++ selfEssenceTests
-             ++ selfEssenceCommitTests
-             ++ p5GovernanceTests
-             ++ phaseM2dTests
+           ++ traceSchemaTests
+           ++ regenerableDerivedTests
+           ++ promotionFlagDisciplineTests
+            ++ selfEssenceTests
+            ++ selfEssenceCommitTests
+            ++ p5GovernanceTests
+            ++ phaseM2dTests
             ++ learningLoopTests
             ++ trainingCycleTests
-             ++ modelComparisonTests
-             ++ renderAuthorityStubTests
-             ++ replayGateTests
-             ++ traceSchemaTests
-             ++ regenerableDerivedTests
-            ++ promotionFlagDisciplineTests
+            ++ modelComparisonTests
+            ++ dreamPressureTests
          )
   if errors testCounts + failures testCounts > 0
     then exitFailure

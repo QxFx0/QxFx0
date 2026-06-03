@@ -117,10 +117,12 @@ library
     QxFx0.Core.PrincipledCore
     QxFx0.Core.MeaningGraph
     QxFx0.Core.DreamDynamics
+    QxFx0.Core.Dream.Pressure
     QxFx0.Core.TopicTransition
     QxFx0.Governance.Replay
 
     QxFx0.Core.BackgroundProcess
+    QxFx0.Memory.Episodic
     QxFx0.Runtime
     QxFx0.Runtime.Health
     QxFx0.Runtime.PGF
@@ -133,6 +135,47 @@ library
      QxFx0.Core.R5Dynamics
     QxFx0.Core.IdentitySignal
     QxFx0.Core.IdentityGuard
+    QxFx0.Core.AtomContributionAdmission
+    QxFx0.Core.AtomExtractionAdmission
+    QxFx0.Core.AtomFindingAdmission
+    QxFx0.Core.EarlyFamilyAdmission
+    QxFx0.Core.FamilyAdmission
+    QxFx0.Core.InterpretationAdmission
+    QxFx0.Core.LexicalClusterHitAdmission
+    QxFx0.Core.LexicalClusterPhraseAdmission
+    QxFx0.Core.LexicalClusterPhraseDecisionAdmission
+    QxFx0.Core.LexicalClusterMatchAdmission
+    QxFx0.Core.PropositionAdmission
+    QxFx0.Core.PropositionAffectiveSupportPhraseAdmission
+    QxFx0.Core.PropositionAffectiveSupportProbeAdmission
+    QxFx0.Core.PropositionComparisonPlausibilityAdmission
+    QxFx0.Core.PropositionContactAdmission
+    QxFx0.Core.PropositionConfrontAdmission
+    QxFx0.Core.PropositionConceptKnowledgeAdmission
+    QxFx0.Core.PropositionContemplativeTopicAdmission
+    QxFx0.Core.PropositionDialogueInvitationAdmission
+    QxFx0.Core.PropositionDistinctionAdmission
+    QxFx0.Core.PropositionExploratoryPromptAdmission
+    QxFx0.Core.PropositionGenerativePromptAdmission
+    QxFx0.Core.PropositionLocationFormationAdmission
+    QxFx0.Core.PropositionMisunderstandingAdmission
+    QxFx0.Core.PropositionNextStepAdmission
+    QxFx0.Core.PropositionOperationalCauseAdmission
+    QxFx0.Core.PropositionOperationalStatusAdmission
+    QxFx0.Core.PropositionPhraseDecisionAdmission
+    QxFx0.Core.PropositionPurposeAdmission
+    QxFx0.Core.PropositionRepairDirectiveAdmission
+    QxFx0.Core.PropositionSelfKnowledgeAdmission
+    QxFx0.Core.PropositionSelfStateAdmission
+    QxFx0.Core.PropositionSystemLogicAdmission
+    QxFx0.Core.PropositionWorldCauseAdmission
+    QxFx0.Core.TurnPipeline.Finalize.Projection
+    QxFx0.Core.RouteHintAdmission
+    QxFx0.Core.SemanticContributionAdmission
+    QxFx0.Core.SemanticFrameAdmission
+    QxFx0.Core.SemanticLogicAdmission
+    QxFx0.Core.SenseVectorAdmission
+    QxFx0.Core.StructuralAtomAdmission
     QxFx0.Core.ClaimBuilder
     QxFx0.Core.Ego
     QxFx0.Core.Legitimacy
@@ -171,6 +214,7 @@ library
     QxFx0.Evaluation.ModelComparison
 
     QxFx0.CLI.Parser
+    QxFx0.Semantic.Commitment
     QxFx0.Semantic.AtomAccretion
     QxFx0.Semantic.MeaningAtoms
     QxFx0.Semantic.MeaningAtom
@@ -201,7 +245,31 @@ library
      QxFx0.Render.Text
       QxFx0.Core.TurnPipeline.Route.Render
       QxFx0.Internal.FilePath
-      QxFx0.Legal.Adapter
+    QxFx0.Internal.Process
+      QxFx0.Types.PropositionFallbackAdmission
+    QxFx0.Types.PropositionContactAdmission
+    QxFx0.Types.PropositionConfrontAdmission
+    QxFx0.Types.PropositionConceptKnowledgeAdmission
+    QxFx0.Types.PropositionSelfKnowledgeAdmission
+    QxFx0.Types.PropositionSelfStateAdmission
+    QxFx0.Types.PropositionSystemLogicAdmission
+    QxFx0.Types.PropositionWorldCauseAdmission
+    QxFx0.Types.PropositionPurposeAdmission
+    QxFx0.Types.PropositionRepairDirectiveAdmission
+    QxFx0.Types.PropositionOperationalStatusAdmission
+    QxFx0.Types.PropositionOperationalCauseAdmission
+    QxFx0.Types.PropositionNextStepAdmission
+    QxFx0.Types.PropositionMisunderstandingAdmission
+    QxFx0.Types.PropositionLocationFormationAdmission
+    QxFx0.Types.PropositionGenerativePromptAdmission
+    QxFx0.Types.PropositionExploratoryPromptAdmission
+    QxFx0.Types.PropositionDistinctionAdmission
+    QxFx0.Types.PropositionDialogueInvitationAdmission
+    QxFx0.Types.PropositionContemplativeTopicAdmission
+    QxFx0.Types.PropositionComparisonPlausibilityAdmission
+    QxFx0.Types.PropositionAffectiveSupportProbeAdmission
+    QxFx0.Types.PropositionAffectiveSupportPhraseAdmission
+    QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
     QxFx0.Core.Bayesian
@@ -226,6 +294,8 @@ library
     QxFx0.Types.Domain.R5
     QxFx0.Types.Domain.User
     QxFx0.Types.State.Identity
+    QxFx0.Types.State.SemanticCommitment
+    QxFx0.Types.DreamPressure
     QxFx0.Types.State.Dialogue
     QxFx0.Types.State.Semantic
     QxFx0.Types.State.System
@@ -234,6 +304,7 @@ library
     QxFx0.Types.Sense
     QxFx0.Types.TruthContract
     QxFx0.Types.Thresholds.Types
+    QxFx0.Types.RuntimeRegime
     QxFx0.Types.Thresholds.Common
     QxFx0.Types.Thresholds.Legitimacy
     QxFx0.Types.Thresholds.Intuition
@@ -250,6 +321,7 @@ library
     QxFx0.Policy.Consciousness.Profiles
     QxFx0.Policy.ParserKeywords
     QxFx0.Policy.RenderLexicon
+    QxFx0.Policy.Metacognition
     QxFx0.Policy.SemanticScoring
     QxFx0.Bridge.Datalog.Compare
     QxFx0.Bridge.Datalog.Runtime

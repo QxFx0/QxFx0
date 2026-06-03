@@ -63,22 +63,18 @@ import QxFx0.Self.Perspective
   , opinionCore
   )
 import QxFx0.Core.TurnPipeline.Route.Render (isTopicNoisyOrAmbiguous)
-import QxFx0.Types.Decision (DialogueOutputMode(..))
 import QxFx0.Types.State
   ( AdaptiveDecision(..)
-   , EvidenceStrength(..)
+  , EvidenceStrength(..)
   , AdaptiveMutationKind(..)
-   , AdaptiveMutationRecord(..)
-   , BeliefPolarity(..)
-   , BeliefRecord(..)
-   , BeliefStore(..)
-   , AdaptiveDecisionRecord(..)
-   , PersistenceDomain(..)
-   , PersistenceDomainClass(..)
-   , StatePersistenceSnapshot(..)
-   , DialogueOutcomeKind(..)
-   , DialogueOutcomeLearningState(..)
-   , DialogueOutcomeSample(..)
+  , AdaptiveMutationRecord(..)
+  , BeliefPolarity(..)
+  , BeliefRecord(..)
+  , BeliefStore(..)
+  , AdaptiveDecisionRecord(..)
+  , DialogueOutcomeKind(..)
+  , DialogueOutcomeLearningState(..)
+  , DialogueOutcomeSample(..)
   , SpeechPolicyState(..)
   , SystemState(..)
   , emptyBeliefStore
@@ -86,11 +82,10 @@ import QxFx0.Types.State
    , emptySpeechPolicyState
    , emptySystemState
    , appendAdaptiveMutationRecords
-   , persistenceDomainClass
-   , preparePersistenceSnapshot
    , ssKnowledgeTree
+   , ssLastGuardReport
    , ssMorphology
-   , ConatusSlice(..)
+  , ConatusSlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
   , EvidenceRef(..)
@@ -109,15 +104,8 @@ import QxFx0.Types.State
   , PerspectiveThread(..)
   , PerspectiveVersionId(..)
   , ClaimStanceRef(..)
-   , defaultNormativeProfile
-   , defaultPerspectiveRegistry
-   )
-import QxFx0.Types.State.Governance
-  ( GovernanceProjection(..)
-  , GovernanceRuntimeFault(..)
-  , ProjectionMeta(..)
-  , currentProjectionVersion
-  , currentReducerVersion
+  , defaultNormativeProfile
+  , defaultPerspectiveRegistry
   )
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
@@ -133,10 +121,12 @@ import QxFx0.Learning.Validator
   )
 import QxFx0.Learning.Parser (parseLLMResponseToFruit)
 import QxFx0.Learning.Sandbox
-  ( SandboxResult(..)
+  ( AdmissionAuthorityDeltas(..)
+  , SandboxResult(..)
   , SandboxMetrics(..)
   , SandboxRejectReason(..)
   , SandboxConfig(..)
+  , deriveAdmissionAuthorityDeltas
   , defaultSandboxConfig
   , runSandboxGate
   , runSandboxGateWithConfig
@@ -186,12 +176,19 @@ learningLoopTests =
   , testValidatorRejectsJunk
   , testParserValidSchema
   , testParserRejectsMalformed
-  , testSandboxRejectsDegrading
-  , testSandboxAcceptsImproving
-  , testGraftUpdatesTreeAndMorph
-  , testTelemetryFieldsPopulated
-  , testFailClosedOnExternalError
-  -- Phase 8 hardening + Phase 9 start tests
+   , testSandboxRejectsDegrading
+   , testSandboxAcceptsImproving
+   , testInflatedRemotePredictiveDeltaDoesNotForceAcceptance
+   , testInflatedRemoteConatusDeltaDoesNotForceAcceptance
+   , testLocalAuthorityDeltasDriveSandboxVerdict
+   , testGraftUpdatesTreeAndMorph
+   , testTelemetryFieldsPopulated
+   , testExecutedToolMatchesPlannedToolAttribution
+   , testExecutedToolOverridesPlannedToolAttribution
+   , testFailClosedOnExternalError
+   , testFallbackFailureKeepsActorClean
+   , testNoResultKeepsActorClean
+   -- Phase 8 hardening + Phase 9 start tests
   , testExplicitConfigFallbackReason
   , testConfigRedactsApiKey
   , testValidatorRejectsSemanticallyEmpty
@@ -208,10 +205,9 @@ learningLoopTests =
         , testRealPathMiniEvalScenario5
    -- WP1-WP5 cumulative learning tests
    , testSystemStatePersistenceRoundTrip
-   , testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient
-   , testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains
    , testSystemStateJsonOmitsDerivedGovernanceViews
    , testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews
+   , testSystemStateDecodeTreatsMissingAndNullLastGuardReportAsNothing
    , testSystemStateV2MissingGovernanceFieldsFailDecode
    , testOldSystemStateDialogueDevelopmentDefaults
    , testAdaptiveMutationLogIsBounded
@@ -228,8 +224,10 @@ learningLoopTests =
   , testMorphologyRetentionMerge
   , testDedupBlocksExternalQueryForKnownMorphology
   , testDedupBlocksExternalQueryForKnownTreeTerm
-  , testConatusDeltaDerivedFromStateNotPayload
-  -- WP6.1 learning-pressure trigger + dedup + telemetry tests
+   , testConatusDeltaDerivedFromStateNotPayload
+   , testStoredFruitDoesNotPersistRemotePredictiveAuthority
+   , testQuarantinePromotionIgnoresInflatedRemotePredictiveClaim
+   -- WP6.1 learning-pressure trigger + dedup + telemetry tests
   , testLearningPressureRaisesLexiconExtension
   , testLearningPressureIgnoresLowUnknownCount
   , testLearningPressureIgnoresWhenGraftsGrowing
@@ -522,16 +520,16 @@ testSandboxRejectsDegrading = TestCase $ do
       payload = KnowledgeFruitPayload
         { kfpProposition = "deg"
         , kfpWord = "deg"
-        , kfpDefinition = "very bad definition that is long enough"
+        , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = (-0.8)
-        , kfpPredictiveDelta = (-0.2)
+        , kfpConatusDelta = 999.0
+        , kfpPredictiveDelta = 999.0
         }
       result = runSandboxGate ss payload
   case result of
-    SandboxReject _ SbrDegradingConatus -> pure ()
     SandboxReject _ SbrNegativeNetScore -> pure ()
+    SandboxReject _ SbrDegradingConatus -> pure ()
     _ -> assertFailure "sandbox must reject degrading proposal"
 
 -- | WP5: sandbox accepts a proposal with positive deltas.
@@ -544,13 +542,81 @@ testSandboxAcceptsImproving = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.5
-        , kfpPredictiveDelta = 0.3
+        , kfpConatusDelta = 0.0
+        , kfpPredictiveDelta = 0.0
         }
       result = runSandboxGate ss payload
   case result of
     SandboxAccept _ -> pure ()
     _ -> assertFailure "sandbox must accept improving proposal"
+
+testInflatedRemotePredictiveDeltaDoesNotForceAcceptance :: Test
+testInflatedRemotePredictiveDeltaDoesNotForceAcceptance = TestCase $ do
+  let ss = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedNone } }
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "weak"
+        , kfpWord = "weak"
+        , kfpDefinition = "short weak signal"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.0
+        , kfpPredictiveDelta = 999.0
+        }
+      result = runSandboxGate ss payload
+  case result of
+    SandboxReject _ _ -> pure ()
+    _ -> assertFailure "inflated remote predictive delta must not force sandbox acceptance"
+
+testInflatedRemoteConatusDeltaDoesNotForceAcceptance :: Test
+testInflatedRemoteConatusDeltaDoesNotForceAcceptance = TestCase $ do
+  let ss = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedNone } }
+      payload = KnowledgeFruitPayload
+        { kfpProposition = "weak"
+        , kfpWord = "weak"
+        , kfpDefinition = "short weak signal"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 999.0
+        , kfpPredictiveDelta = 0.0
+        }
+      result = runSandboxGate ss payload
+  case result of
+    SandboxReject _ _ -> pure ()
+    _ -> assertFailure "inflated remote conatus delta must not force sandbox acceptance"
+
+testLocalAuthorityDeltasDriveSandboxVerdict :: Test
+testLocalAuthorityDeltasDriveSandboxVerdict = TestCase $ do
+  let ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedLexiconExtension } }
+      weakPayload = KnowledgeFruitPayload
+        { kfpProposition = "weak"
+        , kfpWord = "weak"
+        , kfpDefinition = "short weak signal"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 999.0
+        , kfpPredictiveDelta = 999.0
+        }
+      strongPayload = KnowledgeFruitPayload
+        { kfpProposition = "strong"
+        , kfpWord = "strong"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Just (MorphologyPayload (Just "feminine") (Just "first") (Just (M.fromList [("nom", "strong"), ("gen", "stronga"), ("prep", "stronge")])) )
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.0
+        , kfpPredictiveDelta = 0.0
+        }
+      weakAuthority = deriveAdmissionAuthorityDeltas ss0 weakPayload
+      strongAuthority = deriveAdmissionAuthorityDeltas ss0 strongPayload
+  assertBool "weak payload must derive negative local predictive authority despite inflated remote claims"
+    (aadPredictiveDelta weakAuthority < 0.0)
+  assertBool "strong payload must derive positive local authority without remote self-scoring"
+    (aadConatusDelta strongAuthority > 0.0 && aadPredictiveDelta strongAuthority > 0.0)
+  case runSandboxGate ss0 strongPayload of
+    SandboxAccept _ -> pure ()
+    _ -> assertFailure "locally strong payload should pass even with zero remote claims"
 
 -- | WP6: runLearningStep grafts fruit and updates morphology on accept.
 testGraftUpdatesTreeAndMorph :: Test
@@ -594,6 +660,42 @@ testTelemetryFieldsPopulated = TestCase $ do
   assertEqual "status must be accept"
     "accept" (ltValidationStatus tel)
 
+-- | AS1-02: when planned and executed tool match, telemetry and
+-- reliability attribution must both point to the same actor.
+testExecutedToolMatchesPlannedToolAttribution :: Test
+testExecutedToolMatchesPlannedToolAttribution = TestCase $ do
+  let validJson = "{\"proposition\":\"x\",\"word\":\"x\",\"definition\":\"a good definition that is long enough\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse validJson validJson "llm-augment" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension }
+            }
+      plannedTool = ExternalTool "llm-augment" DomainLexicon 0.70 True
+      (ss1, tel) = runLearningStep ss0 plannedTool NeedLexiconExtension "что значит x" (Just (Right resp))
+  assertEqual "telemetry must report the executed tool"
+    (Just "llm-augment") (ltExternalTool tel)
+  assertBool "reliability mutation must target executed tool"
+    (any (\r -> amrKind r == MutToolReliability && any (== "tool=llm-augment") (amrEvidence r)) (ssAdaptiveMutationLog ss1))
+
+-- | AS1-02: if planned and executed tool diverge, executed tool must
+-- remain the canonical actor for telemetry and reliability.
+testExecutedToolOverridesPlannedToolAttribution :: Test
+testExecutedToolOverridesPlannedToolAttribution = TestCase $ do
+  let validJson = "{\"proposition\":\"x\",\"word\":\"x\",\"definition\":\"a good definition that is long enough\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      resp = ExternalQueryResponse validJson validJson "human-mentor" 0
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension }
+            }
+      plannedTool = ExternalTool "llm-augment" DomainLexicon 0.70 True
+      (ss1, tel) = runLearningStep ss0 plannedTool NeedLexiconExtension "что значит x" (Just (Right resp))
+  assertEqual "telemetry must report executed tool, not planned tool"
+    (Just "human-mentor") (ltExternalTool tel)
+  assertBool "reliability mutation must target executed tool, not planned tool"
+    (any (\r -> amrKind r == MutToolReliability && any (== "tool=human-mentor") (amrEvidence r)) (ssAdaptiveMutationLog ss1))
+  assertBool "planned tool must not receive phantom credit/blame"
+    (not (any (\r -> amrKind r == MutToolReliability && any (== "tool=llm-augment") (amrEvidence r)) (ssAdaptiveMutationLog ss1)))
+
 -- | Fail-closed: transport error does not graft anything.
 testFailClosedOnExternalError :: Test
 testFailClosedOnExternalError = TestCase $ do
@@ -610,10 +712,45 @@ testFailClosedOnExternalError = TestCase $ do
     "transport_error" (ltValidationStatus tel)
   assertEqual "tree must remain empty"
     0 (ktGraftedCount (ssKnowledgeTree ss1))
-  assertBool "transport error must record rejected tool reliability mutation"
-    (any (\r -> amrKind r == MutToolReliability && amrDecision r == AdaptiveRejected) (ssAdaptiveMutationLog ss1))
+  assertBool "transport error before executed identity must not mutate reliability"
+    (not (any (\r -> amrKind r == MutToolReliability) (ssAdaptiveMutationLog ss1)))
   assertBool "reject reason must be present"
     (ltRejectReason tel /= Nothing)
+  assertEqual "denied/failed path must not create fake executed tool identity"
+    Nothing (ltExternalTool tel)
+
+testFallbackFailureKeepsActorClean :: Test
+testFallbackFailureKeepsActorClean = TestCase $ do
+  let err = EqeFallback TfrExplicitMock
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension
+                }
+            }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит x" (Just (Left err))
+  assertEqual "fallback path must preserve fallback status"
+    "fallback_non_authoritative" (ltValidationStatus tel)
+  assertEqual "fallback path must keep telemetry actor-clean"
+    Nothing (ltExternalTool tel)
+  assertBool "fallback path must not mutate reliability"
+    (not (any (\r -> amrKind r == MutToolReliability) (ssAdaptiveMutationLog ss1)))
+
+-- | AS1-02: if execution identity is unavailable because no action ran,
+-- telemetry stays actor-clean and reliability remains unchanged.
+testNoResultKeepsActorClean :: Test
+testNoResultKeepsActorClean = TestCase $ do
+  let ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState
+                { lnsCurrentNeed = NeedLexiconExtension }
+            }
+      plannedTool = ExternalTool "llm-augment" DomainLexicon 0.70 True
+      (ss1, tel) = runLearningStep ss0 plannedTool NeedLexiconExtension "что значит x" Nothing
+  assertEqual "no-result path must keep telemetry actor-clean"
+    Nothing (ltExternalTool tel)
+  assertBool "no-result path must not mutate reliability"
+    (not (any (\r -> amrKind r == MutToolReliability) (ssAdaptiveMutationLog ss1)))
 
 -- ============================================================
 -- Phase 8 hardening + Phase 9 start tests
@@ -690,11 +827,11 @@ testSandboxConfigRespectsSafetyFloor = TestCase $ do
       payload = KnowledgeFruitPayload
         { kfpProposition = "deg"
         , kfpWord = "deg"
-        , kfpDefinition = "very bad definition that is long enough"
+        , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = (-0.8)
-        , kfpPredictiveDelta = (-0.2)
+        , kfpConatusDelta = 999.0
+        , kfpPredictiveDelta = 999.0
         }
       strictCfg = defaultSandboxConfig { scSafetyFloor = 0.0 }
       resultStrict = runSandboxGateWithConfig strictCfg ss payload
@@ -953,80 +1090,7 @@ testSystemStatePersistenceRoundTrip = TestCase $ do
   assertBool "belief store claim must survive round-trip"
     (M.member "свобода" (bsClaims (ssBeliefStore ss1)))
 
--- | P5 persistence seam separates canonical truth from projection/transient domains.
-testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient :: Test
-testPersistenceDomainClassSeparatesCanonicalProjectionAndTransient = TestCase $ do
-  assertEqual "core conversation must remain canonical truth"
-    PdcCanonicalTruth
-    (persistenceDomainClass PdCoreConversation)
-  assertEqual "governance history must remain canonical truth"
-    PdcCanonicalTruth
-    (persistenceDomainClass PdGovernanceCanonical)
-  assertEqual "governance views must be rebuildable projections"
-    PdcRebuildableProjection
-    (persistenceDomainClass PdGovernanceDerived)
-  assertEqual "session contour must remain runtime-transient"
-    PdcRuntimeTransient
-    (persistenceDomainClass PdSessionTransient)
-
-testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains :: Test
-testPreparePersistenceSnapshotSeparatesCanonicalAndRuntimeDomains = TestCase $ do
-  let scope = ScopeTopic "freedom"
-      bundle = mkPerspectiveBundleForScope scope
-      candidate = opinionCore bundle
-      registry = applyPerspectiveDecision 1 defaultPerspectiveRegistry bundle candidate PpdPromoteEndorsed
-      projection = GovernanceProjection
-        { gpMeta = ProjectionMeta
-            { pmProjectionVersion = currentProjectionVersion
-            , pmReducerVersion = currentReducerVersion
-            , pmSnapshotTurn = Just 1
-            }
-        , gpPerspectiveRegistry = registry
-        , gpActivePerspectiveProjections = buildActivePerspectiveProjections registry
-        , gpGovernedRefs = []
-        , gpProjectionChecksum = "projection_fixture"
-        }
-      liveState = emptySystemState
-        { ssSessionId = "live-session"
-        , ssOutputMode = SemanticIntrospectionOutput
-        , ssPerspectiveRegistry = registry
-        , ssGovernanceProjection = projection
-        , ssGovernanceRuntimeFault = Just GrfRebuildMismatch
-        }
-      snapshot = preparePersistenceSnapshot "persisted-session" liveState
-      canonicalState = spsCanonicalState snapshot
-      runtimeState = spsRuntimeContinuation snapshot
-  assertEqual "canonical snapshot must rebind persisted session id"
-    "persisted-session"
-    (ssSessionId canonicalState)
-  assertEqual "runtime continuation must also rebind session id"
-    "persisted-session"
-    (ssSessionId runtimeState)
-  assertEqual "canonical snapshot must clear runtime output mode"
-    DialogueOutput
-    (ssOutputMode canonicalState)
-  assertEqual "runtime continuation must preserve live output mode"
-    SemanticIntrospectionOutput
-    (ssOutputMode runtimeState)
-  assertEqual "canonical snapshot must clear rebuildable registry"
-    (ssPerspectiveRegistry emptySystemState)
-    (ssPerspectiveRegistry canonicalState)
-  assertEqual "canonical snapshot must clear rebuildable projection"
-    (ssGovernanceProjection emptySystemState)
-    (ssGovernanceProjection canonicalState)
-  assertEqual "runtime continuation must preserve live registry"
-    registry
-    (ssPerspectiveRegistry runtimeState)
-  assertEqual "runtime continuation must preserve live projection"
-    projection
-    (ssGovernanceProjection runtimeState)
-  assertEqual "canonical snapshot must clear runtime governance fault"
-    Nothing
-    (ssGovernanceRuntimeFault canonicalState)
-  assertEqual "runtime continuation must preserve live governance fault"
-    (Just GrfRebuildMismatch)
-    (ssGovernanceRuntimeFault runtimeState)
-
+-- | P5 canonical persistence omits derived governance projections.
 testSystemStateJsonOmitsDerivedGovernanceViews :: Test
 testSystemStateJsonOmitsDerivedGovernanceViews = TestCase $
   case toJSON emptySystemState of
@@ -1062,6 +1126,27 @@ testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews = TestCase $ do
   assertEqual "persisted governance projection must be ignored on decode"
     (ssGovernanceProjection emptySystemState)
     (ssGovernanceProjection ss)
+
+testSystemStateDecodeTreatsMissingAndNullLastGuardReportAsNothing :: Test
+testSystemStateDecodeTreatsMissingAndNullLastGuardReportAsNothing = TestCase $ do
+  let mkStateValue mutate =
+        case toJSON emptySystemState of
+          Object obj -> Object (mutate obj)
+          value -> value
+      withoutLastGuardReport =
+        mkStateValue (KM.delete "lastGuardReport")
+      withNullLastGuardReport =
+        mkStateValue (KM.insert "lastGuardReport" Null)
+      decodedMissing = decode (encode withoutLastGuardReport) :: Maybe SystemState
+      decodedNull = decode (encode withNullLastGuardReport) :: Maybe SystemState
+  assertBool "state without lastGuardReport must decode" (decodedMissing /= Nothing)
+  assertBool "state with null lastGuardReport must decode" (decodedNull /= Nothing)
+  let ssMissing = maybe emptySystemState id decodedMissing
+      ssNull = maybe emptySystemState id decodedNull
+  assertEqual "missing lastGuardReport must decode to Nothing"
+    Nothing (ssLastGuardReport ssMissing)
+  assertEqual "null lastGuardReport must decode to Nothing"
+    Nothing (ssLastGuardReport ssNull)
 
 -- | P5 schema v2 must fail closed when governance/dialogue fields are absent.
 testSystemStateV2MissingGovernanceFieldsFailDecode :: Test
@@ -1510,6 +1595,58 @@ testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
     (abs (kfConatusDelta fruit - 0.99) > 0.1)
   assertBool "conatus delta must be small and positive (tree growth proxy)"
     (kfConatusDelta fruit > 0.0 && kfConatusDelta fruit < 0.05)
+
+testStoredFruitDoesNotPersistRemotePredictiveAuthority :: Test
+testStoredFruitDoesNotPersistRemotePredictiveAuthority = TestCase $ do
+  let payload = KnowledgeFruitPayload
+        { kfpProposition = "test"
+        , kfpWord = "test"
+        , kfpDefinition = "a good definition that is long enough for testing"
+        , kfpMorphology = Nothing
+        , kfpSource = SourceLLM
+        , kfpConatusDelta = 0.01
+        , kfpPredictiveDelta = 999.0
+        }
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedLexiconExtension } }
+      expectedPredictive = aadPredictiveDelta (deriveAdmissionAuthorityDeltas ss0 payload)
+      (ss1, _tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит test" (Just (Right
+          (ExternalQueryResponse
+            { eqrRawBody = "{\"proposition\":\"test\",\"word\":\"test\",\"definition\":\"a good definition that is long enough for testing\",\"source\":\"llm\",\"conatusDelta\":0.01,\"predictiveDelta\":999.0}"
+            , eqrStructured = "{\"proposition\":\"test\",\"word\":\"test\",\"definition\":\"a good definition that is long enough for testing\",\"source\":\"llm\",\"conatusDelta\":0.01,\"predictiveDelta\":999.0}"
+            , eqrToolName = "llm-augment"
+            , eqrLatencyMs = 0
+            })))
+      tree = ssKnowledgeTree ss1
+      allFruits = concatMap brFruits (concat (M.elems (ktBranches tree)))
+      fruit = case allFruits of
+        [] -> error "testStoredFruitDoesNotPersistRemotePredictiveAuthority: expected stored fruit"
+        (f:_) -> f
+  assertBool "stored predictive delta must not preserve remote 999.0 authority claim"
+    (abs (kfPredictiveDelta fruit - 999.0) > 1.0)
+  assertBool "stored predictive delta must equal the local authority derivation"
+    (abs (kfPredictiveDelta fruit - expectedPredictive) < 1e-9)
+
+testQuarantinePromotionIgnoresInflatedRemotePredictiveClaim :: Test
+testQuarantinePromotionIgnoresInflatedRemotePredictiveClaim = TestCase $ do
+  let weakJson = "{\"proposition\":\"weak\",\"word\":\"weak\",\"definition\":\"short weak signal\",\"source\":\"llm\",\"conatusDelta\":999.0,\"predictiveDelta\":999.0}"
+      ss0 = emptySystemState
+            { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedLexiconExtension } }
+      (ss1, tel) = runLearningStep ss0
+        (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+        NeedLexiconExtension "что значит weak" (Just (Right (ExternalQueryResponse weakJson weakJson "llm-augment" 0)))
+      tree0 = ssKnowledgeTree ss1
+      (tree1, promoted, rejected) = promoteFromQuarantine 10 2 "agreement" tree0
+  assertEqual "weak local evidence must still sandbox-reject despite inflated remote claims"
+    "sandbox_reject" (ltValidationStatus tel)
+  assertEqual "inflated remote predictive claims must not cause later promotion from quarantine"
+    0 promoted
+  assertEqual "weak fruit should remain rejected after quarantine review"
+    1 rejected
+  assertEqual "rejected fruit should stay quarantined"
+    1 (length (ktQuarantine tree1))
 
 -- | WP6.1 helper: single step of learning-pressure detection.
 runNeedStep :: LearningPressureConfig -> LearningNeedState -> Int -> Bool -> Int -> LearningNeedState
