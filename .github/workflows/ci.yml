@@ -29,7 +29,7 @@ jobs:
   core-contract:
     name: Core Contract (PROD_GO)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     if: |
       github.event_name == 'push' ||
       github.event_name == 'pull_request' ||
@@ -78,7 +78,10 @@ jobs:
         run: |
           # extra-lib-dirs must apply to the pgf2 *dependency* too, so use a
           # `package *` stanza (top-level extra-lib-dirs does not reach deps).
+          # -O0 keeps the gate fast (it checks that the tree builds + tests pass,
+          # not runtime perf); the 20k-lemma module is very slow to optimize.
           cat > cabal.project.local <<'EOF'
+          optimization: 0
           package *
             extra-lib-dirs: /tmp/gf-install/usr/lib
             extra-include-dirs: /tmp/gf-install/usr/include
