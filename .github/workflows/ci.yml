@@ -55,7 +55,30 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsqlite3-dev
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config libsqlite3-dev
+
+      - name: Build GF C runtime (libpgf/libgu)
+        run: |
+          set -euo pipefail
+          git clone https://github.com/GrammaticalFramework/gf-core.git /tmp/gf-core
+          git -C /tmp/gf-core checkout 1c086bed25811db1cf71990fb2eeca023e62c060
+          cd /tmp/gf-core/src/runtime/c
+          # Newer libtool rejects ACLOCAL_AMFLAGS alongside AC_CONFIG_MACRO_DIRS;
+          # drop the redundant flag so autoreconf works across autotools versions.
+          sed -i '/^ACLOCAL_AMFLAGS/d' Makefile.am || true
+          autoreconf -i
+          ./configure --prefix=/tmp/gf-install/usr
+          make -j"$(nproc)"
+          make install
+
+      - name: Configure cabal for CI GF runtime
+        run: |
+          cat > cabal.project.local <<'EOF'
+          extra-lib-dirs: /tmp/gf-install/usr/lib
+          extra-include-dirs: /tmp/gf-install/usr/include
+          package qxfx0
+            ghc-options: -optl-Wl,-rpath,/tmp/gf-install/usr/lib
+          EOF
 
       - name: Cache Cabal store
         uses: actions/cache@v4

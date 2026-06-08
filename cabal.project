@@ -1,11 +1,7 @@
 packages: .
 import: cabal.project.freeze
 
-with-compiler: /home/liskil/.ghcup/ghc/9.6.6/bin/ghc
-with-hc-pkg: /home/liskil/.ghcup/ghc/9.6.6/bin/ghc-pkg
 tests: True
-extra-lib-dirs: /home/liskil/gf-core/src/runtime/c/.libs
-extra-include-dirs: /home/liskil/gf-core/src/runtime/c
 
 test-show-details: streaming
 
@@ -13,4 +9,8 @@ test-show-details: streaming
 jobs: 1
 
 package qxfx0
-  ghc-options: +RTS -M8G -RTS -optl-Wl,-rpath,/home/liskil/gf-core/src/runtime/c/.libs
+  ghc-options: +RTS -M8G -RTS
+
+-- NOTE: machine-specific settings (compiler path, GF C-runtime lib/include
+-- dirs, link rpath) live in cabal.project.local (gitignored). CI provisions
+-- the GF runtime separately; see .github/workflows/ci.yml.
