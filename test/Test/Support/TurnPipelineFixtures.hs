@@ -10,6 +10,7 @@ module Test.Support.TurnPipelineFixtures
   , buildPlannedFixtureWithState
   , buildPreparedFixtureWithState
   , buildAuthoritativePerspectiveFinalizeFixture
+  , forceAuthoritativeTurnArtifacts
   , testEpochZero
   , testProtocolPipelineIO
   , testProtocolInterpreter
@@ -21,6 +22,7 @@ import Data.Time.Clock (UTCTime(..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
+import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types
 import QxFx0.Types.Readiness ()
 import QxFx0.Core.PipelineIO
@@ -77,7 +79,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio defaultProtocolFixtureState rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -95,7 +97,7 @@ buildFinalizeFixture rawInput = do
   (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithPipeline pio defaultProtocolFixtureState rawInput
   let precommitPlan = planFinalizePrecommit ss ti ts tp ta
   precommitResults <- resolveFinalizePrecommit pio precommitPlan
-  let bundle =
+  bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           ss
@@ -116,7 +118,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
   (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithPipeline pio startSs rawInput
   let precommitPlan = planFinalizePrecommit ss ti ts tp ta
   precommitResults <- resolveFinalizePrecommit pio precommitPlan
-  let bundle =
+  bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           ss
@@ -149,7 +151,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -167,7 +169,7 @@ buildAuthoritativePerspectiveFinalizeFixture startSs rawInput = do
   let ta = forceAuthoritativeTurnArtifacts ta0
       precommitPlan = planFinalizePrecommit ss ti ts tp ta
   precommitResults <- resolveFinalizePrecommit pio precommitPlan
-  let bundle =
+  bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           ss
@@ -250,7 +252,7 @@ buildPlannedFixtureWithPipeline pio startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixtureWithPipeline :: PipelineIO -> SystemState -> T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

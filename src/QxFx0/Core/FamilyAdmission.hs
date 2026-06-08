@@ -13,6 +13,7 @@ import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Self.Salience (SelfVerdict(..), Salience(..), SalienceDriver(..))
 import QxFx0.Types
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
+import QxFx0.Types.PropositionType (PropositionType(..))
 
 data FamilyAdmissionInput = FamilyAdmissionInput
   { faiTruthContractStatus :: !TruthContractStatus
@@ -47,5 +48,5 @@ familyAlreadyWeak family = family `elem` [CMClarify, CMRepair, CMAnchor, CMConta
 
 familyAdmissionInScope :: InputPropositionFrame -> Bool
 familyAdmissionInScope frame =
-  ipfPropositionType frame == "SelfStateQ"
+  ipfPropositionType frame == SelfStateQ
     && ipfConfidence frame < parserHighConfidenceThreshold

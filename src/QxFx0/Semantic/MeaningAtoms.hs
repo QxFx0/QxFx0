@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module QxFx0.Semantic.MeaningAtoms
   ( RawClusterPhraseDecision(..)
@@ -52,23 +53,23 @@ data RawAtomFindings = RawAtomFindings
   { rafClusterAtoms :: ![MeaningAtom]
   , rafLexicalAtoms :: ![MeaningAtom]
   , rafStructuralAtoms :: ![MeaningAtom]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalClusterMatches = RawLexicalClusterMatches
   { rlmClusterAtoms :: ![MeaningAtom]
   , rlmLexicalAtoms :: ![MeaningAtom]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawClusterPhraseDecision = RawClusterPhraseDecision
   { rcpdClusterName :: !Text
   , rcpdPhrase :: !Text
   , rcpdMatched :: !Bool
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawClusterPhraseContainment = RawClusterPhraseContainment
   { rcpcClusterName :: !Text
   , rcpcMatchedKeywords :: ![Text]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data LexicalPhraseContainmentClass
   = LpcExhaustion
@@ -77,12 +78,12 @@ data LexicalPhraseContainmentClass
   | LpcNeedContact
   | LpcNeedMeaning
   | LpcAgencyLost
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data RawLexicalPhraseContainment = RawLexicalPhraseContainment
   { rlpcClass :: !LexicalPhraseContainmentClass
   , rlpcMatchedLexemes :: ![Text]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalPhraseDecision = RawLexicalPhraseDecision
   { rlpdClass :: !LexicalPhraseContainmentClass

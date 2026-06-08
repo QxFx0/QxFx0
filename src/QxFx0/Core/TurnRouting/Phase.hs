@@ -36,6 +36,7 @@ import QxFx0.Core.TurnRouting.Types (RoutingPhase(..))
 import QxFx0.Semantic.SemanticInput (SemanticInput(..), buildSemanticInputSimple)
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
 import QxFx0.Types
+import QxFx0.Types.PropositionType (PropositionType(..))
 
 computeRoutingPhase :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
                     -> SystemState -> [Text] -> Text -> RoutingPhase
@@ -51,7 +52,7 @@ computeRoutingPhase recommendedFamily frame atomSet nextUserState systemState hi
       familyMerged = mergeFamilySignalsWithFrame recommendedFamily frame familyByParserConfidence semanticFamily
       parserLocked =
         ipfConfidence frame >= parserHighConfidenceThreshold
-          && ipfPropositionType frame /= T.pack "PlainAssert"
+          && ipfPropositionType frame /= PlainAssert
       pressure = detectPressure input history
       principledModeResult = fmap principledMode pressure
       pressureBand = pressureBandFromState (classifyPressure pressure history)
@@ -100,7 +101,7 @@ mergeFamilySignals recommended parser semantic
 mergeFamilySignalsWithFrame :: CanonicalMoveFamily -> InputPropositionFrame -> CanonicalMoveFamily -> CanonicalMoveFamily -> CanonicalMoveFamily
 mergeFamilySignalsWithFrame recommended frame parser semantic
   | ipfConfidence frame >= parserHighConfidenceThreshold
-      && ipfPropositionType frame /= T.pack "PlainAssert"
+      && ipfPropositionType frame /= PlainAssert
       && parser /= recommended = parser
   | otherwise = mergeFamilySignals recommended parser semantic
 
@@ -124,20 +125,22 @@ semanticInputFamilyHint semanticInput =
       keepRecommendedOnClarify =
         not (ipfIsQuestion frame)
           && recommended `elem` [CMGround, CMDefine, CMDistinguish, CMDescribe, CMPurpose, CMContact, CMDeepen]
-          && ipfPropositionType frame `notElem` map T.pack ["ClarifyQ", "EpistemicQ", "RequestQ"]
+          && case ipfPropositionType frame of
+               ClarifyQ -> False
+               EpistemicQ -> False
+               RequestQ -> False
+               _ -> True
       keepRecommendedOnAnchorQuestion =
         recommended `elem` [CMGround, CMDefine, CMDistinguish, CMDescribe, CMPurpose]
-          && ipfPropositionType frame `elem` map T.pack
-            [ "SelfStateQ"
-            , "SelfKnowledgeQ"
-            , "SystemLogicQ"
-            , "WorldCauseQ"
-            , "OperationalCauseQ"
-            , "ConceptKnowledgeQ"
-            , "PurposeQ"
-            , "DistinctionQ"
-            , "ComparisonPlausibilityQ"
-            ]
+          && case ipfPropositionType frame of
+               SelfStateQ -> True
+               SelfKnowledgeQ -> True
+               SystemLogicQ -> True
+               WorldCauseQ -> True
+               OperationalCauseQ -> True
+               ConceptKnowledgeQ -> True
+               PurposeQ -> True
+               _ -> False
   in if hasConfrontLexeme then CMConfront
      else if hasAtom isContact then CMContact
      else if hasAtom isRepair then CMRepair

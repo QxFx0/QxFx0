@@ -83,6 +83,15 @@ import System.Environment (lookupEnv)
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe)
 
+import QxFx0.Policy.EndpointAllowlist
+  ( endpointAllowlist
+  , untrustedHostOverrideWarningTag
+  , validateEndpointUrl
+  , validateEndpointUrlWithContext
+  , endpointHost
+  , isTruthy
+  )
+
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Learning.Tool (ExternalTool(..), etName)
 import QxFx0.Types.ExternalQuery
@@ -135,19 +144,14 @@ data FireworksConfig = FireworksConfig
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
--- | Official LLM API endpoint allowlist.
--- Any endpoint not on this list is rejected unless the operator sets
--- @QXFX0_LLM_ALLOW_UNTRUSTED_HOST=1@ and either enters an explicit
--- dev/test mode or supplies the second confirmation flag documented in
--- 'validateEndpointUrlWithContext'.
+-- | Backward-compat aliases: the allowlist + override tag moved to
+-- 'QxFx0.Policy.EndpointAllowlist' (shared with the embedding path). These
+-- names are kept so existing callers/tests are unaffected.
 llmEndpointAllowlist :: [Text]
-llmEndpointAllowlist =
-  [ "api.mistral.ai"
-  , "api.fireworks.ai"
-  ]
+llmEndpointAllowlist = endpointAllowlist
 
 llmUntrustedHostOverrideWarningTag :: Text
-llmUntrustedHostOverrideWarningTag = "llm_untrusted_host_override_allowed"
+llmUntrustedHostOverrideWarningTag = untrustedHostOverrideWarningTag
 
 llmDefaultTimeoutMs :: Int
 llmDefaultTimeoutMs = 30000
@@ -170,80 +174,9 @@ llmMaxResponseBytes = 65536
 llmRawBodyTelemetryChars :: Int
 llmRawBodyTelemetryChars = 4096
 
--- | Validate an endpoint URL using the strict default policy.
---
--- Rules (fail-closed):
---   1. Scheme must be @https://@.
---   2. Host must be in 'llmEndpointAllowlist'.
---   3. A single untrusted-host override is not sufficient by itself.
---      Use 'validateEndpointUrlWithContext' with dev/test or double opt-in
---      context when this is intentional.
---   3. Empty or malformed URI is rejected.
---
--- Returns 'Right ()' when allowed, 'Left reason' when blocked.
-validateEndpointUrl :: Text -> Maybe Text -> Either TransportFallbackReason ()
-validateEndpointUrl endpoint mAllowOverride =
-  () <$ validateEndpointUrlWithContext endpoint mAllowOverride Nothing Nothing
-
--- | Validate an endpoint URL with explicit override context.
---
--- Parameters after the endpoint are:
---
--- * @QXFX0_LLM_ALLOW_UNTRUSTED_HOST@ value.
--- * dev/test mode marker, for example @QXFX0_TEST_MODE=1@ or
---   @QXFX0_LLM_DEV_MODE=1@.
--- * double-confirmation marker, currently
---   @QXFX0_LLM_ALLOW_UNTRUSTED_HOST_CONFIRM=1@.
---
--- A successful untrusted-host override returns the warning tag that must be
--- emitted to logs/trace before a bearer token is sent to that host.
-validateEndpointUrlWithContext
-  :: Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Maybe Text
-  -> Either TransportFallbackReason (Maybe Text)
-validateEndpointUrlWithContext endpoint mAllowOverride mDevOrTestMode mDoubleConfirm =
-  let stripped = T.strip endpoint
-  in if T.null stripped
-       then Left TfrUnsafeEndpoint
-       else case parseEndpointHost stripped of
-              Nothing -> Left TfrUnsafeEndpoint
-              Just host ->
-                if host `elem` llmEndpointAllowlist
-                  then Right Nothing
-                  else if mAllowOverride == Just "1"
-                         then if isTruthy mDevOrTestMode || isTruthy mDoubleConfirm
-                                then Right (Just llmUntrustedHostOverrideWarningTag)
-                                else Left TfrUntrustedOverrideRejected
-                         else Left TfrBlockedHost
-
-parseEndpointHost :: Text -> Maybe Text
-parseEndpointHost endpoint = do
-  uri <- parseURI (T.unpack endpoint)
-  auth <- uriAuthority uri
-  let scheme = T.toLower (T.pack (uriScheme uri))
-      rawHost = uriRegName auth
-      rawPort = uriPort auth
-      portAllowed = null rawPort || rawPort == ":443"
-  if scheme == "https:" && null (uriUserInfo auth) && not (null rawHost) && portAllowed
-    then Just (T.toLower (T.pack rawHost))
-    else Nothing
-
-endpointHost :: Text -> Text
-endpointHost rawEndpoint =
-  fromMaybe "invalid_endpoint" (parseEndpointHost (T.strip rawEndpoint))
-
-isTruthy :: Maybe Text -> Bool
-isTruthy raw =
-  case T.toLower . T.strip <$> raw of
-    Just "1" -> True
-    Just "true" -> True
-    Just "yes" -> True
-    Just "on" -> True
-    Just "dev" -> True
-    Just "test" -> True
-    _ -> False
+-- Endpoint-host validation (allowlist, https/port checks, override context)
+-- now lives in 'QxFx0.Policy.EndpointAllowlist' and is imported above, shared
+-- with the Semantic embedding path.
 
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig

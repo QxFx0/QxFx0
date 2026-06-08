@@ -12,6 +12,7 @@ concrete QxFx0SyntaxRusColloquial of QxFx0Syntax = QxFx0LexiconRus ** open Synta
     Modifier = { s : Str } ;
     Relation = { s : Str } ;
     Mechanism = { s : Str } ;
+    ActTopic = { s : Str } ;
   lin
     NumSg = { s = "держу" } ;
     NumPl = { s = "держим" } ;
@@ -23,6 +24,12 @@ concrete QxFx0SyntaxRusColloquial of QxFx0Syntax = QxFx0LexiconRus ** open Synta
     MoveInvite topic mod vp = mkS (mkCl (mkNP youSg_Pron) vp) ;
     RelIdentity = { s = "это" } ;
     MechParse = { s = "разбором" } ;
+    ActAnswer = { s = "ответ" } ;
+    ActQuestion = { s = "вопрос" } ;
+    ActTopicTerm = { s = "тема" } ;
+    ActProject = { s = "проект" } ;
+    ActResult = { s = "результат" } ;
+    MoveActOnTopic act = mkS (mkCl (mkNP youSg_Pron) (mkVP (mkV2 (mkV "говорить" "говорю" "говорит") prepositional) (mkNP (mkN act.s)))) ;
     MoveDefine subj rel obj = mkS (mkCl subj (mkVP (mkV2 (mkV "определять" "определяю" "определяет") accusative) obj)) ;
     MoveCause subj mech = mkS (mkCl subj (mkVP (mkV "объяснять" "объясняю" "объясняет"))) ;
     MovePurpose topic = mkS (mkCl topic (mkVP (mkV "значить" "значу" "значит"))) ;

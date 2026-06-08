@@ -6,44 +6,76 @@ module QxFx0.Types.TurnProjection
   ( TurnReplayTrace(..)
   , PreActorFailureKind(..)
   , PreActorFailureEvent(..)
+  , EffectSnapshot(..)
+  , TurnFamilyDerivationStep(..)
+  , GenerationAttempt(..)
   , TurnProjection(..)
   ) where
 
 import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
+import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, ResponseSurfaceKind, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
 import QxFx0.Types.State.Perspective (PerspectiveProjection)
-import QxFx0.Types.Sense (SenseAxis, SenseOperator)
+import QxFx0.Types.Sense (SenseAxis, SenseOperator, RhetoricalMove)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import QxFx0.Types.Domain.User (IdentityClaimRef)
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Field (Field)
+import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import QxFx0.Memory.Episodic
   ( EpisodicQuery
   , EpisodicId
   , ReuseAnnotation
   )
-import Data.Aeson (ToJSON)
+import Data.Aeson (ToJSON, FromJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import QxFx0.Core.FMAR (FmarMode(..))
 
 data PreActorFailureKind
   = PreActorTransportFailure
   | PreActorFallbackNonAuthoritative
   | PreActorNoExecutableTool
   deriving stock (Show, Eq, Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, FromJSON)
 
 data PreActorFailureEvent = PreActorFailureEvent
   { pafeKind :: !PreActorFailureKind
   , pafeActionKind :: !Text
   , pafeReason :: !Text
   } deriving stock (Show, Eq, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | Runtime effect snapshots recorded at prepare time and replayed by
+-- 'QxFx0.Core.PipelineIO.Replay.mkReplayPipelineIO'.  A sub-record
+-- so the wide path (all resolved effects become replay inputs) grows
+-- this field, not the top-level god-record.
+--
+-- Old traces (pre-vX) serialise as 'Nothing'; only traces produced
+-- after this field was added carry the snapshot.
+data EffectSnapshot = EffectSnapshot
+  { esApiHealthy :: !Bool
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | One step in the family derivation chain from routing to rendering.
+data TurnFamilyDerivationStep = TurnFamilyDerivationStep
+  { tfdsLabel  :: !Text
+  , tfdsFamily :: !CanonicalMoveFamily
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | One attempt in the text-generation pipeline (assembly path, PGF, etc.).
+data GenerationAttempt = GenerationAttempt
+  { gaPath    :: !Text
+  , gaOutcome :: !Text
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Canonical replay/projection envelope for a turn.
 -- Rich replay visibility does not imply that every field carries canonical
@@ -171,7 +203,7 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDialogueCommitmentCount :: !Int
   , trcDialogueCommitmentCountBefore :: !Int
    , trcDialogueCommitmentCountAfter :: !Int
-   , trcMicroPlanMoves :: ![Text]
+   , trcMicroPlanMoves :: ![RhetoricalMove]
    , trcMicroPlanExplicitness :: !Double
    , trcDreamPressureDatalogClass :: !(Maybe Text)
    , trcDreamPressureIntuitionClass :: !(Maybe Text)
@@ -227,8 +259,106 @@ data TurnReplayTrace = TurnReplayTrace
     --   'ssSemanticCommitments' at turn completion. Zero when the store
     --   is Nothing (Package 2 not yet initialised). Non-zero indicates
     --   typed domain commitments are accumulating.
+  , trcQuarantinedCommitmentCount :: !Int
+    -- ^ CTS-43: number of quarantined (suppressed) commitments in
+    --   'ssSemanticCommitments' at turn completion. Visible for review;
+    --   quarantined claims do NOT feed reasoning.
+  , trcCommitmentStoreDecision :: !CommitmentStoreAdmissionDecision
+    -- ^ CTS-42: the admission decision applied to this turn's factual
+    --   claims (anchor + surface-parsed). Captures the decision that was
+    --   actually applied, not a re-computation from 'trcTruthContractStatus',
+    --   so replay under a future constitution version does not alter the
+    --   persisted decision.
+  , trcCognitiveSignals :: !CognitiveSignals
+    -- ^ WP-S: the compute-once derived-signal bundle (counterfactual entropy,
+    --   field confidence, shadow disagreement, max posterior) shared by the
+    --   doubt loop (WP-D) and affect (WP-E). Surfaced here as the living
+    --   consumer of the seam.
+  , trcDoubtScore :: !(Maybe Double)
+    -- ^ P8 (WP-D): doubt score in @[0,1]@ from 'tiDoubtScore'. High doubt
+    --   (≥ 0.7) signals uncertainty and can drive routing toward clarifying
+    --   moves or reduce explicitness. @Nothing@ when doubt computation is
+    --   disabled or unavailable.
+  , trcEpisodicRetrievalCount :: !(Maybe Int)
+    -- ^ P8 (WP-B): count of episodes retrieved from 'tiRetrievedEpisodes'.
+    --   Enables replay-time inspection of episodic memory influence on
+    --   routing decisions. @Nothing@ when episodic recall is inactive.
+  , trcContentSaliencyDominantCluster :: !(Maybe Int)
+    -- ^ P8 (WP-C): dominant cluster ID from spectral clustering of the
+    --   meaning graph. Derived from 'csContentSaliency' in 'trcCognitiveSignals'.
+    --   @Nothing@ when content saliency is inactive or no clusters exist.
+  , trcMoodValence :: !(Maybe Double)
+    -- ^ P8 (WP-E): mood valence in @[-1,1]@ from 'atmosphereValence' of
+    --   'tiField'. Negative = negative affect, positive = positive affect.
+    --   @Nothing@ when affect model is disabled.
+  , trcMoodArousal :: !(Maybe Double)
+    -- ^ P8 (WP-E): mood arousal in @[0,1]@ from 'atmosphereArousal' of
+    --   'tiField'. Low = calm, high = excited. @Nothing@ when affect
+    --   model is disabled.
+  , trcAffectDecoupled :: !Bool
+    -- ^ P8 (WP-E): whether affect decoupled mode was active this turn
+    --   ('affectDecoupledActive' flag). When True, atmosphere is computed
+    --   from persistent mood rather than immediate turn valence.
+  , trcMood :: !Double
+    -- ^ P8 (WP-E): persistent mood baseline from 'ssMood' in @[-1,1]@.
+    --   Slow affective EMA over ~'moodWindowTurns'. Enables replay-time
+    --   inspection of long-term affective state evolution.
+  , trcUserModelTopIntent :: !(Maybe Text)
+    -- ^ P8 (WP-A): top-ranked intent from 'ssUserModel' posterior.
+    --   Enables replay-time inspection of user model influence on routing.
+    --   @Nothing@ when user model is empty or disabled.
+  , trcUserModelConfidence :: !(Maybe Double)
+    -- ^ P8 (WP-A): confidence (posterior probability) of the top intent
+    --   from 'ssUserModel'. In @[0,1]@. @Nothing@ when user model is
+    --   empty or disabled.
+  , trcDerivedInferenceCount :: !(Maybe Int)
+    -- ^ P8 (WP-G): count of derived atoms in the Datalog knowledge base.
+    --   Enables replay-time inspection of inference engine activity.
+    --   @Nothing@ when derived inference tracking is disabled.
+  , trcFamilyDivergenceOccurred :: !(Maybe Bool)
+    -- ^ P8 (WP-H3): @Just True@ when holistic and formal families diverged
+    --   this turn ('holisticFamily /= formalFamily'). @Just False@ when
+    --   they agreed. @Nothing@ when family divergence tracking is disabled
+    --   ('familyDivergenceEnabled' flag off).
+  , trcFmarDetectorFamily :: !(Maybe CanonicalMoveFamily)
+    -- ^ FMAR Phase-8: the keyword-detector family recommendation, carried
+    --   for shadow-mode comparison against 'trcFmarFamily'. @Nothing@ when
+    --   FMAR is off (@QXFX0_FMAR@ unset).
+  , trcFmarFamily :: !(Maybe CanonicalMoveFamily)
+    -- ^ FMAR Phase-8: the family FMAR selected from the Field position.
+    --   @Nothing@ when FMAR is off.
+  , trcFmarFamiliesMatch :: !(Maybe Bool)
+    -- ^ FMAR Phase-8: @Just True@ when detector and FMAR agree, @Just False@
+    --   when FMAR overrode the detector. The core shadow-calibration signal.
+    --   @Nothing@ when FMAR is off.
+  , trcFmarFieldDistance :: !(Maybe Double)
+    -- ^ FMAR Phase-8: distance from the current 8D position to the chosen
+    --   family's target Field. Lets calibration judge override quality.
+    --   @Nothing@ when FMAR is off.
+  , trcFmarMode :: !(Maybe FmarMode)
+    -- ^ FMAR Phase-9: the FMAR operating mode. @Just FmarShadow@ or
+    --   @Just FmarLive@ when FMAR is active, @Nothing@ when FMAR is off.
+    --   Disambiguates trcFmarFamiliesMatch — in shadow mode @Just True@
+    --   means cascade==fmar but FMAR did NOT drive the rendering family.
+  , trcFamilyDerivationChain :: ![TurnFamilyDerivationStep]
+    -- ^ P9: ordered list of family derivation steps from routing through
+    --   shadow resolution, legitimacy, diagnostic lock, sense bundle, FMAR,
+    --   to renderingFamily.  Includes intermediate points lost in the
+    --   compressed tpFamily/tpFinalFamily projection.
+  , trcGenerationTrace :: ![GenerationAttempt]
+    -- ^ P9: ordered list of text-generation attempts (assembly, factual,
+    --   template, structured fallback, PGF) with per-attempt outcomes.
+  , trcMorphologyVersion :: !Int
+    -- ^ P9 (RGL Russian): morphology version (0 = JSON, 1 = RGL).
+    --   Replay needs this to distinguish JSON-backed vs RGL-backed
+    --   morphology paths in 'linearizeClaimAstRus'.
+  , trcEffectSnapshot :: !(Maybe EffectSnapshot)
+    -- ^ Runtime effect snapshots (apiHealthy) recorded at prepare-time.
+    --   Consumed by replay to make legitimacy-score deterministic.
+    --   'Nothing' for traces recorded before this field was added
+    --   (pre-vX — not apiHealthy-deterministic).
   } deriving stock (Show, Eq, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

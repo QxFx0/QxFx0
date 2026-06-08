@@ -74,7 +74,10 @@ planRouteEffects ss ti ts =
           intuitPosterior
           (tiField ti)
           (tiSelfVerdict ti)
+          (tiConatusEnergy ti)
+          (tiDoubtScore ti)
           courtesyPred
+          (tiRetrievedEpisodes ti)
       family = rdFamily rd
       atomTags = map maTag (asAtoms atomSet)
    in RouteEffectPlan

@@ -82,10 +82,14 @@ module QxFx0.Self.Conatus
   , gradientMagnitude
   , gradientNormalize
   , conatusViolationPenalty
+    -- * Thresholds
+  , lowEnergyThreshold
   ) where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
+
+import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
 import GHC.Generics (Generic)
 
 import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
@@ -112,16 +116,28 @@ data ConatusWeights = ConatusWeights
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
 
--- | The reference weights used throughout the system unless an
+-- | The reference builtin weights used throughout the system unless an
 -- experiment overrides them via 'computeConatusEnergyWith' or
 -- 'computeConatusGradientWith'.
-defaultConatusWeights :: ConatusWeights
-defaultConatusWeights = ConatusWeights
+builtinConatusWeights :: ConatusWeights
+builtinConatusWeights = ConatusWeights
   { cwMorphology = 1.0
   , cwIdentity   = 0.5
   , cwTurns      = 0.25
   , cwViolation  = 10.0
   }
+
+-- | The reference weights, loaded from
+-- 'resources/config/conatus_weights.json' if present, otherwise
+-- falling back to 'builtinConatusWeights'.
+--
+-- The NOINLINE pragma is required to prevent GHC from inlining
+-- the 'unsafePerformIO' call and potentially evaluating it
+-- multiple times.
+defaultConatusWeights :: ConatusWeights
+defaultConatusWeights =
+  loadConfigOrBuiltin "resources/config/conatus_weights.json" builtinConatusWeights
+{-# NOINLINE defaultConatusWeights #-}
 
 -- | The decomposed scalar contribution of each axis. Kept separate
 -- from 'ConatusEnergy' so that diagnostics and observability can
@@ -249,6 +265,29 @@ gradientNormalize g =
 -- record computed under matching weights.
 conatusViolationPenalty :: ConatusWeights -> [BlanketViolation] -> Double
 conatusViolationPenalty w vs = negate (cwViolation w * fromIntegral (length vs))
+
+-- | Threshold below which Conatus energy is considered "low" and
+-- triggers self-preservation routing restrictions. When
+-- @ceScalar < lowEnergyThreshold@, the system prohibits high-risk
+-- families (CMConfront, CMHypothesis, CMDistinguish) and allows
+-- only restorative families (CMContact, CMAnchor, CMRepair).
+--
+-- The default value of @3.0@ is calibrated against the log-scale
+-- codomain of 'ceScalar': a healthy blanket with moderate
+-- morphology (e.g., 20 entries), some identity claims (e.g., 5),
+-- and a few turns (e.g., 10) yields:
+--
+-- @
+-- C = 1.0 * log(21) + 0.5 * log(6) + 0.25 * log(11) ≈ 3.0 + 0.9 + 0.6 = 4.5
+-- @
+--
+-- A blanket below this threshold has either suffered violations
+-- (penalty term) or has minimal structural substance, warranting
+-- conservative routing.
+--
+-- See ADR-0045 for the integration rationale.
+lowEnergyThreshold :: Double
+lowEnergyThreshold = 3.0
 
 -- | Numerically robust \(\log(1 + x)\) for \(x \geq 0\). Avoids
 -- catastrophic cancellation for small \(x\), and is well-defined

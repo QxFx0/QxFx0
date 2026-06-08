@@ -9,10 +9,20 @@ module QxFx0.Core.TurnPipeline.Prepare.Build
   ) where
 
 import QxFx0.Core.Observability
+import QxFx0.Core.ConsciousnessLoop (computeDoubt)
 import QxFx0.Core.TurnPipeline.Effects
   ( PrepareEffectPlan(..)
   , PrepareStatic(..)
   )
+import QxFx0.Self.Salience (svSalience)
+import QxFx0.Memory.Episodic
+  ( EpisodicEvent
+  , EpisodicQuery(..)
+  , EpisodicStore
+  , episodicRecallActive
+  , retrieve
+  )
+import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
 import QxFx0.Core.TurnPipeline.Prepare.Types
   ( PrepareEffectResults(..)
   , PrepareTimeline(..)
@@ -30,9 +40,30 @@ import QxFx0.Types
 
 import Data.Text (Text)
 
+-- | WP-B R-B1: construct frame-driven episodic query from current turn context.
+-- Query strategy: retrieve recent episodes (last 20 turns) that might inform
+-- the current response. This is a minimal implementation; more sophisticated
+-- queries (ByCommitment, ByKind filtering) can be added later.
+buildEpisodicQuery :: SystemState -> EpisodicQuery
+buildEpisodicQuery ss =
+  let currentTurn = TurnSeq (ssTurnCount ss)
+      -- Query last 20 turns (episodic window is 50, we use a tighter window for relevance)
+      startTurn = TurnSeq (max 0 (unTurnSeq currentTurn - 20))
+  in ByTurnRange (startTurn, currentTurn)
+
+-- | WP-B R-B1: retrieve relevant episodes if recall is active.
+-- Returns empty list when flag is off or no store exists.
+retrieveRelevantEpisodes :: SystemState -> [EpisodicEvent]
+retrieveRelevantEpisodes ss
+  | not episodicRecallActive = []
+  | otherwise = case ssEpisodic ss of
+      Nothing    -> []
+      Just store -> retrieve (buildEpisodicQuery ss) store
+
 buildTurnInput :: SystemState -> Text -> Text -> PrepareEffectPlan -> PrepareEffectResults -> TurnInput
 buildTurnInput ss requestId sessionId effectPlan effectResults =
   let prepareStatic = pepStatic effectPlan
+      retrievedEpisodes = retrieveRelevantEpisodes ss
       embResult = perEmbeddingResult effectResults
       emb = erEmbedding embResult
       embQuality = embeddingSourceQuality (erSource embResult)
@@ -99,6 +130,8 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
        , tiDialoguePhase = psDialoguePhase prepareStatic
        , tiTruthContractStatus = psTruthContractStatus prepareStatic
         , tiEssence = psEssence prepareStatic
+        , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
+        , tiRetrievedEpisodes = retrievedEpisodes
         }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals

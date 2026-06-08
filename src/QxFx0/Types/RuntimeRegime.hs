@@ -55,6 +55,9 @@ data RuntimeRegime = RuntimeRegime
     --   Replay needs this to know whether holistic-formal modulation fired.
   , rrEssenceActive :: !Bool
     -- ^ True when essence commitment is enabled (ADR-0036 promoted).
+  , rrRglMorphologyActive :: !Bool
+    -- ^ True when RGL-backed morphology is enabled (paradigms.json loaded).
+    --   Replay needs this to distinguish RGL vs JSON morphology path.
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
@@ -65,9 +68,9 @@ currentMathVersion :: Int
 currentMathVersion = 1
 
 -- | Current CTS constitution version.
--- Initial value 40 = CTS-01 through CTS-40 (all proposition consumers admitted).
+-- Initial value 43 = CTS-43 (commitment quarantine).
 currentConstitutionVersion :: Int
-currentConstitutionVersion = 40
+currentConstitutionVersion = 43
 
 -- | Default regime for new sessions, reflecting current code state.
 defaultRuntimeRegime :: RuntimeRegime
@@ -75,5 +78,6 @@ defaultRuntimeRegime = RuntimeRegime
   { rrMathVersion          = currentMathVersion
   , rrConstitutionVersion  = currentConstitutionVersion
   , rrFamilyDivergenceActive = True   -- ADR-0019 promoted 2026-06-02
-  , rrEssenceActive          = False  -- ADR-0036 still flag-off
+  , rrEssenceActive          = True   -- ADR-0036 promoted 2026-06-04
+  , rrRglMorphologyActive    = True   -- RGL morphology promoted 2026-06-08 (L3c evidence: parity=0, sweep + live A/B)
   }

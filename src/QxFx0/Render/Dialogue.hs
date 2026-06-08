@@ -2,6 +2,7 @@
 {-| Dialogue surface rendering: claim linearization, stance framing, and fallback text assembly. -}
 module QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
+  , GenerationAttempt(..)
   , hasStructuredDialogueSurface
   , renderDialogueArtifact
   , renderDialogueUtterance
@@ -16,12 +17,15 @@ module QxFx0.Render.Dialogue
   ) where
 
 import Data.Text (Text)
+import QxFx0.Self.Field (Field, emptyField)
+import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
 import qualified Data.Char as Char
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Control.Applicative ((<|>))
 import Data.Char (isAlpha)
 import QxFx0.Types
+import QxFx0.Types.Sense (RhetoricalMove(..), FallbackPolicy(..), ImplicationDirection(..))
 import QxFx0.Types.TruthContract (truthContractAllowsHardKnowledgeTone)
 import QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
@@ -33,9 +37,17 @@ import QxFx0.Lexicon.GfMap
   , lookupGfLexemeForms
   , topicToGfLexemeDecision
   )
-import QxFx0.Lexicon.Inflection (genitiveForm, prepositionalForm, toNominative)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms
+  ( RuntimeParadigms
+  , emptyRuntimeParadigms
+  , lookupNounForm
+  , NounCase(..)
+  , Number(..)
+  )
+import QxFx0.Runtime.PGFStatus (pgfRuntimeActive, pgfFallbackReason)
+import QxFx0.Lexicon.Inflection (toNominative)
 import QxFx0.Types.Text (finalizeForce)
-import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
+import QxFx0.Semantic.Proposition (PropositionType(..))
 import QxFx0.Policy.ParserKeywords
   ( vapidWords
   )
@@ -83,6 +95,10 @@ data DialogueRenderArtifact = DialogueRenderArtifact
   , draSurfaceProvenance :: !SurfaceProvenance
   , draDerivationTags :: ![Text]
   , draDialogAtoms :: !DialogAtoms
+  , draGenerationTrace :: ![GenerationAttempt]
+    -- ^ P9: ordered list of generation attempts (dialog assembly, factual,
+    --   template, structured fallback, PGF runtime) with per-attempt outcome.
+    --   Populated by 'renderArtifactViaAssembly'; extended by PGF resolution.
   } deriving stock (Eq, Show)
 
 -- | Detect whether input text is English (pure Latin, no Cyrillic).
@@ -185,25 +201,27 @@ linearizeClaimAstEn ast =
     MoveHypothesis (MkNP gfTopic) ->
       let topic = maybe "" glfNom (lookupGfLexemeForms gfTopic)
       in if T.null topic then Nothing else Just ("Hypothesis: " <> topic <> " can be explained through a local model.")
+    MoveActOnTopic ActAnswer    -> Just "Let us discuss the answer."
+    MoveActOnTopic ActQuestion  -> Just "Let us discuss the question."
+    MoveActOnTopic ActTopicTerm -> Just "Let us discuss the topic."
+    MoveActOnTopic ActProject   -> Just "Let us discuss the project."
+    MoveActOnTopic ActResult    -> Just "Let us discuss the result."
   where
     capitalize t = if T.null t then t else T.toUpper (T.take 1 t) <> T.drop 1 t
 
 renderDialogueUtterance :: ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> Text
 renderDialogueUtterance rmp rcp topic claims morph =
-  draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph)
+  draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph emptyRuntimeParadigms emptyField)
 
-renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> DialogueRenderArtifact
-renderDialogueArtifact frame rmp rcp topic claims morph =
-  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph of
+renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> DialogueRenderArtifact
+renderDialogueArtifact frame rmp rcp topic claims morph rp field =
+  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph rp field of
     Just artifact -> artifact
     Nothing ->
       let fallbackReason =
-            case propositionTypeFromText (ipfPropositionType frame) of
-              Nothing -> "unknown_proposition_type"
-              Just ptype ->
-                if structuredDialogueType ptype
-                  then "structured_body_returned_plain"
-                  else "proposition_type_not_structured"
+            if structuredDialogueType (ipfPropositionType frame)
+              then "structured_body_returned_plain"
+              else "proposition_type_not_structured"
       in if isEnglishInput (ipfRawText frame)
       then
         let topicText = cleanTopic topic
@@ -224,13 +242,14 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             , draSurfaceProvenance = FromFallback
             , draDerivationTags = ["surface=en_unstructured", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
+            , draGenerationTrace = []
             }
       else
         let cleanedTopic = cleanTopic topic
-            openingText = moveToText (rcpOpening rcp) cleanedTopic morph
-            coreText = moveToText (rcpCore rcp) cleanedTopic morph
-            limitText = moveToText (rcpLimit rcp) cleanedTopic morph
-            contText = moveToText (rcpContinuation rcp) cleanedTopic morph
+            openingText = moveToText (rcpOpening rcp) cleanedTopic rp morph
+            coreText = moveToText (rcpCore rcp) cleanedTopic rp morph
+            limitText = moveToText (rcpLimit rcp) cleanedTopic rp morph
+            contText = moveToText (rcpContinuation rcp) cleanedTopic rp morph
             stylePrefixText = stylePrefix (rcpStyle rcp)
             microPlan = rmpMicroPlan rmp
             microPrefaceText = microPlanPrefix rmp cleanedTopic
@@ -250,32 +269,33 @@ renderDialogueArtifact frame rmp rcp topic claims morph =
             { draRenderedText = rendered
             , draQuestionLike = rmpForce rmp == IFAsk
             , draStylePrefixText = stylePrefixText
-            , draTemplateBodyText = fullBody
+            , draTemplateBodyText = withStyle
             , draClaimText = claimText
             , draClaimAst = Nothing
             , draLinearizationLang = Nothing
             , draLinearizationOk = False
-            , draFallbackReason = Just ("ru_unstructured_fallback:" <> fallbackReason)
+            , draFallbackReason = Just fallbackReason
             , draContractProvenance = FallbackRoute
             , draSurfaceProvenance = FromFallback
-            , draDerivationTags = ["surface=ru_unstructured", "fallback=" <> fallbackReason]
+            , draDerivationTags = ["surface=template", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
+            , draGenerationTrace = []
             }
 
 hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
 hasStructuredDialogueSurface frame =
-  maybe False structuredDialogueType (propositionTypeFromText (ipfPropositionType frame))
+  structuredDialogueType (ipfPropositionType frame)
 
-renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> Maybe DialogueRenderArtifact
-renderStructuredDialogueArtifact frame rmp rcp renderStyle morph = do
-  propositionType <- propositionTypeFromText (ipfPropositionType frame)
-  if not (structuredDialogueType propositionType)
-    then Nothing
-    else
+renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> Maybe DialogueRenderArtifact
+renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field =
+  let propositionType = ipfPropositionType frame
+  in if not (structuredDialogueType propositionType)
+     then Nothing
+     else
       let (body0, claimAst, mLang, linearizationOk, fallbackReason) =
-            structuredBody propositionType frame rmp renderStyle morph
-          body1 = applyMicroPlanToStructuredBody rmp renderStyle body0
-          continuationText = structuredContinuationText frame rmp rcp morph
+            structuredBody propositionType frame rmp renderStyle morph rp
+          body1 = applyMicroPlanToStructuredBody rmp renderStyle field body0
+          continuationText = structuredContinuationText frame rmp rcp rp morph
           body = appendContinuation (rmpMicroPlan rmp) body1 continuationText
           rendered = finalizeForce IFAssert (T.strip body)
           contractProv = contractProvenanceForArtifact fallbackReason claimAst
@@ -295,6 +315,7 @@ renderStructuredDialogueArtifact frame rmp rcp renderStyle morph = do
               , draSurfaceProvenance = surfaceProv
                , draDerivationTags = artifactDerivationTags propositionType linearizationOk fallbackReason claimAst
               , draDialogAtoms = emptyDialogAtoms
+              , draGenerationTrace = []
               }
 
 structuredDialogueType :: PropositionType -> Bool
@@ -322,8 +343,8 @@ structuredDialogueType propositionType =
     , NextStepQ
     ]
 
-structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
-structuredBody propositionType frame rmp renderStyle morph =
+structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
+structuredBody propositionType frame rmp renderStyle morph rp =
   let isEn = isEnglishInput (ipfRawText frame)
       hardKnowledgeTone = truthContractAllowsHardKnowledgeTone (rmpTruthContractStatus rmp)
   in case propositionType of
@@ -332,7 +353,7 @@ structuredBody propositionType frame rmp renderStyle morph =
           fallback = if isEn then "I see a signal of overload. I will not build more interpretations: first let us restore grounding. Briefly point out where exactly the response broke for you, and I will rephrase precisely."
                      else "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "repair" ast renderStyle morph fallback
+          claim = linFn "repair" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ContactSignal ->
       if isGreetingSmallTalkFrame frame
@@ -341,18 +362,18 @@ structuredBody propositionType frame rmp renderStyle morph =
           let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "grounding" else "опора")
               ast = claimAstOrFallback (MoveContact (MkNP (resolveTopicLexeme topicRef))) (rmpPrimaryClaimAst rmp)
               fallback = if isEn then "I hear that grounding is needed now. Let us simplify: identify one point of tension and choose one short step for the near term."
-                         else "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+                         else "Слышу, что сейчас нужна опора." <> contactContextSentence rp morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-              claim = linFn "contact" ast renderStyle morph fallback
+              claim = linFn "contact" ast renderStyle morph rp fallback
           in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     AffectiveQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "state" else "состояние")
           ast = claimAstOrFallback (MoveContact (MkNP (resolveTopicLexeme topicRef))) (rmpPrimaryClaimAst rmp)
           fallback = if isEn
                        then "I hear that grounding is needed now. Let us simplify: identify one point of tension and choose one short step for the near term."
-                       else "Слышу, что сейчас нужна опора." <> contactContextSentence morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+                       else "Слышу, что сейчас нужна опора." <> contactContextSentence rp morph (ipfSemanticSubject frame) <> " Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "affective" ast renderStyle morph fallback
+          claim = linFn "affective" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     OperationalStatusQ ->
       let ast = claimAstOrFallback MoveOperationalStatus (rmpPrimaryClaimAst rmp)
@@ -370,7 +391,7 @@ structuredBody propositionType frame rmp renderStyle morph =
                          , "Я работаю. Узкое место — пропозиционный разбор и избыточно быстрый переход к шаблонному ходу."
                          ]
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "operational_status" ast renderStyle morph fallback
+          claim = linFn "operational_status" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     OperationalCauseQ ->
       let ast = claimAstOrFallback MoveOperationalCause (rmpPrimaryClaimAst rmp)
@@ -380,22 +401,22 @@ structuredBody propositionType frame rmp renderStyle morph =
             , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: ранний выбор семейства ответа делает реплику шаблонной."
             , "По запуску я работаю. Проблема сейчас в разборе смысла и маршрутизации: при потере нюансов ответ уходит в слишком универсальную формулу."
             ]
-          claim = linearizeOrFallbackTagged "operational_cause" ast renderStyle morph fallback
+          claim = linearizeOrFallbackTagged "operational_cause" ast renderStyle morph rp fallback
       in withClaim (clText claim) ast claim
     GroundQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "situation" else "ситуация")
-          topicPrep = if isEn then topicRef else structuredPrepositional morph topicRef
+          topicPrep = if isEn then topicRef else structuredPrepositional rp morph topicRef
           ast = claimAstOrFallback (MoveGround (MkNP (resolveTopicLexeme topicRef))) (rmpPrimaryClaimAst rmp)
           fallback = if isEn then "I hold this as stable grounding for further analysis."
                      else "Держу это как устойчивую опору для дальнейшего разбора."
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "ground" ast renderStyle morph fallback
+          claim = linFn "ground" ast renderStyle morph rp fallback
           bodyText = if isEn then "If we speak about " <> topicPrep <> ", then " <> clText claim
                      else "Если говорить " <> aboutWithTopic topicPrep <> ", то " <> clText claim
       in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     SystemLogicQ ->
       let ast = claimAstOrFallback MoveSystemLogic (rmpPrimaryClaimAst rmp)
-          claim = linearizeOrFallbackTagged "system_logic" ast renderStyle morph (systemLogicSurface frame)
+          claim = linearizeOrFallbackTagged "system_logic" ast renderStyle morph rp (systemLogicSurface frame)
       in withClaim (clText claim) ast claim
     SelfKnowledgeQ
       | asksThoughtCapacityQuestion frame ->
@@ -431,7 +452,7 @@ structuredBody propositionType frame rmp renderStyle morph =
                               then "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора: я работаю через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
                               else "Я — локальная система диалога. О себе я могу удерживать лишь рабочую локальную модель: роль, текущее состояние и способ, которым иду по ходу разговора через типизированный разбор, маршрутизацию семейства хода и ограничения текущей сессии."
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-              claim = linFn "self_knowledge" ast renderStyle morph fallback
+              claim = linFn "self_knowledge" ast renderStyle morph rp fallback
           in withClaimLang (if isEn then selfKnowledgeSurfaceByTargetEn target (clText claim) else selfKnowledgeSurfaceByTarget target (clText claim)) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     DialogueInvitationQ ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
@@ -440,8 +461,8 @@ structuredBody propositionType frame rmp renderStyle morph =
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           fallback = if isEn
                        then "Yes, let us talk about this. I will fix the frame and begin with a grounding distinction so as not to let the topic dissolve into random associations."
-                       else dialogueInvitationSurface frame morph
-          claim = linFn "dialogue_invitation" ast renderStyle morph fallback
+                       else dialogueInvitationSurface rp frame morph
+          claim = linFn "dialogue_invitation" ast renderStyle morph rp fallback
           rendered = clText claim
       in withClaimLang rendered ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConceptKnowledgeQ
@@ -451,20 +472,20 @@ structuredBody propositionType frame rmp renderStyle morph =
                    else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
       | isEn ->
           let ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")))) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
-              claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph (rmpPrimaryClaim rmp)
+              claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
           in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
               <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
               <> clText claim) ast claim "en_GF_MVP"
       | otherwise ->
           let ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
-              claim = linearizeOrFallback ast renderStyle morph (rmpPrimaryClaim rmp)
-          in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference frame morph)
+              claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
+          in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
               <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
               <> clText claim) ast claim
     PurposeQ ->
       let topicRef = nonEmptyOr (T.strip (ipfSemanticSubject frame)) (nonEmptyOr (T.strip (rmpTopic rmp)) (if isEn then "object" else "объект"))
           topicNom = if isEn then topicRef else toNominative morph topicRef
-          topicGen = if isEn then topicRef else structuredGenitive morph topicNom
+          topicGen = if isEn then topicRef else structuredGenitive rp morph topicNom
           topicPhrase =
             if isEn then "the purpose of " <> topicRef
             else if isLikelyBrokenGenitive topicNom topicGen
@@ -473,7 +494,7 @@ structuredBody propositionType frame rmp renderStyle morph =
           (topicFunId, topicLexemeFallback) = topicToGfLexemeDecision topicNom
           ast = claimAstOrFallback (MovePurpose (MkNP topicFunId)) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "purpose" ast renderStyle morph (rmpPrimaryClaim rmp)
+          claim = linFn "purpose" ast renderStyle morph rp (rmpPrimaryClaim rmp)
           purposeClaimText
             | isEn = "The function of " <> topicNom <> " reveals itself through repeatable roles in action."
             | topicLexemeFallback == Just "gf_default_lexeme" =
@@ -489,7 +510,7 @@ structuredBody propositionType frame rmp renderStyle morph =
     WorldCauseQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "phenomenon" else "явление"))
           topicNom = if isEn then topicRef else toNominative morph topicRef
-          topicGen = if isEn then topicRef else structuredGenitive morph topicNom
+          topicGen = if isEn then topicRef else structuredGenitive rp morph topicNom
           safeTopicGen
             | isEn = topicRef
             | isLikelyBrokenGenitive topicNom topicGen = "этого явления"
@@ -497,7 +518,7 @@ structuredBody propositionType frame rmp renderStyle morph =
             | otherwise = topicGen
           ast = claimAstOrFallback (MoveCause (MkNP (resolveTopicLexeme topicNom)) MechParse) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          claim = linFn "world_cause" ast renderStyle morph (rmpPrimaryClaim rmp)
+          claim = linFn "world_cause" ast renderStyle morph rp (rmpPrimaryClaim rmp)
           bodyText = if isEn
                         then "If we speak of the cause of " <> safeTopicGen <> ", then " <> clText claim
                           <> " Therefore I distinguish local reasoning about mechanism from full knowledge of the external world."
@@ -511,7 +532,7 @@ structuredBody propositionType frame rmp renderStyle morph =
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "thought" else "мысль")
           bodyText = if isEn
                        then "If we speak about " <> topicRef <> ", then in my local model it does not arise at one point but in the structure of connections between state, propositions, and dialogue constraints. " <> rmpPrimaryClaim rmp
-                       else "Если говорить " <> aboutWithTopic (structuredPrepositional morph topicRef)
+                       else "Если говорить " <> aboutWithTopic (structuredPrepositional rp morph topicRef)
                          <> ", то в моей локальной модели она возникает не в одной точке, а в структуре связей между состоянием, пропозициями и ограничениями диалога. "
                          <> rmpPrimaryClaim rmp
       in plain bodyText
@@ -521,7 +542,7 @@ structuredBody propositionType frame rmp renderStyle morph =
         Nothing ->
           let ast = claimAstOrFallback MoveSelfState (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-              claim = linFn "self_state" ast renderStyle morph (rmpPrimaryClaim rmp)
+              claim = linFn "self_state" ast renderStyle morph rp (rmpPrimaryClaim rmp)
           in withClaimLang ((if isEn then "My current move is built from parsing the reply, choosing the response family, and session constraints. " else if hardKnowledgeTone then selfStateSurface frame <> " " else "Мой внутренний ход можно описать через локальный разбор реплики, выбор семейства ответа, ограничения сессии и удержание текущего состояния диалога. ") <> clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ComparisonPlausibilityQ ->
       case ipfSemanticCandidates frame of
@@ -530,7 +551,7 @@ structuredBody propositionType frame rmp renderStyle morph =
               rightNom = if isEn then right else toNominative morph right
               ast = claimAstOrFallback (MoveDistinguish (MkNP (resolveTopicLexeme leftNom)) (MkNP (resolveTopicLexeme rightNom))) (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-              claim = linFn "distinguish" ast renderStyle morph (rmpPrimaryClaim rmp)
+              claim = linFn "distinguish" ast renderStyle morph rp (rmpPrimaryClaim rmp)
               bodyText = if isEn then "Comparison needs an explicit frame. If we speak of everyday stability, " <> rightNom
                 <> " usually looks more natural because " <> leftNom
                 <> " describes a less stable configuration. " <> clText claim
@@ -550,7 +571,7 @@ structuredBody propositionType frame rmp renderStyle morph =
               rightNom = if isEn then right else toNominative morph right
               ast = claimAstOrFallback (MoveDistinguish (MkNP (resolveTopicLexeme leftNom)) (MkNP (resolveTopicLexeme rightNom))) (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-              claim = linFn "distinguish" ast renderStyle morph (rmpPrimaryClaim rmp)
+              claim = linFn "distinguish" ast renderStyle morph rp (rmpPrimaryClaim rmp)
               bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> clText claim
                 else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> clText claim
           in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
@@ -565,7 +586,7 @@ structuredBody propositionType frame rmp renderStyle morph =
                          <> " Let us clarify where exactly the response diverged from your request: in meaning, tone, or reasoning."
                        else "Я принимаю это как сигнал сбоя взаимопонимания. " <> rmpPrimaryClaim rmp
                          <> " Давай уточним, где именно ответ разошёлся с твоим запросом: в смысле, тоне или ходе рассуждения."
-          claim = linFn "misunderstanding" ast renderStyle morph fallback
+          claim = linFn "misunderstanding" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
       let ast = claimAstOrFallback MoveGenerativeThought (rmpPrimaryClaimAst rmp)
@@ -573,7 +594,7 @@ structuredBody propositionType frame rmp renderStyle morph =
           fallback = if isEn
                        then "One thought: meaning holds on the connection between words and experience. Another thought: the strength of thinking lies in holding distinctions. A new thought: development begins when we are ready to change our own frame. A logical thought: output quality is verified by the link between premises and conclusion."
                        else generativeThought frame
-          claim = linFn "generative_prompt" ast renderStyle morph fallback
+          claim = linFn "generative_prompt" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ContemplativeTopic ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "topic" else "тема")
@@ -584,7 +605,7 @@ structuredBody propositionType frame rmp renderStyle morph =
                        then "If we hold to the word " <> fallbackTopic <> ", I hear in it not only an object but a field of meanings, including subjectivity as a way to hold inner form. Here one can go through memory, loss, closeness, and the ability to hold the form of life."
                        else "Если держаться слова " <> openGuillemet <> toNominative morph fallbackTopic <> closeGuillemet
                          <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-          claim = linFn "contemplative" ast renderStyle morph fallback
+          claim = linFn "contemplative" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     NextStepQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "task" else "задача"))
@@ -594,7 +615,7 @@ structuredBody propositionType frame rmp renderStyle morph =
           fallback = if isEn
                        then "Next step: make " <> topicNom <> " concrete in one action."
                        else "Следующий шаг: конкретизировать " <> topicNom <> " в одном действии."
-          claim = linFn "next_step" ast renderStyle morph fallback
+          claim = linFn "next_step" ast renderStyle morph rp fallback
           bodyText = if isEn
                        then clText claim <> "\n"
                          <> "Let us fix a practical next move:\n"
@@ -632,21 +653,28 @@ claimAstOrFallback fallbackAst maybeAst =
     Just ast -> ast
     Nothing -> fallbackAst
 
-linearizeOrFallback :: ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
+linearizeOrFallback :: ClaimAst -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Text -> ClaimLinearization
 linearizeOrFallback =
   linearizeOrFallbackTagged "unspecified"
 
-linearizeOrFallbackTagged :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
-linearizeOrFallbackTagged reasonTag ast renderStyle morph fallbackText =
-  case gfMapFallbackReason gfMapLoadStatus of
-    Just reason ->
+linearizeOrFallbackTagged :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Text -> ClaimLinearization
+linearizeOrFallbackTagged reasonTag ast renderStyle morph rp fallbackText =
+  -- WP-H2 R-H2.2: Check both gfMapFallbackReason AND pgfFallbackReason
+  case (gfMapFallbackReason gfMapLoadStatus, pgfFallbackReason) of
+    (Just reason, _) ->
       ClaimLinearization
         { clText = fallbackText
         , clOk = False
         , clFallbackReason = Just reason
         }
-    Nothing ->
-      case linearizeClaimAstRus ast renderStyle morph of
+    (_, Just reason) ->
+      ClaimLinearization
+        { clText = fallbackText
+        , clOk = False
+        , clFallbackReason = Just reason
+        }
+    (Nothing, Nothing) ->
+      case linearizeClaimAstRus rp ast renderStyle morph of
         Just txt ->
           ClaimLinearization
             { clText = txt
@@ -660,16 +688,23 @@ linearizeOrFallbackTagged reasonTag ast renderStyle morph fallbackText =
             , clFallbackReason = Just ("gf_linearization_failed:" <> reasonTag)
             }
 
-linearizeOrFallbackTaggedEn :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> Text -> ClaimLinearization
-linearizeOrFallbackTaggedEn reasonTag ast _renderStyle _morph fallbackText =
-  case gfMapFallbackReason gfMapLoadStatus of
-    Just reason ->
+linearizeOrFallbackTaggedEn :: Text -> ClaimAst -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Text -> ClaimLinearization
+linearizeOrFallbackTaggedEn reasonTag ast _renderStyle _morph _rp fallbackText =
+  -- WP-H2 R-H2.2: Check both gfMapFallbackReason AND pgfFallbackReason
+  case (gfMapFallbackReason gfMapLoadStatus, pgfFallbackReason) of
+    (Just reason, _) ->
       ClaimLinearization
         { clText = fallbackText
         , clOk = False
         , clFallbackReason = Just reason
         }
-    Nothing ->
+    (_, Just reason) ->
+      ClaimLinearization
+        { clText = fallbackText
+        , clOk = False
+        , clFallbackReason = Just reason
+        }
+    (Nothing, Nothing) ->
       case linearizeClaimAstEn ast of
         Just txt ->
           ClaimLinearization
@@ -684,25 +719,63 @@ linearizeOrFallbackTaggedEn reasonTag ast _renderStyle _morph fallbackText =
             , clFallbackReason = Just ("gf_en_linearization_failed:" <> reasonTag)
             }
 
-linearizeClaimAstRus :: ClaimAst -> RenderStyle -> MorphologyData -> Maybe Text
-linearizeClaimAstRus ast renderStyle morph =
+-- | Helper: resolve a Russian noun form for a GF function id.
+-- Strips the "_N" suffix, then resolves through a three-stage fallback chain:
+--   1. RGL paradigms ('lookupNounForm') — the RGL-backed path;
+--   2. legacy JSON forms ('lookupGfLexemeForms') — preserves pre-RGL output
+--      when paradigms are absent (e.g. empty 'RuntimeParadigms');
+--   3. the bare lemma — last resort.
+-- Stage 2 is what keeps an unloaded/empty 'RuntimeParadigms' from regressing
+-- Russian output to a transliterated lemma (e.g. "logika" instead of "логике").
+--
+-- Key-space bridge: GF function ids are Latin ("logika_N") but paradigms.json
+-- is keyed by the Cyrillic nominative ("логика"). The RGL lookup is therefore
+-- keyed by the JSON nominative form ('glfNom'), not the Latin lemma; without
+-- this the RGL path can never resolve and silently always falls through to JSON.
+lookupLemmaForm :: RuntimeParadigms -> Text -> NounCase -> Text
+lookupLemmaForm rp funId case_ =
+  let latinLemma = if "_N" `T.isSuffixOf` funId
+                   then T.dropEnd 2 funId
+                   else funId
+      mForms = lookupGfLexemeForms funId
+      -- Cyrillic nominative is the paradigm key; fall back to latin if absent.
+      rglKey = maybe latinLemma glfNom mForms
+      jsonForm = case mForms of
+        Nothing -> Nothing
+        Just forms -> case case_ of
+          Nom -> Just (glfNom forms)
+          Gen -> Just (glfGen forms)
+          Acc -> Just (glfAcc forms)
+          Ins -> Just (glfIns forms)
+          Loc -> Just (glfPrep forms)
+          Dat -> Nothing  -- JSON forms carry no dative; defer to lemma
+  in case lookupNounForm rp rglKey case_ Sg of
+       Just rglForm -> rglForm
+       Nothing      -> fromMaybe latinLemma jsonForm
+
+-- | Russian ClaimAst linearization with RGL-backed morphology.
+-- Layer 2 (RGL migration): RuntimeParadigms parameter added for morphology lookups.
+-- Morphology resolves via 'lookupLemmaForm', which falls back RGL -> JSON -> lemma,
+-- so an empty 'RuntimeParadigms' still yields the legacy JSON-backed Russian forms.
+linearizeClaimAstRus :: RuntimeParadigms -> ClaimAst -> RenderStyle -> MorphologyData -> Maybe Text
+linearizeClaimAstRus rp ast renderStyle morph =
   case ast of
     StanceWrapped "ApplyStanceTentative" innerAst ->
-      case linearizeClaimAstRus innerAst renderStyle morph of
+      case linearizeClaimAstRus rp innerAst renderStyle morph of
         Just inner -> Just ("Возможно, нам стоит сказать, что " <> inner)
         Nothing -> Nothing
     StanceWrapped "ApplyStanceFirm" innerAst ->
-      case linearizeClaimAstRus innerAst renderStyle morph of
+      case linearizeClaimAstRus rp innerAst renderStyle morph of
         Just inner -> Just ("Зафиксируем строго: " <> inner)
         Nothing -> Nothing
     StanceWrapped _ innerAst ->
-      linearizeClaimAstRus innerAst renderStyle morph
+      linearizeClaimAstRus rp innerAst renderStyle morph
     MoveDefine (MkNP gfSubj) RelIdentity (MkNP gfObj) ->
-      let subjNom = maybe "смысл" glfNom (lookupGfLexemeForms gfSubj)
-          objIns = maybe "смыслом" glfIns (lookupGfLexemeForms gfObj)
+      let subjNom = lookupLemmaForm rp gfSubj Nom
+          objIns = lookupLemmaForm rp gfObj Ins
       in Just (subjNom <> " является " <> objIns <> ".")
     MoveCause (MkNP gfSubj) MechParse ->
-      let subjGen = maybe "смысла" glfGen (lookupGfLexemeForms gfSubj)
+      let subjGen = lookupLemmaForm rp gfSubj Gen
           seed = "cause|" <> subjGen
       in Just (pickDeterministic seed
           [ "Причиной " <> subjGen <> " служит механизм локального разбора."
@@ -712,7 +785,7 @@ linearizeClaimAstRus ast renderStyle morph =
           ])
     MoveInvite (MkNP gfTopic) gfMod gfAction ->
       -- Runtime fallback mirrors the GF surface when PGF is unavailable.
-      let prepForm = maybe "смысле" glfPrep (lookupGfLexemeForms gfTopic)
+      let prepForm = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
           modStr = case gfMod of
             ModFirst -> "сначала "
             ModStrictly -> "строго "
@@ -720,14 +793,14 @@ linearizeClaimAstRus ast renderStyle morph =
             ActMaintain num "ramka_N" -> (case num of NumPl -> "удержим"; NumSg -> "удержу") <> " рамку"
             ActDefine "granitsa_N" -> "определю границу"
             ActMaintain num obj ->
-              let objAcc = maybe obj glfAcc (lookupGfLexemeForms obj)
+              let objAcc = lookupLemmaForm rp obj Acc
               in (case num of NumPl -> "удержим "; NumSg -> "удержу ") <> objAcc
             ActDefine obj ->
-              let objAcc = maybe obj glfAcc (lookupGfLexemeForms obj)
+              let objAcc = lookupLemmaForm rp obj Acc
               in "определю " <> objAcc
       in Just ("Да, поговорим " <> aboutWithTopic prepForm <> ". Я " <> modStr <> vpStr <> ", чтобы не потерять фокус.")
     MovePurpose (MkNP gfTopic) ->
-      let topicGen = maybe "смысла" glfGen (lookupGfLexemeForms gfTopic)
+      let topicGen = lookupLemmaForm rp gfTopic Gen
       in Just ("Функция " <> topicGen <> " проявляется через повторяемую роль в действии.")
     MoveSelfState ->
       let seed = "move_self_state"
@@ -737,8 +810,8 @@ linearizeClaimAstRus ast renderStyle morph =
         , "Внутренний ход сейчас собирается как цепочка: входная реплика -> выбор семейства -> контроль ограничений сессии."
         ])
     MoveCompare (MkNP gfLeft) (MkNP gfRight) ->
-      let leftGen = maybe "первого" glfGen (lookupGfLexemeForms gfLeft)
-          rightGen = maybe "второго" glfGen (lookupGfLexemeForms gfRight)
+      let leftGen = lookupLemmaForm rp gfLeft Gen
+          rightGen = lookupLemmaForm rp gfRight Gen
       in Just ("Сравнение " <> leftGen <> " и " <> rightGen <> " устойчиво только в явно заданной рамке.")
     MoveOperationalStatus ->
       Just (pickDeterministic "move_operational_status"
@@ -761,10 +834,10 @@ linearizeClaimAstRus ast renderStyle morph =
     MoveGenerativeThought ->
       Just "Одна мысль: смысл держится на связи между словами и опытом. Другая мысль: сила мышления — удержать различие. Новая мысль: развитие начинается, когда мы готовы менять собственную рамку. Логичная мысль: качество вывода проверяется связью между посылками и выводом."
     MoveContemplative (MkNP gfTopic) ->
-      let topicNom = maybe "тема" glfNom (lookupGfLexemeForms gfTopic)
+      let topicNom = lookupLemmaForm rp gfTopic Nom
       in Just ("Если держаться слова " <> openGuillemet <> topicNom <> closeGuillemet <> ", я слышу в нём не только предмет, но и поле смыслов, включая субъектность как способ удерживать внутреннюю форму.")
     MoveGround (MkNP gfTopic) ->
-      let topicAcc = maybe "это" glfAcc (lookupGfLexemeForms gfTopic)
+      let topicAcc = lookupLemmaForm rp gfTopic Acc
           seed = "move_ground|" <> topicAcc
       in Just (pickDeterministic seed
         [ "Держу " <> topicAcc <> " как устойчивую опору для дальнейшего разбора."
@@ -772,38 +845,43 @@ linearizeClaimAstRus ast renderStyle morph =
         , "Беру " <> topicAcc <> " как опорный узел, чтобы не потерять связность следующего шага."
         ])
     MoveContact (MkNP gfTopic) ->
-      let topicPrep = maybe "теме" glfPrep (lookupGfLexemeForms gfTopic)
+      let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
       in Just ("Слышу запрос на контакт по теме " <> topicPrep <> ".")
     MoveReflect (MkNP gfTopic) ->
-      let topicAcc = maybe "это" glfAcc (lookupGfLexemeForms gfTopic)
+      let topicAcc = lookupLemmaForm rp gfTopic Acc
       in Just ("Вы отразили " <> topicAcc <> ", и это требует прояснения смысла.")
     MoveDescribe (MkNP gfTopic) ->
-      let topicAcc = maybe "это" glfAcc (lookupGfLexemeForms gfTopic)
+      let topicAcc = lookupLemmaForm rp gfTopic Acc
       in Just ("Опишу " <> topicAcc <> " через локальную рабочую рамку.")
     MoveDeepen (MkNP gfTopic) ->
-      let topicPrep = maybe "теме" glfPrep (lookupGfLexemeForms gfTopic)
+      let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
       in Just ("Углубим разговор о " <> topicPrep <> " через один устойчивый фокус.")
     MoveConfront (MkNP gfTopic) ->
-      let topicNom = maybe "это" glfNom (lookupGfLexemeForms gfTopic)
+      let topicNom = lookupLemmaForm rp gfTopic Nom
       in Just ("Возражение: " <> topicNom <> " требует проверки допущений.")
     MoveAnchor (MkNP gfTopic) ->
-      let topicPrep = maybe "теме" glfPrep (lookupGfLexemeForms gfTopic)
+      let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
       in Just ("Фиксирую опору в " <> topicPrep <> " как точку устойчивости.")
     MoveClarify (MkNP gfTopic) ->
-      let topicPrep = maybe "теме" glfPrep (lookupGfLexemeForms gfTopic)
+      let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
       in Just ("Уточним, что именно вы имеете в виду в " <> topicPrep <> ".")
     MoveNextStepLocal (MkNP gfTopic) ->
-      let topicAcc = maybe "это" glfAcc (lookupGfLexemeForms gfTopic)
+      let topicAcc = lookupLemmaForm rp gfTopic Acc
       in Just ("Следующий шаг: конкретизировать " <> topicAcc <> " в одном действии.")
     MoveHypothesis (MkNP gfTopic) ->
-      let topicNom = maybe "это" glfNom (lookupGfLexemeForms gfTopic)
+      let topicNom = lookupLemmaForm rp gfTopic Nom
       in Just ("Гипотеза: " <> topicNom <> " можно объяснить через локальную модель.")
     MoveDistinguish (MkNP gfLeft) (MkNP gfRight) ->
-      let leftAcc = maybe "первое" glfAcc (lookupGfLexemeForms gfLeft)
-          rightAcc = maybe "второе" glfAcc (lookupGfLexemeForms gfRight)
+      let leftAcc = lookupLemmaForm rp gfLeft Acc
+          rightAcc = lookupLemmaForm rp gfRight Acc
       in Just ("Различим " <> leftAcc <> " и " <> rightAcc <> " в одной рамке критериев.")
+    MoveActOnTopic ActAnswer    -> Just ("Поговорим об ответе.")
+    MoveActOnTopic ActQuestion  -> Just ("Поговорим о вопросе.")
+    MoveActOnTopic ActTopicTerm -> Just ("Поговорим о теме.")
+    MoveActOnTopic ActProject   -> Just ("Поговорим о проекте.")
+    MoveActOnTopic ActResult    -> Just ("Поговорим о результате.")
     ClaimPurpose subject ->
-      let topic = structuredGenitive morph (normalizedTopic subject)
+      let topic = structuredGenitive rp morph (normalizedTopic subject)
           variants =
             [ "Функция " <> topic <> " проявляется через повторяемую роль в действии."
             , "Роль " <> topic <> " определяется через стабильный эффект в практике."
@@ -832,11 +910,11 @@ pickStyleVariant style variants =
 normalizedTopic :: Text -> Text
 normalizedTopic = T.toLower . T.strip
 
-renderOperatorAwareDialogue :: ResponseContentPlan -> Text -> IllocutionaryForce -> MorphologyData -> Text
-renderOperatorAwareDialogue rcp topic force morph =
+renderOperatorAwareDialogue :: ResponseContentPlan -> Text -> IllocutionaryForce -> RuntimeParadigms -> MorphologyData -> Text
+renderOperatorAwareDialogue rcp topic force rp morph =
   let cleanedTopic = cleanTopic topic
-      openingText = moveToText (rcpOpening rcp) cleanedTopic morph
-      coreText = moveToText (rcpCore rcp) cleanedTopic morph
+      openingText = moveToText (rcpOpening rcp) cleanedTopic rp morph
+      coreText = moveToText (rcpCore rcp) cleanedTopic rp morph
       body = T.intercalate dashSeparator (filter (not . T.null) [openingText, coreText])
   in finalizeForce force (T.strip body)
 
@@ -882,7 +960,7 @@ microPlanDelimiter style microPlan
 appendContinuation :: MicroPlan -> Text -> Text -> Text
 appendContinuation microPlan body contText
   | T.null contText = body
-  | mpFallbackPolicy microPlan `elem` ["repair_first", "clarify_first", "close_bound"] = body
+  | mpFallbackPolicy microPlan `elem` [FbRepairFirst, FbClarifyFirst, FbCloseBound] = body
   | T.null body = contText
   | otherwise = body <> arrowSeparator <> contText
 
@@ -890,70 +968,100 @@ microPlanPrefix :: ResponseMeaningPlan -> Text -> Text
 microPlanPrefix rmp topic =
   case mpRhetoricalMoves (rmpMicroPlan rmp) of
     move:_ -> case move of
-      "repair" -> "Сначала восстановлю опору"
-      "clarify" -> "Сначала уточню рамку"
-      "ground" -> if T.null topic then "Зафиксирую опору" else "Зафиксирую опору в теме"
-      "define" -> "Сначала задам определение"
-      "distinguish" -> "Сначала разведу близкие смыслы"
-      "deepen" -> "Удержу один фокус и углублю его"
-      "reflect" -> "Сначала отражу текущий ход"
-      "explain_cause" -> "Сначала удержу причинную связку"
-      "explain_purpose" -> "Сначала удержу назначение"
-      "next_step" -> "Сначала соберу ближайший шаг"
-      "constrain" -> "Сначала сузим рамку"
-      _ -> ""
+      MvRepair -> "Сначала восстановлю опору"
+      MvClarify -> "Сначала уточню рамку"
+      MvGround -> if T.null topic then "Зафиксирую опору" else "Зафиксирую опору в теме"
+      MvDefine -> "Сначала задам определение"
+      MvDistinguish -> "Сначала разведу близкие смыслы"
+      MvDeepen -> "Удержу один фокус и углублю его"
+      MvReflect -> "Сначала отражу текущий ход"
+      MvExplainCause -> "Сначала удержу причинную связку"
+      MvExplainPurpose -> "Сначала удержу назначение"
+      MvNextStep -> "Сначала соберу ближайший шаг"
+      MvConstrain -> "Сначала сузим рамку"
     [] -> ""
 
-applyMicroPlanToStructuredBody :: ResponseMeaningPlan -> RenderStyle -> Text -> Text
-applyMicroPlanToStructuredBody rmp _renderStyle body0 =
+applyMicroPlanToStructuredBody :: ResponseMeaningPlan -> RenderStyle -> Field -> Text -> Text
+applyMicroPlanToStructuredBody rmp _renderStyle field body0 =
   let pref = structuredMicroPrefix rmp
-  in if T.null pref then body0 else pref <> " " <> body0
+      bodyWithPrefix = if T.null pref then body0 else pref <> " " <> body0
+      -- P6': Apply Field-aware modulations to surface text
+      bodyWithField = applyFieldModulations field bodyWithPrefix
+  in bodyWithField
 
 structuredMicroPrefix :: ResponseMeaningPlan -> Text
 structuredMicroPrefix rmp =
   case mpFallbackPolicy (rmpMicroPlan rmp) of
-    "repair_first" -> "Коротко: сначала восстановлю опору."
-    "clarify_first" -> "Коротко: сначала уточню рамку."
-    "contest_bound" -> "Коротко: сначала зафиксирую границу возражения."
+    FbRepairFirst -> "Коротко: сначала восстановлю опору."
+    FbClarifyFirst -> "Коротко: сначала уточню рамку."
+    FbContestBound -> "Коротко: сначала зафиксирую границу возражения."
     _ -> ""
 
-structuredContinuationText :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> MorphologyData -> Text
-structuredContinuationText frame rmp rcp morph
-  | rmpImplicationDirection rmp /= "forward" =
-      moveToText (rcpContinuation rcp) topic morph
+structuredContinuationText :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RuntimeParadigms -> MorphologyData -> Text
+structuredContinuationText frame rmp rcp rp morph
+  | rmpImplicationDirection rmp /= DirForward =
+      moveToText (rcpContinuation rcp) topic rp morph
   | otherwise = ""
   where
     topic = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
 
-moveToText :: ContentMove -> Text -> MorphologyData -> Text
-moveToText MoveGroundKnown topic md      = moveGroundKnownPrefix <> withPrep md topic <> "."
-moveToText MoveGroundBasis topic md      = moveGroundBasisPrefix <> toNominative md topic <> "."
-moveToText MoveShiftFromLabel topic md   = moveShiftFromLabelPrefix <> openGuillemet <> toNominative md topic <> closeGuillemet <> "."
-moveToText MoveDefineFrame topic md      = moveDefineFramePrefix <> toNominative md topic <> "."
-moveToText MoveStateDefinition topic md  = moveStateDefinitionPrefix <> toNominative md topic <> "."
-moveToText MoveShowContrast topic md     = moveShowContrastPrefix <> withPrep md topic <> moveShowContrastPrepSuffix
-moveToText MoveStateBoundary topic md    = moveStateBoundaryPrefix <> genitiveForm md topic <> "."
-moveToText MoveReflectMirror topic md    = moveReflectMirrorPrefix <> toNominative md topic <> "."
-moveToText MoveReflectResonate topic md  = moveReflectResonatePrefix <> toNominative md topic <> "?"
-moveToText MoveDescribeSketch topic md   = moveDescribeSketchPrefix <> toNominative md topic <> "."
-moveToText MovePurposeTeleology topic md = movePurposeTeleologyPrefix <> genitiveForm md topic <> "."
-moveToText MoveHypothesizeTest topic md  = moveHypothesizeTestPrefix <> toNominative md topic <> "?"
-moveToText MoveAffirmPresence _ _        = moveAffirmPresence
-moveToText MoveAcknowledgeRupture _ _    = moveAcknowledgeRupture
-moveToText MoveRepairBridge topic md     = moveRepairBridgePrefix <> optionalTopic md topic <> "."
-moveToText MoveContactBridge topic md    = moveContactBridgePrefix <> optionalTopic md topic <> "."
-moveToText MoveContactReach topic md     = moveContactReachPrefix <> optionalTopic md topic <> "."
-moveToText MoveAnchorStabilize topic md  = moveAnchorStabilizePrefix <> optionalTopic md topic <> "."
-moveToText MoveClarifyDisambiguate topic md = moveClarifyDisambiguatePrefix <> toNominative md topic <> "?"
-moveToText MoveDeepenProbe topic md      = moveDeepenProbePrefix <> toNominative md topic <> "?"
-moveToText MoveConfrontChallenge topic md = moveConfrontChallengePrefix <> toNominative md topic <> "."
-moveToText MoveNextStep topic md         = moveNextStepPrefix <> dashSeparator <> toNominative md topic <> "?"
+moveToText :: ContentMove -> Text -> RuntimeParadigms -> MorphologyData -> Text
+moveToText move topic rp md = case move of
+  MoveGroundKnown         -> moveGroundKnownPrefix <> prep <> "."
+  MoveGroundBasis         -> moveGroundBasisPrefix <> nom <> "."
+  MoveShiftFromLabel      -> moveShiftFromLabelPrefix <> openGuillemet <> nom <> closeGuillemet <> "."
+  MoveDefineFrame         -> moveDefineFramePrefix <> nom <> "."
+  MoveStateDefinition     -> moveStateDefinitionPrefix <> nom <> "."
+  MoveShowContrast        -> moveShowContrastPrefix <> prep <> moveShowContrastPrepSuffix
+  MoveStateBoundary       -> moveStateBoundaryPrefix <> gen <> "."
+  MoveReflectMirror       -> moveReflectMirrorPrefix <> nom <> "."
+  MoveReflectResonate     -> moveReflectResonatePrefix <> nom <> "?"
+  MoveDescribeSketch      -> moveDescribeSketchPrefix <> nom <> "."
+  MovePurposeTeleology    -> movePurposeTeleologyPrefix <> gen <> "."
+  MoveHypothesizeTest     -> moveHypothesizeTestPrefix <> nom <> "?"
+  MoveAffirmPresence      -> moveAffirmPresence
+  MoveAcknowledgeRupture  -> moveAcknowledgeRupture
+  MoveRepairBridge        -> moveRepairBridgePrefix <> opt <> "."
+  MoveContactBridge       -> moveContactBridgePrefix <> opt <> "."
+  MoveContactReach        -> moveContactReachPrefix <> opt <> "."
+  MoveAnchorStabilize     -> moveAnchorStabilizePrefix <> opt <> "."
+  MoveClarifyDisambiguate -> moveClarifyDisambiguatePrefix <> nom <> "?"
+  MoveDeepenProbe         -> moveDeepenProbePrefix <> nom <> "?"
+  MoveConfrontChallenge   -> moveConfrontChallengePrefix <> nom <> "."
+  MoveNextStep            -> moveNextStepPrefix <> dashSeparator <> nom <> "?"
+  where
+    nom  = resolveNominative rp md topic
+    gen  = resolveGenitive rp md topic
+    prep = resolvePrepositional rp md topic
+    opt  = optionalTopic rp md topic
 
-withPrep :: MorphologyData -> Text -> Text
-withPrep md t = prepositionalForm md t
+-- | L3b: RGL noun form for a topic, keyed by its Cyrillic nominative (the
+-- paradigm key). The ONLY gate is the emptiness of 'rp': bootstrap
+-- (Session/Bootstrap) loads paradigms only when 'rrRglMorphologyActive', so an
+-- empty 'rp' == flag off → 'lookupNounForm' always misses → JSON fallback,
+-- byte-identical to the pre-RGL path. Non-empty 'rp' (flag on) → RGL for covered
+-- lemmas, JSON for the rest. Key-space bridge: 'toNominative' resolves the topic
+-- to its Cyrillic nominative (verified in G1–G5).
+rglNounForm :: RuntimeParadigms -> MorphologyData -> Text -> NounCase -> Maybe Text
+rglNounForm rp md t case_ =
+  lookupNounForm rp (toNominative md (T.toLower (T.strip t))) case_ Sg
 
-optionalTopic :: MorphologyData -> Text -> Text
-optionalTopic md t = if T.null t then "" else " \8212 " <> toNominative md t
+-- | L3d: gated case resolvers, RGL-first with an OOV fallback. RGL covers the
+-- full lexicon, so the fallback fires only for words absent from it. Nominative
+-- still uses 'toNominative' (a normalizer, not a JSON-map inflector — it maps a
+-- surface form to its base, which RGL's key bridge also needs); genitive and
+-- prepositional drop their now-redundant JSON-map calls for the OOV helpers.
+resolveNominative :: RuntimeParadigms -> MorphologyData -> Text -> Text
+resolveNominative rp md t = fromMaybe (toNominative md t) (rglNounForm rp md t Nom)
+
+resolveGenitive :: RuntimeParadigms -> MorphologyData -> Text -> Text
+resolveGenitive rp md t = fromMaybe (oovGenitive t) (rglNounForm rp md t Gen)
+
+resolvePrepositional :: RuntimeParadigms -> MorphologyData -> Text -> Text
+resolvePrepositional rp md t = fromMaybe (oovPrepositional t) (rglNounForm rp md t Loc)
+
+optionalTopic :: RuntimeParadigms -> MorphologyData -> Text -> Text
+optionalTopic rp md t = if T.null t then "" else " \8212 " <> resolveNominative rp md t
 
 nonEmptyOr :: Text -> Text -> Text
 nonEmptyOr preferred fallback
@@ -979,20 +1087,20 @@ purposeTopicGenitive topicNom topicGen
   | isLikelyBrokenGenitive topicNom topicGen = "этого объекта"
   | otherwise = topicGen
 
-dialogueTopicReference :: InputPropositionFrame -> MorphologyData -> Text
-dialogueTopicReference frame md =
+dialogueTopicReference :: RuntimeParadigms -> InputPropositionFrame -> MorphologyData -> Text
+dialogueTopicReference rp frame md =
   case rawTopicAfterMarkers (ipfRawText frame) ["о", "об", "обо", "про"] of
     Just topic -> topic
-    Nothing -> structuredPrepositional md (nonEmptyOr (ipfSemanticSubject frame) "этой теме")
+    Nothing -> structuredPrepositional rp md (nonEmptyOr (ipfSemanticSubject frame) "этой теме")
 
-conceptTopicReference :: InputPropositionFrame -> MorphologyData -> Text
-conceptTopicReference frame md =
+conceptTopicReference :: RuntimeParadigms -> InputPropositionFrame -> MorphologyData -> Text
+conceptTopicReference rp frame md =
   case phraseAfterPrefix (ipfRawText frame) "что значит " of
     Just phrase -> "том, что значит " <> phrase
     Nothing ->
       case rawTopicAfterMarkers (ipfRawText frame) ["о", "об", "обо", "про"] of
         Just topic -> topic
-        Nothing -> structuredPrepositional md (nonEmptyOr (ipfSemanticSubject frame) "этом понятии")
+        Nothing -> structuredPrepositional rp md (nonEmptyOr (ipfSemanticSubject frame) "этом понятии")
 
 conceptTopicReferenceEn :: InputPropositionFrame -> Text
 conceptTopicReferenceEn frame =
@@ -1043,14 +1151,14 @@ generativeThought frame
     subject = T.toLower (ipfSemanticSubject frame)
     seed = lowered <> "|" <> subject
 
-dialogueInvitationSurface :: InputPropositionFrame -> MorphologyData -> Text
-dialogueInvitationSurface frame morph =
+dialogueInvitationSurface :: RuntimeParadigms -> InputPropositionFrame -> MorphologyData -> Text
+dialogueInvitationSurface rp frame morph =
   pickDeterministic seed
-    [ "Да, поговорим " <> aboutWithTopic (dialogueTopicReference frame morph)
+    [ "Да, поговорим " <> aboutWithTopic (dialogueTopicReference rp frame morph)
         <> ". Я зафиксирую рамку и начну с опорного различения, чтобы удержать форму рассуждения и не распасть тему на случайные ассоциации."
-    , "Да, поговорим " <> aboutWithTopic (dialogueTopicReference frame morph)
+    , "Да, поговорим " <> aboutWithTopic (dialogueTopicReference rp frame morph)
         <> ". Начну с устойчивой структуры, чтобы удержать форму рассуждения и вести ход последовательно."
-    , "Да, поговорим " <> aboutWithTopic (dialogueTopicReference frame morph)
+    , "Да, поговорим " <> aboutWithTopic (dialogueTopicReference rp frame morph)
         <> ". Сначала закрепим границы вопроса, затем углубим аргументацию и сохраним форму рассуждения."
     ]
   where
@@ -1193,8 +1301,25 @@ structuredInstrumentalIdea topic
     lowered = T.toLower (T.strip topic)
     endsWithAny txt suffixes = any (`T.isSuffixOf` txt) suffixes
 
-structuredGenitive :: MorphologyData -> Text -> Text
-structuredGenitive md topic =
+-- | Genitive for the structured-claim path. L3b: RGL-first (gated by 'rp'
+-- emptiness, same as the resolvers), falling back to 'legacyStructuredGenitive'
+-- — which keeps the hardcoded exceptions, verb-like → "действия" handling, and
+-- heuristic fallback needed when RGL has no paradigm. The dead WP-M2 flag
+-- 'runtimeMorphologyActive' and its 'paradigmGenitive' branch (which never used
+-- RGL anyway) are removed; the real gate is now 'rrRglMorphologyActive' via 'rp'.
+structuredGenitive :: RuntimeParadigms -> MorphologyData -> Text -> Text
+structuredGenitive rp md topic =
+  fromMaybe (oovGenitive topic) (rglNounForm rp md topic Gen)
+
+-- | L3d: out-of-vocabulary genitive. RGL now covers 100% of the funmap, so this
+-- is reached ONLY for words absent from the lexicon entirely (free user input,
+-- and a few common nouns the lexicon happens to miss). The redundant JSON-map
+-- lookup ('genitiveForm') was dropped — RGL is a strict superset of it (verified:
+-- 0 lemmas where the JSON map inflects a word RGL does not). What remains is the
+-- genuine OOV layer: a handful of hardcoded common-word exceptions, the
+-- verb-like → "действия" rule, and the suffix heuristic.
+oovGenitive :: Text -> Text
+oovGenitive topic =
   case T.toLower (T.strip topic) of
     "солнце" -> "солнца"
     "мысль" -> "мысли"
@@ -1202,22 +1327,22 @@ structuredGenitive md topic =
     "есть" -> "действия"
     "быть" -> "действия"
     "жить" -> "жизни"
-    lowered ->
-      if isVerbLikeTopic lowered
-        then "действия"
-        else
-          let baseNom = toNominative md lowered
-              inflected = genitiveForm md baseNom
-          in if inflected == baseNom then heuristicGenitive baseNom else inflected
+    lowered
+      | isVerbLikeTopic lowered -> "действия"
+      | otherwise               -> heuristicGenitive lowered
 
-structuredPrepositional :: MorphologyData -> Text -> Text
-structuredPrepositional md topic =
+structuredPrepositional :: RuntimeParadigms -> MorphologyData -> Text -> Text
+structuredPrepositional rp md topic =
+  fromMaybe (oovPrepositional topic) (rglNounForm rp md topic Loc)
+
+-- | L3d: out-of-vocabulary prepositional. OOV-only, same rationale as
+-- 'oovGenitive' — RGL covers the full funmap; the JSON-map lookup was dropped.
+oovPrepositional :: Text -> Text
+oovPrepositional topic =
   case T.toLower (T.strip topic) of
     "мысль" -> "мысли"
     "идея" -> "идее"
-    lowered ->
-      let inflected = prepositionalForm md lowered
-      in if inflected == lowered then heuristicPrepositional lowered else inflected
+    lowered -> heuristicPrepositional lowered
 
 aboutWithTopic :: Text -> Text
 aboutWithTopic topic =
@@ -1230,15 +1355,15 @@ aboutPreposition topic =
       | ch `elem` ("аеёиоуыэюя" :: String) -> "об"
     _ -> "о"
 
-contactContextSentence :: MorphologyData -> Text -> Text
-contactContextSentence md rawTopic =
+contactContextSentence :: RuntimeParadigms -> MorphologyData -> Text -> Text
+contactContextSentence rp md rawTopic =
   let topic = T.toLower (T.strip rawTopic)
   in if T.null topic
       then ""
       else
         if isAffectiveState topic
           then " Похоже, это состояние \"" <> topic <> "\"."
-          else " Похоже, это про " <> structuredPrepositional md topic <> "."
+          else " Похоже, это про " <> structuredPrepositional rp md topic <> "."
 
 contactGreetingSurface :: InputPropositionFrame -> Text
 contactGreetingSurface frame
@@ -1389,10 +1514,10 @@ dedupeText =
     []
 
 fallbackStructuredText :: InputPropositionFrame -> Maybe Text
-fallbackStructuredText frame = do
-  pt <- propositionTypeFromText (ipfPropositionType frame)
-  let seed suffix = T.toLower (T.strip (ipfRawText frame)) <> "|" <> suffix
-  case pt of
+fallbackStructuredText frame =
+  let pt = ipfPropositionType frame
+      seed suffix = T.toLower (T.strip (ipfRawText frame)) <> "|" <> suffix
+  in case pt of
     RepairSignal ->
       Just "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
     ContactSignal ->
@@ -1453,15 +1578,17 @@ renderArtifactViaAssembly :: RuntimeParadigms -> SystemState -> InputProposition
                            -> ResponseMeaningPlan -> ResponseContentPlan
                            -> Text -> [IdentityClaimRef]
                            -> MorphologyData -> RenderStyle -> ParsedInput
-                           -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> DialogueRenderArtifact
-renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan =
+                           -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
+renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field =
    -- For EN input, skip Russian-only assembly path and use template rendering directly.
    -- Template rendering now supports EN via structuredBody language detection.
-   if isEnglishInput (ipfRawText frame)
-   then
-     let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
-     in templateArtifact { draFallbackReason = Just "en_skip_assembly" }
-    else
+    if isEnglishInput (ipfRawText frame)
+    then
+      let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field
+      in templateArtifact { draFallbackReason = Just "en_skip_assembly"
+                          , draGenerationTrace = [GenerationAttempt "assembly" "skipped_en_input"]
+                          }
+     else
       let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
           da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
           dialogText = case assembleTurn rp da style (ssDiscourse ss) of
@@ -1469,7 +1596,7 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
             _ -> Nothing
           factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
           -- WP2: GF-first with telemetry. Fallback chain records exact reason.
-          templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph
+          templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field
           templateText = let txt = draTemplateBodyText templateArtifact
             in if T.null (T.strip txt) then Nothing else Just txt
           structuredFallback
@@ -1489,6 +1616,16 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
           finalRendered
             | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
             | otherwise = draRenderedText templateArtifact
+          generationTrace =
+            [ GenerationAttempt "dialog_assembly"
+                (maybe "empty" (const "ok") dialogText)
+            , GenerationAttempt "factual_explanation"
+                (maybe "not_found" (const "ok") factualText)
+            , GenerationAttempt "template"
+                (maybe "empty" (const "ok") templateText)
+            , GenerationAttempt "structured_fallback"
+                (maybe "not_applicable" (const "ok") structuredFallback)
+            ]
       in templateArtifact
              { draRenderedText = finalRendered
              , draTemplateBodyText = rendered
@@ -1503,6 +1640,7 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
                    Nothing -> FromDB
                    Just _ -> FromFallback
              , draDerivationTags = draDerivationTags templateArtifact <> maybe ["assembly=primary"] (\reason -> ["assembly=fallback", "fallback=" <> reason]) fallbackReason
+             , draGenerationTrace = generationTrace
              }
 
 contractProvenanceForArtifact :: Maybe Text -> Maybe ClaimAst -> ContractProvenance
@@ -1565,6 +1703,7 @@ claimAstLexemes ast =
     MoveNextStepLocal (MkNP topic) -> [topic]
     MoveHypothesis (MkNP topic) -> [topic]
     MoveDistinguish (MkNP left) (MkNP right) -> [left, right]
+    MoveActOnTopic _ -> []
     StanceWrapped _ inner -> claimAstLexemes inner
     _ -> []
 

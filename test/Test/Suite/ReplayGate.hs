@@ -105,7 +105,7 @@ p1Serializable = TestLabel "P1: every canonical contour is serializable" $
     assertBool ("P1: show (ReplayField f) is empty: " <> s2)
                (not (null s2))
     -- Salience
-    let s3 = show (ReplaySalience (s f))
+    let s3 = show (ReplaySalience (s f 0.0))
     assertBool ("P1: show (ReplaySalience s) is empty: " <> s3)
                (not (null s3))
 
@@ -134,8 +134,8 @@ p2Replayable = TestLabel "P2: compute functions are deterministic" $
         f2 = combineField CombineMaxima emptyField emptyField
     f1 @?= f2
     -- Salience
-    let s1 = computeSalience defaultSalienceWeights ce1 emptyField
-        s2 = computeSalience defaultSalienceWeights ce1 emptyField
+    let s1 = computeSalience defaultSalienceWeights ce1 emptyField 0.0
+        s2 = computeSalience defaultSalienceWeights ce1 emptyField 0.0
     s1 @?= s2
 
 -- ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ replayContour :: ReplaySnapshot -> ReplayGateOutput
 replayContour (ReplaySnapshot b w _) =
   let ce = computeConatusEnergy b []
       s  = computeSalience w ce
-  in ReplaySalience (s emptyField)
+  in ReplaySalience (s emptyField 0.0)
 
 p3Reconstructable :: Test
 p3Reconstructable = TestLabel "P3: replay from snapshot is total" $

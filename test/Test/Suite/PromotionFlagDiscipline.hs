@@ -189,19 +189,22 @@ promotionFlagOffState = TestLabel "4 not-yet-promoted candidates are at their do
           : flat
         ))
 
--- | Family Divergence promoted check: the @= True@ literal must be at
--- Cascade.hs:74 (ADR-0019 accepted 2026-06-02).
+-- | Family Divergence promoted check (ADR-0019). P2-2 split the original
+-- @familyDivergenceEnabled@ into @salienceGuardDivergenceEnabled@ (Cascade.hs)
+-- and @reconcileFamilyDivergence@ (TurnRouting.hs); the promoted @= True@
+-- literal now lives on the salience-guard flag in Cascade.hs. (Grep by name,
+-- not line number, to survive future moves within the file.)
 familyDivergencePromotedCheck :: Test
-familyDivergencePromotedCheck = TestLabel "Family Divergence flag is promoted (= True) at Cascade.hs:74 (ADR-0019)" $
+familyDivergencePromotedCheck = TestLabel "Salience-guard divergence flag is promoted (= True) in Cascade.hs (ADR-0019, renamed by P2-2)" $
   TestCase $ do
     let path = "src/QxFx0/Core/TurnRouting/Cascade.hs"
     contents <- readFileOrEmpty path
     let linesWithTrue = filter
-          (\line -> "familyDivergenceEnabled = True" `L.isInfixOf` line)
+          (\line -> "salienceGuardDivergenceEnabled = True" `L.isInfixOf` line)
           (L.lines contents)
     assertBool
-      ("Family Divergence flag not found at promoted state "
-       <> "(" <> path <> ", expected 'familyDivergenceEnabled = True' literal): "
+      ("Salience-guard divergence flag not found at promoted state "
+       <> "(" <> path <> ", expected 'salienceGuardDivergenceEnabled = True' literal): "
        <> "ADR-0019 was accepted 2026-06-02; the flag should be True.")
       (not (null linesWithTrue))
 

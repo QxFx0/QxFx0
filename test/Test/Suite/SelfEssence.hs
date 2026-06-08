@@ -108,6 +108,51 @@ selfEssenceTests =
     -- Unit — fieldSignature totality
   , TestLabel "fieldSignature is total on emptyField" $
       TestCase testFieldSignatureTotal
+
+    -- WP-F (R-F2) — unit-guard: the live conatus structural floor must live
+    -- in the production log-scale codomain of 'ceScalar' (~[5,20+]), NOT the
+    -- [0,1] 'arbitraryUnitDouble' scale.  Regression lock for ADR-0012 §15.1.
+  , TestLabel "WP-F: conatus structural floor is in production log-scale (unit-guard)" $
+      TestCase $ do
+        let floorV = emConatusStructuralFloor defaultEssenceModulation
+        assertBool
+          ( "emConatusStructuralFloor must be > 1.0 (log-scale); got "
+              ++ show floorV
+              ++ " — a value in [0,1] means the arbitraryUnitDouble "
+              ++ "unit-mismatch bug has regressed" )
+          (floorV > 1.0)
+        assertBool
+          ( "emConatusStructuralFloor must sit below the healthy ceScalar "
+              ++ "band (~14-15) to stay a meaningful sub-floor; got "
+              ++ show floorV )
+          (floorV < 14.0)
+
+    -- WP-F (R-F2b) — the phase-9 reference keeps the historical 0.5 floor for
+    -- backward-compat regression locks, but it must NOT be the live default.
+  , TestLabel "WP-F: phase9 0.5 floor is a kept reference, not the live default" $
+      TestCase $ do
+        assertEqual "phase9 reference floor pinned at 0.5"
+          (0.5 :: Double) (emConatusStructuralFloor phase9EssenceModulation)
+        assertBool "live default floor must differ from the buggy phase9 reference"
+          ( emConatusStructuralFloor defaultEssenceModulation
+              /= emConatusStructuralFloor phase9EssenceModulation )
+
+    -- WP-F (R-F3) — explicit Deferred contract: the angst-side parameters are
+    -- NOT calibrated against the production runtime (ADR-0012 §15.2,
+    -- "Calibration deferred").  Pinning their values makes any change a
+    -- conscious act that must revisit calibration, and documents that the
+    -- angst commitment path is known-uncalibrated.
+  , TestLabel "WP-F: angst-side essence params are explicitly Deferred (uncalibrated)" $
+      TestCase $ do
+        let m = defaultEssenceModulation
+        assertEqual "angst commitment threshold (deferred Phase-9 value)"
+          (0.75 :: Double) (emAngstCommitmentThreshold m)
+        assertEqual "angst accrual rate (deferred Phase-9 value)"
+          (0.05 :: Double) (emAngstAccrualRate m)
+        assertEqual "angst decay rate (deferred Phase-9 value)"
+          (0.02 :: Double) (emAngstDecayRate m)
+        assertEqual "angst accrual divergence floor (deferred Phase-9 value)"
+          (0.5 :: Double) (emAngstAccrualDivergenceFloor m)
   ]
 
 -- ---------------------------------------------------------------------------

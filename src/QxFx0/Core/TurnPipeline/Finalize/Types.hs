@@ -17,6 +17,7 @@ import Data.Time.Clock (UTCTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
+import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
@@ -47,6 +48,10 @@ data FinalizePrecommitResults = FinalizePrecommitResults
   , fprLocalRecoveryPolicy :: !Text
   , fprSemanticIntrospectionEnabled :: !Bool
   , fprWarnMorphologyFallbackEnabled :: !Bool
+  , fprFmarMode :: !FmarMode
+    -- ^ FMAR Phase-9: the FMAR operating mode read from @QXFX0_FMAR@.
+    --   Carried to trace so that 'trcFmarMode' can disambiguate shadow
+    --   vs live override.
   } deriving stock (Eq, Show)
 
 data FinalizePrecommitBundle = FinalizePrecommitBundle

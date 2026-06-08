@@ -46,7 +46,7 @@ import QxFx0.Types.State.SemanticCommitment
   , CommitmentOrigin(..)
   , TurnSeq(..)
   )
-import QxFx0.Types (ClaimAst(..))
+import QxFx0.Types (ClaimAst(..), GfActTopic(..))
 import QxFx0.Runtime.PGF (parseClaimAstGf)
 
 newtype AuthoritySurface = AuthoritySurface
@@ -134,6 +134,11 @@ claimAstToFactualClaim surface ast =
     claimAstTag (ClaimComparison _ _)   = "claim_compare"
     claimAstTag (MoveInvite _ _ _)      = "invite"
     claimAstTag (MoveCause _ _)         = "cause"
+    claimAstTag (MoveActOnTopic ActAnswer)    = "act_on_answer"
+    claimAstTag (MoveActOnTopic ActQuestion)  = "act_on_question"
+    claimAstTag (MoveActOnTopic ActTopicTerm) = "act_on_topic"
+    claimAstTag (MoveActOnTopic ActProject)   = "act_on_project"
+    claimAstTag (MoveActOnTopic ActResult)    = "act_on_result"
     claimAstTag (StanceWrapped _ inner) = "stance:" <> claimAstTag inner
 
 -- | Pattern-matching fallback parser for the four canonical

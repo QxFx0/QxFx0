@@ -12,9 +12,20 @@ module QxFx0.Types.Recovery
   , renderLocalRecoveryStrategy
   ) where
 
-import Data.Aeson (FromJSON, ToJSON(..))
+import Data.Aeson (FromJSON(..), ToJSON(..), Value, withText)
+import Data.Aeson.Types (Parser)
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
+
+-- | Decode an enum from the text its render function produces, by inverting the
+-- render map over all constructors. Keeps render/parse in lockstep — a new
+-- constructor is automatically parseable as soon as it has a render case.
+parseRendered :: (Bounded a, Enum a) => String -> (a -> Text) -> Value -> Parser a
+parseRendered label render = withText label $ \t ->
+  case lookup t [(render c, c) | c <- [minBound .. maxBound]] of
+    Just c  -> pure c
+    Nothing -> fail (label <> ": unrecognized rendered value " <> T.unpack t)
 
 data LocalRecoveryPolicy
   = LocalRecoveryEnabled
@@ -40,11 +51,17 @@ data LocalRecoveryCause
     --   Distinct from 'RecoveryRuntimeDegraded' (which means
     --   the runtime mode itself is degraded for environmental
     --   reasons, e.g. shadow unavailability, partial DB).
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
 
 instance ToJSON LocalRecoveryCause where
   toJSON = toJSON . renderLocalRecoveryCause
+
+-- | Inverse of 'renderLocalRecoveryCause' (the format 'ToJSON' writes). The
+-- generic 'FromJSON' would expect the constructor name ("RecoveryLowLegitimacy")
+-- and so fail to decode the rendered snake_case ("low_legitimacy"); this parser
+-- keeps the round-trip total. Auto-syncs with the render map via [minBound..].
+instance FromJSON LocalRecoveryCause where
+  parseJSON = parseRendered "LocalRecoveryCause" renderLocalRecoveryCause
 
 data LocalRecoveryStrategy
   = StrategyAskClarification
@@ -74,11 +91,14 @@ data LocalRecoveryStrategy
   | StrategyExternalDialogue
     -- ^ Phase 9: autonomous exploratory learning — system initiates
     --   an external dialogue query to acquire new knowledge.
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON)
+  deriving stock (Eq, Show, Generic, Bounded, Enum)
 
 instance ToJSON LocalRecoveryStrategy where
   toJSON = toJSON . renderLocalRecoveryStrategy
+
+-- | Inverse of 'renderLocalRecoveryStrategy' (see 'LocalRecoveryCause' note).
+instance FromJSON LocalRecoveryStrategy where
+  parseJSON = parseRendered "LocalRecoveryStrategy" renderLocalRecoveryStrategy
 
 renderLocalRecoveryPolicy :: LocalRecoveryPolicy -> Text
 renderLocalRecoveryPolicy LocalRecoveryEnabled = "enabled"

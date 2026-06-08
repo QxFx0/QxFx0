@@ -1,0 +1,16 @@
+# QxFx0 hlint configuration
+# See: https://github.com/ndmitchell/hlint
+
+- group: defaults
+
+# Ban partial list functions in production code
+- warn: {name: "Use head", within: []}
+- warn: {name: "Use tail", within: []}
+- warn: {name: "Use fromJust", within: []}
+
+# Encourage otherwise over case-of-bool
+- warn: {name: "Use otherwise", match: "case .* of\n  True ->\n  False ->\n"}
+
+# Ignore generated files
+- ignore: {path: "src/QxFx0/Lexicon/Generated.hs"}
+- ignore: {path: "src/QxFx0/Semantic/Input/GeneratedLexicon.hs"}

@@ -96,9 +96,13 @@ readFileOrEmpty path = (readFile path) `catch` (\(_ :: SomeException) -> return 
 --        -> @trcSalienceDriver@
 extractTrcFieldName :: String -> Maybe String
 extractTrcFieldName line =
+  -- Field lines are @{ trcX :: T@ or @, trcX :: T@: the field name is the
+  -- SECOND word (the first being the brace/comma). The earlier @(_ : _ : name)@
+  -- took the third word (@::@) and so matched nothing — every contour read as
+  -- "missing" though all were present (test-internal bug, not a code regression).
   case L.words (stripComment line) of
-    (_ : _ : name : _) | "trc" `L.isPrefixOf` name -> Just name
-    _                                                -> Nothing
+    (_ : name : _) | "trc" `L.isPrefixOf` name -> Just name
+    _                                          -> Nothing
   where
     stripComment []           = []
     stripComment ('-':'-':_)  = []

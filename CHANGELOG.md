@@ -2,6 +2,52 @@
 
 All notable changes are documented in this file.
 
+## [Unreleased] — Technical Debt Elimination — 2026-06-05
+
+### Fixed
+
+**P0 — Critical Safety Defects**
+- **P0-1**: Replaced unsafe `error` calls with typed `StateInvariantViolation` exceptions in `buildNextSystemState` (2 locations)
+- **P0-2**: Removed `unsafePerformIO` from pure function — moved `logTraceAnomalies` to IO boundary in `buildFinalizePrecommit`
+- **P0-3**: Added `propositionTypeFromText` (`readMaybe`-based) typed dispatch at the render/diagnostic edge. NOTE: not compile-time typo safety (runtime `Nothing` on miss); behaviour-gating sites remain string compares
+
+**Determinism — legitimacy-path apiHealthy (commits `a1dd66c`, `f0e229f`)**
+- `legitimacyScore` consumed a live `apiHealthy` HTTP probe — the one ambient input breaking "same input+state → same output". Now recorded into `TurnReplayTrace` as `trcEffectSnapshot` and replayed via `mkReplayPipelineIO`, so determinism holds by construction. (`emaLoad` was already deterministic — pure EMA over state.)
+- Proven by `Test.Suite.ReplayDeterminism` (replay reads trace not world; score reproduces recorded value; snapshot survives the DB-column `Aeson.encode`/decode).
+- **Scope**: legitimacy path only, unit-proven. Production DB round-trip (load persisted trace → `FromJSON` → replay) is pending; global turn determinism not claimed.
+
+**P1 — Dead Code Removal**
+- **P1-2a**: Removed unused `fmarSelectFamilyRescue` function and its tests from `Self.FamilyTargets`
+- **P1-2b**: Removed dead exports `renderTurnOutput` and `routeTurnPlan` from `TurnPipeline.Route`
+
+**P3 — Code Quality**
+- **P3-1**: Fixed orphan instance — moved `Hashable TurnSeq` to `Types.State.SemanticCommitment`
+- **P3-2**: Added `{-# LANGUAGE DerivingStrategies #-}` and `deriving stock` to 5 files
+- **P3-3**: Removed 7 unused imports from 6 files
+- **P3-4**: Fixed 2 test failures for promoted flags (`episodicRecallActive`, `contentSalienceActive` now default-on)
+- **P3-5**: Renamed `fieldDelta` to `maxFieldHeuristicsDelta` to resolve name collision
+
+**P2 — Documentation & Consistency**
+- **P2-1**: Synchronized AGENTS.md with code — updated 3 flag descriptions (family divergence split, promoted flags)
+- **P2-2**: Resolved `familyDivergenceEnabled` name collision — split into `salienceGuardDivergenceEnabled` (Cascade.hs) and `reconcileFamilyDivergence` (TurnRouting.hs)
+
+### Added
+
+**P1-1 — Generic Admission (Core conversions complete)**
+- Created `QxFx0.Core.GenericPropositionAdmission` (92 lines) + `PropositionAdmissionConfig`
+- Converted all 18 three-guard/label admission modules to delegate to it, each under an equivalence lock (`Test.Suite.AdmissionEquivalence`); commits `eee9a42` + `b03cdf9`
+- 4 two-guard + 2 non-label-predicate variants left as-is (would change behaviour)
+- **Line impact**: ~neutral (net +30 across the Core modules). The ~1460-2120 line reduction is **Phase 2 only** (Types-module templates via TH), not started
+- Plan: `docs/P1-1-REFACTORING-PLAN.md`
+
+### Impact
+
+- **Safety (partial)**: `error`→typed `throw` (still imprecise in pure code); 1 of 6 `unsafePerformIO` moved to IO
+- **Type Safety (partial)**: typed enum at the render edge; gating dispatch still string-based
+- **Code Quality**: -7 unused imports, -2 dead exports, -1 orphan instance, -2 name collisions
+- **Test Stability**: 16 → 14 failures (2 flag-related tests fixed; 14 pre-existing remain)
+- **Maintainability**: single-source-of-truth for admission logic (line-neutral; ~2000-line reduction is Phase-2-only)
+
 ## [v0.2.0-test-parity] — 2026-05-18
 
 ### Added

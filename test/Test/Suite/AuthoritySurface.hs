@@ -175,6 +175,33 @@ negativeCorpusTest = TestLabel "F-11: non-authority surfaces return Nothing from
       (null failures)
 
 -- ---------------------------------------------------------------------------
+-- Stance-label asymmetry lock (P1-2)
+-- ---------------------------------------------------------------------------
+
+-- | Documented asymmetry: 'astToGfExpr' forward-accepts any StanceWrapped label
+-- via a catch-all, but 'gfExprToClaimAst' only reverse-parses the two canonical
+-- labels (ApplyStanceTentative/Firm). A non-canonical label therefore does NOT
+-- round-trip. This test LOCKS that behaviour so the gap is intentional, not a
+-- silent regression — if the parser is extended, update this test.
+stanceLabelAsymmetryTest :: Test
+stanceLabelAsymmetryTest = TestLabel "P1-2: non-canonical StanceWrapped label does not round-trip" $
+  TestCase $
+    let ast = StanceWrapped "ApplyStanceUnknown" (MoveGround (MkNP "svoboda_N"))
+    in case astToGfExpr ast of
+         Left err ->
+           assertBool ("forward astToGfExpr unexpectedly failed: " <> show err) False
+         Right exprStr ->
+           case gfExprToClaimAst exprStr of
+             Right ast' | ast' == ast ->
+               assertBool
+                 "non-canonical stance label unexpectedly round-tripped — parser was extended, update P1-2 doc/test"
+                 False
+             _ ->
+               -- Either Left (no mapping) or a non-equal result: both confirm
+               -- the documented asymmetry holds.
+               assertBool "asymmetry holds" True
+
+-- ---------------------------------------------------------------------------
 -- claimAstToFactualClaim: origin tag coverage
 -- ---------------------------------------------------------------------------
 
@@ -199,5 +226,6 @@ authoritySurfaceTests =
   ++ patternRoundTripTests
   ++ [ coverageTest
      , negativeCorpusTest
+     , stanceLabelAsymmetryTest
      , claimAstOriginTagTest
      ]

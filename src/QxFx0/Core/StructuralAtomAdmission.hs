@@ -8,9 +8,10 @@ module QxFx0.Core.StructuralAtomAdmission
   , admitStructuralAtoms
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms (RawAtomFindings(..))
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data StructuralAtomAdmissionInput = StructuralAtomAdmissionInput
   { saaiTruthContractStatus :: !TruthContractStatus
@@ -28,15 +29,6 @@ data AdmittedStructuralAtoms = AdmittedStructuralAtoms
   , asaDecision :: !StructuralAtomAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitStructuralAtoms :: StructuralAtomAdmissionInput -> RawAtomFindings -> AdmittedStructuralAtoms
-admitStructuralAtoms input rawFindings
-  | truthContractIsAuthoritative (saaiTruthContractStatus input) =
-      AdmittedStructuralAtoms rawFindings rawFindings SadAdmitRaw
-  | all (structuralAlreadySafe . maTag) (rafStructuralAtoms rawFindings) =
-      AdmittedStructuralAtoms rawFindings rawFindings SadPreserveAmbiguous
-  | otherwise =
-      AdmittedStructuralAtoms rawFindings rawFindings { rafStructuralAtoms = [] } SadSuppressSearching
-
 structuralAlreadySafe :: AtomTag -> Bool
 structuralAlreadySafe tag =
   case tag of
@@ -44,3 +36,17 @@ structuralAlreadySafe tag =
     Anchoring _ -> True
     NeedContact _ -> True
     _ -> False
+
+admitStructuralAtoms :: StructuralAtomAdmissionInput -> RawAtomFindings -> AdmittedStructuralAtoms
+admitStructuralAtoms input rawFindings =
+  admitBySuppressStrong config input rawFindings
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = saaiTruthContractStatus
+      , sscAllSafe = \rf -> all (structuralAlreadySafe . maTag) (rafStructuralAtoms rf)
+      , sscSuppress = \rf -> rf { rafStructuralAtoms = [] }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedStructuralAtoms raw proc dec
+      , sscDecisionAdmit = SadAdmitRaw
+      , sscDecisionPreserve = SadPreserveAmbiguous
+      , sscDecisionSuppress = SadSuppressSearching
+      }

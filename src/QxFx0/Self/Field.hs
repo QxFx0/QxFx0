@@ -90,6 +90,11 @@ module QxFx0.Self.Field
   , computeConsolidation
   , computeCounterfactual
   , computeAtmosphere
+  , computeAtmosphereDecoupled
+  , affectDecoupledActive
+  , fieldAwareRenderingActive
+  , updateMood
+  , moodWindowTurns
     -- * Phase-B bounded post-commitment adaptation
   , adaptFieldHeuristics
     -- * Component combinators
@@ -104,14 +109,14 @@ module QxFx0.Self.Field
     -- * History stub (filled in Phase 5)
   , FieldHistory
   , emptyHistory
-  , recordFieldOnto
-  , summariseFrom
   , unFieldHistory
   ) where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
+
+import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
 
 -- ---------------------------------------------------------------------------
 -- Component newtypes
@@ -122,7 +127,7 @@ import GHC.Generics (Generic)
 -- conversational window. Range @[0, 1]@: 0 = topic shift,
 -- 1 = exact echo. @k@ is a Phase-5 tunable.
 newtype Resonance = Resonance { unResonance :: Double }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Ord, Read, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Two-dimensional affective summary on the valence\/arousal axis.
@@ -132,14 +137,14 @@ newtype Resonance = Resonance { unResonance :: Double }
 data Atmosphere = Atmosphere
   { atmosphereValence :: !Double
   , atmosphereArousal :: !Double
-  } deriving stock (Eq, Show, Generic)
+  } deriving stock (Eq, Ord, Read, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Internal-coherence score in @[0, 1]@: @1@ = all signals agree,
 -- @0@ = signals are mutually contradictory and any decision drawn
 -- from this 'Field' is suspect.
 newtype FieldConfidence = FieldConfidence { unFieldConfidence :: Double }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Ord, Read, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Narrative-integration scalar in @[0, 1]@: how much of the
@@ -147,14 +152,14 @@ newtype FieldConfidence = FieldConfidence { unFieldConfidence :: Double }
 -- model. Genuinely temporal — its value at turn @n@ depends on
 -- the trajectory through turns @1..n@, not just the current turn.
 newtype Consolidation = Consolidation { unConsolidation :: Double }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Ord, Read, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Diversity of plausible alternative interpretations of the
 -- current turn, normalised to @[0, 1]@. High = posterior was
 -- spread; low = posterior was peaked.
 newtype Counterfactual = Counterfactual { unCounterfactual :: Double }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Ord, Read, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- ---------------------------------------------------------------------------
@@ -200,7 +205,7 @@ data Field = Field
   , fieldConfidence     :: !FieldConfidence
   , fieldConsolidation  :: !Consolidation
   , fieldCounterfactual :: !Counterfactual
-  } deriving stock (Eq, Show, Generic)
+  } deriving stock (Eq, Ord, Read, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | The \"no observation yet\" zero. Per ADR-0009 §4.4,
@@ -283,10 +288,10 @@ data FieldHeuristics = FieldHeuristics
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
--- | Phase-7 default heuristic parameters.  These reproduce the
+-- | Phase-7 builtin heuristic parameters.  These reproduce the
 -- behaviour of the hardcoded constants that shipped in Phase 5.5d.
-defaultFieldHeuristics :: FieldHeuristics
-defaultFieldHeuristics = FieldHeuristics
+builtinFieldHeuristics :: FieldHeuristics
+builtinFieldHeuristics = FieldHeuristics
   { fhNarrativeWindowSize     = 5
   , fhDefaultNarrativeRate    = 0.2
   , fhTopicStabilityBoost   = 0.5
@@ -296,6 +301,18 @@ defaultFieldHeuristics = FieldHeuristics
   , fhLegitimacyMidpoint      = 0.5
   , fhLegitimacyBonusScale    = 0.4
   }
+
+-- | Phase-7 default heuristic parameters, loaded from
+-- 'resources/config/field_heuristics.json' if present, otherwise
+-- falling back to 'builtinFieldHeuristics'.
+--
+-- The NOINLINE pragma is required to prevent GHC from inlining
+-- the 'unsafePerformIO' call and potentially evaluating it
+-- multiple times.
+defaultFieldHeuristics :: FieldHeuristics
+defaultFieldHeuristics =
+  loadConfigOrBuiltin "resources/config/field_heuristics.json" builtinFieldHeuristics
+{-# NOINLINE defaultFieldHeuristics #-}
 
 -- | Compute 'Consolidation' from a window of recent narrative
 -- success flags and a topic-stability indicator.
@@ -330,11 +347,18 @@ computeCounterfactual fh weights streak =
       raw          = min 1.0 (ambiguity + boost)
   in mkCounterfactual raw
 
--- | Compute 'Atmosphere' from ego agency, ego tension, and the
--- last legitimacy score.
+-- | DEPRECATED (Phase 7): legacy coupled-affect model where arousal == egoTension.
+-- Superseded by 'computeAtmosphereDecoupled', which is selected whenever
+-- 'affectDecoupledActive' is True (the current default). This function is NOT
+-- dead: it remains the @affectDecoupledActive = False@ branch in
+-- 'Core.TurnPipeline.Effects' and provides the regression baseline that
+-- @Test.Suite.AffectModel@ compares the decoupled model against. It will be
+-- removed in P4 when the decoupled model is promoted unconditionally and the
+-- comparison tests are retired. Do not add new callers.
 --
--- Lifeness gate: the returned 'Atmosphere' is always well-formed
--- because 'mkAtmosphere' clamps both axes.
+-- Compute 'Atmosphere' from ego agency, ego tension, and the last legitimacy
+-- score. Lifeness gate: the returned 'Atmosphere' is always well-formed because
+-- 'mkAtmosphere' clamps both axes.
 computeAtmosphere :: FieldHeuristics -> Double -> Double -> Double -> Atmosphere
 computeAtmosphere fh egoAgency egoTension legitScore =
   let valenceBase = egoAgency - egoTension
@@ -343,6 +367,73 @@ computeAtmosphere fh egoAgency egoTension legitScore =
       valence     = valenceBase + legitBonus
       arousal     = egoTension
   in mkAtmosphere valence arousal
+
+-- | WP-E: default-on promotion flag selecting the decoupled affect model
+-- ('computeAtmosphereDecoupled') over the legacy 'computeAtmosphere' where
+-- arousal is identical to ego tension. Promoted to default-on (2026-06-04);
+-- registered in the flag-off discipline (@scripts/check_architecture.sh@ rule [20]).
+affectDecoupledActive :: Bool
+affectDecoupledActive = True
+
+-- | P6': default-off flag enabling Field-aware rendering modulation.
+-- When @True@, the five Field components influence surface realisation:
+--
+-- * 'fieldConfidence' → epistemic hedges (\"maybe\", \"I think\")
+-- * 'fieldAtmosphere' → lexical valence/arousal (soft modals, sentence length)
+-- * 'fieldConsolidation' → discourse connectors (\"also\", \"furthermore\")
+-- * 'fieldCounterfactual' → alternative markers (\"alternatively\", \"however\")
+--
+-- When @False@, rendering is Field-agnostic (current behaviour).
+-- Registered in the flag-off discipline (@scripts/check_architecture.sh@ rule [20]).
+-- Deliberate deferral: activation requires empirical tuning of Field-to-template
+-- modulation parameters against an F-09/F-10 production corpus (Phase 7).
+fieldAwareRenderingActive :: Bool
+fieldAwareRenderingActive = False
+
+-- | WP-E: arousal decoupled from valence. The legacy 'computeAtmosphere' sets
+-- @arousal = egoTension@ and @valence = egoAgency - egoTension@, so the two
+-- axes are not independent and calm-positive vs calm-negative cannot be
+-- represented apart from agency. Here:
+--
+-- * arousal is driven by input /intensity/ (a salience/novelty signal in
+--   @[0,1]@, e.g. resonance or counterfactual entropy), not by tension;
+-- * valence is an appraisal (agency, legitimacy, and an outcome term),
+--   independent of the arousal axis.
+--
+-- This lets the affect plane express, e.g., calm-positive (low arousal,
+-- positive valence) distinctly from agitated-positive.
+computeAtmosphereDecoupled
+  :: FieldHeuristics
+  -> Double  -- ^ ego agency
+  -> Double  -- ^ ego tension
+  -> Double  -- ^ last legitimacy score
+  -> Double  -- ^ input intensity in [0,1] (arousal driver, e.g. resonance)
+  -> Atmosphere
+computeAtmosphereDecoupled fh egoAgency egoTension legitScore inputIntensity =
+  let legitBonus = (legitScore - fhLegitimacyMidpoint fh) * fhLegitimacyBonusScale fh
+      -- valence: appraisal from agency + legitimacy, lightly damped by tension
+      valence    = egoAgency - 0.5 * egoTension + legitBonus
+      -- arousal: input intensity blended with tension (tension still raises
+      -- arousal, but no longer *defines* it)
+      arousal    = 0.7 * clampUnit inputIntensity + 0.3 * clampUnit egoTension
+  in mkAtmosphere valence arousal
+
+-- | Number of turns the mood EMA integrates over (its effective window).
+-- Used to derive the EMA smoothing factor; configurable per ADR-0046.
+moodWindowTurns :: Int
+moodWindowTurns = 12
+
+-- | WP-E: update a slow mood baseline as an exponential moving average of
+-- per-turn valence. Mood is the affective baseline that fast per-turn affect
+-- rides on; a single extreme spike must not dominate it (the EMA factor is
+-- @2 / (window + 1)@, so one sample contributes that fraction). Returns the
+-- new mood in the valence range @[-1, 1]@.
+updateMood :: Double -> Double -> Double
+updateMood priorMood turnValence =
+  let n     = fromIntegral moodWindowTurns :: Double
+      alpha = 2.0 / (n + 1.0)
+      mood' = (1.0 - alpha) * priorMood + alpha * clamp (-1.0) 1.0 turnValence
+  in clamp (-1.0) 1.0 mood'
 
 -- | Bounded adaptation of field-heuristic parameters.
 --
@@ -479,18 +570,6 @@ newtype FieldHistory = FieldHistory { unFieldHistory :: [Field] }
 -- | The empty history.
 emptyHistory :: FieldHistory
 emptyHistory = FieldHistory []
-
--- | Prepend a new 'Field' onto the history, dropping older entries
--- to keep the buffer at most 32 deep.
-recordFieldOnto :: Field -> FieldHistory -> FieldHistory
-recordFieldOnto f (FieldHistory xs) = FieldHistory (f : take 31 xs)
-
--- | Summarise a 'FieldHistory' to a single 'Field'. Phase-4 stub:
--- returns the most-recent snapshot, or 'emptyField' if the history
--- is empty. Phase 5 replaces this with a windowed summary.
-summariseFrom :: FieldHistory -> Field
-summariseFrom (FieldHistory []     ) = emptyField
-summariseFrom (FieldHistory (f : _)) = f
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers

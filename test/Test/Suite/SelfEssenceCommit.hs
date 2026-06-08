@@ -40,6 +40,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Test (isSuccess)
 
 import Data.List (foldl')
+import Data.Aeson (decode, encode)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
@@ -125,7 +126,27 @@ selfEssenceCommitTests =
 
   , TestLabel "missing deliberation violation is explicit" $
       TestCase testMissingDeliberationViolationIsExplicit
+
+    -- Class II (audit synthesis): EssenceCommitment / TrajectoryHash must
+    -- round-trip through JSON. The newtype's generic ToJSON emitted an Object
+    -- ({"unTrajectoryHash":...}) while FromJSON only accepted String/Number, so
+    -- decode (encode x) failed on the persisted selfEssence.ecWitnessHash path
+    -- (masked-batch failure 7). Locks decode∘encode==id.
+  , TestLabel "EssenceCommitment round-trips through JSON (TrajectoryHash)" $
+      TestCase testEssenceCommitmentRoundTrips
   ]
+
+testEssenceCommitmentRoundTrips :: IO ()
+testEssenceCommitmentRoundTrips =
+  let commit = EssenceCommitment
+        { ecMode = EssenceContemplative
+        , ecTrigger = TriggerAngstThreshold
+        , ecCommittedAt = 7
+        , ecWitnessHash = TrajectoryHash "abc123def456"
+        }
+  in assertEqual "EssenceCommitment must survive decode . encode"
+       (Just commit)
+       (decode (encode commit))
 
 -- ---------------------------------------------------------------------------
 -- QuickCheck plumbing

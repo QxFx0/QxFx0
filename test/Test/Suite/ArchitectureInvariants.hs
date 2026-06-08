@@ -11,7 +11,7 @@ import Test.HUnit
 -- | Per ADR-0013 §3 Rule 2: a "supplier" Core
 -- module must not import a canonical-orchestrator
 -- writer. The supplier subtree is
--- 'QxFx0.Core.Consciousness.*'; the orchestrator
+-- 'QxFx0.Core.StanceClassifier.*'; the orchestrator
 -- writers are the 'QxFx0.Core.TurnPipeline.*'
 -- subtree plus 'QxFx0.Core.TurnRouting' (and
 -- 'QxFx0.Core.TurnPlanning', 'QxFx0.Core.TurnRender',
@@ -24,7 +24,7 @@ import Test.HUnit
 architectureInvariantTests :: [Test]
 architectureInvariantTests =
   [ TestLabel "Self layer stays foundational" testSelfLayerStaysFoundational
-  , TestLabel "R2: Core/Consciousness/* supplier does not import canonical-orchestrator writers"
+  , TestLabel "R2: Core/StanceClassifier/* supplier does not import canonical-orchestrator writers"
       testR2SupplierDoesNotImportOrchestrator
   ]
 
@@ -38,7 +38,7 @@ testSelfLayerStaysFoundational = TestCase $ do
     []
     violations
 
--- | R2: walk 'QxFx0.Core.Consciousness/*' and
+-- | R2: walk 'QxFx0.Core.StanceClassifier/*' and
 -- assert that no file imports the canonical
 -- orchestrator writers. This is the inverse of
 -- the R1 test ('testSelfLayerStaysFoundational'):
@@ -50,11 +50,11 @@ testR2SupplierDoesNotImportOrchestrator :: Test
 testR2SupplierDoesNotImportOrchestrator = TestCase $ do
   root <- getCurrentDirectory
   files <- listHsFilesRecursive
-             (root </> "src" </> "QxFx0" </> "Core" </> "Consciousness")
+             (root </> "src" </> "QxFx0" </> "Core" </> "StanceClassifier")
   violations <-
     fmap sort (concat <$> mapM forbiddenOrchestratorImportsInFile files)
   assertEqual
-    ("QxFx0.Core.Consciousness supplier must not import "
+    ("QxFx0.Core.StanceClassifier supplier must not import "
      <> "QxFx0.Core.TurnPipeline.*, QxFx0.Core.TurnRouting, "
      <> "QxFx0.Core.TurnPlanning, QxFx0.Core.TurnRender, "
      <> "or QxFx0.Core.TurnLegitimacy (per ADR-0013 §3 R2)")
@@ -113,7 +113,7 @@ forbiddenImportPrefixes =
 -- | R2 forbidden list. The 'QxFx0.Core.Turn*'
 -- subtrees are the canonical-orchestrator writers
 -- (per ADR-0013 §3 and the role split). A supplier
--- (QxFx0.Core.Consciousness) must not import them.
+-- (QxFx0.Core.StanceClassifier) must not import them.
 --
 -- The list is intentionally **specific** (not
 -- "QxFx0.Core.Turn*" generic) to allow other

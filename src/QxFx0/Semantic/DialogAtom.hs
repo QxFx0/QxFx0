@@ -36,7 +36,7 @@ module QxFx0.Semantic.DialogAtom
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSONKey(..), ToJSONKeyFunction(..), defaultOptions, genericParseJSON, genericToJSON)
+import Data.Aeson (FromJSON(..), ToJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSONKey(..), ToJSONKeyFunction(..))
 import Text.Read (readMaybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M

@@ -5,6 +5,7 @@ module Test.Suite.KnowledgeTree
   ) where
 
 import Data.Aeson (decode, encode)
+import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.List (foldl')
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
@@ -25,7 +26,26 @@ knowledgeTreeTests =
   , TestLabel "KnowledgeTree round-trips through JSON" testKnowledgeTreeRoundTripsJson
   , TestLabel "KnowledgeTree prune drains unvalidated bulk quarantine" testPruneFruitsCleansUnvalidatedQuarantineUnderBulkInsertion
   , TestLabel "KnowledgeTree root stress signal is NaN-safe" testRootStressSignalIsNaNSafe
+  , TestLabel "KnowledgeTree clamps inflated stored deltas on deserialize" testStoredDeltasClampedOnDeserialize
   ]
+
+-- | Trust boundary at the READ edge: a fruit persisted (or hand-edited /
+-- corrupted) with an out-of-range predictiveDelta must NOT deserialize at its
+-- raw value, or it would bypass authoritativeNetDelta promotion gating. The
+-- write path clamps at creation (Loop.hs/Sandbox.hs); this locks the read path.
+testStoredDeltasClampedOnDeserialize :: Test
+testStoredDeltasClampedOnDeserialize = TestCase $ do
+  let inflated = BL.pack
+        "{\"proposition\":\"p\",\"word\":\"w\",\"source\":\"SourceLLM\",\"validated\":true,\"conatusDelta\":999.0,\"predictiveDelta\":999.0,\"graftedTurn\":null,\"observedTurn\":1}"
+  case decode inflated :: Maybe KnowledgeFruit of
+    Nothing -> assertFailure "inflated fruit JSON must still decode (clamped, not rejected)"
+    Just fruit -> do
+      assertBool "predictiveDelta must be clamped to <= 0.50 on deserialize"
+        (kfPredictiveDelta fruit <= 0.50)
+      assertBool "conatusDelta must be clamped to <= 0.40 on deserialize"
+        (kfConatusDelta fruit <= 0.40)
+      assertBool "authoritativeNetDelta must not reflect the inflated 999.0 claim"
+        (authoritativeNetDelta fruit <= 0.90)
 
 testGraftFruitCreatesBranchAndCount :: Test
 testGraftFruitCreatesBranchAndCount = TestCase $ do

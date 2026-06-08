@@ -8,8 +8,9 @@ module QxFx0.Core.AtomExtractionAdmission
   , admitAtomAvailability
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data AtomExtractionAdmissionInput = AtomExtractionAdmissionInput
   { aeaiTruthContractStatus :: !TruthContractStatus
@@ -27,17 +28,6 @@ data AdmittedAtomAvailability = AdmittedAtomAvailability
   , aaaDecision :: !AtomExtractionAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitAtomAvailability :: AtomExtractionAdmissionInput -> AtomSet -> AdmittedAtomAvailability
-admitAtomAvailability input atomSet
-  | truthContractIsAuthoritative (aeaiTruthContractStatus input) =
-      AdmittedAtomAvailability atomSet rawAtoms AedAdmitRaw
-  | all (atomExtractionAlreadySafe . maTag) rawAtoms =
-      AdmittedAtomAvailability atomSet rawAtoms AedPreserveAmbiguous
-  | otherwise =
-      AdmittedAtomAvailability atomSet (filter (atomExtractionAlreadySafe . maTag) rawAtoms) AedSuppressStrongFindings
-  where
-    rawAtoms = asAtoms atomSet
-
 atomExtractionAlreadySafe :: AtomTag -> Bool
 atomExtractionAlreadySafe tag =
   case tag of
@@ -48,3 +38,18 @@ atomExtractionAlreadySafe tag =
     CustomAtom _ _ -> True
     AffectiveAtom _ _ -> True
     _ -> False
+
+admitAtomAvailability :: AtomExtractionAdmissionInput -> AtomSet -> AdmittedAtomAvailability
+admitAtomAvailability input atomSet =
+  admitBySuppressStrong config input atomSet
+  where
+    rawAtoms = asAtoms atomSet
+    config = SuppressStrongConfig
+      { sscGetTruthContract = aeaiTruthContractStatus
+      , sscAllSafe = \_ -> all (atomExtractionAlreadySafe . maTag) rawAtoms
+      , sscSuppress = \_ -> atomSet { asAtoms = filter (atomExtractionAlreadySafe . maTag) rawAtoms }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedAtomAvailability raw (asAtoms proc) dec
+      , sscDecisionAdmit = AedAdmitRaw
+      , sscDecisionPreserve = AedPreserveAmbiguous
+      , sscDecisionSuppress = AedSuppressStrongFindings
+      }

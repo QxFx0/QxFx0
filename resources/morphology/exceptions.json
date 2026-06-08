@@ -1,0 +1,458 @@
+{
+  "анима": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": null,
+    "forms": {
+      "NomSg": "анима",
+      "GenSg": "анимы",
+      "LocSg": "аниме",
+      "AccSg": "аниму",
+      "InsSg": "анимой"
+    }
+  },
+  "асин": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": null,
+    "forms": {
+      "NomSg": "асин",
+      "GenSg": "асина",
+      "LocSg": "асине",
+      "AccSg": "асина",
+      "InsSg": "асином"
+    }
+  },
+  "ватра": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "ватра",
+      "GenSg": "ватры",
+      "LocSg": "ватре",
+      "AccSg": "ватру",
+      "InsSg": "ватрой"
+    }
+  },
+  "глоб": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "глоб",
+      "GenSg": "глоба",
+      "LocSg": "глобе",
+      "AccSg": "глоб",
+      "InsSg": "глобом"
+    }
+  },
+  "дети": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "дети",
+      "GenSg": "детей",
+      "LocSg": "детях",
+      "AccSg": "дети",
+      "InsSg": "детьми"
+    }
+  },
+  "доспехи": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "доспехи",
+      "GenSg": "доспехов",
+      "LocSg": "доспехах",
+      "AccSg": "доспехи",
+      "InsSg": "доспехами"
+    }
+  },
+  "антигон": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "антигон",
+      "GenSg": "антигона",
+      "LocSg": "антигоне",
+      "AccSg": "антигона",
+      "InsSg": "антигоном"
+    }
+  },
+  "антипода": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "антипода",
+      "GenSg": "антиподы",
+      "LocSg": "антиподе",
+      "AccSg": "антиподу",
+      "InsSg": "антиподой"
+    }
+  },
+  "глосс": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "глосс",
+      "GenSg": "глосса",
+      "LocSg": "глоссе",
+      "AccSg": "глосса",
+      "InsSg": "глоссом"
+    }
+  },
+  "абсорбированье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "абсорбированье",
+      "GenSg": "абсорбированья",
+      "LocSg": "абсорбированье",
+      "AccSg": "абсорбирование",
+      "InsSg": "абсорбированием"
+    }
+  },
+  "авиаопыливанье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "авиаопыливанье",
+      "GenSg": "авиаопыливанья",
+      "LocSg": "авиаопыливанье",
+      "AccSg": "авиаопыливание",
+      "InsSg": "авиаопыливанием"
+    }
+  },
+  "авизованье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "авизованье",
+      "GenSg": "авизованья",
+      "LocSg": "авизованье",
+      "AccSg": "авизование",
+      "InsSg": "авизованием"
+    }
+  },
+  "агрегатированье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "агрегатированье",
+      "GenSg": "агрегатированья",
+      "LocSg": "агрегатированье",
+      "AccSg": "агрегатирование",
+      "InsSg": "агрегатированием"
+    }
+  },
+  "адресованье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "адресованье",
+      "GenSg": "адресованья",
+      "LocSg": "адресованье",
+      "AccSg": "адресование",
+      "InsSg": "адресованием"
+    }
+  },
+  "азотированье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "азотированье",
+      "GenSg": "азотированья",
+      "LocSg": "азотированье",
+      "AccSg": "азотирование",
+      "InsSg": "азотированием"
+    }
+  },
+  "активированье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "активированье",
+      "GenSg": "активированья",
+      "LocSg": "активированье",
+      "AccSg": "активирование",
+      "InsSg": "активированием"
+    }
+  },
+  "акцептованье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "акцептованье",
+      "GenSg": "акцептованья",
+      "LocSg": "акцептованье",
+      "AccSg": "акцептование",
+      "InsSg": "акцептованием"
+    }
+  },
+  "алитированье": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "алитированье",
+      "GenSg": "алитированья",
+      "LocSg": "алитированье",
+      "AccSg": "алитирование",
+      "InsSg": "алитированием"
+    }
+  },
+  "данные": {
+    "pos": "Noun",
+    "gender": null,
+    "animacy": null,
+    "forms": {
+      "NomSg": "данные",
+      "GenSg": "данных",
+      "LocSg": "данных",
+      "AccSg": "данные",
+      "InsSg": "данными"
+    }
+  },
+  "деплой": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": null,
+    "forms": {
+      "NomSg": "деплой",
+      "GenSg": "деплоя",
+      "LocSg": "деплое",
+      "AccSg": "деплой",
+      "InsSg": "деплоем"
+    }
+  },
+  "духи": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "духи",
+      "GenSg": "духов",
+      "LocSg": "духах",
+      "AccSg": "духи",
+      "InsSg": "духами"
+    }
+  },
+  "есть": {
+    "pos": "Noun",
+    "gender": null,
+    "animacy": null,
+    "forms": {
+      "NomSg": "есть",
+      "GenSg": "ести",
+      "LocSg": "ести",
+      "AccSg": "есть",
+      "InsSg": "естью"
+    }
+  },
+  "ехать": {
+    "pos": "Noun",
+    "gender": null,
+    "animacy": null,
+    "forms": {
+      "NomSg": "ехать",
+      "GenSg": "ехать",
+      "LocSg": "ехать",
+      "AccSg": "ехать",
+      "InsSg": "ехатью"
+    }
+  },
+  "люди": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "люди",
+      "GenSg": "людей",
+      "LocSg": "людях",
+      "AccSg": "людей",
+      "InsSg": "людьми"
+    }
+  },
+  "опилки": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "опилки",
+      "GenSg": "опилок",
+      "LocSg": "опилках",
+      "AccSg": "опилки",
+      "InsSg": "опилками"
+    }
+  },
+  "рога": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "рога",
+      "GenSg": "рогов",
+      "LocSg": "рогах",
+      "AccSg": "рогу",
+      "InsSg": "рогами"
+    }
+  },
+  "сведения": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "сведения",
+      "GenSg": "сведений",
+      "LocSg": "сведениях",
+      "AccSg": "сведению",
+      "InsSg": "сведениями"
+    }
+  },
+  "уста": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "уста",
+      "GenSg": "уст",
+      "LocSg": "устах",
+      "AccSg": "усту",
+      "InsSg": "устами"
+    }
+  },
+  "апаш": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "апаш",
+      "GenSg": "апаша",
+      "LocSg": "апаше",
+      "AccSg": "апаша",
+      "InsSg": "апашем"
+    }
+  },
+  "воз": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "воз",
+      "GenSg": "воза",
+      "LocSg": "возе",
+      "AccSg": "воз",
+      "InsSg": "возом"
+    }
+  },
+  "г": {
+    "pos": "Noun",
+    "gender": "neut",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "г",
+      "GenSg": "г",
+      "LocSg": "г",
+      "AccSg": "г",
+      "InsSg": "г"
+    }
+  },
+  "дисп": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "дисп",
+      "GenSg": "диспа",
+      "LocSg": "диспе",
+      "AccSg": "дисп",
+      "InsSg": "диспом"
+    }
+  },
+  "дра": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "дра",
+      "GenSg": "дра",
+      "LocSg": "дра",
+      "AccSg": "дра",
+      "InsSg": "дра"
+    }
+  },
+  "лгун": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "лгун",
+      "GenSg": "лгуна",
+      "LocSg": "лгуне",
+      "AccSg": "лгуна",
+      "InsSg": "лгуном"
+    }
+  },
+  "мак": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "мак",
+      "GenSg": "мака",
+      "LocSg": "маке",
+      "AccSg": "мак",
+      "InsSg": "маком"
+    }
+  },
+  "выходной": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "выходной",
+      "GenSg": "выходного",
+      "LocSg": "выходном",
+      "AccSg": "выходной",
+      "InsSg": "выходным"
+    }
+  },
+  "спальный": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "спальный",
+      "GenSg": "спального",
+      "LocSg": "спальном",
+      "AccSg": "спальный",
+      "InsSg": "спальным"
+    }
+  },
+  "ядерный": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "ядерный",
+      "GenSg": "ядерного",
+      "LocSg": "ядерном",
+      "AccSg": "ядерный",
+      "InsSg": "ядерным"
+    }
+  }
+}

@@ -11,7 +11,8 @@ import Data.Time.Calendar (Day(ModifiedJulianDay))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 
-import QxFx0.Core.Dream.Pressure
+import QxFx0.Core.TopicDrift.Pressure
+import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Core.PipelineIO
   ( defaultTestPipelineConfig
   , mkTestPipelineIO
@@ -417,7 +418,7 @@ buildPlannedFixture rawInput = do
   let routePlan = planRouteEffects ss ti ts
       pio = mkTestPipelineIO defaultTestPipelineConfig
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

@@ -17,9 +17,6 @@ import Data.Aeson
   , ToJSON(..)
   , ToJSONKey(..)
   , ToJSONKeyFunction(..)
-  , genericParseJSON
-  , genericToJSON
-  , defaultOptions
   , toEncoding
   )
 import Data.Map.Strict (Map)

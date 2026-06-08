@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 module QxFx0.Observability.Metrics
@@ -27,7 +28,7 @@ data MetricType
   | Gauge      -- ^ Point-in-time value
   | Histogram  -- ^ Distribution of values
   | Timing     -- ^ Duration measurements
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 instance ToJSON MetricType where
   toJSON Counter   = "counter"
@@ -117,4 +118,3 @@ measureTime action = do
   let duration = diffUTCTime end start
   pure (result, duration)
 
--- Made with Bob

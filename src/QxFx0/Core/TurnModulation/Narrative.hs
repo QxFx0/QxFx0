@@ -12,7 +12,7 @@ module QxFx0.Core.TurnModulation.Narrative
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
+import QxFx0.Core.StanceClassifier (ConsciousnessNarrative(..))
 import QxFx0.Policy.Consciousness
   ( narrativeSkillAnalyzeName
   , narrativeSkillHoldName

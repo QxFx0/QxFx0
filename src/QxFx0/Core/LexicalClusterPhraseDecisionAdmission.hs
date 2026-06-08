@@ -8,7 +8,6 @@ module QxFx0.Core.LexicalClusterPhraseDecisionAdmission
   , admitLexicalClusterPhraseDecisions
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms
   ( RawClusterPhraseDecision(..)
   , RawLexicalPhraseDecision(..)
@@ -17,6 +16,8 @@ import QxFx0.Semantic.MeaningAtoms
   , lexicalPhraseDecisionTag
   )
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data LexicalClusterPhraseDecisionAdmissionInput = LexicalClusterPhraseDecisionAdmissionInput
   { lcpdaiTruthContractStatus :: !TruthContractStatus
@@ -34,24 +35,16 @@ data AdmittedLexicalClusterPhraseDecisions = AdmittedLexicalClusterPhraseDecisio
   , alcpdDecision :: !LexicalClusterPhraseDecisionAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitLexicalClusterPhraseDecisions
-  :: LexicalClusterPhraseDecisionAdmissionInput
-  -> RawLexicalClusterPhraseDecisions
-  -> AdmittedLexicalClusterPhraseDecisions
-admitLexicalClusterPhraseDecisions input rawDecisions
-  | truthContractIsAuthoritative (lcpdaiTruthContractStatus input) =
-      AdmittedLexicalClusterPhraseDecisions rawDecisions rawDecisions LcpddAdmitRaw
-  | all clusterDecisionAlreadySafe (rlcpdClusterDecisions rawDecisions)
-      && all lexicalDecisionAlreadySafe (rlcpdLexicalDecisions rawDecisions) =
-      AdmittedLexicalClusterPhraseDecisions rawDecisions rawDecisions LcpddPreserveAmbiguous
-  | otherwise =
-      AdmittedLexicalClusterPhraseDecisions
-        rawDecisions
-        rawDecisions
-          { rlcpdClusterDecisions = map softenClusterDecision (rlcpdClusterDecisions rawDecisions)
-          , rlcpdLexicalDecisions = map softenLexicalDecision (rlcpdLexicalDecisions rawDecisions)
-          }
-        LcpddSuppressStrongDecisions
+tagAlreadySafe :: AtomTag -> Bool
+tagAlreadySafe tag =
+  case tag of
+    Exhaustion _ -> True
+    NeedContact _ -> True
+    Verification _ -> True
+    Anchoring _ -> True
+    CustomAtom _ _ -> True
+    AffectiveAtom _ _ -> True
+    _ -> False
 
 clusterDecisionAlreadySafe :: RawClusterPhraseDecision -> Bool
 clusterDecisionAlreadySafe rawDecision =
@@ -71,13 +64,23 @@ softenLexicalDecision rawDecision
   | lexicalDecisionAlreadySafe rawDecision = rawDecision
   | otherwise = rawDecision { rlpdMatched = False }
 
-tagAlreadySafe :: AtomTag -> Bool
-tagAlreadySafe tag =
-  case tag of
-    Exhaustion _ -> True
-    NeedContact _ -> True
-    Verification _ -> True
-    Anchoring _ -> True
-    CustomAtom _ _ -> True
-    AffectiveAtom _ _ -> True
-    _ -> False
+admitLexicalClusterPhraseDecisions
+  :: LexicalClusterPhraseDecisionAdmissionInput
+  -> RawLexicalClusterPhraseDecisions
+  -> AdmittedLexicalClusterPhraseDecisions
+admitLexicalClusterPhraseDecisions input rawDecisions =
+  admitBySuppressStrong config input rawDecisions
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = lcpdaiTruthContractStatus
+      , sscAllSafe = \rd -> all clusterDecisionAlreadySafe (rlcpdClusterDecisions rd)
+                              && all lexicalDecisionAlreadySafe (rlcpdLexicalDecisions rd)
+      , sscSuppress = \rd -> rd
+          { rlcpdClusterDecisions = map softenClusterDecision (rlcpdClusterDecisions rd)
+          , rlcpdLexicalDecisions = map softenLexicalDecision (rlcpdLexicalDecisions rd)
+          }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedLexicalClusterPhraseDecisions raw proc dec
+      , sscDecisionAdmit = LcpddAdmitRaw
+      , sscDecisionPreserve = LcpddPreserveAmbiguous
+      , sscDecisionSuppress = LcpddSuppressStrongDecisions
+      }

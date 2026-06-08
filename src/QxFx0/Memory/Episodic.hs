@@ -16,6 +16,8 @@ module QxFx0.Memory.Episodic
   , rebuildIndex
   , encode
   , retrieve
+  , recallForTrace
+  , episodicRecallActive
   , forget
   , enforceCapacity
   , enforceAgeWindow
@@ -51,6 +53,24 @@ episodicCapacity = 1000
 
 episodicWindow :: TurnSeq
 episodicWindow = TurnSeq 50
+
+-- | WP-B: default-on promotion flag gating live episodic recall on the turn
+-- path. Promoted to default-on 2026-06-04 (P0 Stage 1, ADR-0034 §Promotion);
+-- registered in the flag-off discipline (@scripts/check_architecture.sh@ rule [20]).
+episodicRecallActive :: Bool
+episodicRecallActive = True
+
+-- | WP-B: a living consumer of 'retrieve'. Runs a deterministic recall query
+-- over the episodic store and reports the query together with how many events
+-- it returned, for the turn-projection trace @trcEpisodicRetrieval@. Pure and
+-- deterministic; returns 'Nothing' when there is no store. This is the
+-- anti-rot consumer guarded by @docs/anti_rot_registry.tsv@ (ADR-0042).
+recallForTrace :: Maybe EpisodicStore -> Maybe (EpisodicQuery, Int)
+recallForTrace Nothing      = Nothing
+recallForTrace (Just store) =
+  let q  = ByKind EpisodicUserInput
+      rs = retrieve q store
+  in Just (q, length rs)
 
 newtype EpisodicId = EpisodicId { unEpisodicId :: Int }
   deriving stock (Eq, Ord, Show, Generic)
@@ -212,9 +232,6 @@ enforceAgeWindow currentTurn store =
 
 instance Hashable EpisodicId
 instance Hashable EpisodicKind
-instance Hashable TurnSeq where
-  hashWithSalt salt = hashWithSalt salt . unTurnSeq
-  hash = hash . unTurnSeq
 
 instance ToJSONKey EpisodicId where
   toJSONKey = ToJSONKeyValue (toJSON . unEpisodicId) (toEncoding . unEpisodicId)

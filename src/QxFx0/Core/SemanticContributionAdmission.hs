@@ -9,10 +9,12 @@ module QxFx0.Core.SemanticContributionAdmission
   , admitSemanticContributions
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.Logic (RankedFamily)
 import QxFx0.Types
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
+import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Types.Admission.PatternCapClarify
+  ( CapClarifyConfig(..), admitByCapClarify )
 
 data SemanticContributionAdmissionInput = SemanticContributionAdmissionInput
   { scaiTruthContractStatus :: !TruthContractStatus
@@ -32,16 +34,13 @@ data AdmittedSemanticContributions = AdmittedSemanticContributions
   , ascDecision :: !SemanticContributionAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitSemanticContributions :: SemanticContributionAdmissionInput -> [RankedFamily] -> AdmittedSemanticContributions
-admitSemanticContributions input rawFamilies
-  | not (contributionAdmissionInScope (scaiFrame input)) =
-      AdmittedSemanticContributions rawFamilies rawFamilies ScdAdmitRaw
-  | truthContractIsAuthoritative (scaiTruthContractStatus input) && not (scaiConatusGateFired input) =
-      AdmittedSemanticContributions rawFamilies rawFamilies ScdAdmitRaw
-  | all (familyAlreadyWeak . fst) rawFamilies =
-      AdmittedSemanticContributions rawFamilies rawFamilies ScdPreserveAmbiguous
-  | otherwise =
-      AdmittedSemanticContributions rawFamilies (softenContributions rawFamilies) ScdCapClarify
+familyAlreadyWeak :: CanonicalMoveFamily -> Bool
+familyAlreadyWeak family = family `elem` [CMClarify, CMRepair, CMGround, CMAnchor, CMContact]
+
+contributionAdmissionInScope :: InputPropositionFrame -> Bool
+contributionAdmissionInScope frame =
+  ipfPropositionType frame == SelfStateQ
+    && ipfConfidence frame < parserHighConfidenceThreshold
 
 softenContributions :: [RankedFamily] -> [RankedFamily]
 softenContributions = map softenOne
@@ -50,10 +49,18 @@ softenContributions = map softenOne
       | familyAlreadyWeak fam = (fam, weight)
       | otherwise = (CMClarify, weight)
 
-familyAlreadyWeak :: CanonicalMoveFamily -> Bool
-familyAlreadyWeak family = family `elem` [CMClarify, CMRepair, CMGround, CMAnchor, CMContact]
-
-contributionAdmissionInScope :: InputPropositionFrame -> Bool
-contributionAdmissionInScope frame =
-  ipfPropositionType frame == "SelfStateQ"
-    && ipfConfidence frame < parserHighConfidenceThreshold
+admitSemanticContributions :: SemanticContributionAdmissionInput -> [RankedFamily] -> AdmittedSemanticContributions
+admitSemanticContributions input rawFamilies =
+  admitByCapClarify config input rawFamilies
+  where
+    config = CapClarifyConfig
+      { cccGetTruthContract = scaiTruthContractStatus
+      , cccConatusFired = scaiConatusGateFired
+      , cccInScope = \inp _ -> contributionAdmissionInScope (scaiFrame inp)
+      , cccAllWeak = all (familyAlreadyWeak . fst)
+      , cccCapDat = softenContributions
+      , cccBuildAdmitted = \_ raw proc dec -> AdmittedSemanticContributions raw proc dec
+      , cccDecisionAdmit = ScdAdmitRaw
+      , cccDecisionPreserve = ScdPreserveAmbiguous
+      , cccDecisionCap = ScdCapClarify
+      }

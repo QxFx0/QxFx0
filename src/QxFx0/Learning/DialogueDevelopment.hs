@@ -32,6 +32,7 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnPlan(..)
   )
 import QxFx0.Types
+import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeText)
 import QxFx0.Types.State.AdaptiveMutation
   ( AdaptiveDecision(..)
   , AdaptiveMutationKind(..)
@@ -96,10 +97,10 @@ assessDialogueOutcome previousState postState ti tp ta =
       postRenderRetightened = taRendered ta /= taPreSafetyRendered ta || taFinalRendered ta /= taRendered ta
       decisionRepair = tdFamily (taDecision ta) == CMRepair
       renderEmpty = T.null (T.strip (taFinalRendered ta))
-      userRepair = propositionType `elem` ["RepairSignal", "MisunderstandingReport"]
-      userClarification = propositionType `elem` ["ClarifyQ", "EpistemicQ", "RequestQ"]
-      successfulContinuation = propositionType == "NextStepQ"
-      userConflict = propositionType == "ConfrontQ" || matchesAnyCue raw conflictPhrases
+      userRepair = propositionType `elem` [RepairSignal, MisunderstandingReport]
+      userClarification = propositionType `elem` [ClarifyQ, EpistemicQ, RequestQ]
+      successfulContinuation = propositionType == NextStepQ
+      userConflict = propositionType == ConfrontQ || matchesAnyCue raw conflictPhrases
       strongPositiveConfirmation = matchesAnyCue raw strongPositiveConfirmationPhrases
       weakAcknowledgement = isWeakAcknowledgementText raw
       (kind0, strong0, strength0) =
@@ -363,9 +364,9 @@ adjustRenderStyleForSpeechPolicy policy original
   | spsAmbiguityTolerance policy <= 0.30 = StyleClinical
   | otherwise = original
 
-outcomeSignals :: Text -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> [Text]
+outcomeSignals :: PropositionType -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> [Text]
 outcomeSignals propositionType repeatedInput localRecovery decisionRepair renderEmpty userConflict strongPositiveConfirmation weakAcknowledgement successfulContinuation userClarification =
-  [ "proposition_type=" <> propositionType ]
+  [ "proposition_type=" <> propositionTypeText propositionType ]
     <> flag "repeated_question" repeatedInput
     <> flag "local_recovery" localRecovery
     <> flag "decision_repair" decisionRepair

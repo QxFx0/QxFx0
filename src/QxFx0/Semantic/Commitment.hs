@@ -1,6 +1,7 @@
 module QxFx0.Semantic.Commitment
   ( commit
   , commitObservation
+  , quarantineObservation
   , revise
   , retract
   , contradict
@@ -37,6 +38,20 @@ commitObservation payload store =
   let cid = CommitmentId (scsNextId store)
       store' = store { scsNextId = scsNextId store + 1 }
   in commit cid payload store'
+
+-- | Auto-generate a commitment ID and place the claim in quarantine.
+-- Uses the shared 'scsNextId' so active and quarantine ids never collide.
+quarantineObservation
+  :: FactualClaimPayload
+  -> SemanticCommitmentStore
+  -> SemanticCommitmentStore
+quarantineObservation payload store =
+  let cid = CommitmentId (scsNextId store)
+      ts  = fcpTurnSeq payload
+  in store
+       { scsQuarantine = HashMap.insert cid (payload, ts) (scsQuarantine store)
+       , scsNextId     = scsNextId store + 1
+       }
 
 -- | Replace a commitment's content; preserves the id.
 revise

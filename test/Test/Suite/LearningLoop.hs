@@ -79,12 +79,15 @@ import QxFx0.Types.State
   , SystemState(..)
   , emptyBeliefStore
   , emptyDialogueOutcomeLearningState
-   , emptySpeechPolicyState
-   , emptySystemState
-   , appendAdaptiveMutationRecords
-   , ssKnowledgeTree
-   , ssLastGuardReport
-   , ssMorphology
+  , emptySpeechPolicyState
+  , emptySystemState
+  , appendAdaptiveMutationRecords
+  , ssKnowledgeTree
+  , ssLastGuardReport
+  )
+import QxFx0.Types.State.SelfState (SelfState(..))
+import QxFx0.Types.State
+  ( ssMorphology
   , ConatusSlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
@@ -1121,8 +1124,8 @@ testSystemStateDecodeIgnoresPersistedDerivedGovernanceViews = TestCase $ do
     (decoded /= Nothing)
   let ss = maybe emptySystemState id decoded
   assertEqual "persisted perspective registry must be ignored on decode"
-    (ssPerspectiveRegistry emptySystemState)
-    (ssPerspectiveRegistry ss)
+    (selfPerspectiveRegistry (ssSelfState emptySystemState))
+    (selfPerspectiveRegistry (ssSelfState ss))
   assertEqual "persisted governance projection must be ignored on decode"
     (ssGovernanceProjection emptySystemState)
     (ssGovernanceProjection ss)
@@ -1382,7 +1385,8 @@ testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
         }
       ss = emptySystemState
         { ssSessionId = "test-session"
-        , ssPerspectiveRegistry = registry
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry }
         , ssDialogueOutcomeLearning = outcome
         }
       bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)) False emptyField

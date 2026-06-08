@@ -252,21 +252,21 @@ propTotality :: Property
 propTotality =
   forAll arbitraryHealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let s = computeSalience defaultSalienceWeights ce f
+    let s = computeSalience defaultSalienceWeights ce f 0.0
     in isFinite (salienceHolisticBias s) && isFinite (salienceConfidence s)
 
 propBiasRange :: Property
 propBiasRange =
   forAll arbitraryHealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let b = salienceHolisticBias (computeSalience defaultSalienceWeights ce f)
+    let b = salienceHolisticBias (computeSalience defaultSalienceWeights ce f 0.0)
     in b >= 0.0 && b <= 1.0
 
 propConfidenceRange :: Property
 propConfidenceRange =
   forAll arbitraryHealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let c = salienceConfidence (computeSalience defaultSalienceWeights ce f)
+    let c = salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0)
     in c >= 0.0 && c <= 1.0 + 1e-12
 
 -- ---------------------------------------------------------------------------
@@ -286,8 +286,8 @@ propMonotoneResonance =
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
     let hi = min 1.0 (lo + delta)
-        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withResonance lo f))
-        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withResonance hi f))
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withResonance lo f) 0.0)
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withResonance hi f) 0.0)
     in bHi >= bLo - 1e-12
 
 propAntiMonotoneConsolidation :: Property
@@ -297,8 +297,8 @@ propAntiMonotoneConsolidation =
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
     let hi = min 1.0 (lo + delta)
-        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withConsolidation lo f))
-        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withConsolidation hi f))
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withConsolidation lo f) 0.0)
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withConsolidation hi f) 0.0)
     in bHi <= bLo + 1e-12
 
 propMonotoneCounterfactual :: Property
@@ -308,8 +308,8 @@ propMonotoneCounterfactual =
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
     let hi = min 1.0 (lo + delta)
-        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withCounterfactual lo f))
-        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withCounterfactual hi f))
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withCounterfactual lo f) 0.0)
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withCounterfactual hi f) 0.0)
     in bHi >= bLo - 1e-12
 
 propAntiMonotoneFieldConfidence :: Property
@@ -319,8 +319,8 @@ propAntiMonotoneFieldConfidence =
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
     let hi = min 1.0 (lo + delta)
-        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withFieldConfidence lo f))
-        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withFieldConfidence hi f))
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withFieldConfidence lo f) 0.0)
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withFieldConfidence hi f) 0.0)
     in bHi <= bLo + 1e-12
 
 -- ---------------------------------------------------------------------------
@@ -331,7 +331,7 @@ propConatusGate :: Property
 propConatusGate =
   forAll arbitraryUnhealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let s = computeSalience defaultSalienceWeights ce f
+    let s = computeSalience defaultSalienceWeights ce f 0.0
     in salienceHolisticBias s == 0.0
        && salienceConfidence s == 1.0
 
@@ -339,7 +339,7 @@ propConatusGateDriver :: Property
 propConatusGateDriver =
   forAll arbitraryUnhealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    salienceDriver (computeSalience defaultSalienceWeights ce f)
+    salienceDriver (computeSalience defaultSalienceWeights ce f 0.0)
       == DrivenByConatusGate
 
 -- ---------------------------------------------------------------------------
@@ -441,8 +441,8 @@ propDeterminism :: Property
 propDeterminism =
   forAll arbitraryHealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let s1 = computeSalience defaultSalienceWeights ce f
-        s2 = computeSalience defaultSalienceWeights ce f
+    let s1 = computeSalience defaultSalienceWeights ce f 0.0
+        s2 = computeSalience defaultSalienceWeights ce f 0.0
     in s1 == s2
 
 -- ---------------------------------------------------------------------------
@@ -455,7 +455,7 @@ propConatusGateFiresExactlyWhenPredicate :: Property
 propConatusGateFiresExactlyWhenPredicate =
   forAll arbitraryConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let s = computeSalience defaultSalienceWeights ce f
+    let s = computeSalience defaultSalienceWeights ce f 0.0
         gateFired = conatusGateFires ce
         driverIsConatus = salienceDriver s == DrivenByConatusGate
     in gateFired == driverIsConatus
@@ -465,7 +465,7 @@ propConatusGateBiasIsZero :: Property
 propConatusGateBiasIsZero =
   forAll arbitraryUnhealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    salienceHolisticBias (computeSalience defaultSalienceWeights ce f) == 0.0
+    salienceHolisticBias (computeSalience defaultSalienceWeights ce f 0.0) == 0.0
 
 -- | When the Conatus gate fires the confidence is clamped to
 -- exactly 1.0.
@@ -473,7 +473,7 @@ propConatusGateConfidenceIsOne :: Property
 propConatusGateConfidenceIsOne =
   forAll arbitraryUnhealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    salienceConfidence (computeSalience defaultSalienceWeights ce f) == 1.0
+    salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0) == 1.0
 
 -- | Atmosphere arousal has a non-negative weight, so increasing it
 -- (holding everything else fixed) does not decrease bias.
@@ -484,8 +484,8 @@ propMonotoneAtmosphereArousal =
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
     let hi = min 1.0 (lo + delta)
-        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal lo f))
-        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal hi f))
+        bLo = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal lo f) 0.0)
+        bHi = salienceHolisticBias (computeSalience defaultSalienceWeights ce (withAtmosphereArousal hi f) 0.0)
     in bHi >= bLo - 1e-12
 
 -- | Atmosphere valence is not read by the salience controller;
@@ -499,8 +499,8 @@ propAtmosphereValenceIrrelevant =
   forAll arbitraryValenceDouble $ \v2 ->
     let f1 = f { fieldAtmosphere = (fieldAtmosphere f) { atmosphereValence = v1 } }
         f2 = f { fieldAtmosphere = (fieldAtmosphere f) { atmosphereValence = v2 } }
-        s1 = computeSalience defaultSalienceWeights ce f1
-        s2 = computeSalience defaultSalienceWeights ce f2
+        s1 = computeSalience defaultSalienceWeights ce f1 0.0
+        s2 = computeSalience defaultSalienceWeights ce f2 0.0
     in s1 == s2
 
 -- | When the Conatus gate fires the field is completely ignored:
@@ -510,15 +510,15 @@ propFieldIgnoredWhenConatusGateFires =
   forAll arbitraryUnhealthyConatus $ \ce ->
   forAll arbitraryField $ \f1 ->
   forAll arbitraryField $ \f2 ->
-    computeSalience defaultSalienceWeights ce f1
-      == computeSalience defaultSalienceWeights ce f2
+    computeSalience defaultSalienceWeights ce f1 0.0
+      == computeSalience defaultSalienceWeights ce f2 0.0
 
 -- | For healthy Conatus energy the confidence is always in [0,1].
 propHealthyConatusConfidenceRange :: Property
 propHealthyConatusConfidenceRange =
   forAll arbitraryHealthyConatus $ \ce ->
   forAll arbitraryField $ \f ->
-    let c = salienceConfidence (computeSalience defaultSalienceWeights ce f)
+    let c = salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0)
     in c >= 0.0 && c <= 1.0 + 1e-12
 
 -- ---------------------------------------------------------------------------
@@ -532,10 +532,11 @@ arbitrarySalienceWeights = do
   wc  <- choose (0.0, 2.0)
   wcf <- choose (0.0, 2.0)
   wfc <- choose (0.0, 2.0)
+  wcs <- choose (0.0, 2.0)
   cgt <- choose (-1.0, 1.0)
   vt  <- choose (0.0, 0.5)
   st  <- choose (0.1, 2.0)
-  pure $ SalienceWeights wr wa wc wcf wfc cgt vt st
+  pure $ SalienceWeights wr wa wc wcf wfc wcs cgt vt st
 
 propAdaptSalienceIdentity :: Property
 propAdaptSalienceIdentity =

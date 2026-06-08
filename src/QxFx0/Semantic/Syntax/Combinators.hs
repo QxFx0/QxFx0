@@ -78,6 +78,8 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.Lexicon.RuntimeParadigms
   ( RuntimeParadigms
+  , PartOfSpeech(..)
+  , partOfSpeechText
   , NounCase(..)
   , Number(..)
   , Gender(..)
@@ -250,7 +252,7 @@ inflectAdjectiveLemma lemma gender number case_
 
 mkNP :: RuntimeParadigms -> Text -> NounCase -> Number -> Either MorphError NP
 mkNP rp lemma case_ number = do
-  _ <- validatePOS rp lemma "Noun"
+  _ <- validatePOS rp lemma PosNoun
   form <- lookupFormOrError rp lemma case_ number
   g <- genderOrError rp lemma
   pure NP { npLemma = form, npCase = case_, npNumber = number, npGender = g
@@ -259,7 +261,7 @@ mkNP rp lemma case_ number = do
 mkVP :: RuntimeParadigms -> Text -> Int -> Number -> Maybe Gender -> Tense
      -> Either MorphError VP
 mkVP rp lemma person number gender tense = do
-  _ <- validatePOS rp lemma "Verb"
+  _ <- validatePOS rp lemma PosVerb
   form <- verbFormOrError rp lemma person number gender tense
   pure VP
     { vpLemma = form
@@ -290,7 +292,7 @@ mkS subj pred = do
 mkAP :: RuntimeParadigms -> Text -> Gender -> Number -> NounCase
      -> Either MorphError AP
 mkAP rp lemma gender number case_ = do
-  _ <- validatePOS rp lemma "Adjective"
+  _ <- validatePOS rp lemma PosAdjective
   form <- adjFormOrError rp lemma gender number case_
   pure AP { apLemma = form, apGender = gender, apNumber = number, apCase = case_ }
 
@@ -636,12 +638,12 @@ linearizePP pp =
 -- Helpers
 --------------------------------------------------------------------------------
 
-validatePOS :: RuntimeParadigms -> Text -> Text -> Either MorphError ()
+validatePOS :: RuntimeParadigms -> Text -> PartOfSpeech -> Either MorphError ()
 validatePOS rp lemma expected =
   case lemmaPos rp lemma of
     Nothing -> Left (MissingParadigm lemma)
     Just actual | actual == expected -> Right ()
-    Just actual -> Left (InvalidPOS lemma actual)
+    Just actual -> Left (InvalidPOS lemma (partOfSpeechText actual))
 
 lookupFormOrError :: RuntimeParadigms -> Text -> NounCase -> Number
                   -> Either MorphError Text

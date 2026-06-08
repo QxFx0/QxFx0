@@ -96,14 +96,18 @@ import QxFx0.Core.TurnPipeline.Types
   , turnResultOutput
   )
 import QxFx0.Core.Observability (TurnMetrics)
+import qualified Data.Map.Strict as Map
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(PersistenceError)
+  , mkPersistenceError
   , throwQxFx0
   )
+import QxFx0.Types.Persistence (PersistenceStage(StageUnknown))
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
 import Data.Time.Clock (UTCTime)
 import QxFx0.Core.TurnPipeline.Prepare (PrepareEffectResults(..))
 import qualified QxFx0.Core.TurnPipeline.Prepare as Prepare
+import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Core.TurnPipeline.Route
   ( RouteStatic(..)
   , RouteEffectRequest(..)
@@ -152,7 +156,7 @@ planRouteEffects = Route.planRouteEffects
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects = Route.resolveRouteEffects
 
-buildRouteTurnPlan :: ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan = Route.buildRouteTurnPlan
 
 planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
@@ -173,7 +177,7 @@ planFinalizePrecommit = Finalize.planFinalizePrecommit
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit = Finalize.resolveFinalizePrecommit
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> FinalizePrecommitBundle
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 
 planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
@@ -206,13 +210,18 @@ resolvePrepareCurrentTime pio = do
   result <- resolveTurnEffect pio TurnReqCurrentTime
   case result of
     TurnResCurrentTime t -> pure t
-    _ -> throwQxFx0 (PersistenceError (T.pack "prepare current time effect returned unexpected result"))
+    _ -> throwQxFx0 (mkPersistenceError
+          StageUnknown
+          (T.pack "resolvePrepareCurrentTime")
+          (T.pack "PERSISTENCE_UNEXPECTED_EFFECT")
+          Map.empty)
 
 planTurn :: PipelineIO -> SystemState -> PreparedTurn -> IO PlannedTurn
 planTurn pio ss (PreparedTurn ti ts) = do
   let routeEffects = Route.planRouteEffects ss ti ts
   routeResults <- Route.resolveRouteEffects pio routeEffects
-  let tp = Route.buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts routeEffects routeResults
+  fmarMode <- Route.readFmarModeIO pio
+  let tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) ss ti ts routeEffects routeResults
   pure (PlannedTurn ti ts tp)
 
 renderTurn :: PipelineIO -> SystemState -> PlannedTurn -> IO RenderedTurn
@@ -226,8 +235,8 @@ finalizeTurn :: PipelineIO -> SystemState -> Text -> Int -> Text -> RenderedTurn
 finalizeTurn pio ss sessionId expectedRevision _requestId (RenderedTurn ti ts tp ta) = do
   let precommitPlan = Finalize.planFinalizePrecommit ss ti ts tp ta
   precommitResults <- Finalize.resolveFinalizePrecommit pio precommitPlan
-  let precommitBundle = Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
-      commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
+  precommitBundle <- Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
+  let commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
   commitResults <- Finalize.resolveFinalizeCommit pio expectedRevision commitPlan
   let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults
   Finalize.resolveFinalizePostCommit (trMetrics turnResult)

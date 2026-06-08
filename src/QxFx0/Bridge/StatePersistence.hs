@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData, RankNTypes #-}
+{-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData, RankNTypes, LambdaCase #-}
 module QxFx0.Bridge.StatePersistence
   ( saveState
   , saveStateExpected
@@ -17,6 +17,7 @@ module QxFx0.Bridge.StatePersistence
 
 import QxFx0.Types.State (SystemState(..), emptySystemState, ssTurnCount)
 import QxFx0.Types.State.Perspective (emptyPerspectiveRegistry)
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Identity (IdentityState(..))
 import QxFx0.Types.State.Semantic (SemanticState(..))
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
@@ -48,7 +49,9 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
+import Data.List (intersect)
 import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
+import System.Environment (lookupEnv)
 import Control.Exception (finally, mask, onException)
 import Control.Exception (try)
 import Data.Text.Encoding.Error (UnicodeException, lenientDecode)
@@ -205,7 +208,7 @@ loadState withDb sessionId = withDb $ \db -> do
     Right mBlob ->
       case mBlob of
         Just blob ->
-          case decodePersistedState blob of
+          decodePersistedState blob >>= \case
             Right ss ->
               case rebuildDerivedViewsAfterLoad ss of
                 Right rebuilt -> do
@@ -224,11 +227,26 @@ loadState withDb sessionId = withDb $ \db -> do
 loadStateRevision :: DbRunner -> Text -> IO Int
 loadStateRevision withDb sessionId = withDb $ \db -> loadStateRevisionDirect db sessionId
 
+-- | Optional backward-compatibility fields: present in the canonical encoding,
+-- but read leniently (@.:? .!= default@) so older blobs still decode. Their
+-- absence is not a decode failure, but it IS worth surfacing explicitly (the
+-- blob predates these fields), which is what this diagnostic reports.
+optionalCompatibilityFields :: [Text]
+optionalCompatibilityFields =
+  [ "lastGuardReport"
+  , "dreamState"
+  , "intuitionState"
+  , "semanticAnchor"
+  , "lastTurnDecision"
+  ]
+
 stateBlobDiagnostics :: Text -> [PersistenceDiagnostic]
 stateBlobDiagnostics blob =
   case Aeson.decode (BL.fromStrict (TE.encodeUtf8 blob)) :: Maybe Aeson.Object of
     Nothing -> []
-    Just _obj -> []
+    Just obj ->
+      let missing = filter (\f -> not (KM.member (AK.fromText f) obj)) optionalCompatibilityFields
+      in if null missing then [] else [PdSchemaMissingFields missing]
 
 loadKV :: NSQL.Database -> Text -> Text -> IO (Maybe Text)
 loadKV db sessionId k = do
@@ -350,10 +368,11 @@ persistedTruthIsAuthoritative _ = False
 -- fields. Derived governance views and runtime-local carry-over are stripped.
 canonicalizePersistedState :: SystemState -> SystemState
 canonicalizePersistedState ss =
-  ss
+  let selfState' = (ssSelfState ss) { selfPerspectiveRegistry = emptyPerspectiveRegistry }
+  in ss
     { ssIdentity = canonicalizePersistedIdentityState (ssIdentity ss)
     , ssSemantic = canonicalizePersistedSemanticState (ssSemantic ss)
-    , ssPerspectiveRegistry = emptyPerspectiveRegistry
+    , ssSelfState = selfState'
     , ssGovernanceProjection = ssGovernanceProjection emptySystemState
     }
 
@@ -393,15 +412,41 @@ demoteNonAuthoritativeRestartCarry ss =
           }
     }
 
-decodePersistedState :: Text -> Either String SystemState
-decodePersistedState blob =
-  let bytes = TE.encodeUtf8 blob
+decodePersistedState :: Text -> IO (Either String SystemState)
+decodePersistedState blob = do
+  mStrict <- lookupEnv "QXFX0_STRICT_DECODE"
+  let strictMode = maybe False (\v -> v == "true" || v == "1") mStrict
+      bytes = TE.encodeUtf8 blob
+      validateStrict obj
+        | not strictMode = Right ()
+        | otherwise =
+            let allRequiredFields =
+                  [ "schemaVersion", "history", "rawInputHistory", "turnCount"
+                  , "lastTopic", "lastFamily", "lastForce", "lastLayer"
+                  , "lastEmbedding", "consecutiveReflect", "recentFamilies"
+                  , "activeScene", "sessionId", "stateOrigin", "ssSelfState"
+                  , "morphology", "learningNeedState", "knowledgeTree"
+                  , "truthContractStatus", "dialogueOutcomeLearning"
+                  , "dialogueThread", "dialogueCommitmentLedger", "dialoguePhase"
+                  , "speechPolicyState", "beliefStore", "governanceHistory"
+                  ]
+                missing = filter (\k -> not (KM.member (AK.fromText k) obj)) allRequiredFields
+            in if null missing
+               then Right ()
+               else Left ("strict_decode_missing_required_fields: " <> show missing)
   -- Canonical write shape is raw top-level SystemState. PersistenceEnvelope
   -- remains accepted only as a tolerated legacy read shape during contract
   -- consolidation and must not be described as current canonical persistence.
-  in case Aeson.eitherDecodeStrict bytes of
-       Right (PersistenceEnvelope _ ss) -> Right ss
-       Left _ -> Aeson.eitherDecodeStrict bytes
+  case Aeson.decode (BL.fromStrict bytes) :: Maybe Aeson.Object of
+    Just obj -> do
+      case validateStrict obj of
+        Left err -> pure (Left err)
+        Right () ->
+          case Aeson.eitherDecodeStrict bytes of
+            Right (PersistenceEnvelope _ ss) -> pure (Right ss)
+            Left e -> pure (Left e)
+    Nothing ->
+      pure (Left "strict_decode_failed_to_parse_json_object")
 
 loadStateRevisionDirect :: NSQL.Database -> Text -> IO Int
 loadStateRevisionDirect db sessionId = do

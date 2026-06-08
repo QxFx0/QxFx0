@@ -16,6 +16,7 @@ license:       MIT
 extra-doc-files: CHANGELOG.md
 data-files:
   migrations/*.sql
+  resources/config/*.json
   resources/lexicon/*.json
   resources/morphology/*.json
   semantics/*.nix
@@ -71,6 +72,8 @@ library
     QxFx0.Types.State.DialogueDevelopment
     QxFx0.Types.State.Perspective
     QxFx0.Types.State.SemanticCommitment
+    QxFx0.Types.Sense
+    QxFx0.Types.State.SelfState
     QxFx0.Types.State.System
     QxFx0.Types.State.Governance
     QxFx0.Types.Thresholds
@@ -85,8 +88,10 @@ library
     QxFx0.Types.RuntimeRegime
     QxFx0.Observability.Logging
     QxFx0.Observability.Metrics
+    QxFx0.Observability.TraceAnalysis
     QxFx0.ExceptionPolicy
     QxFx0.Self.Types
+    QxFx0.Self.ConfigLoad
     QxFx0.Self.Blanket
     QxFx0.Self.Conatus
     QxFx0.Self.Invariants
@@ -96,6 +101,9 @@ library
     QxFx0.Self.Deliberation
     QxFx0.Self.Essence
     QxFx0.Self.Perspective
+    QxFx0.Self.AdaptivePosition
+    QxFx0.Self.FamilyTargets
+    QxFx0.Self.MeaningDirective
     QxFx0.Learning.Need
     QxFx0.Learning.Tool
     QxFx0.Learning.Calibration
@@ -103,6 +111,7 @@ library
     QxFx0.Learning.KnowledgeTree
     QxFx0.Learning.Signal
     QxFx0.Learning.DialogueDevelopment
+    QxFx0.Semantic.Input.Model
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -116,13 +125,19 @@ library
     QxFx0.Core
     QxFx0.Core.PipelineIO
     QxFx0.Core.Guard
-    QxFx0.Core.Consciousness
+    QxFx0.Core.StanceClassifier
     QxFx0.Core.ConsciousnessLoop
     QxFx0.Core.Intuition
+    QxFx0.Core.Bayesian
+    QxFx0.Core.ContentCluster
+    QxFx0.Core.FMAR
+    QxFx0.Core.GFParityHarness
+    QxFx0.Types.Bayesian
+    QxFx0.Types.CognitiveSignals
     QxFx0.Core.PrincipledCore
     QxFx0.Core.MeaningGraph
-    QxFx0.Core.DreamDynamics
-    QxFx0.Core.Dream.Pressure
+    QxFx0.Core.TopicDrift
+    QxFx0.Core.TopicDrift.Pressure
     QxFx0.Core.TopicTransition
     QxFx0.Governance.Replay
 
@@ -140,6 +155,10 @@ library
      QxFx0.Core.R5Dynamics
     QxFx0.Core.IdentitySignal
     QxFx0.Core.IdentityGuard
+    QxFx0.Types.Admission.GenericPropositionAdmission
+    QxFx0.Types.Admission.PatternSuppressStrong
+    QxFx0.Types.Admission.PatternCapClarify
+    QxFx0.Types.Admission.PatternLowerConfidence
     QxFx0.Core.AtomContributionAdmission
     QxFx0.Core.AtomExtractionAdmission
     QxFx0.Core.AtomFindingAdmission
@@ -150,30 +169,30 @@ library
     QxFx0.Core.LexicalClusterPhraseAdmission
     QxFx0.Core.LexicalClusterPhraseDecisionAdmission
     QxFx0.Core.LexicalClusterMatchAdmission
-    QxFx0.Core.PropositionAdmission
-    QxFx0.Core.PropositionAffectiveSupportPhraseAdmission
-    QxFx0.Core.PropositionAffectiveSupportProbeAdmission
-    QxFx0.Core.PropositionComparisonPlausibilityAdmission
-    QxFx0.Core.PropositionContactAdmission
-    QxFx0.Core.PropositionConfrontAdmission
-    QxFx0.Core.PropositionConceptKnowledgeAdmission
-    QxFx0.Core.PropositionContemplativeTopicAdmission
-    QxFx0.Core.PropositionDialogueInvitationAdmission
-    QxFx0.Core.PropositionDistinctionAdmission
-    QxFx0.Core.PropositionExploratoryPromptAdmission
-    QxFx0.Core.PropositionGenerativePromptAdmission
-    QxFx0.Core.PropositionLocationFormationAdmission
-    QxFx0.Core.PropositionMisunderstandingAdmission
-    QxFx0.Core.PropositionNextStepAdmission
-    QxFx0.Core.PropositionOperationalCauseAdmission
-    QxFx0.Core.PropositionOperationalStatusAdmission
-    QxFx0.Core.PropositionPhraseDecisionAdmission
-    QxFx0.Core.PropositionPurposeAdmission
-    QxFx0.Core.PropositionRepairDirectiveAdmission
-    QxFx0.Core.PropositionSelfKnowledgeAdmission
-    QxFx0.Core.PropositionSelfStateAdmission
-    QxFx0.Core.PropositionSystemLogicAdmission
-    QxFx0.Core.PropositionWorldCauseAdmission
+    QxFx0.Types.Admission.PropositionAdmission
+    QxFx0.Types.Admission.PropositionAffectiveSupportPhraseAdmission
+    QxFx0.Types.Admission.PropositionAffectiveSupportProbeAdmission
+    QxFx0.Types.Admission.PropositionComparisonPlausibilityAdmission
+    QxFx0.Types.Admission.PropositionContactAdmission
+    QxFx0.Types.Admission.PropositionConfrontAdmission
+    QxFx0.Types.Admission.PropositionConceptKnowledgeAdmission
+    QxFx0.Types.Admission.PropositionContemplativeTopicAdmission
+    QxFx0.Types.Admission.PropositionDialogueInvitationAdmission
+    QxFx0.Types.Admission.PropositionDistinctionAdmission
+    QxFx0.Types.Admission.PropositionExploratoryPromptAdmission
+    QxFx0.Types.Admission.PropositionGenerativePromptAdmission
+    QxFx0.Types.Admission.PropositionLocationFormationAdmission
+    QxFx0.Types.Admission.PropositionMisunderstandingAdmission
+    QxFx0.Types.Admission.PropositionNextStepAdmission
+    QxFx0.Types.Admission.PropositionOperationalCauseAdmission
+    QxFx0.Types.Admission.PropositionOperationalStatusAdmission
+    QxFx0.Types.Admission.PropositionPhraseDecisionAdmission
+    QxFx0.Types.Admission.PropositionPurposeAdmission
+    QxFx0.Types.Admission.PropositionRepairDirectiveAdmission
+    QxFx0.Types.Admission.PropositionSelfKnowledgeAdmission
+    QxFx0.Types.Admission.PropositionSelfStateAdmission
+    QxFx0.Types.Admission.PropositionSystemLogicAdmission
+    QxFx0.Types.Admission.PropositionWorldCauseAdmission
     QxFx0.Core.TurnPipeline.Finalize.Projection
     QxFx0.Core.RouteHintAdmission
     QxFx0.Core.SemanticContributionAdmission
@@ -181,6 +200,8 @@ library
     QxFx0.Core.SemanticLogicAdmission
     QxFx0.Core.SenseVectorAdmission
     QxFx0.Core.StructuralAtomAdmission
+    QxFx0.Core.ResponseContentAdmission
+    QxFx0.Core.CommitmentStoreAdmission
     QxFx0.Core.ClaimBuilder
     QxFx0.Core.Ego
     QxFx0.Core.Legitimacy
@@ -196,8 +217,7 @@ library
     QxFx0.Bridge.NixCache
     QxFx0.Bridge.SQLite
     QxFx0.Bridge.SQLite.SchemaContract
-    QxFx0.Bridge.SQLite.SchemaContractCheck
-    QxFx0.Bridge.SQLite.SchemaConsistency
+
     QxFx0.Bridge.NativeSQLite
     QxFx0.Bridge.EmbeddedSQL
     QxFx0.Bridge.EmbeddedSQLSync
@@ -205,6 +225,7 @@ library
     QxFx0.Bridge.AgdaR5
     QxFx0.Bridge.AgdaWitness
     QxFx0.Bridge.Datalog
+    QxFx0.Bridge.Datalog.Support
     QxFx0.Bridge.StatePersistence
     QxFx0.Bridge.TxStatement
     QxFx0.Bridge.ExternalLLM
@@ -216,7 +237,6 @@ library
     QxFx0.Learning.TrainingCycle
     QxFx0.Learning.GameTheory
     QxFx0.Learning.GameTheory.LP
-    QxFx0.Evaluation.ModelComparison
 
     QxFx0.CLI.Parser
     QxFx0.Semantic.Commitment
@@ -237,6 +257,12 @@ library
      QxFx0.Semantic.Embedding
      QxFx0.Semantic.Morphology
      QxFx0.Semantic.Proposition
+     QxFx0.Semantic.Proposition.Types
+     QxFx0.Semantic.Proposition.Focus
+     QxFx0.Semantic.Proposition.Semantic
+     QxFx0.Semantic.Proposition.Detection
+     QxFx0.Semantic.Proposition.Detectors
+     QxFx0.Semantic.Proposition.Parse
      QxFx0.Semantic.Sense
      QxFx0.Semantic.Sense.Extract
      QxFx0.Semantic.Sense.Adjacency
@@ -248,12 +274,14 @@ library
      QxFx0.Core.SensePlan
      QxFx0.Render.Authority
       QxFx0.Render.Dialogue
+     QxFx0.Render.FieldModulation
      QxFx0.Render.Semantic
      QxFx0.Render.Text
       QxFx0.Core.TurnPipeline.Route.Render
       QxFx0.Internal.FilePath
-    QxFx0.Internal.Process
-      QxFx0.Types.PropositionFallbackAdmission
+
+      QxFx0.Types.PropositionType
+    QxFx0.Types.PropositionFallbackAdmission
     QxFx0.Types.PropositionContactAdmission
     QxFx0.Types.PropositionConfrontAdmission
     QxFx0.Types.PropositionConceptKnowledgeAdmission
@@ -279,9 +307,7 @@ library
     QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
-    QxFx0.Core.Bayesian
-    QxFx0.Core.Spectral
-    QxFx0.Types.Bayesian
+    QxFx0.Runtime.PGFStatus
     QxFx0.Types.Thresholds.GameTheory
     QxFx0.Types.Decision.Enums
     QxFx0.Types.Decision.Enums.Support
@@ -304,10 +330,9 @@ library
     QxFx0.Types.DreamPressure
     QxFx0.Types.State.Dialogue
     QxFx0.Types.State.Semantic
-    QxFx0.Self.Perspective.Reduce
-    QxFx0.Types.Text
-    QxFx0.Types.Sense
-    QxFx0.Types.TruthContract
+     QxFx0.Self.Perspective.Reduce
+     QxFx0.Types.Text
+     QxFx0.Types.TruthContract
     QxFx0.Types.Thresholds.Types
     QxFx0.Types.Thresholds.Common
     QxFx0.Types.Thresholds.Legitimacy
@@ -327,9 +352,9 @@ library
     QxFx0.Policy.RenderLexicon
     QxFx0.Policy.Metacognition
     QxFx0.Policy.SemanticScoring
+    QxFx0.Policy.EndpointAllowlist
     QxFx0.Bridge.Datalog.Compare
     QxFx0.Bridge.Datalog.Runtime
-    QxFx0.Bridge.Datalog.Support
     QxFx0.Bridge.Datalog.Types
     QxFx0.Bridge.SQLite.Pool
     QxFx0.Bridge.SQLite.Bootstrap
@@ -353,7 +378,6 @@ library
     QxFx0.Semantic.Embedding.Support
     QxFx0.Semantic.Embedding.Fallback
     QxFx0.Semantic.Embedding.Runtime
-    QxFx0.Semantic.Input.Model
     QxFx0.Semantic.Input.Normalize
     QxFx0.Semantic.Input.GeneratedLexicon
     QxFx0.Semantic.Input.Lexicon
@@ -363,11 +387,12 @@ library
     QxFx0.Core.PipelineIO.Internal
     QxFx0.Core.PipelineIO.Operations
     QxFx0.Core.PipelineIO.Test
-    QxFx0.Core.Consciousness.Types
-    QxFx0.Core.Consciousness.Kernel
-    QxFx0.Core.Consciousness.Kernel.Init
-    QxFx0.Core.Consciousness.Kernel.Pulse
-    QxFx0.Core.Consciousness.Narrative
+    QxFx0.Core.PipelineIO.Replay
+    QxFx0.Core.StanceClassifier.Types
+    QxFx0.Core.StanceClassifier.Kernel
+    QxFx0.Core.StanceClassifier.Kernel.Init
+    QxFx0.Core.StanceClassifier.Kernel.Pulse
+    QxFx0.Core.StanceClassifier.Narrative
     QxFx0.Core.TurnPlanning.Modulation
     QxFx0.Core.TurnPlanning.Builders
     QxFx0.Core.TurnPlanning.Templates
@@ -491,13 +516,19 @@ common test-common
     Test.Suite.RegenerableDerived
     Test.Suite.PromotionFlagDiscipline
     Test.Suite.ReplayGate
+    Test.Suite.ReplayDeterminism
+    Test.Suite.AdmissionEquivalence
     Test.Suite.RussianQuality
     Test.Suite.VecProperties
+    Test.Suite.BoundedLists
     Test.Suite.EgoRead
     Test.Suite.SelfBlanket
     Test.Suite.SelfConatus
     Test.Suite.SelfAdjunction
     Test.Suite.SelfField
+    Test.Suite.SelfAdaptivePosition
+    Test.Suite.SelfFamilyTargets
+    Test.Suite.FMARCore
     Test.Suite.SelfSalience
     Test.Suite.SelfDeliberation
     Test.Suite.SelfEssence
@@ -506,11 +537,28 @@ common test-common
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d
     Test.Suite.LearningLoop
-    Test.Suite.TrainingCycle
-    Test.Suite.ModelComparison
-    Test.Suite.ReliabilityHardening
+     Test.Suite.TrainingCycle
+     Test.Suite.ReliabilityHardening
     Test.Suite.M5Regime
     Test.Suite.M6Witness
+    Test.Suite.DatalogSafety
+    Test.Suite.SandboxBoundary
+    Test.Suite.PGFErrorHandling
+    Test.Suite.StructuredErrors
+    Test.Suite.MemoryEpisodic
+    Test.Suite.UserModel
+    Test.Suite.CognitiveSignals
+    Test.Suite.DoubtLoop
+    Test.Suite.AffectModel
+    Test.Suite.ContentSalience
+    Test.Suite.DerivedInference
+    Test.Suite.GFParityHarness
+    Test.Suite.Observability
+    Test.Suite.TraceAnalysis
+    Test.Suite.RoundTrip
+    Test.Suite.ResponseContentAdmission
+    Test.Suite.CommitmentStoreAdmission
+    Test.Suite.CommitmentQuarantine
 
 test-suite qxfx0-test-unit
   import:        test-common

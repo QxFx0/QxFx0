@@ -11,6 +11,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     Modifier ;
     Relation ;
     Mechanism ;
+    ActTopic ;
 
   fun
     NumSg : GfNumber ;
@@ -50,6 +51,14 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
 
     RelIdentity : Relation ;
     MechParse   : Mechanism ;
+
+    ActAnswer    : ActTopic ;
+    ActQuestion  : ActTopic ;
+    ActTopicTerm : ActTopic ;
+    ActProject   : ActTopic ;
+    ActResult    : ActTopic ;
+
+    MoveActOnTopic : ActTopic -> Move ;
 
     ApplyStanceTentative : Move -> Move ;
     ApplyStanceFirm      : Move -> Move ;

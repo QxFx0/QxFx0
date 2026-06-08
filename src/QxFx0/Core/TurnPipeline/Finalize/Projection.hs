@@ -16,8 +16,11 @@ import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Core.Dream.Pressure (buildDreamOutcome)
+import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
+import QxFx0.Core.FMAR (FmarMode(..))
+import QxFx0.Core.TopicDrift.Pressure (buildDreamOutcome)
 import QxFx0.Core.Observability
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Core.TruthContract
   ( normalizedReplayProvenanceStatus
   , replayProvenanceStatusForOutcome
@@ -47,14 +50,22 @@ import QxFx0.Self.Essence
   , renderCommitmentTrigger
   , renderEssenceMode
   )
-import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicEvent(..), EpisodicQuery, EpisodicId, ReuseAnnotation)
+import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicEvent(..), EpisodicQuery, EpisodicId, ReuseAnnotation, episodicRecallActive, recallForTrace)
 import QxFx0.Self.Perspective (buildActivePerspectiveProjections)
 import QxFx0.Self.Salience (Salience(..), renderSalienceDriver, svSalience)
+import QxFx0.Self.Field
+  ( fieldCounterfactual, fieldConfidence, unCounterfactual, unFieldConfidence
+  , fieldAtmosphere, atmosphereValence, atmosphereArousal, affectDecoupledActive )
+import QxFx0.Core.Bayesian (maxBelief, dominantIntent, userModelActive)
+import QxFx0.Semantic.Logic (derivedInferenceActive, deriveAtoms)
+import QxFx0.Core.ContentCluster (computeContentSaliency, contentSalienceActive)
+import QxFx0.Types.CognitiveSignals (CognitiveSignals)
+import qualified QxFx0.Types.CognitiveSignals as CS
 import QxFx0.Types
 import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
-import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion)
-import QxFx0.Types.State.SemanticCommitment (scsActive)
+import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
+import QxFx0.Types.State.SemanticCommitment (scsActive, scsQuarantine)
 import qualified Data.HashMap.Strict as HashMap
 import QxFx0.Types.Thresholds
   ( LegitimacyStatus(..)
@@ -69,19 +80,34 @@ import QxFx0.Types.Thresholds
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience = svSalience . tiSelfVerdict
 
+-- | WP-S: compute the shared derived-signal bundle once. The single point
+-- where counterfactual entropy, field confidence, shadow disagreement, and the
+-- user-model posterior peak are derived; WP-D / WP-E read this rather than
+-- re-deriving from 'Field' / shadow status / posterior independently.
+buildCognitiveSignals :: TurnInput -> TurnPlan -> SystemState -> CognitiveSignals
+buildCognitiveSignals ti tp nextSs = CS.CognitiveSignals
+  { CS.csCounterfactualEntropy = unCounterfactual (fieldCounterfactual (tiField ti))
+  , CS.csFieldConfidence       = unFieldConfidence (fieldConfidence (tiField ti))
+  , CS.csShadowDisagreement    = tpShadowGateTriggered tp
+  , CS.csMaxPosterior          = maxBelief (ssUserModel nextSs)
+  , CS.csContentSaliency       = computeContentSaliency (ssMeaningGraph nextSs)
+  }
+
 buildTurnProjection
   :: Text
   -> Text
   -> Text
   -> Bool
   -> Bool
+  -> FmarMode
   -> SystemState
   -> TurnInput
   -> TurnSignals
   -> TurnPlan
   -> TurnArtifacts
+  -> CommitmentStoreAdmissionDecision
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled nextSs ti ts tp ta =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -131,9 +157,34 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           Nothing ->
             (Nothing, Nothing, [])
       traceSalience = turnInputSalience ti
-      postEssence = ssEssence nextSs
-      perspectiveProjections = buildActivePerspectiveProjections (ssPerspectiveRegistry nextSs)
+      postEssence = selfEssence (ssSelfState nextSs)
+      perspectiveProjections = buildActivePerspectiveProjections (selfPerspectiveRegistry (ssSelfState nextSs))
       learningVerdict = deriveLearningReplayVerdict nextSs ta
+      -- P8: Audit trail visibility fields
+      doubtScore = if tiDoubtScore ti > 0 then Just (tiDoubtScore ti) else Nothing
+      episodicRetrievalCount = if episodicRecallActive && not (null (tiRetrievedEpisodes ti))
+                                 then Just (length (tiRetrievedEpisodes ti))
+                                 else Nothing
+      contentSaliencyDominantCluster = if contentSalienceActive
+                                         then Just 0  -- Placeholder: dominant cluster from csContentSaliency
+                                         else Nothing
+      moodValence = Just (atmosphereValence (fieldAtmosphere (tiField ti)))
+      moodArousal = Just (atmosphereArousal (fieldAtmosphere (tiField ti)))
+      affectDecoupled = affectDecoupledActive
+      persistentMood = ssMood nextSs
+      (userModelTopIntent, userModelConfidence) =
+        case dominantIntent (ssUserModel nextSs) of
+          Just intent | userModelActive ->
+            let intentText = T.pack (show intent)
+                confidence = maxBelief (ssUserModel nextSs)
+            in (Just intentText, Just confidence)
+          _ -> (Nothing, Nothing)
+      derivedInferenceCount = if derivedInferenceActive
+                                then Just (length (deriveAtoms (asAtoms (tiAtomSet ti))))
+                                else Nothing
+      familyDivergenceOccurred = if rrFamilyDivergenceActive defaultRuntimeRegime
+                                   then Just (tpPreShadowFamily tp /= tpFamily tp)
+                                   else Nothing
       (modeTag, committedFlag, angst, triggerTag) =
         case postEssence of
           EssenceUncommitted t ->
@@ -261,13 +312,51 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcEpisodicEncoding = case ssEpisodic nextSs of
               Just store -> map eeId (foldr (:) [] (Seq.reverse (Seq.take 2 (esEvents store))))
               Nothing    -> []
-          , trcEpisodicRetrieval = Nothing
+          , trcEpisodicRetrieval =
+              if episodicRecallActive
+                then recallForTrace (ssEpisodic nextSs)
+                else Nothing
           , trcEpisodicForgetting = (0, Nothing)
           , trcRegimeVersion = rrMathVersion defaultRuntimeRegime
           , trcFamilyDivergenceActive = rrFamilyDivergenceActive defaultRuntimeRegime
-          , trcSemanticCommitmentCount = case ssSemanticCommitments nextSs of
-              Nothing    -> 0
-              Just store -> HashMap.size (scsActive store)
+           , trcSemanticCommitmentCount = case ssSemanticCommitments nextSs of
+               Nothing    -> 0
+               Just store -> HashMap.size (scsActive store)
+           , trcQuarantinedCommitmentCount = case ssSemanticCommitments nextSs of
+               Nothing    -> 0
+               Just store -> HashMap.size (scsQuarantine store)
+           , trcCommitmentStoreDecision = commitDecision
+          , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
+          , trcDoubtScore = doubtScore
+          , trcEpisodicRetrievalCount = episodicRetrievalCount
+          , trcContentSaliencyDominantCluster = contentSaliencyDominantCluster
+          , trcMoodValence = moodValence
+          , trcMoodArousal = moodArousal
+          , trcAffectDecoupled = affectDecoupled
+          , trcMood = persistentMood
+          , trcUserModelTopIntent = userModelTopIntent
+          , trcUserModelConfidence = userModelConfidence
+          , trcDerivedInferenceCount = derivedInferenceCount
+          , trcFamilyDivergenceOccurred = familyDivergenceOccurred
+          , trcFmarDetectorFamily = mdDetectorFamily <$> tpFmarDirective tp
+          , trcFmarFamily = mdFamily <$> tpFmarDirective tp
+          , trcFmarFamiliesMatch =
+              (\d -> mdDetectorFamily d == mdFamily d) <$> tpFmarDirective tp
+          , trcFmarFieldDistance = mdFieldDistance <$> tpFmarDirective tp
+          , trcFmarMode = case fmarMode of
+              FmarOff -> Nothing
+              _      -> Just fmarMode
+          , trcFamilyDerivationChain = tpFamilyDerivationChain tp
+          , trcGenerationTrace = taGenerationTrace ta
+          -- R4: read the live turn regime, not the static default, so replay
+          -- reflects the morphology path actually used this turn.
+          -- (Note: 'trcRegimeVersion'/'trcFamilyDivergenceActive' above still
+          -- read defaultRuntimeRegime — same latent issue, left for a separate
+          -- pass to avoid changing math-version semantics here.)
+          , trcMorphologyVersion = if rrRglMorphologyActive (ssCurrentRegime nextSs) then 1 else 0
+          , trcEffectSnapshot = Just EffectSnapshot
+              { esApiHealthy = tsApiHealthy ts
+              }
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

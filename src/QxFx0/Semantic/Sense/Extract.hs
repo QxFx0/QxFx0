@@ -74,13 +74,12 @@ discourseAxis fn = case fn of
 
 inferOperator :: UtteranceSemanticFrame -> SenseOperator
 inferOperator frame =
-  case T.toLower (irhTag (usfRouteHint frame)) of
-    "concept_knowledge" -> OpDefine
-    "world_cause" -> OpExplainCause
-    "comparison_plausibility" -> OpDistinguish
-    "comparison_relation" -> OpDistinguish
-    "misunderstanding" -> OpRepair
-    "boundary_command" -> OpRepair
-    "next_step" -> OpNextStep
+  case irhTag (usfRouteHint frame) of
+    TagConceptKnowledge -> OpDefine
+    TagWorldCause -> OpExplainCause
+    TagComparisonRelation -> OpDistinguish
+    TagMisunderstanding -> OpRepair
+    TagBoundaryCommand -> OpRepair
+    TagNextStep -> OpNextStep
     _ | usfSpeechAct frame == ActAsk -> OpClarify
       | otherwise -> OpGround

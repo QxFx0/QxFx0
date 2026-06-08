@@ -9,9 +9,11 @@ module QxFx0.Core.EarlyFamilyAdmission
   , admitEarlyFamilyRecommendation
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
+import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Types.Admission.PatternCapClarify
+  ( CapClarifyConfig(..), admitByCapClarify )
 
 data EarlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
   { efaiTruthContractStatus :: !TruthContractStatus
@@ -29,20 +31,26 @@ data AdmittedEarlyFamily = AdmittedEarlyFamily
   , aefDecision :: !EarlyFamilyAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitEarlyFamilyRecommendation :: EarlyFamilyAdmissionInput -> CanonicalMoveFamily -> InputPropositionFrame -> AdmittedEarlyFamily
-admitEarlyFamilyRecommendation input family frame
-  | not (earlyFamilyAdmissionInScope frame) = AdmittedEarlyFamily family EfdAdmitRaw
-  | efaiConatusGateFired input && not (familyAlreadyWeak family) = AdmittedEarlyFamily CMClarify EfdCapClarify
-  | not (truthContractIsAuthoritative (efaiTruthContractStatus input))
-      && not (familyAlreadyWeak family) = AdmittedEarlyFamily CMClarify EfdCapClarify
-  | efaiConatusGateFired input || not (truthContractIsAuthoritative (efaiTruthContractStatus input)) =
-      AdmittedEarlyFamily family EfdPreserveAmbiguous
-  | otherwise = AdmittedEarlyFamily family EfdAdmitRaw
-
 familyAlreadyWeak :: CanonicalMoveFamily -> Bool
 familyAlreadyWeak family = family `elem` [CMClarify, CMRepair, CMAnchor, CMContact]
 
 earlyFamilyAdmissionInScope :: InputPropositionFrame -> Bool
 earlyFamilyAdmissionInScope frame =
-  ipfPropositionType frame == "SelfStateQ"
+  ipfPropositionType frame == SelfStateQ
     && ipfConfidence frame < parserHighConfidenceThreshold
+
+admitEarlyFamilyRecommendation :: EarlyFamilyAdmissionInput -> CanonicalMoveFamily -> InputPropositionFrame -> AdmittedEarlyFamily
+admitEarlyFamilyRecommendation input family frame =
+  admitByCapClarify config input family
+  where
+    config = CapClarifyConfig
+      { cccGetTruthContract = efaiTruthContractStatus
+      , cccConatusFired = efaiConatusGateFired
+      , cccInScope = \_ _ -> earlyFamilyAdmissionInScope frame
+      , cccAllWeak = familyAlreadyWeak
+      , cccCapDat = \_ -> CMClarify
+      , cccBuildAdmitted = \_ _ proc dec -> AdmittedEarlyFamily proc dec
+      , cccDecisionAdmit = EfdAdmitRaw
+      , cccDecisionPreserve = EfdPreserveAmbiguous
+      , cccDecisionCap = EfdCapClarify
+      }

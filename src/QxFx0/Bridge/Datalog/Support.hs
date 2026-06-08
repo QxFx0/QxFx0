@@ -9,6 +9,7 @@ module QxFx0.Bridge.Datalog.Support
   , buildShadowSnapshot
   , parseShadowOutput
   , compactDiagnostic
+  , escapeSymbol
   ) where
 
 import Control.Exception (onException)
@@ -167,6 +168,9 @@ parseVerdictRows (row:_) = case row of
       <*> parseEnumText "clause" clauseText
       <*> parseEnumText "layer" layerText
       <*> parseEnumText "warranted" warrantedText
+      -- Shadow Datalog emits only the five surface fields; the FMAR
+      -- directive is a Haskell-side artefact and is absent here.
+      <*> pure Nothing
   _ ->
     Left ("unexpected R5Verdict row: " <> T.intercalate "|" row)
 
@@ -201,14 +205,14 @@ escapeSymbol =
   T.concatMap $ \ch -> case ch of
     '\\' -> "\\\\"
     '"' -> "\\\""
-    '(' -> "_"
-    ')' -> "_"
-    ';' -> "_"
-    '.' -> "_"
-    '%' -> "_"
-    '\n' -> " "
-    '\r' -> " "
-    '\t' -> " "
+    '(' -> "\\("
+    ')' -> "\\)"
+    '.' -> "\\."
+    '%' -> "\\%"
+    '\n' -> "\\n"
+    '\r' -> "\\r"
+    '\t' -> "\\t"
+    '\0' -> "\\0"
     _ -> T.singleton ch
 
 compactDiagnostic :: Text -> Text

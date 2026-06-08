@@ -1,5 +1,7 @@
 # Python dependencies for CI scripts and lexicon/morphology tooling.
 # Runtime production services do not import these modules directly.
+# Pinned to exact versions for reproducible artifact generation (X6).
+# See docs/specs/cognitive-and-substrate-roadmap-v3.1.md §7 X6.
 
-pymorphy3>=2.0,<3.0
-spacy>=3.7,<4.0
+pymorphy3==2.0.6
+spacy==3.8.13

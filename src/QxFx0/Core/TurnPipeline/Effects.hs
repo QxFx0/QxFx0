@@ -12,6 +12,7 @@ module QxFx0.Core.TurnPipeline.Effects
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence
   , ShadowSnapshotId
@@ -33,7 +34,7 @@ import QxFx0.Semantic.Logic (runSemanticLogic)
 import QxFx0.Semantic.Proposition (parsePropositionWithFrame)
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
-import QxFx0.Core.Consciousness (ConsciousnessNarrative)
+import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Types.SemanticConfig (SemanticConfig)
@@ -49,6 +50,8 @@ import QxFx0.Self.Field
   , computeConsolidation
   , computeCounterfactual
   , computeAtmosphere
+  , computeAtmosphereDecoupled
+  , affectDecoupledActive
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Salience
@@ -57,6 +60,7 @@ import QxFx0.Self.Salience
   , computeSelfVerdict
   , conatusGateFires
   )
+import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from Spectral, WP-I Tier-0)
 import QxFx0.Self.Essence (Essence)
 import QxFx0.Learning.Tool (ExternalTool)
 import QxFx0.Learning.Need (LearningNeed)
@@ -77,7 +81,7 @@ import QxFx0.Core.InterpretationAdmission
   , AdmittedInterpretation(..)
   , admitInterpretationCandidate
   )
-import QxFx0.Core.PropositionAdmission
+import QxFx0.Types.Admission.PropositionAdmission
   ( PropositionAdmissionInput(..)
   , AdmittedPropositionFrame(..)
   , admitPropositionFrame
@@ -359,13 +363,20 @@ buildPrepareEffectPlan ss input currentTime =
       -- Phase 7: populate four of five Field components via
       -- the calibrated 'FieldHeuristics' compute functions.
       -- 'fieldConfidence' is derived below.
-      fieldHeuristics = ssFieldHeuristics ss
+      fieldHeuristics = selfFieldHeuristics (ssSelfState ss)
       preparedField0 = emptyField
         { fieldResonance      = mkResonance resonance
-        , fieldAtmosphere     = computeAtmosphere fieldHeuristics
-                                  (egoAgency (ssEgo ss))
-                                  (egoTension (ssEgo ss))
-                                  (obsLastLegitimacyScore (ssObservability ss))
+        , fieldAtmosphere     =
+            if affectDecoupledActive
+              then computeAtmosphereDecoupled fieldHeuristics
+                     (egoAgency (ssEgo ss))
+                     (egoTension (ssEgo ss))
+                     (obsLastLegitimacyScore (ssObservability ss))
+                     resonance
+              else computeAtmosphere fieldHeuristics
+                     (egoAgency (ssEgo ss))
+                     (egoTension (ssEgo ss))
+                     (obsLastLegitimacyScore (ssObservability ss))
         , fieldConsolidation  = computeConsolidation fieldHeuristics
                                   (ssRecentNarrativeSuccess ss)
                                   (not (T.null bestTopic) && bestTopic == ssLastTopic ss)
@@ -376,7 +387,8 @@ buildPrepareEffectPlan ss input currentTime =
       preparedField = preparedField0
         { fieldConfidence = deriveFieldConfidence preparedField0
         }
-      selfVerdict = computeSelfVerdict (ssSalienceWeights ss) conatusEnergy preparedField
+      contentSaliency = computeContentSaliency (ssMeaningGraph ss)  -- WP-C
+      selfVerdict = computeSelfVerdict (selfSalienceWeights (ssSelfState ss)) conatusEnergy preparedField contentSaliency
       commitmentAdmissionInput = CommitmentAdmissionInput
         { caiTruthContractStatus = ssTruthContractStatus ss
         , caiConatusGateFired = conatusGateFired
@@ -475,7 +487,7 @@ buildPrepareEffectPlan ss input currentTime =
        , psDialogueCommitmentLedger = dialogueLedger
       , psDialoguePhase = dialoguePhase
       , psTruthContractStatus = ssTruthContractStatus ss
-      , psEssence = ssEssence ss
+      , psEssence = selfEssence (ssSelfState ss)
       }
   in PrepareEffectPlan
       { pepStatic = static
@@ -483,9 +495,9 @@ buildPrepareEffectPlan ss input currentTime =
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
       , pepConsciousnessRequest =
-          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy (ssSalienceWeights ss)
+          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy (selfSalienceWeights (ssSelfState ss))
       , pepIntuitionRequest =
-          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy (ssSalienceWeights ss) (ssSemanticConfig ss)
+          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy (selfSalienceWeights (ssSelfState ss)) (ssSemanticConfig ss)
       , pepApiHealthRequest = PrepareReqApiHealth
       }
   where

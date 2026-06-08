@@ -17,10 +17,13 @@ import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 import Control.Exception (finally, mask, mask_, onException, throwIO)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Map.Strict as Map
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(PersistenceTxError, SQLiteError)
+  ( QxFx0Exception(PersistenceTxError, SQLiteErrorStructured)
+  , SQLiteErrorDetails(..)
   , catchIO
+  , mkSQLiteError
   , tryAsync
   , tryQxFx0
   , throwQxFx0
@@ -83,7 +86,7 @@ withDB path action = do
 renderDbActionFailure :: QxFx0Exception -> Text
 renderDbActionFailure ex =
   case ex of
-    SQLiteError msg -> "db action failed: " <> msg
+    SQLiteErrorStructured details -> "db action failed: " <> sedErrorCode details
     PersistenceTxError stage msg ->
       "db action failed: stage=" <> T.pack (show stage) <> ": " <> msg
     _ -> "db action failed"
@@ -95,10 +98,10 @@ withPooledDB pool action = mask $ \restore -> do
     case mConns of
       Nothing ->
         throwQxFx0
-          (SQLiteError
-            ("timed out waiting for SQLite pool connection (pool_size="
-              <> T.pack (show (poolSize pool))
-              <> ")"))
+          (mkSQLiteError
+            "pool_acquire"
+            "TIMEOUT"
+            (Map.singleton "pool_size" (T.pack (show (poolSize pool)))))
       Just available -> pure available
   withConnections restore conns
   where
@@ -147,7 +150,7 @@ openInitializedConnection path = do
   mDb <- NSQL.open path
   case mDb of
     Left err ->
-      throwQxFx0 (SQLiteError err)
+      throwQxFx0 (mkSQLiteError "open" err Map.empty)
     Right db ->
       (do
           execOrThrow db "PRAGMA journal_mode=WAL;"
@@ -167,5 +170,5 @@ execOrThrow db sql = do
   case result of
     Left err ->
       throwQxFx0
-        (SQLiteError ("sqlite exec failed for `" <> sql <> "`: " <> err))
+        (mkSQLiteError "exec" err (Map.singleton "sql" sql))
     Right _ -> pure ()

@@ -12,12 +12,14 @@ module QxFx0.Types.Domain.R5
   , SemanticLayer(..)
   , WarrantedMoveMode(..)
   , R5Verdict(..)
+  , MeaningDirective(..)
   , R5CoreProfile(..)
   , R5PolicyProfile(..)
   , R5EvaluationContext(..)
   , defaultR5CoreProfile
   , defaultR5PolicyProfile
   , mkVerdict
+  , mkVerdictWithDirective
   , forceForFamily
   , clauseFormForIF
   , layerForFamily
@@ -34,10 +36,13 @@ import Data.Aeson
   , object
   , withObject
   , (.:)
+  , (.:?)
   , (.=)
   )
 import GHC.Generics (Generic)
 import Data.Text (Text)
+
+import QxFx0.Self.Field (Field)
 
 data CanonicalMoveFamily
   = CMGround | CMDefine | CMDistinguish | CMReflect | CMDescribe
@@ -102,6 +107,10 @@ data R5Verdict = R5Verdict
   , r5Clause :: !ClauseForm
   , r5Layer :: !SemanticLayer
   , r5Warranted :: !WarrantedMoveMode
+  , r5Directive :: !(Maybe MeaningDirective)
+    -- ^ FMAR directive. 'Nothing' on the static (pre-FMAR) path; populated
+    -- when FMAR is active. Nullable so legacy construction and legacy JSON
+    -- round-trip unchanged.
   } deriving stock (Eq, Ord, Show, Read, Generic)
     deriving anyclass (NFData)
 
@@ -113,6 +122,7 @@ instance ToJSON R5Verdict where
       , "clause" .= r5Clause r5
       , "layer" .= r5Layer r5
       , "warranted" .= r5Warranted r5
+      , "directive" .= r5Directive r5
       ]
 
 instance FromJSON R5Verdict where
@@ -123,6 +133,35 @@ instance FromJSON R5Verdict where
       <*> o .: "clause"
       <*> o .: "layer"
       <*> o .: "warranted"
+      <*> o .:? "directive"
+
+-- | The FMAR directive attached to an 'R5Verdict'. Defined here (rather than
+-- in @QxFx0.Self.MeaningDirective@) to avoid a module import cycle: this type
+-- needs the move-family enums above, and 'R5Verdict' needs this type.
+-- 'QxFx0.Self.MeaningDirective' re-exports it under the Self-layer name.
+data MeaningDirective = MeaningDirective
+  { mdFamily            :: !CanonicalMoveFamily
+    -- ^ Final family after FMAR + Conatus gate + rescue.
+  , mdDetectorFamily    :: !CanonicalMoveFamily
+    -- ^ Keyword-detector recommendation (shadow-mode comparison baseline).
+  , mdFieldDelta        :: !Field
+    -- ^ @targetField(mdFamily) - currentField@; seeds tone-variant selection.
+  , mdForce             :: !IllocutionaryForce
+  , mdClause            :: !ClauseForm
+  , mdLayer             :: !SemanticLayer
+  , mdWarranted         :: !WarrantedMoveMode
+  , mdConatusGateOk     :: !Bool
+    -- ^ Did the Conatus gate permit the FMAR choice (True) or veto it (False)?
+  , mdRescueUsed        :: !Bool
+    -- ^ Was the Conatus-rescue selection invoked?
+  , mdFieldDistance     :: !Double
+    -- ^ Distance from current position to the chosen family's target Field.
+  , mdAbstractionBudget :: !Int
+    -- ^ Repurposed from the former CoreDirective; carried for the renderer.
+  , mdMaxWordsHint      :: !Int
+    -- ^ Repurposed from the former CoreDirective; carried for the renderer.
+  } deriving stock (Eq, Ord, Read, Show, Generic)
+    deriving anyclass (NFData, FromJSON, ToJSON)
 
 data R5CoreProfile = R5CoreProfile
   { r5cVersionId :: !Int
@@ -241,4 +280,20 @@ mkVerdict fam =
     , r5Clause = clauseFormForIF (forceForFamily fam)
     , r5Layer = layerForFamily fam
     , r5Warranted = warrantedForFamily fam
+    , r5Directive = Nothing
     }
+
+-- | Build a verdict carrying an FMAR 'MeaningDirective'. The verdict's
+-- surface fields are derived from the directive's final family, so the
+-- verdict stays internally consistent with the FMAR decision.
+mkVerdictWithDirective :: MeaningDirective -> R5Verdict
+mkVerdictWithDirective directive =
+  let fam = mdFamily directive
+   in R5Verdict
+        { r5Family = fam
+        , r5Force = forceForFamily fam
+        , r5Clause = clauseFormForIF (forceForFamily fam)
+        , r5Layer = layerForFamily fam
+        , r5Warranted = warrantedForFamily fam
+        , r5Directive = Just directive
+        }

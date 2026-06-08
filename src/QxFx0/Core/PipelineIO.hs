@@ -8,6 +8,7 @@ module QxFx0.Core.PipelineIO
   , TestPipelineConfig(..)
   , defaultTestPipelineConfig
   , mkTestPipelineIO
+  , mkReplayPipelineIO
   , pipelineRuntimeMode
   , pipelineRuntimeModeText
   , pipelineShadowPolicy
@@ -61,4 +62,7 @@ import QxFx0.Core.PipelineIO.Test
   ( TestPipelineConfig(..)
   , defaultTestPipelineConfig
   , mkTestPipelineIO
+  )
+import QxFx0.Core.PipelineIO.Replay
+  ( mkReplayPipelineIO
   )

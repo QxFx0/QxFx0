@@ -19,6 +19,7 @@ import QxFx0.Self.Essence
   , etWitnesses
   )
 import QxFx0.Types (SystemState(..))
+import QxFx0.Types.State.SelfState (SelfState(..))
 
 import qualified QxFx0.Runtime as Runtime
   ( Session(..)
@@ -58,10 +59,10 @@ runLongSessionFixture filename = do
                 assertFailure ("turn " ++ show turnIdx ++ " raised: " ++ show err)
               Right (sess', _) -> do
                 let ss = Runtime.sessSystemState sess'
-                    angst = case ssEssence ss of
+                    angst = case selfEssence (ssSelfState ss) of
                               EssenceUncommitted t -> etAngstLevel t
                               EssenceCommitted t _ -> etAngstLevel t
-                    wits  = case ssEssence ss of
+                    wits  = case selfEssence (ssSelfState ss) of
                               EssenceUncommitted t -> length (etWitnesses t)
                               EssenceCommitted t _ -> length (etWitnesses t)
                 assertBool ("angst out of [0,1] at turn " ++ show turnIdx)
@@ -70,7 +71,7 @@ runLongSessionFixture filename = do
                   (wits == turnIdx)
                 pure (turnIdx + 1, sess')
       (_, finalSession) <- foldM step (1, session0) inputs
-      let finalAngst = case ssEssence (Runtime.sessSystemState finalSession) of
+      let finalAngst = case selfEssence (ssSelfState (Runtime.sessSystemState finalSession)) of
                          EssenceUncommitted t -> etAngstLevel t
                          EssenceCommitted t _ -> etAngstLevel t
       assertBool "final angst must be non-negative" (finalAngst >= 0.0)

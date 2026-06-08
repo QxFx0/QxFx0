@@ -230,7 +230,7 @@ the HTTP sidecar) and never reloaded without a restart.
 
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
-| `QXFX0_GF_RUNTIME` | boolean | `1` | Enable GF linearization pipeline. `0` skips GF entirely. |
+| `QXFX0_GF_RUNTIME` | boolean | `0` | Enable in-process PGF linearization pipeline. Default off; set to `1` to activate. When off, the Haskell rule-based fallback (`linearizeClaimAstRus`) is used. |
 | `QXFX0_GF_LANG` | string | `QxFx0SyntaxRus` | PGF grammar module name for the target language. |
 | `QXFX0_GF_PGF_PATH` | path | auto-resolved | Explicit path to compiled `.pgf` binary. |
 | `QXFX0_WARN_MORPHOLOGY_FALLBACK` | boolean | (infra) | Emit warnings when morphology falls back to heuristic stems. |

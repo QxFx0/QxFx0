@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS runtime_sessions (
   last_active TEXT NOT NULL DEFAULT (datetime('now')),
   agency REAL NOT NULL DEFAULT 0.5,
   tension REAL NOT NULL DEFAULT 0.3,
-  status TEXT NOT NULL DEFAULT 'active'
+  status TEXT NOT NULL DEFAULT 'active',
+  state_revision INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS dialogue_state (

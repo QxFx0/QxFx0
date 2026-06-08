@@ -8,6 +8,7 @@ module Test.Suite.TurnPipelineProtocol
   ) where
 
 import Control.Concurrent (threadDelay)
+
 import Control.Exception (try)
 import Control.Monad (foldM, unless)
 import Data.Aeson (encode, decode)
@@ -31,7 +32,10 @@ import Test.QuickCheck
   , stdArgs
   )
 
+import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types
+import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Semantic.Input.Model (SemanticTag(..))
 import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
 import QxFx0.Types.Thresholds (blockedConceptsRetentionLimit, parserLowConfidenceThreshold)
 import QxFx0.Core.PipelineIO
@@ -106,7 +110,7 @@ import QxFx0.Core.SemanticFrameAdmission
   , admittedSemanticFrameRouteTag
   , admittedSemanticFrameRouteEvidence
   )
-import QxFx0.Core.PropositionAdmission
+import QxFx0.Types.Admission.PropositionAdmission
   ( PropositionAdmissionInput(..)
   , PropositionAdmissionDecision(..)
   , AdmittedPropositionFrame(..)
@@ -310,6 +314,9 @@ import QxFx0.Learning.Guardrails
   , isQuarantineExpired
   )
 import Test.Support (withEnvVar)
+-- Authoritative-turn finalize fixture (forces canonical artifacts) for the
+-- governed perspective-commit path; the other fixtures here are local copies.
+import Test.Support.TurnPipelineFixtures (buildAuthoritativePerspectiveFinalizeFixture)
 
 turnPipelineProtocolTests :: [Test]
 turnPipelineProtocolTests =
@@ -416,8 +423,12 @@ turnPipelineProtocolTests =
      , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
      , testRuntimeDegradedUsesVisibleLocalRecovery
      , testParserLowConfidenceUsesDistinguishCandidates
-     , testRenderBlockedPersistsSafeRecoveryTrace
-     , testConatusGateFiresRecoveryConatusGate
+      , testRenderBlockedPersistsSafeRecoveryTrace
+      -- P1-1 (Phase 7): FMAR behavioral integration — FmarLive must override cascade routing
+      , testFmarLiveOverridesRouting
+      -- P1-1: empty/fresh state must NOT fire the Conatus gate (energy starts non-negative)
+      , testConatusGateDoesNotFireFromEmptyState
+      , testConatusGateFiresRecoveryConatusGate
      , testConatusGateFlagDrivesLocalRecoveryPlan
      , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
      , testConatusGradientMorphologyDominant
@@ -664,7 +675,7 @@ testBlockedConceptsRetentionIsBoundedAndDeduplicated = TestCase $
               precommitPlan = planFinalizePrecommit state tiBlocked ts tp ta
           in do
             precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-            let bundle =
+            bundle <-
                   buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
                     state
@@ -809,13 +820,13 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
     let ts = ts0 { tsNarrativeFragment = Just "narrative_override_attempt" }
         routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects strictShadowPio routePlan
-    let turnPlan = buildRouteTurnPlan (pipelineShadowPolicy strictShadowPio) ss ti ts routePlan routeResults
+    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) ss ti ts routePlan routeResults
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts turnPlan
     renderResults <- resolveRenderEffects strictShadowPio renderPlan
     let turnArtifacts = buildTurnArtifacts ss ti ts turnPlan renderPlan renderResults
         precommitPlan = planFinalizePrecommit ss ti ts turnPlan turnArtifacts
     precommitResults <- resolveFinalizePrecommit strictShadowPio precommitPlan
-    let precommitBundle =
+    precommitBundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory strictShadowPio)
             ss
@@ -825,7 +836,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
             turnArtifacts
             precommitPlan
             precommitResults
-        projection = fpbProjection precommitBundle
+    let projection = fpbProjection precommitBundle
     assertEqual "shadow unavailable should remain visible in projection" ShadowUnavailable (tqpShadowStatus projection)
     assertEqual "narrative hint must not bypass hard shadow gate" CMRepair (tqpOwnerFamily projection)
 
@@ -865,7 +876,7 @@ testAdvisoryShadowDivergenceDoesNotTriggerRecovery = TestCase $
       (not ("Признаю разрыв" `T.isInfixOf` taRendered turnArtifacts))
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
     precommitResults <- resolveFinalizePrecommit strictPio precommitPlan
-    let bundle =
+    bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory strictPio)
             ss
@@ -875,7 +886,7 @@ testAdvisoryShadowDivergenceDoesNotTriggerRecovery = TestCase $
             turnArtifacts
             precommitPlan
             precommitResults
-        projection = fpbProjection bundle
+    let projection = fpbProjection bundle
         replayTrace = tqpReplayTrace projection
     assertEqual "projection should keep the non-repair owner family"
       CMReflect
@@ -905,7 +916,7 @@ testShadowVetoAllowedWithinWindow = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger when count < max"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must increment"
@@ -933,7 +944,7 @@ testShadowVetoExhaustedAfterMax = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
     assertBool "shadow gate must be bypassed when exhausted"
       (not (tpShadowGateTriggered turnPlan))
     assertBool "shadow message must contain exhaustion telemetry"
@@ -960,7 +971,7 @@ testShadowVetoWindowResets = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger after window reset"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must reset to 1 after expiry"
@@ -1295,7 +1306,7 @@ testWorldCauseQuestionRendersGroundedExplanation = TestCase $
       "почему солнце светит?"
       CMGround
       [ "причин"
-      , "механизм локального разбора"
+      , "локальную схему"
       , "внешнем мире"
       ]
 
@@ -1404,9 +1415,9 @@ testLocationFormationQuestionRendersStructuredExplanation = TestCase $
   withDeterministicEmbedding $
     assertStructuredTurn
       "где формируется мысль?"
-      CMGround
-      [ "если говорить о мысли"
-      , "структуре связей"
+      CMReflect
+      [ "образно"
+      , "смысловая точка"
       ]
 
 testComparisonQuestionRendersStructuredDistinction :: Test
@@ -1708,7 +1719,7 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
       ("Локальный режим восстановления." `T.isInfixOf` taRendered turnArtifacts)
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
     precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-    let bundle =
+    bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
             ss
@@ -1718,13 +1729,56 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
             turnArtifacts
             precommitPlan
             precommitResults
-        replayTrace = tqpReplayTrace (fpbProjection bundle)
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
     assertEqual "degraded runtime replay trace should keep typed recovery cause"
       (Just RecoveryRuntimeDegraded)
       (trcRecoveryCause replayTrace)
     assertEqual "degraded runtime replay trace should keep typed recovery strategy"
       (Just StrategyNarrowScope)
       (trcRecoveryStrategy replayTrace)
+
+testFmarLiveOverridesRouting :: Test
+testFmarLiveOverridesRouting = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts) <- buildPreparedFixture "что такое свобода"
+    let routePlan = planRouteEffects ss ti ts
+        pio = testProtocolPipelineIO
+    routeResults <- resolveRouteEffects pio routePlan
+    let tpOff  = buildRouteTurnPlan FmarOff  (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+    case tpFmarDirective tpOff of
+      Just _  -> assertFailure "FmarOff must not produce an FMAR directive"
+      Nothing -> pure ()
+    case tpFmarDirective tpLive of
+      Nothing -> assertFailure "FmarLive must produce an FMAR directive"
+      Just _  -> pure ()
+    assertBool "FmarLive must select a different final family than FmarOff"
+      (tpFinalFamily tpOff /= tpFinalFamily tpLive)
+
+-- | An empty/fresh system state must NOT fire the Conatus gate. By design the
+-- gate trips only when @ceScalar < conatusGateThreshold@ (== 0), which requires
+-- accumulated blanket violations to drive energy negative. A fresh fixture
+-- starts with non-negative energy, so the gate stays closed and no
+-- ConatusGate-caused recovery plan is produced. (The firing path is exercised
+-- separately by 'testConatusGateFiresRecoveryConatusGate', which forces a
+-- negative energy.) This corrects an earlier premise that wrongly assumed the
+-- empty state self-triggers the gate.
+testConatusGateDoesNotFireFromEmptyState :: Test
+testConatusGateDoesNotFireFromEmptyState = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    assertBool "empty system state must NOT fire Conatus gate"
+      (not (tiConatusGateFired ti))
+    assertBool "Conatus energy must be non-negative with empty state"
+      (ceScalar (tiConatusEnergy ti) >= 0)
+    let renderPlan = planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing -> pure ()
+      Just recoveryPlan ->
+        assertBool
+          ("empty state must not produce a ConatusGate recovery plan, got: "
+            <> show (lrpCause recoveryPlan))
+          (lrpCause recoveryPlan /= RecoveryConatusGate)
 
 testConatusGateFiresRecoveryConatusGate :: Test
 testConatusGateFiresRecoveryConatusGate = TestCase $
@@ -2091,7 +2145,7 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
       (not (T.null (T.strip (taRendered turnArtifacts))))
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
     precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-    let bundle =
+    bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
             ss
@@ -2101,7 +2155,7 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
             turnArtifacts
             precommitPlan
             precommitResults
-        replayTrace = tqpReplayTrace (fpbProjection bundle)
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
     assertEqual "render-blocked replay trace should keep typed recovery cause"
       (Just RecoveryRenderBlocked)
       (trcRecoveryCause replayTrace)
@@ -2332,7 +2386,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixture rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -2348,7 +2402,7 @@ buildFinalizeFixture rawInput = do
   (ss, ti, ts, tp, ta) <- buildRenderedFixture rawInput
   let precommitPlan = planFinalizePrecommit ss ti ts tp ta
   precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-  let bundle =
+  bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
           ss
@@ -2371,7 +2425,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
   (ss, ti, ts, tp, ta) <- buildRenderedFixtureWithState startSs rawInput
   let precommitPlan = planFinalizePrecommit ss ti ts tp ta
   precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
-  let bundle =
+  bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
           ss
@@ -2400,7 +2454,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -2423,7 +2477,7 @@ strongInterpretationFrame :: InputPropositionFrame
 strongInterpretationFrame =
   emptyInputPropositionFrame
     { ipfRawText = "я сейчас устал"
-    , ipfPropositionType = "SelfStateQ"
+    , ipfPropositionType = SelfStateQ
     , ipfCanonicalFamily = CMDescribe
     , ipfConfidence = 0.92
     }
@@ -2660,7 +2714,7 @@ testConatusGatedSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
 testConstitutionAdmissibleRouteHintPreservesRawHint :: Test
 testConstitutionAdmissibleRouteHintPreservesRawHint = TestCase $ do
   let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
-      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe TagSelfState "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
       admitted = rawHint
   assertEqual "authoritative contour should admit the raw route hint"
     RhdAdmitRaw
@@ -2675,7 +2729,7 @@ testConstitutionAdmissibleRouteHintPreservesRawHint = TestCase $ do
 testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission :: Test
 testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission = TestCase $ do
   let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
-      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe TagSelfState "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
       admitted = admitRouteHint (RouteHintAdmissionInput LegacyIncompleteSurface False semanticFrameInput) (arhHint rawHint)
       rawFrame = applyAdmittedRouteHint rawHint semanticFrame
       admittedFrame = applyAdmittedRouteHint admitted semanticFrame
@@ -2693,7 +2747,7 @@ testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission = TestCase $ do
 testConatusGatedRouteHintSoftensBeforePropositionAdmission :: Test
 testConatusGatedRouteHintSoftensBeforePropositionAdmission = TestCase $ do
   let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
-      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe "self_state" "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
+      rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe TagSelfState "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
       admitted = admitRouteHint (RouteHintAdmissionInput CanonicalSurfacePreserved True semanticFrameInput) (arhHint rawHint)
       admittedFrame = applyAdmittedRouteHint admitted semanticFrame
       admittedProp = parsePropositionWithFrame semanticFrameInput admittedFrame
@@ -3800,7 +3854,7 @@ testExploratoryPromptDetected :: Test
 testExploratoryPromptDetected = TestCase $ do
   let frame = parseProposition "изучи свободу"
   assertEqual "exploratory prompt must be detected"
-    "ExploratoryPrompt" (ipfPropositionType frame)
+    ExploratoryPrompt (ipfPropositionType frame)
 
 -- | Phase 9 MVP: when learning need is active but no request strategy
 -- fires, the render plan carries an exploratory query request.
@@ -4362,7 +4416,13 @@ testPerspectiveFinalizeRecordsGovernedMutation = TestCase $
                   ]
               }
           }
-    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState startSs "это помогло"
+    -- The governed perspective contour only commits for an AUTHORITATIVE
+    -- executed turn (rebuildGovernedViews refuses a non-authoritative truth
+    -- contract by design). The executed contract is set from the turn outcome
+    -- (overwriting startSs), and input "это помогло" yields a non-authoritative
+    -- outcome — so use the authoritative fixture helper, which forces canonical
+    -- artifacts, to exercise the real commit path.
+    (bundle, _ta) <- buildAuthoritativePerspectiveFinalizeFixture startSs "это помогло"
     let nextSs = fpbNextSs bundle
     assertBool "top-level mutation log must include P4 mutation"
       (any (\r -> amrKind r == MutPerspective && amrDecision r `elem` [AdaptiveAccepted, AdaptivePromoted, AdaptiveObserved]) (ssAdaptiveMutationLog nextSs))

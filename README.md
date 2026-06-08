@@ -16,7 +16,17 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
 If you need dialogue infrastructure where "why did it do that?" has a precise answer, QxFx0 is built for that use case.
 
-## Current Status (2026-06-03)
+> **Post-render guard scope (accuracy note).** The post-render safety guard
+> (`QxFx0.Core.Guard`) has two severities. **Blocking** checks
+> (`InvariantBlock`) — empty/`...`-only output, metadata/markup leak, identity
+> drift, over-length, input-injection — divert to a hardcoded recovery surface.
+> **Advisory** checks (`InvariantWarn`) — toxic-keyword match and
+> stuck-repetition — are detected and recorded in the trace (`safety=…`) but the
+> output is **still emitted**; they do not block. Toxicity handling is therefore
+> observability, not enforcement, in the current build. Treat the guard as a
+> structural/identity circuit-breaker, not a content-moderation layer.
+
+## Current Status (2026-06-09)
 
 **Maturity**: Research-grade with production-ready core  
 **License**: MIT  
@@ -24,6 +34,9 @@ If you need dialogue infrastructure where "why did it do that?" has a precise an
 
 ### Recent Milestones
 
+- ✅ **Russian morphology (RGL)** — 20,000-lemma resource-grammar paradigms behind a single-engine resolver, zero parity gap against the lexicon
+- ✅ **Constitution-aware admission** — Truth-contract gating of response content and of commitment persistence; non-authoritative claims are quarantined and trace-visible rather than silently dropped
+- ✅ **Externalized configuration** — Character/calibration constants are tunable via JSON at runtime, with byte-identical built-in fallback (no recompilation to retune)
 - ✅ **Phase 9–10 (Essence Commitment)** — Trajectory tracking with rupture detection
 - ✅ **Phase 8 (Deliberation)** — Reconciliation framework with tone divergence
 - ✅ **Phase 6 (M6.1)** — Single-source-of-truth Conatus refactor
@@ -200,6 +213,11 @@ No Python in the runtime path. No LLM for generation. Pure determinism.
 - **Infrastructure**: Some gates require high-memory CI runners
 - **Coverage**: Russian lexicon is more complete than English
 - **Scope**: Designed for reasoning workflows, not chitchat
+- **Python tooling**: Runtime is pure Haskell (no Python on the turn path), but
+  the runtime is **data-dependent on an offline Python generation pipeline**
+  (pymorphy3 + spacy) that produces `Lexicon/Generated.hs`, GF grammars, and
+  morphology paradigms from the canonical `spec/sql/` sources. Versions are
+  pinned in `requirements.txt` for reproducible regeneration (X6).
 - **Determinism**: Not bit-for-bit (time/UUID/process scheduling vary)
 
 ## English Language Status

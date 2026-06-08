@@ -1,15 +1,19 @@
-{-# LANGUAGE DerivingStrategies, DeriveAnyClass, OverloadedStrings, BangPatterns, StrictData, DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies, DeriveAnyClass, OverloadedStrings, BangPatterns, StrictData, DeriveGeneric, TypeApplications #-}
 module QxFx0.Runtime.Health
   ( SystemHealth(..)
   , checkHealth
   , probeRuntimeReadiness
   ) where
 
+import Control.Exception (try, IOException)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (find)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>), takeDirectory)
+import System.IO.Error (isDoesNotExistError)
+import System.IO.Unsafe (unsafePerformIO)
+import qualified PGF2 as PGF
 import QxFx0.ExceptionPolicy (tryIO, tryQxFx0)
 import QxFx0.Types.Readiness
   ( AgdaVerificationStatus
@@ -59,6 +63,9 @@ data SystemHealth = SystemHealth
   , shGfMapStatus    :: !Text
   , shGfMapEntries   :: !Int
   , shGfMapIssue     :: !(Maybe Text)
+  , shPgfOk          :: !Bool
+  , shPgfStatus      :: !Text
+  , shPgfIssue       :: !(Maybe Text)
   , shNixPolicyPresent :: !Bool
   , shNixReady       :: !Bool
   , shNixIssues      :: ![Text]
@@ -91,6 +98,12 @@ data GfMapHealth = GfMapHealth
   , ghStatus  :: !Text
   , ghEntries :: !Int
   , ghIssue   :: !(Maybe Text)
+  }
+
+data PgfHealth = PgfHealth
+  { phOk     :: !Bool
+  , phStatus :: !Text
+  , phIssue  :: !(Maybe Text)
   }
 
 checkHealth :: RuntimeContext -> IO SystemHealth
@@ -132,10 +145,12 @@ mkSystemHealth :: RuntimeMode -> FilePath -> ReadinessStatus -> BackendReadiness
 mkSystemHealth runtimeMode dbPath readiness backend = do
   morphBackend <- resolveMorphBackend
   gfHealth <- loadRuntimeGfMapHealth
+  pgfHealth <- probePgfHealth
   let readinessMode = computeReadinessMode readiness
       componentOk rc = maybe False (\(_, ok, _) -> ok) (find (\(c, _, _) -> c == rc) (rsComponents readiness))
       morpOk = componentOk RcMorphology
       gfOk = ghOk gfHealth
+      pgfOk = phOk pgfHealth
       nixPolicyPresent = componentOk RcNixPolicy
       nixOk = nixPolicyPresent && brNixOperational backend
       datalogOk = componentOk RcDatalogRules && brDatalogReady backend
@@ -166,15 +181,18 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
         (if nixPolicyPresent then [] else ["nix_policy_missing"])
           ++ brNixIssues backend
       gfReadinessNote = if gfOk then Nothing else Just ("gfmap:" <> maybe "failed" id (ghIssue gfHealth))
+      pgfReadinessNote = if pgfOk then Nothing else Just ("pgf:" <> maybe "failed" id (phIssue pgfHealth))
+      allReadinessNotes = catMaybes [gfReadinessNote, pgfReadinessNote]
+        where catMaybes = foldr (\mx acc -> maybe acc (:acc) mx) []
       readinessText = case readinessMode of
-        Ready -> maybe "ready" (\note -> "not_ready:" <> note) gfReadinessNote
+        Ready -> if null allReadinessNotes then "ready" else "not_ready:" <> T.intercalate "," allReadinessNotes
         Degraded xs ->
-          case gfReadinessNote of
-            Nothing -> "degraded:" <> T.intercalate "," (map (T.pack . show) xs)
-            Just note -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ [note])
-        NotReady xs -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ maybe [] pure gfReadinessNote)
+          if null allReadinessNotes
+            then "degraded:" <> T.intercalate "," (map (T.pack . show) xs)
+            else "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ allReadinessNotes)
+        NotReady xs -> "not_ready:" <> T.intercalate "," (map (T.pack . show) xs ++ allReadinessNotes)
       strictDecisionPathOk = not strictBackendRequired || decisionPathLocalOnly
-      ready = strictReadinessOk && dbReady && schemaOk && gfOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
+      ready = strictReadinessOk && dbReady && schemaOk && gfOk && pgfOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
       degraded = ready && (readinessMode /= Ready || not embedStrictReady || not agdaOk || not datalogOk || not nixOk)
       status
         | not ready = "not_ready"
@@ -191,6 +209,9 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
     , shGfMapStatus = ghStatus gfHealth
     , shGfMapEntries = ghEntries gfHealth
     , shGfMapIssue = ghIssue gfHealth
+    , shPgfOk = pgfOk
+    , shPgfStatus = phStatus pgfHealth
+    , shPgfIssue = phIssue pgfHealth
     , shNixPolicyPresent = nixPolicyPresent
     , shNixReady = nixOk
     , shNixIssues = nixIssues
@@ -241,6 +262,50 @@ gfMapHealthFromStatus status =
       , ghEntries = 0
       , ghIssue = Just reason
       }
+
+-- | WP-H2: Boot-time PGF health probe. Attempts to load the PGF grammar
+-- to verify it's valid and accessible. This enables GF default-on when
+-- the probe succeeds.
+probePgfHealth :: IO PgfHealth
+probePgfHealth = do
+  let pgfPath = "spec/gf/QxFx0Syntax.pgf"
+  exists <- doesFileExist pgfPath
+  if not exists
+    then pure $ PgfHealth
+      { phOk = False
+      , phStatus = "missing"
+      , phIssue = Just ("pgf_file_not_found:" <> T.pack pgfPath)
+      }
+    else do
+      result <- try @IOException $ do
+        pgf <- PGF.readPGF pgfPath
+        let langCount = length (PGF.languages pgf)
+        pure langCount
+      case result of
+        Left e ->
+          if isDoesNotExistError e
+            then pure $ PgfHealth
+              { phOk = False
+              , phStatus = "missing"
+              , phIssue = Just ("pgf_file_not_found:" <> T.pack pgfPath)
+              }
+            else pure $ PgfHealth
+              { phOk = False
+              , phStatus = "load_failed"
+              , phIssue = Just ("pgf_io_error:" <> T.pack (show e))
+              }
+        Right langCount ->
+          if langCount > 0
+            then pure $ PgfHealth
+              { phOk = True
+              , phStatus = "loaded"
+              , phIssue = Nothing
+              }
+            else pure $ PgfHealth
+              { phOk = False
+              , phStatus = "invalid"
+              , phIssue = Just "pgf_no_languages"
+              }
 
 isSchemaContractOk :: SchemaContractResult -> Bool
 isSchemaContractOk (SchemaContractOk _) = True
@@ -296,3 +361,5 @@ checkExistingDatabase dbPath = do
     Left _   -> pure False
     Right (Left _) -> pure False
     Right (Right alive) -> pure alive
+
+

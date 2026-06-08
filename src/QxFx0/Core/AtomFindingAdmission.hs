@@ -8,9 +8,10 @@ module QxFx0.Core.AtomFindingAdmission
   , admitAtomFindings
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms (RawAtomFindings(..))
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data AtomFindingAdmissionInput = AtomFindingAdmissionInput
   { afaiTruthContractStatus :: !TruthContractStatus
@@ -28,21 +29,6 @@ data AdmittedAtomFindings = AdmittedAtomFindings
   , aafDecision :: !AtomFindingAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitAtomFindings :: AtomFindingAdmissionInput -> RawAtomFindings -> AdmittedAtomFindings
-admitAtomFindings input rawFindings
-  | truthContractIsAuthoritative (afaiTruthContractStatus input) =
-      AdmittedAtomFindings rawFindings rawFindings AfdAdmitRaw
-  | all (findingAlreadySafe . maTag) (rafClusterAtoms rawFindings ++ rafLexicalAtoms rawFindings) =
-      AdmittedAtomFindings rawFindings rawFindings AfdPreserveAmbiguous
-  | otherwise =
-      AdmittedAtomFindings
-        rawFindings
-        rawFindings
-          { rafClusterAtoms = filter (findingAlreadySafe . maTag) (rafClusterAtoms rawFindings)
-          , rafLexicalAtoms = filter (findingAlreadySafe . maTag) (rafLexicalAtoms rawFindings)
-          }
-        AfdSuppressStrongFindings
-
 findingAlreadySafe :: AtomTag -> Bool
 findingAlreadySafe tag =
   case tag of
@@ -53,3 +39,20 @@ findingAlreadySafe tag =
     CustomAtom _ _ -> True
     AffectiveAtom _ _ -> True
     _ -> False
+
+admitAtomFindings :: AtomFindingAdmissionInput -> RawAtomFindings -> AdmittedAtomFindings
+admitAtomFindings input rawFindings =
+  admitBySuppressStrong config input rawFindings
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = afaiTruthContractStatus
+      , sscAllSafe = \rf -> all (findingAlreadySafe . maTag) (rafClusterAtoms rf ++ rafLexicalAtoms rf)
+      , sscSuppress = \rf -> rf
+          { rafClusterAtoms = filter (findingAlreadySafe . maTag) (rafClusterAtoms rf)
+          , rafLexicalAtoms = filter (findingAlreadySafe . maTag) (rafLexicalAtoms rf)
+          }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedAtomFindings raw proc dec
+      , sscDecisionAdmit = AfdAdmitRaw
+      , sscDecisionPreserve = AfdPreserveAmbiguous
+      , sscDecisionSuppress = AfdSuppressStrongFindings
+      }

@@ -73,7 +73,8 @@ handleTurnEffect ctx request =
       pure (TurnResNixGuard status)
     TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do
       cl <- readConsciousLoop ctx
-      let salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance })
+      let contentSaliency = 0.0  -- WP-C: default for runtime handler
+          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience cl semanticInput humanTheta resonance
           currentNarrative = clLastNarrative nextLoop
@@ -81,7 +82,8 @@ handleTurnEffect ctx request =
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
     TurnReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig -> do
       intuitive <- readIntuition ctx
-      let salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance })
+      let contentSaliency = 0.0  -- WP-C: default for runtime handler
+          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (mFlash, intuitionState) =
             checkIntuitionWithInputAndSalience
               salience semanticConfig inputText resonance tension turnNumber intuitive

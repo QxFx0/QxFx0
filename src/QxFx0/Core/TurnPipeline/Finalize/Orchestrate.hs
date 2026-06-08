@@ -30,7 +30,7 @@ finalizeTurnState :: PipelineIO -> SystemState -> Text -> Int -> Text -> TurnInp
 finalizeTurnState pipelineIO systemState sessionId expectedRevision _requestId turnInput turnSignals turnPlan turnArtifacts = do
   let precommitPlan = planFinalizePrecommit systemState turnInput turnSignals turnPlan turnArtifacts
   precommitResults <- resolveFinalizePrecommit pipelineIO precommitPlan
-  let precommitBundle =
+  precommitBundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pipelineIO)
           systemState
@@ -40,7 +40,7 @@ finalizeTurnState pipelineIO systemState sessionId expectedRevision _requestId t
           turnArtifacts
           precommitPlan
           precommitResults
-      commitPlan = planFinalizeCommit sessionId systemState turnInput turnSignals turnArtifacts precommitBundle
+  let commitPlan = planFinalizeCommit sessionId systemState turnInput turnSignals turnArtifacts precommitBundle
   commitResults <- resolveFinalizeCommit pipelineIO expectedRevision commitPlan
   let rendered = RenderedTurn turnInput turnSignals turnPlan turnArtifacts
       turnResult = buildFinalizeTurnResult rendered precommitBundle commitResults

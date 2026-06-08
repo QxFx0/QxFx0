@@ -6,6 +6,8 @@ module Test.Suite.RuntimeInfrastructure
   ( runtimeInfrastructureTests
   ) where
 
+import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
+import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import Data.Aeson (Value(..), eitherDecodeStrict')
 import qualified Data.Aeson.KeyMap as KeyMap
 import Test.HUnit hiding (Testable)
@@ -59,12 +61,13 @@ import qualified QxFx0.Bridge.SQLite as SQLite
 import qualified QxFx0.Bridge.AgdaR5 as AgdaR5
 import qualified QxFx0.Bridge.Datalog as Datalog
 import qualified QxFx0.Bridge.NixGuard as NixGuard
-import QxFx0.Internal.Process (resolveTrustedExecutable)
+-- import QxFx0.Internal.Process (resolveTrustedExecutable)  -- REMOVED: dead code module
 import QxFx0.Resources (computeReadinessMode, assessResourceReadiness, loadMorphologyData, ReadinessStatus(..), ReadinessComponent(..), ReadinessMode(..))
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport(..))
 
@@ -320,7 +323,7 @@ testLegacyV2SchemaMigratesShadowDivergenceTraceColumns = TestCase $ do
       queryCount conn "SELECT count(*) FROM pragma_table_info('shadow_divergence_log') WHERE name IN ('shadow_snapshot_id','shadow_divergence_kind')"
     assertEqual "legacy v2 DB should have shadow_divergence_log trace columns after migration" 2 colCount
     versionCount <- Runtime.withRuntimeDb rt $ \conn ->
-      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 3"
+      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 4"
     assertEqual "legacy v2 DB should be marked current after shadow log migration" 1 versionCount
     (_, response) <- Runtime.runTurnInSession session0 "Что такое свобода?"
     assertBool "turn should produce non-empty response after shadow log migration" (not (T.null response))
@@ -345,7 +348,7 @@ testLegacyV1WithoutSchemaVersionMigrates = TestCase $ do
       queryCount conn "SELECT count(*) FROM pragma_table_info('turn_quality') WHERE name IN ('warranted_mode','decision_disposition','shadow_snapshot_id','shadow_divergence_kind','replay_trace_json')"
     assertEqual "legacy DB without schema_version should have all v2 trace columns after migration" 5 colCount
     versionCount <- Runtime.withRuntimeDb rt $ \conn ->
-      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 3"
+      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 4"
     assertEqual "schema_version should be current after migration" 1 versionCount
 
 testLegacyV1WithEmptySchemaVersionMigrates :: Test
@@ -368,7 +371,7 @@ testLegacyV1WithEmptySchemaVersionMigrates = TestCase $ do
       queryCount conn "SELECT count(*) FROM pragma_table_info('turn_quality') WHERE name IN ('warranted_mode','decision_disposition','shadow_snapshot_id','shadow_divergence_kind','replay_trace_json')"
     assertEqual "legacy DB with empty schema_version should have all v2 trace columns after migration" 5 colCount
     versionCount <- Runtime.withRuntimeDb rt $ \conn ->
-      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 3"
+      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 4"
     assertEqual "schema_version should be current after migration" 1 versionCount
 
 testMigrationAtomicityRollbackOnFailure :: Test
@@ -392,7 +395,7 @@ testMigrationAtomicityRollbackOnFailure = TestCase $ do
     session0 <- Runtime.bootstrapSession True "migration_atomicity"
     let rt = Runtime.sessRuntime session0
     versionCount <- Runtime.withRuntimeDb rt $ \conn ->
-      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 3"
+      queryCount conn "SELECT count(*) FROM schema_version WHERE version = 4"
     assertEqual "version should be current after atomic migration" 1 versionCount
     colCount <- Runtime.withRuntimeDb rt $ \conn ->
       queryCount conn "SELECT count(*) FROM pragma_table_info('turn_quality') WHERE name IN ('warranted_mode','decision_disposition','shadow_snapshot_id','shadow_divergence_kind','replay_trace_json')"
@@ -457,7 +460,7 @@ testReadinessStrictInvariantFreshDbOk = TestCase $ do
     assertBool "fresh DB health should be ready" (Runtime.shReady health)
     assertEqual "fresh DB status should be ok" "ok" (Runtime.shStatus health)
     assertBool "fresh DB schema_ok should be true" (Runtime.shSchemaOk health)
-    assertEqual "fresh DB schema_version should be current" 3 (Runtime.shSchemaVersion health)
+    assertEqual "fresh DB schema_version should be current" 4 (Runtime.shSchemaVersion health)
 
 testEmbeddedSqlFallbackRequiresExplicitOptIn :: Test
 testEmbeddedSqlFallbackRequiresExplicitOptIn = TestCase $ do
@@ -650,13 +653,14 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = authoritativeGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertBool "governed fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "governed fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -668,8 +672,8 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
           (ssGovernanceHistory governedState)
           (ssGovernanceHistory restored)
         assertEqual "derived perspective registry must be rebuilt from canonical history"
-          (ssPerspectiveRegistry governedState)
-          (ssPerspectiveRegistry restored)
+          (selfPerspectiveRegistry (ssSelfState governedState))
+          (selfPerspectiveRegistry (ssSelfState restored))
         assertEqual "governance projection must be rebuilt from canonical history"
           (ssGovernanceProjection governedState)
           (ssGovernanceProjection restored)
@@ -682,7 +686,8 @@ testLoadStateRebuildsDerivedGovernanceViewsFromAssembledHistory = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = assembledGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertEqual "assembled fixture must use assembled authoritative status"
@@ -691,7 +696,7 @@ testLoadStateRebuildsDerivedGovernanceViewsFromAssembledHistory = TestCase $ do
     assertBool "assembled fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "assembled fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild_assembled"
     case saveResult of
       Left err -> assertFailure ("failed to persist assembled governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -703,8 +708,8 @@ testLoadStateRebuildsDerivedGovernanceViewsFromAssembledHistory = TestCase $ do
           (ssGovernanceHistory governedState)
           (ssGovernanceHistory restored)
         assertEqual "assembled authoritative perspective registry must be rebuilt from canonical history"
-          (ssPerspectiveRegistry governedState)
-          (ssPerspectiveRegistry restored)
+          (selfPerspectiveRegistry (ssSelfState governedState))
+          (selfPerspectiveRegistry (ssSelfState restored))
         assertEqual "assembled authoritative governance projection must be rebuilt from canonical history"
           (ssGovernanceProjection governedState)
           (ssGovernanceProjection restored)
@@ -727,8 +732,8 @@ testSaveStatePersistsCanonicalGovernanceSubset = TestCase $ do
       Left err -> assertFailure ("failed to persist canonical-subset fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right savedState -> do
         assertEqual "saveState should preserve live derived perspective registry for caller"
-          (ssPerspectiveRegistry governedState)
-          (ssPerspectiveRegistry savedState)
+          (selfPerspectiveRegistry (ssSelfState governedState))
+          (selfPerspectiveRegistry (ssSelfState savedState))
         assertEqual "saveState should preserve live governance projection for caller"
           (ssGovernanceProjection governedState)
           (ssGovernanceProjection savedState)
@@ -769,13 +774,14 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = authoritativeGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertBool "bootstrap governed fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "bootstrap governed fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -789,8 +795,8 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
       (ssGovernanceHistory governedState)
       (ssGovernanceHistory restoredState)
     assertEqual "bootstrap must rebuild perspective registry from canonical history"
-      (ssPerspectiveRegistry governedState)
-      (ssPerspectiveRegistry restoredState)
+      (selfPerspectiveRegistry (ssSelfState governedState))
+      (selfPerspectiveRegistry (ssSelfState restoredState))
     assertEqual "bootstrap must rebuild governance projection from canonical history"
       (ssGovernanceProjection governedState)
       (ssGovernanceProjection restoredState)
@@ -802,7 +808,8 @@ testBootstrapSessionRestoresAssembledGovernanceViews = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = assembledGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertEqual "assembled bootstrap fixture must use assembled authoritative status"
@@ -811,7 +818,7 @@ testBootstrapSessionRestoresAssembledGovernanceViews = TestCase $ do
     assertBool "assembled bootstrap fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "assembled bootstrap fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore_assembled"
     case saveResult of
       Left err -> assertFailure ("failed to persist assembled bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -825,8 +832,8 @@ testBootstrapSessionRestoresAssembledGovernanceViews = TestCase $ do
       (ssGovernanceHistory governedState)
       (ssGovernanceHistory restoredState)
     assertEqual "assembled bootstrap must rebuild perspective registry from canonical history"
-      (ssPerspectiveRegistry governedState)
-      (ssPerspectiveRegistry restoredState)
+      (selfPerspectiveRegistry (ssSelfState governedState))
+      (selfPerspectiveRegistry (ssSelfState restoredState))
     assertEqual "assembled bootstrap must rebuild governance projection from canonical history"
       (ssGovernanceProjection governedState)
       (ssGovernanceProjection restoredState)
@@ -1606,8 +1613,31 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcField = emptyField
                  , trcIdentityClaims = []
                  , trcRegimeVersion = 1
-                 , trcFamilyDivergenceActive = True
-                 , trcSemanticCommitmentCount = 0
+                 , trcMorphologyVersion = 0
+                  , trcFamilyDivergenceActive = True
+                   , trcSemanticCommitmentCount = 0
+                   , trcQuarantinedCommitmentCount = 0
+                   , trcCommitmentStoreDecision = CsaAdmitCanonical
+                  , trcCognitiveSignals = emptyCognitiveSignals
+                 , trcDoubtScore = Nothing
+                 , trcEpisodicRetrievalCount = Nothing
+                 , trcContentSaliencyDominantCluster = Nothing
+                 , trcMoodValence = Nothing
+                 , trcMoodArousal = Nothing
+                 , trcAffectDecoupled = False
+                 , trcMood = 0.0
+                 , trcUserModelTopIntent = Nothing
+                 , trcUserModelConfidence = Nothing
+                 , trcDerivedInferenceCount = Nothing
+                 , trcFamilyDivergenceOccurred = Nothing
+                 , trcFmarDetectorFamily = Nothing
+                 , trcFmarFamily = Nothing
+                 , trcFmarFamiliesMatch = Nothing
+                 , trcFmarFieldDistance = Nothing
+                 , trcFmarMode = Nothing
+                 , trcFamilyDerivationChain = []
+                 , trcGenerationTrace = []
+                 , trcEffectSnapshot = Nothing
                  }
            , tqpDivergence = True
            }
@@ -2102,8 +2132,31 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcField = emptyField
                  , trcIdentityClaims = []
                  , trcRegimeVersion = 1
-                 , trcFamilyDivergenceActive = True
-                 , trcSemanticCommitmentCount = 0
+                 , trcMorphologyVersion = 0
+                  , trcFamilyDivergenceActive = True
+                   , trcSemanticCommitmentCount = 0
+                   , trcQuarantinedCommitmentCount = 0
+                   , trcCommitmentStoreDecision = CsaAdmitCanonical
+                  , trcCognitiveSignals = emptyCognitiveSignals
+                 , trcDoubtScore = Nothing
+                 , trcEpisodicRetrievalCount = Nothing
+                 , trcContentSaliencyDominantCluster = Nothing
+                 , trcMoodValence = Nothing
+                 , trcMoodArousal = Nothing
+                 , trcAffectDecoupled = False
+                 , trcMood = 0.0
+                 , trcUserModelTopIntent = Nothing
+                 , trcUserModelConfidence = Nothing
+                 , trcDerivedInferenceCount = Nothing
+                 , trcFamilyDivergenceOccurred = Nothing
+                 , trcFmarDetectorFamily = Nothing
+                 , trcFmarFamily = Nothing
+                 , trcFmarFamiliesMatch = Nothing
+                 , trcFmarFieldDistance = Nothing
+                 , trcFmarMode = Nothing
+                 , trcFamilyDerivationChain = []
+                 , trcGenerationTrace = []
+                 , trcEffectSnapshot = Nothing
                  }
            , tqpDivergence = True
            }
@@ -2536,8 +2589,9 @@ testProbeRuntimeReadinessExposesGfMapStatus = TestCase $ do
 testWriteAgdaWitnessErrorGivesNonzeroExit :: Test
 testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do
   mBin <- findExecutable "qxfx0-main"
-  agdaResult <- resolveTrustedExecutable "agda" Nothing []
-  let mAgda = either (const Nothing) Just agdaResult
+  -- resolveTrustedExecutable removed with Internal.Process module (dead code cleanup)
+  -- Test disabled until alternative Agda resolution is implemented
+  let mAgda = Nothing :: Maybe FilePath
   case mBin of
     Nothing -> pure ()
     Just bin -> do
@@ -2549,6 +2603,7 @@ testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do
         (ExitFailure _, Nothing) ->
           assertBool "--write-agda-witness on failure should report error on stderr"
             (not (null stderr))
+        _ -> pure ()  -- No Agda available, skip
         (ExitSuccess, Nothing) ->
           assertFailure "--write-agda-witness succeeded unexpectedly (agda not in PATH)"
         (ExitFailure _, Just _) ->

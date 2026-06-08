@@ -12,6 +12,8 @@ scripts/generate_paradigms_pymorphy2.py).
 -}
 module QxFx0.Semantic.Lexicon.RuntimeParadigms
   ( ParadigmEntry(..)
+  , PartOfSpeech(..)
+  , partOfSpeechText
   , RuntimeParadigms(..)
   , loadRuntimeParadigms
   , loadDefaultRuntimeParadigms
@@ -44,9 +46,9 @@ module QxFx0.Semantic.Lexicon.RuntimeParadigms
   ) where
 
 import Control.Applicative ((<|>))
-import Data.Aeson (FromJSON(..), eitherDecodeStrict, genericParseJSON, defaultOptions, fieldLabelModifier)
+import Data.Aeson (FromJSON(..), ToJSON(..), eitherDecodeStrict, genericParseJSON, genericToJSON, defaultOptions, fieldLabelModifier, withText, Value(String))
 import Data.Char (toLower)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
@@ -61,8 +63,45 @@ import Control.DeepSeq (NFData)
 -- Types
 --------------------------------------------------------------------------------
 
+data PartOfSpeech
+  = PosNoun
+  | PosVerb
+  | PosAdjective
+  | PosAdverb
+  | PosExpression
+  | PosMetaphor
+  deriving stock (Eq, Ord, Show, Read, Bounded, Enum, Generic)
+  deriving anyclass (NFData)
+
+instance FromJSON PartOfSpeech where
+  parseJSON = withText "PartOfSpeech" $ \t ->
+    case parsePartOfSpeechText t of
+      Just pos -> pure pos
+      Nothing  -> fail ("Unknown PartOfSpeech: " ++ T.unpack t)
+
+instance ToJSON PartOfSpeech where
+  toJSON pos = String (partOfSpeechText pos)
+
+partOfSpeechText :: PartOfSpeech -> Text
+partOfSpeechText PosNoun       = "Noun"
+partOfSpeechText PosVerb       = "Verb"
+partOfSpeechText PosAdjective  = "Adjective"
+partOfSpeechText PosAdverb     = "Adverb"
+partOfSpeechText PosExpression = "Expression"
+partOfSpeechText PosMetaphor   = "Metaphor"
+
+parsePartOfSpeechText :: Text -> Maybe PartOfSpeech
+parsePartOfSpeechText t = case t of
+  "Noun"       -> Just PosNoun
+  "Verb"       -> Just PosVerb
+  "Adjective"  -> Just PosAdjective
+  "Adverb"     -> Just PosAdverb
+  "Expression" -> Just PosExpression
+  "Metaphor"   -> Just PosMetaphor
+  _            -> Nothing
+
 data ParadigmEntry = ParadigmEntry
-  { pePos     :: !Text
+  { pePos     :: !PartOfSpeech
   , peGender  :: !(Maybe Text)
   , peAnimacy :: !(Maybe Text)
   , peAspect  :: !(Maybe Text)
@@ -78,10 +117,32 @@ instance FromJSON ParadigmEntry where
         _              -> map toLower lbl
     }
 
+instance ToJSON ParadigmEntry where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = \lbl -> case lbl of
+        ('p':'e':rest) -> map toLower rest
+        _              -> map toLower lbl
+    }
+
 data RuntimeParadigms = RuntimeParadigms
   { rpMap        :: !(Map Text ParadigmEntry)
   , rpExceptions :: !(Map Text ParadigmEntry)
-  } deriving stock (Eq, Show)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
+
+instance FromJSON RuntimeParadigms where
+  parseJSON = genericParseJSON defaultOptions
+    { fieldLabelModifier = \lbl -> case lbl of
+        ('r':'p':rest) -> map toLower rest
+        _              -> map toLower lbl
+    }
+
+instance ToJSON RuntimeParadigms where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = \lbl -> case lbl of
+        ('r':'p':rest) -> map toLower rest
+        _              -> map toLower lbl
+    }
 
 --------------------------------------------------------------------------------
 -- Load
@@ -131,32 +192,35 @@ nounCaseKey c n = T.pack (show c <> show n)
 
 lookupNounForm :: RuntimeParadigms -> Text -> NounCase -> Number -> Maybe Text
 lookupNounForm rp lemma case_ number =
-  lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+  -- Exceptions OVERRIDE the main map (rpExceptions first): resources/morphology/
+  -- exceptions.json carries hand-verified paradigms for the ~9 lemmas pymorphy
+  -- mis-parses (G5 category A). Without exceptions-first, the wrong rpMap form
+  -- would win via <|> short-circuit.
+  lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
+    -- G3b: trust the stored AccSg form directly. pymorphy already encodes both
+    -- animacy AND declension class in the accusative — a-stem masculine animates
+    -- (бонза→бонзу, будда→будду) take the -у accusative, NOT the genitive. The
+    -- previous "masc anim → Gen" override was redundant for consonant stems
+    -- (волк→волка == Gen) and WRONG for a-stems (forced бонзы instead of бонзу).
     lookupInMap mp = do
       entry <- M.lookup lemma mp
-      guard (pePos entry == "Noun")
-      case (case_, peGender entry, peAnimacy entry) of
-        (Acc, Just "masc", Just "anim") ->
-          M.lookup (nounCaseKey Gen number) (peForms entry)
-        (Acc, Just "masc", Just "inan") ->
-          M.lookup (nounCaseKey Nom number) (peForms entry)
-        _ ->
-          M.lookup (nounCaseKey case_ number) (peForms entry)
+      guard (pePos entry == PosNoun)
+      M.lookup (nounCaseKey case_ number) (peForms entry)
 
 lookupNounFormOr :: RuntimeParadigms -> Text -> NounCase -> Number -> Text -> Text
 lookupNounFormOr rp lemma case_ number fallback =
   fromMaybe fallback (lookupNounForm rp lemma case_ number)
 
 lemmaGender :: RuntimeParadigms -> Text -> Maybe Text
-lemmaGender rp lemma = lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+lemmaGender rp lemma = lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
     lookupInMap mp = do
       entry <- M.lookup lemma mp
       peGender entry
 
-lemmaPos :: RuntimeParadigms -> Text -> Maybe Text
-lemmaPos rp lemma = lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+lemmaPos :: RuntimeParadigms -> Text -> Maybe PartOfSpeech
+lemmaPos rp lemma = lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
     lookupInMap mp = pePos <$> M.lookup lemma mp
 
@@ -176,11 +240,11 @@ verbFormKey :: VerbForm -> Text
 verbFormKey = T.pack . show
 
 lookupVerbForm :: RuntimeParadigms -> Text -> VerbForm -> Maybe Text
-lookupVerbForm rp lemma form = lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+lookupVerbForm rp lemma form = lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
     lookupInMap mp = do
       entry <- M.lookup lemma mp
-      guard (pePos entry == "Verb")
+      guard (pePos entry == PosVerb)
       M.lookup (verbFormKey form) (peForms entry)
 
 lookupVerbFormOr :: RuntimeParadigms -> Text -> VerbForm -> Text -> Text
@@ -211,38 +275,38 @@ adjectiveFormKey (AdjFull c Sg Nothing)   = T.pack (show c <> "Sg")
 adjectiveFormKey (AdjShort g)             = T.pack ("Short" <> show g)
 
 lookupAdjectiveForm :: RuntimeParadigms -> Text -> AdjectiveForm -> Maybe Text
-lookupAdjectiveForm rp lemma form = lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+lookupAdjectiveForm rp lemma form = lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
     lookupInMap mp = do
       entry <- M.lookup lemma mp
-      guard (pePos entry == "Adjective")
+      guard (pePos entry == PosAdjective)
       M.lookup (adjectiveFormKey form) (peForms entry)
 
 lookupAdjectiveFormOr :: RuntimeParadigms -> Text -> AdjectiveForm -> Text -> Text
 lookupAdjectiveFormOr rp lemma form fallback =
   fromMaybe fallback (lookupAdjectiveForm rp lemma form)
 
----------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 --- Adverb lookup
 ---------------------------------------------------------------------------------
 
 lookupAdverbForm :: RuntimeParadigms -> Text -> Maybe Text
-lookupAdverbForm rp lemma = lookupInMap (rpMap rp) <|> lookupInMap (rpExceptions rp)
+lookupAdverbForm rp lemma = lookupInMap (rpExceptions rp) <|> lookupInMap (rpMap rp)
   where
     lookupInMap mp = do
       entry <- M.lookup lemma mp
-      guard (pePos entry == "Adverb")
+      guard (pePos entry == PosAdverb)
       M.lookup "Base" (peForms entry)
 
 lookupExpression :: RuntimeParadigms -> Text -> Maybe Text
 lookupExpression rp lemma = do
   entry <- M.lookup lemma (rpMap rp)
-  guard (pePos entry == "Expression")
+  guard (pePos entry == PosExpression)
   M.lookup "Base" (peForms entry)
 
 lookupMetaphor :: RuntimeParadigms -> Text -> Maybe Text -> Maybe (Text, Text)
 lookupMetaphor rp targetKeyword _mbase =
-  let matches = filter (\(_, entry) -> pePos entry == "Metaphor" &&
+  let matches = filter (\(_, entry) -> pePos entry == PosMetaphor &&
         M.lookup "Target" (peForms entry) == Just targetKeyword) (M.toList (rpMap rp))
   in case matches of
        (k, entry) : _ ->

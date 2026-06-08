@@ -9,7 +9,9 @@ module QxFx0.ExceptionPolicy
   , RuntimeInitErrorDetails(..)
   , EmbeddingErrorDetails(..)
   , SQLiteErrorDetails(..)
+  , PGFError(..)
   , renderQxFx0ExceptionForLog
+  , renderQxFx0ExceptionForLogDebug
   , throwQxFx0
   , toErrorCode
   , toLogMessage
@@ -58,6 +60,26 @@ data SQLiteErrorDetails = SQLiteErrorDetails
   , sedErrorCode :: !Text
   } deriving stock (Eq, Show)
 
+-- | Structured PGF-specific errors for grammatical framework operations
+data PGFError
+  = PGFFileNotFound FilePath
+  | PGFParseError Text
+  | PGFLinearizationError Text
+  | PGFIOError IOException
+  deriving stock (Show, Eq)
+
+instance Exception PGFError
+
+-- P2-3: the four @*Error Text@ / @*ErrorStructured@ pairs below are a
+-- deliberate, retained compatibility surface, NOT a forgotten half-migration.
+-- Construction has migrated to the structured forms (see 'mkPersistenceError',
+-- 'mkRuntimeInitError', 'mkEmbeddingError', 'mkSQLiteError'). The flat @Text@
+-- constructors are kept because they are load-bearing on the CONSUMER side:
+-- the test contract (CoreBehavior, StatePersistence, RuntimeInfrastructure)
+-- pattern-matches them as expected results, and 'toErrorCode'/'toLogMessage'
+-- handle both. Full retirement requires rewriting those test expectations and
+-- is deferred. Do not add NEW flat-form construction sites — use the @mk*@
+-- helpers.
 data QxFx0Exception
   = PersistenceError Text
   | PersistenceErrorStructured !PersistenceErrorDetails
@@ -85,6 +107,11 @@ data QxFx0Exception
     -- it has chosen to be. Not recoverable; the session must abort
     -- the turn (no persistence). Co-located with 'IdentityRupture'
     -- in 'Finalize.Commit'; the two failures are orthogonal.
+  | StateInvariantViolation !Text
+    -- ^ System state invariant violated during turn pipeline.
+    -- Indicates a programming error or corrupted state that prevents
+    -- safe continuation of the turn. The turn should be aborted and
+    -- the system should attempt graceful degradation.
   deriving stock (Eq)
 
 instance Show QxFx0Exception where
@@ -113,6 +140,7 @@ toErrorCode ex =
     AgdaGateError _ -> T.pack "AGDA_GATE_ERROR"
     IdentityRupture _ -> T.pack "IDENTITY_RUPTURE"
     EssenceRupture _ -> T.pack "ESSENCE_RUPTURE"
+    StateInvariantViolation _ -> T.pack "STATE_INVARIANT_VIOLATION"
 
 -- | Extract human-readable log message from exception
 toLogMessage :: QxFx0Exception -> Text
@@ -194,6 +222,20 @@ renderQxFx0ExceptionForLog ex =
     AgdaGateError _ -> T.pack "AgdaGateError(<redacted>)"
     IdentityRupture _ -> T.pack "IdentityRupture(<redacted>)"
     EssenceRupture _ -> T.pack "EssenceRupture(<redacted>)"
+    StateInvariantViolation msg -> T.pack "StateInvariantViolation(" <> msg <> T.pack ")"
+
+-- | Debug variant: reveals full error details for PersistenceTxError
+-- (and other detail-redacted constructors) when the caller opts in.
+-- Gated by QXFX0_DEBUG_ERRORS=true in the logging layer.
+renderQxFx0ExceptionForLogDebug :: QxFx0Exception -> Text
+renderQxFx0ExceptionForLogDebug ex =
+  case ex of
+    PersistenceTxError stage msg -> T.pack "PersistenceTxError(stage=" <> T.pack (show stage) <> T.pack ", detail=" <> msg <> T.pack ")"
+    SQLiteError msg -> T.pack "SQLiteError(" <> msg <> T.pack ")"
+    PersistenceError msg -> T.pack "PersistenceError(" <> msg <> T.pack ")"
+    RuntimeInitError msg -> T.pack "RuntimeInitError(" <> msg <> T.pack ")"
+    EmbeddingError msg -> T.pack "EmbeddingError(" <> msg <> T.pack ")"
+    _ -> renderQxFx0ExceptionForLog ex
 
 tryAsync :: IO a -> IO (Either SomeException a)
 tryAsync action = do

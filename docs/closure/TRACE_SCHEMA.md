@@ -441,3 +441,53 @@ is a **regression**: the discipline is broken.
   Sense, Dialogue, Dream, Perspective) are
   complete. Those are tracked separately in
   the corresponding Self/* module docs.
+
+---
+
+## 12. Effect-replay snapshot (`trcEffectSnapshot`) — 2026-06-05
+
+**Field:** `trcEffectSnapshot :: Maybe EffectSnapshot`
+**Sub-record:** `EffectSnapshot { esApiHealthy :: !Bool }`
+**Source:** `buildTurnProjection` copies `tsApiHealthy ts`
+            (`Finalize/Projection.hs`).
+**Consumed by:** `QxFx0.Core.PipelineIO.Replay.mkReplayPipelineIO`.
+
+Unlike every other field in this document, `trcEffectSnapshot` is **not**
+an observability `trc*` field — it is the first trace field that is a
+**replay input**. It records the one non-deterministic effect the
+legitimacy path consumes (`apiHealthy`, an HTTP embedding-health probe
+cached ~60s) so that replay reads the *recorded* value instead of
+re-probing the live world. Record ≡ consume by construction: both
+`legitimacyScore` (via `Route/Shadow`) and `esApiHealthy`
+(`Projection.hs`) read the same threaded `tsApiHealthy` field.
+
+`emaLoad`, the other `legitimacyScore` input, is **already deterministic**
+— it is `AtomTrace.atCurrentLoad`, a pure EMA over the input atom set and
+prior trace, both in `SystemState`. It needs no snapshot.
+
+(The §-header "94 `trc*` fields" predates the FMAR and effect-snapshot
+additions; the live count should be read from `check_replay_gate.sh`, not
+hand-maintained here.)
+
+### Determinism scope (honest)
+
+- **Proven now:** legitimacy-path determinism for `apiHealthy`, by
+  `test/Test/Suite/ReplayDeterminism.hs` — **P1** (replay reads trace,
+  not world), **P2** (`legitimacyScore` reproduces the recorded value and
+  differs from the live-degraded value), **P3** (end-to-end through the
+  real `buildTurnProjection`: `esApiHealthy` tracks the consumed
+  `tsApiHealthy` for *both* polarities, and `mkReplayPipelineIO` reads
+  each value back).
+- **Pending (wide path / item #1):** production replay round-trip —
+  loading a *persisted* trace from the DB blob. `EffectSnapshot` derives
+  `ToJSON` only; a `FromJSON` + DB-load→replay path does not exist yet.
+  Replay is proven for an in-memory trace, not a stored one.
+- **Not claimed:** global turn determinism. Only `apiHealthy` is pinned.
+  Other live effects (embedding, intuition, consciousness, nix) still
+  resolve to test-harness defaults under `mkReplayPipelineIO`; time/UUID
+  are not pinned. The narrow fix makes the **legitimacy path** honest,
+  not the whole turn.
+
+Old traces (pre-2026-06-05) serialise `trcEffectSnapshot` as `Nothing`;
+`mkReplayPipelineIO` falls back to `apiHealthy = False` for them, so they
+are explicitly **not** `apiHealthy`-deterministic under replay.

@@ -8,7 +8,6 @@ module QxFx0.Core.LexicalClusterPhraseAdmission
   , admitLexicalClusterPhraseContainment
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms
   ( RawClusterPhraseContainment(..)
   , RawLexicalPhraseContainment(..)
@@ -17,6 +16,8 @@ import QxFx0.Semantic.MeaningAtoms
   , lexicalPhraseContainmentTag
   )
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data LexicalClusterPhraseAdmissionInput = LexicalClusterPhraseAdmissionInput
   { lcpaiTruthContractStatus :: !TruthContractStatus
@@ -34,32 +35,6 @@ data AdmittedLexicalClusterPhraseContainment = AdmittedLexicalClusterPhraseConta
   , alcpDecision :: !LexicalClusterPhraseAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitLexicalClusterPhraseContainment
-  :: LexicalClusterPhraseAdmissionInput
-  -> RawLexicalClusterPhraseContainment
-  -> AdmittedLexicalClusterPhraseContainment
-admitLexicalClusterPhraseContainment input rawContainment
-  | truthContractIsAuthoritative (lcpaiTruthContractStatus input) =
-      AdmittedLexicalClusterPhraseContainment rawContainment rawContainment LpdAdmitRaw
-  | all clusterPhraseAlreadySafe (rlcpcClusterContainment rawContainment)
-      && all lexicalPhraseAlreadySafe (rlcpcLexicalContainment rawContainment) =
-      AdmittedLexicalClusterPhraseContainment rawContainment rawContainment LpdPreserveAmbiguous
-  | otherwise =
-      AdmittedLexicalClusterPhraseContainment
-        rawContainment
-        rawContainment
-          { rlcpcClusterContainment = filter clusterPhraseAlreadySafe (rlcpcClusterContainment rawContainment)
-          , rlcpcLexicalContainment = filter lexicalPhraseAlreadySafe (rlcpcLexicalContainment rawContainment)
-          }
-        LpdSuppressStrongContainment
-
-clusterPhraseAlreadySafe :: RawClusterPhraseContainment -> Bool
-clusterPhraseAlreadySafe = tagAlreadySafe . clusterPhraseContainmentTag
-
-lexicalPhraseAlreadySafe :: RawLexicalPhraseContainment -> Bool
-lexicalPhraseAlreadySafe rawContainment =
-  maybe True tagAlreadySafe (lexicalPhraseContainmentTag rawContainment)
-
 tagAlreadySafe :: AtomTag -> Bool
 tagAlreadySafe tag =
   case tag of
@@ -70,3 +45,31 @@ tagAlreadySafe tag =
     CustomAtom _ _ -> True
     AffectiveAtom _ _ -> True
     _ -> False
+
+clusterPhraseAlreadySafe :: RawClusterPhraseContainment -> Bool
+clusterPhraseAlreadySafe = tagAlreadySafe . clusterPhraseContainmentTag
+
+lexicalPhraseAlreadySafe :: RawLexicalPhraseContainment -> Bool
+lexicalPhraseAlreadySafe rawContainment =
+  maybe True tagAlreadySafe (lexicalPhraseContainmentTag rawContainment)
+
+admitLexicalClusterPhraseContainment
+  :: LexicalClusterPhraseAdmissionInput
+  -> RawLexicalClusterPhraseContainment
+  -> AdmittedLexicalClusterPhraseContainment
+admitLexicalClusterPhraseContainment input rawContainment =
+  admitBySuppressStrong config input rawContainment
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = lcpaiTruthContractStatus
+      , sscAllSafe = \rc -> all clusterPhraseAlreadySafe (rlcpcClusterContainment rc)
+                            && all lexicalPhraseAlreadySafe (rlcpcLexicalContainment rc)
+      , sscSuppress = \rc -> rc
+          { rlcpcClusterContainment = filter clusterPhraseAlreadySafe (rlcpcClusterContainment rc)
+          , rlcpcLexicalContainment = filter lexicalPhraseAlreadySafe (rlcpcLexicalContainment rc)
+          }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedLexicalClusterPhraseContainment raw proc dec
+      , sscDecisionAdmit = LpdAdmitRaw
+      , sscDecisionPreserve = LpdPreserveAmbiguous
+      , sscDecisionSuppress = LpdSuppressStrongContainment
+      }

@@ -12,11 +12,16 @@ module QxFx0.Types.Sense
   , SenseVector(..)
   , ResponseSensePlan(..)
   , MicroPlan(..)
+  , RhetoricalMove(..)
+  , FallbackPolicy(..)
+  , ImplicationDirection(..)
   , emptySenseVector
   , emptyResponseSensePlan
   , emptyMicroPlan
   , renderSenseAxis
   , renderSenseOperator
+  , rhetoricalMoveFromOperator
+  , fallbackPolicyFromPhase
   ) where
 
 import Control.DeepSeq (NFData)
@@ -25,6 +30,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 
 newtype SemanticNodeId = SemanticNodeId { unSemanticNodeId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
@@ -97,12 +103,72 @@ data ResponseSensePlan = ResponseSensePlan
     deriving anyclass (NFData, FromJSON, ToJSON)
 
 data MicroPlan = MicroPlan
-  { mpRhetoricalMoves :: ![Text]
+  { mpRhetoricalMoves :: ![RhetoricalMove]
   , mpExplicitness :: !Double
   , mpStructureBudget :: !Int
-  , mpFallbackPolicy :: !Text
+  , mpFallbackPolicy :: !FallbackPolicy
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | RhetoricalMove — typed representation of micro-plan moves.
+-- Replaces string literals like "repair", "clarify", "ground", etc.
+data RhetoricalMove
+  = MvRepair
+  | MvClarify
+  | MvGround
+  | MvDefine
+  | MvDistinguish
+  | MvDeepen
+  | MvReflect
+  | MvExplainCause
+  | MvExplainPurpose
+  | MvNextStep
+  | MvConstrain
+  deriving stock (Eq, Ord, Show, Read, Bounded, Enum, Generic)
+  deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | FallbackPolicy — typed representation of fallback strategies.
+-- Replaces string literals like "repair_first", "clarify_first", etc.
+data FallbackPolicy
+  = FbRepairFirst
+  | FbClarifyFirst
+  | FbGroundFirst
+  | FbContestBound
+  | FbCloseBound
+  | FbSafeDegrade
+  deriving stock (Eq, Ord, Show, Read, Bounded, Enum, Generic)
+  deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | ImplicationDirection — typed representation of implication direction.
+-- Replaces string literals "forward" / "bounded".
+data ImplicationDirection
+  = DirForward
+  | DirBounded
+  deriving stock (Eq, Ord, Show, Read, Bounded, Enum, Generic)
+  deriving anyclass (NFData, FromJSON, ToJSON)
+
+-- | Convert SenseOperator to RhetoricalMove.
+rhetoricalMoveFromOperator :: SenseOperator -> RhetoricalMove
+rhetoricalMoveFromOperator OpRepair = MvRepair
+rhetoricalMoveFromOperator OpClarify = MvClarify
+rhetoricalMoveFromOperator OpGround = MvGround
+rhetoricalMoveFromOperator OpDefine = MvDefine
+rhetoricalMoveFromOperator OpDistinguish = MvDistinguish
+rhetoricalMoveFromOperator OpDeepen = MvDeepen
+rhetoricalMoveFromOperator OpReflect = MvReflect
+rhetoricalMoveFromOperator OpExplainCause = MvExplainCause
+rhetoricalMoveFromOperator OpExplainPurpose = MvExplainPurpose
+rhetoricalMoveFromOperator OpNextStep = MvNextStep
+rhetoricalMoveFromOperator OpConstrain = MvConstrain
+
+-- | Convert DialoguePhase to FallbackPolicy.
+fallbackPolicyFromPhase :: DialoguePhase -> FallbackPolicy
+fallbackPolicyFromPhase Repairing = FbRepairFirst
+fallbackPolicyFromPhase Clarifying = FbClarifyFirst
+fallbackPolicyFromPhase Grounding = FbGroundFirst
+fallbackPolicyFromPhase Contesting = FbContestBound
+fallbackPolicyFromPhase Closing = FbCloseBound
+fallbackPolicyFromPhase _ = FbSafeDegrade
 
 emptySenseVector :: SenseVector
 emptySenseVector = SenseVector
@@ -131,7 +197,7 @@ emptyMicroPlan = MicroPlan
   { mpRhetoricalMoves = []
   , mpExplicitness = 0.5
   , mpStructureBudget = 1
-  , mpFallbackPolicy = "safe_degrade"
+  , mpFallbackPolicy = FbSafeDegrade
   }
 
 renderSenseAxis :: SenseAxis -> Text

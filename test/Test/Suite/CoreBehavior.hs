@@ -34,6 +34,8 @@ import qualified Data.Vector as V
 import qualified Data.Text as T
 
 import QxFx0.Types
+import QxFx0.Types.PropositionType (PropositionType(..), propositionTypeText)
+import QxFx0.Types.Sense (ImplicationDirection(..), RhetoricalMove(..), FallbackPolicy(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
 import QxFx0.Lexicon.Resolver (resolveLexemeForm)
 import qualified QxFx0.Lexicon.GfMap as GfMap
@@ -49,10 +51,10 @@ import qualified QxFx0.Core.TurnRender as TurnRender
 import qualified QxFx0.Core.Legitimacy as Legitimacy
 import qualified QxFx0.Core.TurnLegitimacy as TurnLegitimacy
 import qualified QxFx0.Core.TurnPlanning as TurnPlanning
-import qualified QxFx0.Core.DreamDynamics as Dream
+import qualified QxFx0.Core.TopicDrift as Dream
 import qualified QxFx0.Core.BackgroundProcess as Background
 import qualified QxFx0.Core.Intuition as Intuition
-import qualified QxFx0.Core.Consciousness as Consciousness
+import qualified QxFx0.Core.StanceClassifier as Consciousness
 import qualified QxFx0.Core.IdentitySignal as IdentitySignal
 import qualified QxFx0.Core.IdentityGuard as IdentityGuard
 import qualified QxFx0.Core.TruthContract as TruthContract
@@ -83,7 +85,7 @@ import QxFx0.Self.Deliberation
 import QxFx0.Core.TurnPipeline (RoutingDecision(..))
 import qualified QxFx0.Core.MeaningGraph as MeaningGraph
 import qualified QxFx0.Core.TopicTransition as TopicTransition
-import QxFx0.Core.Consciousness ()
+import QxFx0.Core.StanceClassifier ()
 import QxFx0.Core.PrincipledCore (detectPressure)
 import qualified QxFx0.Semantic.Input.Parse as InputParse
 import QxFx0.Semantic.Proposition
@@ -95,51 +97,51 @@ import QxFx0.Semantic.Proposition
   , collectRawContactTriggers
   , collectRawKeywordFallbackDecisions
   )
-import QxFx0.Core.PropositionPhraseDecisionAdmission
+import QxFx0.Types.Admission.PropositionPhraseDecisionAdmission
   ( admitPropositionPhraseDecisions )
-import QxFx0.Core.PropositionContactAdmission
+import QxFx0.Types.Admission.PropositionContactAdmission
   ( admitPropositionContactTriggers )
-import QxFx0.Core.PropositionConfrontAdmission
+import QxFx0.Types.Admission.PropositionConfrontAdmission
   ( admitPropositionConfrontTriggers )
-import QxFx0.Core.PropositionNextStepAdmission
+import QxFx0.Types.Admission.PropositionNextStepAdmission
   ( admitPropositionNextStepTriggers )
-import QxFx0.Core.PropositionOperationalStatusAdmission
+import QxFx0.Types.Admission.PropositionOperationalStatusAdmission
   ( admitPropositionOperationalStatusTriggers )
-import QxFx0.Core.PropositionOperationalCauseAdmission
+import QxFx0.Types.Admission.PropositionOperationalCauseAdmission
   ( admitPropositionOperationalCauseTriggers )
-import QxFx0.Core.PropositionSystemLogicAdmission
+import QxFx0.Types.Admission.PropositionSystemLogicAdmission
   ( admitPropositionSystemLogicTriggers )
-import QxFx0.Core.PropositionDistinctionAdmission
+import QxFx0.Types.Admission.PropositionDistinctionAdmission
   ( admitPropositionDistinctionTriggers )
-import QxFx0.Core.PropositionAffectiveSupportPhraseAdmission
+import QxFx0.Types.Admission.PropositionAffectiveSupportPhraseAdmission
   ( admitPropositionAffectiveSupportPhraseTriggers )
-import QxFx0.Core.PropositionAffectiveSupportProbeAdmission
+import QxFx0.Types.Admission.PropositionAffectiveSupportProbeAdmission
   ( admitPropositionAffectiveSupportProbeTriggers )
-import QxFx0.Core.PropositionSelfKnowledgeAdmission
+import QxFx0.Types.Admission.PropositionSelfKnowledgeAdmission
   ( admitPropositionSelfKnowledgeTriggers )
-import QxFx0.Core.PropositionPurposeAdmission
+import QxFx0.Types.Admission.PropositionPurposeAdmission
   ( admitPropositionPurposeTriggers )
-import QxFx0.Core.PropositionConceptKnowledgeAdmission
+import QxFx0.Types.Admission.PropositionConceptKnowledgeAdmission
   ( admitPropositionConceptKnowledgeTriggers )
-import QxFx0.Core.PropositionMisunderstandingAdmission
+import QxFx0.Types.Admission.PropositionMisunderstandingAdmission
   ( admitPropositionMisunderstandingTriggers )
-import QxFx0.Core.PropositionWorldCauseAdmission
+import QxFx0.Types.Admission.PropositionWorldCauseAdmission
   ( admitPropositionWorldCauseTriggers )
-import QxFx0.Core.PropositionLocationFormationAdmission
+import QxFx0.Types.Admission.PropositionLocationFormationAdmission
   ( admitPropositionLocationFormationTriggers )
-import QxFx0.Core.PropositionExploratoryPromptAdmission
+import QxFx0.Types.Admission.PropositionExploratoryPromptAdmission
   ( admitPropositionExploratoryPromptTriggers )
-import QxFx0.Core.PropositionDialogueInvitationAdmission
+import QxFx0.Types.Admission.PropositionDialogueInvitationAdmission
   ( admitPropositionDialogueInvitationTriggers )
-import QxFx0.Core.PropositionContemplativeTopicAdmission
+import QxFx0.Types.Admission.PropositionContemplativeTopicAdmission
   ( admitPropositionContemplativeTopicTriggers )
-import QxFx0.Core.PropositionGenerativePromptAdmission
+import QxFx0.Types.Admission.PropositionGenerativePromptAdmission
   ( admitPropositionGenerativePromptTriggers )
-import QxFx0.Core.PropositionComparisonPlausibilityAdmission
+import QxFx0.Types.Admission.PropositionComparisonPlausibilityAdmission
   ( admitPropositionComparisonPlausibilityTriggers )
-import QxFx0.Core.PropositionSelfStateAdmission
+import QxFx0.Types.Admission.PropositionSelfStateAdmission
   ( admitPropositionSelfStateTriggers )
-import QxFx0.Core.PropositionRepairDirectiveAdmission
+import QxFx0.Types.Admission.PropositionRepairDirectiveAdmission
   ( admitPropositionRepairDirectiveTriggers )
 import QxFx0.Types.PropositionFallbackAdmission
   ( PropositionPhraseDecisionAdmissionInput(..)
@@ -282,9 +284,10 @@ import QxFx0.Types.PropositionRepairDirectiveAdmission
   )
 import QxFx0.Types.SemanticConfig (defaultSemanticConfig)
 import qualified QxFx0.Render.Dialogue as Dialogue
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
 import qualified QxFx0.Render.Semantic as RenderSemantic
 import qualified QxFx0.Core.ConsciousnessLoop as CLoop
-import QxFx0.Core.Consciousness (ConsciousnessModel(..), ConsciousState(..), SelfInterpretation(..))
+import QxFx0.Core.StanceClassifier (ConsciousnessModel(..), ConsciousState(..), SelfInterpretation(..))
 import QxFx0.Resources (loadMorphologyData)
 import qualified Data.Map.Strict as Map
 import QxFx0.Lexicon.Generated (generatedLexemeEntries)
@@ -294,7 +297,7 @@ import qualified QxFx0.Lexicon.Runtime as LexRuntime
 import qualified QxFx0.Lexicon.Analyze as LexAnalyze
 import qualified QxFx0.Core.ClaimBuilder as ClaimBuilder
 import qualified QxFx0.Runtime.PGF as RuntimePGF
-import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), EmbeddingErrorDetails(..))
 import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.CLI.Parser (decodeWorkerCommand, parseMode, parseJsonStringArray, extractSessionArgs, RuntimeOutputMode(..), WorkerCommand(..))
 import Test.Support (withEnvVar)
@@ -311,7 +314,7 @@ testSI layer atoms fam = SemanticInput
   , siAtomSet = atoms
   , siPropositionFrame = InputPropositionFrame
       { ipfRawText = ""
-      , ipfPropositionType = ""
+      , ipfPropositionType = PlainAssert
       , ipfFocusEntity = ""
       , ipfFocusNominative = ""
       , ipfSemanticSubject = ""
@@ -732,15 +735,24 @@ testTextToEmbeddingSourceIgnoresUrlWithoutExplicitRemoteBackend = TestCase $
       assertEqual "Remote URL alone must not switch runtime into remote embedding mode" Emb.EmbeddingLocalImplicit (Emb.erSource result)
       assertEqual "Implicit local fallback should keep canonical dimension" 384 (V.length (Emb.erEmbedding result))
 
+-- | Extract the human-readable detail/issues text from an embedding error,
+-- tolerating both the legacy flat 'EmbeddingError' and the current
+-- 'EmbeddingErrorStructured' (issues live in eedContext under "issues").
+embeddingErrorDetail :: QxFx0Exception -> Maybe T.Text
+embeddingErrorDetail (EmbeddingError d) = Just d
+embeddingErrorDetail (EmbeddingErrorStructured d) =
+  Just (eedErrorCode d <> ";" <> Map.findWithDefault "" "issues" (eedContext d))
+embeddingErrorDetail _ = Nothing
+
 testTextToEmbeddingSourceRemoteFailure :: Test
 testTextToEmbeddingSourceRemoteFailure = TestCase $
   withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
     withEnvVar "EMBEDDING_API_URL" (Just "http://127.0.0.1:1/embeddings") $ do
       result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
       case result of
-        Left (EmbeddingError detail) ->
+        Left e | Just detail <- embeddingErrorDetail e ->
           assertBool "Explicit remote backend should fail closed with a typed embedding error when endpoint is unreachable or invalid" (
-            "remote_embedding_unhealthy" `T.isInfixOf` detail || "invalid_remote_embedding_url" `T.isInfixOf` detail)
+            "remote_embedding_unhealthy" `T.isInfixOf` detail || "invalid_remote_embedding_url" `T.isInfixOf` detail || "remote_embedding_host_blocked" `T.isInfixOf` detail)
         Left other ->
           assertFailure ("expected EmbeddingError for explicit remote backend failure, got: " <> show other)
         Right ok ->
@@ -752,7 +764,7 @@ testTextToEmbeddingSourceRemoteBlockedHostFailsClosed = TestCase $
     withEnvVar "EMBEDDING_API_URL" (Just "https://evil.example/embeddings") $ do
       result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
       case result of
-        Left (EmbeddingError detail) ->
+        Left e | Just detail <- embeddingErrorDetail e ->
           assertBool "Explicit remote backend should reject untrusted remote hosts before network I/O"
             ("remote_embedding_host_blocked" `T.isInfixOf` detail)
         Left other ->
@@ -766,7 +778,7 @@ testTextToEmbeddingSourceRemoteMissingUrlFailsClosed = TestCase $
     withEnvVar "EMBEDDING_API_URL" Nothing $ do
       result <- try (Emb.textToEmbeddingResult "test") :: IO (Either QxFx0Exception Emb.EmbeddingResult)
       case result of
-        Left (EmbeddingError detail) ->
+        Left e | Just detail <- embeddingErrorDetail e ->
           assertBool "Explicit remote backend without URL should fail closed with a typed embedding error" ("remote_embedding_url_missing" `T.isInfixOf` detail)
         Left other ->
           assertFailure ("expected EmbeddingError for missing remote embedding URL, got: " <> show other)
@@ -1083,13 +1095,13 @@ testGfCombinatorics :: Test
 testGfCombinatorics = TestCase $ do
   let ast1 = MoveInvite (MkNP "logika_N") ModFirst (ActMaintain NumSg "ramka_N")
       morph = Morph.buildMorphologyData []
-      res1 = Dialogue.linearizeClaimAstRus ast1 StyleStandard morph
+      res1 = Dialogue.linearizeClaimAstRus emptyRuntimeParadigms ast1 StyleStandard morph
   assertEqual "AST linearization is stable"
               (Just "Да, поговорим о логике. Я сначала удержу рамку, чтобы не потерять фокус.")
               res1
 
   let ast2 = MoveInvite (MkNP "logika_N") ModStrictly (ActMaintain NumSg "ramka_N")
-      res2 = Dialogue.linearizeClaimAstRus ast2 StyleStandard morph
+      res2 = Dialogue.linearizeClaimAstRus emptyRuntimeParadigms ast2 StyleStandard morph
   assertEqual "AST modifier changes correctly"
               (Just "Да, поговорим о логике. Я строго удержу рамку, чтобы не потерять фокус.")
               res2
@@ -1118,17 +1130,17 @@ testGfTopicMapProvidesForms = TestCase $
 testClaimAstCoverageForOperationalAndMetaPrompts :: Test
 testClaimAstCoverageForOperationalAndMetaPrompts = TestCase $ do
   let probes =
-        [ ("Ты не работаешь?", "OperationalStatusQ")
-        , ("Почему ты не работаешь?", "OperationalCauseQ")
-        , ("В чём твоя логика?", "SystemLogicQ")
-        , ("Я не понимаю тебя", "MisunderstandingReport")
-        , ("Скажи интересную мысль", "ReflectiveQ")
-        , ("Тишина", "ContemplativeTopic")
+        [ ("Ты не работаешь?", OperationalStatusQ)
+        , ("Почему ты не работаешь?", OperationalCauseQ)
+        , ("В чём твоя логика?", SystemLogicQ)
+        , ("Я не понимаю тебя", MisunderstandingReport)
+        , ("Скажи интересную мысль", ReflectiveQ)
+        , ("Тишина", ContemplativeTopic)
         ]
   forM_ probes $ \(inputText, expectedType) -> do
     let frame = parseProposition inputText
         family = ipfCanonicalFamily frame
-        rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
+        rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True 0.5
     assertEqual ("proposition type mismatch for " <> T.unpack inputText) expectedType (ipfPropositionType frame)
     assertBool ("expected ClaimAst coverage for " <> T.unpack inputText) (rmpPrimaryClaimAst rmp /= Nothing)
 
@@ -1195,7 +1207,7 @@ testGfFallbackSurfaceParity = TestCase $ do
                 , MoveDeepen (MkNP "logika_N")
                 ]
           forM_ samples $ \ast -> do
-            let fallbackRendered = Dialogue.linearizeClaimAstRus ast StyleStandard morph
+            let fallbackRendered = Dialogue.linearizeClaimAstRus emptyRuntimeParadigms ast StyleStandard morph
             runtimeRendered <- RuntimePGF.linearizeClaimAstGf (Just pgfPath) ast
             case (fallbackRendered, runtimeRendered) of
               (Nothing, _) ->
@@ -1246,7 +1258,7 @@ testLegitimacyPenaltyDemotesLowConfidencePlan = TestCase $ do
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "тема"
          , rmpPrimaryClaim = "тезис", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
-         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpImplicationDirection = DirForward, rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = DeepDepth
          , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
@@ -1695,7 +1707,7 @@ testRouteFamilyInputPropagated = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "тест" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   assertBool "Input should propagate to semanticInput (not empty)" (siRawInput (rdSemanticInput rd) == input)
   assertBool "Pressure should be detected from actual input" (isJust (rdPressure rd))
   assertBool "PrincipledMode should activate from actual input" (isJust (rdPrincipledMode rd))
@@ -1710,7 +1722,7 @@ testRouteFamilyNixBlocked = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   assertEqual "Nix-blocked should force CMRepair" CMRepair (rdFamily rd)
 
 testNixGuardCyrillicConceptDoesNotUnsafeBlock :: Test
@@ -1736,7 +1748,7 @@ testRouteFamilyAnchorUsesCurrentTopic = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       currentTopic = "свобода"
       atomSet = collectAtoms input []
-      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMGround frame atomSet nextUserState ss [] input False currentTopic Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   assertBool "Anchor secondary channel should reflect current topic"
     (fmap saSecondaryChannel (rdSemanticAnchor rd) == Just (Just "свобода"))
 
@@ -1748,7 +1760,7 @@ testModulateRMPWithNarrativeDeepMode = TestCase $ do
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "topic"
          , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
-         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpImplicationDirection = DirForward, rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
          , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
@@ -1765,7 +1777,7 @@ testModulateRMPWithNarrativeTopicFill = TestCase $ do
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = ""
          , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
-         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpImplicationDirection = DirForward, rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
          , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
@@ -1781,7 +1793,7 @@ testModulateRMPWithNarrativeNoOp = TestCase $ do
         , rmpStrategy = DirectThenGround, rmpStance = Firm
          , rmpEpistemic = Known 0.9, rmpTopic = "topic"
          , rmpPrimaryClaim = "claim", rmpPrimaryClaimAst = Nothing, rmpScope = Nothing, rmpContrastAxis = ""
-         , rmpImplicationDirection = "forward", rmpProvenance = BuiltClaim
+         , rmpImplicationDirection = DirForward, rmpProvenance = BuiltClaim
          , rmpTruthContractStatus = CanonicalSurfacePreserved
          , rmpCommitmentStrength = 0.9, rmpDepthMode = SurfaceDepth
          , rmpSensePlan = emptyResponseSensePlan, rmpMicroPlan = emptyMicroPlan
@@ -1867,13 +1879,13 @@ testRouteFamilyNarrativeHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
       silenceNarrative = Just ConsciousnessNarrative
         { cnKernelState = "test", cnActiveDesires = "test"
         , cnSkillInPlay = "\1052\1086\1083\1095\1072\1090\1100"
         , cnSelfView = "test", cnConflict = "", cnLimitation = ""
         }
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0 dummyConatusEnergy emptyField Nothing
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" silenceNarrative 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   assertBool "Silence narrative hint should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "Silence narrative should route to CMAnchor" CMAnchor (rdFamily rdWithHint)
@@ -1890,7 +1902,7 @@ testRouteFamilyOperationalQuestionResistsReflectNarrative = TestCase $ do
         , cnSkillInPlay = "unknown skill"
         , cnSelfView = "test", cnConflict = "Внутренний конфликт: test", cnLimitation = ""
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "работа" conflictNarrative 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   assertBool "diagnostic operational question should not be overridden into reflect by conflict narrative" (rdFamily rd /= CMReflect)
 
 testRouteFamilyIntuitionHintChangesFamily :: Test
@@ -1900,9 +1912,9 @@ testRouteFamilyIntuitionHintChangesFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rdBaseline = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
       holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
-      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField Nothing
+      rdWithHint = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField 0.5 Nothing []
   assertBool "High intuition posterior should change family from baseline"
     (rdFamily rdWithHint /= rdFamily rdBaseline)
   assertEqual "High intuition posterior should route to CMDeepen" CMDeepen (rdFamily rdWithHint)
@@ -1918,7 +1930,7 @@ testRouteFamilyHolisticFieldKeepsCMDeepen = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
       holisticField = emptyField { fieldResonance = mkResonance 0.8, fieldAtmosphere = mkAtmosphere 0.0 0.7 }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy holisticField 0.5 Nothing []
   assertEqual "holistic-leaning field must keep CMDeepen (not escalate to formal default)" CMDeepen (rdFamily rd)
   case rdDeliberation rd of
     Nothing -> assertFailure "rdDeliberation must be populated"
@@ -1936,7 +1948,7 @@ testRouteFamilyEmptyFieldKeepsCascadeFamily = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy emptyField 0.5 Nothing []
   assertEqual "empty field with high intuition must preserve cascade family (no salience escalation)" CMDeepen (rdFamily rd)
   case rdDeliberation rd of
     Nothing -> assertFailure "rdDeliberation must be populated"
@@ -1951,7 +1963,7 @@ testRouteFamilyDeliberationPopulated = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   case rdDeliberation rd of
     Nothing -> assertFailure "routeFamily must populate rdDeliberation"
     Just deliberation -> do
@@ -1986,7 +1998,7 @@ testRouteFamilyConatusOverrideDeliberation = TestCase $ do
             , ccPenalty    = 1.0
             }
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField 0.5 Nothing []
   case rdDeliberation rd of
     Nothing -> assertFailure "routeFamily must populate rdDeliberation under conatus override"
     Just deliberation -> do
@@ -2013,8 +2025,8 @@ testRouteFamilyAgreementIdempotence = TestCase $ do
       frame = parseProposition input
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
-      rd1 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
-      rd2 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField Nothing
+      rd1 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
+      rd2 = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
   case (rdDeliberation rd1, rdDeliberation rd2) of
     (Just d1, Just d2) -> do
       assertEqual "identical inputs must yield identical deliberation"
@@ -2045,7 +2057,7 @@ testRouteFamilyHolisticFieldDeliberationDivergence = TestCase $ do
         { fieldResonance = mkResonance 0.8
         , fieldAtmosphere = mkAtmosphere 0.5 0.7
         }
-      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy divergentField Nothing
+      rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.7 dummyConatusEnergy divergentField 0.5 Nothing []
   assertEqual "holistic-leaning field must keep CMDeepen"
     CMDeepen (rdFamily rd)
   case rdDeliberation rd of
@@ -2104,21 +2116,21 @@ testMoveToTextGroundKnown = TestCase $ do
         , mdNominative = Map.fromList [("\1089\1074\1086\1073\1086\1076\1072", "\1089\1074\1086\1073\1086\1076\1072")]
         , mdFormsBySurface = Map.empty
         }
-      result = Dialogue.moveToText MoveGroundKnown "\1089\1074\1086\1073\1086\1076\1072" md
+      result = Dialogue.moveToText MoveGroundKnown "\1089\1074\1086\1073\1086\1076\1072" emptyRuntimeParadigms md
   assertBool "MoveGroundKnown should contain prepositional form" (T.isInfixOf "\1089\1074\1086\1073\1086\1076\1077" result)
 
 testMoveToTextAffirmPresence :: Test
 testMoveToTextAffirmPresence = TestCase $ do
   let md = MorphologyData Map.empty Map.empty Map.empty Map.empty
-      result = Dialogue.moveToText MoveAffirmPresence "\1089\1074\1086\1073\1086\1076\1072" md
+      result = Dialogue.moveToText MoveAffirmPresence "\1089\1074\1086\1073\1086\1076\1072" emptyRuntimeParadigms md
   assertEqual "MoveAffirmPresence should ignore topic" "\1071 \1079\1076\1077\1089\1100." result
 
 testClaimAstStableForSameIntent :: Test
 testClaimAstStableForSameIntent = TestCase $ do
   let frame1 = parseProposition "поговорим о логике?"
       frame2 = parseProposition "давай поговорим о логике?"
-      rmp1 = TurnPlanning.buildRMP (ipfCanonicalFamily frame1) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame1 emptySenseVector (ipfFocusEntity frame1) emptyEgoState emptyAtomTrace True
-      rmp2 = TurnPlanning.buildRMP (ipfCanonicalFamily frame2) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame2 emptySenseVector (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True
+      rmp1 = TurnPlanning.buildRMP (ipfCanonicalFamily frame1) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame1 emptySenseVector (ipfFocusEntity frame1) emptyEgoState emptyAtomTrace True 0.5
+      rmp2 = TurnPlanning.buildRMP (ipfCanonicalFamily frame2) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame2 emptySenseVector (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True 0.5
   case (rmpPrimaryClaimAst rmp1, rmpPrimaryClaimAst rmp2) of
     (Just (MoveInvite _ _ _), Just (MoveInvite _ _ _)) -> pure ()
     other -> assertFailure ("same intent should map to stable invitation AST, got: " <> show other)
@@ -2127,12 +2139,12 @@ testClaimAstSameTreeVariedSurface :: Test
 testClaimAstSameTreeVariedSurface = TestCase $ do
   let frame = parseProposition "что такое осень?"
       family = ipfCanonicalFamily frame
-      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True
+      rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True 0.5
       rcpFormal = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleFormal }
       rcpWarm = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleWarm }
       md = ssMorphology emptySystemState
-      artFormal = Dialogue.renderDialogueArtifact frame rmp rcpFormal (ipfFocusEntity frame) [] md
-      artWarm = Dialogue.renderDialogueArtifact frame rmp rcpWarm (ipfFocusEntity frame) [] md
+      artFormal = Dialogue.renderDialogueArtifact frame rmp rcpFormal (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField
+      artWarm = Dialogue.renderDialogueArtifact frame rmp rcpWarm (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField
   assertBool "define question should build claim AST" (rmpPrimaryClaimAst rmp /= Nothing)
   assertBool "structured render should mark linearization as successful" (Dialogue.draLinearizationOk artFormal)
   assertEqual "same AST should stay stable across styles for GF linearization"
@@ -2155,11 +2167,11 @@ testStructuredDialogueRespectsBoundedContinuation :: Test
 testStructuredDialogueRespectsBoundedContinuation = TestCase $ do
   let frame = parseProposition "что такое свобода?"
       family = ipfCanonicalFamily frame
-      rmp0 = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "свобода" emptyEgoState emptyAtomTrace True
-      rmp = rmp0 { rmpImplicationDirection = "bounded" }
+      rmp0 = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "свобода" emptyEgoState emptyAtomTrace True 0.5
+      rmp = rmp0 { rmpImplicationDirection = DirBounded }
       rcp = TurnPlanning.buildRCP family rmp
       md = ssMorphology emptySystemState
-      artifact = Dialogue.renderDialogueArtifact frame rmp rcp "свобода" [] md
+      artifact = Dialogue.renderDialogueArtifact frame rmp rcp "свобода" [] md emptyRuntimeParadigms emptyField
   assertBool "bounded structured dialogue should expose a boundary continuation"
     ("Проведём границу:" `T.isInfixOf` Dialogue.draTemplateBodyText artifact)
 
@@ -2712,7 +2724,7 @@ testBuildRmpForceProperty = quickCheckTest "buildRMP force matches family contra
   forAll
     (elements [CMGround, CMDefine, CMDistinguish, CMReflect, CMDescribe, CMPurpose, CMHypothesis, CMRepair, CMContact, CMAnchor, CMClarify, CMDeepen, CMConfront, CMNextStep])
     (\fam ->
-      let rmp = TurnPlanning.buildRMP fam emptyDialogueCommitmentLedger Exploring emptyDialogueThread emptyInputPropositionFrame emptySenseVector "topic" emptyEgoState emptyAtomTrace True
+      let rmp = TurnPlanning.buildRMP fam emptyDialogueCommitmentLedger Exploring emptyDialogueThread emptyInputPropositionFrame emptySenseVector "topic" emptyEgoState emptyAtomTrace True 0.5
       in rmpForce rmp == forceForFamily fam
     )
 
@@ -2877,25 +2889,25 @@ testParsePropositionENComplexPurposeVsDistinguish = TestCase $ do
       frame3 = parseProposition "what is probability, and how does it differ from necessity in practical reasoning?"
       frame4 = parseProposition "why do they differ"
   assertEqual "complex distinction 1 should be PurposeQ"
-    "PurposeQ" (ipfPropositionType frame1)
+    PurposeQ (ipfPropositionType frame1)
   assertEqual "complex distinction 2 should be PurposeQ"
-    "PurposeQ" (ipfPropositionType frame2)
+    PurposeQ (ipfPropositionType frame2)
   assertEqual "complex distinction 3 should be PurposeQ"
-    "PurposeQ" (ipfPropositionType frame3)
+    PurposeQ (ipfPropositionType frame3)
   assertEqual "complex distinction 4 should be PurposeQ"
-    "PurposeQ" (ipfPropositionType frame4)
+    PurposeQ (ipfPropositionType frame4)
 
 testParsePropositionENRepairExplainDifferently :: Test
 testParsePropositionENRepairExplainDifferently = TestCase $ do
   let frame = parseProposition "can you explain that differently?"
   assertEqual "'explain that differently' should be RepairSignal"
-    "RepairSignal" (ipfPropositionType frame)
+    RepairSignal (ipfPropositionType frame)
 
 testParsePropositionSelfKnowledgeAboutSelf :: Test
 testParsePropositionSelfKnowledgeAboutSelf = TestCase $ do
   let frame = parseProposition "что ты знаешь о себе?"
   assertEqual "Self-knowledge about self should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Self-knowledge family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
   assertBool "Self-knowledge confidence should be high"
@@ -2905,7 +2917,7 @@ testParsePropositionSelfKnowledgeAboutUserTypo :: Test
 testParsePropositionSelfKnowledgeAboutUserTypo = TestCase $ do
   let frame = parseProposition "что ты знаешь о мне?"
   assertEqual "Self-knowledge about user with typo should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Self-knowledge about user should keep a user target"
     "user" (ipfSemanticTarget frame)
 
@@ -2913,7 +2925,7 @@ testParsePropositionWorldCauseSun :: Test
 testParsePropositionWorldCauseSun = TestCase $ do
   let frame = parseProposition "почему солнце светит?"
   assertEqual "World cause should be WorldCauseQ"
-    "WorldCauseQ" (ipfPropositionType frame)
+    WorldCauseQ (ipfPropositionType frame)
   assertEqual "World cause family should be CMGround"
     CMGround (ipfCanonicalFamily frame)
   assertBool "World cause confidence should be high"
@@ -2923,7 +2935,7 @@ testParsePropositionWorldCauseSky :: Test
 testParsePropositionWorldCauseSky = TestCase $ do
   let frame = parseProposition "почему небо голубое?"
   assertEqual "Sky cause should stay in world-cause class"
-    "WorldCauseQ" (ipfPropositionType frame)
+    WorldCauseQ (ipfPropositionType frame)
   assertEqual "Sky cause should preserve noun subject"
     "небо" (ipfSemanticSubject frame)
   assertEqual "Sky cause family should be CMGround"
@@ -2933,7 +2945,7 @@ testParsePropositionLocationFormationThought :: Test
 testParsePropositionLocationFormationThought = TestCase $ do
   let frame = parseProposition "где формируется мысль?"
   assertEqual "Location formation should be LocationFormationQ"
-    "LocationFormationQ" (ipfPropositionType frame)
+    LocationFormationQ (ipfPropositionType frame)
   assertEqual "Location formation family should be CMGround"
     CMGround (ipfCanonicalFamily frame)
 
@@ -2941,13 +2953,13 @@ testParsePropositionLocationFormationTypo :: Test
 testParsePropositionLocationFormationTypo = TestCase $ do
   let frame = parseProposition "где формтруется мысль?"
   assertEqual "Location formation with typo should be LocationFormationQ"
-    "LocationFormationQ" (ipfPropositionType frame)
+    LocationFormationQ (ipfPropositionType frame)
 
 testParsePropositionEverydayPurchaseStatement :: Test
 testParsePropositionEverydayPurchaseStatement = TestCase $ do
   let frame = parseProposition "я купил дом"
   assertEqual "Everyday purchase statement should route to GroundQ"
-    "GroundQ" (ipfPropositionType frame)
+    GroundQ (ipfPropositionType frame)
   assertEqual "Everyday purchase statement should keep concrete topic"
     "дом" (ipfSemanticSubject frame)
   assertEqual "Everyday purchase statement family should be CMGround"
@@ -2957,7 +2969,7 @@ testParsePropositionEverydayResidenceStatement :: Test
 testParsePropositionEverydayResidenceStatement = TestCase $ do
   let frame = parseProposition "я живу дома"
   assertEqual "Everyday residence statement should route to GroundQ"
-    "GroundQ" (ipfPropositionType frame)
+    GroundQ (ipfPropositionType frame)
   assertEqual "Everyday residence statement should keep concrete topic"
     "дом" (ipfSemanticSubject frame)
   assertEqual "Everyday residence statement family should be CMGround"
@@ -2967,7 +2979,7 @@ testParsePropositionAffectiveHelpQuestion :: Test
 testParsePropositionAffectiveHelpQuestion = TestCase $ do
   let frame = parseProposition "что делать если грустно?"
   assertEqual "Affective-help question should route to next-step planning"
-    "NextStepQ" (ipfPropositionType frame)
+    NextStepQ (ipfPropositionType frame)
   assertEqual "Affective-help family should be CMNextStep"
     CMNextStep (ipfCanonicalFamily frame)
 
@@ -2975,7 +2987,7 @@ testParsePropositionComparisonPlausibilityTableChair :: Test
 testParsePropositionComparisonPlausibilityTableChair = TestCase $ do
   let frame = parseProposition "стол на стуле. или стул на столе. что логичнее?"
   assertEqual "Comparison plausibility should be ComparisonPlausibilityQ"
-    "ComparisonPlausibilityQ" (ipfPropositionType frame)
+    ComparisonPlausibilityQ (ipfPropositionType frame)
   assertEqual "Comparison family should be CMDistinguish"
     CMDistinguish (ipfCanonicalFamily frame)
   assertEqual "Comparison should capture left/right candidates"
@@ -2986,7 +2998,7 @@ testParsePropositionMisunderstandingReport :: Test
 testParsePropositionMisunderstandingReport = TestCase $ do
   let frame = parseProposition "я не понимаю тебя"
   assertEqual "Misunderstanding should be MisunderstandingReport"
-    "MisunderstandingReport" (ipfPropositionType frame)
+    MisunderstandingReport (ipfPropositionType frame)
   assertEqual "Misunderstanding family should be CMRepair"
     CMRepair (ipfCanonicalFamily frame)
 
@@ -3024,7 +3036,7 @@ testParsePropositionDialogueInvitationLogic :: Test
 testParsePropositionDialogueInvitationLogic = TestCase $ do
   let frame = parseProposition "поговорим о логике?"
   assertEqual "Dialogue invitation should be DialogueInvitationQ"
-    "DialogueInvitationQ" (ipfPropositionType frame)
+    DialogueInvitationQ (ipfPropositionType frame)
   assertEqual "Dialogue invitation should route to CMDeepen"
     CMDeepen (ipfCanonicalFamily frame)
 
@@ -3032,7 +3044,7 @@ testParsePropositionConceptKnowledgeSun :: Test
 testParsePropositionConceptKnowledgeSun = TestCase $ do
   let frame = parseProposition "знаешь что такое солнце?"
   assertEqual "Concept knowledge prompt should be ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "Concept knowledge subject should preserve the concept noun"
     "солнце" (ipfSemanticSubject frame)
 
@@ -3040,7 +3052,7 @@ testParsePropositionSelfStateQuestion :: Test
 testParsePropositionSelfStateQuestion = TestCase $ do
   let frame = parseProposition "о чём ты думаешь?"
   assertEqual "Self-state question should be SelfStateQ"
-    "SelfStateQ" (ipfPropositionType frame)
+    SelfStateQ (ipfPropositionType frame)
   assertEqual "Self-state question should route to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3048,7 +3060,7 @@ testParsePropositionGenerativePromptThought :: Test
 testParsePropositionGenerativePromptThought = TestCase $ do
   let frame = parseProposition "скажи любую мысль"
   assertEqual "Generative prompt should be GenerativePrompt"
-    "GenerativePrompt" (ipfPropositionType frame)
+    GenerativePrompt (ipfPropositionType frame)
   assertEqual "Generative prompt should route to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3056,7 +3068,7 @@ testParsePropositionContemplativeTopicSilence :: Test
 testParsePropositionContemplativeTopicSilence = TestCase $ do
   let frame = parseProposition "тишина"
   assertEqual "Single contemplative topic should be ContemplativeTopic"
-    "ContemplativeTopic" (ipfPropositionType frame)
+    ContemplativeTopic (ipfPropositionType frame)
   assertEqual "Contemplative topic should route to CMDeepen"
     CMDeepen (ipfCanonicalFamily frame)
 
@@ -3064,7 +3076,7 @@ testParsePropositionConceptKnowledgeFreedomVariant :: Test
 testParsePropositionConceptKnowledgeFreedomVariant = TestCase $ do
   let frame = parseProposition "знаешь ли ты что такое свобода?"
   assertEqual "Variant concept question should still be ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "Frame evidence must include semantic route tag"
     True (any ("frame.route_tag=concept_knowledge" `T.isPrefixOf`) (ipfSemanticEvidence frame))
 
@@ -3072,7 +3084,7 @@ testParsePropositionSelfStateMindVariant :: Test
 testParsePropositionSelfStateMindVariant = TestCase $ do
   let frame = parseProposition "что у тебя на уме?"
   assertEqual "Self-state variant should be SelfStateQ"
-    "SelfStateQ" (ipfPropositionType frame)
+    SelfStateQ (ipfPropositionType frame)
   assertEqual "Self-state family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3080,7 +3092,7 @@ testParsePropositionGenerativePromptIdeaVariant :: Test
 testParsePropositionGenerativePromptIdeaVariant = TestCase $ do
   let frame = parseProposition "дай идею"
   assertEqual "Generative variant should be GenerativePrompt"
-    "GenerativePrompt" (ipfPropositionType frame)
+    GenerativePrompt (ipfPropositionType frame)
   assertEqual "Generative family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3088,7 +3100,7 @@ testParsePropositionGenerativePromptAnotherThoughtVariant :: Test
 testParsePropositionGenerativePromptAnotherThoughtVariant = TestCase $ do
   let frame = parseProposition "а еще одну интересную мысль?"
   assertEqual "Another-thought variant should be GenerativePrompt"
-    "GenerativePrompt" (ipfPropositionType frame)
+    GenerativePrompt (ipfPropositionType frame)
   assertEqual "Another-thought family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3096,7 +3108,7 @@ testParsePropositionGenerativePromptLogicalVariant :: Test
 testParsePropositionGenerativePromptLogicalVariant = TestCase $ do
   let frame = parseProposition "скажи что-то логичное"
   assertEqual "Logical quality prompt should be GenerativePrompt"
-    "GenerativePrompt" (ipfPropositionType frame)
+    GenerativePrompt (ipfPropositionType frame)
   assertEqual "Logical quality prompt should preserve requested quality as subject"
     "логичный" (ipfSemanticSubject frame)
 
@@ -3104,7 +3116,7 @@ testParsePropositionContemplativeTopicHome :: Test
 testParsePropositionContemplativeTopicHome = TestCase $ do
   let frame = parseProposition "дом"
   assertEqual "One-word contemplative input should be ContemplativeTopic"
-    "ContemplativeTopic" (ipfPropositionType frame)
+    ContemplativeTopic (ipfPropositionType frame)
   assertEqual "Contemplative one-word family should be CMDeepen"
     CMDeepen (ipfCanonicalFamily frame)
 
@@ -3112,7 +3124,7 @@ testParsePropositionReflectiveAssertionSubjectivityTopic :: Test
 testParsePropositionReflectiveAssertionSubjectivityTopic = TestCase $ do
   let frame = parseProposition "я думаю, что важно сохранять свою субъектность"
   assertEqual "Reflective assertion should map to ContemplativeTopic"
-    "ContemplativeTopic" (ipfPropositionType frame)
+    ContemplativeTopic (ipfPropositionType frame)
   assertEqual "Reflective assertion should keep abstract concept as semantic subject"
     "субъектность" (ipfSemanticSubject frame)
 
@@ -3120,7 +3132,7 @@ testParsePropositionSelfKnowledgeWhatYouAre :: Test
 testParsePropositionSelfKnowledgeWhatYouAre = TestCase $ do
   let frame = parseProposition "что ты есть?"
   assertEqual "What-you-are question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "What-you-are family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3128,7 +3140,7 @@ testParsePropositionSelfKnowledgeWhatYouAreVariant :: Test
 testParsePropositionSelfKnowledgeWhatYouAreVariant = TestCase $ do
   let frame = parseProposition "чем ты являешься?"
   assertEqual "Be-what variant should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Be-what variant family should be CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3136,7 +3148,7 @@ testParsePropositionSelfKnowledgeNameQuestion :: Test
 testParsePropositionSelfKnowledgeNameQuestion = TestCase $ do
   let frame = parseProposition "Как тебя зовут?"
   assertEqual "Name question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Name question should map to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3144,7 +3156,7 @@ testParsePropositionSelfKnowledgeTellAboutSelfQuestion :: Test
 testParsePropositionSelfKnowledgeTellAboutSelfQuestion = TestCase $ do
   let frame = parseProposition "что ты можешь рассказать о себе?"
   assertEqual "Tell-about-self question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Tell-about-self question should map to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -3152,7 +3164,7 @@ testParsePropositionSelfKnowledgeCapabilityQuestion :: Test
 testParsePropositionSelfKnowledgeCapabilityQuestion = TestCase $ do
   let frame = parseProposition "ты умеешь обобщать?"
   assertEqual "Capability question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Capability question should route to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
   assertEqual "Capability question should use capability target"
@@ -3164,7 +3176,7 @@ testParsePropositionSelfKnowledgeHelpQuestion :: Test
 testParsePropositionSelfKnowledgeHelpQuestion = TestCase $ do
   let frame = parseProposition "ты можешь мне помочь?"
   assertEqual "Help question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Help question should use user_help target"
     "user_help" (ipfSemanticTarget frame)
   assertEqual "Help question should preserve help subject"
@@ -3174,7 +3186,7 @@ testParsePropositionSelfKnowledgeUserIdentityQuestion :: Test
 testParsePropositionSelfKnowledgeUserIdentityQuestion = TestCase $ do
   let frame = parseProposition "кто я такой?"
   assertEqual "User identity question should be SelfKnowledgeQ"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "User identity question should target user"
     "user" (ipfSemanticTarget frame)
 
@@ -3182,7 +3194,7 @@ testParsePropositionKeywordFallbackOperationalCause :: Test
 testParsePropositionKeywordFallbackOperationalCause = TestCase $ do
   let frame = parseProposition "почему система не отвечает?"
   assertEqual "Keyword fallback should preserve operational-cause compatibility"
-    "OperationalCauseQ" (ipfPropositionType frame)
+    OperationalCauseQ (ipfPropositionType frame)
   assertEqual "Keyword fallback operational cause should map to CMGround"
     CMGround (ipfCanonicalFamily frame)
 
@@ -3226,7 +3238,7 @@ testParsePropositionConceptKnowledgeBeingSmartVariant :: Test
 testParsePropositionConceptKnowledgeBeingSmartVariant = TestCase $ do
   let frame = parseProposition "что значит быть умным?"
   assertEqual "Being-smart variant should be ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "Being-smart concept phrase should be preserved"
     "быть умным" (ipfSemanticSubject frame)
 
@@ -3234,7 +3246,7 @@ testParsePropositionConceptKnowledgeWhoIsGod :: Test
 testParsePropositionConceptKnowledgeWhoIsGod = TestCase $ do
   let frame = parseProposition "кто такой бог?"
   assertEqual "Who-is-God question should be ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "Who-is-God question should map to CMDefine"
     CMDefine (ipfCanonicalFamily frame)
   assertEqual "Who-is-God should preserve subject noun"
@@ -3244,7 +3256,7 @@ testParsePropositionConceptKnowledgeWhatIsSense :: Test
 testParsePropositionConceptKnowledgeWhatIsSense = TestCase $ do
   let frame = parseProposition "что есть смысл?"
   assertEqual "What-is-sense question should be ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "What-is-sense question should map to CMDefine"
     CMDefine (ipfCanonicalFamily frame)
 
@@ -3262,7 +3274,7 @@ testParsePropositionDialogueInvitationWithoutTopicFallsBackToDialogue :: Test
 testParsePropositionDialogueInvitationWithoutTopicFallsBackToDialogue = TestCase $ do
   let frame = parseProposition "поговорим?"
   assertEqual "Topic-less invitation should keep dialogue proposition"
-    "DialogueInvitationQ" (ipfPropositionType frame)
+    DialogueInvitationQ (ipfPropositionType frame)
   assertEqual "Topic-less invitation should default semantic subject to dialogue"
     "диалог" (ipfSemanticSubject frame)
 
@@ -3270,7 +3282,7 @@ testParsePropositionEverydayStatementKeepsHighParserConfidence :: Test
 testParsePropositionEverydayStatementKeepsHighParserConfidence = TestCase $ do
   let frame = parseProposition "я купил дом, дом оказался хорошим"
   assertEqual "Everyday statement should map to GroundQ"
-    "GroundQ" (ipfPropositionType frame)
+    GroundQ (ipfPropositionType frame)
   assertBool "Everyday statement confidence should stay parser-lock high"
     (ipfConfidence frame >= 0.72)
 
@@ -3278,7 +3290,7 @@ testParsePropositionFarewellSignal :: Test
 testParsePropositionFarewellSignal = TestCase $ do
   let frame = parseProposition "до свидания"
   assertEqual "Farewell should map to ContactSignal"
-    "ContactSignal" (ipfPropositionType frame)
+    ContactSignal (ipfPropositionType frame)
   assertEqual "Farewell should map to CMContact"
     CMContact (ipfCanonicalFamily frame)
 
@@ -3286,7 +3298,7 @@ testParsePropositionGratitudeSignal :: Test
 testParsePropositionGratitudeSignal = TestCase $ do
   let frame = parseProposition "спасибо тебе"
   assertEqual "Gratitude should map to ContactSignal"
-    "ContactSignal" (ipfPropositionType frame)
+    ContactSignal (ipfPropositionType frame)
   assertEqual "Gratitude should map to CMContact"
     CMContact (ipfCanonicalFamily frame)
 
@@ -3367,7 +3379,7 @@ testOperationalStatusRemainsUnchangedUnderConfrontSlice :: Test
 testOperationalStatusRemainsUnchangedUnderConfrontSlice = TestCase $ do
   let frame = parseProposition "ты не работаешь?"
   assertEqual "operational status should remain unchanged by confront-only seam"
-    "OperationalStatusQ" (ipfPropositionType frame)
+    OperationalStatusQ (ipfPropositionType frame)
 
 testConstitutionAdmissiblePropositionNextStepPreservesRawTriggers :: Test
 testConstitutionAdmissiblePropositionNextStepPreservesRawTriggers = TestCase $ do
@@ -3403,7 +3415,7 @@ testAffectiveHelpRemainsUnchangedUnderNextStepSlice :: Test
 testAffectiveHelpRemainsUnchangedUnderNextStepSlice = TestCase $ do
   let frame = parseProposition "что делать если грустно?"
   assertEqual "affective-help routing should remain unchanged by next-step-only seam"
-    "NextStepQ" (ipfPropositionType frame)
+    NextStepQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleOperationalStatusPreservesRawTriggers :: Test
 testConstitutionAdmissibleOperationalStatusPreservesRawTriggers = TestCase $ do
@@ -3442,7 +3454,7 @@ testOperationalCauseRemainsUnchangedUnderOperationalStatusSlice :: Test
 testOperationalCauseRemainsUnchangedUnderOperationalStatusSlice = TestCase $ do
   let frame = parseProposition "почему система не отвечает?"
   assertEqual "operational cause should remain unchanged by operational-status-only seam"
-    "OperationalCauseQ" (ipfPropositionType frame)
+    OperationalCauseQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleOperationalCausePreservesRawTriggers :: Test
 testConstitutionAdmissibleOperationalCausePreservesRawTriggers = TestCase $ do
@@ -3481,7 +3493,7 @@ testOperationalStatusRemainsUnchangedUnderOperationalCauseSlice :: Test
 testOperationalStatusRemainsUnchangedUnderOperationalCauseSlice = TestCase $ do
   let frame = parseProposition "ты не работаешь?"
   assertEqual "operational status should remain unchanged by operational-cause-only seam"
-    "OperationalStatusQ" (ipfPropositionType frame)
+    OperationalStatusQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleSystemLogicPreservesRawTriggers :: Test
 testConstitutionAdmissibleSystemLogicPreservesRawTriggers = TestCase $ do
@@ -3517,7 +3529,7 @@ testOperationalStatusRemainsUnchangedUnderSystemLogicSlice :: Test
 testOperationalStatusRemainsUnchangedUnderSystemLogicSlice = TestCase $ do
   let frame = parseProposition "ты не работаешь?"
   assertEqual "operational status should remain unchanged by system-logic-only seam"
-    "OperationalStatusQ" (ipfPropositionType frame)
+    OperationalStatusQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleDistinctionPreservesRawTriggers :: Test
 testConstitutionAdmissibleDistinctionPreservesRawTriggers = TestCase $ do
@@ -3553,7 +3565,7 @@ testSystemLogicRemainsUnchangedUnderDistinctionSlice :: Test
 testSystemLogicRemainsUnchangedUnderDistinctionSlice = TestCase $ do
   let frame = parseProposition "В чём твоя логика?"
   assertEqual "system logic should remain unchanged by distinction-only seam"
-    "SystemLogicQ" (ipfPropositionType frame)
+    SystemLogicQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleAffectiveSupportPhrasePreservesRawTriggers :: Test
 testConstitutionAdmissibleAffectiveSupportPhrasePreservesRawTriggers = TestCase $ do
@@ -3589,7 +3601,7 @@ testNextStepRemainsUnchangedUnderAffectivePhraseSlice :: Test
 testNextStepRemainsUnchangedUnderAffectivePhraseSlice = TestCase $ do
   let frame = parseProposition "что делать если грустно?"
   assertEqual "next-step path should remain unchanged by phrase-only affective seam"
-    "NextStepQ" (ipfPropositionType frame)
+    NextStepQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleAffectiveSupportProbePreservesRawTriggers :: Test
 testConstitutionAdmissibleAffectiveSupportProbePreservesRawTriggers = TestCase $ do
@@ -3625,7 +3637,7 @@ testNonAuthoritativeAffectiveSupportProbeSuppressesStrongTriggers = TestCase $ d
     PasprSuppressStrongProbe
     (apasprDecision admitted)
   assertBool "weak contour should stop raw affective-support probe from being sufficient by implication"
-    (ipfPropositionType frame /= "ContactSignal")
+    (ipfPropositionType frame /= ContactSignal)
 
 testPhraseTriggerHalfRemainsUnchangedUnderAffectiveProbeSlice :: Test
 testPhraseTriggerHalfRemainsUnchangedUnderAffectiveProbeSlice = TestCase $ do
@@ -3676,7 +3688,7 @@ testPurposeRemainsUnchangedUnderSelfKnowledgeSlice :: Test
 testPurposeRemainsUnchangedUnderSelfKnowledgeSlice = TestCase $ do
   let frame = parseProposition "зачем ты нужен?"
   assertEqual "purpose contour should remain unchanged by self-knowledge-only seam"
-    "PurposeQ" (ipfPropositionType frame)
+    PurposeQ (ipfPropositionType frame)
 
 testConstitutionAdmissiblePurposePreservesRawTriggers :: Test
 testConstitutionAdmissiblePurposePreservesRawTriggers = TestCase $ do
@@ -3712,7 +3724,7 @@ testSelfKnowledgeRemainsUnchangedUnderPurposeSlice :: Test
 testSelfKnowledgeRemainsUnchangedUnderPurposeSlice = TestCase $ do
   let frame = parseProposition "кто ты?"
   assertEqual "self-knowledge contour should remain unchanged by purpose-only seam"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleConceptKnowledgePreservesRawTriggers :: Test
 testConstitutionAdmissibleConceptKnowledgePreservesRawTriggers = TestCase $ do
@@ -3750,7 +3762,7 @@ testWorldCauseRemainsUnchangedUnderConceptKnowledgeSlice :: Test
 testWorldCauseRemainsUnchangedUnderConceptKnowledgeSlice = TestCase $ do
   let frame = parseProposition "почему идет дождь?"
   assertEqual "world-cause contour should remain unchanged by concept-knowledge-only seam"
-    "WorldCauseQ" (ipfPropositionType frame)
+    WorldCauseQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleMisunderstandingPreservesRawTriggers :: Test
 testConstitutionAdmissibleMisunderstandingPreservesRawTriggers = TestCase $ do
@@ -3788,7 +3800,7 @@ testRepairDirectiveRemainsUnchangedUnderMisunderstandingSlice :: Test
 testRepairDirectiveRemainsUnchangedUnderMisunderstandingSlice = TestCase $ do
   let frame = parseProposition "объясни проще"
   assertEqual "repair directive should remain unchanged by misunderstanding-only seam"
-    "RepairSignal" (ipfPropositionType frame)
+    RepairSignal (ipfPropositionType frame)
 
 testConstitutionAdmissibleWorldCausePreservesRawTriggers :: Test
 testConstitutionAdmissibleWorldCausePreservesRawTriggers = TestCase $ do
@@ -3824,7 +3836,7 @@ testLocationFormationRemainsUnchangedUnderWorldCauseSlice :: Test
 testLocationFormationRemainsUnchangedUnderWorldCauseSlice = TestCase $ do
   let frame = parseProposition "где формируется мысль?"
   assertEqual "location-formation contour should remain unchanged by world-cause-only seam"
-    "LocationFormationQ" (ipfPropositionType frame)
+    LocationFormationQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleLocationFormationPreservesRawTriggers :: Test
 testConstitutionAdmissibleLocationFormationPreservesRawTriggers = TestCase $ do
@@ -3860,7 +3872,7 @@ testSelfStateRemainsUnchangedUnderLocationFormationSlice :: Test
 testSelfStateRemainsUnchangedUnderLocationFormationSlice = TestCase $ do
   let frame = parseProposition "о чём ты думаешь?"
   assertEqual "self-state contour should remain unchanged by location-formation-only seam"
-    "SelfStateQ" (ipfPropositionType frame)
+    SelfStateQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleExploratoryPromptPreservesRawTriggers :: Test
 testConstitutionAdmissibleExploratoryPromptPreservesRawTriggers = TestCase $ do
@@ -3893,7 +3905,7 @@ testDialogueInvitationRemainsUnchangedUnderExploratoryPromptSlice :: Test
 testDialogueInvitationRemainsUnchangedUnderExploratoryPromptSlice = TestCase $ do
   let frame = parseProposition "давай поговорим о смысле"
   assertEqual "dialogue-invitation contour should remain unchanged by exploratory-prompt-only seam"
-    "DialogueInvitationQ" (ipfPropositionType frame)
+    DialogueInvitationQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleDialogueInvitationPreservesRawTriggers :: Test
 testConstitutionAdmissibleDialogueInvitationPreservesRawTriggers = TestCase $ do
@@ -3938,7 +3950,7 @@ testContemplativeTopicRemainsUnchangedUnderDialogueInvitationSlice :: Test
 testContemplativeTopicRemainsUnchangedUnderDialogueInvitationSlice = TestCase $ do
   let frame = parseProposition "я"
   assertEqual "contemplative-topic contour should remain unchanged by dialogue-invitation-only seam"
-    "ContemplativeTopic" (ipfPropositionType frame)
+    ContemplativeTopic (ipfPropositionType frame)
 
 testConstitutionAdmissibleContemplativeTopicPreservesRawTriggers :: Test
 testConstitutionAdmissibleContemplativeTopicPreservesRawTriggers = TestCase $ do
@@ -3991,7 +4003,7 @@ testGenerativePromptRemainsUnchangedUnderContemplativeTopicSlice :: Test
 testGenerativePromptRemainsUnchangedUnderContemplativeTopicSlice = TestCase $ do
   let frame = parseProposition "скажи любую мысль"
   assertEqual "generative-prompt contour should remain unchanged by contemplative-topic-only seam"
-    "GenerativePrompt" (ipfPropositionType frame)
+    GenerativePrompt (ipfPropositionType frame)
 
 testConstitutionAdmissibleGenerativePromptPreservesRawTriggers :: Test
 testConstitutionAdmissibleGenerativePromptPreservesRawTriggers = TestCase $ do
@@ -4039,7 +4051,7 @@ testSelfStateRemainsUnchangedUnderGenerativePromptSlice :: Test
 testSelfStateRemainsUnchangedUnderGenerativePromptSlice = TestCase $ do
   let frame = parseProposition "о чём ты думаешь?"
   assertEqual "self-state contour should remain unchanged by generative-prompt-only seam"
-    "SelfStateQ" (ipfPropositionType frame)
+    SelfStateQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleComparisonPlausibilityPreservesRawTriggers :: Test
 testConstitutionAdmissibleComparisonPlausibilityPreservesRawTriggers = TestCase $ do
@@ -4138,13 +4150,13 @@ testSelfKnowledgeRemainsUnchangedUnderSelfStateSlice :: Test
 testSelfKnowledgeRemainsUnchangedUnderSelfStateSlice = TestCase $ do
   let frame = parseProposition "что ты знаешь о себе?"
   assertEqual "self-knowledge contour should remain unchanged by self-state-only seam"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
 
 testSystemLogicRemainsUnchangedUnderSelfStateSlice :: Test
 testSystemLogicRemainsUnchangedUnderSelfStateSlice = TestCase $ do
   let frame = parseProposition "как ты формируешь ответ?"
   assertEqual "system-logic contour should remain unchanged by self-state-only seam"
-    "SelfKnowledgeQ" (ipfPropositionType frame)
+    SelfKnowledgeQ (ipfPropositionType frame)
 
 testConstitutionAdmissibleRepairDirectivePreservesRawTriggers :: Test
 testConstitutionAdmissibleRepairDirectivePreservesRawTriggers = TestCase $ do
@@ -4183,20 +4195,20 @@ testMisunderstandingRemainsUnchangedUnderRepairDirectiveSlice :: Test
 testMisunderstandingRemainsUnchangedUnderRepairDirectiveSlice = TestCase $ do
   let frame = parseProposition "я не понимаю тебя"
   assertEqual "misunderstanding contour should remain unchanged by repair-directive-only seam"
-    "MisunderstandingReport" (ipfPropositionType frame)
+    MisunderstandingReport (ipfPropositionType frame)
 
 testApologyRouteHintRemainsUnchangedUnderRepairDirectiveSlice :: Test
 testApologyRouteHintRemainsUnchangedUnderRepairDirectiveSlice = TestCase $ do
   let frame = parseProposition "извини, я был резок"
   assertEqual "apology route-hint path should remain unchanged by repair-directive-only seam"
-    "RepairSignal" (ipfPropositionType frame)
+    RepairSignal (ipfPropositionType frame)
 
 
 testParsePropositionApologySignal :: Test
 testParsePropositionApologySignal = TestCase $ do
   let frame = parseProposition "извини, я был резок"
   assertEqual "Apology should map to RepairSignal"
-    "RepairSignal" (ipfPropositionType frame)
+    RepairSignal (ipfPropositionType frame)
   assertEqual "Apology should map to CMRepair"
     CMRepair (ipfCanonicalFamily frame)
 
@@ -4204,7 +4216,7 @@ testParsePropositionAgreementSignal :: Test
 testParsePropositionAgreementSignal = TestCase $ do
   let frame = parseProposition "я согласен с тобой"
   assertEqual "Agreement should map to AnchorSignal"
-    "AnchorSignal" (ipfPropositionType frame)
+    AnchorSignal (ipfPropositionType frame)
   assertEqual "Agreement should map to CMAnchor"
     CMAnchor (ipfCanonicalFamily frame)
 
@@ -4212,7 +4224,7 @@ testParsePropositionDisagreementSignal :: Test
 testParsePropositionDisagreementSignal = TestCase $ do
   let frame = parseProposition "я не согласен с тобой"
   assertEqual "Disagreement should map to ConfrontQ"
-    "ConfrontQ" (ipfPropositionType frame)
+    ConfrontQ (ipfPropositionType frame)
   assertEqual "Disagreement should map to CMConfront"
     CMConfront (ipfCanonicalFamily frame)
 
@@ -4220,7 +4232,7 @@ testParsePropositionOpinionQuestion :: Test
 testParsePropositionOpinionQuestion = TestCase $ do
   let frame = parseProposition "как считаешь, логика важна?"
   assertEqual "Opinion question should map to SelfStateQ"
-    "SelfStateQ" (ipfPropositionType frame)
+    SelfStateQ (ipfPropositionType frame)
   assertEqual "Opinion question should map to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -4233,7 +4245,7 @@ testParsePropositionHowYouWillNotSmallTalk = TestCase $ do
         , "frame.route_tag=" `T.isPrefixOf` e
         ]
   assertBool "How-you-will question should not collapse to contact smalltalk"
-    (ipfPropositionType frame /= "ContactSignal")
+    (ipfPropositionType frame /= ContactSignal)
   assertBool "How-you-will question should avoid greeting_smalltalk route tag"
     (routeTag /= Just "greeting_smalltalk")
 
@@ -4241,7 +4253,7 @@ testParsePropositionHowYouWillMapsToSystemLogic :: Test
 testParsePropositionHowYouWillMapsToSystemLogic = TestCase $ do
   let frame = parseProposition "как ты будешь определять границы?"
   assertEqual "How-you-will question should map to SystemLogicQ"
-    "SystemLogicQ" (ipfPropositionType frame)
+    SystemLogicQ (ipfPropositionType frame)
   assertEqual "SystemLogicQ should map to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
@@ -4249,7 +4261,7 @@ testParsePropositionPurposeDeicticSubjectNormalized :: Test
 testParsePropositionPurposeDeicticSubjectNormalized = TestCase $ do
   let frame = parseProposition "зачем ты тут?"
   assertEqual "Purpose deictic question should map to PurposeQ"
-    "PurposeQ" (ipfPropositionType frame)
+    PurposeQ (ipfPropositionType frame)
   assertEqual "Purpose deictic question should normalize subject to system"
     "система" (ipfSemanticSubject frame)
 
@@ -4257,7 +4269,7 @@ testParsePropositionConceptKnowledgeDeathSubject :: Test
 testParsePropositionConceptKnowledgeDeathSubject = TestCase $ do
   let frame = parseProposition "ты знаешь, что такое смерть?"
   assertEqual "Concept knowledge about death should map to ConceptKnowledgeQ"
-    "ConceptKnowledgeQ" (ipfPropositionType frame)
+    ConceptKnowledgeQ (ipfPropositionType frame)
   assertEqual "Concept knowledge about death should preserve subject noun"
     "смерть" (ipfSemanticSubject frame)
 
@@ -4267,7 +4279,7 @@ testParsePropositionHowDistinguishMapsToDistinction = TestCase $ do
   assertEqual "How-distinguish should stay in distinguish family"
     CMDistinguish (ipfCanonicalFamily frame)
   assertBool "How-distinguish should not collapse to contemplative topic"
-    (ipfPropositionType frame /= "ContemplativeTopic")
+    (ipfPropositionType frame /= ContemplativeTopic)
 
 testPropositionToFamilySelfKnowledgeIsDescribe :: Test
 testPropositionToFamilySelfKnowledgeIsDescribe = TestCase $

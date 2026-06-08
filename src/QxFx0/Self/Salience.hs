@@ -106,9 +106,6 @@ module QxFx0.Self.Salience
   , salienceVerdict
     -- * Adjunction-aware dispatch
   , chooseBranch
-    -- * Phase-5.5 transitional helpers
-  , salienceFromField
-  , salienceFromResonance
     -- * Phase-2.5 runtime-Conatus helpers
   , salienceFromConatusEnergy
   , salienceFromConatusResonance
@@ -118,7 +115,6 @@ module QxFx0.Self.Salience
   , renderSalienceDriver
     -- * Family classification (Holistic / Formal)
   , isHolisticFamily
-  , isFormalFamily
     -- * Phase-B bounded post-commitment adaptation
   , adaptSalienceWeights
   ) where
@@ -128,6 +124,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
+import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
 import QxFx0.Self.Conatus
   ( ConatusComponents (..)
@@ -160,6 +157,7 @@ data SalienceDriver
   | DrivenByCounterfactual
   | DrivenByFieldConfidence
   | DrivenByConatusGate
+  | DrivenByContentSaliency  -- ^ WP-C: top-down content signal from spectral clustering
   | DrivenByDefault
   deriving stock (Eq, Show, Bounded, Enum, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
@@ -231,6 +229,10 @@ data SalienceWeights = SalienceWeights
     --   (lower field confidence ⇒ more bias toward Formal, in
     --   keeping with "the system can\'t trust holistic signals;
     --   fall back to formal contracts").
+  , weightContentSaliency :: !Double
+    -- ^ WP-C: Multiplier on content saliency from spectral clustering.
+    --   Direction: positive (more distinct topic clusters ⇒ more bias
+    --   toward Holistic, as rich content structure favors generative mode).
   , conatusGateThreshold  :: !Double
     -- ^ If @ceScalar < this@, force 'PreferFormal' with full
     --   confidence and 'DrivenByConatusGate' driver.
@@ -244,23 +246,36 @@ data SalienceWeights = SalienceWeights
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
--- | The Phase-5 default weights.
+-- | The Phase-5 builtin weights.
 --
 -- These are pinned to make the property tests pass and to make
 -- the operational mapping (ADR-0010 §6) plausible. They are
 -- explicitly /not/ calibrated against empirical ground truth;
 -- Phase 7 will replace them.
-defaultSalienceWeights :: SalienceWeights
-defaultSalienceWeights = SalienceWeights
+builtinSalienceWeights :: SalienceWeights
+builtinSalienceWeights = SalienceWeights
   { weightResonance       = 1.0
   , weightAtmosphere      = 0.5
   , weightConsolidation   = 0.75
   , weightCounterfactual  = 0.75
   , weightFieldConfidence = 0.5
+  , weightContentSaliency = 0.6  -- WP-C: moderate weight, pending Phase II calibration
   , conatusGateThreshold  = 0.0  -- @ceScalar@ can be negative under heavy violation; gate trips at 0
   , verdictThreshold      = 0.05 -- 5% dead band each side of 0.5
   , sigmoidTemperature    = 1.0
   }
+
+-- | The Phase-5 default weights, loaded from
+-- 'resources/config/salience_weights.json' if present, otherwise
+-- falling back to 'builtinSalienceWeights'.
+--
+-- The NOINLINE pragma is required to prevent GHC from inlining
+-- the 'unsafePerformIO' call and potentially evaluating it
+-- multiple times.
+defaultSalienceWeights :: SalienceWeights
+defaultSalienceWeights =
+  loadConfigOrBuiltin "resources/config/salience_weights.json" builtinSalienceWeights
+{-# NOINLINE defaultSalienceWeights #-}
 
 -- ---------------------------------------------------------------------------
 -- Tunable behavioural thresholds
@@ -317,8 +332,14 @@ defaultSalienceModulation = SalienceModulation
 -- 'PreferFormal'-shaped verdict with full confidence and
 -- 'DrivenByConatusGate'. Otherwise the rule of ADR-0010 §3 is
 -- applied.
-computeSalience :: SalienceWeights -> ConatusEnergy -> Field -> Salience
-computeSalience w ce f
+-- | WP-C: Compute the salience verdict with optional content saliency.
+--
+-- The @contentSaliency@ parameter is the top-down signal from spectral
+-- clustering of the meaning graph (range @[0,1]@, computed by
+-- 'QxFx0.Core.ContentCluster.computeContentSaliency'). When
+-- 'QxFx0.Core.ContentCluster.contentSalienceActive' is @False@, pass @0.0@.
+computeSalience :: SalienceWeights -> ConatusEnergy -> Field -> Double -> Salience
+computeSalience w ce f contentSaliency
   | ceScalar ce < conatusGateThreshold w =
       Salience
         { salienceHolisticBias = 0.0
@@ -326,13 +347,14 @@ computeSalience w ce f
         , salienceDriver       = DrivenByConatusGate
         }
   | otherwise =
-      let cs = contributions w f
+      let cs = contributions w f contentSaliency
           raw =
             contribResonance      cs
             + contribAtmosphere     cs
             - contribConsolidation  cs
             + contribCounterfactual cs
             - contribFieldConfidence cs
+            + contribContentSaliency cs  -- WP-C: top-down content signal
           bias = sigmoid (raw / sigmoidTemperature w)
        in Salience
              { salienceHolisticBias = bias
@@ -341,9 +363,10 @@ computeSalience w ce f
              }
 
 -- | Compute the aggregated self-layer verdict for a single turn.
-computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> SelfVerdict
-computeSelfVerdict w ce f =
-  let salience = computeSalience w ce f
+-- | WP-C: Compute the aggregated self-layer verdict with content saliency.
+computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> Double -> SelfVerdict
+computeSelfVerdict w ce f contentSaliency =
+  let salience = computeSalience w ce f contentSaliency
   in SelfVerdict
        { svSalience = salience
        , svVerdict = salienceVerdict w salience
@@ -410,22 +433,6 @@ chooseBranch v holistic formal = case v of
 -- This is the Phase-5.5 wiring helper.  Call sites that already
 -- have access to a runtime 'ConatusEnergy' (e.g. from
 -- 'PrepareStatic' or 'TurnInput') should pass it here.
-salienceFromField :: ConatusEnergy -> Field -> Salience
-salienceFromField ce =
-  computeSalience defaultSalienceWeights ce
-
--- | Build a 'Salience' from a single resonance signal, using
--- 'salienceFromField' on an otherwise-empty 'Field'.
---
--- This helper is kept for call sites that only have a resonance
--- scalar (e.g. the intuition handler in
--- 'QxFx0.Runtime.Wiring.Handlers').  Full-pipeline call sites
--- (routing, render-style, recovery) already use 'salienceFromField'
--- with a five-component 'Field'.
-salienceFromResonance :: ConatusEnergy -> Double -> Salience
-salienceFromResonance ce resonance =
-  salienceFromField ce (emptyField { fieldResonance = mkResonance resonance })
-
 -- ---------------------------------------------------------------------------
 -- Phase-2.5 runtime-Conatus helpers (M2d)
 -- ---------------------------------------------------------------------------
@@ -443,8 +450,11 @@ salienceFromResonance ce resonance =
 -- 'DrivenByConatusGate' and the 5.5b\/5.5c post-processors
 -- automatically dispatch to 'StyleRecovery' and suppress the
 -- narrative fragment, respectively.
-salienceFromConatusEnergy :: ConatusEnergy -> Field -> Salience
-salienceFromConatusEnergy = computeSalience defaultSalienceWeights
+-- | WP-C: Compute a 'Salience' from a precomputed 'ConatusEnergy', a 'Field',
+-- and optional content saliency. Uses 'defaultSalienceWeights'.
+salienceFromConatusEnergy :: ConatusEnergy -> Field -> Double -> Salience
+salienceFromConatusEnergy ce f contentSaliency =
+  computeSalience defaultSalienceWeights ce f contentSaliency
 
 -- | Convenience: build a 'Salience' from a precomputed
 -- 'ConatusEnergy' and a single resonance signal (otherwise-empty
@@ -455,6 +465,7 @@ salienceFromConatusResonance ce resonance =
   salienceFromConatusEnergy
     ce
     (emptyField { fieldResonance = mkResonance resonance })
+    0.0  -- WP-C: no content saliency
 
 -- | Compute a 'Salience' from a 'SelfBlanket', its current list
 -- of 'BlanketViolation's, and a 'Field'.
@@ -463,9 +474,11 @@ salienceFromConatusResonance ce resonance =
 -- internally. Used by call sites that have direct access to the
 -- runtime 'SystemState' (and hence to a 'SelfBlanket') without
 -- needing to thread Conatus through a request shape.
-salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Salience
-salienceFromBlanket b violations =
-  salienceFromConatusEnergy (computeConatusEnergy b violations)
+-- | WP-C: Compute a 'Salience' from a 'SelfBlanket', violations, a 'Field',
+-- and optional content saliency.
+salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Double -> Salience
+salienceFromBlanket b violations f contentSaliency =
+  salienceFromConatusEnergy (computeConatusEnergy b violations) f contentSaliency
 
 -- | Predicate: does the Conatus gate fire on this energy under
 -- 'defaultSalienceWeights'?
@@ -497,6 +510,7 @@ renderSalienceDriver DrivenByConsolidation   = "consolidation"
 renderSalienceDriver DrivenByCounterfactual  = "counterfactual"
 renderSalienceDriver DrivenByFieldConfidence = "field_confidence"
 renderSalienceDriver DrivenByConatusGate     = "conatus_gate"
+renderSalienceDriver DrivenByContentSaliency = "content_saliency"  -- WP-C
 renderSalienceDriver DrivenByDefault         = "default"
 
 -- ---------------------------------------------------------------------------
@@ -535,6 +549,7 @@ adaptSalienceWeights rawSignal w =
        , weightConsolidation   = bounded (weightConsolidation   def) (weightConsolidation   w)
        , weightCounterfactual  = bounded (weightCounterfactual  def) (weightCounterfactual  w)
        , weightFieldConfidence = bounded (weightFieldConfidence def) (weightFieldConfidence w)
+       , weightContentSaliency = bounded (weightContentSaliency def) (weightContentSaliency w)  -- WP-C
        }
 
 -- ---------------------------------------------------------------------------
@@ -553,15 +568,17 @@ data Contributions = Contributions
   , contribConsolidation   :: !Double
   , contribCounterfactual  :: !Double
   , contribFieldConfidence :: !Double
+  , contribContentSaliency :: !Double  -- ^ WP-C: top-down content signal
   }
 
-contributions :: SalienceWeights -> Field -> Contributions
-contributions w f = Contributions
+contributions :: SalienceWeights -> Field -> Double -> Contributions
+contributions w f contentSaliency = Contributions
   { contribResonance       = weightResonance       w * unResonance       (fieldResonance      f)
   , contribAtmosphere      = weightAtmosphere      w * atmosphereArousal (fieldAtmosphere     f)
   , contribConsolidation   = weightConsolidation   w * unConsolidation   (fieldConsolidation  f)
   , contribCounterfactual  = weightCounterfactual  w * unCounterfactual  (fieldCounterfactual f)
   , contribFieldConfidence = weightFieldConfidence w * unFieldConfidence (fieldConfidence     f)
+  , contribContentSaliency = weightContentSaliency w * contentSaliency  -- WP-C
   }
 
 -- | Closed-form logistic squash.
@@ -583,6 +600,7 @@ dominantDriver cs
       , (DrivenByConsolidation  , abs (contribConsolidation   cs))
       , (DrivenByCounterfactual , abs (contribCounterfactual  cs))
       , (DrivenByFieldConfidence, abs (contribFieldConfidence cs))
+      , (DrivenByContentSaliency, abs (contribContentSaliency cs))  -- WP-C
       ]
     totalMagnitude = sum (map snd cs')
     pickLarger a@(_, va) b@(_, vb) = if va >= vb then a else b
@@ -600,7 +618,7 @@ dominantDriver cs
 computeConfidence :: Contributions -> Double
 computeConfidence cs
   | dominant == 0.0 = 1.0
-  | otherwise       = max 0.0 (1.0 - other / (4.0 * dominant))
+  | otherwise       = max 0.0 (1.0 - other / (5.0 * dominant))  -- WP-C: now 6 contributions, so n-1 = 5
   where
     magnitudes =
       [ abs (contribResonance       cs)
@@ -608,6 +626,7 @@ computeConfidence cs
       , abs (contribConsolidation   cs)
       , abs (contribCounterfactual  cs)
       , abs (contribFieldConfidence cs)
+      , abs (contribContentSaliency cs)  -- WP-C
       ]
     dominant = maximum magnitudes
     other    = sum magnitudes - dominant
@@ -622,8 +641,3 @@ isHolisticFamily CMHypothesis = True
 isHolisticFamily CMDeepen     = True
 isHolisticFamily CMPurpose    = True
 isHolisticFamily _            = False
-
--- | Inverse of 'isHolisticFamily'.  Kept explicit so callers do
--- not need to remember which side is default.
-isFormalFamily :: CanonicalMoveFamily -> Bool
-isFormalFamily = not . isHolisticFamily

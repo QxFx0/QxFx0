@@ -1,0 +1,1 @@
+{"conatusGateThreshold":0,"sigmoidTemperature":1,"verdictThreshold":5.0e-2,"weightAtmosphere":0.5,"weightConsolidation":0.75,"weightContentSaliency":0.6,"weightCounterfactual":0.75,"weightFieldConfidence":0.5,"weightResonance":1}

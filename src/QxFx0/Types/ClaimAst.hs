@@ -10,6 +10,7 @@ module QxFx0.Types.ClaimAst
   , GfRelation(..)
   , GfMechanism(..)
   , GfNumber(..)
+  , GfActTopic(..)
   ) where
 
 import Control.DeepSeq (NFData)
@@ -29,6 +30,15 @@ data GfNP = MkNP !Text deriving stock (Eq, Show, Generic) deriving anyclass (NFD
 data GfRelation = RelIdentity deriving stock (Eq, Show, Generic) deriving anyclass (NFData)
 data GfMechanism = MechParse deriving stock (Eq, Show, Generic) deriving anyclass (NFData)
 data GfNumber = NumSg | NumPl deriving stock (Eq, Show, Generic) deriving anyclass (NFData)
+
+data GfActTopic
+  = ActAnswer
+  | ActQuestion
+  | ActTopicTerm
+  | ActProject
+  | ActResult
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData)
 
 data ClaimAst
   = ClaimPurpose !Text
@@ -57,6 +67,7 @@ data ClaimAst
   | MoveNextStepLocal GfNP
   | MoveHypothesis GfNP
   | MoveDistinguish GfNP GfNP
+  | MoveActOnTopic GfActTopic
   | StanceWrapped !Text ClaimAst
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData)
@@ -73,6 +84,8 @@ instance ToJSON GfMechanism where toJSON = genericToJSON defaultOptions
 instance FromJSON GfMechanism where parseJSON = genericParseJSON defaultOptions
 instance ToJSON GfNumber where toJSON = genericToJSON defaultOptions
 instance FromJSON GfNumber where parseJSON = genericParseJSON defaultOptions
+instance ToJSON GfActTopic where toJSON = genericToJSON defaultOptions
+instance FromJSON GfActTopic where parseJSON = genericParseJSON defaultOptions
 
 instance ToJSON ClaimAst where toJSON = genericToJSON defaultOptions
 instance FromJSON ClaimAst where parseJSON = genericParseJSON defaultOptions

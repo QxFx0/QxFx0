@@ -7,7 +7,7 @@ module QxFx0.Core.TurnPipeline.Finalize.Dream
   ( applyDreamDynamics
   ) where
 
-import QxFx0.Core.Dream.Pressure
+import QxFx0.Core.TopicDrift.Pressure
 import QxFx0.Types
 import QxFx0.Types.Config.Dream (defaultDreamPressureRegime, dreamFamilyBiasProfile, dreamMaxAttractorNormDefault)
 import QxFx0.Types.Thresholds
@@ -27,7 +27,7 @@ import QxFx0.Types.Thresholds
   , dreamRewireWeightFloor
   )
 import QxFx0.Core.TurnPipeline.Types
-import qualified QxFx0.Core.DreamDynamics as Dream
+import qualified QxFx0.Core.TopicDrift as Dream
 import QxFx0.Core.MeaningGraph (rewireMeaningGraphForDreamCycle, successRate)
 
 import qualified Data.Text as T

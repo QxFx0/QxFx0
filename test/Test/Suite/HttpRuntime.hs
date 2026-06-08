@@ -27,7 +27,7 @@ import Network.HTTP.Simple
   , setRequestBodyJSON
   , setRequestMethod
   )
-import System.Directory (doesFileExist)
+import System.Directory (doesFileExist, findExecutable)
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
@@ -47,7 +47,7 @@ import System.Process
   )
 import Test.HUnit
 
-import QxFx0.Internal.Process (resolveTrustedExecutable)
+-- import QxFx0.Internal.Process (resolveTrustedExecutable)  -- REMOVED: dead code module
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import Test.Support (removeIfExists, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
 
@@ -580,10 +580,12 @@ resolveQxFx0MainBinary = do
 
 requireTrustedPython :: IO FilePath
 requireTrustedPython = do
-  result <- resolveTrustedExecutable "python3" Nothing []
+  -- resolveTrustedExecutable removed with Internal.Process module (dead code cleanup)
+  -- Fall back to system python3 directly
+  result <- findExecutable "python3"
   case result of
-    Right pythonBin -> pure pythonBin
-    Left err -> assertFailure ("trusted python3 is required for HTTP sidecar tests: " <> T.unpack err) >> fail "unreachable"
+    Just pythonBin -> pure pythonBin
+    Nothing -> assertFailure "python3 is required for HTTP sidecar tests" >> fail "unreachable"
 
 startSidecar :: FilePath -> [String] -> IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 startSidecar binPath args =

@@ -4,8 +4,7 @@
 Description : observer — Route-plan assembly and render handoff after effect resolution. -}
 module QxFx0.Core.TurnPipeline.Route.Build
   ( buildRouteTurnPlan
-  , routeTurnPlan
-  , renderTurnOutput
+  , readFmarModeIO
   ) where
 
 import QxFx0.Core.Intuition (flashThreshold)
@@ -13,13 +12,42 @@ import QxFx0.Core.TruthContract (capByTruthContract, capCommitmentStrengthByTrut
 import QxFx0.Core.Observability (recordThresholdProbe)
 import QxFx0.Core.Legitimacy (legitimacyRecoveryBonus)
 import QxFx0.Core.SensePlan (familySenseBundle)
+import QxFx0.Core.ResponseContentAdmission
+  ( ResponseContentAdmissionInput(..)
+  , ResponseContentAdmissionDecision(..)
+  , AdmittedResponseContent(..)
+  , admitResponseContent
+  )
+import QxFx0.Core.FMAR
+  ( FmarMode (..)
+  , computeAdaptivePosition
+  , fmarSelectFamily
+  , isFmarActive
+  , readFmarMode
+  )
+import QxFx0.Self.FamilyTargets (FamilyTarget(..), familyTargetFor, familyTargets, fieldDistance)
+import QxFx0.Self.Field
+  ( Atmosphere(..)
+  , Field(..)
+  , FieldConfidence(..)
+  , Consolidation(..)
+  , Counterfactual(..)
+  , Resonance(..)
+  , mkAtmosphere
+  , mkConsolidation
+  , mkCounterfactual
+  , mkFieldConfidence
+  , mkResonance
+  )
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , ShadowPolicy
   , pipelineLocalRecoveryPolicy
   , pipelineRuntimeMode
   , pipelineShadowPolicy
+  , resolveTurnEffect
   )
+import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Core.TurnPlanning (buildRCP, buildRMPWithTruthContract)
 import QxFx0.Core.TurnRender (applyRenderStrategyWithTruthContract)
 import QxFx0.Core.TurnPipeline.Route.Effects
@@ -52,7 +80,7 @@ import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
-import QxFx0.Semantic.Proposition (diagnosticPropositionFamily)
+import QxFx0.Semantic.Proposition (diagnosticPropositionFamily, diagnosticPropositionFamilyTyped)
 import QxFx0.Types
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.Thresholds
@@ -62,8 +90,8 @@ import QxFx0.Types.Thresholds
   , parserLowConfidenceThreshold
   )
 
-buildRouteTurnPlan :: ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
-buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
   let atomSet = tiAtomSet ti
       intuitPosterior = tsIntuitPosterior ts
       rd = rsRoutingDecision (repStatic effectPlan)
@@ -97,7 +125,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
                  else (shadowResolution0, False, vetoCount + 1, windowStart)
           else (shadowResolution0, False, vetoCount, windowStart)
       family0 = srEffectiveFamily shadowResolution
-      (family, _, _) = familySenseBundle family0 (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti)
+      (family, _, _) = familySenseBundle family0 (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti) (tiDoubtScore ti)
       recoveryBonus =
         legitimacyRecoveryBonus
           (scShadowStatus sc == ShadowMatch && not (scShadowHasDivergence sc))
@@ -106,7 +134,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
       renderStrategy = rdRenderStrategy rd
       renderStyle = adjustRenderStyleForSpeechPolicy (ssSpeechPolicyState ss) (rdRenderStyle rd)
       preRenderTruthStatus = derivePreRenderTruthContractStatus ti sc shadowResolution family
-      rmpBase = buildRMPWithTruthContract preRenderTruthStatus family (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti)
+      rmpBase = buildRMPWithTruthContract preRenderTruthStatus family (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiFrame ti) (tiSenseVector ti) (tiBestTopic ti) newEgo (tiNewTrace ti) (tiNixAvailable ti) (tiDoubtScore ti)
       rmp0 = applyRenderStrategyWithTruthContract preRenderTruthStatus family renderStrategy rmpBase
       rcp0 = (buildRCP family rmp0) {rcpStyle = renderStyle}
       rmp1 = modulateRMPWithNarrative (tsNarrativeFragment ts) rmp0
@@ -124,7 +152,7 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
       (legitScore, rmpAfterLegit0, rcpFinal0, finalFamily0, _finalForce0) =
         applyLegitimacyToPlans legitInput family rmp1 rcp1 renderStyle
       lockedDiagnosticFamily =
-        case diagnosticPropositionFamily (ipfPropositionType (tiFrame ti)) of
+        case diagnosticPropositionFamilyTyped (ipfPropositionType (tiFrame ti)) of
           Just diagnosticFamily
             | not (srGateTriggered shadowResolution)
                 && finalFamily0 /= CMRepair ->
@@ -132,25 +160,80 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
           _ ->
             Nothing
       finalFamily = maybe finalFamily0 id lockedDiagnosticFamily
-      (finalFamily', finalSensePlan, finalMicroPlan) = familySenseBundle finalFamily (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti)
-      finalForce' = forceForFamily finalFamily'
-      postLegitTruthStatus = derivePostLegitTruthContractStatus preRenderTruthStatus ti sc shadowResolution legitScore finalFamily'
+      (cascadeFamily, cascadeSensePlan, cascadeMicroPlan) = familySenseBundle finalFamily (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti) (tiDoubtScore ti)
+
+      -- FMAR Phase-4+7: override cascade family when Field-driven routing is active.
+      fmarActive = isFmarActive fmarMode
+      fmarPos = computeAdaptivePosition (tiField ti) (rdToMs rd) (tiConatusEnergy ti)
+      fmarFamily
+        | fmarActive = fmarSelectFamily fmarPos (tiRecommendedFamily ti) familyTargets
+        | otherwise  = cascadeFamily  -- unused when inactive, kept for totality
+      renderingFamily = case fmarMode of
+        FmarLive -> fmarFamily
+        _        -> cascadeFamily
+      renderingForce = forceForFamily renderingFamily
+      familyDerivationChain =
+        [ TurnFamilyDerivationStep "routing" (rdFamily rd)
+        , TurnFamilyDerivationStep "shadow" (srEffectiveFamily shadowResolution)
+        , TurnFamilyDerivationStep "sense_bundle" family
+        , TurnFamilyDerivationStep "legitimacy" finalFamily0
+        ]
+        <> maybe [] (\df -> [TurnFamilyDerivationStep "diagnostic_lock" df]) lockedDiagnosticFamily
+        <> [ TurnFamilyDerivationStep "post_diagnostic" finalFamily
+           , TurnFamilyDerivationStep "cascade" cascadeFamily
+           ]
+        <> [ TurnFamilyDerivationStep "fmar" fmarFamily | fmarActive ]
+        <> [ TurnFamilyDerivationStep "rendering" renderingFamily
+           ]
+      (_, renderingSensePlan, renderingMicroPlan) = case fmarMode of
+        FmarLive -> familySenseBundle renderingFamily (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti) (tiDoubtScore ti)
+        _        -> (cascadeFamily, cascadeSensePlan, cascadeMicroPlan)
+
+      postLegitTruthStatus = derivePostLegitTruthContractStatus preRenderTruthStatus ti sc shadowResolution legitScore renderingFamily
       rmpAfterLegit =
         rmpAfterLegit0
-          { rmpFamily = finalFamily'
-          , rmpForce = finalForce'
-          , rmpSpeechAct = familyToSpeechAct finalFamily'
-          , rmpRelation = familyToRelation finalFamily'
+          { rmpFamily = renderingFamily
+          , rmpForce = renderingForce
+          , rmpSpeechAct = familyToSpeechAct renderingFamily
+          , rmpRelation = familyToRelation renderingFamily
           , rmpEpistemic = capByTruthContract postLegitTruthStatus (rmpEpistemic rmpAfterLegit0)
           , rmpTruthContractStatus = postLegitTruthStatus
           , rmpCommitmentStrength = capCommitmentStrengthByTruthContract postLegitTruthStatus (rmpCommitmentStrength rmpAfterLegit0)
-          , rmpSensePlan = finalSensePlan
-          , rmpMicroPlan = finalMicroPlan
+          , rmpSensePlan = renderingSensePlan
+          , rmpMicroPlan = renderingMicroPlan
           }
       rcpFinal =
-        if finalFamily' == finalFamily0
+        if renderingFamily == finalFamily0
           then rcpFinal0
-          else (buildRCP finalFamily' rmpAfterLegit) {rcpStyle = rcpStyle rcpFinal0}
+          else (buildRCP renderingFamily rmpAfterLegit) {rcpStyle = rcpStyle rcpFinal0}
+
+      -- CTS-41: constitution-aware response content admission
+      admissionInput = ResponseContentAdmissionInput
+        { rcaiTruthContractStatus      = postLegitTruthStatus
+        , rcaiShadowDivergenceSeverity = scShadowDivergenceSeverity sc
+        , rcaiLegitScore               = legitScore
+        }
+      AdmittedResponseContent arcDecision arcRmp arcRcp =
+        admitResponseContent admissionInput rmpAfterLegit rcpFinal
+
+      -- FMAR directive for trace (shadow or live)
+      fmarDirective
+        | fmarActive = Just (MeaningDirective
+            { mdFamily            = fmarFamily
+            , mdDetectorFamily    = cascadeFamily
+            , mdFieldDelta        = fieldDelta (ftTargetField (familyTargetFor fmarFamily)) (tiField ti)
+            , mdForce             = forceForFamily fmarFamily
+            , mdClause            = clauseFormForIF (forceForFamily fmarFamily)
+            , mdLayer             = layerForFamily fmarFamily
+            , mdWarranted         = warrantedForFamily fmarFamily
+            , mdConatusGateOk     = not (tiConatusGateFired ti)
+            , mdRescueUsed        = tiConatusGateFired ti
+            , mdFieldDistance     = fieldDistance fmarPos (ftTargetField (familyTargetFor fmarFamily))
+            , mdAbstractionBudget = 0
+            , mdMaxWordsHint      = 0
+            })
+        | otherwise = Nothing
+
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
@@ -161,32 +244,35 @@ buildRouteTurnPlan shadowPolicy ss ti ts effectPlan effectResults =
           . recordThresholdProbe "intuition_flash" flashThreshold
               (intuitPosterior >= flashThreshold)
           $ tiMetrics ti
-   in TurnPlan
-         { tpRouting = rd
-         , tpFamily = family
-         , tpRenderStyle = renderStyleText renderStyle
-         , tpRmpAfterLegit = rmpAfterLegit
-         , tpRcpFinal = rcpFinal
-         , tpFinalFamily = finalFamily'
-         , tpFinalForce = finalForce'
-         , tpLegitScore = legitScore
-         , tpActiveScene = activeScene
-         , tpShadowStatus = scShadowStatus sc
-         , tpShadowDivergence = scShadowHasDivergence sc
-         , tpShadowDivergenceKind = scShadowDivergenceKind sc
-         , tpShadowDivergenceSeverity = scShadowDivergenceSeverity sc
-          , tpShadowGateTriggered = srGateTriggered shadowResolution
-          , tpShadowSnapshotId = scShadowSnapshotId sc
-          , tpShadowFamily = scShadowFamily sc
-          , tpShadowForce = scShadowForce sc
-          , tpShadowMessage =
-              if vetoExhausted
-                then scShadowMessage sc <> "|shadow_veto_exhausted"
-                else scShadowMessage sc
-          , tpShadowVetoState = ShadowVetoState newVetoCount newWindowStart
-          , tpMetrics = metricsWithThresholds
-           , tpDeliberation = rdDeliberation rd
-           }
+    in TurnPlan
+          { tpRouting = rd
+          , tpFamily = family
+          , tpRenderStyle = renderStyleText renderStyle
+          , tpRmpAfterLegit = arcRmp
+          , tpRcpFinal = arcRcp
+          , tpFinalFamily = renderingFamily
+          , tpFinalForce = renderingForce
+          , tpLegitScore = legitScore
+          , tpActiveScene = activeScene
+          , tpShadowStatus = scShadowStatus sc
+          , tpShadowDivergence = scShadowHasDivergence sc
+          , tpShadowDivergenceKind = scShadowDivergenceKind sc
+          , tpShadowDivergenceSeverity = scShadowDivergenceSeverity sc
+           , tpShadowGateTriggered = srGateTriggered shadowResolution
+           , tpShadowSnapshotId = scShadowSnapshotId sc
+           , tpShadowFamily = scShadowFamily sc
+           , tpShadowForce = scShadowForce sc
+           , tpShadowMessage =
+               if vetoExhausted
+                 then scShadowMessage sc <> "|shadow_veto_exhausted"
+                 else scShadowMessage sc
+           , tpShadowVetoState = ShadowVetoState newVetoCount newWindowStart
+           , tpMetrics = metricsWithThresholds
+            , tpDeliberation = rdDeliberation rd
+            , tpFmarDirective = fmarDirective
+            , tpFamilyDerivationChain = familyDerivationChain
+            , tpResponseAdmission = arcDecision
+            }
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
 derivePreRenderTruthContractStatus ti sc shadowResolution family
@@ -214,7 +300,35 @@ routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO Tur
 routeTurnPlan pio ss ti ts = do
   let effectPlan = planRouteEffects ss ti ts
   effectResults <- resolveRouteEffects pio effectPlan
-  pure (buildRouteTurnPlan (pipelineShadowPolicy pio) ss ti ts effectPlan effectResults)
+  fmarMode <- readFmarModeIO pio
+  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) ss ti ts effectPlan effectResults)
+
+-- | Read 'QXFX0_FMAR' once via the pipeline IO boundary and parse it into
+-- an 'FmarMode'. Mirrors 'shouldUseGfRuntime' in the render stage.
+readFmarModeIO :: PipelineIO -> IO FmarMode
+readFmarModeIO pio = do
+  result <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_FMAR")
+  case result of
+    TurnResReadEnv mraw -> pure (readFmarMode mraw)
+    _                   -> pure FmarOff
+
+-- | Component-wise @target − current@ over the five Field components,
+-- clamped to each component's valid range by the smart constructors.
+fieldDelta :: Field -> Field -> Field
+fieldDelta target current =
+  Field
+    { fieldResonance      = mkResonance
+        (unResonance (fieldResonance target) - unResonance (fieldResonance current))
+    , fieldAtmosphere     = mkAtmosphere
+        (atmosphereValence (fieldAtmosphere target) - atmosphereValence (fieldAtmosphere current))
+        (atmosphereArousal (fieldAtmosphere target) - atmosphereArousal (fieldAtmosphere current))
+    , fieldConfidence     = mkFieldConfidence
+        (unFieldConfidence (fieldConfidence target) - unFieldConfidence (fieldConfidence current))
+    , fieldConsolidation  = mkConsolidation
+        (unConsolidation (fieldConsolidation target) - unConsolidation (fieldConsolidation current))
+    , fieldCounterfactual = mkCounterfactual
+        (unCounterfactual (fieldCounterfactual target) - unCounterfactual (fieldCounterfactual current))
+    }
 
 renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts
 renderTurnOutput pio ss ti ts tp = do

@@ -38,13 +38,11 @@ module QxFx0.Learning.Guardrails
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
-import Data.Maybe (isJust)
+import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:?), (.!=), (.=))
 import Data.Text (Text)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Learning.Calibration (CalibrationId(..), CalibrationProposal(..))
+import QxFx0.Learning.Calibration (CalibrationId(..))
 
 data ExternalActionKind
   = RequestDrivenExternalAction
@@ -92,6 +90,7 @@ cooldownTurns = 5
 minQuarantineTurns :: Int
 minQuarantineTurns = 2
 
+-- | Maximum size of quarantine list (bounded rotation, newest first).
 maxQuarantineEntries :: Int
 maxQuarantineEntries = 500
 
@@ -162,7 +161,7 @@ recordProposalSubmission gs turn proposalId =
         if turn - gsWindowStart gs > proposalWindowTurns
            then (turn, 1)
            else (gsWindowStart gs, gsProposalsThisWindow gs + 1)
-      quarantine' = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs)
+      quarantine' = take maxQuarantineEntries ((turn, proposalId) : gsQuarantine gs)
    in gs
         { gsLastProposalTurn    = turn
         , gsProposalsThisWindow = newWindowCount
@@ -190,9 +189,16 @@ recordAcceptance gs = gs { gsConsecutiveRejections = 0 }
 -- re-hydration from persisted state if needed.
 quarantineProposal :: GuardrailState -> Int -> CalibrationId -> GuardrailState
 quarantineProposal gs turn proposalId =
-  gs { gsQuarantine = pruneQuarantine turn ((turn, proposalId) : gsQuarantine gs) }
+  -- Prune entries that have already completed their quarantine window (stale,
+  -- relative to the current insert turn) BEFORE size-capping. Without this,
+  -- the list only ever truncated by size (maxQuarantineEntries) and expired
+  -- entries lingered, so a re-quarantine could see a stale slot as still
+  -- active. Size cap is retained as the OOM backstop.
+  let fresh = filter (\(subTurn, _) -> turn - subTurn < minQuarantineTurns) (gsQuarantine gs)
+  in gs { gsQuarantine = take maxQuarantineEntries ((turn, proposalId) : fresh) }
 
 -- | Check whether a specific proposal has completed its quarantine.
+-- Also prunes expired entries from the quarantine list.
 isQuarantineExpired :: GuardrailState -> Int -> CalibrationId -> Bool
 isQuarantineExpired gs turn proposalId =
   case lookup proposalId (map swap (gsQuarantine gs)) of
@@ -200,11 +206,6 @@ isQuarantineExpired gs turn proposalId =
     Just subTurn -> turn - subTurn >= minQuarantineTurns
   where
     swap (a, b) = (b, a)
-
-pruneQuarantine :: Int -> [(Int, CalibrationId)] -> [(Int, CalibrationId)]
-pruneQuarantine turn entries =
-  let stillActive = filter (\(submittedTurn, _) -> turn - submittedTurn < minQuarantineTurns) entries
-  in take maxQuarantineEntries stillActive
 
 -- Internal helpers
 

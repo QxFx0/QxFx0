@@ -105,10 +105,10 @@ import QxFx0.Types.State
     , ssGovernanceHistory
     , ssGovernanceProjection
     , ssGovernanceRuntimeFault
-    , ssPerspectiveRegistry
-    , ssFieldHeuristics
   , ssTruthContractStatus
+  , ssSelfState
   )
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Governance (EpistemicStatus(..))
 import QxFx0.Core.TurnPipeline
   ( PrepareEffectPlan(..)
@@ -261,15 +261,16 @@ testPerspectiveOperatorAtomicOnAppendFailure = TestCase $ do
         ]
       before = emptySystemState
         { ssGovernanceHistory = brokenHistory
-        , ssPerspectiveRegistry = registry1
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry1 }
         }
       after = applyPerspectiveOperator before positiveConatus False emptyField
   assertEqual "append failure leaves canonical history unchanged"
     (ssGovernanceHistory before)
     (ssGovernanceHistory after)
   assertEqual "append failure leaves derived registry unchanged"
-    (ssPerspectiveRegistry before)
-    (ssPerspectiveRegistry after)
+    (selfPerspectiveRegistry (ssSelfState before))
+    (selfPerspectiveRegistry (ssSelfState after))
   assertEqual "append failure leaves adaptive mutation log unchanged"
     (ssAdaptiveMutationLog before)
     (ssAdaptiveMutationLog after)
@@ -312,14 +313,15 @@ testSystemStateRebuildsDerivedRegistry :: Test
 testSystemStateRebuildsDerivedRegistry = TestCase $ do
   let (event, expectedRegistry) = promotionEvent 1 Nothing
       staleState = emptySystemState
-        { ssPerspectiveRegistry = defaultPerspectiveRegistry
+        { ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = defaultPerspectiveRegistry }
         , ssGovernanceHistory = [event]
         , ssTruthContractStatus = CanonicalSurfacePreserved
         }
-  assertBool "fixture has stale derived registry" (ssPerspectiveRegistry staleState /= expectedRegistry)
+  assertBool "fixture has stale derived registry" (selfPerspectiveRegistry (ssSelfState staleState) /= expectedRegistry)
   rebuilt <- assertRight (rebuildGovernedSystemState staleState)
   assertEqual "canonical history is preserved" [event] (ssGovernanceHistory rebuilt)
-  assertEqual "derived registry is rebuilt from canonical history" expectedRegistry (ssPerspectiveRegistry rebuilt)
+  assertEqual "derived registry is rebuilt from canonical history" expectedRegistry (selfPerspectiveRegistry (ssSelfState rebuilt))
 
 testSystemStateReplayFailsClosedWhenTruthNonAuthoritative :: Test
 testSystemStateReplayFailsClosedWhenTruthNonAuthoritative = TestCase $ do
@@ -514,7 +516,8 @@ testGovernanceSummaryVisibility = TestCase $ do
   projection <- assertRight (rebuildGovernanceProjection [event1, freeze])
   let ss = emptySystemState
         { ssGovernanceHistory = [event1, freeze]
-        , ssPerspectiveRegistry = registry1
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry1 }
         , ssGovernanceProjection = projection
         , ssTruthContractStatus = CanonicalSurfacePreserved
         }
@@ -563,12 +566,14 @@ testGovernanceFingerprintCanonicalizesHistory = TestCase $ do
         Left err -> error (T.unpack err)
       summaryForward = governanceSummaryLines emptySystemState
         { ssGovernanceHistory = [event1, event2]
-        , ssPerspectiveRegistry = registry1
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry1 }
         , ssGovernanceProjection = projection1
         }
       summaryShuffled = governanceSummaryLines emptySystemState
         { ssGovernanceHistory = [event2, event1]
-        , ssPerspectiveRegistry = registry1
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry1 }
         , ssGovernanceProjection = projection2
         }
       fingerprint lines' = case [ value | line <- lines', Just value <- [T.stripPrefix "governance_fingerprint: " line] ] of
@@ -580,12 +585,13 @@ testGovernanceFingerprintCanonicalizesHistory = TestCase $ do
 
 testPreparePathUsesDefaultFieldHeuristics :: Test
 testPreparePathUsesDefaultFieldHeuristics = TestCase $ do
-  let ss = emptySystemState
-        { ssFieldHeuristics = defaultFieldHeuristics { fhDefaultNarrativeRate = 0.99 }
+  let customHeuristics = defaultFieldHeuristics { fhDefaultNarrativeRate = 0.99 }
+      ss = emptySystemState
+        { ssSelfState = (ssSelfState emptySystemState) { selfFieldHeuristics = customHeuristics }
         }
       plan = buildPrepareEffectPlan ss "что такое свобода" (UTCTime (fromGregorian 2026 1 1) 0)
   assertEqual "prepare path should thread persisted field heuristics"
-    (ssFieldHeuristics ss)
+    (selfFieldHeuristics (ssSelfState ss))
     (psFieldHeuristics (pepStatic plan))
 
 testDenyFirstPermissions :: Test

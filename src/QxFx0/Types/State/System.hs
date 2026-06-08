@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {-| Canonical top-level persisted system state plus compatibility accessors. -}
@@ -38,13 +39,14 @@ module QxFx0.Types.State.System
   , ssLastSalienceBias
   , ssHolisticStreak
   , ssRecentNarrativeSuccess
-  , ssSalienceWeights
-  , ssFieldHeuristics
   , ssLearningNeedState
   , ssGovernanceRuntimeFault
   , ssSemanticCommitments
   , ssMetacognition
+  , ssUserModel
+  , ssMood
   , ssCurrentRegime
+  , ssRuntimeParadigms
   , appendAdaptiveMutationRecord
   , appendAdaptiveMutationRecords
   , commitGovernedPerspectiveProjection
@@ -86,6 +88,8 @@ import QxFx0.Types.Domain
   , SemanticScene
   , UserState
   )
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
+import QxFx0.Types.Bayesian (BeliefState, initialBeliefs)
 import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
 import QxFx0.Types.Intuition (IntuitiveState, defaultIntuitiveState)
@@ -155,6 +159,10 @@ import QxFx0.Self.Essence (Essence, emptyEssence)
 import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
+import QxFx0.Types.State.SelfState
+  ( SelfState(..)
+  , defaultSelfState
+  )
 import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
 import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
 import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
@@ -163,7 +171,9 @@ import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
 import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
 import QxFx0.Types.State.SemanticCommitment (SemanticCommitmentStore)
 import QxFx0.Policy.Metacognition (MetacognitionContour)
-import QxFx0.Memory.Episodic (EpisodicStore)
+import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicIndex, emptyIndex)
+import qualified Data.HashSet as HS
+import qualified Data.Sequence as Seq
 import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
 
 data SystemState = SystemState
@@ -173,17 +183,15 @@ data SystemState = SystemState
   , ssSessionId :: !Text
   , ssOutputMode :: !DialogueOutputMode
   , ssMorphology :: !MorphologyData
+  , ssRuntimeParadigms :: !RuntimeParadigms
+    -- ^ P9 (RGL Russian): runtime morphology paradigms loaded from
+    --   paradigms.json. Used by linearizeClaimAstRus when
+    --   rrRglMorphologyActive is True. Initialised to emptyRuntimeParadigms.
   , ssObservability :: !ObservabilityState
-  , ssEssence :: !Essence
-    -- ^ Phase 9: essence-selection trajectory accumulator.
-    --   Carries the uncommitted (or committed) 'Essence' across
-    --   turns.  Initialised to 'emptyEssence'.
-  , ssSalienceWeights :: !SalienceWeights
-    -- ^ Phase B: mutable salience weights for post-commitment
-    --   bounded self-tuning.  Initialised to 'defaultSalienceWeights'.
-  , ssFieldHeuristics :: !FieldHeuristics
-    -- ^ Phase B: mutable field heuristics for post-commitment
-    --   bounded self-tuning.  Initialised to 'defaultFieldHeuristics'.
+  , ssSelfState :: !SelfState
+    -- ^ Phase 4.1.3: Grouped Self-layer state containing essence,
+    --   salience weights, field heuristics, and perspective registry.
+    --   Initialised to 'defaultSelfState'.
   , ssShadowVetoState :: !ShadowVetoState
     -- ^ WP2 (GAP2): bounded shadow-veto counter and window anchor.
     --   Tracks gate-trigger count within a sliding window to prevent
@@ -246,10 +254,6 @@ data SystemState = SystemState
     --   separate from the validated 'KnowledgeTree'. The legacy field name
     --   is kept for persisted JSON compatibility; conceptually this is the
     --   ClaimStanceStore contour. Initialised to 'emptyBeliefStore'.
-  , ssPerspectiveRegistry :: !PerspectiveRegistry
-    -- ^ P4/P5 derived versioned perspective lineage projection.
-    --   P5 canonical truth is 'ssGovernanceHistory'; this registry is kept
-    --   as a rebuildable runtime view. Initialised to 'emptyPerspectiveRegistry'.
   , ssGovernanceProjection :: !GovernanceProjection
     -- ^ Rebuildable governance-wide runtime projection derived from
     --   canonical governance history.
@@ -267,6 +271,15 @@ data SystemState = SystemState
   , ssEpisodic :: !(Maybe EpisodicStore)
     -- ^ P7: episodic memory store.  @Nothing@ until the first turn's
     --   encode call; @Just@ after the first encode.
+  , ssUserModel :: !BeliefState
+    -- ^ WP-A: Bayesian posterior over hidden user intents
+    --   (@UserWantsDefine|…|UserIsDistressed@).  Updated per turn by
+    --   'QxFx0.Core.Bayesian.bayesianUpdateFromText'; initialised to
+    --   'initialBeliefs' (uniform prior).
+  , ssMood :: !Double
+    -- ^ WP-E: slow affective baseline (valence EMA over ~'moodWindowTurns'
+    --   turns), range @[-1,1]@.  Fast per-turn 'Atmosphere' rides on this;
+    --   updated by 'QxFx0.Self.Field.updateMood'.  Initialised to @0.0@.
   , ssCurrentRegime :: !RuntimeRegime
     -- ^ M5: the runtime regime active for this session. Records which
     --   math version and feature flags are in effect, making governance
@@ -311,9 +324,8 @@ instance ToJSON SystemState where
      , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
      , "morphology" .= ssMorphology ss
      , "observability" .= ssObservability ss
-     , "essence" .= ssEssence ss
-    , "salienceWeights" .= ssSalienceWeights ss
-    , "fieldHeuristics" .= ssFieldHeuristics ss
+     -- Phase 4.1.3: Grouped Self-layer state (single source of truth)
+     , "ssSelfState" .= ssSelfState ss
      , "shadowVetoState" .= ssShadowVetoState ss
      , "provisionalAtoms" .= ssProvisionalAtoms ss
      , "learningNeedState" .= ssLearningNeedState ss
@@ -335,7 +347,10 @@ instance ToJSON SystemState where
           , "semanticCommitments" .= ssSemanticCommitments ss
            , "metacognition" .= ssMetacognition ss
            , "episodic" .= ssEpisodic ss
+           , "userModel" .= ssUserModel ss
+           , "mood" .= ssMood ss
            , "currentRegime" .= ssCurrentRegime ss
+           , "runtimeParadigms" .= ssRuntimeParadigms ss
            ]
 
 instance FromJSON SystemState where
@@ -344,8 +359,7 @@ instance FromJSON SystemState where
     let requiredTopLevelFields
           | schemaVersion >= currentSystemStateSchemaVersion =
               [ "morphology"
-              , "salienceWeights"
-              , "fieldHeuristics"
+              , "ssSelfState"
               , "learningNeedState"
               , "knowledgeTree"
               , "truthContractStatus"
@@ -358,9 +372,12 @@ instance FromJSON SystemState where
               , "governanceHistory"
               ]
           | otherwise =
+              -- Legacy (pre-v2) required set. 'salienceWeights' and
+              -- 'fieldHeuristics' are intentionally NOT here: in the legacy
+              -- branch they parse via '.:? .!= default' (folded into ssSelfState
+              -- in v2), so demanding them rejected genuinely-old state that
+              -- never carried them top-level.
               [ "morphology"
-              , "salienceWeights"
-              , "fieldHeuristics"
               , "learningNeedState"
               , "knowledgeTree"
               , "truthContractStatus"
@@ -401,14 +418,26 @@ instance FromJSON SystemState where
       <*> o .:? "lastTurnDecision" .!= Nothing
       <*> o .: "intuitConfidence"
       <*> o .:? "semanticConfig" .!= defaultSemanticConfig
+    -- Phase 4.1.3: Read SelfState with backward compatibility fallback
+    selfState <- (o .:? "ssSelfState") >>= \case
+      Just s -> pure s
+      Nothing -> SelfState
+        <$> (if schemaVersion >= currentSystemStateSchemaVersion
+             then o .: "salienceWeights"
+             else o .:? "salienceWeights" .!= defaultSalienceWeights)
+        <*> (if schemaVersion >= currentSystemStateSchemaVersion
+             then o .: "fieldHeuristics"
+             else o .:? "fieldHeuristics" .!= defaultFieldHeuristics)
+        <*> pure emptyPerspectiveRegistry
+        <*> o .:? "essence" .!= emptyEssence
+    
     SystemState ds ids sem
       <$> o .: "sessionId"
       <*> (parseDialogueOutputMode <$> o .: "outputMode")
       <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "morphology" else o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty)
+      <*> o .:? "runtimeParadigms" .!= emptyRuntimeParadigms
       <*> o .: "observability"
-      <*> o .:? "essence" .!= emptyEssence
-      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "salienceWeights" else o .:? "salienceWeights" .!= defaultSalienceWeights)
-      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "fieldHeuristics" else o .:? "fieldHeuristics" .!= defaultFieldHeuristics)
+      <*> pure selfState
        <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
        <*> o .:? "provisionalAtoms" .!= []
        <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "learningNeedState" else o .:? "learningNeedState" .!= emptyLearningNeedState)
@@ -425,13 +454,14 @@ instance FromJSON SystemState where
             <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "truthContractStatus" else o .:? "truthContractStatus" .!= LegacyIncompleteSurface)
             <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "speechPolicyState" else o .:? "speechPolicyState" .!= emptySpeechPolicyState)
             <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "beliefStore" else o .:? "beliefStore" .!= emptyBeliefStore)
-            <*> pure emptyPerspectiveRegistry
             <*> pure emptyGovernanceProjection
             <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "governanceHistory" else o .:? "governanceHistory" .!= [])
             <*> o .:? "governanceRuntimeFault" .!= Nothing
             <*> o .:? "semanticCommitments" .!= Nothing
             <*> o .:? "metacognition" .!= Nothing
             <*> o .:? "episodic" .!= Nothing
+            <*> o .:? "userModel" .!= initialBeliefs
+            <*> o .:? "mood" .!= 0.0
             <*> o .:? "currentRegime" .!= defaultRuntimeRegime
 
 ssHistory :: SystemState -> Seq Text
@@ -568,8 +598,9 @@ appendAdaptiveMutationRecords records ss =
 
 commitGovernedPerspectiveProjection :: GovernanceProjection -> AdaptiveMutationRecord -> SystemState -> SystemState
 commitGovernedPerspectiveProjection projection record ss =
-  appendAdaptiveMutationRecord record ss
-    { ssPerspectiveRegistry = gpPerspectiveRegistry projection
+  let selfState' = (ssSelfState ss) { selfPerspectiveRegistry = gpPerspectiveRegistry projection }
+  in appendAdaptiveMutationRecord record ss
+    { ssSelfState = selfState'
     , ssGovernanceProjection = projection
     }
 
@@ -586,10 +617,9 @@ emptySystemState = SystemState
   , ssSessionId = ""
   , ssOutputMode = DialogueOutput
   , ssMorphology = MorphologyData M.empty M.empty M.empty M.empty
+  , ssRuntimeParadigms = emptyRuntimeParadigms
   , ssObservability = emptyObservabilityState
-  , ssEssence = emptyEssence
-  , ssSalienceWeights = defaultSalienceWeights
-  , ssFieldHeuristics = defaultFieldHeuristics
+  , ssSelfState = defaultSelfState
   , ssShadowVetoState = defaultShadowVetoState
   , ssProvisionalAtoms = []
   , ssLearningNeedState = emptyLearningNeedState
@@ -606,13 +636,16 @@ emptySystemState = SystemState
   , ssTruthContractStatus = LegacyIncompleteSurface
   , ssSpeechPolicyState = emptySpeechPolicyState
   , ssBeliefStore = emptyBeliefStore
-  , ssPerspectiveRegistry = emptyPerspectiveRegistry
   , ssGovernanceProjection = emptyGovernanceProjection
   , ssGovernanceHistory = []
   , ssGovernanceRuntimeFault = Nothing
   , ssSemanticCommitments = Nothing
   , ssMetacognition = Nothing
-  , ssEpisodic = Nothing
+  , ssEpisodic = Just (EpisodicStore Seq.empty emptyIndex HS.empty 0)
+    -- ^ WP-B R-B4: explicit initialization instead of lazy Nothing.
+    --   Empty store with session-id 0 (will be updated on first encode).
+  , ssUserModel = initialBeliefs
+  , ssMood = 0.0
   , ssCurrentRegime = defaultRuntimeRegime
   }
 

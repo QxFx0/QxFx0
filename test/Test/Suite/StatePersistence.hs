@@ -6,6 +6,8 @@ module Test.Suite.StatePersistence
   , statePersistenceTests
   ) where
 
+import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
+import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import Control.Exception (try)
 import Control.Monad (forM_)
 import qualified Data.Aeson as Aeson
@@ -49,6 +51,8 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import qualified QxFx0.Runtime as Runtime
+import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..))
+import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import QxFx0.Self.Essence
   ( CommitmentTrigger(..)
@@ -61,6 +65,7 @@ import QxFx0.Self.Essence
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
+import QxFx0.Types.State.SelfState (SelfState(..))
 import Test.Support (assertExec, queryCount, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
 
 statePersistenceFastTests :: [Test]
@@ -86,7 +91,39 @@ statePersistenceSlowTests =
   , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
   , testPersistedReplayTraceDeterministicWithFixedTimeProperty
   , testSaveStateWithDivergencePersistsShadowLog
+  , testReplayTraceDbRoundTripFeedsReplayPipeline
   ]
+
+-- | Item #1 (production half): the REAL on-disk DB round-trip. Run a live turn
+-- through the runtime (which persists the trace blob via persistTurnQuality),
+-- read the @replay_trace_json@ column straight back from SQLite, decode it with
+-- the now-existing 'FromJSON TurnReplayTrace', and feed it to
+-- 'mkReplayPipelineIO'. This is the half the unit-suite P5 deferred: not just
+-- @decode . encode@ in memory, but blob -> on-disk SQLite -> blob -> decode ->
+-- replay, end to end.
+testReplayTraceDbRoundTripFeedsReplayPipeline :: Test
+testReplayTraceDbRoundTripFeedsReplayPipeline = TestCase $
+  withRuntimeEnv "qxfx0_test_replay_db_roundtrip.db" $ do
+    let sid = "replay_db_roundtrip"
+    session0 <- Runtime.bootstrapSession True sid
+    (session1, _resp) <- Runtime.runTurnInSession session0 "что такое свобода"
+    let rt = Runtime.sessRuntime session1
+    blob <- Runtime.withRuntimeDb rt (`fetchLatestReplayTraceJson` sid)
+    assertBool "a replay_trace_json row must have been persisted by the live turn"
+      (not (T.null blob))
+    case Aeson.eitherDecodeStrict' (encodeUtf8 blob) :: Either String TurnReplayTrace of
+      Left err ->
+        assertFailure ("persisted trace blob must decode as TurnReplayTrace: " <> err)
+      Right trace -> do
+        assertEqual "decoded trace session id must match the live session"
+          sid (trcSessionId trace)
+        -- The decoded trace drives replay: mkReplayPipelineIO must return the
+        -- apiHealthy recorded in the persisted snapshot (or False if pre-vX /
+        -- absent), proving the blob -> decode -> replay path is wired.
+        let expectedHealthy = maybe False esApiHealthy (trcEffectSnapshot trace)
+        replayHealthy <- checkPipelineApiHealth (mkReplayPipelineIO trace)
+        assertEqual "replay pipeline must reproduce the persisted apiHealthy"
+          expectedHealthy replayHealthy
 
 statePersistenceTests :: [Test]
 statePersistenceTests = statePersistenceFastTests ++ statePersistenceSlowTests
@@ -114,13 +151,14 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = authoritativeGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertBool "governed fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "governed fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -132,8 +170,8 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
           (ssGovernanceHistory governedState)
           (ssGovernanceHistory restored)
         assertEqual "derived perspective registry must be rebuilt from canonical history"
-          (ssPerspectiveRegistry governedState)
-          (ssPerspectiveRegistry restored)
+          (selfPerspectiveRegistry (ssSelfState governedState))
+          (selfPerspectiveRegistry (ssSelfState restored))
         assertEqual "governance projection must be rebuilt from canonical history"
           (ssGovernanceProjection governedState)
           (ssGovernanceProjection restored)
@@ -146,13 +184,14 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
     let rt = Runtime.sessRuntime session0
         governedState = authoritativeGovernedState (Runtime.sessSystemState session0)
         stalePersistedState = governedState
-          { ssPerspectiveRegistry = ssPerspectiveRegistry emptySystemState
+          { ssSelfState = (ssSelfState governedState)
+              { selfPerspectiveRegistry = selfPerspectiveRegistry (ssSelfState emptySystemState) }
           , ssGovernanceProjection = ssGovernanceProjection emptySystemState
           }
     assertBool "bootstrap governed fixture must record canonical governance history"
       (not (null (ssGovernanceHistory governedState)))
     assertBool "bootstrap governed fixture must produce a non-empty derived perspective registry"
-      (ssPerspectiveRegistry governedState /= ssPerspectiveRegistry emptySystemState)
+      (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -166,8 +205,8 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
       (ssGovernanceHistory governedState)
       (ssGovernanceHistory restoredState)
     assertEqual "bootstrap must rebuild perspective registry from canonical history"
-      (ssPerspectiveRegistry governedState)
-      (ssPerspectiveRegistry restoredState)
+      (selfPerspectiveRegistry (ssSelfState governedState))
+      (selfPerspectiveRegistry (ssSelfState restoredState))
     assertEqual "bootstrap must rebuild governance projection from canonical history"
       (ssGovernanceProjection governedState)
       (ssGovernanceProjection restoredState)
@@ -267,8 +306,10 @@ testLoadStateLegacyNumericTrajectoryHashRestores = TestCase $ do
     session0 <- Runtime.bootstrapSession True "test_legacy_numeric_trajectory_hash"
     let rt = Runtime.sessRuntime session0
         ss0 = (Runtime.sessSystemState session0)
-          { ssEssence = EssenceCommitted emptyTrajectory
-              (EssenceCommitment EssenceContemplative TriggerAngstThreshold 1 (TrajectoryHash "sha256:legacy-fixture"))
+          { ssSelfState = (ssSelfState (Runtime.sessSystemState session0))
+              { selfEssence = EssenceCommitted emptyTrajectory
+                  (EssenceCommitment EssenceContemplative TriggerAngstThreshold 1 (TrajectoryHash "sha256:legacy-fixture"))
+              }
           }
     saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "test_legacy_numeric_trajectory_hash"
     case saveResult of
@@ -303,7 +344,7 @@ testLoadStateLegacyNumericTrajectoryHashRestores = TestCase $ do
     loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "test_legacy_numeric_trajectory_hash"
     case loaded of
       StatePersistence.LoadStateRestored restored ->
-        case ssEssence restored of
+        case selfEssence (ssSelfState restored) of
           EssenceCommitted _ commitment ->
             assertEqual "legacy numeric trajectory hash should restore as text-compatible value"
               (TrajectoryHash "0")
@@ -312,13 +353,23 @@ testLoadStateLegacyNumericTrajectoryHashRestores = TestCase $ do
       other ->
         assertFailure ("expected restored state for legacy numeric trajectory hash, got: " <> show other)
 
+-- Navigates the REAL persisted path to the committed essence's witness hash:
+-- ssSelfState -> selfEssence -> contents[1] -> ecWitnessHash. (The earlier
+-- "essence" top-level key was stale — SystemState keys it "ssSelfState" and
+-- SelfState keys it "selfEssence" via generic-default field names, so the old
+-- path silently no-op'd and the fixture hash survived unchanged.)
 injectLegacyNumericTrajectoryHash :: Value -> Value
 injectLegacyNumericTrajectoryHash value =
   case value of
     Object root ->
-      Object (updateKeyMap (Key.fromText "essence") updateEssence root)
+      Object (updateKeyMap (Key.fromText "ssSelfState") updateSelfState root)
     _ -> value
   where
+    updateSelfState selfStateVal =
+      case selfStateVal of
+        Object selfStateObj ->
+          Object (updateKeyMap (Key.fromText "selfEssence") updateEssence selfStateObj)
+        _ -> selfStateVal
     updateEssence essenceVal =
       case essenceVal of
         Object essenceObj ->
@@ -459,8 +510,8 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
           (Just GrfRebuildMismatch)
           (ssGovernanceRuntimeFault ss)
         assertEqual "saved runtime continuation should preserve live perspective registry"
-          (ssPerspectiveRegistry ss0)
-          (ssPerspectiveRegistry ss)
+          (selfPerspectiveRegistry (ssSelfState ss0))
+          (selfPerspectiveRegistry (ssSelfState ss))
         persistedBlob <- Runtime.withRuntimeDb rt $ \db -> do
           mStmt <- NSQL.prepare db "SELECT value FROM dialogue_state WHERE session_id = ? AND key = ? ORDER BY updated_at DESC LIMIT 1"
           stmt <- case mStmt of
@@ -486,8 +537,8 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
               Nothing
               (ssGovernanceRuntimeFault persistedState)
             assertEqual "persisted canonical state must not carry rebuildable registry"
-              (ssPerspectiveRegistry emptySystemState)
-              (ssPerspectiveRegistry persistedState)
+              (selfPerspectiveRegistry (ssSelfState emptySystemState))
+              (selfPerspectiveRegistry (ssSelfState persistedState))
 
 testSaveStateWithProjectionFailureRollsBackTransaction :: Test
 testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
@@ -810,8 +861,31 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcEpisodicRetrieval = Nothing
     , trcEpisodicForgetting = (0, Nothing)
     , trcRegimeVersion = 1
+    , trcMorphologyVersion = 0
     , trcFamilyDivergenceActive = False
-    , trcSemanticCommitmentCount = 0
+  , trcSemanticCommitmentCount = 0
+  , trcQuarantinedCommitmentCount = 0
+  , trcCommitmentStoreDecision = CsaAdmitCanonical
+  , trcCognitiveSignals = emptyCognitiveSignals
+    , trcDoubtScore = Nothing
+    , trcEpisodicRetrievalCount = Nothing
+    , trcContentSaliencyDominantCluster = Nothing
+    , trcMoodValence = Nothing
+    , trcMoodArousal = Nothing
+    , trcAffectDecoupled = False
+    , trcMood = 0.0
+    , trcUserModelTopIntent = Nothing
+    , trcUserModelConfidence = Nothing
+    , trcDerivedInferenceCount = Nothing
+    , trcFamilyDivergenceOccurred = Nothing
+    , trcFmarDetectorFamily = Nothing
+    , trcFmarFamily = Nothing
+    , trcFmarFamiliesMatch = Nothing
+    , trcFmarFieldDistance = Nothing
+    , trcFmarMode = Nothing
+    , trcFamilyDerivationChain = []
+    , trcGenerationTrace = []
+    , trcEffectSnapshot = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

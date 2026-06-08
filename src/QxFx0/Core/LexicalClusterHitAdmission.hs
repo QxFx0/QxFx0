@@ -8,9 +8,10 @@ module QxFx0.Core.LexicalClusterHitAdmission
   , admitLexicalClusterHits
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms (RawClusterHit(..), RawLexicalClusterHits(..), RawLexicalHit(..))
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data LexicalClusterHitAdmissionInput = LexicalClusterHitAdmissionInput
   { lchaiTruthContractStatus :: !TruthContractStatus
@@ -28,27 +29,6 @@ data AdmittedLexicalClusterHits = AdmittedLexicalClusterHits
   , alchDecision :: !LexicalClusterHitAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitLexicalClusterHits :: LexicalClusterHitAdmissionInput -> RawLexicalClusterHits -> AdmittedLexicalClusterHits
-admitLexicalClusterHits input rawHits
-  | truthContractIsAuthoritative (lchaiTruthContractStatus input) =
-      AdmittedLexicalClusterHits rawHits rawHits LchdAdmitRaw
-  | all rawHitAlreadySafe (rlchClusterHits rawHits) && all rawLexicalHitAlreadySafe (rlchLexicalHits rawHits) =
-      AdmittedLexicalClusterHits rawHits rawHits LchdPreserveAmbiguous
-  | otherwise =
-      AdmittedLexicalClusterHits
-        rawHits
-        rawHits
-          { rlchClusterHits = filter rawHitAlreadySafe (rlchClusterHits rawHits)
-          , rlchLexicalHits = filter rawLexicalHitAlreadySafe (rlchLexicalHits rawHits)
-          }
-        LchdSuppressStrongHits
-
-rawHitAlreadySafe :: RawClusterHit -> Bool
-rawHitAlreadySafe = tagAlreadySafe . rchTag
-
-rawLexicalHitAlreadySafe :: RawLexicalHit -> Bool
-rawLexicalHitAlreadySafe = tagAlreadySafe . rlhTag
-
 tagAlreadySafe :: AtomTag -> Bool
 tagAlreadySafe tag =
   case tag of
@@ -59,3 +39,26 @@ tagAlreadySafe tag =
     CustomAtom _ _ -> True
     AffectiveAtom _ _ -> True
     _ -> False
+
+rawHitAlreadySafe :: RawClusterHit -> Bool
+rawHitAlreadySafe = tagAlreadySafe . rchTag
+
+rawLexicalHitAlreadySafe :: RawLexicalHit -> Bool
+rawLexicalHitAlreadySafe = tagAlreadySafe . rlhTag
+
+admitLexicalClusterHits :: LexicalClusterHitAdmissionInput -> RawLexicalClusterHits -> AdmittedLexicalClusterHits
+admitLexicalClusterHits input rawHits =
+  admitBySuppressStrong config input rawHits
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = lchaiTruthContractStatus
+      , sscAllSafe = \rh -> all rawHitAlreadySafe (rlchClusterHits rh) && all rawLexicalHitAlreadySafe (rlchLexicalHits rh)
+      , sscSuppress = \rh -> rh
+          { rlchClusterHits = filter rawHitAlreadySafe (rlchClusterHits rh)
+          , rlchLexicalHits = filter rawLexicalHitAlreadySafe (rlchLexicalHits rh)
+          }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedLexicalClusterHits raw proc dec
+      , sscDecisionAdmit = LchdAdmitRaw
+      , sscDecisionPreserve = LchdPreserveAmbiguous
+      , sscDecisionSuppress = LchdSuppressStrongHits
+      }

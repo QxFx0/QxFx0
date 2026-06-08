@@ -30,12 +30,15 @@ import QxFx0.Core.TurnPipeline.Effects
 import QxFx0.Core.TurnPipeline.Finalize.State (finalizeMetrics)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
+import qualified Data.Map.Strict as Map
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(EssenceRupture, IdentityRupture, PersistenceError)
+  , mkPersistenceError
   , renderQxFx0ExceptionForLog
   , throwQxFx0
   , tryAsync
   )
+import QxFx0.Types.Persistence (PersistenceStage(StageStateBlobUpsert, StageUnknown))
 import QxFx0.Self.Essence (EssenceViolation, renderEssenceViolation)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
@@ -96,10 +99,18 @@ resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
       TurnResSaveState (Right savedSystemState) -> pure savedSystemState
       TurnResSaveState (Left err) -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_failed session=" <> T.unpack (fcpSessionId commitPlan) <> " detail=" <> T.unpack (renderPersistenceDiagnostics [err])
-        throwQxFx0 (PersistenceError ("saveStateWithProjection failed: " <> renderPersistenceDiagnostics [err]))
+        throwQxFx0 (mkPersistenceError
+          StageStateBlobUpsert
+          (T.pack "saveStateWithProjection")
+          (T.pack "PERSISTENCE_SAVE_FAILED")
+          (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan), (T.pack "detail", renderPersistenceDiagnostics [err])]))
       _ -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
-        throwQxFx0 (PersistenceError "saveStateWithProjection returned unexpected result")
+        throwQxFx0 (mkPersistenceError
+          StageStateBlobUpsert
+          (T.pack "saveStateWithProjection")
+          (T.pack "PERSISTENCE_UNEXPECTED_EFFECT")
+          (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan)]))
   commitAttempt <-
     tryAsync (attemptCommitRuntimeState pipelineIO commitPlan (fcpPreviewIntuition commitPlan))
   case commitAttempt of
@@ -192,7 +203,11 @@ attemptCommitRuntimeState pipelineIO commitPlan previewIntuition = do
     TurnResCommitRuntimeState -> pure ()
     _ -> do
       hPutStrLn stderr $ "[persistence_debug] commit_runtime_state_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
-      throwQxFx0 (PersistenceError "commit runtime state effect returned unexpected result")
+      throwQxFx0 (mkPersistenceError
+        StageUnknown
+        (T.pack "commitRuntimeState")
+        (T.pack "PERSISTENCE_UNEXPECTED_EFFECT")
+        (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan)]))
 
 recoverRuntimeTurnState :: PipelineIO -> FinalizeCommitPlan -> SystemState -> IO ()
 recoverRuntimeTurnState pipelineIO commitPlan savedState =
@@ -245,7 +260,11 @@ maybeInjectPostCommitTailException pipelineIO = do
               markResult <- resolveTurnEffect pipelineIO (TurnReqTestMarkOnceFile pathText)
               case markResult of
                 TurnResTestMarkOnceFile True ->
-                  throwQxFx0 (PersistenceError "test_post_commit_tail_exception")
+                  throwQxFx0 (mkPersistenceError
+                    StageUnknown
+                    (T.pack "test_post_commit_tail")
+                    (T.pack "TEST_POST_COMMIT_EXCEPTION")
+                    Map.empty)
                 _ ->
                   pure ()
         _ ->

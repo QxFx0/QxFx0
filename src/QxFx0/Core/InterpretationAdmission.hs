@@ -12,6 +12,7 @@ module QxFx0.Core.InterpretationAdmission
 import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types
 import QxFx0.Types.Thresholds (parserHighConfidenceThreshold)
+import QxFx0.Types.PropositionType (PropositionType(..))
 
 import Data.Text (Text)
 
@@ -51,7 +52,7 @@ admitInterpretationCandidate input recommendedFamily frame
           clarifyFrame =
             frame
               { ipfCanonicalFamily = clarifyFamily
-              , ipfPropositionType = "ClarifyQ"
+              , ipfPropositionType = ClarifyQ
               , ipfSemanticEvidence = ipfSemanticEvidence frame ++ ["interpretation_admission=" <> reason]
               }
       in AdmittedInterpretation clarifyFamily clarifyFrame decision
@@ -60,11 +61,11 @@ interpretationAlreadyWeakOrAmbiguous :: CanonicalMoveFamily -> InputPropositionF
 interpretationAlreadyWeakOrAmbiguous recommendedFamily frame =
   recommendedFamily `elem` [CMClarify, CMRepair, CMAnchor, CMContact]
     || ipfCanonicalFamily frame `elem` [CMClarify, CMRepair, CMAnchor, CMContact]
-    || ipfPropositionType frame `elem`
-         [ "ClarifyQ"
-         , "EpistemicQ"
-         , "RequestQ"
-         , "RepairSignal"
-         , "MisunderstandingReport"
-         , "ContactSignal"
-         ]
+    || case ipfPropositionType frame of
+         ClarifyQ -> True
+         EpistemicQ -> True
+         RequestQ -> True
+         RepairSignal -> True
+         MisunderstandingReport -> True
+         ContactSignal -> True
+         _ -> False

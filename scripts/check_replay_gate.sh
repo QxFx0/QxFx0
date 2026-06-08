@@ -93,6 +93,10 @@ check_field "trcRecoveryCause"   "Recovery"
 check_field "trcRecoveryStrategy" "Recovery"
 check_field "trcRecoveryEvidence" "Recovery"
 
+# ── Effect snapshots ───────────────────────────────────────────
+echo "--- Effect snapshots ---"
+check_field "trcEffectSnapshot" "EffectSnapshot"
+
 # ── Summary ─────────────────────────────────────────────────────
 echo ""
 if [ "$fail" -eq 0 ]; then

@@ -19,17 +19,17 @@ import QxFx0.Core.TurnPlanning.Modulation
   , threeStageModulationWithTruthContract
   , threeStageModulation
   )
-import QxFx0.Semantic.Proposition (PropositionType(..), propositionTypeFromText)
+import QxFx0.Semantic.Proposition (PropositionType(..))
 import QxFx0.Types
 import QxFx0.Types.State.Perspective (PerspectiveScope(..), renderPerspectiveScope)
 
-buildRMP :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
-buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailable =
-  buildRMPWithTruthContract LegacyIncompleteSurface family ledger phase thread frame senseVector topic ego trace nixAvailable
+buildRMP :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> Double -> ResponseMeaningPlan
+buildRMP family ledger phase thread frame senseVector topic ego trace nixAvailable doubt =
+  buildRMPWithTruthContract LegacyIncompleteSurface family ledger phase thread frame senseVector topic ego trace nixAvailable doubt
 
-buildRMPWithTruthContract :: TruthContractStatus -> CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> ResponseMeaningPlan
-buildRMPWithTruthContract truthStatus family ledger phase thread frame senseVector topic ego trace nixAvailable =
-  let (family', sensePlan, microPlan) = familySenseBundle family ledger phase thread senseVector
+buildRMPWithTruthContract :: TruthContractStatus -> CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> InputPropositionFrame -> SenseVector -> Text -> EgoState -> AtomTrace -> Bool -> Double -> ResponseMeaningPlan
+buildRMPWithTruthContract truthStatus family ledger phase thread frame senseVector topic ego trace nixAvailable doubt =
+  let (family', sensePlan, microPlan) = familySenseBundle family ledger phase thread senseVector doubt
       baseStance = familyToStance family'
       baseEpistemic = familyToEpistemic family'
       (feralStance, feralEpistemic) = feralDegradation nixAvailable baseStance baseEpistemic
@@ -89,39 +89,39 @@ topicFromFrame thread ledger phase frame fallback =
   clampTopicToDialogueScope phase thread ledger rawTopic
   where
     rawTopic =
-      case propositionTypeFromText (ipfPropositionType frame) of
-        Just SelfKnowledgeQ
+      case ipfPropositionType frame of
+        SelfKnowledgeQ
           | ipfSemanticTarget frame == "user" -> "твой контекст"
           | ipfSemanticTarget frame == "user_help" -> nonEmptyOr (ipfSemanticSubject frame) "помощь"
           | ipfSemanticTarget frame == "self_capability" -> nonEmptyOr (ipfSemanticSubject frame) "способность"
           | otherwise -> "моя роль"
-        Just DialogueInvitationQ ->
+        DialogueInvitationQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just ConceptKnowledgeQ ->
+        ConceptKnowledgeQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just WorldCauseQ ->
+        WorldCauseQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just PurposeQ ->
+        PurposeQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just LocationFormationQ ->
+        LocationFormationQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just SelfStateQ ->
+        SelfStateQ ->
           "мой текущий ход"
-        Just ComparisonPlausibilityQ ->
+        ComparisonPlausibilityQ ->
           case ipfSemanticCandidates frame of
             [] -> nonEmptyOr (ipfFocusEntity frame) fallback
             xs -> T.intercalate " / " xs
-        Just MisunderstandingReport ->
+        MisunderstandingReport ->
           "взаимопонимание"
-        Just GenerativePrompt ->
+        GenerativePrompt ->
           "мысль"
-        Just ContemplativeTopic ->
+        ContemplativeTopic ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
-        Just OperationalStatusQ ->
+        OperationalStatusQ ->
           "работа"
-        Just OperationalCauseQ ->
+        OperationalCauseQ ->
           "разбор смысла"
-        Just SystemLogicQ ->
+        SystemLogicQ ->
           "логика"
         _ ->
           nonEmptyOr (ipfFocusEntity frame) fallback
@@ -169,16 +169,16 @@ structuralScopeText thread fallback =
 normalizeScopeKey :: Text -> Text
 normalizeScopeKey = T.unwords . T.words . T.toLower . T.strip
 
-implicationDirectionFromScope :: Maybe PerspectiveScope -> TruthContractStatus -> CanonicalMoveFamily -> Text
+implicationDirectionFromScope :: Maybe PerspectiveScope -> TruthContractStatus -> CanonicalMoveFamily -> ImplicationDirection
 implicationDirectionFromScope mScope truthStatus family
-  | truthStatus `notElem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = "bounded"
-  | family `elem` [CMNextStep, CMDeepen, CMPurpose] = maybe "bounded" (const "forward") mScope
-  | otherwise = "bounded"
+  | truthStatus `notElem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] = DirBounded
+  | family `elem` [CMNextStep, CMDeepen, CMPurpose] = maybe DirBounded (const DirForward) mScope
+  | otherwise = DirBounded
 
 primaryClaimFromFrame :: TruthContractStatus -> InputPropositionFrame -> Text -> Text
 primaryClaimFromFrame truthStatus frame fallback =
-  case propositionTypeFromText (ipfPropositionType frame) of
-    Just SelfKnowledgeQ
+  case ipfPropositionType frame of
+    SelfKnowledgeQ
       | ipfSemanticTarget frame == "user" ->
           if truthStatus == CanonicalSurfacePreserved
             then "Я знаю о тебе только то, что проявлено в текущей сессии."
@@ -191,31 +191,31 @@ primaryClaimFromFrame truthStatus frame fallback =
           if truthStatus == CanonicalSurfacePreserved
             then "Я знаю о себе свою роль, состояние и ход текущего диалога."
             else "О себе я удерживаю только локальную рабочую модель роли, состояния и хода текущего диалога."
-    Just DialogueInvitationQ ->
+    DialogueInvitationQ ->
       "Можно войти в тему через устойчивую рамку и затем углубить разговор."
-    Just ConceptKnowledgeQ ->
+    ConceptKnowledgeQ ->
       "Я могу дать локальную понятийную рамку, а не внешнее наблюдение."
-    Just WorldCauseQ ->
+    WorldCauseQ ->
       "Причинное объяснение требует рамки и не равно эмпирическому знанию."
-    Just PurposeQ ->
+    PurposeQ ->
       "Функцию и назначение лучше объяснять через устойчивую роль объекта в действии, а не через одно случайное употребление."
-    Just LocationFormationQ ->
+    LocationFormationQ ->
       "Мысль лучше описывать через структуру связей, а не через одну точку."
-    Just SelfStateQ ->
+    SelfStateQ ->
       "Мой текущий ход строится из разбора твоей реплики, выбора семейства ответа и ограничений сессии."
-    Just ComparisonPlausibilityQ ->
+    ComparisonPlausibilityQ ->
       "Сравнение устойчиво только внутри явно заданной рамки."
-    Just MisunderstandingReport ->
+    MisunderstandingReport ->
       "Нужно уточнить место сбоя взаимопонимания."
-    Just GenerativePrompt ->
+    GenerativePrompt ->
       "Одна мысль может задать рамку всему дальнейшему разговору."
-    Just ContemplativeTopic ->
+    ContemplativeTopic ->
       "Одно слово может открывать не определение, а целое поле смыслов."
-    Just OperationalStatusQ ->
+    OperationalStatusQ ->
       "Сбой сейчас не в запуске, а в разборе вопроса."
-    Just OperationalCauseQ ->
+    OperationalCauseQ ->
       "Проблема сейчас в маршрутизации и схлопывании смысла."
-    Just SystemLogicQ ->
+    SystemLogicQ ->
       "Моя логика строится вокруг локального разбора и маршрутизации."
     _ ->
       fallback
@@ -226,81 +226,81 @@ claimAstFromFrame truthStatus frame fallback ego =
       scopedSubject = if truthStatus `elem` [CanonicalSurfacePreserved, AssembledSurfacePreserved] then subject0 else fallback
       topicNP = mkTopicNP scopedSubject
       familyFallback = fallbackAstForFamily (ipfCanonicalFamily frame) topicNP
-  in case propositionTypeFromText (ipfPropositionType frame) of
-      Just DialogueInvitationQ ->
+  in case ipfPropositionType frame of
+      DialogueInvitationQ ->
         let gfMod = if egoTension ego > 0.5 then ModStrictly else ModFirst
             gfNum = extractNumber frame
             gfAction = if egoAgency ego > 0.6
                        then ActDefine "granitsa_N"
                        else ActMaintain gfNum "ramka_N"
         in Just (MoveInvite topicNP gfMod gfAction)
-      Just ConceptKnowledgeQ ->
+      ConceptKnowledgeQ ->
         Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
-      Just WorldCauseQ ->
+      WorldCauseQ ->
         Just (MoveCause topicNP MechParse)
-      Just PurposeQ ->
+      PurposeQ ->
         Just (MovePurpose topicNP)
-      Just SelfStateQ ->
+      SelfStateQ ->
         Just MoveSelfState
-      Just ComparisonPlausibilityQ ->
+      ComparisonPlausibilityQ ->
         Just (buildComparisonAst frame topicNP)
-      Just OperationalStatusQ ->
+      OperationalStatusQ ->
         Just MoveOperationalStatus
-      Just OperationalCauseQ ->
+      OperationalCauseQ ->
         Just MoveOperationalCause
-      Just SystemLogicQ ->
+      SystemLogicQ ->
         Just MoveSystemLogic
-      Just MisunderstandingReport ->
+      MisunderstandingReport ->
         Just MoveMisunderstanding
-      Just GenerativePrompt ->
+      GenerativePrompt ->
         Just MoveGenerativeThought
-      Just ContemplativeTopic ->
+      ContemplativeTopic ->
         Just (MoveContemplative topicNP)
-      Just ContactSignal ->
+      ContactSignal ->
         Just (MoveContact topicNP)
-      Just ExploratoryPrompt ->
+      ExploratoryPrompt ->
         Just familyFallback
-      Just AffectiveQ ->
+      AffectiveQ ->
         Just (MoveContact topicNP)
-      Just ReflectiveQ ->
+      ReflectiveQ ->
         Just (MoveReflect topicNP)
-      Just DefinitionalQ ->
+      DefinitionalQ ->
         Just (MoveDefine topicNP RelIdentity (MkNP "ponyatie_N"))
-      Just DistinctionQ ->
+      DistinctionQ ->
         Just (buildComparisonAst frame topicNP)
-      Just GroundQ ->
+      GroundQ ->
         Just (MoveGround topicNP)
-      Just SelfDescQ ->
+      SelfDescQ ->
         Just (MoveDescribe topicNP)
-      Just HypotheticalQ ->
+      HypotheticalQ ->
         Just (MoveHypothesis topicNP)
-      Just RepairSignal ->
+      RepairSignal ->
         Just MoveMisunderstanding
-      Just AnchorSignal ->
+      AnchorSignal ->
         Just (MoveAnchor topicNP)
-      Just ClarifyQ ->
+      ClarifyQ ->
         Just (MoveClarify topicNP)
-      Just DeepenQ ->
+      DeepenQ ->
         Just (MoveDeepen topicNP)
-      Just ConfrontQ ->
+      ConfrontQ ->
         Just (MoveConfront topicNP)
-      Just NextStepQ ->
+      NextStepQ ->
         Just (MoveNextStepLocal topicNP)
-      Just PlainAssert ->
+      PlainAssert ->
         Just (MoveGround topicNP)
-      Just EpistemicQ ->
+      EpistemicQ ->
         Just (MoveClarify topicNP)
-      Just RequestQ ->
+      RequestQ ->
         Just (MoveClarify topicNP)
-      Just EvaluationQ ->
+      EvaluationQ ->
         Just (buildComparisonAst frame topicNP)
-      Just NarrativeQ ->
+      NarrativeQ ->
         Just (MoveDescribe topicNP)
-      Just SelfKnowledgeQ ->
+      SelfKnowledgeQ ->
         Just (MoveDescribe topicNP)
-      Just LocationFormationQ ->
+      LocationFormationQ ->
         Just (MoveGround topicNP)
-      Nothing ->
+      _ ->
         Just familyFallback
 
 mkTopicNP :: Text -> GfNP
@@ -349,20 +349,20 @@ extractNumber frame =
 
 contrastAxisFromFrame :: InputPropositionFrame -> Text
 contrastAxisFromFrame frame =
-  case propositionTypeFromText (ipfPropositionType frame) of
-    Just ComparisonPlausibilityQ -> "логичность"
-    Just SelfKnowledgeQ
+  case ipfPropositionType frame of
+    ComparisonPlausibilityQ -> "логичность"
+    SelfKnowledgeQ
       | ipfSemanticTarget frame == "user" -> "границы знания"
       | ipfSemanticTarget frame == "user_help" -> "рамка помощи"
       | ipfSemanticTarget frame == "self_capability" -> "границы способности"
       | otherwise -> "самоописание"
-    Just DialogueInvitationQ -> "рамка разговора"
-    Just ConceptKnowledgeQ -> "границы знания"
-    Just PurposeQ -> "назначение"
-    Just SelfStateQ -> "внутренний ход"
-    Just MisunderstandingReport -> "точка разрыва"
-    Just GenerativePrompt -> "направление мысли"
-    Just ContemplativeTopic -> "смысловой резонанс"
+    DialogueInvitationQ -> "рамка разговора"
+    ConceptKnowledgeQ -> "границы знания"
+    PurposeQ -> "назначение"
+    SelfStateQ -> "внутренний ход"
+    MisunderstandingReport -> "точка разрыва"
+    GenerativePrompt -> "направление мысли"
+    ContemplativeTopic -> "смысловой резонанс"
     _ -> ""
 
 nonEmptyOr :: Text -> Text -> Text
@@ -386,7 +386,7 @@ buildRCP family meaningPlan =
 
 continuationMoveForScope :: ResponseMeaningPlan -> ContentMove
 continuationMoveForScope meaningPlan
-  | rmpImplicationDirection meaningPlan /= "forward" = MoveStateBoundary
+  | rmpImplicationDirection meaningPlan /= DirForward = MoveStateBoundary
   | otherwise = senseContinuationMove (rspChosenOperator (rmpSensePlan meaningPlan))
 
 senseContinuationMove :: SenseOperator -> ContentMove

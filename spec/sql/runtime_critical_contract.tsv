@@ -19,6 +19,7 @@ column	turn_quality	shadow_divergence_kind
 column	turn_quality	replay_trace_json
 column	shadow_divergence_log	shadow_snapshot_id
 column	shadow_divergence_log	shadow_divergence_kind
+column	runtime_sessions	state_revision
 index	-	idx_identity_concept
 index	-	idx_identity_topic
 index	-	idx_templates_move

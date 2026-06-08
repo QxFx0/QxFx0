@@ -7,6 +7,7 @@ concrete QxFx0SyntaxEng of QxFx0Syntax = QxFx0LexiconEng ** open SyntaxEng, Para
     Modifier = { s : Str } ;
     Relation = { s : Str } ;
     Mechanism = { s : Str } ;
+    ActTopic = { s : Str } ;
   lin
     NumSg = { s = "maintain" } ;
     NumPl = { s = "maintain" } ;
@@ -18,6 +19,12 @@ concrete QxFx0SyntaxEng of QxFx0Syntax = QxFx0LexiconEng ** open SyntaxEng, Para
     MoveInvite topic mod vp = mkS (mkCl (mkNP i_Pron) vp) ;
     RelIdentity = { s = "is" } ;
     MechParse = { s = "parse" } ;
+    ActAnswer = { s = "answer" } ;
+    ActQuestion = { s = "question" } ;
+    ActTopicTerm = { s = "topic" } ;
+    ActProject = { s = "project" } ;
+    ActResult = { s = "result" } ;
+    MoveActOnTopic act = mkS (mkCl (mkNP i_Pron) (mkVP (mkV2 (mkV "discuss")) (mkNP (mkN act.s)))) ;
     MoveDefine subj rel obj = mkS (mkCl subj (mkVP (mkV2 (mkV "define")) obj)) ;
     MoveCause subj mech = mkS (mkCl subj (mkVP (mkV "explain"))) ;
     MovePurpose topic = mkS (mkCl topic (mkVP (mkV "matter"))) ;

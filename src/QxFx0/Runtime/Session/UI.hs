@@ -59,20 +59,18 @@ import QxFx0.Types.State
   , ssGovernanceHistory
   , ssGovernanceProjection
   , ssGovernanceRuntimeFault
-  , ssPerspectiveRegistry
   , ssEgo
-  , ssEssence
-  , ssFieldHeuristics
   , ssKernelPulse
   , ssLastFamily
   , ssLastTopic
   , ssMeaningGraph
-  , ssSalienceWeights
   , ssTrace
   , ssTruthContractStatus
   , ssDialoguePhase
   , ssTurnCount
+  , ssSelfState
   )
+import QxFx0.Types.State.SelfState (SelfState(..))
 
 data ReplayTraceSummary = ReplayTraceSummary
   { rtsRecoveryCause :: !(Maybe Text)
@@ -138,7 +136,7 @@ governanceSummaryLines :: SystemState -> [Text]
 governanceSummaryLines ss =
   let history = ssGovernanceHistory ss
       liveProjection = ssGovernanceProjection ss
-      liveRegistry = ssPerspectiveRegistry ss
+      liveRegistry = selfPerspectiveRegistry (ssSelfState ss)
       rebuildResult = rebuildGovernedViews ss
       latestProvenance = latestGovernanceProvenance history
       (rebuildStatus, summaryProjection, staleCount) =
@@ -178,7 +176,7 @@ stateSummaryLines session = do
       renderValue :: Show a => a -> Text
       renderValue = T.pack . show
       essenceModeTag =
-        case ssEssence ss of
+        case selfEssence (ssSelfState ss) of
           EssenceUncommitted _ -> "uncommitted"
           EssenceCommitted _ c -> "committed:" <> renderEssenceMode (ecMode c)
       recoveryCauseTag = maybe "n/a" id (rtsRecoveryCause =<< latestTrace)
@@ -235,7 +233,7 @@ renderStateOrigin RecoveredCorruptOrigin = "recovered_corrupt"
 
 salienceFieldContractStatus :: SystemState -> Text
 salienceFieldContractStatus ss
-  | ssSalienceWeights ss == defaultSalienceWeights && ssFieldHeuristics ss == defaultFieldHeuristics = "persisted_governing_default"
+  | selfSalienceWeights (ssSelfState ss) == defaultSalienceWeights && selfFieldHeuristics (ssSelfState ss) == defaultFieldHeuristics = "persisted_governing_default"
   | otherwise = "persisted_governing_runtime_tuned"
 
 planNarrativeToneContractStatus :: SystemState -> Text

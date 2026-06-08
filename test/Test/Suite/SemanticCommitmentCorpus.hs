@@ -22,18 +22,20 @@ module Test.Suite.SemanticCommitmentCorpus
   ) where
 
 import Test.HUnit (Test (..), assertBool, assertEqual)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 import qualified Data.HashMap.Strict as HashMap
 import Prelude
 
 import QxFx0.Types.State.SemanticCommitment
   ( SemanticCommitmentStore (..)
-  , emptySemanticCommitmentStore
   )
-import QxFx0.Types.State.System (ssSemanticCommitments)
+import QxFx0.Types.State.System (SystemState, emptySystemState, ssSemanticCommitments)
 import QxFx0.Types.TurnProjection (tqpReplayTrace, trcSemanticCommitmentCount)
 import QxFx0.Core.TurnPipeline.Protocol (FinalizePrecommitBundle(..))
-import Test.Suite.TurnPipelineProtocol (buildFinalizeFixture, buildFinalizeFixtureWithState, withDeterministicEmbedding)
+import Test.Suite.TurnPipelineProtocol (withDeterministicEmbedding)
+import Test.Support.TurnPipelineFixtures
+  ( buildAuthoritativePerspectiveFinalizeFixture
+  )
 
 -- | Turn 1 must produce a non-empty SemanticCommitmentStore.
 -- After the anchor bridge (C3 Package 2 completion), every turn that
@@ -42,7 +44,7 @@ c3Turn1ProducesCommitments :: Test
 c3Turn1ProducesCommitments = TestLabel "C3: turn 1 produces a non-empty SemanticCommitmentStore" $
   TestCase $
     withDeterministicEmbedding $ do
-      (_, _, _, _, _, bundle) <- buildFinalizeFixture "что такое свобода?"
+      (bundle, _) <- buildAuthoritativePerspectiveFinalizeFixture emptySystemState "что такое свобода?"
       let nextSs = fpbNextSs bundle
           mStore = ssSemanticCommitments nextSs
       assertBool "C3: ssSemanticCommitments must be Just after first turn"
@@ -59,11 +61,11 @@ c3MultiTurnAccumulatesCommitments = TestLabel "C3: commitment store grows across
   TestCase $
     withDeterministicEmbedding $ do
       -- Turn 1
-      (_, _, _, _, _, bundle1) <- buildFinalizeFixture "что такое свобода?"
+      (bundle1, _) <- buildAuthoritativePerspectiveFinalizeFixture emptySystemState "что такое свобода?"
       let ss1 = fpbNextSs bundle1
           count1 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss1)
       -- Turn 2: build on state from turn 1
-      (_, _, _, _, _, bundle2) <- buildFinalizeFixtureWithState ss1 "расскажи подробнее"
+      (bundle2, _) <- buildAuthoritativePerspectiveFinalizeFixture ss1 "расскажи подробнее"
       let ss2 = fpbNextSs bundle2
           count2 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss2)
       assertBool
@@ -77,7 +79,7 @@ c3TraceFieldMatchesStoreCount :: Test
 c3TraceFieldMatchesStoreCount = TestLabel "C3: trcSemanticCommitmentCount matches ssSemanticCommitments store size" $
   TestCase $
     withDeterministicEmbedding $ do
-      (_, _, _, _, _, bundle) <- buildFinalizeFixture "что такое свобода?"
+      (bundle, _) <- buildAuthoritativePerspectiveFinalizeFixture emptySystemState "что такое свобода?"
       let nextSs = fpbNextSs bundle
           trace  = tqpReplayTrace (fpbProjection bundle)
           traceCount  = trcSemanticCommitmentCount trace
@@ -94,11 +96,11 @@ c3ThreeTurnCorpusFixture :: Test
 c3ThreeTurnCorpusFixture = TestLabel "C3: three-turn corpus fixture yields ≥3 commitments" $
   TestCase $
     withDeterministicEmbedding $ do
-      (_, _, _, _, _, b1) <- buildFinalizeFixture "что такое свобода?"
+      (b1, _) <- buildAuthoritativePerspectiveFinalizeFixture emptySystemState "что такое свобода?"
       let ss1 = fpbNextSs b1
-      (_, _, _, _, _, b2) <- buildFinalizeFixtureWithState ss1 "расскажи об ответственности"
+      (b2, _) <- buildAuthoritativePerspectiveFinalizeFixture ss1 "расскажи об ответственности"
       let ss2 = fpbNextSs b2
-      (_, _, _, _, _, b3) <- buildFinalizeFixtureWithState ss2 "как они связаны?"
+      (b3, _) <- buildAuthoritativePerspectiveFinalizeFixture ss2 "как они связаны?"
       let ss3 = fpbNextSs b3
           count3 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss3)
       assertBool

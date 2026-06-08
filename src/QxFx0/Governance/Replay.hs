@@ -44,6 +44,7 @@ import QxFx0.Types.State.Perspective
   , PerspectiveRegistry(..)
   , emptyPerspectiveRegistry
   )
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.System
   ( SystemState(..)
   )
@@ -91,8 +92,9 @@ rebuildGovernedViews ss = do
 rebuildGovernedSystemState :: SystemState -> Either Text SystemState
 rebuildGovernedSystemState ss = do
   (registry, projection) <- rebuildGovernedViews ss
+  let selfState' = (ssSelfState ss) { selfPerspectiveRegistry = registry }
   pure ss
-    { ssPerspectiveRegistry = registry
+    { ssSelfState = selfState'
     , ssGovernanceProjection = projection
     }
 

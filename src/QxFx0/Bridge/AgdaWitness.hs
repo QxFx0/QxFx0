@@ -17,7 +17,8 @@ import QxFx0.Bridge.AgdaR5
   ( AgdaVerificationResult(..)
   , verifyR5WithAgda
   )
-import QxFx0.ExceptionPolicy (QxFx0Exception(RuntimeInitError), catchIO, throwQxFx0, tryQxFx0)
+import qualified Data.Map.Strict as M
+import QxFx0.ExceptionPolicy (catchIO, mkRuntimeInitError, throwQxFx0, tryQxFx0)
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Resources
   ( ResourcePaths(..)
@@ -75,7 +76,8 @@ resolveAgdaWitnessPath = do
       trustedMatches <- mapM (`isPathWithin` canonical) trustedRoots
       if or trustedMatches
         then pure canonical
-        else throwQxFx0 (RuntimeInitError ("QXFX0_AGDA_WITNESS outside trusted roots: " <> T.pack canonical))
+        else throwQxFx0 $ mkRuntimeInitError "AgdaWitness" "path_validation" "WITNESS_PATH_UNTRUSTED"
+          (M.fromList [("path", T.pack canonical)])
     Nothing -> do
       stateDir <- resolveQxFx0StateDir
       pure (stateDir </> "agda-witness.json")
@@ -106,7 +108,8 @@ writeAgdaWitness = do
       atomicWriteWitness witnessPath AgdaWitness { awVersion = witnessVersion, awFiles = hashes }
       pure witnessPath
     other ->
-      throwQxFx0 (RuntimeInitError ("Cannot write Agda witness: " <> T.pack (renderAgdaFailure other)))
+      throwQxFx0 $ mkRuntimeInitError "AgdaWitness" "witness_write" "AGDA_VERIFICATION_FAILED"
+        (M.fromList [("failure", T.pack (renderAgdaFailure other))])
 
 writeStubAgdaWitness :: FilePath -> IO ()
 writeStubAgdaWitness witnessPath = do
@@ -225,7 +228,8 @@ hashWitnessInput :: (Text, FilePath) -> IO (Text, Text)
 hashWitnessInput (label, path) = do
   exists <- doesFileExist path
   if not exists
-    then throwQxFx0 (RuntimeInitError ("Witness input missing: " <> T.pack path))
+    then throwQxFx0 $ mkRuntimeInitError "AgdaWitness" "hash_input" "WITNESS_INPUT_MISSING"
+      (M.fromList [("path", T.pack path)])
     else do
       contents <- BL.readFile path
       pure (label, hashBytes contents)

@@ -11,6 +11,7 @@ module QxFx0.Types.Decision.Model
   , GfRelation(..)
   , GfMechanism(..)
   , GfNumber(..)
+  , GfActTopic(..)
   , ResponseMeaningPlan(..)
   , ResponseContentPlan(..)
   , InputPropositionFrame(..)
@@ -38,7 +39,9 @@ import Data.Aeson
   , (.!=)
   , (.=)
   )
+import Data.Aeson.Types (Parser, parseFail)
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import QxFx0.Types.Config.Decision (defaultInputPropositionConfidence)
@@ -50,6 +53,7 @@ import QxFx0.Types.ClaimAst
   , GfRelation(..)
   , GfMechanism(..)
   , GfNumber(..)
+  , GfActTopic(..)
   )
 import QxFx0.Types.Decision.Enums
 import QxFx0.Types.Domain
@@ -70,8 +74,9 @@ import QxFx0.Types.Orbital
   )
 import QxFx0.Types.Thresholds (DepthMode, LegitimacyStatus(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
-import QxFx0.Types.Sense (MicroPlan, ResponseSensePlan, emptyMicroPlan, emptyResponseSensePlan)
+import QxFx0.Types.Sense (MicroPlan, ResponseSensePlan, RhetoricalMove(..), FallbackPolicy(..), ImplicationDirection(..), emptyMicroPlan, emptyResponseSensePlan)
 import QxFx0.Types.State.Perspective (PerspectiveScope)
+import QxFx0.Types.PropositionType (PropositionType(..), propositionTypeFromText)
 
 data ResponseMeaningPlan = ResponseMeaningPlan
   { rmpFamily :: !CanonicalMoveFamily
@@ -86,7 +91,7 @@ data ResponseMeaningPlan = ResponseMeaningPlan
   , rmpPrimaryClaimAst :: !(Maybe ClaimAst)
   , rmpScope :: !(Maybe PerspectiveScope)
   , rmpContrastAxis :: !Text
-  , rmpImplicationDirection :: !Text
+  , rmpImplicationDirection :: !ImplicationDirection
   , rmpProvenance :: !ContractProvenance
   , rmpTruthContractStatus :: !TruthContractStatus
   , rmpCommitmentStrength :: !Double
@@ -174,7 +179,7 @@ instance FromJSON ResponseContentPlan where
 
 data InputPropositionFrame = InputPropositionFrame
   { ipfRawText :: !Text
-  , ipfPropositionType :: !Text
+  , ipfPropositionType :: !PropositionType
   , ipfFocusEntity :: !Text
   , ipfFocusNominative :: !Text
   , ipfSemanticSubject :: !Text
@@ -194,13 +199,63 @@ data InputPropositionFrame = InputPropositionFrame
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
-instance ToJSON InputPropositionFrame where toJSON = genericToJSON defaultOptions
-instance FromJSON InputPropositionFrame where parseJSON = genericParseJSON defaultOptions
+instance ToJSON InputPropositionFrame where
+  toJSON frame = object
+    [ "ipfRawText" .= ipfRawText frame
+    , "ipfPropositionType" .= propositionTypeText (ipfPropositionType frame)
+    , "ipfFocusEntity" .= ipfFocusEntity frame
+    , "ipfFocusNominative" .= ipfFocusNominative frame
+    , "ipfSemanticSubject" .= ipfSemanticSubject frame
+    , "ipfSemanticTarget" .= ipfSemanticTarget frame
+    , "ipfSemanticCandidates" .= ipfSemanticCandidates frame
+    , "ipfSemanticEvidence" .= ipfSemanticEvidence frame
+    , "ipfCanonicalFamily" .= ipfCanonicalFamily frame
+    , "ipfIllocutionaryForce" .= ipfIllocutionaryForce frame
+    , "ipfClauseForm" .= ipfClauseForm frame
+    , "ipfSemanticLayer" .= ipfSemanticLayer frame
+    , "ipfKeyPhrases" .= ipfKeyPhrases frame
+    , "ipfEmotionalTone" .= ipfEmotionalTone frame
+    , "ipfConfidence" .= ipfConfidence frame
+    , "ipfIsQuestion" .= ipfIsQuestion frame
+    , "ipfIsNegated" .= ipfIsNegated frame
+    , "ipfRegisterHint" .= ipfRegisterHint frame
+    ]
+
+instance FromJSON InputPropositionFrame where
+  parseJSON = withObject "InputPropositionFrame" $ \o ->
+    InputPropositionFrame
+      <$> o .: "ipfRawText"
+      <*> (o .: "ipfPropositionType" >>= parsePropositionTypeText)
+      <*> o .: "ipfFocusEntity"
+      <*> o .: "ipfFocusNominative"
+      <*> o .: "ipfSemanticSubject"
+      <*> o .: "ipfSemanticTarget"
+      <*> o .: "ipfSemanticCandidates"
+      <*> o .: "ipfSemanticEvidence"
+      <*> o .: "ipfCanonicalFamily"
+      <*> o .: "ipfIllocutionaryForce"
+      <*> o .: "ipfClauseForm"
+      <*> o .: "ipfSemanticLayer"
+      <*> o .: "ipfKeyPhrases"
+      <*> o .: "ipfEmotionalTone"
+      <*> o .: "ipfConfidence"
+      <*> o .: "ipfIsQuestion"
+      <*> o .: "ipfIsNegated"
+      <*> o .: "ipfRegisterHint"
+
+propositionTypeText :: PropositionType -> Text
+propositionTypeText = T.pack . show
+
+parsePropositionTypeText :: Text -> Parser PropositionType
+parsePropositionTypeText t =
+  case propositionTypeFromText t of
+    Just pt -> pure pt
+    Nothing -> parseFail ("Unknown PropositionType: " ++ T.unpack t)
 
 emptyInputPropositionFrame :: InputPropositionFrame
 emptyInputPropositionFrame = InputPropositionFrame
   { ipfRawText = ""
-  , ipfPropositionType = "Unknown"
+  , ipfPropositionType = PlainAssert
   , ipfFocusEntity = ""
   , ipfFocusNominative = ""
   , ipfSemanticSubject = ""

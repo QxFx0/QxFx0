@@ -647,6 +647,13 @@ FLAG_OFF_FLAGS = [
     ("Perspective Operator", "QXFX0_PERSPECTIVE_OPERATOR_ENABLED",       False),
     ("External LLM",         "QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED",        False),
     ("Adaptive Mutation",    "QXFX0_ADAPTIVE_MUTATION_ENABLED",          False),
+    ("Episodic Recall",      "episodicRecallActive",                     False),
+    ("User Model",           "userModelActive",                          False),
+    ("Doubt Loop",           "doubtLoopActive",                          False),
+    ("Affect Decoupled",     "affectDecoupledActive",                    False),
+    ("Content Salience",     "contentSalienceActive",                    False),
+    ("Derived Inference",    "derivedInferenceActive",                   False),
+    ("Runtime Morphology",   "runtimeMorphologyActive",                  False),
 ]
 
 # Promoted flags: must have '= True' in src/.
@@ -707,6 +714,18 @@ if violations:
 PY
 then
   fail_violation "canonical-flag-off discipline violated (ADR-0013 Rule 6)"
+fi
+
+echo "  [21] Anti-rot registry: every registered guard test exists in test/ (ADR-0042)..."
+ANTI_ROT_REGISTRY="$ROOT/docs/anti_rot_registry.tsv"
+if [ -f "$ANTI_ROT_REGISTRY" ]; then
+  while IFS=$'\t' read -r artifact _kind _site test_name wp _adr _notes; do
+    case "$artifact" in ''|'#'*|'artifact') continue ;; esac
+    [ -z "$test_name" ] && continue
+    if ! rg -F -q -- "$test_name" "$ROOT/test" 2>/dev/null; then
+      fail_violation "anti-rot: registered test '$test_name' ($artifact, $wp) absent from test/ (ADR-0042)"
+    fi
+  done < "$ANTI_ROT_REGISTRY"
 fi
 
 if [ "$VIOLATIONS" -gt 0 ]; then

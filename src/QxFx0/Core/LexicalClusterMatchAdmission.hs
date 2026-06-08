@@ -8,9 +8,10 @@ module QxFx0.Core.LexicalClusterMatchAdmission
   , admitLexicalClusterMatches
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Semantic.MeaningAtoms (RawLexicalClusterMatches(..))
 import QxFx0.Types
+import QxFx0.Types.Admission.PatternSuppressStrong
+  ( SuppressStrongConfig(..), admitBySuppressStrong )
 
 data LexicalClusterMatchAdmissionInput = LexicalClusterMatchAdmissionInput
   { lcaiTruthContractStatus :: !TruthContractStatus
@@ -28,21 +29,6 @@ data AdmittedLexicalClusterMatches = AdmittedLexicalClusterMatches
   , alcmDecision :: !LexicalClusterMatchAdmissionDecision
   } deriving stock (Eq, Show)
 
-admitLexicalClusterMatches :: LexicalClusterMatchAdmissionInput -> RawLexicalClusterMatches -> AdmittedLexicalClusterMatches
-admitLexicalClusterMatches input rawMatches
-  | truthContractIsAuthoritative (lcaiTruthContractStatus input) =
-      AdmittedLexicalClusterMatches rawMatches rawMatches LcdAdmitRaw
-  | all (matchAlreadySafe . maTag) (rlmClusterAtoms rawMatches ++ rlmLexicalAtoms rawMatches) =
-      AdmittedLexicalClusterMatches rawMatches rawMatches LcdPreserveAmbiguous
-  | otherwise =
-      AdmittedLexicalClusterMatches
-        rawMatches
-        rawMatches
-          { rlmClusterAtoms = filter (matchAlreadySafe . maTag) (rlmClusterAtoms rawMatches)
-          , rlmLexicalAtoms = filter (matchAlreadySafe . maTag) (rlmLexicalAtoms rawMatches)
-          }
-        LcdSuppressStrongMatches
-
 matchAlreadySafe :: AtomTag -> Bool
 matchAlreadySafe tag =
   case tag of
@@ -53,3 +39,20 @@ matchAlreadySafe tag =
     CustomAtom _ _ -> True
     AffectiveAtom _ _ -> True
     _ -> False
+
+admitLexicalClusterMatches :: LexicalClusterMatchAdmissionInput -> RawLexicalClusterMatches -> AdmittedLexicalClusterMatches
+admitLexicalClusterMatches input rawMatches =
+  admitBySuppressStrong config input rawMatches
+  where
+    config = SuppressStrongConfig
+      { sscGetTruthContract = lcaiTruthContractStatus
+      , sscAllSafe = \rm -> all (matchAlreadySafe . maTag) (rlmClusterAtoms rm ++ rlmLexicalAtoms rm)
+      , sscSuppress = \rm -> rm
+          { rlmClusterAtoms = filter (matchAlreadySafe . maTag) (rlmClusterAtoms rm)
+          , rlmLexicalAtoms = filter (matchAlreadySafe . maTag) (rlmLexicalAtoms rm)
+          }
+      , sscBuildAdmitted = \_ raw proc dec -> AdmittedLexicalClusterMatches raw proc dec
+      , sscDecisionAdmit = LcdAdmitRaw
+      , sscDecisionPreserve = LcdPreserveAmbiguous
+      , sscDecisionSuppress = LcdSuppressStrongMatches
+      }

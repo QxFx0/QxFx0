@@ -9,6 +9,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     Modifier = { s : Str } ;
     Relation = { s : Str } ;
     Mechanism = { s : Str } ;
+    ActTopic = { s : Str } ;
 
   lin
     NumSg = { s = "удержу" } ;
@@ -28,6 +29,14 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
 
     RelIdentity = { s = "является" } ;
     MechParse   = { s = "механизмом локального разбора" } ;
+
+    ActAnswer    = { s = "ответ" } ;
+    ActQuestion  = { s = "вопрос" } ;
+    ActTopicTerm = { s = "тема" } ;
+    ActProject   = { s = "проект" } ;
+    ActResult    = { s = "результат" } ;
+
+    MoveActOnTopic act = { s = "Поговорим о " ++ act.s ++ "." } ;
     MoveDefine subj rel obj = { s = subj.nom ++ " " ++ rel.s ++ " " ++ obj.ins } ;
     MoveCause subj mech = { s = "Причиной " ++ subj.gen ++ " служит " ++ mech.s } ;
     MovePurpose topic = { s = "Назначение " ++ topic.gen ++ " раскрывается через устойчивую роль в действии." } ;

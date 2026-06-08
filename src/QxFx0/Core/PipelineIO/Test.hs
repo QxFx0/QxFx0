@@ -8,6 +8,7 @@ module QxFx0.Core.PipelineIO.Test
   ( TestPipelineConfig(..)
   , defaultTestPipelineConfig
   , mkTestPipelineIO
+  , defaultTestInterpreter
   ) where
 
 import QxFx0.Core.ConsciousnessLoop
@@ -100,7 +101,8 @@ defaultTestInterpreter request =
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard (Unavailable "nix_unavailable_default_test_pipeline"))
     TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do
-      let salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance })
+      let contentSaliency = 0.0  -- WP-C: default for test interpreter
+          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience initialLoop semanticInput humanTheta resonance
           nextNarrative = clLastNarrative nextLoop

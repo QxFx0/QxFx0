@@ -81,3 +81,7 @@ docs/audits/
 *.log
 *.tmp
 .*.tmp
+
+# Internal work-orders / technician briefs (kept local, not published)
+docs/tz/
+docs/infra-hardening-tz.md

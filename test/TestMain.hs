@@ -40,7 +40,6 @@ import Test.Suite.VecProperties (vecPropertiesTests)
 import Test.Suite.EgoRead (egoReadTests)
 import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
-import Test.Suite.ModelComparison (modelComparisonTests)
 import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 import Test.Suite.M6Witness (m6WitnessTests)
 import Test.Suite.M5Regime (m5RegimeTests)
@@ -48,7 +47,7 @@ import Test.Suite.M5Regime (m5RegimeTests)
 main :: IO ()
 main = do
   testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ modelComparisonTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests)
+     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

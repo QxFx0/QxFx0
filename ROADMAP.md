@@ -1031,3 +1031,59 @@ Activation rule:
 - Package identifiers are intentionally unchanged for now.
 - The absence of `.git` in this fork is deliberate.
 - If the fork later needs a separate repository, initialize git inside `QxFx0_v3` explicitly and attach a new remote rather than reusing the baseline one.
+
+## Infrastructure Hardening Program (Post-Audit 2026-06-08)
+
+This program does not replace or interrupt the M0–M6 spine. It runs alongside the companion programs (SG0–SG4, AS0–AS4), motivated by the comprehensive audit of 466 modules. Organized by implementation dependency, not priority number.
+
+### Gate: Tree Cleanup
+- Remove 4 dead modules from cabal: `QxFx0.Internal.Process`, `QxFx0.Evaluation.ModelComparison`, `QxFx0.Bridge.SQLite.SchemaContractCheck`, `QxFx0.Bridge.SQLite.SchemaConsistency`.
+- Remove `Semantic/Proposition.hs.backup` (compiled as source).
+- Effort: <1h. Blocks nothing but unclutters every subsequent step.
+
+### IH‑1: CI Foundation
+- `cabal build lib` (fast, 5min)
+- `cabal test qxfx0-test-fast` (medium, 10min)
+- `hlint + ormolu` (fast, 3min)
+- GF build gate: `pgf -make QxFx0SyntaxRusColloquial.gf` + `scripts/gf_quality_gate.sh`
+- Effort: 3–5 days. Blocks IH‑2, IH‑3, IH‑4, IH‑5 — every regression is currently detected manually.
+
+### IH‑2: Layering Inversion Fix
+- `Semantic` (layer 6) must not import `Core.*Admission` (layer 3). Extract admission interface to `Types.Admission` or `Bridge.Admission`.
+- Effort: 1–2 weeks. Depends on IH‑1 (CI must verify the move doesn't break anything).
+
+### IH‑3: Data Integrity Belt
+- Serialisation round-trip tests: `decode . encode == id` for all persisted types (`TurnReplayTrace`, `SystemState`, `LocalRecoveryCause`, etc.).
+- `--strict-decode` CLI flag: replaces `.:? .!=` with `.:` for production deployments, restoring strict validation while keeping forward-compatible replay in dev.
+- Effort: 1 week total (round-trip: 3d, flag: 2d). Depends on IH‑1.
+
+### IH‑4: Memory Footprint
+- Lazy-load `resources/morphology/forms_by_surface.json` (131 MB, 73% of morphology footprint) using the existing `unsafePerformIO` + `IORef` pattern (`gfMapData` / `cachedReadPGF`).
+- Effort: 1 day. Depends on IH‑1.
+
+### IH‑5: Error Provenance
+- Structured errors for remaining 5 `*Error Text` / `*ErrorStructured` half-migrated pairs.
+- `--debug-errors` / `QXFX0_DEBUG_ERRORS` env flag (exists as P1-2, needs promotion to documented debugging tool).
+- Effort: 1 week. Depends on IH‑1.
+
+### Parallel Line: Typed Consolidation
+Independent of IH‑2 through IH‑5, can start anytime:
+
+- **Admission types → GADT/generics-sop**: 83 admission types → 4–5 patterns. Effort: 2–3 weeks.
+- **String dispatch → typed enums**: 30+ raw string dispatch sites (`== "SelfStateQ"`, `lang == "QxFx0SyntaxRus"`). Effort: 1–2 weeks.
+- **Haddock**: `Self/` and `Core/` modules. Effort: 1–2 weeks.
+- **Prometheus + structured logging**: Effort: 2–3 weeks.
+- **Semantic substrate roadmap**: naive parser roadmap (document, not rewrite). Effort: 1–2 months.
+
+### IH‑X: Deferred Queue (not blocking)
+- Agda nightly CI (3–5 days).
+- Nix simplification (1 week).
+- Python pipeline fixation (3–5 days).
+- Generated lexicon → binary format (2–3 weeks).
+
+### Sequencing rule
+- IH‑1 first — no other step can be verified without CI.
+- IH‑2, IH‑3, IH‑5 depend on IH‑1 but are independent of each other (parallel after IH‑1).
+- IH‑4 (lazy loading) is low-risk, can be parallel.
+- Parallel line never blocks IH‑1–IH‑5; IH‑1 never blocks parallel line.
+- GF build gate (`pgf -make`) is part of IH‑1 but is load‑bearing specifically for RGL promotion — surface‑generation regressions are user‑visible.

@@ -16,6 +16,7 @@ module QxFx0.Types.State.SemanticCommitment
   , RetractionReason(..)
   , ContradictionKind(..)
   , emptySemanticCommitmentStore
+  , quarantinedClaims
   ) where
 
 import Control.DeepSeq (NFData)
@@ -29,7 +30,7 @@ import GHC.Generics (Generic)
 -- | Monotonic turn counter scoped to a session.
 newtype TurnSeq = TurnSeq { unTurnSeq :: Int }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (Hashable, NFData, ToJSON, FromJSON)
 
 -- | Unique commitment identifier within a session.
 newtype CommitmentId = CommitmentId { unCommitmentId :: Int }
@@ -95,16 +96,18 @@ data ContradictionEvent = ContradictionEvent
 
 -- | The commitment store.
 data SemanticCommitmentStore = SemanticCommitmentStore
-  { scsActive   :: !(HashMap CommitmentId (FactualClaimPayload, TurnSeq))
-  , scsLineage  :: !(HashMap CommitmentId [LineageEvent])
+  { scsActive     :: !(HashMap CommitmentId (FactualClaimPayload, TurnSeq))
+  , scsQuarantine :: !(HashMap CommitmentId (FactualClaimPayload, TurnSeq))
+  , scsLineage    :: !(HashMap CommitmentId [LineageEvent])
   , scsContradictions :: ![ContradictionEvent]
-  , scsNextId   :: !Int
+  , scsNextId     :: !Int
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
 instance ToJSON SemanticCommitmentStore where
   toJSON store = object
     [ "scsActive" .= mapToList (scsActive store)
+    , "scsQuarantine" .= mapToList (scsQuarantine store)
     , "scsLineage" .= mapToList (scsLineage store)
     , "scsContradictions" .= scsContradictions store
     , "scsNextId" .= scsNextId store
@@ -115,6 +118,7 @@ instance FromJSON SemanticCommitmentStore where
   parseJSON = withObject "SemanticCommitmentStore" $ \o ->
     SemanticCommitmentStore
       <$> (HashMap.fromList <$> o .: "scsActive")
+      <*> (HashMap.fromList <$> o .:? "scsQuarantine" .!= [])
       <*> (HashMap.fromList <$> o .: "scsLineage")
       <*> o .: "scsContradictions"
       <*> o .: "scsNextId"
@@ -122,10 +126,15 @@ instance FromJSON SemanticCommitmentStore where
 -- | Empty store with no commitments.
 emptySemanticCommitmentStore :: SemanticCommitmentStore
 emptySemanticCommitmentStore = SemanticCommitmentStore
-  { scsActive   = HashMap.empty
-  , scsLineage  = HashMap.empty
+  { scsActive     = HashMap.empty
+  , scsQuarantine = HashMap.empty
+  , scsLineage    = HashMap.empty
   , scsContradictions = []
-  , scsNextId   = 1
+  , scsNextId     = 1
   }
+
+-- | Review-visibility accessor: claims currently in quarantine.
+quarantinedClaims :: SemanticCommitmentStore -> [FactualClaimPayload]
+quarantinedClaims = map fst . HashMap.elems . scsQuarantine
 
 

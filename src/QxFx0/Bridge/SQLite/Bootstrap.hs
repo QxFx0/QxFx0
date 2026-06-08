@@ -25,9 +25,10 @@ import QxFx0.Bridge.SQLite.SchemaContract
   , isV1Shape
   , isV2Shape
   )
+import qualified Data.Map.Strict as Map
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(SQLiteError)
-  , catchIO
+  ( catchIO
+  , mkSQLiteError
   , throwQxFx0
   , tryQxFx0
   )
@@ -41,7 +42,7 @@ import QxFx0.Resources
 import System.Environment (lookupEnv)
 
 currentSchemaDescription :: Text
-currentSchemaDescription = "Runtime schema v3: shadow_divergence_log trace columns (shadow_snapshot_id, shadow_divergence_kind)"
+currentSchemaDescription = "Runtime schema v4: runtime_sessions.state_revision for optimistic-concurrency revision tracking"
 
 ensureSchemaMigrations :: NSQL.Database -> IO ()
 ensureSchemaMigrations db = do
@@ -94,37 +95,40 @@ ensureSchemaMigrations db = do
           seedAfterMigration sqlSet db
       | otherwise ->
           throwQxFx0
-            (SQLiteError $
-              "schema_version mismatch: expected "
-                <> T.pack (show currentSchemaVersion)
-                <> ", found "
-                <> T.pack (show v)
-                <> ". Downgrade is not supported.")
+            (mkSQLiteError
+              "schema_version_check"
+              "VERSION_MISMATCH"
+              (Map.fromList
+                [ ("expected", T.pack (show currentSchemaVersion))
+                , ("found", T.pack (show v))
+                ]))
   -- 3. Post-bootstrap validation
   contractResult <- checkSchemaContract db
   case contractResult of
     SchemaContractOk _ -> pure ()
     SchemaContractFreshBootstrapable -> pure ()
     SchemaContractVersionBehind expected actual ->
-      throwQxFx0 (SQLiteError $
-        "schema version behind: expected " <> T.pack (show expected)
-        <> ", found " <> T.pack (show actual))
+      throwQxFx0 (mkSQLiteError
+        "schema_contract"
+        "VERSION_BEHIND"
+        (Map.fromList [("expected", T.pack (show expected)), ("actual", T.pack (show actual))]))
     SchemaContractMissingTable t ->
-      throwQxFx0 (SQLiteError $ "schema contract failed: missing table " <> t)
+      throwQxFx0 (mkSQLiteError "schema_contract" "MISSING_TABLE" (Map.singleton "table" t))
     SchemaContractMissingColumns t cols ->
-      throwQxFx0 (SQLiteError $
-        "schema contract failed: table " <> t <> " missing columns: "
-        <> T.intercalate ", " cols)
+      throwQxFx0 (mkSQLiteError
+        "schema_contract"
+        "MISSING_COLUMNS"
+        (Map.fromList [("table", t), ("columns", T.intercalate ", " cols)]))
     SchemaContractMissingIndex ix ->
-      throwQxFx0 (SQLiteError $ "schema contract failed: missing index " <> ix)
+      throwQxFx0 (mkSQLiteError "schema_contract" "MISSING_INDEX" (Map.singleton "index" ix))
     SchemaContractMissingTrigger tr ->
-      throwQxFx0 (SQLiteError $ "schema contract failed: missing trigger " <> tr)
+      throwQxFx0 (mkSQLiteError "schema_contract" "MISSING_TRIGGER" (Map.singleton "trigger" tr))
     SchemaContractMissingFTS fts ->
-      throwQxFx0 (SQLiteError $ "schema contract failed: missing fts table " <> fts)
+      throwQxFx0 (mkSQLiteError "schema_contract" "MISSING_FTS" (Map.singleton "fts_table" fts))
     SchemaContractInconsistent reason ->
-      throwQxFx0 (SQLiteError $ "schema contract inconsistent: " <> reason)
+      throwQxFx0 (mkSQLiteError "schema_contract" "INCONSISTENT" (Map.singleton "reason" reason))
     SchemaContractQueryFailed msg ->
-      throwQxFx0 (SQLiteError $ "schema contract query failed: " <> msg)
+      throwQxFx0 (mkSQLiteError "schema_contract" "QUERY_FAILED" (Map.singleton "message" msg))
 
 seedAfterMigration :: BootstrapSqlSet -> NSQL.Database -> IO ()
 seedAfterMigration sqlSet db = do
@@ -180,15 +184,16 @@ allowEmbeddedSqlFallback reason fallbackValue = do
     Just "1" -> pure fallbackValue
     _ ->
       throwQxFx0
-        (SQLiteError $
-          "embedded SQL fallback disabled; canonical spec/sql is required: " <> reason
-        )
+        (mkSQLiteError
+          "embedded_sql_fallback"
+          "FALLBACK_DISABLED"
+          (Map.singleton "reason" reason))
 
 insertSchemaVersion :: NSQL.Database -> Int -> Text -> IO ()
 insertSchemaVersion db version description = do
   mStmt <- NSQL.prepare db "INSERT OR REPLACE INTO schema_version(version, description) VALUES(?, ?)"
   case mStmt of
-    Left err -> throwQxFx0 (SQLiteError $ "schema version insert prepare failed: " <> err)
+    Left err -> throwQxFx0 (mkSQLiteError "schema_version_insert" err Map.empty)
     Right stmt -> do
       _ <- NSQL.bindInt stmt 1 version
       _ <- NSQL.bindText stmt 2 description
@@ -209,7 +214,7 @@ runPendingMigrations db currentVersion = do
   beginResult <- NSQL.execSql db "BEGIN IMMEDIATE;"
   case beginResult of
     Left err ->
-      throwQxFx0 (SQLiteError $ "migration tx begin failed: " <> err)
+      throwQxFx0 (mkSQLiteError "migration_tx_begin" err Map.empty)
     Right _ ->
       pure ()
   -- Run migration steps
@@ -223,19 +228,25 @@ runPendingMigrations db currentVersion = do
         commitResult <- NSQL.execSql db "COMMIT;"
         case commitResult of
           Left err ->
-            throwQxFx0 (SQLiteError $ "migration tx commit failed: " <> err)
+            throwQxFx0 (mkSQLiteError "migration_tx_commit" err Map.empty)
           Right _ ->
             pure ()
       other -> do
         rollbackResult <- NSQL.execSql db "ROLLBACK;"
         case rollbackResult of
           Left rbErr ->
-            throwQxFx0 (SQLiteError $
-              "migration validation failed: " <> renderSchemaContractResult other
-              <> "; rollback also failed: " <> rbErr)
+            throwQxFx0 (mkSQLiteError
+              "migration_validation"
+              "VALIDATION_FAILED_ROLLBACK_FAILED"
+              (Map.fromList
+                [ ("validation_error", renderSchemaContractResult other)
+                , ("rollback_error", rbErr)
+                ]))
           Right _ ->
-            throwQxFx0 (SQLiteError $
-              "migration validation failed: " <> renderSchemaContractResult other)
+            throwQxFx0 (mkSQLiteError
+              "migration_validation"
+              "VALIDATION_FAILED"
+              (Map.singleton "error" (renderSchemaContractResult other)))
 
 rollbackOnException :: NSQL.Database -> IO ()
 rollbackOnException db = do
@@ -260,6 +271,11 @@ resolveMigrationSteps fromVersion
             , EnsureColumn "shadow_divergence_log" "shadow_divergence_kind" "TEXT NOT NULL DEFAULT 'none'"
             ]
           else []
+      , if fromVersion < 4
+          then
+            [ EnsureColumn "runtime_sessions" "state_revision" "INTEGER NOT NULL DEFAULT 0"
+            ]
+          else []
       ]
 
 runMigrationStep :: NSQL.Database -> MigrationStep -> IO ()
@@ -273,9 +289,10 @@ runMigrationStep db step = case step of
         case result of
           Left err ->
             throwQxFx0
-              (SQLiteError $
-                "migration_failed stage=ensure_column table=" <> table
-                <> " column=" <> col <> " sqlite=" <> err)
+              (mkSQLiteError
+                "migration_ensure_column"
+                err
+                (Map.fromList [("table", table), ("column", col)]))
           Right _ -> pure ()
       else pure ()
 
@@ -283,7 +300,7 @@ execBootstrapSql :: NSQL.Database -> (FilePath, Text) -> IO ()
 execBootstrapSql db (label, sqlText) = do
   result <- NSQL.execSql db sqlText
   case result of
-    Left err -> throwQxFx0 (SQLiteError $ T.pack ("bootstrap SQL failed for " <> label <> ": ") <> err)
+    Left err -> throwQxFx0 (mkSQLiteError "bootstrap_sql" err (Map.singleton "label" (T.pack label)))
     Right _ -> pure ()
 
 seedBootstrapSql :: NSQL.Database -> Text -> (FilePath, Text) -> IO ()
@@ -302,8 +319,10 @@ tableHasRowsQuery tableName =
     "identity_claims" -> pure "SELECT 1 FROM identity_claims LIMIT 1"
     _ ->
       throwQxFx0
-        (SQLiteError
-          ("unsupported bootstrap seed table name: " <> tableName))
+        (mkSQLiteError
+          "bootstrap_seed"
+          "UNSUPPORTED_TABLE"
+          (Map.singleton "table_name" tableName))
 
 tableHasRows :: NSQL.Database -> Text -> IO Bool
 tableHasRows db sql = do
@@ -314,7 +333,7 @@ withPreparedStatement db sql context action = do
   mStmt <- NSQL.prepare db sql
   case mStmt of
     Left err ->
-      throwQxFx0 (SQLiteError (context <> " prepare failed: " <> err))
+      throwQxFx0 (mkSQLiteError "prepare" err (Map.singleton "context" context))
     Right stmt ->
       action stmt `finally` finalizeBestEffort stmt
 

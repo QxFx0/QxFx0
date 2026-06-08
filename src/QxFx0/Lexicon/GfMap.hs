@@ -5,6 +5,7 @@
 module QxFx0.Lexicon.GfMap
   ( GfLexemeForms(..)
   , GfMapLoadStatus(..)
+  , GfMapData(..)
   , defaultGfLexemeId
   , gfMapFallbackReason
   , gfMapProvenanceTag
@@ -15,6 +16,7 @@ module QxFx0.Lexicon.GfMap
   , gfMapLoadStatus
   , loadGfMapFromContent
   , loadGfMapStatusFromPath
+  , gfMapData
   ) where
 
 import Control.Applicative ((<|>))

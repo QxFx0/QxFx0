@@ -35,7 +35,8 @@ import qualified Data.ByteString as BS
 import Foreign hiding (void)
 import Foreign.C.Types (CInt(..), CDouble(..))
 import Foreign.C.String (CString, withCString, peekCString)
-import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(SQLiteError))
+import qualified Data.Map.Strict as Map
+import QxFx0.ExceptionPolicy (throwQxFx0, mkSQLiteError)
 import Data.Text.Encoding.Error (lenientDecode)
 
 data CDatabase
@@ -125,7 +126,7 @@ close :: Database -> IO ()
 close db = do
   rc <- c_sqlite3_close db
   if rc /= sqlOk
-    then throwQxFx0 (SQLiteError $ T.pack $ "sqlite3_close failed: " ++ show rc)
+    then throwQxFx0 (mkSQLiteError "close" (T.pack $ "rc=" ++ show rc) Map.empty)
     else return ()
 
 prepare :: Database -> Text -> IO (Either Text Statement)
@@ -164,9 +165,9 @@ stepRow stmt = do
     Right rc | rc == sqlRow -> pure True
     Right rc | rc == sqlDone -> pure False
     Right rc ->
-      throwQxFx0 (SQLiteError ("sqlite3_step returned unexpected code: " <> T.pack (show rc)))
+      throwQxFx0 (mkSQLiteError "step" ("unexpected_code=" <> T.pack (show rc)) Map.empty)
     Left err ->
-      throwQxFx0 (SQLiteError err)
+      throwQxFx0 (mkSQLiteError "step" err Map.empty)
 
 bindText :: Statement -> CInt -> Text -> IO (Either Text ())
 bindText stmt idx val = do
@@ -212,7 +213,7 @@ columnText stmt idx = do
     else do
       cLen <- c_sqlite3_column_bytes stmt idx
       if cLen < 0
-        then throwQxFx0 (SQLiteError ("columnText failed: negative_length " <> T.pack (show cLen)))
+        then throwQxFx0 (mkSQLiteError "columnText" "NEGATIVE_LENGTH" (Map.singleton "length" (T.pack (show cLen))))
         else do
           bs <- BS.packCStringLen (cStr, fromIntegral cLen)
           pure (TE.decodeUtf8 bs)
@@ -225,7 +226,7 @@ columnTextLenient stmt idx = do
     else do
       cLen <- c_sqlite3_column_bytes stmt idx
       if cLen < 0
-        then throwQxFx0 (SQLiteError ("columnTextLenient failed: negative_length " <> T.pack (show cLen)))
+        then throwQxFx0 (mkSQLiteError "columnTextLenient" "NEGATIVE_LENGTH" (Map.singleton "length" (T.pack (show cLen))))
         else do
           bs <- BS.packCStringLen (cStr, fromIntegral cLen)
           pure (TE.decodeUtf8With lenientDecode bs)
@@ -245,7 +246,7 @@ finalize :: Statement -> IO ()
 finalize stmt = do
   rc <- c_sqlite3_finalize stmt
   if rc /= sqlOk
-    then throwQxFx0 (SQLiteError $ T.pack $ "sqlite3_finalize failed: " ++ show rc)
+    then throwQxFx0 (mkSQLiteError "finalize" (T.pack $ "rc=" ++ show rc) Map.empty)
     else return ()
 
 execSql :: Database -> Text -> IO (Either Text ())

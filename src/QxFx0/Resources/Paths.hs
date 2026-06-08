@@ -16,12 +16,15 @@ module QxFx0.Resources.Paths
 
 import Control.Monad (filterM)
 import Data.List (intercalate, nub)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe, maybeToList)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Paths_qxfx0 (getDataDir, getDataFileName)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(RuntimeInitError)
+  , mkRuntimeInitError
   , throwQxFx0
   , tryIO
   , tryQxFx0
@@ -419,4 +422,4 @@ deriveResourceRoot schemaSql migrationDir morphologyDir =
           | otherwise -> "."
 
 throwResourceError :: Text -> IO a
-throwResourceError = throwQxFx0 . RuntimeInitError
+throwResourceError msg = throwQxFx0 $ mkRuntimeInitError "Resources" "path_resolution" "RESOURCE_ERROR" (M.singleton "message" msg)

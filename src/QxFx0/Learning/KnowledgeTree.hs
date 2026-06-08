@@ -31,6 +31,7 @@ module QxFx0.Learning.KnowledgeTree
   , graftFruit
   , quarantineFruit
   , promoteFromQuarantine
+  , authoritativeNetDelta
   , pruneBranches
   , pruneFruits
   , branchHealthTrend
@@ -100,10 +101,23 @@ instance FromJSON KnowledgeFruit where
       <*> o .:? "word" .!= ""
       <*> o .:  "source"
       <*> o .:? "validated" .!= False
-      <*> o .:? "conatusDelta" .!= 0.0
-      <*> o .:? "predictiveDelta" .!= 0.0
+      -- Trust boundary at the READ edge: clamp authority deltas to the same
+      -- bounds Sandbox.hs enforces at creation ([-0.35,0.40] / [-0.40,0.50]),
+      -- so a fruit persisted before the write-side clamp (565d73d), or a
+      -- hand-edited / corrupted row, cannot smuggle an inflated value (e.g.
+      -- predictiveDelta:999.0) past authoritativeNetDelta promotion gating.
+      <*> (clampFruitDelta (-0.35) 0.40 <$> o .:? "conatusDelta" .!= 0.0)
+      <*> (clampFruitDelta (-0.40) 0.50 <$> o .:? "predictiveDelta" .!= 0.0)
       <*> o .:? "graftedTurn" .!= Nothing
       <*> o .:? "observedTurn" .!= 0
+
+-- | Clamp a stored authority delta into a bounded range; NaN/Inf -> 0.
+-- Mirrors 'QxFx0.Learning.Sandbox.clampRange' but kept local to avoid a
+-- Learning.Sandbox import cycle.
+clampFruitDelta :: Double -> Double -> Double -> Double
+clampFruitDelta lo hi x
+  | isNaN x || isInfinite x = 0.0
+  | otherwise = max lo (min hi x)
 
 -- | A branch holds fruit aligned with a particular reconcile rule.
 data Branch = Branch
@@ -242,7 +256,7 @@ graftFruit rule fruit t =
        }
 
 -- | Place a fruit into quarantine (anti-dogmatism).
--- Enforces bounded quarantine size with oldest-first eviction.
+-- Enforces bounded quarantine size with newest-first retention (LRU eviction).
 quarantineFruit :: KnowledgeFruit -> KnowledgeTree -> KnowledgeTree
 quarantineFruit fruit t =
   let quarantine' = take maxKnowledgeQuarantineSize (fruit : ktQuarantine t)
@@ -307,9 +321,9 @@ pruneBranches currentTurn healthThreshold minUnhealthyTurns t =
 partitionBranches
   :: Int -> Double -> Int -> [Branch] -> ([Branch], [Branch])
 partitionBranches currentTurn threshold minAge bs =
-  let pred b = brHealth b >= threshold
-            || currentTurn - brCreatedTurn b < minAge
-  in L.partition pred bs
+  let predicate b = brHealth b >= threshold
+                 || currentTurn - brCreatedTurn b < minAge
+  in L.partition predicate bs
 
 -- | Prune individual fruits that are unvalidated or have persistently
 -- negative deltas.  Also cleans quarantine of unvalidated items.

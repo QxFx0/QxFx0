@@ -15,6 +15,7 @@ import QxFx0.Render.Dialogue
   , linearizeClaimAstRus
   , hasStructuredDialogueSurface
   )
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms, loadDefaultRuntimeParadigms)
 import QxFx0.Types
   ( StanceMarker(..)
   , ContentMove(..)
@@ -24,6 +25,7 @@ import QxFx0.Types
   , RenderStyle(..)
   , emptyInputPropositionFrame
   )
+import QxFx0.Types.PropositionType (PropositionType(..))
 
 emptyMorphologyData :: MorphologyData
 emptyMorphologyData = MorphologyData M.empty M.empty M.empty M.empty
@@ -37,6 +39,7 @@ renderDialogueCoverageTests =
   , TestLabel "moveToText GroundKnown" testMoveToTextGroundKnown
   , TestLabel "moveToText DefineFrame" testMoveToTextDefineFrame
   , TestLabel "moveToText all content moves" testMoveToTextAllMoves
+  , TestLabel "L3b: moveToText uses RGL genitive with populated paradigms" testMoveToTextRglGenitive
   , TestLabel "linearizeClaimAstRus MoveOperationalStatus" testLinearizeOperationalStatus
   , TestLabel "linearizeClaimAstRus ClaimPurpose" testLinearizeClaimPurpose
   , TestLabel "linearizeClaimAstRus all simple constructors" testLinearizeAllSimple
@@ -67,12 +70,25 @@ testStancePrefixAll = TestCase $ do
 
 testMoveToTextGroundKnown :: Test
 testMoveToTextGroundKnown = TestCase $ do
-  let txt = moveToText MoveGroundKnown "право" emptyMorphologyData
+  let txt = moveToText MoveGroundKnown "право" emptyRuntimeParadigms emptyMorphologyData
   assertBool "GroundKnown should produce non-empty text" (not (T.null txt))
+
+-- | L3b/L3d: with populated paradigms the genitive comes from RGL; the empty-rp
+-- path now falls to the OOV heuristic (L3d dropped the JSON-map fallback). Use
+-- an irregular noun where the two genuinely differ: время → RGL "времени"
+-- (n-stem) vs heuristic "времяа" (wrong). Proves RGL is the live source and the
+-- OOV path is a distinct, weaker fallback.
+testMoveToTextRglGenitive :: Test
+testMoveToTextRglGenitive = TestCase $ do
+  rp <- loadDefaultRuntimeParadigms
+  let withRgl    = moveToText MoveStateBoundary "время" rp emptyMorphologyData
+      withoutRgl = moveToText MoveStateBoundary "время" emptyRuntimeParadigms emptyMorphologyData
+  assertBool "RGL path must produce the n-stem genitive времени" (T.isInfixOf "времени" withRgl)
+  assertBool "OOV heuristic path must NOT produce времени" (not (T.isInfixOf "времени" withoutRgl))
 
 testMoveToTextDefineFrame :: Test
 testMoveToTextDefineFrame = TestCase $ do
-  let txt = moveToText MoveDefineFrame "хартия" emptyMorphologyData
+  let txt = moveToText MoveDefineFrame "хартия" emptyRuntimeParadigms emptyMorphologyData
   assertBool "DefineFrame should produce non-empty text" (not (T.null txt))
 
 testMoveToTextAllMoves :: Test
@@ -89,17 +105,17 @@ testMoveToTextAllMoves = TestCase $ do
         , MoveNextStep
         ]
   mapM_ (\cm -> assertBool ("moveToText should not crash for " ++ show cm)
-             (let _ = moveToText cm "тема" emptyMorphologyData in True))
+             (let _ = moveToText cm "тема" emptyRuntimeParadigms emptyMorphologyData in True))
     moves
 
 testLinearizeOperationalStatus :: Test
 testLinearizeOperationalStatus = TestCase $ do
-  let result = linearizeClaimAstRus MoveOperationalStatus StyleStandard emptyMorphologyData
+  let result = linearizeClaimAstRus emptyRuntimeParadigms MoveOperationalStatus StyleStandard emptyMorphologyData
   assertBool "MoveOperationalStatus should linearize to Just" (maybe False (not . T.null) result)
 
 testLinearizeClaimPurpose :: Test
 testLinearizeClaimPurpose = TestCase $ do
-  let _ = linearizeClaimAstRus (ClaimPurpose "тест") StyleStandard emptyMorphologyData
+  let _ = linearizeClaimAstRus emptyRuntimeParadigms (ClaimPurpose "тест") StyleStandard emptyMorphologyData
   assertBool "ClaimPurpose linearization should not crash" True
 
 testLinearizeAllSimple :: Test
@@ -117,7 +133,7 @@ testLinearizeAllSimple = TestCase $ do
         , MoveSelfState
         ]
   mapM_ (\ast -> assertBool ("linearizeClaimAstRus should not crash for " ++ show ast)
-             (let _ = linearizeClaimAstRus ast StyleStandard emptyMorphologyData in True))
+             (let _ = linearizeClaimAstRus emptyRuntimeParadigms ast StyleStandard emptyMorphologyData in True))
     asts
 
 testHasStructuredSurfaceEmpty :: Test
@@ -127,6 +143,6 @@ testHasStructuredSurfaceEmpty = TestCase $ do
 
 testHasStructuredSurfaceOperational :: Test
 testHasStructuredSurfaceOperational = TestCase $ do
-  let frame = emptyInputPropositionFrame { ipfPropositionType = "OperationalStatusQ" }
+  let frame = emptyInputPropositionFrame { ipfPropositionType = OperationalStatusQ }
   assertBool "OperationalStatusQ should have structured surface"
     (hasStructuredDialogueSurface frame)

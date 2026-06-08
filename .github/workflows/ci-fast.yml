@@ -1,0 +1,112 @@
+# CI Fast — supplement to ci_gate_contract.sh
+# Purpose: fast feedback on push/PR without duplicating existing gates.
+#
+# This workflow does NOT replace ci.yml. It adds:
+# - cabal build qxfx0 (lib only, fast)
+# - hlint + ormolu checks
+# - GF compile check (pre-quality, not full gate)
+# - swap setup for 16GB runners
+#
+# Existing gates in ci_gate_contract.sh (build all, fast tests, GF quality,
+# haddock, schema checks) remain untouched.
+
+name: CI Fast
+
+on:
+  push:
+    branches: [main, master, feat/*]
+  pull_request:
+    branches: [main, master]
+
+env:
+  LD_LIBRARY_PATH: /tmp/gf-install/usr/lib
+
+jobs:
+  ci-fast:
+    name: CI Fast (build + lint + format + gf-compile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup swap (16GB runner safety)
+        run: |
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Setup Haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.6.6'
+          cabal-version: '3.10'
+
+      - name: Cache Cabal store
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project.freeze', 'qxfx0.cabal', 'cabal.project.local') }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-
+
+      - name: Cabal update
+        run: cabal update
+
+      # ── Build lib only (fast feedback, not full build) ──────────────
+      - name: Build lib
+        run: cabal build qxfx0 2>&1 | tail -20
+
+      # ── hlint ───────────────────────────────────────────────────────
+      - name: Install hlint
+        run: cabal install hlint --overwrite-policy=always 2>&1 | tail -5
+
+      - name: hlint check
+        run: |
+          hlint src/ --hint=.hlint.yaml 2>&1 | tail -30
+          # hlint exits 0 if no hints, 1 if hints found
+          # We treat hints as warnings, not errors (for now)
+          exit 0
+
+      # ── ormolu ──────────────────────────────────────────────────────
+      - name: Install ormolu
+        run: cabal install ormolu --overwrite-policy=always 2>&1 | tail -5
+
+      - name: ormolu check
+        run: |
+          find src/ -name '*.hs' ! -name 'Generated.hs' ! -name 'GeneratedLexicon.hs' | xargs ormolu --mode check 2>&1 | tail -30
+          # Exit code 0 = all formatted, non-zero = needs formatting
+          # We treat as warning for now (first pass)
+          exit 0
+
+      # ── GF compile check (pre-quality, not full gate) ───────────────
+      - name: GF compile check
+        run: |
+          if command -v pgf &> /dev/null; then
+            cd spec/gf
+            pgf -make QxFx0SyntaxRus.gf 2>&1 | tail -10
+          else
+            echo "GF not installed — skipping compile check (covered by ci_gate_contract.sh Gate 4)"
+          fi
+
+      # ── What this does NOT do (already in ci_gate_contract.sh) ──────
+      # - cabal build all (Gate 1)
+      # - cabal test fast (Gate 2)
+      # - check_architecture.sh (Gate 3)
+      # - check_calibration_codomain.sh (Gate 3b)
+      # - check_replay_gate.sh (Gate 3c)
+      # - gf_quality_gate.sh (Gate 4)
+      # - check_gf_render_path.sh (Gate 4a)
+      # - check_en_render_path.sh (Gate 4b)
+      # - check_haddock.sh (Gate 5)
+      # - check_embedded_sql (Gate 6)
+      # - check_schema_consistency (Gate 7)
+      # - check_schema_contract (Gate 8)
+      # - check_runtime_contract.py (Gate 8b)
+      # - check_generated_artifacts.sh (Gate 9)
+      # - check_lexicon.sh (Gate 10)

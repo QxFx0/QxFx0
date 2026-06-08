@@ -13,6 +13,9 @@ module QxFx0.Core.Bayesian
   , detectInsight
   , likelihood
   , maxBelief
+  , updateUserModel
+  , userModelActive
+  , dominantIntent
   ) where
 
 import qualified Data.Map.Strict as M
@@ -98,3 +101,33 @@ detectInsight bs =
 
 maxBelief :: BeliefState -> Double
 maxBelief bs = if M.null bs then 0.0 else maximum (M.elems bs)
+
+-- | WP-A: default-off promotion flag gating the Bayesian user-model update
+-- on the turn path. Flag-off pending promotion (ADR-0044); registered in the
+-- flag-off discipline (@scripts/check_architecture.sh@ rule [20]).
+userModelActive :: Bool
+userModelActive = False
+
+-- | WP-A: living consumer of 'bayesianUpdateFromText'. Runs a single Bayesian
+-- update step from raw text, returning the updated posterior. When the flag is
+-- off, returns the prior unchanged. This is the anti-rot consumer guarded by
+-- @docs/anti_rot_registry.tsv@ (ADR-0042).
+updateUserModel :: SemanticConfig -> BeliefState -> Text -> BeliefState
+updateUserModel cfg prior raw
+  | userModelActive = bayesianUpdateFromText cfg prior raw
+  | otherwise       = prior
+
+-- | WP-A reader: the most-probable hidden user intent, but only when the
+-- posterior is meaningfully peaked above the uniform prior (margin > epsilon).
+-- Returns 'Nothing' for a flat/uniform posterior (e.g. flag-off, where the
+-- model never updates), so the baseline @dtIntentHypothesis@ is preserved.
+dominantIntent :: BeliefState -> Maybe HiddenBelief
+dominantIntent bs
+  | M.null bs = Nothing
+  | otherwise =
+      let n        = fromIntegral (M.size bs)
+          uniform  = 1.0 / n
+          (h, p)   = M.foldrWithKey
+                       (\k v acc@(_, best) -> if v > best then (k, v) else acc)
+                       (UserWantsDefine, -1.0) bs
+      in if p > uniform + 1.0e-6 then Just h else Nothing

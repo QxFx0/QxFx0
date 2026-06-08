@@ -10,10 +10,11 @@ module QxFx0.Runtime.Session.Bootstrap
   ) where
 
 import Control.Exception (bracket, try)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
+import qualified QxFx0.Observability.Logging as Log
 import QxFx0.Bridge.SQLite
   ( ensureSchemaMigrations
   , loadClusters
@@ -25,7 +26,16 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, stepOrFail)
 import QxFx0.Types.Persistence (LoadStateResult(..), renderPersistenceDiagnostics)
 import QxFx0.Bridge.StatePersistence (loadState, loadStateRevision)
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), renderQxFx0ExceptionForLog, throwQxFx0, tryIO, tryQxFx0)
+import QxFx0.ExceptionPolicy
+  ( QxFx0Exception(..)
+  , RuntimeInitErrorDetails(..)
+  , SQLiteErrorDetails(..)
+  , mkRuntimeInitError
+  , renderQxFx0ExceptionForLog
+  , throwQxFx0
+  , tryIO
+  , tryQxFx0
+  )
 import QxFx0.Governance.Replay (rebuildGovernedSystemState)
 import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Self.Blanket (computeSelfBlanket)
@@ -52,6 +62,8 @@ import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
 import QxFx0.Runtime.Paths (resolveDbPath)
 import QxFx0.Runtime.Session.Types
 import QxFx0.Semantic.SemanticScene (defaultScenes)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, allParadigmLemmas, emptyRuntimeParadigms)
+import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrRglMorphologyActive)
 import QxFx0.Types.State
   ( SystemState(..)
   , dsActiveScene
@@ -71,17 +83,27 @@ import System.IO (hPutStrLn, stderr)
 
 bootstrapSession :: Bool -> Text -> IO Session
 bootstrapSession quiet sessionId = do
+  Log.logInfo "Starting session bootstrap"
+    (Log.addContext "session_id" sessionId Log.emptyContext)
   dbPath <- resolveDbPath
   runtimeMode <- resolveRuntimeMode
   createDirectoryIfMissing True (takeDirectory dbPath)
   readiness <- assessResourceReadiness dbPath
   let readinessMode = computeReadinessMode readiness
+  Log.logDebug "Resource readiness assessed"
+    (Log.addContext "readiness_mode" (T.pack $ show readinessMode) $
+     Log.addContext "db_path" (T.pack dbPath) Log.emptyContext)
   case evaluateBootstrapReadiness runtimeMode readinessMode of
-    Left failure ->
-      throwQxFx0 (RuntimeInitError (renderBootstrapGateFailure failure))
+    Left failure -> do
+      Log.logError "Bootstrap readiness gate failed"
+        (Log.addContext "failure" (renderBootstrapGateFailure failure) Log.emptyContext)
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "readiness_gate" "BOOTSTRAP_GATE_FAILURE"
+        (M.fromList [("failure", renderBootstrapGateFailure failure)])
     Right _ ->
       case readinessMode of
-        Degraded failed ->
+        Degraded failed -> do
+          Log.logWarn "Bootstrap in degraded mode"
+            (Log.addContext "failed_components" (T.pack $ show failed) Log.emptyContext)
           unless quiet $ hPutStrLn stderr $ "[degraded] optional components unavailable: " ++ show failed
         _ ->
           pure ()
@@ -94,25 +116,61 @@ bootstrapSession quiet sessionId = do
     ) :: IO (Either QxFx0Exception (Either Text ()))
   case schemaInitResult of
     Left err -> do
+      Log.logException err
+        (Log.addContext "db_path" (T.pack dbPath) $
+         Log.addContext "stage" "schema_init" Log.emptyContext)
       hPutStrLn stderr $ "[runtime_init_debug] schema_init_qxfx0_exception db=" <> dbPath <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog err)
-      throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> runtimeInitDetail err)
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "schema_init" "SCHEMA_INIT_EXCEPTION"
+        (M.fromList [("db_path", T.pack dbPath), ("detail", runtimeInitDetail err)])
     Right (Left err) -> do
+      Log.logError "Schema initialization SQL error"
+        (Log.addContext "db_path" (T.pack dbPath) $
+         Log.addContext "detail" err Log.emptyContext)
       hPutStrLn stderr $ "[runtime_init_debug] schema_init_sql_error db=" <> dbPath <> " detail=" <> T.unpack err
-      throwQxFx0 (RuntimeInitError $ "Cannot initialize schema: " <> err)
-    Right (Right _) -> pure ()
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "schema_init" "SCHEMA_INIT_SQL_ERROR"
+        (M.fromList [("db_path", T.pack dbPath), ("detail", err)])
+    Right (Right _) -> do
+      Log.logInfo "Schema initialization complete"
+        (Log.addContext "db_path" (T.pack dbPath) Log.emptyContext)
+      pure ()
 
   morphologyResult <- tryQxFx0 loadMorphologyData
   morphology <- case morphologyResult of
     Left err -> do
+      Log.logException err
+        (Log.addContext "stage" "morphology_load" Log.emptyContext)
       hPutStrLn stderr $ "[runtime_init_debug] morphology_load_failed detail=" <> T.unpack (renderQxFx0ExceptionForLog err)
-      throwQxFx0 (RuntimeInitError $ "Cannot load morphology data: " <> renderQxFx0ExceptionForLog err)
-    Right md -> pure md
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "morphology_load" "MORPHOLOGY_LOAD_FAILED"
+        (M.fromList [("detail", renderQxFx0ExceptionForLog err)])
+    Right md -> do
+      Log.logInfo "Morphology data loaded" Log.emptyContext
+      pure md
+  -- R1 + flag gate (RGL Russian): load runtime morphology paradigms only when
+  -- 'rrRglMorphologyActive' is set. The flag is static (set in
+  -- 'defaultRuntimeRegime', not changed mid-session), so gating the LOAD here
+  -- makes it a real switch: flag off → empty paradigms → 'lookupNounForm' always
+  -- misses → 'lookupLemmaForm' uses the JSON path everywhere → RGL is genuinely
+  -- inert (the documented "rrRglMorphologyActive = False ⇒ JSON production"
+  -- contract). Flag on → RGL-backed morphology for covered lemmas. Load failure
+  -- is non-fatal: an empty set degrades gracefully to JSON.
+  runtimeParadigms <-
+    if rrRglMorphologyActive defaultRuntimeRegime
+      then do
+        ps <- loadDefaultRuntimeParadigms
+        when (null (allParadigmLemmas ps)) $
+          Log.logInfo "Runtime paradigms empty (JSON morphology fallback active)" Log.emptyContext
+        pure ps
+      else pure emptyRuntimeParadigms
   runtime <- initRuntimeContext dbPath
   health <- checkHealth runtime
   case evaluateStrictHealth runtimeMode health of
-    Left failure ->
-      throwQxFx0 (RuntimeInitError (renderBootstrapGateFailure failure))
-    Right _ ->
+    Left failure -> do
+      Log.logError "Health gate failed"
+        (Log.addContext "failure" (renderBootstrapGateFailure failure) Log.emptyContext)
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "health_gate" "HEALTH_GATE_FAILURE"
+        (M.fromList [("failure", renderBootstrapGateFailure failure)])
+    Right _ -> do
+      Log.logInfo "Health check passed" Log.emptyContext
       pure ()
 
   idClaims <- withRuntimeDb runtime $ \db ->
@@ -127,6 +185,7 @@ bootstrapSession quiet sessionId = do
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}
         , ssMorphology = morphology
+        , ssRuntimeParadigms = runtimeParadigms
         , ssIdentity = (ssIdentity emptySystemState) {idsIdentityClaims = idClaims}
         , ssSemantic = (ssSemantic emptySystemState) {semClusters = clusters}
         , ssSessionId = sessionId
@@ -145,7 +204,8 @@ bootstrapSession quiet sessionId = do
         unless quiet $
           hPutStrLn stderr $
             "[runtime_init_debug] persisted_state_corrupt session=" <> T.unpack sessionId <> " detail=" <> T.unpack rendered
-        throwQxFx0 (RuntimeInitError ("Persisted state is corrupt: " <> rendered))
+        throwQxFx0 $ mkRuntimeInitError "Bootstrap" "state_restore" "STATE_CORRUPT"
+          (M.fromList [("session_id", sessionId), ("diagnostics", rendered)])
       Right (LoadStateRestored ss) ->
         if ssTurnCount ss == 0 && null (ssHistory ss)
           then pure (FreshOrigin, freshState)
@@ -161,6 +221,7 @@ bootstrapSession quiet sessionId = do
             let restored0 = ss
                   { ssDialogue = (ssDialogue ss) {dsActiveScene = firstScene}
                   , ssMorphology = mergeMorphology morphology (ssMorphology ss)
+                  , ssRuntimeParadigms = runtimeParadigms
                   , ssIdentity = (ssIdentity ss)
                     { idsIdentityClaims = if null (ssIdentityClaims ss) then idClaims else ssIdentityClaims ss
                     }
@@ -172,7 +233,8 @@ bootstrapSession quiet sessionId = do
              in if truthContractIsAuthoritative (ssTruthContractStatus restored0)
                   then case rebuildGovernedSystemState restored0 of
                          Right restored1 -> pure (RestoredOrigin, restored1)
-                         Left err -> throwQxFx0 (RuntimeInitError ("Persisted state governance rebuild failed: " <> err))
+                         Left err -> throwQxFx0 $ mkRuntimeInitError "Bootstrap" "governance_rebuild" "GOVERNANCE_REBUILD_FAILED"
+                           (M.fromList [("session_id", sessionId), ("error", err)])
                   else pure (RestoredOrigin, restored0)
   -- Phase 1: verify that the freshly bootstrapped state forms a
   -- structurally coherent self (see docs/THEORY.md §4.1 and
@@ -180,9 +242,20 @@ bootstrapSession quiet sessionId = do
   -- the session was unable to come into being as /this system/, and
   -- there is nothing to recover.
   case checkInitialBlanket (computeSelfBlanket restored) of
-    [] -> pure ()
-    vs -> throwQxFx0 (IdentityRupture ("bootstrap: " <> renderBlanketViolations vs))
+    [] -> do
+      Log.logInfo "Self-blanket verification passed"
+        (Log.addContext "state_origin" (T.pack $ show stateOrigin) Log.emptyContext)
+      pure ()
+    vs -> do
+      let violations = renderBlanketViolations vs
+      Log.logError "Self-blanket verification failed"
+        (Log.addContext "violations" violations Log.emptyContext)
+      throwQxFx0 (IdentityRupture ("bootstrap: " <> violations))
   hydrateRuntimeTurnState runtime restored
+  Log.logInfo "Session bootstrap complete"
+    (Log.addContext "session_id" sessionId $
+     Log.addContext "state_origin" (T.pack $ show stateOrigin) $
+     Log.addContext "turn_count" (T.pack $ show $ ssTurnCount restored) Log.emptyContext)
   pure Session
     { sessSystemState = restored
     , sessOutputMode = DialogueMode
@@ -208,8 +281,9 @@ mergeMorphology resource persisted = MorphologyData
 runtimeInitDetail :: QxFx0Exception -> Text
 runtimeInitDetail ex =
   case ex of
-    SQLiteError msg -> msg
+    SQLiteErrorStructured details -> sedOperation details <> ": " <> sedErrorCode details
     RuntimeInitError msg -> msg
+    RuntimeInitErrorStructured details -> riedOperation details <> ": " <> riedErrorCode details
     _ -> renderQxFx0ExceptionForLog ex
 
 withBootstrappedSession :: Bool -> Text -> (Session -> IO a) -> IO a
@@ -217,7 +291,10 @@ withBootstrappedSession quiet sessionId =
   bracket (bootstrapSession quiet sessionId) closeSession
 
 closeSession :: Session -> IO ()
-closeSession = releaseRuntimeContext . sessRuntime
+closeSession session = do
+  Log.logInfo "Closing session"
+    (Log.addContext "session_id" (sessSessionId session) Log.emptyContext)
+  releaseRuntimeContext (sessRuntime session)
 
 checkSessionReadiness :: Session -> IO ReadinessMode
 checkSessionReadiness session = do

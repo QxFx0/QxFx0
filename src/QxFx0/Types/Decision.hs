@@ -12,6 +12,7 @@ module QxFx0.Types.Decision
   , GfRelation(..)
   , GfMechanism(..)
   , GfNumber(..)
+  , GfActTopic(..)
   , ResponseMeaningPlan(..)
   , ContentMove(..)
   , ResponseContentPlan(..)

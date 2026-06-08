@@ -14,6 +14,7 @@ module QxFx0.Self.Perspective
   , applyPerspectiveOperator
   ) where
 
+import QxFx0.Types.State.SelfState (SelfState(..))
 import Data.List (sortOn)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
@@ -79,9 +80,9 @@ import QxFx0.Types.State.System
   , ssKnowledgeTree
   , ssGovernanceHistory
   , ssGovernanceRuntimeFault
-  , ssPerspectiveRegistry
   , ssSessionId
   , ssTurnCount
+  , ssSelfState
   )
 
 data PerspectiveOperationResult = PerspectiveOperationResult
@@ -98,7 +99,7 @@ data PerspectiveOperationResult = PerspectiveOperationResult
 assemblePerspectiveInput :: SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
 assemblePerspectiveInput ss conatusEnergy conatusGateFired field =
   let scope = selectPerspectiveScope ss
-      registry = ssPerspectiveRegistry ss
+      registry = selfPerspectiveRegistry (ssSelfState ss)
       normativeProfile = activeNormativeProfile scope registry
       lineage = lineageForScope scope registry
       beliefStore = ssBeliefStore ss
@@ -194,7 +195,7 @@ applyPerspectiveOperator ss conatusEnergy conatusGateFired field =
   let bundle = assemblePerspectiveInput ss conatusEnergy conatusGateFired field
       candidate = opinionCore bundle
       admissibility = evaluatePerspectiveAdmissibility bundle candidate
-      registry0 = ssPerspectiveRegistry ss
+      registry0 = selfPerspectiveRegistry (ssSelfState ss)
       decision = decidePerspectivePromotion registry0 bundle candidate admissibility
       prospectiveRegistry = applyPerspectiveDecision (ssTurnCount ss) registry0 bundle candidate decision
       prospectiveAdaptiveRecord = perspectiveMutationRecord (ssTurnCount ss) prospectiveRegistry bundle candidate admissibility decision

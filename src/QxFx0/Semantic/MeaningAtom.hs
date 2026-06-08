@@ -23,7 +23,7 @@ module QxFx0.Semantic.MeaningAtom
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSON(..), ToJSONKey(..), ToJSONKeyFunction(..), defaultOptions, genericParseJSON, genericToJSON, toJSON, toEncoding)
+import Data.Aeson (FromJSON(..), FromJSONKey(..), FromJSONKeyFunction(..), ToJSON(..), ToJSONKey(..), ToJSONKeyFunction(..), toJSON, toEncoding)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)

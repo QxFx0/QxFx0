@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- GENERATED from spec/sql/lexicon/*.sql via scripts/generate_haskell_from_tsv.py (X6: pymorphy3==2.0.6, spacy==3.8.13)
 module QxFx0.Lexicon.Generated
   ( generatedLexemeEntries
   , generatedCandidateForms

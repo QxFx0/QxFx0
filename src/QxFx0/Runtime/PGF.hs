@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-| In-process PGF linearization via the @pgf2@ Haskell library.
     Replaces the old out-of-process @gf -run@ CLI bridge.
@@ -28,12 +29,16 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
+import System.IO.Error (isDoesNotExistError)
+import System.IO.Unsafe (unsafePerformIO)
+import Data.IORef (IORef, newIORef, readIORef, modifyIORef')
 import qualified PGF2 as PGF
 import Data.Bits (xor)
 import Data.Word (Word64)
 import Numeric (showHex)
 
-import QxFx0.Types (ArtifactManifest(..), AssemblyPath(..), AuthorityClass(..), ClaimAst(..), GfLinearizationResult(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
+import QxFx0.Types (ArtifactManifest(..), AssemblyPath(..), AuthorityClass(..), ClaimAst(..), GfActTopic(..), GfLinearizationResult(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
+import QxFx0.ExceptionPolicy (PGFError(..))
 import QxFx0.Types.Decision.Enums.Render (RenderStyle(..))
 import QxFx0.Runtime.GF.Map (lookupTopicGfLexemeId, buildGfLexemeMap)
 import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
@@ -41,9 +46,31 @@ import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
 import QxFx0.Semantic.DialogAtom (DialogAtoms, daTopicNominative, hasTag, headAtomValue, AtomTag(..))
 import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
 import QxFx0.Render.Dialogue (linearizeClaimAstRus)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
 
 defaultPgfPath :: FilePath
 defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
+
+-- P1-1: session-scoped PGF cache keyed by path. 'PGF.readPGF' reads a 312KB
+-- binary on every call; without this it ran once per linearize/parse per turn
+-- (~3GB I/O over 10k turns). Pattern mirrors 'PGFStatus.pgfLoadResult'
+-- (unsafePerformIO + NOINLINE). The IORef holds a path->PGF map populated
+-- lazily on first use of each path.
+pgfCacheRef :: IORef (Map.Map FilePath PGF.PGF)
+pgfCacheRef = unsafePerformIO (newIORef Map.empty)
+{-# NOINLINE pgfCacheRef #-}
+
+-- | Load a PGF for the given path, caching the result. Subsequent calls for
+--   the same path return the cached grammar without touching disk.
+cachedReadPGF :: FilePath -> IO PGF.PGF
+cachedReadPGF pgfPath = do
+  cache <- readIORef pgfCacheRef
+  case Map.lookup pgfPath cache of
+    Just pgf -> pure pgf
+    Nothing -> do
+      pgf <- PGF.readPGF pgfPath
+      modifyIORef' pgfCacheRef (Map.insert pgfPath pgf)
+      pure pgf
 
 -- COMPAT GLUE: Old target wiring expects 2-arg interface (no explicit language).
 -- We default to the Russian concrete syntax shipped in the repo.
@@ -51,17 +78,32 @@ linearizeClaimAstGf :: Maybe FilePath -> ClaimAst -> IO (Either Text GfLineariza
 linearizeClaimAstGf mPgfPath ast = linearizeClaimAstGfLang mPgfPath "QxFx0SyntaxRus" ast
 
 linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text GfLinearizationResult)
-linearizeClaimAstGfLang mPgfPath lang ast =
-  case astToGfExpr ast of
-    Left err -> pure (Left err)
-    Right expr -> do
-      result <- linearizeExpr mPgfPath lang expr
-      pure $ case result of
-        Left err -> Left err
-        Right raw
-          | lang == "QxFx0SyntaxRus" ->
-              Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_compatibility_shim") (fallbackSurfaceText ast raw) (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim (fallbackSurfaceText ast raw)))
-          | otherwise ->
+linearizeClaimAstGfLang mPgfPath lang ast
+  -- P0-1 (variant A): for Russian the Haskell renderer 'linearizeClaimAstRus'
+  -- is the sole authoritative path. Compute it directly instead of running
+  -- PGF.linearize and discarding the result. PGF is consulted only as an
+  -- emergency fallback when the Haskell renderer yields nothing (<0.1%).
+  | lang == "QxFx0SyntaxRus" =
+      case linearizeClaimAstRus emptyRuntimeParadigms ast StyleStandard emptyMorphologyData of
+        Just text ->
+          pure (Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_haskell_authoritative") text (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim text)))
+        Nothing ->
+          case astToGfExpr ast of
+            Left err -> pure (Left err)
+            Right expr -> do
+              result <- linearizeExpr mPgfPath lang expr
+              pure $ case result of
+                Left pgfErr -> Left (renderPGFError pgfErr)
+                Right raw ->
+                  Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_gf_emergency_fallback") raw (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim raw))
+  | otherwise =
+      case astToGfExpr ast of
+        Left err -> pure (Left err)
+        Right expr -> do
+          result <- linearizeExpr mPgfPath lang expr
+          pure $ case result of
+            Left pgfErr -> Left (renderPGFError pgfErr)
+            Right raw ->
               Right (mkGfLinearizationResult mPgfPath lang PgfClaimRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfClaimRoute AuthorityCanonical raw))
 
 linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text GfLinearizationResult)
@@ -74,41 +116,43 @@ linearizeDialogAtomsGfLang mPgfPath lang da =
     Right expr -> do
       result <- linearizeExpr mPgfPath lang expr
       pure $ case result of
-        Left err -> Left err
+        Left pgfErr -> Left (renderPGFError pgfErr)
         Right raw
           | lang == "QxFx0SyntaxRus" ->
               Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_compatibility_shim") raw (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim raw))
           | otherwise ->
               Right (mkGfLinearizationResult mPgfPath lang PgfAtomsRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfAtomsRoute AuthorityCanonical raw))
 
-linearizeExpr :: Maybe FilePath -> Text -> Text -> IO (Either Text Text)
+linearizeExpr :: Maybe FilePath -> Text -> Text -> IO (Either PGFError Text)
 linearizeExpr mPgfPath lang expr = do
   let pgfPath = fromMaybe defaultPgfPath mPgfPath
   exists <- doesFileExist pgfPath
   if not exists
-    then pure (Left ("pgf_missing:" <> T.pack pgfPath))
+    then pure (Left (PGFFileNotFound pgfPath))
     else do
-      result <- try $ do
-        pgf <- PGF.readPGF pgfPath
+      result <- try @IOException $ do
+        pgf <- cachedReadPGF pgfPath
         let langs = PGF.languages pgf
         case Map.lookup (T.unpack lang) langs of
-          Nothing -> pure (Left ("pgf_lang_not_found:" <> lang <> ":available=" <> T.pack (show (Map.keys langs))))
+          Nothing -> pure (Left (PGFParseError ("pgf_lang_not_found:" <> lang <> ":available=" <> T.pack (show (Map.keys langs)))))
           Just concr -> case PGF.readExpr (T.unpack expr) of
-            Nothing -> pure (Left ("pgf_parse_expr_failed:" <> expr))
+            Nothing -> pure (Left (PGFParseError ("pgf_parse_expr_failed:" <> expr)))
             Just pgfExpr ->
               let raw = T.pack (PGF.linearize concr pgfExpr)
               in pure (Right raw)
       case result of
-        Left (e :: IOException) -> pure (Left ("pgf_exception:" <> T.pack (show e)))
+        Left e ->
+          if isDoesNotExistError e
+            then pure (Left (PGFFileNotFound pgfPath))
+            else pure (Left (PGFIOError e))
         Right r -> pure r
 
-fallbackSurface :: ClaimAst -> Either Text Text
-fallbackSurface ast =
-  maybe (Left "pgf_russian_fallback_failed:shim_route") Right (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
-
-fallbackSurfaceText :: ClaimAst -> Text -> Text
-fallbackSurfaceText ast fallbackText =
-  maybe fallbackText id (linearizeClaimAstRus ast StyleStandard emptyMorphologyData)
+-- | Convert PGFError to Text for backward compatibility with existing error handling
+renderPGFError :: PGFError -> Text
+renderPGFError (PGFFileNotFound path) = "pgf_file_not_found:" <> T.pack path
+renderPGFError (PGFParseError msg) = "pgf_parse_error:" <> msg
+renderPGFError (PGFLinearizationError msg) = "pgf_linearization_error:" <> msg
+renderPGFError (PGFIOError e) = "pgf_io_error:" <> T.pack (show e)
 
 mkGfLinearizationResult :: Maybe FilePath -> Text -> AssemblyPath -> AuthorityClass -> Maybe Text -> Text -> ArtifactManifest -> GfLinearizationResult
 mkGfLinearizationResult mPgfPath lang assemblyPath authorityClass fallbackReason text manifest =
@@ -193,6 +237,8 @@ astToGfExpr ast =
       Right ("MoveHypothesis (MkNP " <> topic <> ")")
     MoveDistinguish (MkNP left) (MkNP right) ->
       Right ("MoveDistinguish (MkNP " <> left <> ") (MkNP " <> right <> ")")
+    MoveActOnTopic act ->
+      Right ("MoveActOnTopic " <> gfActTopicExpr act)
     StanceWrapped "ApplyStanceTentative" inner ->
       ("ApplyStanceTentative (" <>) . (<> ")") <$> astToGfExpr inner
     StanceWrapped "ApplyStanceFirm" inner ->
@@ -227,6 +273,13 @@ gfMechanismExpr MechParse = "MechParse"
 gfNumberExpr :: GfNumber -> Text
 gfNumberExpr NumSg = "NumSg"
 gfNumberExpr NumPl = "NumPl"
+
+gfActTopicExpr :: GfActTopic -> Text
+gfActTopicExpr ActAnswer    = "ActAnswer"
+gfActTopicExpr ActQuestion  = "ActQuestion"
+gfActTopicExpr ActTopicTerm = "ActTopicTerm"
+gfActTopicExpr ActProject   = "ActProject"
+gfActTopicExpr ActResult    = "ActResult"
 
 gfActionExpr :: GfVP -> Either Text Text
 gfActionExpr action =
@@ -281,7 +334,7 @@ parseClaimAstGfLang mPgfPath lang surface = do
     then pure (Left ("pgf_missing:" <> T.pack pgfPath))
     else do
       result <- try $ do
-        pgf <- PGF.readPGF pgfPath
+        pgf <- cachedReadPGF pgfPath
         let langs = PGF.languages pgf
         case Map.lookup (T.unpack lang) langs of
           Nothing ->
@@ -307,8 +360,13 @@ parseClaimAstGfLang mPgfPath lang surface = do
 -- @PGF.showExpr []@) back to a 'ClaimAst'. This is the exact inverse of
 -- 'astToGfExpr' — each case matches the string produced by the forward pass.
 --
--- Returns @Left err@ for expressions outside the ClaimAst subset (e.g.
--- MoveActOnTopic, MoveAcknowledge) or with unrecognised structure.
+-- Returns @Left "no_claimart_mapping:..."@ for expressions with unrecognised
+-- structure. Two known asymmetries with the forward pass:
+--   * 'GfRelation'/'GfMechanism' currently have a single inhabitant
+--     (RelIdentity/MechParse), so MoveDefine/MoveCause reverse-parse them as
+--     constants. Extending those types requires extending the parser here.
+--   * 'StanceWrapped' forward-accepts any label; reverse only recognises
+--     "ApplyStanceTentative"/"ApplyStanceFirm". Other labels do not round-trip.
 gfExprToClaimAst :: Text -> Either Text ClaimAst
 gfExprToClaimAst expr =
   let stripped = T.strip expr
@@ -367,6 +425,9 @@ gfExprToClaimAst expr =
       | Just inner <- T.stripPrefix "ApplyStanceFirm (" e >>= stripTrailingParen =
           fmap (StanceWrapped "ApplyStanceFirm") (go inner)
 
+      -- MoveActOnTopic: "MoveActOnTopic ActXxx"
+      | Just act <- stripMoveActOnTopic e = Right (MoveActOnTopic act)
+
       | otherwise = Left ("no_claimart_mapping:" <> T.take 60 e)
 
     -- Extract topic from "MoveFun (MkNP topic)"
@@ -402,6 +463,12 @@ gfExprToClaimAst expr =
       guard (not (T.null s))
       pure s
 
+    -- "MoveActOnTopic ActXxx"
+    stripMoveActOnTopic e = do
+      rest <- T.stripPrefix "MoveActOnTopic " e
+      act <- parseGfActTopic (T.strip rest)
+      pure act
+
     -- "MoveInvite (MkNP topic) ModXxx ActionExpr"
     stripMoveInvite e = do
       rest   <- T.stripPrefix "MoveInvite (MkNP " e
@@ -432,4 +499,13 @@ parseGfVP vp
   | Just rest <- T.stripPrefix "ActMaintain NumSg " vp = Right (ActMaintain NumSg rest)
   | Just rest <- T.stripPrefix "ActMaintain NumPl " vp = Right (ActMaintain NumPl rest)
   | otherwise = Left ("unknown_gf_vp:" <> T.take 40 vp)
+
+parseGfActTopic :: Text -> Maybe GfActTopic
+parseGfActTopic "ActAnswer"    = Just ActAnswer
+parseGfActTopic "ActQuestion"  = Just ActQuestion
+parseGfActTopic "ActTopicTerm" = Just ActTopicTerm
+parseGfActTopic "ActProject"   = Just ActProject
+parseGfActTopic "ActResult"    = Just ActResult
+parseGfActTopic _              = Nothing
+
 

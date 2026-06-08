@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 module QxFx0.Observability.Logging
@@ -20,9 +21,10 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime, getCurrentTime)
+import System.Environment (lookupEnv)
 import System.IO (stderr, hPutStrLn)
 
-import QxFx0.ExceptionPolicy (QxFx0Exception, toErrorCode, toLogMessage)
+import QxFx0.ExceptionPolicy (QxFx0Exception, toErrorCode, toLogMessage, renderQxFx0ExceptionForLogDebug)
 
 -- | Log severity levels
 data LogLevel
@@ -30,7 +32,7 @@ data LogLevel
   | LogInfo
   | LogWarn
   | LogError
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show)
 
 instance ToJSON LogLevel where
   toJSON LogDebug = "DEBUG"
@@ -45,7 +47,7 @@ data LogEntry = LogEntry
   , leMessage   :: !Text
   , leContext   :: !(Map Text Text)
   , leErrorCode :: !(Maybe Text)
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 instance ToJSON LogEntry where
   toJSON LogEntry{..} = object
@@ -95,14 +97,24 @@ logError msg ctx = do
   let entry = LogEntry timestamp LogError msg ctx Nothing
   emitLog entry
 
--- | Log exception with structured error code
+-- | Log exception with structured error code.
+-- When QXFX0_DEBUG_ERRORS=true, reveals full error details (including
+-- PersistenceTxError messages) instead of redacting them.
 logException :: QxFx0Exception -> LogContext -> IO ()
 logException ex ctx = do
   timestamp <- getCurrentTime
+  mDebug <- lookupEnv "QXFX0_DEBUG_ERRORS"
+  let debugEnabled = case fmap (T.toLower . T.strip . T.pack) mDebug of
+        Just "1"    -> True
+        Just "true" -> True
+        _           -> False
+      message = if debugEnabled
+                  then renderQxFx0ExceptionForLogDebug ex
+                  else toLogMessage ex
   let entry = LogEntry
         { leTimestamp = timestamp
         , leLevel     = LogError
-        , leMessage   = toLogMessage ex
+        , leMessage   = message
         , leContext   = ctx
         , leErrorCode = Just (toErrorCode ex)
         }
@@ -126,4 +138,3 @@ formatContext ctx =
 emitLog :: LogEntry -> IO ()
 emitLog entry = hPutStrLn stderr $ T.unpack $ formatLogEntry entry
 
--- Made with Bob

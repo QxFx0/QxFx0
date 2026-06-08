@@ -57,7 +57,7 @@ import qualified System.Directory as D
 import qualified System.FilePath as FP
 
 -- | A source file under test, identified by its
--- relative path (e.g. "src/QxFx0/Core/DreamDynamics.hs").
+-- relative path (e.g. "src/QxFx0.Core.TopicDrift.hs").
 data SourceFile = SourceFile
   { sfPath    :: !String
   , sfHaddock :: !String

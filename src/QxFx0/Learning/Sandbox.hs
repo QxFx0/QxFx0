@@ -166,6 +166,7 @@ runSandboxGateWithConfig cfg ss payload =
 
       effectiveMinScore = scMinNetScore cfg
 
+  -- Reject if projected conatus is at or below safety floor (non-regression criterion)
   in if projectedConatus <= scSafetyFloor cfg
        then SandboxReject metrics SbrDegradingConatus
       else if projectedUncertainty > currentUncertainty + scMaxUncertaintyIncrease cfg

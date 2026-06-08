@@ -31,7 +31,9 @@ import qualified Network.HTTP.Simple as HTTP
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
 import Network.URI (URI(..), URIAuth(..), parseURI)
-import QxFx0.ExceptionPolicy (QxFx0Exception(EmbeddingError), throwQxFx0)
+import qualified Data.Map.Strict as Map
+import QxFx0.ExceptionPolicy (QxFx0Exception(EmbeddingError), mkEmbeddingError, throwQxFx0)
+import QxFx0.Policy.EndpointAllowlist (validateEndpointUrl)
 import QxFx0.Semantic.Embedding.Fallback (fallbackEmbedding)
 import QxFx0.Semantic.Embedding.Support (embeddingDim)
 import QxFx0.Semantic.Embedding.Types
@@ -129,18 +131,29 @@ textToEmbeddingResultWithManager manager input = do
           Just url -> tryRemote explicit url issues input
           Nothing -> failRemote explicit (if null issues then ["remote_embedding_url_missing"] else issues) input
   where
-    tryRemote explicit url issues txt = do
-      res <- fetchRemoteEmbeddingWithManager manager url txt
-      case res of
-        Left _ -> failRemote explicit (issues <> ["remote_embedding_unhealthy"]) txt
-        Right embedding ->
-          pure EmbeddingResult
-            { erEmbedding = embedding
-            , erSource = EmbeddingRemote
-            }
+    -- Gate the remote endpoint against the shared host allowlist BEFORE any
+    -- network I/O — same policy the LLM path uses (one allowlist, in
+    -- 'QxFx0.Policy.EndpointAllowlist'). An untrusted host fails closed with a
+    -- typed 'remote_embedding_host_blocked' before a request is sent.
+    tryRemote explicit url issues txt =
+      case validateEndpointUrl (T.pack url) Nothing of
+        Left _ -> failRemote explicit (issues <> ["remote_embedding_host_blocked"]) txt
+        Right () -> do
+          res <- fetchRemoteEmbeddingWithManager manager url txt
+          case res of
+            Left _ -> failRemote explicit (issues <> ["remote_embedding_unhealthy"]) txt
+            Right embedding ->
+              pure EmbeddingResult
+                { erEmbedding = embedding
+                , erSource = EmbeddingRemote
+                }
 
     failRemote explicit issues txt
-      | explicit = throwQxFx0 (EmbeddingError (T.intercalate ";" issues))
+      | explicit = throwQxFx0 (mkEmbeddingError
+          (T.pack "remote")
+          (T.pack "fetch_embedding")
+          (T.pack "EMBEDDING_REMOTE_FAILURE")
+          (Map.fromList [(T.pack "issues", T.intercalate (T.pack ";") issues)]))
       | otherwise =
           pure EmbeddingResult
             { erEmbedding = fallbackEmbedding txt

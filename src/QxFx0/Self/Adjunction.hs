@@ -70,6 +70,8 @@ module QxFx0.Self.Adjunction
   , groundIn
   , rebroaden
   , probe
+    -- * Context split (P4)
+  , holisticFormalContextSplitActive
   ) where
 
 import QxFx0.Self.Field (Field)
@@ -162,3 +164,14 @@ rebroaden a = Formal (\_fd -> a)
 -- call sites land in Phase 8 (deliberation framework, see ROADMAP.md).
 probe :: Formal a -> Field -> a
 probe = runFormal
+
+-- | Feature flag: when True, holistic and formal proposals receive
+-- different epistemic contexts (episodic memory + full Field for
+-- holistic; commitment ledger + truth contract only for formal).
+-- When False, both proposals see identical context (current behaviour).
+--
+-- Active as of 2026-06-05: ADR-0008 §4 resolved, flag-on behaviour
+-- (emptyField for formal hemisphere) is now default.
+holisticFormalContextSplitActive :: Bool
+holisticFormalContextSplitActive = True
+{-# INLINE holisticFormalContextSplitActive #-}

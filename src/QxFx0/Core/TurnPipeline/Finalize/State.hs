@@ -11,12 +11,16 @@ module QxFx0.Core.TurnPipeline.Finalize.State
   , computeEssenceValidation
   ) where
 
+import Control.Exception (throw)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
+import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
-import QxFx0.Semantic.Commitment (commitObservation)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation)
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore)
 import QxFx0.Render.Authority (parseAuthoritySurface, AuthoritySurface(..))
+import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
 import QxFx0.Memory.Episodic
   ( EpisodicStore(..)
@@ -41,7 +45,12 @@ import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection, turnInp
 import QxFx0.Core.TurnRender (updateStateNixCache)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.TurnLegitimacy (safeOutputText)
+import QxFx0.Core.Bayesian (updateUserModel, dominantIntent)
 import QxFx0.Core.Observability
+import QxFx0.Observability.TraceAnalysis
+  ( analyzeTrace
+  , logTraceAnomalies
+  )
 import QxFx0.Render.Semantic (renderSemanticIntrospection)
 import QxFx0.Self.Salience
   ( SelfVerdict(..)
@@ -71,7 +80,7 @@ import QxFx0.Self.Essence
   , witness
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
-import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..))
+import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..), Atmosphere(..), updateMood)
 import QxFx0.Learning.Need
   ( detectLearningNeedWithPressure
   , defaultLearningPressureConfig
@@ -184,7 +193,7 @@ selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights 
     strength = if abs signal >= 0.15 then EvidenceStrong else EvidenceWeak
     decision = if abs signal >= 0.15 then AdaptiveAccepted else AdaptiveObserved
     salienceDelta = salienceWeightsMaxDelta oldWeights newWeights
-    fieldDelta = fieldHeuristicsMaxDelta oldHeuristics newHeuristics
+    maxFieldHeuristicsDelta = fieldHeuristicsMaxDelta oldHeuristics newHeuristics
     salienceRecord =
       if oldWeights == newWeights
         then []
@@ -211,7 +220,7 @@ selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights 
               , amrEvidence = signalEvidence
               , amrEvidenceStrength = strength
               , amrConfidence = min 1.0 (abs signal)
-              , amrBoundedDelta = Just fieldDelta
+              , amrBoundedDelta = Just maxFieldHeuristicsDelta
               , amrDecision = decision
               }
           ]
@@ -323,7 +332,7 @@ fieldHeuristicsMaxDelta old new = maximumOrZero
 maximumOrZero :: [Double] -> Double
 maximumOrZero = foldr max 0.0
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger)
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision)
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
@@ -411,17 +420,17 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                 promotionRule = textShow outcomeFamily
                 (treePromoted, promotedFromQuarantine, _rejectedFromQuarantine) =
                   promoteFromQuarantine currentTurn 2 promotionRule treeClean
-                weights1 = if shouldApplySignal then adaptSalienceWeights signal (ssSalienceWeights ss) else ssSalienceWeights ss
-                heuristics1 = if shouldApplySignal then adaptFieldHeuristics signal (ssFieldHeuristics ss) else ssFieldHeuristics ss
+                weights1 = if shouldApplySignal then adaptSalienceWeights signal (selfSalienceWeights (ssSelfState ss)) else selfSalienceWeights (ssSelfState ss)
+                heuristics1 = if shouldApplySignal then adaptFieldHeuristics signal (selfFieldHeuristics (ssSelfState ss)) else selfFieldHeuristics (ssSelfState ss)
                 calibrationLog1 =
                   if shouldApplySignal
                     then appendCalibrationEntries currentTurn (ssCalibrationLog ss)
-                      [ if weights1 /= ssSalienceWeights ss then Just (ProposalSalienceWeights weights1) else Nothing
-                      , if heuristics1 /= ssFieldHeuristics ss then Just (ProposalFieldHeuristics heuristics1) else Nothing
+                      [ if weights1 /= selfSalienceWeights (ssSelfState ss) then Just (ProposalSalienceWeights weights1) else Nothing
+                      , if heuristics1 /= selfFieldHeuristics (ssSelfState ss) then Just (ProposalFieldHeuristics heuristics1) else Nothing
                       ]
                     else ssCalibrationLog ss
                 tuningRecords = calibrationMutationRecord currentTurn calibrationDecision signal sigComps :
-                  selfTuningMutationRecords currentTurn signal sigComps weights1 heuristics1 (ssSalienceWeights ss) (ssFieldHeuristics ss)
+                  selfTuningMutationRecords currentTurn signal sigComps weights1 heuristics1 (selfSalienceWeights (ssSelfState ss)) (selfFieldHeuristics (ssSelfState ss))
                 treeRecords = knowledgeMaintenanceMutationRecords currentTurn _prunedBranches _prunedFruits
                   <> quarantinePromotionMutationRecords currentTurn promotedFromQuarantine
             in ( weights1
@@ -431,7 +440,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
                , calibrationLog1
                , tuningRecords <> treeRecords
                )
-          _ -> (ssSalienceWeights ss, ssFieldHeuristics ss, ssKnowledgeTree ss, ssCalibrationSnapshots ss, ssCalibrationLog ss, [])
+          _ -> (selfSalienceWeights (ssSelfState ss), selfFieldHeuristics (ssSelfState ss), ssKnowledgeTree ss, ssCalibrationSnapshots ss, ssCalibrationLog ss, [])
       -- WP6.1: endogenous learning diagnostic drive with separate learning pressure.
       bestTopic = tiBestTopic ti
       isTopicUnknown = not (T.null bestTopic)
@@ -499,9 +508,12 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
           , obsEmbeddingApiHealthy = tsApiHealthy ts
           , obsLastLegitimacyScore = tpLegitScore tp
           }
-      , ssEssence = nextEssence
-      , ssSalienceWeights = adaptedWeights
-      , ssFieldHeuristics = adaptedHeuristics
+      -- Phase 4.1.3: Update grouped Self-layer state
+      , ssSelfState = (ssSelfState ss)
+          { selfEssence = nextEssence
+          , selfSalienceWeights = adaptedWeights
+          , selfFieldHeuristics = adaptedHeuristics
+          }
       , ssShadowVetoState = tpShadowVetoState tp
       , ssProvisionalAtoms =
           let currentTurn = ssTurnCount ss
@@ -538,16 +550,23 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       -- C3: additionally commit a typed anchor observation when SemanticAnchor
       -- is established this turn. This makes the anchor machine-visible in the
       -- SemanticCommitmentStore alongside the surface-parsed claim.
-      store1 = case tpSemanticAnchor tp of
-        Nothing -> store0
-        Just anchor ->
+      -- CTS-42: gate both commits with the same admission decision.
+      store1 = case (commitDecision, tpSemanticAnchor tp) of
+        (CsaAdmitCanonical, Just anchor) ->
           let anchorPayload = anchorToFactualClaim anchor turnSeq
           in commitObservation anchorPayload store0
-      nextWithCommitments = case mClaimPayload of
-        Just claimPayload -> nextWithLog
+        (CsaSuppress, Just anchor) ->
+          let anchorPayload = anchorToFactualClaim anchor turnSeq
+          in quarantineObservation anchorPayload store0
+        _ -> store0
+      nextWithCommitments = case (commitDecision, mClaimPayload) of
+        (CsaAdmitCanonical, Just claimPayload) -> nextWithLog
           { ssSemanticCommitments =
               Just (commitObservation claimPayload { fcpTurnSeq = turnSeq } store1) }
-        Nothing -> nextWithLog { ssSemanticCommitments = Just store1 }
+        (CsaSuppress, Just claimPayload) -> nextWithLog
+          { ssSemanticCommitments =
+              Just (quarantineObservation claimPayload { fcpTurnSeq = turnSeq } store1) }
+        _ -> nextWithLog { ssSemanticCommitments = Just store1 }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of
         Just c  -> Just c
@@ -567,10 +586,10 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
             <*> pure agreement
             <*> pure inRecovery
         }
-      -- P7: episodic memory encoding
+      -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init)
       episodic0 = case ssEpisodic nextWithMeta of
         Just store' -> store'
-        Nothing     -> EpisodicStore empty emptyIndex HS.empty 0
+        Nothing     -> throw $ StateInvariantViolation "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4"
       userInputEncoded = encode turnSeq EpisodicUserInput (EpisodicUserText rawText) [] episodic0
       decisionKind = EpisodicSystemDecision
       decisionContent = EpisodicFamilyDecision outcomeFamily
@@ -580,8 +599,34 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       nextWithEpisodic = nextWithMeta
         { ssEpisodic = Just episodic3
         }
-      in ( nextWithEpisodic
+      -- WP-A: Bayesian user-model update (default-off, flag-gated in updateUserModel)
+      updatedUserModel = updateUserModel
+        (ssSemanticConfig nextWithEpisodic)
+        (ssUserModel nextWithEpisodic)
+        rawText
+      -- WP-A reader: a peaked posterior overrides the write-only intent
+      -- hypothesis with the inferred intent (uniform posterior -> unchanged).
+      threadWithIntent = case dominantIntent updatedUserModel of
+        Just intent ->
+          (ssDialogueThread nextWithEpisodic)
+            { dtIntentHypothesis = Just (T.pack (show intent)) }
+        Nothing -> ssDialogueThread nextWithEpisodic
+      nextWithUserModel = nextWithEpisodic
+        { ssUserModel = updatedUserModel
+        , ssDialogueThread = threadWithIntent
+        }
+      -- WP-E: update the slow mood baseline from this turn's atmosphere valence
+      -- (EMA over ~moodWindowTurns). Living consumer of updateMood.
+      turnValence = atmosphereValence (fieldAtmosphere (tiField ti))
+      nextWithMood = nextWithUserModel
+        { ssMood = updateMood (ssMood nextWithUserModel) turnValence
+        }
+      -- CTS-42: compute the admission decision once, apply to both
+      -- anchor and surface-parsed claims.
+      commitDecision = admitCommitmentToStore (etoTruthContractStatus executedOutcome)
+      in ( nextWithMood
     , commitmentTrigger
+    , commitDecision
     )
 
 maxProvisionalAtoms :: Int
@@ -589,7 +634,14 @@ maxProvisionalAtoms = 1000
 
 buildFinalOutput :: Bool -> Maybe TurnReplayTrace -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
 buildFinalOutput wantIntrospection mReplayTrace ss baseSurface nextSs =
-  let preIntrospectionSurface =
+  let -- Phase 3D: Analyze trace for anomalies (lightweight, < 1ms)
+      -- Note: Trace analysis and logging moved to IO boundary in caller (buildFinalizePrecommit)
+      -- to maintain referential transparency. The analysis itself is pure.
+      _traceAnalysis = case mReplayTrace of
+        Just trace -> analyzeTrace trace
+        Nothing -> throw $ StateInvariantViolation "buildFinalOutput: trace analysis requires replay trace"
+      
+      preIntrospectionSurface =
         if wantIntrospection
           then
             let introspectionText = renderSemanticIntrospection nextSs mReplayTrace

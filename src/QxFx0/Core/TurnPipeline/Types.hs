@@ -29,7 +29,7 @@ import QxFx0.Types.Orbital (OrbitalMemory)
 import QxFx0.Core.PrincipledCore (PrincipledMode, PressureSignal)
 import QxFx0.Core.IdentitySignal (IdentitySignal)
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
-import QxFx0.Core.Consciousness (ConsciousnessNarrative)
+import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
@@ -44,8 +44,10 @@ import QxFx0.Semantic.SemanticInput (SemanticInput)
 import QxFx0.Semantic.Sense (SenseVector)
 import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
+import QxFx0.Core.ResponseContentAdmission (ResponseContentAdmissionDecision)
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
+import QxFx0.Memory.Episodic (EpisodicEvent)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -136,6 +138,19 @@ data TurnInput = TurnInput
     -- ^ Phase 9: the pre-turn essence carrier, populated by
     --   'buildPrepareEffectPlan' from 'ssEssence'.  Single source
     --   of truth for the turn's essence-layer reads.
+  , tiDoubtScore :: !Double
+    -- ^ WP-D: doubt score in @[0,1]@ derived from 'tiSelfVerdict'
+    --   via 'QxFx0.Core.ConsciousnessLoop.computeDoubt'.  High doubt
+    --   (≥ 'doubtSuppressionThreshold') signals uncertainty and can
+    --   drive routing toward clarifying moves (CMClarify) or reduce
+    --   explicitness.  Single source of truth for doubt-driven
+    --   routing decisions.
+  , tiRetrievedEpisodes :: ![EpisodicEvent]
+    -- ^ WP-B R-B1: episodes retrieved from 'ssEpisodic' via frame-driven
+    --   query on Prepare stage.  Enables routing/planning to avoid
+    --   re-asking established facts or repeating recent decisions.
+    --   Empty list when 'episodicRecallActive' is False or no relevant
+    --   episodes exist.  Living consumer of 'QxFx0.Memory.Episodic.retrieve'.
   }
 
 data TurnSignals = TurnSignals
@@ -174,6 +189,19 @@ data TurnPlan = TurnPlan
     --   persist it without recomputing the shadow policy.
   , tpMetrics :: !TurnMetrics
   , tpDeliberation :: !(Maybe Deliberation)
+  , tpFmarDirective :: !(Maybe MeaningDirective)
+    -- ^ FMAR Phase-7: the meaning-shaped directive computed in
+    --   'routeTurnPlan' when @QXFX0_FMAR@ is shadow or live. 'Nothing'
+    --   on the static path. In shadow mode this is carried for tracing
+    --   only; in live mode the family override has already been applied.
+  , tpFamilyDerivationChain :: ![TurnFamilyDerivationStep]
+    -- ^ P9: provenance chain of family values through the route pipeline.
+    --   Populated by 'buildRouteTurnPlan' so that trace projection can
+    --   replay every intermediate family without rebuilding the chain.
+  , tpResponseAdmission :: !ResponseContentAdmissionDecision
+    -- ^ CTS-41: constitution-aware filtering decision applied to RMP/RCP
+    --   between planning and render. Determines whether plans are admitted
+    --   as-is, softened, weakened, or rerouted to clarify.
   }
 
 tpNewEgo :: TurnPlan -> EgoState
@@ -249,6 +277,9 @@ data TurnArtifacts = TurnArtifacts
     --   or knowledge tree.
   , taExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
     -- ^ AS1-03: typed rationale for allow/deny/no-action on outbound actions.
+  , taGenerationTrace :: ![GenerationAttempt]
+    -- ^ P9: text-generation attempt trace from the dialogue renderer.
+    --   Populated by 'buildTurnArtifacts' from the DialogueRenderArtifact.
   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts

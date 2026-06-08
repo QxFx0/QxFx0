@@ -50,6 +50,7 @@ import QxFx0.Types.State
   , emptyDialogueOutcomeLearningState
   , emptySystemState
   )
+import QxFx0.Types.State.SelfState (SelfState(..))
 
 selfPerspectiveTests :: [Test]
 selfPerspectiveTests =
@@ -122,7 +123,8 @@ testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
         }
       ss = emptySystemState
         { ssSessionId = "test-session"
-        , ssPerspectiveRegistry = registry
+        , ssSelfState = (ssSelfState emptySystemState)
+            { selfPerspectiveRegistry = registry }
         , ssDialogueOutcomeLearning = outcome
         }
       bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)) False emptyField

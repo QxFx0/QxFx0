@@ -218,124 +218,124 @@ inferRouteHint normalized units =
 inferRuleRouteHint :: NormalizedInput -> [WordMeaningUnit] -> InputRouteHint
 inferRuleRouteHint normalized units
   | exactNormalizedIn normalized ["хочу поговорить", "хочу поговорить."] =
-      mkHint RouteTypeContact "force_contact_regression" "force_contact_hocu_pogovorit" 0.99
+      mkHint RouteTypeContact (TagCustom "force_contact_regression") "force_contact_hocu_pogovorit" 0.99
   | exactNormalizedIn normalized ["почему вода мокрая", "почему вода мокрая?"] =
-      mkHint RouteTypeGround "force_ground_regression" "force_ground_pochemu_voda_mokraya" 0.99
+      mkHint RouteTypeGround (TagCustom "force_ground_regression") "force_ground_pochemu_voda_mokraya" 0.99
   | exactNormalizedIn normalized ["скажи что-то ценное", "скажи что то ценное"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skazhi_chto_to_cennoe" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_skazhi_chto_to_cennoe" 0.99
   | exactNormalizedIn normalized ["скажи интересную мысль", "скажи интересную мысль?"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skazhi_interesnuyu_mysl" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_skazhi_interesnuyu_mysl" 0.99
   | exactNormalizedIn normalized ["что дальше", "что дальше?"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_chto_dalshe" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_chto_dalshe" 0.99
   | exactNormalizedIn normalized ["как не потерять смысл", "как не потерять смысл?"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_kak_ne_poteryat_smysl" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_kak_ne_poteryat_smysl" 0.99
   | exactNormalizedIn normalized ["какой здесь скрытый смысл", "какой здесь скрытый смысл?"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_skrytyj_smysl" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_skrytyj_smysl" 0.99
   | exactNormalizedIn normalized ["как мыслить точнее", "как мыслить точнее?"] =
-      mkHint RouteTypeUnknown "force_reflect_regression" "force_reflect_kak_myslit_tochnee" 0.99
+      mkHint RouteTypeUnknown (TagCustom "force_reflect_regression") "force_reflect_kak_myslit_tochnee" 0.99
   | exactNormalizedIn normalized ["это противоречие", "это противоречие."] =
-      mkHint RouteTypeRepair "force_repair_regression" "force_repair_eto_protivorechie" 0.99
+      mkHint RouteTypeRepair (TagCustom "force_repair_regression") "force_repair_eto_protivorechie" 0.99
   | hasPhrase tokens ["не", "понимаю"] && hasAny tokens ["тебя", "диалог", "контакт"] =
-      mkHint RouteTypeRepair "misunderstanding" "misunderstanding_report" 0.9
+      mkHint RouteTypeRepair TagMisunderstanding "misunderstanding_report" 0.9
   | isBoundarySilenceCommand normalized units =
-      mkHint RouteTypeRepair "boundary_command" "boundary_silence_command" 0.91
+      mkHint RouteTypeRepair TagBoundaryCommand "boundary_silence_command" 0.91
   | isInsultSignal normalized units =
-      mkHint RouteTypeRepair "boundary_command" "insult_boundary_signal" 0.9
+      mkHint RouteTypeRepair TagBoundaryCommand "insult_boundary_signal" 0.9
   | isNextStepQuestion normalized units =
-      mkHint RouteTypeClarify "next_step" "next_step_question" 0.89
+      mkHint RouteTypeClarify TagNextStep "next_step_question" 0.89
   | isConfrontSignal normalized units =
-      mkHint RouteTypeDistinguish "disagreement_confront" "confront_signal" 0.89
+      mkHint RouteTypeDistinguish TagDisagreementConfront "confront_signal" 0.89
   | isRepairDirective normalized units =
-      mkHint RouteTypeRepair "misunderstanding" "repair_directive" 0.9
+      mkHint RouteTypeRepair TagMisunderstanding "repair_directive" 0.9
   | isApologySignal normalized units =
-      mkHint RouteTypeRepair "apology_repair" "apology_signal" 0.88
+      mkHint RouteTypeRepair TagApologyRepair "apology_signal" 0.88
   | isFarewellSignal normalized units =
-      mkHint RouteTypeContact "farewell_contact" "farewell_signal" 0.88
+      mkHint RouteTypeContact TagFarewellContact "farewell_signal" 0.88
   | isGratitudeSignal normalized units =
-      mkHint RouteTypeContact "gratitude_contact" "gratitude_signal" 0.87
+      mkHint RouteTypeContact TagGratitudeContact "gratitude_signal" 0.87
   | isAffectiveHelpQuestion normalized units =
-      mkHint RouteTypeContact "affective_help" "affective_help_question" 0.9
+      mkHint RouteTypeContact TagAffectiveHelp "affective_help_question" 0.9
   | isDisagreementSignal normalized units =
-      mkHint RouteTypeDistinguish "disagreement_confront" "disagreement_signal" 0.88
+      mkHint RouteTypeDistinguish TagDisagreementConfront "disagreement_signal" 0.88
   | isAgreementSignal normalized units =
-      mkHint RouteTypeGround "agreement_anchor" "agreement_signal" 0.86
+      mkHint RouteTypeGround TagAgreementAnchor "agreement_signal" 0.86
   | isSelfFutureQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "self_future_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_future_question" 0.9
   | isOpinionQuestion normalized units =
-      mkHint RouteTypeDescribe "opinion_question" "opinion_question" 0.88
+      mkHint RouteTypeDescribe TagOpinionQuestion "opinion_question" 0.88
   | isNameQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "self_name_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_name_question" 0.9
   | isSelfDescriptionRequest normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "self_knowledge_profile_request" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_knowledge_profile_request" 0.9
   | isSelfIntentQuestion normalized units =
-      mkHint RouteTypeDescribe "self_state" "self_intent_question" 0.9
+      mkHint RouteTypeDescribe TagSelfState "self_intent_question" 0.9
   | isSelfMetaQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "self_meta_question_direct" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_meta_question_direct" 0.9
   | isSelfThoughtQuestion normalized units =
-      mkHint RouteTypeDescribe "self_state" "self_state_question_direct" 0.89
+      mkHint RouteTypeDescribe TagSelfState "self_state_question_direct" 0.89
   | isGenericHowYouProcessQuestion normalized units =
-      mkHint RouteTypeDescribe "system_logic" "self_process_how_question_generic" 0.89
+      mkHint RouteTypeDescribe TagSystemLogic "self_process_how_question_generic" 0.89
   | hasPhrase tokens ["как", "ты", "думаешь"] || hasPhrase tokens ["как", "вы", "думаете"] =
-      mkHint RouteTypeDescribe "self_state" "self_state_how_question" 0.9
+      mkHint RouteTypeDescribe TagSelfState "self_state_how_question" 0.9
   | hasPhrase tokens ["как", "ты", "формируешь", "ответ"] =
-      mkHint RouteTypeDescribe "self_knowledge" "self_response_formation_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_response_formation_question" 0.9
   | hasPhrase tokens ["как", "ты", "выбираешь", "слова"] =
-      mkHint RouteTypeDescribe "self_knowledge" "self_word_choice_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_word_choice_question" 0.9
   | hasPhrase tokens ["как", "ты", "принимаешь", "решение"] =
-      mkHint RouteTypeDescribe "self_knowledge" "self_decision_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_decision_question" 0.9
   | hasPhrase tokens ["как", "ты", "держишь", "рамку"] =
-      mkHint RouteTypeDescribe "self_knowledge" "self_frame_holding_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_frame_holding_question" 0.9
   | asksSelfRoleQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "self_role_question" 0.88
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_role_question" 0.88
   | asksSystemLogicQuestion normalized units =
-      mkHint RouteTypeDescribe "system_logic" "system_logic_question" 0.88
+      mkHint RouteTypeDescribe TagSystemLogic "system_logic_question" 0.88
   | asksCapabilityQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "system_capability_question" 0.88
+      mkHint RouteTypeDescribe TagSelfKnowledge "system_capability_question" 0.88
   | asksAssistanceQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "directed_help_question" 0.9
+      mkHint RouteTypeDescribe TagSelfKnowledge "directed_help_question" 0.9
   | asksUserIdentityQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "user_identity_question" 0.88
+      mkHint RouteTypeDescribe TagSelfKnowledge "user_identity_question" 0.88
   | isSystemIdentityQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "system_identity_probe" 0.86
+      mkHint RouteTypeDescribe TagSelfKnowledge "system_identity_probe" 0.86
   | isDirectSelfProbeQuestion normalized units =
-      mkHint RouteTypeDescribe "self_knowledge" "direct_self_probe_question" 0.88
+      mkHint RouteTypeDescribe TagSelfKnowledge "direct_self_probe_question" 0.88
   | isGreetingOrSmallTalk normalized units =
-      mkHint RouteTypeContact "greeting_smalltalk" "greeting_or_smalltalk" 0.85
+      mkHint RouteTypeContact TagGreetingSmalltalk "greeting_or_smalltalk" 0.85
   | shortDialogueProbe tokens && not (niIsQuestion normalized) && hasAny tokens ["поговорим", "обсудим"] =
-      mkHint RouteTypeContact "short_dialogue_probe" "short_dialogue_probe" 0.88
+      mkHint RouteTypeContact TagShortDialogueProbe "short_dialogue_probe" 0.88
   | isDialogueQuestion normalized units =
-      mkHint RouteTypeDeepen "dialogue_invitation" "dialogue_question" 0.86
+      mkHint RouteTypeDeepen TagDialogueInvitation "dialogue_question" 0.86
   | hasAny tokens ["поговорим", "обсудим"] || hasPhrase tokens ["давай", "поговорим"] =
-      mkHint RouteTypeDeepen "dialogue_invitation" "dialogue_invitation" 0.88
+      mkHint RouteTypeDeepen TagDialogueInvitation "dialogue_invitation" 0.88
   | asksThoughtAboutTopicQuestion normalized units =
-      mkHint RouteTypeDeepen "contemplative_topic" "thought_about_topic_question" 0.88
+      mkHint RouteTypeDeepen TagContemplativeTopic "thought_about_topic_question" 0.88
   | isDefinitionalQuestion normalized units =
-      mkHint RouteTypeDefine "concept_knowledge" "concept_question_form" 0.87
+      mkHint RouteTypeDefine TagConceptKnowledge "concept_question_form" 0.87
   | isRelationComparisonQuestion normalized units =
-      mkHint RouteTypeDistinguish "comparison_relation" "relation_comparison_signal" 0.85
+      mkHint RouteTypeDistinguish TagComparisonRelation "relation_comparison_signal" 0.85
   | isPurposeFunctionQuestion normalized units =
-      mkHint RouteTypeGround "purpose_function" "purpose_function_question" 0.86
+      mkHint RouteTypeGround TagPurposeFunction "purpose_function_question" 0.86
   | hasAny tokens ["знаешь", "известно"] && hasPhrase tokens ["что", "такое"] =
-      mkHint RouteTypeDefine "concept_knowledge" "knowledge_plus_definition" 0.89
+      mkHint RouteTypeDefine TagConceptKnowledge "knowledge_plus_definition" 0.89
   | hasPhrase tokens ["о", "чем", "ты", "думаешь"] || hasPhrase tokens ["что", "у", "тебя", "на", "уме"] =
-      mkHint RouteTypeDescribe "self_state" "self_state_question" 0.86
+      mkHint RouteTypeDescribe TagSelfState "self_state_question" 0.86
   | (hasLemmaAny units ["в", "что"] && hasLemmaAny units ["твой", "твоя", "твое", "ваш"] && hasLemmaAny units ["логика", "смысл", "суть"]) =
-      mkHint RouteTypeDescribe "system_logic" "system_logic_question" 0.86
+      mkHint RouteTypeDescribe TagSystemLogic "system_logic_question" 0.86
   | isGenerativeQualityPrompt normalized units =
-      mkHint RouteTypeDescribe "generative_prompt" "quality_modulated_generation" 0.86
+      mkHint RouteTypeDescribe TagGenerativePrompt "quality_modulated_generation" 0.86
   | (hasAny tokens ["скажи", "дай"] || hasAny tokens ["еще", "ещё", "новую", "другую"])
       && hasAny tokens ["мысль", "идею", "идея", "слово", "фразу"] =
-      mkHint RouteTypeDescribe "generative_prompt" "generative_request" 0.84
+      mkHint RouteTypeDescribe TagGenerativePrompt "generative_request" 0.84
   | hasAny tokens ["почему"] && (hasLemmaAny units ["система", "сбой", "ошибка", "ты", "вы"]) =
-      mkHint RouteTypeGround "operational_cause" "why_plus_system_noun" 0.84
+      mkHint RouteTypeGround TagOperationalCause "why_plus_system_noun" 0.84
   | hasAny tokens ["почему"] && any (isWorldNoun . wmuLemma) units =
-      mkHint RouteTypeGround "world_cause" "why_plus_world_noun" 0.84
+      mkHint RouteTypeGround TagWorldCause "why_plus_world_noun" 0.84
   | hasAny tokens ["почему"] && not (isAffectiveHelpQuestion normalized units) =
-      mkHint RouteTypeGround "world_cause" "why_generic_ground" 0.82
+      mkHint RouteTypeGround TagWorldCause "why_generic_ground" 0.82
   | isLocationFormationQuestion normalized units =
-      mkHint RouteTypeGround "location_formation" "where_plus_mental_noun" 0.84
+      mkHint RouteTypeGround TagLocationFormation "where_plus_mental_noun" 0.84
   | isConcealmentLocationQuestion normalized units =
-      mkHint RouteTypeDeepen "contemplative_topic" "where_plus_concealment_question" 0.84
+      mkHint RouteTypeDeepen TagContemplativeTopic "where_plus_concealment_question" 0.84
   | hasPhrase tokens ["кто", "ты"]
       || hasPhrase tokens ["кто", "я"]
       || hasPhrase tokens ["что", "ты", "есть"]
@@ -345,17 +345,17 @@ inferRuleRouteHint normalized units
       || hasPhrase tokens ["кем", "ты", "являешься"]
       || hasPhrase tokens ["что", "ты", "знаешь", "о", "себе"]
       || (hasPhrase tokens ["у", "тебя"] && hasAny tokens ["мысль", "идея"] && hasAny tokens ["одна", "всего"]) =
-      mkHint RouteTypeDescribe "self_knowledge" "self_knowledge_question" 0.86
+      mkHint RouteTypeDescribe TagSelfKnowledge "self_knowledge_question" 0.86
   | isContemplativeQuestion normalized units =
-      mkHint RouteTypeDeepen "contemplative_topic" "contemplative_question" 0.85
+      mkHint RouteTypeDeepen TagContemplativeTopic "contemplative_question" 0.85
   | isReflectiveAssertion normalized units =
-      mkHint RouteTypeDeepen "contemplative_topic" "reflective_assertion" 0.83
+      mkHint RouteTypeDeepen TagContemplativeTopic "reflective_assertion" 0.83
   | isEverydayEventAssertion normalized units =
-      mkHint RouteTypeGround "everyday_event" "declarative_action_world_object" 0.84
+      mkHint RouteTypeGround TagEverydayEvent "declarative_action_world_object" 0.84
   | contemplativeInput units =
-      mkHint RouteTypeDeepen "contemplative_topic" "single_or_short_contemplative_input" 0.8
+      mkHint RouteTypeDeepen TagContemplativeTopic "single_or_short_contemplative_input" 0.8
   | otherwise =
-      mkHint RouteTypeUnknown "unknown" "no_high_confidence_semantic_route" 0.55
+      mkHint RouteTypeUnknown TagUnknown "no_high_confidence_semantic_route" 0.55
   where
     tokens = niTokens normalized
 
@@ -376,30 +376,30 @@ scoreRouteHint normalized units ruleHint =
       ruleCandidate = fallbackRuleCandidate ruleHint scoredCandidates
       preserveRuleHint =
         irhTag ruleHint `elem`
-          [ "misunderstanding"
-          , "boundary_command"
-          , "apology_repair"
-          , "farewell_contact"
-          , "gratitude_contact"
-          , "affective_help"
-          , "greeting_smalltalk"
-          , "purpose_function"
-          , "comparison_relation"
-          , "disagreement_confront"
-          , "next_step"
-          , "short_dialogue_probe"
-          , "concept_knowledge"
-          , "self_knowledge"
-          , "self_state"
-          , "system_logic"
-          , "operational_cause"
-          , "world_cause"
-          , "location_formation"
-          , "generative_prompt"
+          [ TagMisunderstanding
+          , TagBoundaryCommand
+          , TagApologyRepair
+          , TagFarewellContact
+          , TagGratitudeContact
+          , TagAffectiveHelp
+          , TagGreetingSmalltalk
+          , TagPurposeFunction
+          , TagComparisonRelation
+          , TagDisagreementConfront
+          , TagNextStep
+          , TagShortDialogueProbe
+          , TagConceptKnowledge
+          , TagSelfKnowledge
+          , TagSelfState
+          , TagSystemLogic
+          , TagOperationalCause
+          , TagWorldCause
+          , TagLocationFormation
+          , TagGenerativePrompt
           ]
       useBest =
         (not preserveRuleHint)
-          && ( irhTag ruleHint == "unknown"
+          && ( irhTag ruleHint == TagUnknown
                 || rcFinalScore bestCandidate > rcFinalScore ruleCandidate + 0.05
              )
       chosen = if useBest then bestCandidate else ruleCandidate
@@ -417,8 +417,9 @@ scoreRouteHint normalized units ruleHint =
 
 data RouteCandidate = RouteCandidate
   { rcRouteType :: !InputRouteType
-  , rcTag :: !Text
+  , rcTag :: !SemanticTag
   , rcReason :: !Text
+  , rcPrototypes :: ![Text]
   , rcRuleScore :: !Double
   , rcSemanticScore :: !Double
   , rcSyntacticScore :: !Double
@@ -433,7 +434,7 @@ buildRouteCandidate
   -> InputClauseType
   -> Text
   -> InputRouteHint
-  -> (InputRouteType, Text, Text, [Text])
+  -> (InputRouteType, SemanticTag, Text, [Text])
   -> RouteCandidate
 buildRouteCandidate normalized units clauseType normalizedText ruleHint (routeType, tag, reason, prototypes) =
   let ruleScore = ruleAlignmentScore ruleHint routeType tag
@@ -452,6 +453,7 @@ buildRouteCandidate normalized units clauseType normalizedText ruleHint (routeTy
       { rcRouteType = routeType
       , rcTag = tag
       , rcReason = reason
+      , rcPrototypes = prototypes
       , rcRuleScore = ruleScore
       , rcSemanticScore = semanticScore
       , rcSyntacticScore = syntacticScore
@@ -466,6 +468,7 @@ defaultCandidate hint =
     { rcRouteType = irhType hint
     , rcTag = irhTag hint
     , rcReason = irhReason hint
+    , rcPrototypes = []
     , rcRuleScore = irhConfidence hint
     , rcSemanticScore = 0.5
     , rcSyntacticScore = 0.5
@@ -486,80 +489,80 @@ fallbackRuleCandidate ruleHint candidates =
     findByTag wanted = listToMaybe . filter (\candidate -> rcTag candidate == wanted)
     findByType wanted = listToMaybe . filter (\candidate -> rcRouteType candidate == wanted)
 
-ruleAlignmentScore :: InputRouteHint -> InputRouteType -> Text -> Double
+ruleAlignmentScore :: InputRouteHint -> InputRouteType -> SemanticTag -> Double
 ruleAlignmentScore ruleHint routeType tag
   | irhTag ruleHint == tag = irhConfidence ruleHint
   | irhType ruleHint == routeType = clamp01 (irhConfidence ruleHint * 0.72)
-  | irhTag ruleHint == "unknown" = 0.18
+  | irhTag ruleHint == TagUnknown = 0.18
   | otherwise = 0.08
 
-semanticScoreForTag :: NormalizedInput -> [WordMeaningUnit] -> Text -> Double
+semanticScoreForTag :: NormalizedInput -> [WordMeaningUnit] -> SemanticTag -> Double
 semanticScoreForTag normalized units tag
-  | tag == "misunderstanding" =
+  | tag == TagMisunderstanding =
       if hasPhrase tokens ["не", "понимаю"] then 0.95 else 0.2
-  | tag == "boundary_command" =
+  | tag == TagBoundaryCommand =
       if isBoundarySilenceCommand normalized units || isInsultSignal normalized units then 0.95 else 0.2
-  | tag == "apology_repair" =
+  | tag == TagApologyRepair =
       if isApologySignal normalized units then 0.94 else 0.22
-  | tag == "farewell_contact" =
+  | tag == TagFarewellContact =
       if isFarewellSignal normalized units then 0.93 else 0.22
-  | tag == "gratitude_contact" =
+  | tag == TagGratitudeContact =
       if isGratitudeSignal normalized units then 0.93 else 0.22
-  | tag == "affective_help" =
+  | tag == TagAffectiveHelp =
       if isAffectiveHelpQuestion normalized units then 0.95 else 0.2
-  | tag == "disagreement_confront" =
+  | tag == TagDisagreementConfront =
       if isDisagreementSignal normalized units then 0.93 else 0.24
-  | tag == "agreement_anchor" =
+  | tag == TagAgreementAnchor =
       if isAgreementSignal normalized units then 0.92 else 0.24
-  | tag == "opinion_question" =
+  | tag == TagOpinionQuestion =
       if isOpinionQuestion normalized units then 0.93 else 0.25
-  | tag == "system_logic" =
+  | tag == TagSystemLogic =
       if asksSystemLogicQuestion normalized units then 0.93 else 0.25
-  | tag == "self_knowledge" =
+  | tag == TagSelfKnowledge =
       if asksCapabilityQuestion normalized units || asksAssistanceQuestion normalized units
            || isNameQuestion normalized units || isSelfDescriptionRequest normalized units
            || asksUserIdentityQuestion normalized units || isSystemIdentityQuestion normalized units
          then 0.92
          else 0.28
-  | tag == "greeting_smalltalk" =
+  | tag == TagGreetingSmalltalk =
       if isGreetingOrSmallTalk normalized units then 0.93 else 0.2
-  | tag == "dialogue_invitation" =
+  | tag == TagDialogueInvitation =
       if isDialogueQuestion normalized units
            || ((hasAny tokens ["поговорим", "обсудим"]) && not (shortDialogueProbe tokens && not (niIsQuestion normalized)))
         then 0.92
         else 0.24
-  | tag == "short_dialogue_probe" =
+  | tag == TagShortDialogueProbe =
       if shortDialogueProbe tokens && not (niIsQuestion normalized) && hasAny tokens ["поговорим", "обсудим"] then 0.92 else 0.2
-  | tag == "concept_knowledge" =
+  | tag == TagConceptKnowledge =
       if isDefinitionalQuestion normalized units || (hasAny tokens ["знаешь", "известно"] && hasPhrase tokens ["что", "такое"])
          then 0.92
          else 0.26
-  | tag == "purpose_function" =
+  | tag == TagPurposeFunction =
       if isPurposeFunctionQuestion normalized units then 0.92 else 0.25
-  | tag == "comparison_relation" =
+  | tag == TagComparisonRelation =
       if isRelationComparisonQuestion normalized units then 0.92 else 0.24
-  | tag == "self_state" =
+  | tag == TagSelfState =
       if isSelfThoughtQuestion normalized units
           || hasPhrase tokens ["о", "чем", "ты", "думаешь"] || hasPhrase tokens ["что", "у", "тебя", "на", "уме"]
         then 0.92
         else 0.25
-  | tag == "generative_prompt" =
+  | tag == TagGenerativePrompt =
       if isGenerativeQualityPrompt normalized units
            || ((hasAny tokens ["скажи", "дай"] || hasAny tokens ["еще", "ещё", "новую", "другую"])
                 && hasAny tokens ["мысль", "идею", "идея", "слово", "фразу"])
         then 0.92
         else 0.24
-  | tag == "operational_cause" =
+  | tag == TagOperationalCause =
       if hasAny tokens ["почему"] && hasLemmaAny units ["система", "сбой", "ошибка", "ты", "вы"] then 0.9 else 0.24
-  | tag == "world_cause" =
+  | tag == TagWorldCause =
       if hasAny tokens ["почему"] && any (isWorldNoun . wmuLemma) units then 0.9 else 0.24
-  | tag == "location_formation" =
+  | tag == TagLocationFormation =
       if isLocationFormationQuestion normalized units then 0.91 else 0.24
-  | tag == "next_step" =
+  | tag == TagNextStep =
       if isNextStepQuestion normalized units then 0.93 else 0.22
-  | tag == "everyday_event" =
+  | tag == TagEverydayEvent =
       if isEverydayEventAssertion normalized units then 0.9 else 0.24
-  | tag == "contemplative_topic" =
+  | tag == TagContemplativeTopic =
       if isContemplativeQuestion normalized units || isReflectiveAssertion normalized units || contemplativeInput units then 0.88 else 0.25
   | otherwise = 0.22
   where
@@ -596,14 +599,14 @@ embeddingScoreForTag normalizedText prototypes =
       [] -> 0.0
       _ -> maximum similarities
 
-routeCatalog :: [(InputRouteType, Text, Text, [Text])]
+routeCatalog :: [(InputRouteType, SemanticTag, Text, [Text])]
 routeCatalog =
-  [ (RouteTypeRepair, "misunderstanding", "semantic_misunderstanding", ["я не понимаю тебя", "контакт потерян", "диалог распался"])
-  , (RouteTypeRepair, "boundary_command", "semantic_boundary_command", ["молчи", "замолчи", "заткнись", "ты тупой"])
-  , (RouteTypeRepair, "apology_repair", "semantic_apology_repair", ["извини", "прости", "прошу прощения"])
-  , (RouteTypeContact, "farewell_contact", "semantic_farewell_contact", ["пока", "до свидания", "увидимся"])
-  , (RouteTypeContact, "gratitude_contact", "semantic_gratitude_contact", ["спасибо", "благодарю", "thank you"])
-  , (RouteTypeContact, "affective_help", "semantic_affective_help"
+  [ (RouteTypeRepair, TagMisunderstanding, "semantic_misunderstanding", ["я не понимаю тебя", "контакт потерян", "диалог распался"])
+  , (RouteTypeRepair, TagBoundaryCommand, "semantic_boundary_command", ["молчи", "замолчи", "заткнись", "ты тупой"])
+  , (RouteTypeRepair, TagApologyRepair, "semantic_apology_repair", ["извини", "прости", "прошу прощения"])
+  , (RouteTypeContact, TagFarewellContact, "semantic_farewell_contact", ["пока", "до свидания", "увидимся"])
+  , (RouteTypeContact, TagGratitudeContact, "semantic_gratitude_contact", ["спасибо", "благодарю", "thank you"])
+  , (RouteTypeContact, TagAffectiveHelp, "semantic_affective_help"
       , [ "что делать если грустно"
         , "как не переживать"
         , "как не волноваться"
@@ -625,23 +628,23 @@ routeCatalog =
         , "мне плохо"
         ]
     )
-  , (RouteTypeGround, "agreement_anchor", "semantic_agreement_anchor", ["я согласен", "верно", "логично"])
-  , (RouteTypeDistinguish, "disagreement_confront", "semantic_disagreement_confront", ["я не согласен", "сомневаюсь", "это спорно"])
-  , (RouteTypeDescribe, "opinion_question", "semantic_opinion_question", ["какое твое мнение", "как считаешь", "что думаешь об этом"])
-  , (RouteTypeDescribe, "system_logic", "semantic_system_logic", ["в чем твоя логика", "как ты устроен", "как ты работаешь"])
-  , (RouteTypeDescribe, "self_knowledge", "semantic_self_knowledge", ["кто ты", "что ты такое", "что ты знаешь о себе", "ты можешь мне помочь", "как тебя зовут", "расскажи о себе", "что ты можешь рассказать о себе"])
-  , (RouteTypeContact, "greeting_smalltalk", "semantic_greeting_smalltalk", ["привет", "как дела", "как жизнь"])
-  , (RouteTypeContact, "short_dialogue_probe", "semantic_short_dialogue_probe", ["поговорим", "обсудим"])
-  , (RouteTypeDeepen, "dialogue_invitation", "semantic_dialogue_invitation", ["поговорим", "давай поговорим", "обсудим"])
-  , (RouteTypeDefine, "concept_knowledge", "semantic_concept_knowledge", ["что такое", "что значит", "знаешь что такое"])
-  , (RouteTypeGround, "purpose_function", "semantic_purpose_function", ["в чем функция", "зачем нужен", "для чего"])
-  , (RouteTypeDistinguish, "comparison_relation", "semantic_comparison_relation", ["что логичнее", "в чем разница", "или это"])
-  , (RouteTypeDescribe, "self_state", "semantic_self_state", ["о чем ты думаешь", "что у тебя на уме"])
-  , (RouteTypeDescribe, "generative_prompt", "semantic_generative_prompt", ["скажи мысль", "дай идею", "скажи что-нибудь"])
-  , (RouteTypeGround, "operational_cause", "semantic_operational_cause", ["почему система не работает", "почему ты не отвечаешь"])
-  , (RouteTypeGround, "world_cause", "semantic_world_cause", ["почему небо голубое", "почему солнце светит"])
-  , (RouteTypeGround, "location_formation", "semantic_location_formation", ["где формируется мысль", "откуда берется идея"])
-  , (RouteTypeClarify, "next_step", "semantic_next_step"
+  , (RouteTypeGround, TagAgreementAnchor, "semantic_agreement_anchor", ["я согласен", "верно", "логично"])
+  , (RouteTypeDistinguish, TagDisagreementConfront, "semantic_disagreement_confront", ["я не согласен", "сомневаюсь", "это спорно"])
+  , (RouteTypeDescribe, TagOpinionQuestion, "semantic_opinion_question", ["какое твое мнение", "как считаешь", "что думаешь об этом"])
+  , (RouteTypeDescribe, TagSystemLogic, "semantic_system_logic", ["в чем твоя логика", "как ты устроен", "как ты работаешь"])
+  , (RouteTypeDescribe, TagSelfKnowledge, "semantic_self_knowledge", ["кто ты", "что ты такое", "что ты знаешь о себе", "ты можешь мне помочь", "как тебя зовут", "расскажи о себе", "что ты можешь рассказать о себе"])
+  , (RouteTypeContact, TagGreetingSmalltalk, "semantic_greeting_smalltalk", ["привет", "как дела", "как жизнь"])
+  , (RouteTypeContact, TagShortDialogueProbe, "semantic_short_dialogue_probe", ["поговорим", "обсудим"])
+  , (RouteTypeDeepen, TagDialogueInvitation, "semantic_dialogue_invitation", ["поговорим", "давай поговорим", "обсудим"])
+  , (RouteTypeDefine, TagConceptKnowledge, "semantic_concept_knowledge", ["что такое", "что значит", "знаешь что такое"])
+  , (RouteTypeGround, TagPurposeFunction, "semantic_purpose_function", ["в чем функция", "зачем нужен", "для чего"])
+  , (RouteTypeDistinguish, TagComparisonRelation, "semantic_comparison_relation", ["что логичнее", "в чем разница", "или это"])
+  , (RouteTypeDescribe, TagSelfState, "semantic_self_state", ["о чем ты думаешь", "что у тебя на уме"])
+  , (RouteTypeDescribe, TagGenerativePrompt, "semantic_generative_prompt", ["скажи мысль", "дай идею", "скажи что-нибудь"])
+  , (RouteTypeGround, TagOperationalCause, "semantic_operational_cause", ["почему система не работает", "почему ты не отвечаешь"])
+  , (RouteTypeGround, TagWorldCause, "semantic_world_cause", ["почему небо голубое", "почему солнце светит"])
+  , (RouteTypeGround, TagLocationFormation, "semantic_location_formation", ["где формируется мысль", "откуда берется идея"])
+  , (RouteTypeClarify, TagNextStep, "semantic_next_step"
       , [ "что дальше"
         , "что теперь"
         , "что потом"
@@ -650,9 +653,9 @@ routeCatalog =
         , "как действовать дальше"
         ]
     )
-  , (RouteTypeGround, "everyday_event", "semantic_everyday_event", ["я купил дом", "я живу дома"])
-  , (RouteTypeDeepen, "contemplative_topic", "semantic_contemplative_topic", ["тишина", "смысл", "истина", "я думаю"])
-  , (RouteTypeUnknown, "unknown", "semantic_unknown", ["что", "непонятно"])
+  , (RouteTypeGround, TagEverydayEvent, "semantic_everyday_event", ["я купил дом", "я живу дома"])
+  , (RouteTypeDeepen, TagContemplativeTopic, "semantic_contemplative_topic", ["тишина", "смысл", "истина", "я думаю"])
+  , (RouteTypeUnknown, TagUnknown, "semantic_unknown", ["что", "непонятно"])
   ]
 
 showScore :: Double -> Text
@@ -1156,9 +1159,9 @@ inferClauseType normalized
 inferSpeechAct :: InputClauseType -> InputRouteHint -> InputSpeechAct
 inferSpeechAct clauseType routeHint =
   case irhTag routeHint of
-    "dialogue_invitation" -> ActInvite
-    "misunderstanding" -> ActReport
-    "generative_prompt" -> ActRequest
+    TagDialogueInvitation -> ActInvite
+    TagMisunderstanding -> ActReport
+    TagGenerativePrompt -> ActRequest
     _ ->
       case clauseType of
         ClauseInterrogativeInput -> ActAsk
@@ -1176,21 +1179,21 @@ inferPolarity units
 inferTopic :: NormalizedInput -> [WordMeaningUnit] -> InputRouteHint -> Text
 inferTopic normalized units routeHint =
   case irhTag routeHint of
-    "greeting_smalltalk" -> "контакт"
-    "dialogue_invitation" ->
+    TagGreetingSmalltalk -> "контакт"
+    TagDialogueInvitation ->
       fromMaybe "диалог" (topicAfterMarkers (niTokens normalized) ["о", "об", "обо", "про"])
-    "concept_knowledge" -> fromMaybe defaultTopic (topicAfterMarkers (niTokens normalized) ["о", "об", "обо", "про", "такое", "значит"])
-    "affective_help" ->
+    TagConceptKnowledge -> fromMaybe defaultTopic (topicAfterMarkers (niTokens normalized) ["о", "об", "обо", "про", "такое", "значит"])
+    TagAffectiveHelp ->
       fromMaybe defaultTopic (affectiveStateTopic units)
-    "purpose_function" ->
+    TagPurposeFunction ->
       fromMaybe purposeFallback (purposeObjectLemma units)
-    "world_cause" ->
+    TagWorldCause ->
       fromMaybe defaultTopic (worldCauseTopic units)
-    "self_knowledge"
+    TagSelfKnowledge
       | asksCapabilityQuestion normalized units || asksAssistanceQuestion normalized units ->
           fromMaybe defaultTopic (abilityComplement units)
-    "contemplative_topic" -> fromMaybe defaultTopic (topicBySemantics units)
-    "generative_prompt" ->
+    TagContemplativeTopic -> fromMaybe defaultTopic (topicBySemantics units)
+    TagGenerativePrompt ->
       fromMaybe defaultTopic (requestedQualityTopic (niTokens normalized) <|> qualityDescriptorLemma units <|> preferredTopicLemma units)
     _ -> defaultTopic
   where
@@ -1222,7 +1225,7 @@ inferParticipants normalized =
 inferSemanticCandidates :: NormalizedInput -> [WordMeaningUnit] -> InputRouteHint -> [Text]
 inferSemanticCandidates normalized units routeHint =
   take 8 . filter (not . T.null) $
-    [ "route_tag=" <> irhTag routeHint
+    [ "route_tag=" <> semanticTagText (irhTag routeHint)
     , "route_reason=" <> irhReason routeHint
     , "route_rule_score=" <> showScore (irhRuleScore routeHint)
     , "route_semantic_score=" <> showScore (irhSemanticScore routeHint)
@@ -1248,7 +1251,7 @@ inferFrameConfidence units routeHint =
           else sum (map wmuConfidence units) / fromIntegral (length units)
   in clamp01 ((tokenConfidence * 0.55) + (irhConfidence routeHint * 0.45))
 
-mkHint :: InputRouteType -> Text -> Text -> Double -> InputRouteHint
+mkHint :: InputRouteType -> SemanticTag -> Text -> Double -> InputRouteHint
 mkHint routeType tag reason confidence =
   InputRouteHint
     { irhType = routeType

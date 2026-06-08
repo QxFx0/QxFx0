@@ -6,6 +6,7 @@ module QxFx0.Core.TurnRouting.Cascade
   ( runFamilyCascade
   , applyPrincipledFamily
   , applyGuardGating
+  , applyConatusGateRestriction
   , buildGuardReport
   ) where
 
@@ -13,7 +14,9 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Core.Consciousness (ConsciousnessNarrative)
+import QxFx0.Memory.Episodic (EpisodicEvent(..), EpisodicKind(..), episodicRecallActive)
+import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
+import QxFx0.Core.ConsciousnessLoop (doubtSuppressionThreshold, doubtLoopActive)
 import QxFx0.Core.IdentityGuard
   ( IdentityGuardReport(..)
   , IdentityGuardWarning(..)
@@ -28,6 +31,7 @@ import QxFx0.Core.TurnRouting.Types
   ( FamilyCascade(..)
   , RoutingPhase(..)
   )
+import QxFx0.Self.Conatus (ConatusEnergy(..), lowEnergyThreshold)
 import QxFx0.Self.Salience
   ( Salience(..)
   , SalienceDriver(..)
@@ -36,17 +40,24 @@ import QxFx0.Self.Salience
   )
 import QxFx0.Types
 import QxFx0.Types.Thresholds
+import QxFx0.Types.Thresholds.Routing
   ( identityGuardDefaultAgencyBaseline
   , identityGuardDefaultTensionBaseline
-  , parserHighConfidenceThreshold
   )
+import QxFx0.Types.PropositionType (PropositionType(..))
+
+-- | WP-B R-B3: check if retrieved episodes contain recent system decisions.
+-- If yes, suppress doubt-driven CMClarify override (don't re-ask established facts).
+hasRecentSystemDecision :: [EpisodicEvent] -> Bool
+hasRecentSystemDecision episodes =
+  any (\e -> eeKind e == EpisodicSystemDecision) episodes
 
 runFamilyCascade :: RoutingPhase -> SystemState -> UserState -> InputPropositionFrame -> AtomSet -> [Text] -> Text
-                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> FamilyCascade
-runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience =
+                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> ConatusEnergy -> Double -> [EpisodicEvent] -> FamilyCascade
+runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes =
   let parserLockedFamily =
         if ipfConfidence frame >= parserHighConfidenceThreshold
-             && ipfPropositionType frame /= T.pack "PlainAssert"
+              && ipfPropositionType frame /= PlainAssert
           then Just (ipfCanonicalFamily frame)
           else Nothing
       familyAfterIdentity =
@@ -66,12 +77,39 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
       familyAfterPrincipled =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
-          Nothing -> applyPrincipledFamilyModulated familyDivergenceEnabled salience rpPrincipledModeResult familyAfterIntuition
+          Nothing -> applyPrincipledFamilyModulated salienceGuardDivergenceEnabled salience rpPrincipledModeResult familyAfterIntuition
       guardReportPre = buildGuardReport (ssLastGuardReport systemState) (ssEgo systemState) rpPreEgo
-      familyAfterGuard = applyGuardGatingModulated familyDivergenceEnabled salience guardReportPre familyAfterPrincipled
-      familyCascade = fromMaybe familyAfterGuard (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterGuard)
+      familyAfterGuard = applyGuardGatingModulated salienceGuardDivergenceEnabled salience guardReportPre familyAfterPrincipled
+      -- P1 Conatus Gate: when energy is low, restrict to restorative families.
+      -- Low energy (< lowEnergyThreshold) prohibits high-risk families
+      -- (CMConfront, CMHypothesis, CMDistinguish) and allows only restorative
+      -- families (CMContact, CMAnchor, CMRepair). This implements the
+      -- self-preservation routing constraint specified in ADR-0045.
+      familyAfterConatusGate =
+        case parserLockedFamily of
+          Just parserFamily -> parserFamily
+          Nothing ->
+            if ceScalar conatusEnergy < lowEnergyThreshold
+              then applyConatusGateRestriction familyAfterGuard
+              else familyAfterGuard
+      -- WP-D + WP-B R-B3: doubt-driven family override with episodic memory check.
+      -- When doubt is high (≥ threshold) and the doubt loop is active, prefer
+      -- CMClarify to signal uncertainty — UNLESS retrieved episodes show the
+      -- system already provided a decision on this topic (don't re-ask).
+      familyAfterDoubt =
+        case parserLockedFamily of
+          Just parserFamily -> parserFamily
+          Nothing ->
+            let shouldClarify = doubtLoopActive
+                             && doubt >= doubtSuppressionThreshold
+                             && not (episodicRecallActive && hasRecentSystemDecision retrievedEpisodes)
+            in if shouldClarify
+              then CMClarify
+              else familyAfterConatusGate
+      familyCascade = fromMaybe familyAfterDoubt (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterDoubt)
       finalFamily = if isNixBlocked then CMRepair else familyCascade
-      familyDivergenceEnabled = True
+      -- Phase 8 Package D: salience-modulated guard divergence (always enabled)
+      salienceGuardDivergenceEnabled = True
    in FamilyCascade
         { fcFamilyAfterIdentity = familyAfterIdentity
         , fcFamilyAfterNarrative = familyAfterNarrative
@@ -107,10 +145,10 @@ applyPrincipledFamily mode family =
 -- calibration goes through that single record rather than this
 -- function.
 applyPrincipledFamilyModulated :: Bool -> Salience -> Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
-applyPrincipledFamilyModulated familyDivergenceEnabled salience mode family =
+applyPrincipledFamilyModulated salienceGuardDivergenceEnabled salience mode family =
   case salienceDriver salience of
     DrivenByConatusGate -> applyPrincipledFamily mode family
-    _ | familyDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
+    _ | salienceGuardDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
     _ -> applyPrincipledFamily mode family
 
 applyGuardGating :: IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
@@ -137,11 +175,28 @@ applyGuardGating guardReport family
 --
 -- Threshold sourced from 'defaultSalienceModulation'.
 applyGuardGatingModulated :: Bool -> Salience -> IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
-applyGuardGatingModulated familyDivergenceEnabled salience guard family
+applyGuardGatingModulated salienceGuardDivergenceEnabled salience guard family
   | salienceDriver salience == DrivenByConatusGate = applyGuardGating guard family
-  | familyDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
+  | salienceGuardDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
       if GuardAgencyCollapse `elem` igrWarnings guard then CMRepair else family
   | otherwise = applyGuardGating guard family
+
+-- | Apply Conatus gate restriction: when energy is low, map high-risk
+-- families to restorative alternatives. This is the core P1 integration
+-- that closes the gap between Conatus computation and routing behaviour.
+--
+-- Mapping:
+-- * CMConfront → CMContact (restorative engagement)
+-- * CMHypothesis → CMAnchor (grounding in established facts)
+-- * CMDistinguish → CMRepair (structural recovery)
+-- * All other families → unchanged (already safe or restorative)
+applyConatusGateRestriction :: CanonicalMoveFamily -> CanonicalMoveFamily
+applyConatusGateRestriction family =
+  case family of
+    CMConfront    -> CMContact
+    CMHypothesis  -> CMAnchor
+    CMDistinguish -> CMRepair
+    _             -> family  -- CMContact, CMAnchor, CMRepair, CMClarify, CMGround, CMDeepen already safe
 
 buildGuardReport :: Maybe IdentityGuardReport -> EgoState -> EgoState -> IdentityGuardReport
 buildGuardReport lastGuard oldEgo newEgo =

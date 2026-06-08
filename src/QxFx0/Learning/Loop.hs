@@ -56,6 +56,8 @@ import QxFx0.Learning.Sandbox
   , SandboxRejectReason(..)
   , SandboxResult(..)
   , runSandboxGate
+  , deriveAdmissionAuthorityDeltas
+  , aadPredictiveDelta
   )
 import QxFx0.Learning.Signal (CalibrationSignal(..), SignalComponents(..), computeCalibrationSignal)
 import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, updateToolReliability, defaultAvailableTools)
@@ -131,9 +133,13 @@ runLearningStep ss tool need query mResult =
       morph = ssMorphology ss
       needState = ssLearningNeedState ss
 
+      -- Actor-clean by default: 'ltExternalTool' is the identity that ACTUALLY
+      -- executed, set only on the response branch (from 'eqrToolName'). The
+      -- planned tool name is never reported as executed, and a path where
+      -- nothing ran (Nothing / transport error) stays Nothing.
       baseTelemetry = emptyLearningTelemetry
         { ltQueryType    = Just (renderNeedTag need)
-        , ltExternalTool = Just (etName tool)
+        , ltExternalTool = Nothing
         }
 
   in case mResult of
@@ -142,50 +148,60 @@ runLearningStep ss tool need query mResult =
       (ss, baseTelemetry)
 
     Just (Left err) ->
-      -- Transport / API failure: fail-closed, penalise tool.
-      let rel1 = updateToolReliability (etName tool) False rel0
-          records =
-            [ toolReliabilityMutation turn (etName tool) False (renderQueryError err)
-            ]
-          tel  = baseTelemetry
+      -- Transport / API / fallback failure: fail-closed. No executed-tool
+      -- identity exists (the call never returned a response), so we do NOT
+      -- mutate tool reliability and telemetry stays actor-clean. Attributing
+      -- blame to the planned tool here would be phantom credit/blame.
+      let tel  = baseTelemetry
             { ltValidationStatus = case err of
                 EqeFallback _ -> "fallback_non_authoritative"
                 _ -> "transport_error"
             , ltRejectReason     = Just (renderQueryError err)
             }
-      in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)
+      in (ss, tel)
 
     Just (Right resp) ->
-      -- Got a response: parse -> validate -> sandbox -> graft.
+      -- Got a response: parse -> validate -> sandbox -> graft. The EXECUTED
+      -- tool identity is the responder ('eqrToolName resp'), which may differ
+      -- from the planned 'tool'. Telemetry and all reliability mutations on
+      -- this branch attribute to the executed tool, never the planned one.
       let preProxy = conatusProxyFromState ss
+          executedTool = eqrToolName resp
+          respTelemetry = baseTelemetry { ltExternalTool = Just executedTool }
       in case parseLLMResponseToFruit resp of
         Nothing ->
-          let rel1 = updateToolReliability (etName tool) False rel0
+          let rel1 = updateToolReliability executedTool False rel0
               records =
-                [ toolReliabilityMutation turn (etName tool) False "parser_rejected_schema_or_text"
+                [ toolReliabilityMutation turn executedTool False "parser_rejected_schema_or_text"
                 ]
-              tel  = baseTelemetry
+              tel  = respTelemetry
                 { ltValidationStatus = "invalid_response"
                 , ltRejectReason     = Just "parser_rejected_schema_or_text"
                 }
           in (appendAdaptiveMutationRecords records (ss { ssToolReliability = rel1 }), tel)
 
         Just payload ->
+          -- Predictive authority is LOCALLY derived from the received payload's
+          -- quality (definition/morphology/need-alignment), clamped to a bounded
+          -- range — NOT trusted from the remote's self-asserted predictiveDelta,
+          -- which a peer could inflate (e.g. 999.0). Mirrors the conatus path,
+          -- which is already derived from local state change rather than payload.
+          let derivedPredictive = aadPredictiveDelta (deriveAdmissionAuthorityDeltas ss payload) in
           case validateFruitPayload payload morph of
             Left valErr ->
-              let rel1 = updateToolReliability (etName tool) False rel0
+              let rel1 = updateToolReliability executedTool False rel0
                   ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
                   -- ss1 does not yet contain the quarantined fruit; add 0.01 proxy for tree growth
                   postProxy = conatusProxyFromState ss1 + 0.01
-                  fruit = payloadToFruit payload turn False (postProxy - preProxy)
+                  fruit = payloadToFruit payload turn False (postProxy - preProxy) derivedPredictive
                   tree1 = quarantineFruit fruit tree0
                   ss2   = ss1 { ssKnowledgeTree = tree1 }
                   reason = renderValidationError valErr
                   records =
-                    [ toolReliabilityMutation turn (etName tool) False reason
+                    [ toolReliabilityMutation turn executedTool False reason
                     , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong "external_learning:validation_reject" reason
                     ]
-                  tel   = baseTelemetry
+                  tel   = respTelemetry
                     { ltValidationStatus = "validation_reject"
                     , ltRejectReason     = Just reason
                     }
@@ -194,18 +210,18 @@ runLearningStep ss tool need query mResult =
             Right validatedPayload ->
               case runSandboxGate ss validatedPayload of
                 SandboxReject metrics reason ->
-                  let rel1 = updateToolReliability (etName tool) False rel0
+                  let rel1 = updateToolReliability executedTool False rel0
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
                       postProxy = conatusProxyFromState ss1
-                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
+                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy) derivedPredictive
                       tree1 = quarantineFruit fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
                       reasonText = renderSandboxRejectReason reason
                       records =
-                        [ toolReliabilityMutation turn (etName tool) False reasonText
+                        [ toolReliabilityMutation turn executedTool False reasonText
                         , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveQuarantined EvidenceStrong "external_learning:sandbox_reject" reasonText
                         ]
-                      tel   = baseTelemetry
+                      tel   = respTelemetry
                         { ltValidationStatus = "sandbox_reject"
                         , ltSandboxResult  = Just (renderSandboxMetrics metrics)
                         , ltRejectReason   = Just reasonText
@@ -213,18 +229,18 @@ runLearningStep ss tool need query mResult =
                   in (appendAdaptiveMutationRecords records ss2, tel)
 
                 SandboxAccept metrics ->
-                  let rel1 = updateToolReliability (etName tool) True rel0
+                  let rel1 = updateToolReliability executedTool True rel0
                       morph1 = mergeMorphologyPayload morph validatedPayload
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1, ssMorphology = morph1 }
                       postProxy = conatusProxyFromState ss1 + 0.01
-                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy)
+                      fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy) derivedPredictive
                       tree1 = graftFruit (renderNeedTag need) fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
                       records =
-                        [ toolReliabilityMutation turn (etName tool) True "sandbox_accept"
+                        [ toolReliabilityMutation turn executedTool True "sandbox_accept"
                         , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveAccepted EvidenceStrong "external_learning:graft" (renderNeedTag need)
                         ]
-                      tel   = baseTelemetry
+                      tel   = respTelemetry
                         { ltValidationStatus = "accept"
                         , ltSandboxResult    = Just (renderSandboxMetrics metrics)
                         , ltGraftTurn        = Just turn
@@ -244,17 +260,21 @@ conatusProxyFromState s =
   in energy + 0.01 * fromIntegral treeSize
 
 -- | Convert a validated payload into a 'KnowledgeFruit'.
--- The conatus delta is derived from actual state change (pre vs post)
--- rather than trusting the external payload.
-payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> Double -> KnowledgeFruit
-payloadToFruit payload turn validated conatusDelta =
+-- BOTH authority deltas are derived locally rather than trusted from the
+-- external payload: the conatus delta from actual state change (pre vs post),
+-- and the predictive delta (passed in) from 'deriveAdmissionAuthorityDeltas'
+-- over the payload's quality, clamped. The payload's self-asserted
+-- @kfpPredictiveDelta@ is deliberately NOT stored — a remote peer must not be
+-- able to write its own authority into the knowledge tree.
+payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> Double -> Double -> KnowledgeFruit
+payloadToFruit payload turn validated conatusDelta predictiveDelta =
   KnowledgeFruit
     { kfProposition     = kfpProposition payload
     , kfWord            = kfpWord payload
     , kfSource          = kfpSource payload
     , kfValidated       = validated
     , kfConatusDelta    = conatusDelta
-    , kfPredictiveDelta = kfpPredictiveDelta payload
+    , kfPredictiveDelta = predictiveDelta
     , kfGraftedTurn     = if validated then Just turn else Nothing
     , kfObservedTurn    = turn
     }

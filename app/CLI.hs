@@ -10,13 +10,14 @@ import CLI.State (handleStateJson)
 import CLI.Turn (runTurnJson)
 import CLI.Worker (runWorkerStdio)
 
+import Control.Monad (when)
 import Data.Aeson (encode)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Render.Text (textShow)
 import qualified Data.Text.IO as T
 import System.Directory (createDirectoryIfMissing)
-import System.Environment (getArgs)
+import System.Environment (getArgs, setEnv)
 import System.Exit (exitFailure)
 import System.FilePath (takeDirectory)
 import System.IO (BufferMode(..), hPutStrLn, hSetBuffering, stderr, stdout)
@@ -27,8 +28,7 @@ import qualified QxFx0.Bridge.EmbeddedSQLSync as EmbeddedSQLSync
 import qualified QxFx0.Runtime as Runtime
 import qualified QxFx0.Resources as Resources
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
-import qualified QxFx0.Bridge.SQLite.SchemaContractCheck as SchemaContractCheck
-import qualified QxFx0.Bridge.SQLite.SchemaConsistency as SchemaConsistency
+import Data.List (partition)
 import QxFx0.CLI.Parser (extractSessionArgs)
 import QxFx0.ExceptionPolicy (QxFx0Exception)
 
@@ -36,9 +36,13 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   args <- getArgs
+  let (debugFlag, restArgs1) = extractDebugFlag args
+      (strictFlag, restArgs2) = extractStrictDecodeFlag restArgs1
+  when debugFlag $ setEnv "QXFX0_DEBUG_ERRORS" "true"
+  when strictFlag $ setEnv "QXFX0_STRICT_DECODE" "true"
   sessionId0 <- Runtime.resolveSessionId
-  let (sessionId, restArgs) = extractSessionArgs sessionId0 args
-  case restArgs of
+  let (sessionId, finalArgs) = extractSessionArgs sessionId0 restArgs2
+  case finalArgs of
     []                        -> interactiveMain sessionId
     ["--help"]                -> Runtime.printHelp >> printMachineHelp
     ["--healthcheck"]         -> handleHealthcheck sessionId
@@ -54,8 +58,6 @@ main = do
     ["--init-db-only"]        -> handleInitDb
     ["--check-embedded-sql"]  -> handleCheckEmbeddedSql
     ["--sync-embedded-sql"]   -> handleSyncEmbeddedSql
-    ["--check-schema-consistency"] -> handleCheckSchemaConsistency
-    ["--check-schema-contract"] -> handleCheckSchemaContract
     _                         -> do
       hPutStrLn stderr "Unsupported arguments. Use --help."
       exitFailure
@@ -78,6 +80,8 @@ printMachineHelp = do
   T.putStrLn "  --serve-http [port]          start HTTP sidecar"
   T.putStrLn "  --check-embedded-sql         verify EmbeddedSQL.hs matches spec/sql"
   T.putStrLn "  --sync-embedded-sql          rewrite EmbeddedSQL.hs from spec/sql"
+  T.putStrLn "  --debug-errors               show full error details (sets QXFX0_DEBUG_ERRORS=true)"
+  T.putStrLn "  --strict-decode              fail on missing JSON fields (sets QXFX0_STRICT_DECODE=true)"
   T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
   T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
 
@@ -120,23 +124,6 @@ handleSyncEmbeddedSql = do
   EmbeddedSQLSync.writeEmbeddedSqlModule paths "src/QxFx0/Bridge/EmbeddedSQL.hs"
   T.putStrLn "wrote src/QxFx0/Bridge/EmbeddedSQL.hs"
 
-handleCheckSchemaConsistency :: IO ()
-handleCheckSchemaConsistency = do
-  paths <- Resources.resolveResourcePaths
-  result <- SchemaConsistency.checkSchemaConsistency (Resources.rpMigrationDir paths) (Resources.rpSchemaSql paths)
-  case result of
-    Right ok -> T.putStrLn ok
-    Left err -> T.putStrLn err >> exitFailure
-
-handleCheckSchemaContract :: IO ()
-handleCheckSchemaContract = do
-  result <- SchemaContractCheck.checkSchemaContractManifest
-    "spec/sql/runtime_critical_contract.tsv"
-    "spec/sql/schema.sql"
-  case result of
-    Right ok -> T.putStrLn ok
-    Left err -> T.putStrLn err >> exitFailure
-
 handleWorkerStdio :: Text -> IO ()
 handleWorkerStdio sessionId = runWorkerStdio sessionId
 
@@ -159,3 +146,19 @@ interactiveMain sessionId =
     T.putStrLn $ "Session: " <> Runtime.sessSessionId session
     T.putStrLn $ "State: " <> textShow (Runtime.sessStateOrigin session)
     Runtime.loop session
+
+-- | Extract --debug-errors flag from args. Sets QXFX0_DEBUG_ERRORS env var
+-- which enables detailed error output in the logging layer.
+extractDebugFlag :: [String] -> (Bool, [String])
+extractDebugFlag args =
+  let (flags, rest) = partition (== "--debug-errors") args
+  in (not (null flags), rest)
+
+-- | Extract --strict-decode flag from args. Sets QXFX0_STRICT_DECODE env var
+-- which enforces strict JSON validation (no .:? .!= defaults) for persisted
+-- state blobs. Missing required fields cause decode failure instead of
+-- silent defaults.
+extractStrictDecodeFlag :: [String] -> (Bool, [String])
+extractStrictDecodeFlag args =
+  let (flags, rest) = partition (== "--strict-decode") args
+  in (not (null flags), rest)

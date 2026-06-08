@@ -18,6 +18,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -31,7 +32,7 @@ import QxFx0.Core.PipelineIO
   , resolveTurnEffect
   )
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop(..))
-import QxFx0.Core.Consciousness (ConsciousnessNarrative(..))
+import QxFx0.Core.StanceClassifier (ConsciousnessNarrative(..))
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.BackgroundProcess (surfacingToFragment)
 import QxFx0.Core.Observability
@@ -204,12 +205,12 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       -- WP2: GF-first rendering. Assembly path is primary for all dialogue branches.
       -- Template fallback is only used when assembly produces empty text (no PGF/runtime).
       viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
-                        bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan
+                        bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti)
       assemblyFallbackReason = fromMaybe "assembly_empty_fallback" (draFallbackReason viaAssembly)
       dialogueArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
-            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss))
+            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti))
               { draFallbackReason = Just assemblyFallbackReason }
       forceFinalized =
         if structuredSurface
@@ -241,7 +242,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           else narrativeEnriched <> "\n" <> surfacingFragment
       structuredQuestion =
         ipfConfidence (tiFrame ti) >= parserLowConfidenceThreshold
-          && ipfPropositionType (tiFrame ti) /= "PlainAssert"
+          && ipfPropositionType (tiFrame ti) /= PlainAssert
       morphologyWarning =
         if T.any isSpace input
              && not structuredQuestion
@@ -607,8 +608,9 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , taExternalQueryResult = rerExternalQueryResult effectResults
        , taExploratoryQueryResult = rerExploratoryQueryResult effectResults
        , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
-       , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
-        }
+        , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
+        , taGenerationTrace = draGenerationTrace (rsTemplateArtifact renderStatic)
+         }
 
 deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath
 deriveAssemblyPath renderStatic artifact finalizeSurfaceProv
@@ -1118,11 +1120,13 @@ applyRuntimeGfResult gfLang renderStatic result =
                       AuthorityAssembled -> FromOperator
                       AuthorityCanonical -> FromDB
                       AuthorityLegacyIncomplete -> FromHardFallback
-                  , draDerivationTags = draDerivationTags baseArtifact
-                      <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
-                         , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
-                         ]
-                  }
+                   , draDerivationTags = draDerivationTags baseArtifact
+                       <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
+                          , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
+                          ]
+                   , draGenerationTrace = draGenerationTrace baseArtifact
+                       <> [GenerationAttempt "pgf_dialog_atoms" "ok"]
+                   }
           in renderStatic
                 { rsTemplateArtifact = updatedArtifact
                 , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
@@ -1158,11 +1162,13 @@ applyRuntimeGfResult gfLang renderStatic result =
                       AuthorityAssembled -> FromOperator
                       AuthorityCanonical -> FromDB
                       AuthorityLegacyIncomplete -> FromHardFallback
-                  , draDerivationTags = draDerivationTags baseArtifact
-                      <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
-                         , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
-                         ]
-                  }
+                   , draDerivationTags = draDerivationTags baseArtifact
+                       <> ["gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
+                          , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
+                          ]
+                   , draGenerationTrace = draGenerationTrace baseArtifact
+                       <> [GenerationAttempt "pgf_claim_ast" "ok"]
+                   }
           in renderStatic
                 { rsTemplateArtifact = updatedArtifact
                 , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
@@ -1178,6 +1184,8 @@ applyRuntimeGfResult gfLang renderStatic result =
                  { draLinearizationLang = Just (langTag <> "_GF_PGF")
                  , draLinearizationOk = False
                  , draFallbackReason = Just ("gf_runtime:" <> err)
+                 , draGenerationTrace = draGenerationTrace baseArtifact
+                     <> [GenerationAttempt "pgf_claim_ast" ("error:" <> err)]
                  }
            }
     _ ->
@@ -1188,6 +1196,8 @@ applyRuntimeGfResult gfLang renderStatic result =
                  { draLinearizationLang = Just (langTag <> "_GF_PGF")
                  , draLinearizationOk = False
                  , draFallbackReason = Just "gf_runtime:unexpected_effect_result"
+                 , draGenerationTrace = draGenerationTrace baseArtifact
+                     <> [GenerationAttempt "pgf" "unexpected_effect_result"]
                  }
            }
 

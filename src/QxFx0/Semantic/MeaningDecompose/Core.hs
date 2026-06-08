@@ -12,12 +12,7 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.MeaningAtom (FactAtoms)
 import QxFx0.Semantic.MeaningDecompose.Domains
-  ( heartPump
-  , aorta
-  , vessels
-  , bloodGroups
-  , bloodVolume
-  , decomposedFacts
+  ( decomposedFacts
   , heartFacts
   , bloodFacts
   )

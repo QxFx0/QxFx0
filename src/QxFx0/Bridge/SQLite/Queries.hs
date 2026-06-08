@@ -13,7 +13,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isLetter, isSpace)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
-import QxFx0.ExceptionPolicy (QxFx0Exception(SQLiteError), throwQxFx0)
+import qualified Data.Map.Strict as Map
+import QxFx0.ExceptionPolicy (mkSQLiteError, throwQxFx0)
 import QxFx0.Types
   ( ClusterDef(..)
   , IdentityClaimRef(..)
@@ -148,5 +149,5 @@ prepareQuery :: NSQL.Database -> Text -> Text -> IO NSQL.Statement
 prepareQuery db ctx sql = do
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left err -> throwQxFx0 (SQLiteError ("prepare " <> ctx <> " failed: " <> err))
+    Left err -> throwQxFx0 (mkSQLiteError "prepare" err (Map.singleton "context" ctx))
     Right stmt -> pure stmt

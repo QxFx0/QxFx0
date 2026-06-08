@@ -62,7 +62,7 @@ module QxFx0.Self.Essence
 
 import Control.DeepSeq (NFData)
 import qualified Crypto.Hash.SHA256 as SHA256
-import Data.Aeson (FromJSON(..), ToJSON, Value(..), encode)
+import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), encode)
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.ByteString as BS
 import Data.Foldable (foldl', toList)
@@ -194,7 +194,14 @@ data CommitmentTrigger
 
 newtype TrajectoryHash = TrajectoryHash { unTrajectoryHash :: Text }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON)
+  deriving anyclass (NFData)
+
+-- | Emit a BARE string, matching the 'String' case the FromJSON below accepts.
+-- The generic newtype ToJSON would emit @{"unTrajectoryHash":...}@ (an Object),
+-- which the hand-written FromJSON rejects — so @decode . encode@ failed on the
+-- persisted @selfEssence.ecWitnessHash@ path. (Class II round-trip fix.)
+instance ToJSON TrajectoryHash where
+  toJSON = toJSON . unTrajectoryHash
 
 instance FromJSON TrajectoryHash where
   parseJSON value =

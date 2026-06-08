@@ -13,6 +13,16 @@ import Data.Ord (Down(..))
 
 import QxFx0.Semantic.Sense
 import QxFx0.Semantic.Sense.Adjacency
+import QxFx0.Types.Sense
+  ( SenseOperator(..)
+  , SenseVector(..)
+  , ResponseSensePlan(..)
+  , MicroPlan(..)
+  , RhetoricalMove(..)
+  , FallbackPolicy(..)
+  , rhetoricalMoveFromOperator
+  , fallbackPolicyFromPhase
+  )
 import QxFx0.Types.State.DialogueDevelopment
 import QxFx0.Types
 
@@ -37,11 +47,11 @@ buildResponseSensePlan family ledger phase inputVec =
       , rspDistance = distance
       }
 
-familySenseBundle :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> SenseVector -> (CanonicalMoveFamily, ResponseSensePlan, MicroPlan)
-familySenseBundle family ledger phase thread inputVec =
+familySenseBundle :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> DialogueThread -> SenseVector -> Double -> (CanonicalMoveFamily, ResponseSensePlan, MicroPlan)
+familySenseBundle family ledger phase thread inputVec doubt =
   let constrainedFamily = constrainFamilyBySense family ledger phase inputVec
       sensePlan = buildResponseSensePlan constrainedFamily ledger phase inputVec
-      microPlan = buildMicroPlan thread ledger phase sensePlan
+      microPlan = buildMicroPlan thread ledger phase sensePlan doubt
   in (constrainedFamily, sensePlan, microPlan)
 
 constrainFamilyBySense :: CanonicalMoveFamily -> DialogueCommitmentLedger -> DialoguePhase -> SenseVector -> CanonicalMoveFamily
@@ -59,8 +69,8 @@ constrainFamilyBySense family ledger phase inputVec =
        (CMConfront, OpDistinguish) -> CMConfront
        (other, _) -> other
 
-buildMicroPlan :: DialogueThread -> DialogueCommitmentLedger -> DialoguePhase -> ResponseSensePlan -> MicroPlan
-buildMicroPlan thread ledger phase sensePlan =
+buildMicroPlan :: DialogueThread -> DialogueCommitmentLedger -> DialoguePhase -> ResponseSensePlan -> Double -> MicroPlan
+buildMicroPlan thread ledger phase sensePlan doubt =
   let operator = rspChosenOperator sensePlan
       phaseBudget = case phase of
         Repairing -> 1
@@ -70,26 +80,26 @@ buildMicroPlan thread ledger phase sensePlan =
         Advancing -> 2
         Contesting -> 1
         Closing -> 1
-      explicitness = clamp01 (0.35 + fromIntegral (length (dtAcceptedTerms thread)) * 0.02 + if commitmentAllowsAdvance ledger then 0.15 else (-0.10))
+      -- WP-D R-D2: explicitness modulation based on doubt
+      -- Base explicitness from dialogue state
+      baseExplicitness = 0.35 + fromIntegral (length (dtAcceptedTerms thread)) * 0.02 + if commitmentAllowsAdvance ledger then 0.15 else (-0.10)
+      -- High doubt (≥0.75) reduces explicitness by up to 0.20
+      -- Rationale: uncertainty → simpler, more tentative language
+      doubtPenalty = if doubt >= 0.75 then 0.20 * (doubt - 0.75) / 0.25 else 0.0
+      explicitness = clamp01 (baseExplicitness - doubtPenalty)
       moves = case operator of
-        OpRepair -> ["repair"]
-        OpClarify -> ["clarify"]
-        OpGround -> ["ground"]
-        OpDefine -> ["define"]
-        OpExplainCause -> ["explain_cause"]
-        OpDistinguish -> ["distinguish"]
-        OpDeepen -> ["deepen"]
-        OpReflect -> ["reflect"]
-        OpExplainPurpose -> ["explain_purpose"]
-        OpNextStep -> ["next_step"]
-        OpConstrain -> ["constrain"]
-      fallbackPolicy = case phase of
-        Repairing -> "repair_first"
-        Clarifying -> "clarify_first"
-        Grounding -> "ground_first"
-        Contesting -> "contest_bound"
-        Closing -> "close_bound"
-        _ -> "safe_degrade"
+        OpRepair -> [MvRepair]
+        OpClarify -> [MvClarify]
+        OpGround -> [MvGround]
+        OpDefine -> [MvDefine]
+        OpExplainCause -> [MvExplainCause]
+        OpDistinguish -> [MvDistinguish]
+        OpDeepen -> [MvDeepen]
+        OpReflect -> [MvReflect]
+        OpExplainPurpose -> [MvExplainPurpose]
+        OpNextStep -> [MvNextStep]
+        OpConstrain -> [MvConstrain]
+      fallbackPolicy = fallbackPolicyFromPhase phase
   in MicroPlan
       { mpRhetoricalMoves = take 2 moves
       , mpExplicitness = explicitness

@@ -33,7 +33,7 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy (tryQxFx0)
 
 currentSchemaVersion :: Int
-currentSchemaVersion = 3
+currentSchemaVersion = 4
 
 -- | Tables that must exist for the runtime to function.
 schemaContractTables :: [Text]
@@ -62,6 +62,10 @@ schemaContractColumns = Map.fromList
   , ( "shadow_divergence_log"
     , [ "shadow_snapshot_id"
       , "shadow_divergence_kind"
+      ]
+    )
+  , ( "runtime_sessions"
+    , [ "state_revision"
       ]
     )
   ]

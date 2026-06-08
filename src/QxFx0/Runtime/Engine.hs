@@ -28,39 +28,113 @@ import QxFx0.Runtime.Session
   , printStateSummary
   , runtimeToDialogueMode
   )
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), throwQxFx0)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), mkRuntimeInitError, throwQxFx0)
+import qualified QxFx0.Observability.Logging as Log
+import qualified QxFx0.Observability.Metrics as Metrics
 
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Control.Exception (IOException, try)
 import System.IO (hPutStrLn, stderr, hIsEOF, stdin)
 import System.Exit (exitSuccess)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Data.IORef (newIORef)
 
 runTurn :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
 runTurn ctx ss input sessionId = do
+  Log.logDebug "Starting turn execution"
+    (Log.addContext "session_id" sessionId $
+     Log.addContext "input_length" (T.pack $ show $ T.length input) Log.emptyContext)
   expectedRevision <- StatePersistence.loadStateRevision (withRuntimeDb ctx) sessionId
   runTurnWithRevision ctx ss input sessionId expectedRevision
 
 runTurnWithRevision :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
 runTurnWithRevision ctx ss input sessionId expectedRevision
-  | T.length input > maxInputLength = return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
+  | T.length input > maxInputLength = do
+      Log.logWarn "Input exceeds maximum length"
+        (Log.addContext "input_length" (T.pack $ show $ T.length input) $
+         Log.addContext "max_length" (T.pack $ show maxInputLength) Log.emptyContext)
+      return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
   | otherwise = withRuntimeSession ctx sessionId $ do
+      startTime <- getCurrentTime
       turnResult <- try (runTurnBody ctx ss input sessionId expectedRevision) :: IO (Either QxFx0Exception (SystemState, Text))
+      endTime <- getCurrentTime
+      let duration = diffUTCTime endTime startTime
+      
+      -- Create metrics registry for this turn
+      metricsRegistry <- newIORef []
+      
       case turnResult of
-        Left (EssenceRupture detail) -> pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
-        Left (EmbeddingError detail) -> pure (ss, "Turn blocked: embedding backend [" <> detail <> "]")
-        Left err -> throwQxFx0 err
-        Right result -> pure result
+        Left (EssenceRupture detail) -> do
+          Log.logError "Turn blocked by essence rupture"
+            (Log.addContext "detail" detail Log.emptyContext)
+          Metrics.recordCounter metricsRegistry "turn.error" 1.0
+            (M.singleton "error_type" "essence_rupture")
+          Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
+          pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
+        Left (EmbeddingError detail) -> do
+          Log.logError "Turn blocked by embedding error"
+            (Log.addContext "detail" detail Log.emptyContext)
+          Metrics.recordCounter metricsRegistry "turn.error" 1.0
+            (M.singleton "error_type" "embedding_error")
+          Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
+          pure (ss, "Turn blocked: embedding backend [" <> detail <> "]")
+        Left err -> do
+          Log.logException err
+            (Log.addContext "session_id" sessionId Log.emptyContext)
+          Metrics.recordCounter metricsRegistry "turn.error" 1.0
+            (M.singleton "error_type" "other")
+          throwQxFx0 err
+        Right result -> do
+          Log.logInfo "Turn completed successfully"
+            (Log.addContext "session_id" sessionId $
+             Log.addContext "duration_ms" (T.pack $ show $ round (realToFrac duration * 1000 :: Double)) Log.emptyContext)
+          Metrics.recordCounter metricsRegistry "turn.success" 1.0 M.empty
+          Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
+          pure result
 
 runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
 runTurnBody ctx ss input sessionId expectedRevision = do
   let pio = toPipelineIO ctx
+  
+  Log.logDebug "Turn pipeline: resolving request ID" Log.emptyContext
   reqId <- resolveRequestId pio
+  
+  Log.logDebug "Turn pipeline: preparing turn" Log.emptyContext
+  prepareStart <- getCurrentTime
   prepared <- prepareTurn pio ss input sessionId reqId
+  prepareEnd <- getCurrentTime
+  
+  Log.logDebug "Turn pipeline: planning turn" Log.emptyContext
+  planStart <- getCurrentTime
   planned <- planTurn pio ss prepared
+  planEnd <- getCurrentTime
+  
+  Log.logDebug "Turn pipeline: rendering turn" Log.emptyContext
+  renderStart <- getCurrentTime
   rendered <- renderTurn pio ss planned
+  renderEnd <- getCurrentTime
+  
+  Log.logDebug "Turn pipeline: finalizing turn" Log.emptyContext
+  finalizeStart <- getCurrentTime
   tr <- finalizeTurn pio ss sessionId expectedRevision reqId rendered
+  finalizeEnd <- getCurrentTime
+  
+  -- Log phase timings
+  let prepareDuration = diffUTCTime prepareEnd prepareStart
+      planDuration = diffUTCTime planEnd planStart
+      renderDuration = diffUTCTime renderEnd renderStart
+      finalizeDuration = diffUTCTime finalizeEnd finalizeStart
+  
+  Log.logDebug "Turn pipeline phases completed"
+    (Log.addContext "prepare_ms" (T.pack $ show $ round (realToFrac prepareDuration * 1000 :: Double)) $
+     Log.addContext "plan_ms" (T.pack $ show $ round (realToFrac planDuration * 1000 :: Double)) $
+     Log.addContext "render_ms" (T.pack $ show $ round (realToFrac renderDuration * 1000 :: Double)) $
+     Log.addContext "finalize_ms" (T.pack $ show $ round (realToFrac finalizeDuration * 1000 :: Double)) Log.emptyContext)
+  
   pure (trNextSs tr, trOutput tr)
 
 resolveRequestId :: PipelineIO -> IO Text
@@ -68,7 +142,8 @@ resolveRequestId pio = do
   requestIdResult <- resolveTurnEffect pio TurnReqRequestId
   case requestIdResult of
     TurnResRequestId rid -> pure rid
-    _ -> throwQxFx0 (RuntimeInitError "request id effect returned unexpected result")
+    _ -> throwQxFx0 $ mkRuntimeInitError "Engine" "resolve_request_id" "UNEXPECTED_EFFECT_RESULT"
+      (M.singleton "expected" "TurnResRequestId")
 
 runTurnInSession :: Session -> Text -> IO (Session, Text)
 runTurnInSession session text = do

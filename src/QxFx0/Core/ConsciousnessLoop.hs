@@ -10,6 +10,9 @@ module QxFx0.Core.ConsciousnessLoop
   , narrativeConfidenceThreshold
   , updateAfterResponse
   , addCoreSignal
+  , computeDoubt
+  , doubtLoopActive
+  , doubtSuppressionThreshold
   ) where
 
 import Data.Text (Text)
@@ -24,7 +27,7 @@ import QxFx0.Semantic.KeywordMatch
   ( tokenizeKeywordText
   , containsAnyKeywordPhrase
   )
-import QxFx0.Core.Consciousness
+import QxFx0.Core.StanceClassifier
   ( ConsciousnessModel(..)
   , ConsciousState(..), SelfInterpretation(..)
   , KernelOutput(..), ConsciousnessNarrative(..)
@@ -125,9 +128,42 @@ runConsciousnessLoopWithSalience
   -> Double
   -> (ConsciousnessLoop, Text)
 runConsciousnessLoopWithSalience salience loop semanticInput humanTheta resonance =
-  let (loop', fragment) = runConsciousnessLoop loop semanticInput humanTheta resonance
-      weighted          = applySalienceToNarrativeFragment salience fragment
+  let (loop0, fragment) = runConsciousnessLoop loop semanticInput humanTheta resonance
+      -- WP-D: derive a doubt score from the salience verdict and record it
+      -- (previously clDoubtScore was initialised to 0.0 and never written).
+      doubt  = computeDoubt salience
+      loop'  = loop0 { clDoubtScore = doubt }
+      -- WP-D reader: under the (default-off) doubt loop, a high doubt score
+      -- suppresses the narrative fragment — the system "hesitates" when its
+      -- own signals are uncertain, rather than asserting. Flag-off => identity.
+      weighted
+        | doubtLoopActive && doubt >= doubtSuppressionThreshold = T.empty
+        | otherwise = applySalienceToNarrativeFragment salience fragment
   in (loop', weighted)
+
+-- | WP-D: default-on promotion flag gating the doubt-driven narrative
+-- suppression. Promoted to default-on (ADR-0045, 2026-06-04); registered in the
+-- flag-off discipline (@scripts/check_architecture.sh@ rule [20]).
+doubtLoopActive :: Bool
+doubtLoopActive = True
+
+-- | Doubt at or above which the narrative is suppressed when the loop is on.
+doubtSuppressionThreshold :: Double
+doubtSuppressionThreshold = 0.75
+
+-- | WP-D: compute a doubt score in @[0,1]@ from the salience verdict. Doubt is
+-- the complement of decisiveness (1 - confidence), amplified when the leading
+-- driver is ambiguity (counterfactual spread) and forced high under a Conatus
+-- gate (structural threat). This is the living producer of 'clDoubtScore'.
+computeDoubt :: Salience -> Double
+computeDoubt salience =
+  let base = 1.0 - clamp01 (salienceConfidence salience)
+  in clamp01 $ case salienceDriver salience of
+       DrivenByConatusGate    -> max base 0.9
+       DrivenByCounterfactual -> min 1.0 (base + 0.2)
+       _                      -> base
+  where
+    clamp01 x = max 0.0 (min 1.0 x)
 
 -- | Confidence threshold below which the narrative fragment is
 -- suppressed (replaced by an empty 'Text') by

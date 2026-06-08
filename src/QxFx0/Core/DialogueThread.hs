@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Core.DialogueThread
@@ -27,14 +28,14 @@ import QxFx0.Types (TruthContractStatus)
 data CommitmentAdmissionInput = CommitmentAdmissionInput
   { caiTruthContractStatus :: !TruthContractStatus
   , caiConatusGateFired :: !Bool
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data CommitmentAdmissionDecision
   = CadAdmitCanonical
   | CadCapUnresolved
   | CadPreserveContested
   | CadSuspendStrengthening
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 deriveDialogueThread :: DialogueThread -> DialogueCommitmentLedger -> DialogueState -> UtteranceSemanticFrame -> DialogueThread
 deriveDialogueThread previous ledger dialogue frame =
