@@ -31,9 +31,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup swap (16GB runner safety)
+      - name: Setup swap (runner memory safety)
         run: |
-          sudo fallocate -l 8G /swapfile
+          # Runner images may ship an active /swapfile; free it before resizing
+          # (otherwise fallocate fails with "Text file busy").
+          sudo swapoff -a || true
+          sudo rm -f /swapfile
+          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
