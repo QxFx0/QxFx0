@@ -42,6 +42,9 @@ jobs:
       QXFX0_ENABLE_COVERAGE_GATE: 0
       QXFX0_RELEASE_SMOKE_MODE: degraded-local
       QXFX0_GF_RUNTIME: 1
+      # GF C runtime built into /tmp/gf-install; help gcc/ld + runtime find it.
+      LIBRARY_PATH: /tmp/gf-install/usr/lib
+      C_INCLUDE_PATH: /tmp/gf-install/usr/include
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,9 +76,12 @@ jobs:
 
       - name: Configure cabal for CI GF runtime
         run: |
+          # extra-lib-dirs must apply to the pgf2 *dependency* too, so use a
+          # `package *` stanza (top-level extra-lib-dirs does not reach deps).
           cat > cabal.project.local <<'EOF'
-          extra-lib-dirs: /tmp/gf-install/usr/lib
-          extra-include-dirs: /tmp/gf-install/usr/include
+          package *
+            extra-lib-dirs: /tmp/gf-install/usr/lib
+            extra-include-dirs: /tmp/gf-install/usr/include
           package qxfx0
             ghc-options: -optl-Wl,-rpath,/tmp/gf-install/usr/lib
           EOF
