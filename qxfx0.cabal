@@ -84,6 +84,7 @@ library
     QxFx0.Types.ClaimAst
     QxFx0.Types.CommitmentStoreAdmission
     QxFx0.Types.FMAR
+    QxFx0.Types.Lexicon.RuntimeParadigms
     QxFx0.Types.TurnProjection
     QxFx0.Types.Vec
     QxFx0.Types.ExternalQuery

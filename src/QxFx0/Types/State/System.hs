@@ -88,7 +88,7 @@ import QxFx0.Types.Domain
   , SemanticScene
   , UserState
   )
-import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
+import QxFx0.Types.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Types.Bayesian (BeliefState, initialBeliefs)
 import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
