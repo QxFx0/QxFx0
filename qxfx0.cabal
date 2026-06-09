@@ -271,6 +271,7 @@ library
      QxFx0.Semantic.SemanticScene
      QxFx0.Semantic.SemanticInput
      QxFx0.Semantic.AuthorityParse
+     QxFx0.Semantic.Authority.GfExprParse
      QxFx0.Semantic.Retrieve
      QxFx0.Core.DialogueThread
      QxFx0.Core.SensePlan
