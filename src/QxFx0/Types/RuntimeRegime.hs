@@ -68,9 +68,9 @@ currentMathVersion :: Int
 currentMathVersion = 1
 
 -- | Current CTS constitution version.
--- Initial value 43 = CTS-43 (commitment quarantine).
+-- Initial value 44 = CTS-44 (commitment promotion).
 currentConstitutionVersion :: Int
-currentConstitutionVersion = 43
+currentConstitutionVersion = 44
 
 -- | Default regime for new sessions, reflecting current code state.
 defaultRuntimeRegime :: RuntimeRegime

@@ -82,6 +82,8 @@ data LineageEvent
   = LineageCommitted !TurnSeq
   | LineageRevised !TurnSeq !FactualClaimPayload
   | LineageRetracted !TurnSeq !RetractionReason
+  | LineagePromoted !TurnSeq
+    -- ^ CTS-44: promoted from quarantine to active on this turn.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 

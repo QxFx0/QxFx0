@@ -17,7 +17,7 @@ import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
-import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine)
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore)
 import QxFx0.Render.Authority (parseAuthoritySurface, AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
@@ -332,7 +332,7 @@ fieldHeuristicsMaxDelta old new = maximumOrZero
 maximumOrZero :: [Double] -> Double
 maximumOrZero = foldr max 0.0
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision)
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
 buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
@@ -554,19 +554,22 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       store1 = case (commitDecision, tpSemanticAnchor tp) of
         (CsaAdmitCanonical, Just anchor) ->
           let anchorPayload = anchorToFactualClaim anchor turnSeq
-          in commitObservation anchorPayload store0
+          in fst (commitObservation anchorPayload store0)
         (CsaSuppress, Just anchor) ->
           let anchorPayload = anchorToFactualClaim anchor turnSeq
           in quarantineObservation anchorPayload store0
         _ -> store0
-      nextWithCommitments = case (commitDecision, mClaimPayload) of
-        (CsaAdmitCanonical, Just claimPayload) -> nextWithLog
-          { ssSemanticCommitments =
-              Just (commitObservation claimPayload { fcpTurnSeq = turnSeq } store1) }
-        (CsaSuppress, Just claimPayload) -> nextWithLog
-          { ssSemanticCommitments =
-              Just (quarantineObservation claimPayload { fcpTurnSeq = turnSeq } store1) }
-        _ -> nextWithLog { ssSemanticCommitments = Just store1 }
+      (store2, promotedCount) = case (commitDecision, mClaimPayload) of
+        (CsaAdmitCanonical, Just claimPayload) ->
+          let payload = claimPayload { fcpTurnSeq = turnSeq }
+              (committed, newCid) = commitObservation payload store1
+          in promoteMatchingQuarantine newCid (fcpStatement payload) committed
+        (CsaSuppress, Just claimPayload) ->
+          ( quarantineObservation claimPayload { fcpTurnSeq = turnSeq } store1
+          , 0
+          )
+        _ -> (store1, 0)
+      nextWithCommitments = nextWithLog { ssSemanticCommitments = Just store2 }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of
         Just c  -> Just c
@@ -627,6 +630,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       in ( nextWithMood
     , commitmentTrigger
     , commitDecision
+    , promotedCount
     )
 
 maxProvisionalAtoms :: Int
