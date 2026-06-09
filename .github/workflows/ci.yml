@@ -107,6 +107,13 @@ jobs:
       - name: Python unit tests
         run: python3 -m unittest discover -s test -p 'test_*.py'
 
+      - name: Generate morphology artifacts
+        run: |
+          # forms_by_surface.json / lexicon.db are gitignored (large, generated);
+          # regenerate from tracked lexicon source so runtime init + lexicon
+          # tests can resolve resources/morphology/*.
+          python3 scripts/export_lexicon.py
+
       - name: Cabal update
         run: cabal update
 
