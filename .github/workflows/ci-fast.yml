@@ -23,7 +23,7 @@ env:
 
 jobs:
   ci-fast:
-    name: CI Fast (build + lint + format + gf-compile)
+    name: CI Fast (lint + format + gf-compile)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -62,9 +62,10 @@ jobs:
       - name: Cabal update
         run: cabal update
 
-      # ── Build lib only (fast feedback, not full build) ──────────────
-      - name: Build lib
-        run: cabal build qxfx0 2>&1 | tail -20
+      # NOTE: the compile signal (cabal build all + fast tests) lives in the
+      # Core Contract job (ci.yml), which provisions the GF C runtime. CI Fast
+      # stays lint/format/gf-compile only — static checks that need neither the
+      # GF runtime nor a built library, so it gives quick per-push feedback.
 
       # ── hlint ───────────────────────────────────────────────────────
       - name: Install hlint
