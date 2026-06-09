@@ -99,6 +99,21 @@ under explicit regime rules:
 | GF round-trip ≥ 99% on Move* subset | `gfExprToClaimAst` + `parseClaimAstGf` | `Test.Suite.AuthoritySurface.coverageTest` |
 | Non-authority surfaces return Nothing | `parseAuthoritySurfacePattern` | `Test.Suite.AuthoritySurface.negativeCorpusTest` |
 
+**C3 strengthening addendum (2026-06-10) — constitution-governed commitment accountability.**
+The original C3 (2026-06-03) proved commitments are *stored*. The CTS-42/43/44 program upgrades
+C3 to the full M6 criterion — commitments are *held accountably under the constitution*, with
+authoritative vs non-authoritative state distinguished and corrections replay-visible:
+
+| Claim | Evidence | Test |
+|-------|---------|------|
+| Only faithful-authority surfaces persist as canonical (degraded/non-authoritative do not) | CTS-42 `admitCommitmentToStore` on `TruthContractStatus`; `trcCommitmentStoreDecision` | `Test.Suite.CommitmentStoreAdmission` |
+| Suppressed (non-authoritative) claims are quarantined, not silently dropped; replay-visible | CTS-43 `quarantineObservation`; `trcQuarantinedCommitmentCount` | `Test.Suite.CommitmentQuarantine` |
+| Quarantined claim promoted to canonical when a later authoritative turn re-establishes it (correction/repair) | CTS-44 `promoteMatchingQuarantine`; `LineagePromoted`; `trcPromotedFromQuarantineCount` | `Test.Suite.CommitmentPromotion` |
+
+This is the C3 axis of subject structure: the system distinguishes its own bounded,
+authoritative commitments from non-authoritative residue and refines them under correction in a
+governance-visible way. `currentConstitutionVersion = 44`.
+
 ### C4 — Bidirectional semantic participation
 
 | Claim | Evidence | Test |

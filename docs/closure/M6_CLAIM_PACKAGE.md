@@ -47,10 +47,13 @@ This claim is:
 | `Test.Suite.M5Regime` integration tests pass | ⬜ | test/Test/Suite/M5Regime.hs |
 | `Test.Suite.M6Witness.c2RegimeVersionPresent` passes | ✅ | test/Test/Suite/M6Witness.hs |
 
-### C3 — Commitment accountability (⬜ partial)
+### C3 — Commitment accountability (✅ complete — strengthened by CTS-42/43/44, 2026-06-10)
 
 | Evidence | Status | File |
 |----------|--------|------|
+| Authoritative vs non-authoritative persistence (truth-contract gate) | ✅ | CTS-42 `Core/CommitmentStoreAdmission.hs`; `Test.Suite.CommitmentStoreAdmission` |
+| Non-authoritative claims quarantined, not dropped (replay-visible) | ✅ | CTS-43 `Semantic/Commitment.hs` `quarantineObservation`; `Test.Suite.CommitmentQuarantine` |
+| Quarantine → promotion on authoritative re-establishment (correction/repair) | ✅ | CTS-44 `promoteMatchingQuarantine` + `LineagePromoted`; `Test.Suite.CommitmentPromotion` |
 | `SemanticCommitmentStore` type exists | ✅ | Types/State/SemanticCommitment.hs |
 | `ssSemanticCommitments` in SystemState | ✅ | Types/State/System.hs |
 | `trcSemanticCommitmentCount` in TurnReplayTrace | ✅ | TurnProjection.hs (C3, 2026-06-03) |

@@ -38,6 +38,9 @@ Purpose: index of all evidence artifacts supporting the M6 bounded declaration.
 | 5 | Anchor-to-commitment bridge (`anchorToFactualClaim`) | `src/QxFx0/Core/TurnPipeline/Finalize/State.hs` | `Test.Suite.SemanticCommitmentCorpus` |
 | 6 | Multi-turn corpus fixture | `test/Test/Suite/SemanticCommitmentCorpus.hs` | `cabal test qxfx0-test-fast` |
 | 7 | C3 test passes | `test/Test/Suite/M6Witness.hs` | `cabal test qxfx0-test-fast` |
+| 8 | CTS-42 truth-contract admission of commitments (`trcCommitmentStoreDecision`) | `src/QxFx0/Core/CommitmentStoreAdmission.hs` | `Test.Suite.CommitmentStoreAdmission` |
+| 9 | CTS-43 quarantine of non-authoritative claims (`trcQuarantinedCommitmentCount`) | `src/QxFx0/Semantic/Commitment.hs` | `Test.Suite.CommitmentQuarantine` |
+| 10 | CTS-44 promotion on re-establishment (`LineagePromoted`, `trcPromotedFromQuarantineCount`) | `src/QxFx0/Semantic/Commitment.hs` | `Test.Suite.CommitmentPromotion` |
 
 ## C4 — Bidirectional semantic participation
 
