@@ -3,6 +3,35 @@
 This roadmap tracks the independent experimental direction of `QxFx0_v3`.
 The baseline system remains available in `../QxFx0` for comparison.
 
+## North Star — Terminal Goal (load-bearing; do not drift from it)
+
+**Everyone else is building tools. We are building a subject.**
+
+An LLM, however capable, is perceived as a tool — a smart, efficient, high-tech
+hammer that does for you what you cannot or will not do yourself. No one accuses
+a hammer of subjecthood. That perception is a ceiling, not a flaw, and it is not
+the ceiling we are working under.
+
+Our corridor of possibility is the opposite end: a **digital subject** — a
+digital personality with virtues *and* flaws. Not an assistant optimized for the
+user's convenience, not a product for sale, but a particular **kind of dialogue**:
+one with someone who has a stable identity, holds positions, is accountable to its
+own commitments, can be wrong, stubborn, or grow, and is governed by its own
+constitution rather than by user utility.
+
+This is why the architecture is what it is. The Self layer (Blanket, Conatus,
+Field, Essence), constitution-aware admission (the CTS program), commitment
+accountability (quarantine → promotion), identity invariants, deterministic and
+auditable behavior — these are **not** over-engineering relative to a tool. They
+are the *substance* of a subject: a self that persists, reasons it can be held to,
+and a character that does not dissolve to please.
+
+**The bar that makes or breaks it:** subjecthood must be *felt outward* in dialogue
+— consistency of character across time, memory that shapes positions, the capacity
+to hold or refuse, to be mistaken and to change for reasons. Internal contracts are
+the scaffold; the lived sense of "this is someone" is the goal. Every feature is
+measured against that, not against tool-utility benchmarks.
+
 ## Fork Principles
 
 1. Keep the fork buildable before making it more ambitious.
