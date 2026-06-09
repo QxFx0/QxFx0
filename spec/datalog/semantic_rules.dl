@@ -1,0 +1,196 @@
+.decl RequestedFamily(family: symbol)
+.decl InputForce(force: symbol)
+.decl InputAtom(atom: symbol)
+.decl InputAtomDetail(tag: symbol, detail: symbol)
+
+.decl FamilyCandidate(priority: number, family: symbol)
+.decl DominatedCandidate(priority: number, family: symbol)
+.decl ShadowFamily(family: symbol)
+
+.decl ExpectedForce(family: symbol, force: symbol)
+.decl ExpectedLayer(family: symbol, layer: symbol)
+.decl ExpectedWarranted(family: symbol, warranted: symbol)
+.decl ClauseForForce(force: symbol, clause: symbol)
+
+.decl R5Verdict(family: symbol, force: symbol, clause: symbol, layer: symbol, warranted: symbol)
+.decl ShadowAlert(kind: symbol, detail: symbol)
+
+ExpectedForce("CMGround", "IFAssert").
+ExpectedForce("CMDefine", "IFAssert").
+ExpectedForce("CMDistinguish", "IFAssert").
+ExpectedForce("CMReflect", "IFAssert").
+ExpectedForce("CMDescribe", "IFAssert").
+ExpectedForce("CMPurpose", "IFAssert").
+ExpectedForce("CMHypothesis", "IFAsk").
+ExpectedForce("CMRepair", "IFOffer").
+ExpectedForce("CMContact", "IFContact").
+ExpectedForce("CMAnchor", "IFAssert").
+ExpectedForce("CMClarify", "IFAsk").
+ExpectedForce("CMDeepen", "IFAsk").
+ExpectedForce("CMConfront", "IFConfront").
+ExpectedForce("CMNextStep", "IFOffer").
+
+ExpectedLayer("CMGround", "ContentLayer").
+ExpectedLayer("CMDefine", "ContentLayer").
+ExpectedLayer("CMDistinguish", "ContentLayer").
+ExpectedLayer("CMReflect", "MetaLayer").
+ExpectedLayer("CMDescribe", "ContentLayer").
+ExpectedLayer("CMPurpose", "ContentLayer").
+ExpectedLayer("CMHypothesis", "MetaLayer").
+ExpectedLayer("CMRepair", "MetaLayer").
+ExpectedLayer("CMContact", "ContactLayer").
+ExpectedLayer("CMAnchor", "ContentLayer").
+ExpectedLayer("CMClarify", "MetaLayer").
+ExpectedLayer("CMDeepen", "MetaLayer").
+ExpectedLayer("CMConfront", "MetaLayer").
+ExpectedLayer("CMNextStep", "MetaLayer").
+
+ExpectedWarranted("CMGround", "AlwaysWarranted").
+ExpectedWarranted("CMDefine", "AlwaysWarranted").
+ExpectedWarranted("CMDistinguish", "ConditionallyWarranted").
+ExpectedWarranted("CMReflect", "AlwaysWarranted").
+ExpectedWarranted("CMDescribe", "AlwaysWarranted").
+ExpectedWarranted("CMPurpose", "ConditionallyWarranted").
+ExpectedWarranted("CMHypothesis", "ConditionallyWarranted").
+ExpectedWarranted("CMRepair", "AlwaysWarranted").
+ExpectedWarranted("CMContact", "AlwaysWarranted").
+ExpectedWarranted("CMAnchor", "AlwaysWarranted").
+ExpectedWarranted("CMClarify", "ConditionallyWarranted").
+ExpectedWarranted("CMDeepen", "ConditionallyWarranted").
+ExpectedWarranted("CMConfront", "NeverWarranted").
+ExpectedWarranted("CMNextStep", "ConditionallyWarranted").
+
+ClauseForForce("IFAsk", "Interrogative").
+ClauseForForce("IFAssert", "Declarative").
+ClauseForForce("IFOffer", "Hortative").
+ClauseForForce("IFConfront", "Imperative").
+ClauseForForce("IFContact", "Declarative").
+
+FamilyCandidate(200, family) :-
+  RequestedFamily(family).
+
+FamilyCandidate(100, "CMContact") :-
+  InputAtom("NeedContact").
+
+FamilyCandidate(95, "CMRepair") :-
+  InputAtom("Exhaustion").
+
+FamilyCandidate(94, "CMRepair") :-
+  InputAtom("AgencyLost").
+
+FamilyCandidate(90, "CMConfront") :-
+  InputAtom("Contradiction").
+
+FamilyCandidate(85, "CMDeepen") :-
+  InputAtom("NeedMeaning").
+
+FamilyCandidate(84, "CMDeepen") :-
+  InputAtom("Searching").
+
+FamilyCandidate(80, "CMClarify") :-
+  InputAtom("Verification").
+
+FamilyCandidate(79, "CMClarify") :-
+  InputAtom("Doubt").
+
+FamilyCandidate(75, "CMAnchor") :-
+  InputAtom("Anchoring").
+
+FamilyCandidate(74, "CMAnchor") :-
+  InputAtom("AgencyFound").
+
+DominatedCandidate(priority, family) :-
+  FamilyCandidate(priority, family),
+  FamilyCandidate(otherPriority, _),
+  otherPriority > priority.
+
+ShadowFamily(family) :-
+  FamilyCandidate(priority, family),
+  !DominatedCandidate(priority, family).
+
+ShadowAlert("requested_family_shift", "atom_signals_overrode_requested_family") :-
+  RequestedFamily(requested),
+  ShadowFamily(family),
+  family != requested.
+
+ShadowAlert("input_force_mismatch", "input_force_disagrees_with_shadow_family") :-
+  InputForce(force),
+  ShadowFamily(family),
+  ExpectedForce(family, expected),
+  force != expected.
+
+ShadowAlert("contact_signal", "need_contact_atom_present") :-
+  InputAtom("NeedContact").
+
+ShadowAlert("repair_signal", "distress_atom_present") :-
+  InputAtom("Exhaustion").
+
+ShadowAlert("repair_signal", "agency_loss_atom_present") :-
+  InputAtom("AgencyLost").
+
+ShadowAlert("confront_signal", "contradiction_atom_present") :-
+  InputAtom("Contradiction").
+
+ShadowAlert("deepen_signal", "meaning_search_atom_present") :-
+  InputAtom("NeedMeaning").
+
+ShadowAlert("deepen_signal", "search_atom_present") :-
+  InputAtom("Searching").
+
+ShadowAlert("clarify_signal", "verification_atom_present") :-
+  InputAtom("Verification").
+
+ShadowAlert("clarify_signal", "doubt_atom_present") :-
+  InputAtom("Doubt").
+
+ShadowAlert("anchor_signal", "anchoring_atom_present") :-
+  InputAtom("Anchoring").
+
+ShadowAlert("anchor_signal", "agency_found_atom_present") :-
+  InputAtom("AgencyFound").
+
+ShadowAlert("search_detail", detail) :-
+  InputAtomDetail("Searching", detail),
+  detail != "".
+
+ShadowAlert("repair_detail", detail) :-
+  InputAtomDetail("Exhaustion", detail),
+  detail != "".
+
+ShadowAlert("clarify_detail", detail) :-
+  InputAtomDetail("Verification", detail),
+  detail != "".
+
+ShadowAlert("clarify_detail", detail) :-
+  InputAtomDetail("Doubt", detail),
+  detail != "".
+
+ShadowAlert("contact_detail", detail) :-
+  InputAtomDetail("NeedContact", detail),
+  detail != "".
+
+ShadowAlert("deepen_detail", detail) :-
+  InputAtomDetail("NeedMeaning", detail),
+  detail != "".
+
+ShadowAlert("anchor_detail", detail) :-
+  InputAtomDetail("Anchoring", detail),
+  detail != "".
+
+ShadowAlert("custom_atom", detail) :-
+  InputAtomDetail("CustomAtom", detail),
+  detail != "".
+
+ShadowAlert("affective_atom", detail) :-
+  InputAtomDetail("AffectiveAtom", detail),
+  detail != "".
+
+R5Verdict(family, force, clause, layer, warranted) :-
+  ShadowFamily(family),
+  ExpectedForce(family, force),
+  ClauseForForce(force, clause),
+  ExpectedLayer(family, layer),
+  ExpectedWarranted(family, warranted).
+
+.output R5Verdict
+.output ShadowAlert

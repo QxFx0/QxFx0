@@ -23,6 +23,7 @@ result-*
 *.db-wal
 *.db-journal
 semantic_rules.dl
+!spec/datalog/semantic_rules.dl
 .test-tmp/
 .verify-home/
 R5Verdict.csv
