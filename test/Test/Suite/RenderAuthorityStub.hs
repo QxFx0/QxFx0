@@ -11,6 +11,7 @@ module Test.Suite.RenderAuthorityStub (tests) where
 import Prelude
 
 import qualified QxFx0.Render.Authority as Auth
+import qualified QxFx0.Runtime.AuthorityParse as RuntimeAuth
 import QxFx0.Types.State.SemanticCommitment
   ( FactualClaimPayload(..)
   , CommitmentOrigin(..)
@@ -54,42 +55,42 @@ tests = testGroup "Render.Authority (Package 4)"
 
   , testCase "parser recognises en:UserIs" $ do
       let surface = Auth.AuthoritySurface "User is a software developer."
-      case Auth.parseAuthoritySurface surface of
+      case Auth.parseAuthoritySurfacePattern surface of
         Just p  -> fcpStatement p @?= "User is a software developer."
         Nothing -> assertBool "expected parse success" False
 
   , testCase "parser recognises ru:UserIs" $ do
       let surface = Auth.AuthoritySurface "Пользователь — разработчик."
-      case Auth.parseAuthoritySurface surface of
+      case Auth.parseAuthoritySurfacePattern surface of
         Just p  -> fcpStatement p @?= "Пользователь — разработчик."
         Nothing -> assertBool "expected parse success" False
 
   , testCase "parser recognises en:TopicIs" $ do
       let surface = Auth.AuthoritySurface "Topic is closure plan."
-      case Auth.parseAuthoritySurface surface of
+      case Auth.parseAuthoritySurfacePattern surface of
         Just p  -> fcpStatement p @?= "Topic is closure plan."
         Nothing -> assertBool "expected parse success" False
 
   , testCase "parser recognises ru:TopicIs" $ do
       let surface = Auth.AuthoritySurface "Тема — план закрытия."
-      case Auth.parseAuthoritySurface surface of
+      case Auth.parseAuthoritySurfacePattern surface of
         Just p  -> fcpStatement p @?= "Тема — план закрытия."
         Nothing -> assertBool "expected parse success" False
 
   , testCase "parser returns Nothing for non-commitment text" $
-      Auth.parseAuthoritySurface (Auth.AuthoritySurface "Hello, world!")
+      Auth.parseAuthoritySurfacePattern (Auth.AuthoritySurface "Hello, world!")
         @?= Nothing
 
   , testCase "renderer round-trips canonical payload" $ do
       let surface = Auth.renderAuthoritySurface canonicalPayload
-      case Auth.parseAuthoritySurface surface of
+      case RuntimeAuth.parseAuthoritySurfaceRuntime surface of
         Just p  -> fcpStatement p @?= fcpStatement canonicalPayload
         Nothing -> assertBool "expected round-trip" False
 
   , testCase "round-trip property holds" $
-      Auth.roundTripProperty canonicalPayload @?= True
+      RuntimeAuth.roundTripProperty canonicalPayload @?= True
 
   , testCase "non-round-trippable surface fails property" $ do
       let bad = canonicalPayload { fcpOrigin = OriginParser "en:Unknown" }
-      Auth.roundTripProperty bad @?= False
+      RuntimeAuth.roundTripProperty bad @?= False
   ]

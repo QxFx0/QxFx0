@@ -8,6 +8,7 @@
 module QxFx0.Runtime.AuthorityParse
   ( parseAuthoritySurfaceRuntime
   , parseAuthoritySurfaceIO
+  , roundTripProperty
   ) where
 
 import Data.Text (Text)
@@ -19,6 +20,7 @@ import QxFx0.Render.Authority
   ( AuthoritySurface(..)
   , claimAstToFactualClaim
   , parseAuthoritySurfacePattern
+  , renderAuthoritySurface
   )
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 
@@ -44,3 +46,10 @@ parseAuthoritySurfaceIO (AuthoritySurface txt)
       case result of
         Right ast -> pure (Just (claimAstToFactualClaim txt ast))
         Left _    -> pure (parseAuthoritySurfacePattern (AuthoritySurface txt))
+
+-- | Round-trip property: parse ∘ render == id on the canonical subset.
+roundTripProperty :: FactualClaimPayload -> Bool
+roundTripProperty p =
+  case parseAuthoritySurfaceRuntime (renderAuthoritySurface p) of
+    Just p' -> fcpStatement p == fcpStatement p' && fcpOrigin p == fcpOrigin p'
+    Nothing -> False

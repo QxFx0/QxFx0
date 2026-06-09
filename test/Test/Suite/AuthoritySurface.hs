@@ -35,11 +35,11 @@ import QxFx0.Types
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..))
 import QxFx0.Render.Authority
   ( AuthoritySurface(..)
-  , parseAuthoritySurface
   , parseAuthoritySurfacePattern
   , renderAuthoritySurface
   , claimAstToFactualClaim
   )
+import QxFx0.Runtime.AuthorityParse (parseAuthoritySurfaceRuntime)
 import QxFx0.Runtime.PGF (gfExprToClaimAst, astToGfExpr)
 
 -- ---------------------------------------------------------------------------
