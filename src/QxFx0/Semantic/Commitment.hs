@@ -2,6 +2,7 @@ module QxFx0.Semantic.Commitment
   ( commit
   , commitObservation
   , quarantineObservation
+  , promoteMatchingQuarantine
   , revise
   , retract
   , contradict
@@ -9,6 +10,8 @@ module QxFx0.Semantic.Commitment
 
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import QxFx0.Types.State.SemanticCommitment
 
@@ -30,14 +33,16 @@ commit cid payload store
     ts = fcpTurnSeq payload
 
 -- | Auto-generate a commitment ID and store the claim.
+-- Returns the updated store and the generated id so callers can reference
+-- the new commitment without the fragile 'scsNextId - 1' pattern.
 commitObservation
   :: FactualClaimPayload
   -> SemanticCommitmentStore
-  -> SemanticCommitmentStore
+  -> (SemanticCommitmentStore, CommitmentId)
 commitObservation payload store =
   let cid = CommitmentId (scsNextId store)
       store' = store { scsNextId = scsNextId store + 1 }
-  in commit cid payload store'
+  in (commit cid payload store', cid)
 
 -- | Auto-generate a commitment ID and place the claim in quarantine.
 -- Uses the shared 'scsNextId' so active and quarantine ids never collide.
@@ -52,6 +57,34 @@ quarantineObservation payload store =
        { scsQuarantine = HashMap.insert cid (payload, ts) (scsQuarantine store)
        , scsNextId     = scsNextId store + 1
        }
+
+-- | Promote quarantined claims whose normalized statement matches the given
+-- statement into the active store. The active commitment's lineage receives
+-- a 'LineagePromoted' entry. Returns the updated store and the count of
+-- promoted claims.
+promoteMatchingQuarantine
+  :: CommitmentId
+  -> Text
+  -> SemanticCommitmentStore
+  -> (SemanticCommitmentStore, Int)
+promoteMatchingQuarantine cid statement store =
+  let norm = T.toLower . T.strip
+      target = norm statement
+      matching =
+        HashMap.filter (\(payload, _) -> norm (fcpStatement payload) == target)
+          (scsQuarantine store)
+      promotedCount = HashMap.size matching
+      store' = store { scsQuarantine = HashMap.difference (scsQuarantine store) matching }
+      store'' = case HashMap.lookup cid (scsActive store') of
+        Just (_, ts) ->
+          let oldLineage = HashMap.lookupDefault [] cid (scsLineage store')
+          in store'
+               { scsLineage =
+                   HashMap.insert cid (oldLineage ++ [LineagePromoted ts])
+                     (scsLineage store')
+               }
+        Nothing -> store'
+  in (store'', promotedCount)
 
 -- | Replace a commitment's content; preserves the id.
 revise

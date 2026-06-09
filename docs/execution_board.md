@@ -52,7 +52,7 @@ Purpose: authoritative source for what to do next.
 | H3 (M5 governed regime) | ✅ M5Regime tests pass |
 | C1 (continuity + 6 contours P4) | ✅ |
 | C2 (restart integrity + regime markers) | ✅ |
-| C3 (commitment accountability) | ⬜ partial — type + trace field present; full auth path TBD |
+| C3 (commitment accountability) | ✅ CTS-42 admission + CTS-43 quarantine + CTS-44 promotion |
 | C4 (bidirectional semantic) | ✅ GF-E1b + CTS-40 + ADR-0019 |
 
 **M6 declaration:** ready after C3 full completion.

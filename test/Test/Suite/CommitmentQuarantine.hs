@@ -30,7 +30,8 @@ import QxFx0.Types.State.SemanticCommitment
   , TurnSeq (..)
   , quarantinedClaims
   )
-import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine)
+import QxFx0.Types.State.SemanticCommitment (LineageEvent(..))
 import QxFx0.Semantic.Retrieve (retrieve)
 import QxFx0.Types.State.System (ssSemanticCommitments, ssTruthContractStatus)
 import QxFx0.Types.TurnProjection (tqpReplayTrace, trcSemanticCommitmentCount, trcQuarantinedCommitmentCount, trcCommitmentStoreDecision)
@@ -79,7 +80,7 @@ unitQuarantineSharedNextId :: Test
 unitQuarantineSharedNextId = TestLabel "active and quarantine share scsNextId (no collision)" $
   TestCase $ do
     let store0 = emptySemanticCommitmentStore
-        store1 = commitObservation samplePayload store0
+        (store1, _cid) = commitObservation samplePayload store0
         store2 = quarantineObservation (samplePayload { fcpStatement = "quarantined" }) store1
     assertEqual "active must have 1 entry"
       1 (HashMap.size (scsActive store2))
@@ -206,6 +207,64 @@ integrationDegradedQuarantineNotActive = TestLabel "CTS-43: degraded surface →
       assertBool "at least one quarantined claim must exist"
         (not (null quarantined))
 
+-- ---------------------------------------------------------------------------
+-- CTS-44: promotion tests
+-- ---------------------------------------------------------------------------
+
+unitPromoteMatchingQuarantine :: Test
+unitPromoteMatchingQuarantine = TestLabel "promoteMatchingQuarantine moves matching claim to active" $
+  TestCase $ do
+    let store0 = emptySemanticCommitmentStore
+        qPayload = samplePayload { fcpStatement = "match me" }
+        store1 = quarantineObservation qPayload store0
+        (committed, cid) = commitObservation (samplePayload { fcpStatement = "match me" }) store1
+        (promoted, count) = promoteMatchingQuarantine cid "match me" committed
+    assertEqual "promoted count must be 1" 1 count
+    assertEqual "quarantine must be empty after promotion"
+      HashMap.empty (scsQuarantine promoted)
+    assertEqual "active must have 1 entry (new claim, deduped from quarantine)"
+      1 (HashMap.size (scsActive promoted))
+    let lineage = HashMap.lookup cid (scsLineage promoted)
+    assertBool "lineage must contain LineagePromoted"
+      (maybe False (any isPromoted) lineage)
+  where
+    isPromoted (LineagePromoted _) = True
+    isPromoted _ = False
+
+unitPromoteNormalizedMatch :: Test
+unitPromoteNormalizedMatch = TestLabel "promoteMatchingQuarantine matches normalized statement" $
+  TestCase $ do
+    let store0 = emptySemanticCommitmentStore
+        qPayload = samplePayload { fcpStatement = "  Свобода " }
+        store1 = quarantineObservation qPayload store0
+        (committed, cid) = commitObservation (samplePayload { fcpStatement = "свобода" }) store1
+        (promoted, count) = promoteMatchingQuarantine cid "свобода" committed
+    assertEqual "promoted count must be 1 (normalized match)" 1 count
+    assertEqual "quarantine must be empty after promotion"
+      HashMap.empty (scsQuarantine promoted)
+
+unitPromoteNoMatch :: Test
+unitPromoteNoMatch = TestLabel "promoteMatchingQuarantine leaves non-matching quarantine intact" $
+  TestCase $ do
+    let store0 = emptySemanticCommitmentStore
+        qPayload = samplePayload { fcpStatement = "different" }
+        store1 = quarantineObservation qPayload store0
+        (committed, cid) = commitObservation (samplePayload { fcpStatement = "match me" }) store1
+        (promoted, count) = promoteMatchingQuarantine cid "match me" committed
+    assertEqual "promoted count must be 0 (no match)" 0 count
+    assertEqual "quarantine must still contain the non-matching claim"
+      1 (HashMap.size (scsQuarantine promoted))
+
+unitPromoteEmptyQuarantine :: Test
+unitPromoteEmptyQuarantine = TestLabel "promoteMatchingQuarantine is no-op on empty quarantine" $
+  TestCase $ do
+    let store0 = emptySemanticCommitmentStore
+        (committed, cid) = commitObservation samplePayload store0
+        (promoted, count) = promoteMatchingQuarantine cid "anything" committed
+    assertEqual "promoted count must be 0 (empty quarantine)" 0 count
+    assertEqual "active must have 1 entry"
+      1 (HashMap.size (scsActive promoted))
+
 commitmentQuarantineTests :: [Test]
 commitmentQuarantineTests =
   [ unitQuarantineWritesToQuarantine
@@ -216,4 +275,8 @@ commitmentQuarantineTests =
   , unitBackCompatNoQuarantineKey
   , integrationCanonicalActiveEmptyQuarantine
   , integrationDegradedQuarantineNotActive
+  , unitPromoteMatchingQuarantine
+  , unitPromoteNormalizedMatch
+  , unitPromoteNoMatch
+  , unitPromoteEmptyQuarantine
   ]

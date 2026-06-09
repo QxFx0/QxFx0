@@ -151,6 +151,7 @@ minimalReplayTrace apiHealthy =
     , trcFamilyDivergenceActive = False
   , trcSemanticCommitmentCount = 0
   , trcQuarantinedCommitmentCount = 0
+  , trcPromotedFromQuarantineCount = 0
   , trcCommitmentStoreDecision = CsaAdmitCanonical
   , trcCognitiveSignals = emptyCognitiveSignals
     , trcDoubtScore = Nothing
@@ -241,7 +242,7 @@ testRecordedEqualsConsumed =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical
+                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0
         recorded proj = esApiHealthy <$> trcEffectSnapshot (tqpReplayTrace proj)
     assertEqual "projection records True when consumed value is True"
                (Just True) (recorded (projOf True))
@@ -265,7 +266,7 @@ testSnapshotSurvivesSerialization =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical
+                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0
         decodeSnapshot proj =
           (eitherDecode (encode (tqpReplayTrace proj))
              >>= parseEither (withObject "trace" (\o -> o .:? "trcEffectSnapshot")))
@@ -288,7 +289,7 @@ testFullTraceRoundTrips =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
-                  (buildTurnProjection "test" "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical)
+                  (buildTurnProjection "test" "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0)
     assertEqual "decode (encode trace) must reproduce the trace exactly"
       (Right trace)
       (eitherDecode (encode trace) :: Either String TurnReplayTrace)

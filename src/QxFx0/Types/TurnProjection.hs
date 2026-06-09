@@ -263,6 +263,10 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ CTS-43: number of quarantined (suppressed) commitments in
     --   'ssSemanticCommitments' at turn completion. Visible for review;
     --   quarantined claims do NOT feed reasoning.
+  , trcPromotedFromQuarantineCount :: !Int
+    -- ^ CTS-44: number of claims promoted from quarantine to active
+    --   this turn (matching statement normalized). Zero when no promotion
+    --   occurred.
   , trcCommitmentStoreDecision :: !CommitmentStoreAdmissionDecision
     -- ^ CTS-42: the admission decision applied to this turn's factual
     --   claims (anchor + surface-parsed). Captures the decision that was

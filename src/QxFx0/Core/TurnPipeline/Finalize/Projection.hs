@@ -106,8 +106,9 @@ buildTurnProjection
   -> TurnPlan
   -> TurnArtifacts
   -> CommitmentStoreAdmissionDecision
+  -> Int
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -322,10 +323,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
            , trcSemanticCommitmentCount = case ssSemanticCommitments nextSs of
                Nothing    -> 0
                Just store -> HashMap.size (scsActive store)
-           , trcQuarantinedCommitmentCount = case ssSemanticCommitments nextSs of
-               Nothing    -> 0
-               Just store -> HashMap.size (scsQuarantine store)
-           , trcCommitmentStoreDecision = commitDecision
+            , trcQuarantinedCommitmentCount = case ssSemanticCommitments nextSs of
+                Nothing    -> 0
+                Just store -> HashMap.size (scsQuarantine store)
+            , trcPromotedFromQuarantineCount = promotedCount
+            , trcCommitmentStoreDecision = commitDecision
           , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
           , trcDoubtScore = doubtScore
           , trcEpisodicRetrievalCount = episodicRetrievalCount

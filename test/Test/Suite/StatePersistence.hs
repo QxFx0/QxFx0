@@ -865,6 +865,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcFamilyDivergenceActive = False
   , trcSemanticCommitmentCount = 0
   , trcQuarantinedCommitmentCount = 0
+  , trcPromotedFromQuarantineCount = 0
   , trcCommitmentStoreDecision = CsaAdmitCanonical
   , trcCognitiveSignals = emptyCognitiveSignals
     , trcDoubtScore = Nothing

@@ -126,7 +126,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           turnPlan
           turnArtifacts
           (fsMeaningGraphBase static)
-      (nextSystemState0, commitmentTrigger, commitDecision) =
+      (nextSystemState0, commitmentTrigger, commitDecision, promotedCount) =
         buildNextSystemState
           updateHistory
           systemState
@@ -163,6 +163,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
           turnPlan
           turnArtifacts
           commitDecision
+          promotedCount
       wantIntrospection =
         fprSemanticIntrospectionEnabled precommitResults
           || ssOutputMode systemState == SemanticIntrospectionOutput
