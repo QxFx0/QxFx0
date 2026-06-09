@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-|
-Module      : QxFx0.Core.GFParityHarness
+Module      : Test.Support.GFParityHarness
 Description : M3.0 — GF relocation parity harness (reference table + verify).
 
 Holds the reference table mapping each 'PropositionType' to its expected RU
@@ -24,7 +24,7 @@ retired (M3.2).
   morphology) so the reference records the move's structural shape, not
   fixture-specific phrasing.
 -}
-module QxFx0.Core.GFParityHarness
+module Test.Support.GFParityHarness
   ( -- * Reference table
     ParityReference
   , emptyParityReference

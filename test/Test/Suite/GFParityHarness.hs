@@ -12,7 +12,7 @@ module Test.Suite.GFParityHarness
 
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
-import QxFx0.Core.GFParityHarness
+import Test.Support.GFParityHarness
 import QxFx0.Semantic.Proposition.Types (PropositionType (..))
 
 gfParityHarnessTests :: [Test]

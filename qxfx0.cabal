@@ -134,7 +134,6 @@ library
     QxFx0.Core.Bayesian
     QxFx0.Core.ContentCluster
     QxFx0.Core.FMAR
-    QxFx0.Core.GFParityHarness
     QxFx0.Types.Bayesian
     QxFx0.Types.CognitiveSignals
     QxFx0.Core.PrincipledCore
@@ -499,6 +498,7 @@ common test-common
   other-modules:
     Test.Support
     Test.Support.TurnPipelineFixtures
+    Test.Support.GFParityHarness
     Test.Suite.ArchitectureInvariants
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
