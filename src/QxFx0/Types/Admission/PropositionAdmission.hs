@@ -12,7 +12,7 @@ module QxFx0.Types.Admission.PropositionAdmission
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types
 import QxFx0.Types.Thresholds (parserLowConfidenceThreshold)
-import QxFx0.Semantic.Proposition.Types (PropositionType(..))
+import QxFx0.Types.PropositionType (PropositionType(..))
 import qualified Data.Text as T
 
 data PropositionAdmissionInput = PropositionAdmissionInput
