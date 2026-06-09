@@ -5,7 +5,7 @@
 
 {-|
 Module      : QxFx0.Self.FamilyTargets
-Description : FMAR Phase-3 — per-family target Fields and Field-distance selection.
+Description : canonical — FMAR Phase-3 — per-family target Fields and Field-distance selection.
 
 Each 'CanonicalMoveFamily' is paired with a 'Field' signature describing
 the system state in which executing that family is most authentic — its

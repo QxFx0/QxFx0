@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{-|
+Module      : QxFx0.Self.Perspective.Reduce
+Description : canonical — Perspective reduction and projection builders.
+-}
+
 module QxFx0.Self.Perspective.Reduce
   ( applyPerspectiveDecision
   , buildPerspectiveProjection

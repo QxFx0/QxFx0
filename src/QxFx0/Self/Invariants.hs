@@ -2,7 +2,7 @@
 
 {-|
 Module      : QxFx0.Self.Invariants
-Description : Pure invariant checks over 'SelfBlanket' snapshots.
+Description : canonical — Pure invariant checks over 'SelfBlanket' snapshots.
 
 Two check operators are provided:
 

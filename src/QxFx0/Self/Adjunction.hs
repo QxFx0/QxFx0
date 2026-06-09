@@ -6,7 +6,7 @@
 
 {-|
 Module      : QxFx0.Self.Adjunction
-Description : Phase-3 algebraic backbone of the dual-mode runtime.
+Description : canonical — Phase-3 algebraic backbone of the dual-mode runtime.
 
 A typed, pure realisation of the @Holistic ⊣ Formal@ adjunction
 named in @docs\/THEORY.md@ §3.2 and pinned by

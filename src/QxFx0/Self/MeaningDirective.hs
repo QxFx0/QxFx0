@@ -1,6 +1,6 @@
 {-|
 Module      : QxFx0.Self.MeaningDirective
-Description : FMAR Phase-5 — re-export shim for 'MeaningDirective'.
+Description : canonical — FMAR Phase-5 — re-export shim for 'MeaningDirective'.
 
 The 'MeaningDirective' type is /defined/ in 'QxFx0.Types.Domain.R5'
 alongside 'R5Verdict' (which carries it as @Maybe MeaningDirective@).

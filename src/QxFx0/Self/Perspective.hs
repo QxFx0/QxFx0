@@ -1,7 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{-| P4 OpinionCore / PerspectiveOperator pure layer. -}
+{-|
+Module      : QxFx0.Self.Perspective
+Description : canonical — P4 OpinionCore / PerspectiveOperator pure layer.
+-}
 module QxFx0.Self.Perspective
   ( PerspectiveOperationResult(..)
   , assemblePerspectiveInput

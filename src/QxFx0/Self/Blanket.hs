@@ -2,7 +2,7 @@
 
 {-|
 Module      : QxFx0.Self.Blanket
-Description : Computation of 'SelfBlanket' snapshots from 'SystemState'.
+Description : canonical — Computation of 'SelfBlanket' snapshots from 'SystemState'.
 
 Pure projection from the runtime 'SystemState' to its structural
 self-identity snapshot. This is the only sanctioned way to obtain

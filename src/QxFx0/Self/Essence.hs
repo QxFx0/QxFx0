@@ -4,9 +4,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
-{- |
-
-Phase 9 essence selection infrastructure.
+{-|
+Module      : QxFx0.Self.Essence
+Description : canonical — Phase 9 essence selection infrastructure.
 
 Reads the system's deliberation history and accumulates an
 'EssenceTrajectory' from which a later 'commit' will produce an

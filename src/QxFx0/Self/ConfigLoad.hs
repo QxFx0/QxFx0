@@ -7,7 +7,7 @@
 
 {-|
 Module      : QxFx0.Self.ConfigLoad
-Description : Unsafe IO config loader with builtin fallback.
+Description : supplier — Unsafe IO config loader with builtin fallback.
 
 The pattern is taken from 'Runtime/PGFStatus.hs' / 'pgfCacheRef' in
 'Runtime/PGF.hs':

@@ -5,7 +5,7 @@
 
 {-|
 Module      : QxFx0.Self.AdaptivePosition
-Description : FMAR Phase-2 — 8D adaptive state position over Field + spectral bands.
+Description : canonical — FMAR Phase-2 — 8D adaptive state position over Field + spectral bands.
 
 The position of the system in the space FMAR (Field-Modulated Adaptive
 Routing) reasons over: the five-component 'Field', a three-component

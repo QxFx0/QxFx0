@@ -6,7 +6,7 @@
 
 {-|
 Module      : QxFx0.Self.Conatus
-Description : Phase-2 Conatus functional over the SelfBlanket.
+Description : canonical — Phase-2 Conatus functional over the SelfBlanket.
 
 A typed, pure realisation of the scalar functional named in
 @docs\/THEORY.md@ §4.2 and elaborated in @docs\/adr\/0007-dual-mode-conatus.md@.

@@ -5,7 +5,7 @@
 
 {-|
 Module      : QxFx0.Self.Field
-Description : Phase-4 right-hemispheric observation summary.
+Description : canonical — Phase-4 right-hemispheric observation summary.
 
 A typed, pure realisation of the five-component @Field@ named in
 @docs\/adr\/0007-dual-mode-conatus.md@ and pinned by
@@ -356,8 +356,8 @@ computeCounterfactual fh weights streak =
 -- removed in P4 when the decoupled model is promoted unconditionally and the
 -- comparison tests are retired. Do not add new callers.
 --
--- Compute 'Atmosphere' from ego agency, ego tension, and the last legitimacy
--- score. Lifeness gate: the returned 'Atmosphere' is always well-formed because
+-- Compute 'Atmosphere' from ego agency, ego tension, and the most recent
+-- legitimacy score. Lifeness gate: the returned 'Atmosphere' is always well-formed because
 -- 'mkAtmosphere' clamps both axes.
 computeAtmosphere :: FieldHeuristics -> Double -> Double -> Double -> Atmosphere
 computeAtmosphere fh egoAgency egoTension legitScore =
@@ -406,7 +406,7 @@ computeAtmosphereDecoupled
   :: FieldHeuristics
   -> Double  -- ^ ego agency
   -> Double  -- ^ ego tension
-  -> Double  -- ^ last legitimacy score
+  -> Double  -- ^ most recent legitimacy score
   -> Double  -- ^ input intensity in [0,1] (arousal driver, e.g. resonance)
   -> Atmosphere
 computeAtmosphereDecoupled fh egoAgency egoTension legitScore inputIntensity =

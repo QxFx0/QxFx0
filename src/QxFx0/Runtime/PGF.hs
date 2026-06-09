@@ -477,10 +477,12 @@ gfExprToClaimAst expr =
       -- rest2 = "ModFirst ActDefine obj" etc.
       let ws = T.words rest2
       guard (length ws >= 2)
-      let modS    = head ws
-          actionS = T.unwords (tail ws)
-      guard (not (T.null topic))
-      pure (topic, modS, actionS)
+      case ws of
+        (modS : restWs) -> do
+          let actionS = T.unwords restWs
+          guard (not (T.null topic))
+          pure (topic, modS, actionS)
+        _ -> Nothing
 
     stripTrailingParen t =
       if T.isSuffixOf ")" t then Just (T.dropEnd 1 t) else Nothing

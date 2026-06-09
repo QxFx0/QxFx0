@@ -6,7 +6,7 @@
 
 {-|
 Module      : QxFx0.Self.Deliberation
-Description : Phase-8 deliberation framework — symbiotic reconciliation
+Description : canonical — Phase-8 deliberation framework — symbiotic reconciliation
               of two hemispheric proposals into one outgoing 'Plan'.
 
 == What this module is

@@ -7,7 +7,7 @@
 
 {-|
 Module      : QxFx0.Self.Types
-Description : Pure type definitions for the Self layer (SelfBlanket invariants).
+Description : canonical — Pure type definitions for the Self layer (SelfBlanket invariants).
 
 This module defines the typed snapshot of a system's structural
 self-identity: the Markov-blanket-style record whose simultaneous

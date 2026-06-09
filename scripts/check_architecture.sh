@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/src"
