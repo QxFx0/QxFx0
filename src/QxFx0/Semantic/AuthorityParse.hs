@@ -24,7 +24,7 @@ import qualified PGF2 as PGF
 import System.Directory (doesFileExist)
 import Prelude
 
-import QxFx0.Runtime.PGF (gfExprToClaimAst)
+import QxFx0.Semantic.Authority.GfExprParse (gfExprToClaimAst)
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload)
 import QxFx0.Render.Authority (AuthoritySurface(..), claimAstToFactualClaim, parseAuthoritySurfacePattern)
 
