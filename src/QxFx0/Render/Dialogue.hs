@@ -44,7 +44,7 @@ import QxFx0.Semantic.Lexicon.RuntimeParadigms
   , NounCase(..)
   , Number(..)
   )
-import QxFx0.Runtime.PGFStatus (pgfRuntimeActive, pgfFallbackReason)
+import QxFx0.Lexicon.PGFStatus (pgfFallbackReason)
 import QxFx0.Lexicon.Inflection (toNominative)
 import QxFx0.Types.Text (finalizeForce)
 import QxFx0.Semantic.Proposition (PropositionType(..))

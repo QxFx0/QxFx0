@@ -309,7 +309,7 @@ library
     QxFx0.Legal.Adapter
   other-modules:
     Paths_qxfx0
-    QxFx0.Runtime.PGFStatus
+    QxFx0.Lexicon.PGFStatus
     QxFx0.Types.Thresholds.GameTheory
     QxFx0.Types.Decision.Enums
     QxFx0.Types.Decision.Enums.Support

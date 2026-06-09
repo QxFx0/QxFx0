@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings, TypeApplications #-}
-{-| PGF runtime activation status.
-    
-    Separate module to avoid circular dependencies:
-    - Runtime.Health imports Runtime.Wiring
-    - Runtime.Wiring imports Render.Dialogue (via Pipeline/Handlers)
-    - Render.Dialogue needs pgfRuntimeActive
-    
-    Solution: This module has minimal dependencies and can be imported by Render.Dialogue.
+{-| PGF load status (Lexicon resource layer).
+
+    The compiled PGF grammar is a loaded resource, exactly like the GF function
+    map ('QxFx0.Lexicon.GfMap.gfMapLoadStatus'). Keeping the load status here (a
+    low layer with no Render/Core/Runtime dependencies) lets Render read it
+    directly — Render → Lexicon is allowed, Render → Runtime is not.
+
+    Pattern: unsafePerformIO + NOINLINE, same as 'gfMapLoadStatus'.
 -}
-module QxFx0.Runtime.PGFStatus
+module QxFx0.Lexicon.PGFStatus
   ( pgfRuntimeActive
   , pgfFallbackReason
   ) where
@@ -21,7 +21,6 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified PGF2 as PGF
 
 -- | Global PGF load result, computed once at module load time.
---   Pattern: unsafePerformIO + NOINLINE (same as gfMapLoadStatus).
 pgfLoadResult :: (Maybe PGF.PGF, Maybe Text)
 pgfLoadResult = unsafePerformIO loadPgfOnce
 {-# NOINLINE pgfLoadResult #-}
@@ -44,7 +43,6 @@ loadPgfOnce = do
                else pure (Nothing, Just "pgf_no_languages")
 
 -- | True if PGF runtime is active (file loaded successfully).
---   When False, linearization functions fall back to templates.
 pgfRuntimeActive :: Bool
 pgfRuntimeActive = case fst pgfLoadResult of
   Just _  -> True
@@ -53,4 +51,3 @@ pgfRuntimeActive = case fst pgfLoadResult of
 -- | Reason why PGF runtime is not active (Nothing if active).
 pgfFallbackReason :: Maybe Text
 pgfFallbackReason = snd pgfLoadResult
-
