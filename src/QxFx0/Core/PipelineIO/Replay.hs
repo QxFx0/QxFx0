@@ -2,7 +2,7 @@
 {-# LANGUAGE StrictData #-}
 
 {-|
-Description : Deterministic replay 'PipelineIO' — narrow fix for legitimacy-score path.
+Description : supplier — Deterministic replay 'PipelineIO' — narrow fix for legitimacy-score path.
 
 'Narrow fix' means only the 'apiHealthy' effect is replayed from the
 trace snapshot ('trcEffectSnapshot').  All other effects fall through to
