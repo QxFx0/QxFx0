@@ -21,7 +21,7 @@ module QxFx0.Types.Admission.PatternSuppressStrong
   , admitBySuppressStrong
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
+import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types.Observability (TruthContractStatus)
 
 data SuppressStrongConfig input dat admitted decision = SuppressStrongConfig

@@ -18,7 +18,7 @@ module QxFx0.Types.Admission.PatternCapClarify
   , admitByCapClarify
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
+import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types.Observability (TruthContractStatus)
 
 data CapClarifyConfig input dat admitted decision = CapClarifyConfig

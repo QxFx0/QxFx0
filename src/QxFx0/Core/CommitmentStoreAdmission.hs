@@ -23,23 +23,8 @@ module QxFx0.Core.CommitmentStoreAdmission
   , admitCommitmentToStore
   ) where
 
-import Data.Aeson (ToJSON (..), FromJSON (..), defaultOptions, genericToJSON, genericParseJSON)
-import GHC.Generics (Generic)
-
+import QxFx0.Types.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.Observability (TruthContractStatus(..))
-
--- | Decision whether a turn's factual claim may be persisted.
---
--- 'CsaAdmitCanonical' — the surface is authoritative (canonical or
--- assembled), the claim is written to 'scsActive'.
---
--- 'CsaSuppress' — the surface is degraded or non-authoritative; the claim
--- is NOT written. This closes the M6 C3 "commitment accountability" leak.
-data CommitmentStoreAdmissionDecision
-  = CsaAdmitCanonical
-  | CsaSuppress
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON)
 
 -- | Admit only when the truth contract reports an authoritative surface.
 --

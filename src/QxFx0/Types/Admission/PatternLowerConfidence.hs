@@ -20,7 +20,7 @@ module QxFx0.Types.Admission.PatternLowerConfidence
   , admitByLowerConfidence
   ) where
 
-import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
+import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Types.Observability (TruthContractStatus)
 
 data LowerConfConfig input dat admitted decision = LowerConfConfig

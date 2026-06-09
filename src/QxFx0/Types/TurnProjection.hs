@@ -14,7 +14,7 @@ module QxFx0.Types.TurnProjection
 
 import QxFx0.Types.Domain (CanonicalMoveFamily(..), IllocutionaryForce(..), Register(..), SemanticLayer(..), WarrantedMoveMode(..))
 import QxFx0.Types.Decision (RenderStyle(..), ShadowStatus(..), LegitimacyReason(..), PlannerMode(..), ParserMode(..), DecisionDisposition(..))
-import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
+import QxFx0.Types.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, ResponseSurfaceKind, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
@@ -35,7 +35,7 @@ import QxFx0.Memory.Episodic
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import QxFx0.Core.FMAR (FmarMode(..))
+import QxFx0.Types.FMAR (FmarMode(..))
 
 data PreActorFailureKind
   = PreActorTransportFailure

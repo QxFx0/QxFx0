@@ -31,11 +31,10 @@ module QxFx0.Core.FMAR
   , isFmarActive
   ) where
 
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 
+import QxFx0.Types.FMAR (FmarMode(..))
 import QxFx0.Self.AdaptivePosition
   ( AdaptivePosition (..)
   , SpectralEncoding
@@ -120,16 +119,6 @@ computeAdaptivePosition field ms ce =
     , apSpectral      = encodeMeaningState ms
     , apConatusEnergy = ceScalar ce
     }
-
--- | FMAR activation mode, parsed from the @QXFX0_FMAR@ environment value.
---
---   * 'FmarOff'    — the static path is unchanged (byte-identical output).
---   * 'FmarShadow' — FMAR computes its choice and a directive for tracing,
---     but the detector family still drives rendering.
---   * 'FmarLive'   — FMAR drives both routing and rendering.
-data FmarMode = FmarOff | FmarShadow | FmarLive
-  deriving stock (Eq, Ord, Read, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON)
 
 -- | Parse a @QXFX0_FMAR@ value into an 'FmarMode'. Unset (@Nothing@),
 -- empty, @0@, @off@, or @false@ → 'FmarOff'. @shadow@ → 'FmarShadow'.
