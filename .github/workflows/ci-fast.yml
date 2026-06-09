@@ -25,7 +25,7 @@ jobs:
   ci-fast:
     name: CI Fast (lint + format + gf-compile)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -69,7 +69,7 @@ jobs:
 
       # ── hlint ───────────────────────────────────────────────────────
       - name: Install hlint
-        run: cabal install hlint --overwrite-policy=always 2>&1 | tail -5
+        run: cabal install hlint --overwrite-policy=always -j"$(nproc)" 2>&1 | tail -5
 
       - name: hlint check
         run: |
@@ -80,7 +80,7 @@ jobs:
 
       # ── ormolu ──────────────────────────────────────────────────────
       - name: Install ormolu
-        run: cabal install ormolu --overwrite-policy=always 2>&1 | tail -5
+        run: cabal install ormolu --overwrite-policy=always -j"$(nproc)" 2>&1 | tail -5
 
       - name: ormolu check
         run: |
