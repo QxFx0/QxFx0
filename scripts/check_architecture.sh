@@ -623,13 +623,19 @@ echo "  [20] ADR-0013 §3 Rule 6: canonical-flag-off modules are not in the auth
 # Per docs/closure/PROMOTION_PLAYBOOK.md, flags not yet promoted must not
 # have '= True' in production code. Promoted flags must have '= True'.
 #
-# Current state (2026-06-02):
-#   PROMOTED  — Family Divergence (ADR-0019, familyDivergenceEnabled = True)
-#   FLAG-OFF  — Essence, Perspective Operator, External LLM, Adaptive Mutation
+# Current state (2026-06-10, post-ADR-0034/0045/0046/0047/0048 promotions):
+#   PROMOTED  — Family Divergence (ADR-0019, salienceGuardDivergenceEnabled = True)
+#               Episodic Recall (ADR-0034, episodicRecallActive = True)
+#               Doubt Loop (ADR-0045, doubtLoopActive = True)
+#               Affect Decoupled (ADR-0046, affectDecoupledActive = True)
+#               Content Salience (ADR-0047, contentSalienceActive = True)
+#               Derived Inference (ADR-0048, derivedInferenceActive = True)
+#   FLAG-OFF  — Essence, Perspective Operator, External LLM, Adaptive Mutation,
+#               User Model, Runtime Morphology
 #
 # The check has two parts:
-#   (a) The 4 not-yet-promoted flags must not have '= True' in src/.
-#   (b) Family Divergence (promoted) must have '= True' at Cascade.hs.
+#   (a) The 6 not-yet-promoted flags must not have '= True' in src/.
+#   (b) Promoted flags must have '= True' at their declared paths.
 if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
 import pathlib
 import re
@@ -647,18 +653,18 @@ FLAG_OFF_FLAGS = [
     ("Perspective Operator", "QXFX0_PERSPECTIVE_OPERATOR_ENABLED",       False),
     ("External LLM",         "QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED",        False),
     ("Adaptive Mutation",    "QXFX0_ADAPTIVE_MUTATION_ENABLED",          False),
-    ("Episodic Recall",      "episodicRecallActive",                     False),
     ("User Model",           "userModelActive",                          False),
-    ("Doubt Loop",           "doubtLoopActive",                          False),
-    ("Affect Decoupled",     "affectDecoupledActive",                    False),
-    ("Content Salience",     "contentSalienceActive",                    False),
-    ("Derived Inference",    "derivedInferenceActive",                   False),
     ("Runtime Morphology",   "runtimeMorphologyActive",                  False),
 ]
 
 # Promoted flags: must have '= True' in src/.
 PROMOTED_FLAGS = [
-    ("Family Divergence",    "familyDivergenceEnabled",   "src/QxFx0/Core/TurnRouting/Cascade.hs"),
+    ("Family Divergence",    "salienceGuardDivergenceEnabled",   "src/QxFx0/Core/TurnRouting/Cascade.hs"),
+    ("Episodic Recall",      "episodicRecallActive",             "src/QxFx0/Memory/Episodic.hs"),
+    ("Doubt Loop",           "doubtLoopActive",                  "src/QxFx0/Core/ConsciousnessLoop.hs"),
+    ("Affect Decoupled",     "affectDecoupledActive",            "src/QxFx0/Self/Field.hs"),
+    ("Content Salience",     "contentSalienceActive",            "src/QxFx0/Core/ContentCluster.hs"),
+    ("Derived Inference",    "derivedInferenceActive",           "src/QxFx0/Semantic/Logic.hs"),
 ]
 
 true_lit_re = re.compile(r"\b\w+\s*=\s*True\b")
