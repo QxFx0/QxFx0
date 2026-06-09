@@ -49,6 +49,7 @@ import QxFx0.Core.PipelineIO
   , mkTestPipelineIO
   , pipelineShadowPolicy
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   )
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import QxFx0.Core.TurnPipeline.Protocol
@@ -678,6 +679,7 @@ testBlockedConceptsRetentionIsBoundedAndDeduplicated = TestCase $
             bundle <-
                   buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
+                    (pipelineParseAuthoritySurface testProtocolPipelineIO)
                     state
                     tiBlocked
                     ts
@@ -829,6 +831,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
     precommitBundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory strictShadowPio)
+            (pipelineParseAuthoritySurface strictShadowPio)
             ss
             ti
             ts
@@ -879,6 +882,7 @@ testAdvisoryShadowDivergenceDoesNotTriggerRecovery = TestCase $
     bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory strictPio)
+            (pipelineParseAuthoritySurface strictPio)
             ss
             ti
             ts
@@ -1722,6 +1726,7 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
     bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
+            (pipelineParseAuthoritySurface testProtocolPipelineIO)
             ss
             ti
             ts
@@ -2148,6 +2153,7 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
     bundle <-
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
+            (pipelineParseAuthoritySurface testProtocolPipelineIO)
             ss
             ti
             ts
@@ -2405,6 +2411,7 @@ buildFinalizeFixture rawInput = do
   bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
+          (pipelineParseAuthoritySurface testProtocolPipelineIO)
           ss
           ti
           ts
@@ -2428,6 +2435,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
   bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
+          (pipelineParseAuthoritySurface testProtocolPipelineIO)
           ss
           ti
           ts

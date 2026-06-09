@@ -41,7 +41,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , resolveFinalizePrecommit
   , buildFinalizePrecommit
   )
-import QxFx0.Core.PipelineIO (pipelineUpdateHistory)
+import QxFx0.Core.PipelineIO (pipelineUpdateHistory, pipelineParseAuthoritySurface)
 import Test.Suite.TurnPipelineProtocol (withDeterministicEmbedding)
 import Test.Support.TurnPipelineFixtures
   ( buildRenderedFixture
@@ -152,6 +152,7 @@ integrationCanonicalActiveEmptyQuarantine = TestLabel "CTS-43: canonical surface
       precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
       bundle <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
+                    (pipelineParseAuthoritySurface testProtocolPipelineIO)
                     ss ti ts tp taAuth precommitPlan precommitResults
       let nextSs = fpbNextSs bundle
           trace = tqpReplayTrace (fpbProjection bundle)
@@ -179,6 +180,7 @@ integrationDegradedQuarantineNotActive = TestLabel "CTS-43: degraded surface →
       precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
       bundle1 <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
+                    (pipelineParseAuthoritySurface testProtocolPipelineIO)
                     ss ti ts tp taAuth precommitPlan precommitResults
       let ss1 = fpbNextSs bundle1
           count1 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss1)

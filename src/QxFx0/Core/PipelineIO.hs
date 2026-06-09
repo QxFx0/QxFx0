@@ -28,6 +28,7 @@ module QxFx0.Core.PipelineIO
   , modifyPipelineIntuition
   , checkPipelineApiHealth
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   ) where
 
 import QxFx0.Core.PipelineIO.Internal
@@ -50,6 +51,7 @@ import QxFx0.Core.PipelineIO.Operations
     , pipelineShadowPolicy
     , shadowPolicyText
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   , resolvePipelineNixPath
   , resolveTurnEffect
   , resolveTurnEffects

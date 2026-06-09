@@ -24,6 +24,7 @@ module QxFx0.Core.PipelineIO.Operations
   , modifyPipelineIntuition
   , checkPipelineApiHealth
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   ) where
 
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, initialLoop)
@@ -34,6 +35,8 @@ import QxFx0.Core.PipelineIO.Internal
   , ShadowPolicy(..)
   , ShadowResult(..)
   )
+import QxFx0.Render.Authority (AuthoritySurface(..))
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -169,3 +172,6 @@ checkPipelineApiHealth pio = do
 
 pipelineUpdateHistory :: PipelineIO -> Text -> Seq Text -> Seq Text
 pipelineUpdateHistory pio = pioUpdateHistory pio
+
+pipelineParseAuthoritySurface :: PipelineIO -> AuthoritySurface -> Maybe FactualClaimPayload
+pipelineParseAuthoritySurface pio = pioParseAuthoritySurface pio

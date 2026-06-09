@@ -40,6 +40,7 @@ import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (NixGuardStatus(..))
 import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))
 import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
+import QxFx0.Render.Authority (parseAuthoritySurfacePattern)
 import QxFx0.Types.Recovery (LocalRecoveryPolicy(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowSnapshotId(..)
@@ -91,6 +92,7 @@ mkTestPipelineIO cfg =
           (st', result) <- f st
           pure (st', result)
       , pioConatusPrior = defaultConatusPrior
+      , pioParseAuthoritySurface = parseAuthoritySurfacePattern
       }
 
 defaultTestInterpreter :: TurnEffectInterpreter

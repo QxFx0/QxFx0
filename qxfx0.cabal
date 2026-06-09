@@ -148,6 +148,7 @@ library
     QxFx0.Runtime
     QxFx0.Runtime.Health
     QxFx0.Runtime.PGF
+    QxFx0.Runtime.AuthorityParse
     QxFx0.Runtime.GF.Map
     QxFx0.Runtime.GF.Morphology
     QxFx0.Runtime.Session

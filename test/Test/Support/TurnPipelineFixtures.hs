@@ -32,6 +32,7 @@ import QxFx0.Core.PipelineIO
   , mkTestPipelineIO
   , pipelineShadowPolicy
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   )
 import QxFx0.Core.TurnPipeline.Protocol
   ( FinalizePrecommitBundle
@@ -100,6 +101,7 @@ buildFinalizeFixture rawInput = do
   bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
+          (pipelineParseAuthoritySurface pio)
           ss
           ti
           ts
@@ -121,6 +123,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
   bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
+          (pipelineParseAuthoritySurface pio)
           ss
           ti
           ts
@@ -172,6 +175,7 @@ buildAuthoritativePerspectiveFinalizeFixture startSs rawInput = do
   bundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
+          (pipelineParseAuthoritySurface pio)
           ss
           ti
           ts

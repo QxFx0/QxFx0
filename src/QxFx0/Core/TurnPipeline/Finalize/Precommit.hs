@@ -44,6 +44,8 @@ import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types
+import QxFx0.Render.Authority (AuthoritySurface(..))
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
@@ -114,8 +116,8 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprFmarMode = fmarMode
       }
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
-buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
   let static = fppStatic precommitPlan
       (newDreamState, newMeaningGraph, rewireEventsCount) =
         applyDreamDynamics
@@ -129,6 +131,7 @@ buildFinalizePrecommit updateHistory systemState turnInput turnSignals turnPlan 
       (nextSystemState0, commitmentTrigger, commitDecision, promotedCount) =
         buildNextSystemState
           updateHistory
+          parseAuthSurface
           systemState
           turnInput
           turnSignals

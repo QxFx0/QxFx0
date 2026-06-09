@@ -18,6 +18,7 @@ import QxFx0.Runtime.Wiring.Context
   , rcMode
   , updateHistoryStrict
   )
+import QxFx0.Runtime.AuthorityParse (parseAuthoritySurfaceRuntime)
 import QxFx0.Types.Recovery (LocalRecoveryPolicy(..))
 
 toPipelineIO :: RuntimeContext -> PipelineIO
@@ -34,4 +35,5 @@ toPipelineIO ctx = PipelineIO
   , pioModifyConsciousLoop = modifyConsciousLoop ctx
   , pioModifyIntuition = modifyIntuition ctx
   , pioConatusPrior = defaultConatusPrior
+  , pioParseAuthoritySurface = parseAuthoritySurfaceRuntime
   }

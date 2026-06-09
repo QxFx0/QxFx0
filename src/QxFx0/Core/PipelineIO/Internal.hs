@@ -24,6 +24,8 @@ import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
   , ShadowSnapshotId
   )
+import QxFx0.Render.Authority (AuthoritySurface(..))
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import Data.Text (Text)
 import Data.Sequence (Seq)
 
@@ -89,4 +91,5 @@ data PipelineIO = PipelineIO
   , pioModifyConsciousLoop :: forall a. (ConsciousnessLoop -> IO (ConsciousnessLoop, a)) -> IO a
   , pioModifyIntuition :: forall a. (IntuitiveState -> IO (IntuitiveState, a)) -> IO a
   , pioConatusPrior     :: !ConatusPrior
+  , pioParseAuthoritySurface :: AuthoritySurface -> Maybe FactualClaimPayload
   }

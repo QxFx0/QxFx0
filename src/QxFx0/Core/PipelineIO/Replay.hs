@@ -27,6 +27,7 @@ import QxFx0.Core.PipelineIO.Internal
 import QxFx0.Core.PipelineIO.Test
   ( defaultTestInterpreter
   )
+import QxFx0.Render.Authority (parseAuthoritySurfacePattern)
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -82,4 +83,5 @@ mkReplayPipelineIO trace =
       , pioModifyConsciousLoop = \f -> snd <$> f initialLoop
       , pioModifyIntuition = \f -> snd <$> f defaultIntuitiveState
       , pioConatusPrior = defaultConatusPrior
+      , pioParseAuthoritySurface = parseAuthoritySurfacePattern
       }

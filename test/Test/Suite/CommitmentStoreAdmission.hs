@@ -34,7 +34,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , resolveFinalizePrecommit
   , buildFinalizePrecommit
   )
-import QxFx0.Core.PipelineIO (pipelineUpdateHistory)
+import QxFx0.Core.PipelineIO (pipelineUpdateHistory, pipelineParseAuthoritySurface)
 import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..))
 import Test.Suite.TurnPipelineProtocol (withDeterministicEmbedding)
 import Test.Support.TurnPipelineFixtures
@@ -91,6 +91,7 @@ integrationCanonicalAdmits = TestLabel "CTS-42: canonical surface admits claims 
       precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
       bundle <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
+                    (pipelineParseAuthoritySurface testProtocolPipelineIO)
                     ss ti ts tp taAuth precommitPlan precommitResults
       let nextSs = fpbNextSs bundle
           trace = tqpReplayTrace (fpbProjection bundle)
@@ -116,6 +117,7 @@ integrationDegradedSuppresses = TestLabel "CTS-42: degraded surface suppresses c
       precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
       bundle1 <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
+                    (pipelineParseAuthoritySurface testProtocolPipelineIO)
                     ss ti ts tp taAuth precommitPlan precommitResults
       let ss1 = fpbNextSs bundle1
           count1 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss1)

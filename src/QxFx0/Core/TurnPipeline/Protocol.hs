@@ -61,6 +61,8 @@ module QxFx0.Core.TurnPipeline.Protocol
   ) where
 
 import QxFx0.Types
+import QxFx0.Render.Authority (AuthoritySurface(..))
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , PipelineRuntimeMode
@@ -70,6 +72,7 @@ import QxFx0.Core.PipelineIO
   , pipelineShadowPolicy
   , pipelineLocalRecoveryPolicy
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   )
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -177,7 +180,7 @@ planFinalizePrecommit = Finalize.planFinalizePrecommit
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit = Finalize.resolveFinalizePrecommit
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 
 planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
@@ -235,7 +238,7 @@ finalizeTurn :: PipelineIO -> SystemState -> Text -> Int -> Text -> RenderedTurn
 finalizeTurn pio ss sessionId expectedRevision _requestId (RenderedTurn ti ts tp ta) = do
   let precommitPlan = Finalize.planFinalizePrecommit ss ti ts tp ta
   precommitResults <- Finalize.resolveFinalizePrecommit pio precommitPlan
-  precommitBundle <- Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) ss ti ts tp ta precommitPlan precommitResults
+  precommitBundle <- Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) (pipelineParseAuthoritySurface pio) ss ti ts tp ta precommitPlan precommitResults
   let commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
   commitResults <- Finalize.resolveFinalizeCommit pio expectedRevision commitPlan
   let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults

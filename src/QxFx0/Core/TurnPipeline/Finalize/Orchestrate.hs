@@ -11,6 +11,7 @@ import Data.Text (Text)
 import QxFx0.Core.PipelineIO
   ( PipelineIO
   , pipelineUpdateHistory
+  , pipelineParseAuthoritySurface
   )
 import QxFx0.Core.TurnPipeline.Finalize.Commit
   ( buildFinalizeTurnResult
@@ -33,6 +34,7 @@ finalizeTurnState pipelineIO systemState sessionId expectedRevision _requestId t
   precommitBundle <-
         buildFinalizePrecommit
           (pipelineUpdateHistory pipelineIO)
+          (pipelineParseAuthoritySurface pipelineIO)
           systemState
           turnInput
           turnSignals

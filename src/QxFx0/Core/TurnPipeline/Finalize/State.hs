@@ -19,7 +19,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
 import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine)
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore)
-import QxFx0.Render.Authority (parseAuthoritySurface, AuthoritySurface(..))
+import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
 import QxFx0.Memory.Episodic
@@ -332,8 +332,8 @@ fieldHeuristicsMaxDelta old new = maximumOrZero
 maximumOrZero :: [Double] -> Double
 maximumOrZero = foldr max 0.0
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
-buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
+buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
       turnSalience = turnInputSalience ti
@@ -545,7 +545,7 @@ buildNextSystemState updateHistory ss ti ts tp ta newDreamState newMeaningGraph 
       -- Nothing parse is silently skipped (non-authority surface).
       turnSeq = TurnSeq (ssTurnCount ss + 1)
       renderedSurface = AuthoritySurface (taFinalRendered ta)
-      mClaimPayload = parseAuthoritySurface renderedSurface
+      mClaimPayload = parseAuthSurface renderedSurface
       store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments nextWithLog)
       -- C3: additionally commit a typed anchor observation when SemanticAnchor
       -- is established this turn. This makes the anchor machine-visible in the
