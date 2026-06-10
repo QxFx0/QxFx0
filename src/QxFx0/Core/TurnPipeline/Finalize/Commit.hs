@@ -28,6 +28,7 @@ import QxFx0.Core.TurnPipeline.Effects
   , TurnEffectResult(..)
   )
 import QxFx0.Core.TurnPipeline.Finalize.State (finalizeMetrics)
+import QxFx0.Types.TurnProjection (tqpReplayTrace, trcCommitmentContradicted)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import qualified Data.Map.Strict as Map
@@ -160,8 +161,9 @@ buildFinalizeTurnResult :: RenderedTurn -> FinalizePrecommitBundle -> FinalizeCo
 buildFinalizeTurnResult rendered bundle commitResults =
   let RenderedTurn turnInput turnSignals _turnPlan turnArtifacts = rendered
       savedState = fcrSavedSs commitResults
+      commitContradicted = trcCommitmentContradicted (tqpReplayTrace (fpbProjection bundle))
       metricsFinal =
-        finalizeMetrics
+        (finalizeMetrics
           turnInput
           turnArtifacts
           (fpbOutcomeFamily bundle)
@@ -170,7 +172,8 @@ buildFinalizeTurnResult rendered bundle commitResults =
           (tsApiHealthy turnSignals)
           (fpbFinalSafetyStatus bundle)
           (fcrSaveStart commitResults)
-          (fcrSaveEnd commitResults)
+          (fcrSaveEnd commitResults))
+          { tmCommitmentContradicted = commitContradicted }
    in TurnResult
         { trRendered = rendered
         , trNextSs = savedState

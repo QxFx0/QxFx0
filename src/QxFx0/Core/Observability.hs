@@ -57,6 +57,8 @@ data TurnMetrics = TurnMetrics
     -- ^ WP6.1: telemetry tag explaining why lexicon need was raised or not.
   , tmDedupSkipReason :: !(Maybe Text)
     -- ^ WP3/WP6.1: reason external query was dedup-skipped, if any.
+  , tmCommitmentContradicted :: !Bool
+    -- ^ WP1: whether this turn's commitment engagement detected contradiction.
   }
 
 emptyTurnMetrics :: RequestId -> Text -> TurnMetrics
@@ -77,6 +79,7 @@ emptyTurnMetrics rid sid = TurnMetrics
   , tmGraftsWindow = 0
   , tmLexiconNeedTriggerReason = ""
   , tmDedupSkipReason = Nothing
+  , tmCommitmentContradicted = False
   }
 
 recordPhase :: Text -> UTCTime -> UTCTime -> PhaseTiming
@@ -105,6 +108,7 @@ renderMetricsLog TurnMetrics{..} = T.intercalate " "
   , "api_healthy=" <> (if tmApiHealthy then "1" else "0")
   , "phases=" <> T.intercalate "," (map renderPhaseTiming tmPhases)
   , "thresholds=" <> T.intercalate "," (map renderThresholdProbe tmThresholds)
+  , "contradicted=" <> (if tmCommitmentContradicted then "1" else "0")
   , "total_ms=" <> textShow (totalDurationMs tmPhases)
   , case tmError of
       Nothing -> ""
