@@ -62,9 +62,10 @@ _N/A_
 _N/A_
 
 ## O — slow-suite triage
-**Status:** PARTIALLY CLOSED (1 of 7 fixed; 6 documented)  
-**Anchor:** `qxfx0-test-slow` 135 cases, 7 failures identified (suite timeout at ~20 min; 7 failures before case 52).  
-**Raw tally:** 135 cases, 7 failures, 0 errors.  
+**Status:** PARTIALLY CLOSED (1 fixed; 6 documented; FULL FAILURE COUNT UNKNOWN — suite does not complete)  
+**Anchor:** `qxfx0-test-slow` declares 135 HUnit cases but **does NOT run to completion** — it hits a ~20 min wall-clock timeout. Independent reviewer re-run (2026-06-11) confirmed: `Tried: 29` of 135 before timeout, exit 124. The "135" is the *planned* case count, not the *executed* one.  
+**Raw tally (HONEST):** suite incomplete. Of the cases that ran before the timeout, **7 distinct failures were identified and root-caused** (below). **The total failure count over the full suite is UNKNOWN** — failures may exist past the timeout boundary. No-silent-caps doctrine: this is a known coverage gap, not a clean "7 failures" verdict.  
+**Follow-up (scoped, not in this TZ):** the suite itself needs to be made completable (split, parallelize, or raise the per-case budget) before any "slow-suite is green" claim is possible.  
 **Trivial fix applied:** `RuntimeInfrastructure.hs:1459` `minimalBlob` missing optional compatibility fields (`lastGuardReport`, `dreamState`, `intuitionState`, `semanticAnchor`, `lastTurnDecision`) — added to fixture literal.  
 **Open / scoped (do not fix on the fly):**
 1. `RuntimeInfrastructure.hs:620` — semanticAnchor must survive persisted load; root cause: state loaded as non-authoritative despite `authoritativeGovernedState` fixture.  
@@ -78,6 +79,7 @@ _N/A_
 
 ## Build & arch
 - `cabal build all` — clean (warnings only).  
-- Unit raw tally: 1217 cases, 0 errors, 1 pre-existing GF failure (unchanged).  
+- Unit raw tally: 1217 cases, 0 errors, 1 pre-existing GF failure (unchanged). Reviewer-confirmed 2026-06-11.  
 - Integration parity: 0.  
-- Arch: `sed 's/\r$//' scripts/check_architecture.sh > scripts/.arch_tmp.sh && bash scripts/.arch_tmp.sh && rm scripts/.arch_tmp.sh` — 0 violations.
+- Slow suite: does NOT complete (~20 min timeout); see item O — 7 root-caused, full count unknown.  
+- Arch: `sed 's/\r$//' scripts/check_architecture.sh > scripts/.arch_tmp.sh && bash scripts/.arch_tmp.sh && rm scripts/.arch_tmp.sh` — 0 violations. Reviewer-confirmed 2026-06-11.
