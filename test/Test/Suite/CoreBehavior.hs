@@ -2319,8 +2319,8 @@ testIsLegitConstructors = TestCase $ do
 
 testExceptionPolicyQxFx0Exception :: Test
 testExceptionPolicyQxFx0Exception = TestCase $ do
-  assertEqual "PersistenceError shows redacted contract" "PersistenceError(<redacted>)" (show (PersistenceError "test error" :: QxFx0Exception))
-  assertEqual "SQLiteError shows redacted contract" "SQLiteError(<redacted>)" (show (SQLiteError "sql fail" :: QxFx0Exception))
+  assertEqual "PersistenceError shows category" "category=PersistenceError, detail=<redacted>" (show (PersistenceError "test error" :: QxFx0Exception))
+  assertEqual "SQLiteError shows category" "category=SQLiteError, detail=<redacted>" (show (SQLiteError "sql fail" :: QxFx0Exception))
 
 testDecodeWorkerCommandShutdown :: Test
 testDecodeWorkerCommandShutdown = TestCase $ do

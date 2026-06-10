@@ -188,41 +188,40 @@ mkSQLiteError operation errorCode context =
 renderQxFx0ExceptionForLog :: QxFx0Exception -> Text
 renderQxFx0ExceptionForLog ex =
   case ex of
-    PersistenceError _ -> T.pack "PersistenceError(<redacted>)"
+    PersistenceError _ -> T.pack "category=PersistenceError, detail=<redacted>"
     PersistenceErrorStructured details ->
-      T.pack "PersistenceError(stage=" <> T.pack (show (pedStage details))
+      T.pack "category=PersistenceError, stage=" <> T.pack (show (pedStage details))
       <> T.pack ", operation=" <> pedOperation details
       <> T.pack ", code=" <> pedErrorCode details
-      <> T.pack ", context=<redacted>)"
-    PersistenceTxError stage _ -> T.pack "PersistenceTxError(stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>)"
+      <> T.pack ", context=<redacted>"
+    PersistenceTxError stage _ -> T.pack "category=PersistenceTxError, stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>"
     PersistenceConflict sid expected actual priorTurn ->
-      T.pack "PersistenceConflict(session=" <> sid
+      T.pack "category=PersistenceConflict, session=" <> sid
       <> T.pack ", expected_revision=" <> T.pack (show expected)
       <> T.pack ", actual_revision=" <> T.pack (show actual)
       <> T.pack ", expected_prior_turn=" <> T.pack (show priorTurn)
-      <> T.pack ")"
-    SQLiteError _ -> T.pack "SQLiteError(<redacted>)"
+    SQLiteError _ -> T.pack "category=SQLiteError, detail=<redacted>"
     SQLiteErrorStructured details ->
-      T.pack "SQLiteError(operation=" <> sedOperation details
+      T.pack "category=SQLiteError, operation=" <> sedOperation details
       <> T.pack ", code=" <> sedErrorCode details
-      <> T.pack ", context=<redacted>)"
-    RuntimeInitError _ -> T.pack "RuntimeInitError(<redacted>)"
+      <> T.pack ", context=<redacted>"
+    RuntimeInitError _ -> T.pack "category=RuntimeInitError, detail=<redacted>"
     RuntimeInitErrorStructured details ->
-      T.pack "RuntimeInitError(component=" <> riedComponent details
+      T.pack "category=RuntimeInitError, component=" <> riedComponent details
       <> T.pack ", operation=" <> riedOperation details
       <> T.pack ", code=" <> riedErrorCode details
-      <> T.pack ", context=<redacted>)"
-    EmbeddingError _ -> T.pack "EmbeddingError(<redacted>)"
+      <> T.pack ", context=<redacted>"
+    EmbeddingError _ -> T.pack "category=EmbeddingError, detail=<redacted>"
     EmbeddingErrorStructured details ->
-      T.pack "EmbeddingError(backend=" <> eedBackend details
+      T.pack "category=EmbeddingError, backend=" <> eedBackend details
       <> T.pack ", operation=" <> eedOperation details
       <> T.pack ", code=" <> eedErrorCode details
-      <> T.pack ", context=<redacted>)"
-    ThresholdParseError _ -> T.pack "ThresholdParseError(<redacted>)"
-    AgdaGateError _ -> T.pack "AgdaGateError(<redacted>)"
-    IdentityRupture _ -> T.pack "IdentityRupture(<redacted>)"
-    EssenceRupture _ -> T.pack "EssenceRupture(<redacted>)"
-    StateInvariantViolation msg -> T.pack "StateInvariantViolation(" <> msg <> T.pack ")"
+      <> T.pack ", context=<redacted>"
+    ThresholdParseError _ -> T.pack "category=ThresholdParseError, detail=<redacted>"
+    AgdaGateError _ -> T.pack "category=AgdaGateError, detail=<redacted>"
+    IdentityRupture _ -> T.pack "category=IdentityRupture, detail=<redacted>"
+    EssenceRupture _ -> T.pack "category=EssenceRupture, detail=<redacted>"
+    StateInvariantViolation _ -> T.pack "category=StateInvariantViolation, detail=<redacted>"
 
 -- | Debug variant: reveals full error details for PersistenceTxError
 -- (and other detail-redacted constructors) when the caller opts in.
