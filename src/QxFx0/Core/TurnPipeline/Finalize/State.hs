@@ -607,13 +607,11 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
             <*> pure inRecovery
         }
       -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init)
-      -- R-B4: ssEpisodic is explicitly initialized (not lazy Nothing).
-      -- If it is Nothing here, the invariant is violated; use error
-      -- (forcing-point, not imprecise throw) so the failure is total
-      -- and traceable at the site, not a lazy timing hazard.
-      episodic0 = case ssEpisodic nextWithMeta of
+      -- unreachable invariant (R-B4 guarantees ssEpisodic Just);
+      -- typed bottom forced here for deterministic, categorisable failure
+      !episodic0 = case ssEpisodic nextWithMeta of
         Just store' -> store'
-        Nothing     -> error "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4"
+        Nothing     -> throw (StateInvariantViolation "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4")
       userInputEncoded = encode turnSeq EpisodicUserInput (EpisodicUserText rawText) [] episodic0
       decisionKind = EpisodicSystemDecision
       decisionContent = EpisodicFamilyDecision outcomeFamily
