@@ -92,12 +92,11 @@ log_gate() {
 
 fail_contract() {
   local reason="$1"
-  # Only build (Gate 1) and fast tests (Gate 2) are hard gates. The remaining
-  # gates enforce architecture/contract invariants the codebase has pre-existing
-  # debt against; they run and report but are advisory (non-blocking) so the
-  # contract reflects "builds + tests pass". Tracked for follow-up cleanup.
+  # Build (Gate 1), fast tests (Gate 2), and architecture (Gate 3) are hard gates.
+  # The remaining gates enforce calibration/replay/contract invariants; they run
+  # in the extended (nightly) profile and are advisory (non-blocking) there.
   case "$reason" in
-    "Gate 1 "*|"Gate 2 "*)
+    "Gate 1 "* | "Gate 2 "* | "Gate 3 "*)
       OVERALL_VERDICT="REJECT"
       REJECT_REASON="$reason"
       echo "" | tee -a "$SUMMARY"
@@ -157,15 +156,23 @@ else
   fail_contract "Gate 2 (fast tests)"
 fi
 
+# ── Gate 3: Architecture ────────────────────────────────────────────────
+ARCH_LOG="$GATES_DIR/03_check_architecture_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && bash scripts/check_architecture.sh 2>&1) > "$ARCH_LOG" 2>&1; then
+  log_gate "check_architecture.sh" "0" "PASS" "boundary checks ok"
+else
+  log_gate "check_architecture.sh" "$?" "FAIL" "boundary violation"
+  fail_contract "Gate 3 (architecture)"
+fi
+
 # ── Core profile stops here ─────────────────────────────────────────────
-# Build (Gate 1) and fast tests (Gate 2) are the blocking per-push signal.
-# The architecture/contract gates below enforce invariants the codebase has
-# pre-existing debt against; they run in the extended (nightly) profile, where
-# the debt is reported without blocking every push. Keeps core CI fast + green.
+# Build (Gate 1), fast tests (Gate 2), and architecture (Gate 3) are blocking
+# in core. The remaining gates (calibration, replay, contract) enforce
+# invariants that run in the extended (nightly) profile.
 if [ "$PROFILE" = "core" ]; then
   echo "" | tee -a "$SUMMARY"
-  echo "Core profile: build + fast tests PASS (blocking gates)." | tee -a "$SUMMARY"
-  echo "Architecture/contract gates run in the extended (nightly) profile." | tee -a "$SUMMARY"
+  echo "Core profile: build + fast tests + architecture PASS (blocking gates)." | tee -a "$SUMMARY"
+  echo "Calibration/replay/contract gates run in the extended (nightly) profile." | tee -a "$SUMMARY"
   echo "" | tee -a "$SUMMARY"
   echo "=== CI Gate Contract VERDICT ===" | tee -a "$SUMMARY"
   echo "Profile:    $PROFILE" | tee -a "$SUMMARY"
@@ -174,15 +181,6 @@ if [ "$PROFILE" = "core" ]; then
   echo "Timestamp:  $(date -Iseconds)" | tee -a "$SUMMARY"
   echo "CONTRACT_VERDICT: PROD_GO" | tee -a "$SUMMARY"
   exit 0
-fi
-
-# ── Gate 3: Architecture ────────────────────────────────────────────────
-ARCH_LOG="$GATES_DIR/03_check_architecture_${RUN_ID}_${PROFILE}.log"
-if (cd "$ROOT" && bash scripts/check_architecture.sh 2>&1) > "$ARCH_LOG" 2>&1; then
-  log_gate "check_architecture.sh" "0" "PASS" "boundary checks ok"
-else
-  log_gate "check_architecture.sh" "$?" "FAIL" "boundary violation"
-  fail_contract "Gate 3 (architecture)"
 fi
 
 # ── Gate 3b: Calibration Codomain (Package 11 enforcement) ─────────────
