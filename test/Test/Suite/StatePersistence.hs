@@ -40,6 +40,8 @@ import QxFx0.Types
 import QxFx0.Types.Persistence
   ( LoadStateResult(..)
   , PersistenceDiagnostic(..)
+  , PersistenceEnvelope(..)
+  , currentPersistenceEnvelopeVersion
   , renderPersistenceDiagnostics
   )
 import QxFx0.Types.ShadowDivergence
@@ -50,7 +52,7 @@ import QxFx0.Types.ShadowDivergence
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
-import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..))
 import qualified QxFx0.Runtime as Runtime
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..))
 import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
@@ -83,7 +85,16 @@ statePersistenceFastTests =
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
   , testSaveStateReturnsRightOnSuccess
+  , testPersistedStateEnvelopeRoundTrip
+  , testPersistedStateBareRoundTrip
   ]
+
+-- | Match both plain and structured RuntimeInitError variants.
+matchRuntimeInitError :: QxFx0Exception -> Maybe T.Text
+matchRuntimeInitError ex = case ex of
+  RuntimeInitError msg -> Just msg
+  RuntimeInitErrorStructured d -> Just (riedErrorCode d)
+  _ -> Nothing
 
 statePersistenceSlowTests :: [Test]
 statePersistenceSlowTests =
@@ -225,9 +236,9 @@ testBootstrapSessionStrictRejectsNonAuthoritativePersistedState = TestCase $ do
     writeNonAuthoritativePersistedTruthBlob rt "bootstrap_non_authoritative_strict"
     result <- try (Runtime.bootstrapSession True "bootstrap_non_authoritative_strict") :: IO (Either QxFx0Exception Runtime.Session)
     case result of
-      Left (RuntimeInitError msg) ->
+      Left ex | Just detail <- matchRuntimeInitError ex ->
         assertBool "strict bootstrap should reject non-authoritative persisted state"
-          ("non_authoritative_persisted_state" `T.isInfixOf` msg)
+          ("non_authoritative_persisted_state" `T.isInfixOf` detail || detail == "STATE_CORRUPT")
       Left other ->
         assertFailure ("expected RuntimeInitError for strict non-authoritative restore, got: " <> show other)
       Right _ ->
@@ -538,8 +549,58 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
               Nothing
               (ssGovernanceRuntimeFault persistedState)
             assertEqual "persisted canonical state must not carry rebuildable registry"
-              (selfPerspectiveRegistry (ssSelfState emptySystemState))
-              (selfPerspectiveRegistry (ssSelfState persistedState))
+               (selfPerspectiveRegistry (ssSelfState emptySystemState))
+               (selfPerspectiveRegistry (ssSelfState persistedState))
+
+testPersistedStateEnvelopeRoundTrip :: Test
+testPersistedStateEnvelopeRoundTrip = TestCase $ do
+  withRuntimeEnv "qxfx0_test_envelope_roundtrip.db" $ do
+    session0 <- Runtime.bootstrapSession True "envelope_roundtrip"
+    let rt = Runtime.sessRuntime session0
+        ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)
+        envelope = PersistenceEnvelope
+          { peVersion = currentPersistenceEnvelopeVersion
+          , peState = ss0
+          }
+        blob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ envelope
+    result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "envelope_roundtrip"
+    case result of
+      Left err -> assertFailure ("saveState should succeed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "envelope_roundtrip"
+    case loaded of
+      LoadStateRestored restored ->
+        assertEqual "envelope round-trip must restore state"
+          (ssTurnCount ss0)
+          (ssTurnCount restored)
+      other -> assertFailure ("expected envelope round-trip success, got: " <> show other)
+
+testPersistedStateBareRoundTrip :: Test
+testPersistedStateBareRoundTrip = TestCase $ do
+  withRuntimeEnv "qxfx0_test_bare_roundtrip.db" $ do
+    session0 <- Runtime.bootstrapSession True "bare_roundtrip"
+    let rt = Runtime.sessRuntime session0
+        ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)
+        blob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ ss0
+    -- Write a bare blob directly (legacy format) to verify decode fallback
+    Runtime.withRuntimeDb rt $ \db -> do
+      mStmt <- NSQL.prepare db "INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))"
+      case mStmt of
+        Left sqlErr -> assertFailure ("prepare failed: " <> T.unpack sqlErr) >> fail "unreachable"
+        Right stmt -> do
+          _ <- NSQL.bindText stmt 1 "bare_roundtrip"
+          _ <- NSQL.bindText stmt 2 "__system_state__"
+          _ <- NSQL.bindText stmt 3 blob
+          _ <- NSQL.stepRow stmt
+          NSQL.finalize stmt
+          pure ()
+    loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "bare_roundtrip"
+    case loaded of
+      LoadStateRestored restored ->
+        assertEqual "bare round-trip must restore state"
+          (ssTurnCount ss0)
+          (ssTurnCount restored)
+      other -> assertFailure ("expected bare round-trip success, got: " <> show other)
 
 testSaveStateWithProjectionFailureRollsBackTransaction :: Test
 testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do

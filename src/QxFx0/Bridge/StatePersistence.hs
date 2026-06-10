@@ -434,9 +434,8 @@ decodePersistedState blob = do
             in if null missing
                then Right ()
                else Left ("strict_decode_missing_required_fields: " <> show missing)
-  -- Canonical write shape is raw top-level SystemState. PersistenceEnvelope
-  -- remains accepted only as a tolerated legacy read shape during contract
-  -- consolidation and must not be described as current canonical persistence.
+  -- Canonical write shape is PersistenceEnvelope (versioned state).
+  -- Bare top-level SystemState is accepted as a legacy read fallback.
   case Aeson.decode (BL.fromStrict bytes) :: Maybe Aeson.Object of
     Just obj -> do
       case validateStrict obj of
@@ -444,7 +443,10 @@ decodePersistedState blob = do
         Right () ->
           case Aeson.eitherDecodeStrict bytes of
             Right (PersistenceEnvelope _ ss) -> pure (Right ss)
-            Left e -> pure (Left e)
+            Left _ ->
+              case Aeson.eitherDecodeStrict bytes of
+                Right ss -> pure (Right ss)
+                Left e -> pure (Left e)
     Nothing ->
       pure (Left "strict_decode_failed_to_parse_json_object")
 
