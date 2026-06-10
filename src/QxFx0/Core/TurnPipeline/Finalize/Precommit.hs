@@ -176,7 +176,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
   let traceAnalysis = analyzeTrace replayTrace
   logTraceAnomalies replayTrace traceAnalysis
   let (outputWithIntrospection, finalSafetyStatus) =
-        buildFinalOutput wantIntrospection (Just replayTrace) systemState (taGuardSurface turnArtifacts) nextSystemState
+        buildFinalOutput wantIntrospection replayTrace systemState (taGuardSurface turnArtifacts) nextSystemState
   pure FinalizePrecommitBundle
         { fpbNextSs = nextSystemState
         , fpbProjection = projection

@@ -607,9 +607,13 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
             <*> pure inRecovery
         }
       -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init)
+      -- R-B4: ssEpisodic is explicitly initialized (not lazy Nothing).
+      -- If it is Nothing here, the invariant is violated; use error
+      -- (forcing-point, not imprecise throw) so the failure is total
+      -- and traceable at the site, not a lazy timing hazard.
       episodic0 = case ssEpisodic nextWithMeta of
         Just store' -> store'
-        Nothing     -> throw $ StateInvariantViolation "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4"
+        Nothing     -> error "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4"
       userInputEncoded = encode turnSeq EpisodicUserInput (EpisodicUserText rawText) [] episodic0
       decisionKind = EpisodicSystemDecision
       decisionContent = EpisodicFamilyDecision outcomeFamily
@@ -653,19 +657,17 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
 maxProvisionalAtoms :: Int
 maxProvisionalAtoms = 1000
 
-buildFinalOutput :: Bool -> Maybe TurnReplayTrace -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
-buildFinalOutput wantIntrospection mReplayTrace ss baseSurface nextSs =
+buildFinalOutput :: Bool -> TurnReplayTrace -> SystemState -> Guard.GuardSurface -> SystemState -> (Text, Guard.SafetyStatus)
+buildFinalOutput wantIntrospection replayTrace ss baseSurface nextSs =
   let -- Phase 3D: Analyze trace for anomalies (lightweight, < 1ms)
       -- Note: Trace analysis and logging moved to IO boundary in caller (buildFinalizePrecommit)
       -- to maintain referential transparency. The analysis itself is pure.
-      _traceAnalysis = case mReplayTrace of
-        Just trace -> analyzeTrace trace
-        Nothing -> throw $ StateInvariantViolation "buildFinalOutput: trace analysis requires replay trace"
+      _traceAnalysis = analyzeTrace replayTrace
       
       preIntrospectionSurface =
         if wantIntrospection
           then
-            let introspectionText = renderSemanticIntrospection nextSs mReplayTrace
+            let introspectionText = renderSemanticIntrospection nextSs (Just replayTrace)
             in baseSurface
                 { Guard.gsRenderedText = Guard.gsRenderedText baseSurface <> "\n" <> introspectionText
                 , Guard.gsSegments = Guard.gsSegments baseSurface <> [Guard.RenderSegment Guard.SegmentIntrospection introspectionText]
