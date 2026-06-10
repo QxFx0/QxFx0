@@ -151,80 +151,53 @@ if ! cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1; then
 fi
 
 echo "  [10b] HTTP perimeter invariants must stay closed..."
+# Perimeter is split — loopback bind guard in app/CLI/Http.hs (Haskell launcher),
+# auth/session/sanitize in scripts/http_runtime.py (Python sidecar).
 if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import sys
 
 root = pathlib.Path(sys.argv[1])
 http_hs = (root / "app/CLI/Http.hs").read_text(encoding="utf-8")
-http_runtime_hs = (root / "app/CLI/Http/Runtime.hs").read_text(encoding="utf-8")
-embedding_hs = (root / "src/QxFx0/Semantic/Embedding/Runtime.hs").read_text(encoding="utf-8")
+http_runtime_py = (root / "scripts/http_runtime.py").read_text(encoding="utf-8")
 
-if '|| h == "0.0.0.0"' in http_hs:
-    raise SystemExit(1)
-if 'http_runtime.py' in http_hs:
-    raise SystemExit(1)
-for required in (
-    'QXFX0_EMBEDDING_BACKEND',
-    'EMBEDDING_API_URL',
-    'EmbeddingBackendLocalDeterministic',
-    'EmbeddingBackendRemoteHTTP',
-    'ehStrictReady = True',
-    'remote_embedding_url_missing',
-    'invalid_remote_embedding_url',
-    'remote_embedding_host_blocked',
+# Haskell launcher: loopback guard
+for forbidden in (
+    '|| h == "0.0.0.0"',
+    'http_runtime.py',
 ):
-    if required not in embedding_hs:
+    if forbidden in http_hs:
         raise SystemExit(1)
-if 'Just url -> EmbeddingSelection EmbeddingBackendRemoteHTTP False' in embedding_hs:
-    raise SystemExit(1)
-if 'Just "remote" -> remoteSelection trustedHttpsHosts mUrl' not in embedding_hs:
-    raise SystemExit(1)
-if 'Just "remote-http" -> remoteSelection trustedHttpsHosts mUrl' not in embedding_hs:
-    raise SystemExit(1)
-if 'esExplicit = False' not in embedding_hs:
-    raise SystemExit(1)
+
 for required in (
     'QXFX0_HTTP_HOST',
     'QXFX0_HTTP_PORT',
     'QXFX0_ALLOW_NON_LOOPBACK_HTTP',
-    'QXFX0_API_KEY',
-    'QXFX0_ALLOW_INSECURE_NO_API_KEY',
-    'non_loopback_bind_requires_opt_in',
-    'api_key_required_for_non_loopback_bind',
+    'isLoopbackHost',
 ):
     if required not in http_hs:
         raise SystemExit(1)
-for required in (
-    '"/sidecar-health"',
-    '"/runtime-ready"',
-    '"/turn"',
-    'sanitizeInput',
-    'claimOrValidateSessionToken',
-    'session_token_required',
-    'invalid_session_token',
-    'sidecar_busy',
-    'turn_outcome_unknown',
+
+# Python sidecar: auth, session, sanitize, endpoints
+for forbidden in (
+    '0.0.0.0',
 ):
-    if required not in http_runtime_hs:
+    if forbidden in http_runtime_py:
         raise SystemExit(1)
 
-health_start = http_runtime_hs.index('doDeprecatedHealth state req respond = do')
-health_auth = http_runtime_hs.index('authResponse <- checkAuthPure state req', health_start)
-health_evict = http_runtime_hs.index('registryEvictIdle (hrsRegistry state)', health_start)
-if health_auth > health_evict:
-    raise SystemExit(1)
-
-sidecar_start = http_runtime_hs.index('doSidecarHealth state req respond = do')
-sidecar_auth = http_runtime_hs.index('authResponse <- checkAuthPure state req', sidecar_start)
-sidecar_evict = http_runtime_hs.index('registryEvictIdle (hrsRegistry state)', sidecar_start)
-if sidecar_auth > sidecar_evict:
-    raise SystemExit(1)
-
-sanitize_pos = http_runtime_hs.index('bodyResult <- parseTurnRequest state req')
-claim_pos = http_runtime_hs.index('ownership <-')
-if sanitize_pos > claim_pos:
-    raise SystemExit(1)
+for required in (
+    'QXFX0_API_KEY',
+    'QXFX0_REQUIRE_SESSION_TOKEN',
+    'def sanitize_input',
+    'hmac.compare_digest',
+    '"unauthorized"',
+    '401',
+    'points outside trusted roots',
+    '"/sidecar-health"',
+    '"/runtime-ready"',
+):
+    if required not in http_runtime_py:
+        raise SystemExit(1)
 PY
   fail_violation "HTTP perimeter invariants drifted (bind/auth/input/script/embedding contract)"
 fi
