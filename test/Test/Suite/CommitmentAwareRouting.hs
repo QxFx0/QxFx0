@@ -153,6 +153,16 @@ unitEmptyStore = TestLabel "empty store" $
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
 
+unitInfixNoEngage :: Test
+unitInfixNoEngage = TestLabel "infix does not engage (word boundary)" $
+  TestCase $ do
+    let store = makeStoreWithClaim "несвобода — это рабство"
+        result = detectCommitmentEngagement store "свобода" atomSetWithoutContradiction
+    assertEqual "ceEngaged should be empty (no whole-word overlap)"
+      0 (length (ceEngaged result))
+    assertEqual "ceContradicted should be False"
+      False (ceContradicted result)
+
 -- ---------------------------------------------------------------------------
 -- Integration test: through the pipeline with overridden atom set
 -- ---------------------------------------------------------------------------
@@ -285,6 +295,7 @@ commitmentAwareRoutingTests =
   , unitContradicted
   , unitNotEngaged
   , unitEmptyStore
+  , unitInfixNoEngage
   , integrationContradictionTraceAndLedger
   , integrationNoContradictionNoHint
   ]
