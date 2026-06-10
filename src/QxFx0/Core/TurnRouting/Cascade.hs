@@ -8,6 +8,7 @@ module QxFx0.Core.TurnRouting.Cascade
   , applyGuardGating
   , applyConatusGateRestriction
   , buildGuardReport
+  , commitmentFamilyHint
   ) where
 
 import Data.Maybe (fromMaybe)
@@ -45,6 +46,7 @@ import QxFx0.Types.Thresholds.Routing
   , identityGuardDefaultTensionBaseline
   )
 import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..))
 
 -- | WP-B R-B3: check if retrieved episodes contain recent system decisions.
 -- If yes, suppress doubt-driven CMClarify override (don't re-ask established facts).
@@ -52,9 +54,16 @@ hasRecentSystemDecision :: [EpisodicEvent] -> Bool
 hasRecentSystemDecision episodes =
   any (\e -> eeKind e == EpisodicSystemDecision) episodes
 
+-- | SUBJECT-SEAM-1: when the turn contradicts a held commitment, hint
+-- toward CMReflect (soft re-assertion) rather than passive continuation.
+commitmentFamilyHint :: CommitmentEngagement -> Maybe CanonicalMoveFamily
+commitmentFamilyHint ce
+  | ceContradicted ce = Just CMReflect
+  | otherwise         = Nothing
+
 runFamilyCascade :: RoutingPhase -> SystemState -> UserState -> InputPropositionFrame -> AtomSet -> [Text] -> Text
-                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> ConatusEnergy -> Double -> [EpisodicEvent] -> FamilyCascade
-runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes =
+                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> ConatusEnergy -> Double -> [EpisodicEvent] -> CommitmentEngagement -> FamilyCascade
+runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes commitmentEngagement =
   let parserLockedFamily =
         if ipfConfidence frame >= parserHighConfidenceThreshold
               && ipfPropositionType frame /= PlainAssert
@@ -65,11 +74,15 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
           Just parserFamily -> parserFamily
           Nothing ->
             maybe rpFamilyAfterStrategy (`preferFamily` rpFamilyAfterStrategy) (identityFamilyHint rpIdentitySignal0)
+      familyAfterCommitment =
+        case parserLockedFamily of
+          Just parserFamily -> parserFamily
+          Nothing -> maybe familyAfterIdentity (`preferFamily` familyAfterIdentity) (commitmentFamilyHint commitmentEngagement)
       narrativeHint = narrative >>= narrativeFamilyHint
       familyAfterNarrative =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
-          Nothing -> maybe familyAfterIdentity (`preferFamily` familyAfterIdentity) narrativeHint
+          Nothing -> maybe familyAfterCommitment (`preferFamily` familyAfterCommitment) narrativeHint
       familyAfterIntuition =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
@@ -111,15 +124,16 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
       -- Phase 8 Package D: salience-modulated guard divergence (always enabled)
       salienceGuardDivergenceEnabled = True
    in FamilyCascade
-        { fcFamilyAfterIdentity = familyAfterIdentity
-        , fcFamilyAfterNarrative = familyAfterNarrative
-        , fcFamilyAfterIntuition = familyAfterIntuition
-        , fcFamilyAfterPrincipled = familyAfterPrincipled
-        , fcGuardReportPre = guardReportPre
-        , fcFamilyAfterGuard = familyAfterGuard
-        , fcFamilyCascade = familyCascade
-        , fcFinalFamily = finalFamily
-        }
+         { fcFamilyAfterIdentity = familyAfterIdentity
+         , fcFamilyAfterCommitment = familyAfterCommitment
+         , fcFamilyAfterNarrative = familyAfterNarrative
+         , fcFamilyAfterIntuition = familyAfterIntuition
+         , fcFamilyAfterPrincipled = familyAfterPrincipled
+         , fcGuardReportPre = guardReportPre
+         , fcFamilyAfterGuard = familyAfterGuard
+         , fcFamilyCascade = familyCascade
+         , fcFinalFamily = finalFamily
+         }
 
 applyPrincipledFamily :: Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
 applyPrincipledFamily mode family =

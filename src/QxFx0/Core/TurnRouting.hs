@@ -23,6 +23,7 @@ import QxFx0.Core.TurnPipeline.Types (RoutingDecision(..))
 import QxFx0.Core.Ego (updateEgoFromTurn)
 import QxFx0.Core.IdentitySignal (buildIdentitySignalSimple)
 import QxFx0.Semantic.SemanticInput (buildSemanticInputSimple)
+import QxFx0.Semantic.Retrieve (detectCommitmentEngagement)
 import QxFx0.Core.TurnModulation (computeTensionDelta)
 import QxFx0.Core.TurnRender
   ( deriveSemanticAnchor
@@ -51,6 +52,7 @@ import QxFx0.Self.Salience
 import QxFx0.Self.Adjunction (holisticFormalContextSplitActive)
 import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from Spectral, WP-I Tier-0)
 import QxFx0.Memory.Episodic (EpisodicEvent)
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..))
 import QxFx0.Core.TurnRouting.Cascade
   ( applyConatusGateRestriction
   , applyGuardGating
@@ -131,10 +133,14 @@ routeFamilyWithSelfVerdict :: CanonicalMoveFamily -> InputPropositionFrame -> At
                           -> Maybe ConsciousnessNarrative -> Double -> Field -> SelfVerdict -> ConatusEnergy
                           -> Double -> Maybe (Plan -> Bool) -> [EpisodicEvent]
                           -> RoutingDecision
-routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior preparedField selfVerdict conatusEnergy doubt mCourtesy retrievedEpisodes =
+routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss history input isNixBlocked currentTopic mNarrative intuitPosterior preparedField selfVerdict conatusEnergy doubt mCourtesy retrievedEpisodes =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
       routingSalience = svSalience selfVerdict
-      cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience conatusEnergy doubt retrievedEpisodes
+      commitmentEngagement =
+        case ssSemanticCommitments ss of
+          Just store -> detectCommitmentEngagement store currentTopic atomSet
+          Nothing    -> CommitmentEngagement [] False
+      cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience conatusEnergy doubt retrievedEpisodes commitmentEngagement
       FamilyCascade{..} = cascade
 
       -- Phase 8 (M1/M2): build hemispheric proposals and reconcile.

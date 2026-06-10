@@ -37,6 +37,7 @@ data RoutingPhase = RoutingPhase
 
 data FamilyCascade = FamilyCascade
   { fcFamilyAfterIdentity :: !CanonicalMoveFamily
+  , fcFamilyAfterCommitment :: !CanonicalMoveFamily
   , fcFamilyAfterNarrative :: !CanonicalMoveFamily
   , fcFamilyAfterIntuition :: !CanonicalMoveFamily
   , fcFamilyAfterPrincipled :: !CanonicalMoveFamily

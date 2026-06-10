@@ -17,6 +17,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
+import QxFx0.Core.TurnRouting.Cascade (commitmentFamilyHint)
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Core.TopicDrift.Pressure (buildDreamOutcome)
 import QxFx0.Core.Observability
@@ -331,7 +332,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
            , trcCommitmentStoreDecision = commitDecision
            , trcCommitmentEngaged = length (ceEngaged commitmentEngagement)
            , trcCommitmentContradicted = ceContradicted commitmentEngagement
-           , trcCommitmentFamilyHint = Nothing
+           , trcCommitmentFamilyHint = commitmentFamilyHint (tpCommitmentEngagement tp)
            , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
           , trcDoubtScore = doubtScore
           , trcEpisodicRetrievalCount = episodicRetrievalCount
