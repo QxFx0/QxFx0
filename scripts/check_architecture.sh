@@ -593,52 +593,50 @@ then
 fi
 
 echo "  [20] ADR-0013 §3 Rule 6: canonical-flag-off modules are not in the authority path..."
-# Per docs/closure/PROMOTION_PLAYBOOK.md, flags not yet promoted must not
-# have '= True' in production code. Promoted flags must have '= True'.
-#
-# Current state (2026-06-10, post-ADR-0034/0045/0046/0047/0048 promotions):
-#   PROMOTED  — Family Divergence (ADR-0019, salienceGuardDivergenceEnabled = True)
-#               Episodic Recall (ADR-0034, episodicRecallActive = True)
-#               Doubt Loop (ADR-0045, doubtLoopActive = True)
-#               Affect Decoupled (ADR-0046, affectDecoupledActive = True)
-#               Content Salience (ADR-0047, contentSalienceActive = True)
-#               Derived Inference (ADR-0048, derivedInferenceActive = True)
-#   FLAG-OFF  — Essence, Perspective Operator, External LLM, Adaptive Mutation,
-#               User Model, Runtime Morphology
-#
-# The check has two parts:
-#   (a) The 6 not-yet-promoted flags must not have '= True' in src/.
-#   (b) Promoted flags must have '= True' at their declared paths.
-if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'
+# Source of truth: docs/closure/flag_promotion_registry.tsv.
+# Promotion = update one registry line.
+# Flags not yet promoted must not have '= True' in production code.
+# Promoted flags must have '= True'.
+if ! python3 - "$ROOT" >/dev/null 2>&1 <<'PY'; then
 import pathlib
 import re
 import sys
 
 root = pathlib.Path(sys.argv[1])
 src_root = root / "src"
+registry_path = root / "docs/closure/flag_promotion_registry.tsv"
+
 if not src_root.is_dir():
     raise SystemExit(0)
 
-# Not-yet-promoted flags: must NOT have '= True' in src/.
-# (flag_name, in_code) — in_code=True means also check '= False' exists.
-FLAG_OFF_FLAGS = [
-    ("Essence",              "essenceCommitmentEnabled",                False),
-    ("Perspective Operator", "QXFX0_PERSPECTIVE_OPERATOR_ENABLED",       False),
-    ("External LLM",         "QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED",        False),
-    ("Adaptive Mutation",    "QXFX0_ADAPTIVE_MUTATION_ENABLED",          False),
-    ("User Model",           "userModelActive",                          False),
-    ("Runtime Morphology",   "runtimeMorphologyActive",                  False),
-]
+# Fail-closed: registry must exist and be readable
+if not registry_path.is_file():
+    print("flag_promotion_registry.tsv not found", file=sys.stderr)
+    raise SystemExit(1)
 
-# Promoted flags: must have '= True' in src/.
-PROMOTED_FLAGS = [
-    ("Family Divergence",    "salienceGuardDivergenceEnabled",   "src/QxFx0/Core/TurnRouting/Cascade.hs"),
-    ("Episodic Recall",      "episodicRecallActive",             "src/QxFx0/Memory/Episodic.hs"),
-    ("Doubt Loop",           "doubtLoopActive",                  "src/QxFx0/Core/ConsciousnessLoop.hs"),
-    ("Affect Decoupled",     "affectDecoupledActive",            "src/QxFx0/Self/Field.hs"),
-    ("Content Salience",     "contentSalienceActive",            "src/QxFx0/Core/ContentCluster.hs"),
-    ("Derived Inference",    "derivedInferenceActive",           "src/QxFx0/Semantic/Logic.hs"),
-]
+registry_lines = registry_path.read_text(encoding="utf-8").strip().splitlines()
+if not registry_lines:
+    print("flag_promotion_registry.tsv is empty", file=sys.stderr)
+    raise SystemExit(1)
+
+header = registry_lines[0].split("\t")
+expected_cols = ["flag", "state", "file", "adr"]
+if header != expected_cols:
+    print(f"flag_promotion_registry.tsv header mismatch: {header}", file=sys.stderr)
+    raise SystemExit(1)
+
+flag_off: list[tuple[str, str]] = []  # (contour, flag)
+promoted: list[tuple[str, str, str]] = []  # (contour, flag, expected_path)
+
+for line in registry_lines[1:]:
+    parts = line.split("\t")
+    if len(parts) < 3:
+        continue
+    flag_name, state, file_path = parts[0], parts[1], parts[2]
+    if state == "off":
+        flag_off.append((flag_name, flag_name))
+    elif state == "promoted":
+        promoted.append((flag_name, flag_name, file_path))
 
 true_lit_re = re.compile(r"\b\w+\s*=\s*True\b")
 false_lit_re = re.compile(r"\b\w+\s*=\s*False\b")
@@ -646,9 +644,8 @@ false_lit_re = re.compile(r"\b\w+\s*=\s*False\b")
 violations: list[str] = []
 
 # Part (a): flag-off checks
-for (contour, flag, in_code) in FLAG_OFF_FLAGS:
+for (contour, flag) in flag_off:
     true_files: list[str] = []
-    false_files: list[str] = []
     for path in src_root.rglob("*.hs"):
         text = path.read_text(encoding="utf-8")
         for line_no, line in enumerate(text.splitlines(), 1):
@@ -656,20 +653,14 @@ for (contour, flag, in_code) in FLAG_OFF_FLAGS:
                 continue
             if true_lit_re.search(line):
                 true_files.append(f"{path.relative_to(root)}:{line_no}")
-            if in_code and false_lit_re.search(line):
-                false_files.append(f"{path.relative_to(root)}:{line_no}")
     if true_files:
         violations.append(
             f"{contour} ({flag}): '= True' literal found in production code (not yet promoted): "
             + ", ".join(true_files)
         )
-    if in_code and not false_files:
-        violations.append(
-            f"{contour} ({flag}): in-code flag is missing '= False' literal in src/"
-        )
 
 # Part (b): promoted flag checks
-for (contour, flag, expected_path) in PROMOTED_FLAGS:
+for (contour, flag, expected_path) in promoted:
     target = root / expected_path
     if not target.is_file():
         violations.append(
@@ -691,7 +682,6 @@ if violations:
         print(v, file=sys.stderr)
     raise SystemExit(1)
 PY
-then
   fail_violation "canonical-flag-off discipline violated (ADR-0013 Rule 6)"
 fi
 
