@@ -564,6 +564,7 @@ common test-common
     Test.Suite.ResponseContentAdmission
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine
+    Test.Suite.CommitmentAwareRouting
 
 test-suite qxfx0-test-unit
   import:        test-common
