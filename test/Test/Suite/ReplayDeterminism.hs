@@ -37,6 +37,7 @@ import QxFx0.Types.ShadowDivergence (ShadowDivergence(..), ShadowDivergenceKind(
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..), TurnProjection(..))
+import QxFx0.Types.State.SemanticCommitment (emptyCommitmentEngagement)
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
 import QxFx0.Core.TurnPipeline (TurnSignals(..))
@@ -153,6 +154,9 @@ minimalReplayTrace apiHealthy =
   , trcQuarantinedCommitmentCount = 0
   , trcPromotedFromQuarantineCount = 0
   , trcCommitmentStoreDecision = CsaAdmitCanonical
+   , trcCommitmentEngaged = 0
+   , trcCommitmentContradicted = False
+   , trcCommitmentFamilyHint = Nothing
   , trcCognitiveSignals = emptyCognitiveSignals
     , trcDoubtScore = Nothing
     , trcEpisodicRetrievalCount = Nothing
@@ -242,7 +246,7 @@ testRecordedEqualsConsumed =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0
+                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement
         recorded proj = esApiHealthy <$> trcEffectSnapshot (tqpReplayTrace proj)
     assertEqual "projection records True when consumed value is True"
                (Just True) (recorded (projOf True))
@@ -266,7 +270,7 @@ testSnapshotSurvivesSerialization =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0
+                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement
         decodeSnapshot proj =
           (eitherDecode (encode (tqpReplayTrace proj))
              >>= parseEither (withObject "trace" (\o -> o .:? "trcEffectSnapshot")))
@@ -289,7 +293,7 @@ testFullTraceRoundTrips =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
-                  (buildTurnProjection "test" "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0)
+                  (buildTurnProjection "test" "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement)
     assertEqual "decode (encode trace) must reproduce the trace exactly"
       (Right trace)
       (eitherDecode (encode trace) :: Either String TurnReplayTrace)

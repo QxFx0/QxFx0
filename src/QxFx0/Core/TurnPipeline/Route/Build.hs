@@ -81,7 +81,9 @@ import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily, diagnosticPropositionFamilyTyped)
+import QxFx0.Semantic.Retrieve (detectCommitmentEngagement)
 import QxFx0.Types
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..))
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.Thresholds
   ( agdaVerificationPenalty
@@ -235,6 +237,10 @@ buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
         | otherwise = Nothing
 
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
+      commitmentEngagement =
+        case ssSemanticCommitments ss of
+          Just store -> detectCommitmentEngagement store (tiBestTopic ti) atomSet
+          Nothing    -> CommitmentEngagement [] False
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
           . recordThresholdProbe "legitimacy_pass" legitimacyPassThreshold
@@ -272,6 +278,7 @@ buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
             , tpFmarDirective = fmarDirective
             , tpFamilyDerivationChain = familyDerivationChain
             , tpResponseAdmission = arcDecision
+            , tpCommitmentEngagement = commitmentEngagement
             }
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus

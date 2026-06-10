@@ -65,7 +65,7 @@ import QxFx0.Types
 import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
-import QxFx0.Types.State.SemanticCommitment (scsActive, scsQuarantine)
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
 import qualified Data.HashMap.Strict as HashMap
 import QxFx0.Types.Thresholds
   ( LegitimacyStatus(..)
@@ -107,8 +107,9 @@ buildTurnProjection
   -> TurnArtifacts
   -> CommitmentStoreAdmissionDecision
   -> Int
+  -> CommitmentEngagement
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount commitmentEngagement =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -327,8 +328,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 Nothing    -> 0
                 Just store -> HashMap.size (scsQuarantine store)
             , trcPromotedFromQuarantineCount = promotedCount
-            , trcCommitmentStoreDecision = commitDecision
-          , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
+           , trcCommitmentStoreDecision = commitDecision
+           , trcCommitmentEngaged = length (ceEngaged commitmentEngagement)
+           , trcCommitmentContradicted = ceContradicted commitmentEngagement
+           , trcCommitmentFamilyHint = Nothing
+           , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
           , trcDoubtScore = doubtScore
           , trcEpisodicRetrievalCount = episodicRetrievalCount
           , trcContentSaliencyDominantCluster = contentSaliencyDominantCluster

@@ -267,13 +267,22 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ CTS-44: number of claims promoted from quarantine to active
     --   this turn (matching statement normalized). Zero when no promotion
     --   occurred.
-  , trcCommitmentStoreDecision :: !CommitmentStoreAdmissionDecision
+   , trcCommitmentStoreDecision :: !CommitmentStoreAdmissionDecision
     -- ^ CTS-42: the admission decision applied to this turn's factual
     --   claims (anchor + surface-parsed). Captures the decision that was
     --   actually applied, not a re-computation from 'trcTruthContractStatus',
     --   so replay under a future constitution version does not alter the
     --   persisted decision.
-  , trcCognitiveSignals :: !CognitiveSignals
+   , trcCommitmentEngaged :: !Int
+    -- ^ SUBJECT-SEAM-1: number of active commitments engaged by the
+    --   turn's input topic (word overlap with active store).
+   , trcCommitmentContradicted :: !Bool
+    -- ^ SUBJECT-SEAM-1: True when the turn both engaged a held commitment
+    --   AND carried a Contradiction atom.
+   , trcCommitmentFamilyHint :: !(Maybe CanonicalMoveFamily)
+    -- ^ SUBJECT-SEAM-1: family hint derived from commitment engagement
+    --   (e.g. CMReflect when contradicted). Nothing when no engagement.
+   , trcCognitiveSignals :: !CognitiveSignals
     -- ^ WP-S: the compute-once derived-signal bundle (counterfactual entropy,
     --   field confidence, shadow disagreement, max posterior) shared by the
     --   doubt loop (WP-D) and affect (WP-E). Surfaced here as the living

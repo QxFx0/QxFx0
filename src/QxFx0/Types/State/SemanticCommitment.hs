@@ -15,7 +15,9 @@ module QxFx0.Types.State.SemanticCommitment
   , ContradictionEvent(..)
   , RetractionReason(..)
   , ContradictionKind(..)
+  , CommitmentEngagement(..)
   , emptySemanticCommitmentStore
+  , emptyCommitmentEngagement
   , quarantinedClaims
   ) where
 
@@ -134,6 +136,18 @@ emptySemanticCommitmentStore = SemanticCommitmentStore
   , scsContradictions = []
   , scsNextId     = 1
   }
+
+-- | Result of detecting whether a turn engages or contradicts held commitments.
+-- Engaged = words overlap with active store; Contradicted = engaged + Contradiction atom.
+data CommitmentEngagement = CommitmentEngagement
+  { ceEngaged      :: ![CommitmentId]      -- active commitments touched by the turn
+  , ceContradicted :: !Bool                -- engaged and carries a Contradiction signal
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Empty engagement (no overlap, no contradiction).
+emptyCommitmentEngagement :: CommitmentEngagement
+emptyCommitmentEngagement = CommitmentEngagement [] False
 
 -- | Review-visibility accessor: claims currently in quarantine.
 quarantinedClaims :: SemanticCommitmentStore -> [FactualClaimPayload]

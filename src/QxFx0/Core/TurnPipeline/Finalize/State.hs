@@ -17,8 +17,8 @@ import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
-import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine)
-import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, contradict)
+import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore, CommitmentEngagement(..), CommitmentId(..), ContradictionKind(..))
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
@@ -551,25 +551,42 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
       -- is established this turn. This makes the anchor machine-visible in the
       -- SemanticCommitmentStore alongside the surface-parsed claim.
       -- CTS-42: gate both commits with the same admission decision.
-      store1 = case (commitDecision, tpSemanticAnchor tp) of
+      (store1, mAnchorCid) = case (commitDecision, tpSemanticAnchor tp) of
         (CsaAdmitCanonical, Just anchor) ->
           let anchorPayload = anchorToFactualClaim anchor turnSeq
-          in fst (commitObservation anchorPayload store0)
+              (s, cid) = commitObservation anchorPayload store0
+          in (s, Just cid)
         (CsaSuppress, Just anchor) ->
           let anchorPayload = anchorToFactualClaim anchor turnSeq
-          in quarantineObservation anchorPayload store0
-        _ -> store0
-      (store2, promotedCount) = case (commitDecision, mClaimPayload) of
+          in (quarantineObservation anchorPayload store0, Nothing)
+        _ -> (store0, Nothing)
+      (store2, promotedCount, mSurfaceCid) = case (commitDecision, mClaimPayload) of
         (CsaAdmitCanonical, Just claimPayload) ->
           let payload = claimPayload { fcpTurnSeq = turnSeq }
               (committed, newCid) = commitObservation payload store1
-          in promoteMatchingQuarantine newCid (fcpStatement payload) committed
+              (promoted, count) = promoteMatchingQuarantine newCid (fcpStatement payload) committed
+          in (promoted, count, Just newCid)
         (CsaSuppress, Just claimPayload) ->
           ( quarantineObservation claimPayload { fcpTurnSeq = turnSeq } store1
           , 0
+          , Nothing
           )
-        _ -> (store1, 0)
-      nextWithCommitments = nextWithLog { ssSemanticCommitments = Just store2 }
+        _ -> (store1, 0, Nothing)
+      -- SUBJECT-SEAM-1: if the turn contradicted held commitments, record each
+      -- contradiction pair (new claim ↔ engaged commitment) in the ledger.
+      store3 =
+        let ce = tpCommitmentEngagement tp
+        in if ceContradicted ce
+             then
+               let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
+                   engaged = ceEngaged ce
+               in foldr (\engagedCid s ->
+                    if engagedCid == newCid
+                      then s
+                      else contradict engagedCid newCid ContradictionStatement turnSeq s
+                  ) store2 engaged
+             else store2
+      nextWithCommitments = nextWithLog { ssSemanticCommitments = Just store3 }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of
         Just c  -> Just c

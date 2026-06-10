@@ -48,6 +48,7 @@ import QxFx0.Core.ResponseContentAdmission (ResponseContentAdmissionDecision)
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
 import QxFx0.Memory.Episodic (EpisodicEvent)
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -202,6 +203,10 @@ data TurnPlan = TurnPlan
     -- ^ CTS-41: constitution-aware filtering decision applied to RMP/RCP
     --   between planning and render. Determines whether plans are admitted
     --   as-is, softened, weakened, or rerouted to clarify.
+  , tpCommitmentEngagement :: !CommitmentEngagement
+    -- ^ SUBJECT-SEAM-1: whether the turn engages or contradicts held
+    --   commitments. Populated in 'buildRouteTurnPlan' from the active
+    --   store and current atom set.
   }
 
 tpNewEgo :: TurnPlan -> EgoState

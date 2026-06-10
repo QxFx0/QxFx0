@@ -167,6 +167,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
           turnArtifacts
           commitDecision
           promotedCount
+          (tpCommitmentEngagement turnPlan)
       wantIntrospection =
         fprSemanticIntrospectionEnabled precommitResults
           || ssOutputMode systemState == SemanticIntrospectionOutput
