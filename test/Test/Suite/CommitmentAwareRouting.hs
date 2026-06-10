@@ -114,6 +114,36 @@ atomSetWithoutContradiction = AtomSet
   , asRegister = Neutral
   }
 
+-- | Contradiction token about a DIFFERENT topic (cross-topic false positive).
+atomWithCrossTopicContradiction :: MeaningAtom
+atomWithCrossTopicContradiction = MeaningAtom
+  { maText = "нет нравственности"
+  , maTag = Contradiction "нравственность" "нет"
+  , maEmbedding = V.empty
+  }
+
+atomSetWithCrossTopicContradiction :: AtomSet
+atomSetWithCrossTopicContradiction = AtomSet
+  { asAtoms = [atomWithCrossTopicContradiction]
+  , asLoad = 1.0
+  , asRegister = Neutral
+  }
+
+-- | Poor-token contradiction (amplified) — fallback to weak.
+atomWithPoorContradiction :: MeaningAtom
+atomWithPoorContradiction = MeaningAtom
+  { maText = "amplified"
+  , maTag = Contradiction "amplified" "amplified"
+  , maEmbedding = V.empty
+  }
+
+atomSetWithPoorContradiction :: AtomSet
+atomSetWithPoorContradiction = AtomSet
+  { asAtoms = [atomWithPoorContradiction]
+  , asLoad = 1.0
+  , asRegister = Neutral
+  }
+
 unitEngagedNotContradicted :: Test
 unitEngagedNotContradicted = TestLabel "engaged without contradiction atom" $
   TestCase $ do
@@ -162,6 +192,28 @@ unitInfixNoEngage = TestLabel "infix does not engage (word boundary)" $
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
+
+-- | Cross-topic contradiction: overlap exists, but contradiction atom is about a different topic.
+unitCrossTopicNoContradiction :: Test
+unitCrossTopicNoContradiction = TestLabel "cross-topic contradiction is not contradicted" $
+  TestCase $ do
+    let store = makeStoreWithClaim "свобода есть право человека"
+        result = detectCommitmentEngagement store "свобода" atomSetWithCrossTopicContradiction
+    assertEqual "ceEngaged should be non-empty"
+      1 (length (ceEngaged result))
+    assertEqual "ceContradicted should be False (cross-topic)"
+      False (ceContradicted result)
+
+-- | Poor-token contradiction: "amplified" fallback keeps contradicted = True.
+unitPoorTokenFallback :: Test
+unitPoorTokenFallback = TestLabel "poor-token contradiction falls back to contradicted" $
+  TestCase $ do
+    let store = makeStoreWithClaim "свобода есть право человека"
+        result = detectCommitmentEngagement store "свобода" atomSetWithPoorContradiction
+    assertEqual "ceEngaged should be non-empty"
+      1 (length (ceEngaged result))
+    assertEqual "ceContradicted should be True (poor fallback)"
+      True (ceContradicted result)
 
 -- ---------------------------------------------------------------------------
 -- Integration test: through the pipeline with overridden atom set
@@ -296,6 +348,8 @@ commitmentAwareRoutingTests =
   , unitNotEngaged
   , unitEmptyStore
   , unitInfixNoEngage
+  , unitCrossTopicNoContradiction
+  , unitPoorTokenFallback
   , integrationContradictionTraceAndLedger
   , integrationNoContradictionNoHint
   ]

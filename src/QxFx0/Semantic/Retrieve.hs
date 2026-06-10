@@ -63,12 +63,18 @@ retrieve query store =
   where
     overlaps q payload = snd (wordSetOverlap q (fcpStatement payload))
 
+-- | A contradiction token is considered "poor" (uninformative) if it is the literal
+--   "amplified" or too short (≤2 chars). Poor tokens cannot be scoped to a claim
+--   and trigger a weak fallback.
+isPoorToken :: Text -> Bool
+isPoorToken tok = tok == "amplified" || T.length tok <= 2
+
 -- | Detect whether the current turn engages or contradicts held commitments.
 -- Engaged = significant word overlap (whole-word, threshold ≥1) with active store.
--- Contradicted = engaged + presence of Contradiction atom in the turn.
+-- Contradicted = engaged AND (contradiction atom scoped to engaged claim OR poor-token fallback).
 --
--- SEAM-2 Phase 1: replaced isInfixOf with word-set overlap + significance threshold.
--- SEAM-2 Phase 2 will scope the contradiction to the engaged topic.
+-- SEAM-2 Phase 1: word-set overlap + significance threshold.
+-- SEAM-2 Phase 2: scope contradiction to the engaged topic (cross-topic FP fix).
 detectCommitmentEngagement
   :: SemanticCommitmentStore
   -> Text
@@ -81,8 +87,26 @@ detectCommitmentEngagement store inputTopic atomSet =
           snd (wordSetOverlap inputTopic (fcpStatement payload))
         ) (HashMap.toList active)
       engagedIds = map fst engagedPairs
-      hasContradiction = any (\a -> case maTag a of Contradiction _ _ -> True; _ -> False) (asAtoms atomSet)
+      engagedPayloads = map (fst . snd) engagedPairs
+      contradictionAtoms = filter (\a -> case maTag a of Contradiction _ _ -> True; _ -> False) (asAtoms atomSet)
+      -- Strong: contradiction token shares significant words with an engaged claim.
+      contradictionScoped = any (\atom ->
+        case maTag atom of
+          Contradiction tokL tokR ->
+            any (\payload ->
+                let stmt = fcpStatement payload
+                in  snd (wordSetOverlap tokL stmt)
+                 || snd (wordSetOverlap tokR stmt)
+            ) engagedPayloads
+          _ -> False
+        ) contradictionAtoms
+      -- Weak fallback: contradiction atom exists but only carries poor tokens.
+      hasPoorContradiction = any (\atom ->
+        case maTag atom of
+          Contradiction tokL tokR -> isPoorToken tokL && isPoorToken tokR
+          _ -> False
+        ) contradictionAtoms
   in CommitmentEngagement
        { ceEngaged      = engagedIds
-       , ceContradicted = not (null engagedIds) && hasContradiction
+       , ceContradicted = not (null engagedIds) && (contradictionScoped || hasPoorContradiction)
        }
