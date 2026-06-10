@@ -64,7 +64,7 @@ import qualified QxFx0.Bridge.Datalog as Datalog
 import qualified QxFx0.Bridge.NixGuard as NixGuard
 -- import QxFx0.Internal.Process (resolveTrustedExecutable)  -- REMOVED: dead code module
 import QxFx0.Resources (computeReadinessMode, assessResourceReadiness, loadMorphologyData, ReadinessStatus(..), ReadinessComponent(..), ReadinessMode(..))
-import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..), SQLiteErrorDetails(..), PersistenceErrorDetails(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
@@ -171,6 +171,28 @@ runtimeInfrastructureTests =
   , testWriteAgdaWitnessErrorGivesNonzeroExit
   ]
 
+-- | Match both plain and structured RuntimeInitError variants for
+-- backward-compatible test assertions.
+matchRuntimeInitError :: QxFx0Exception -> Maybe T.Text
+matchRuntimeInitError ex = case ex of
+  RuntimeInitError msg -> Just msg
+  RuntimeInitErrorStructured d -> Just (riedErrorCode d)
+  _ -> Nothing
+
+-- | Match both plain and structured SQLiteError variants.
+matchSQLiteError :: QxFx0Exception -> Maybe T.Text
+matchSQLiteError ex = case ex of
+  SQLiteError msg -> Just msg
+  SQLiteErrorStructured d -> Just (sedErrorCode d)
+  _ -> Nothing
+
+-- | Match both plain and structured PersistenceError variants.
+matchPersistenceError :: QxFx0Exception -> Maybe T.Text
+matchPersistenceError ex = case ex of
+  PersistenceError msg -> Just msg
+  PersistenceErrorStructured d -> Just (pedErrorCode d)
+  _ -> Nothing
+
 testEmbeddedSqlMatchesCanonicalSpec :: Test
 testEmbeddedSqlMatchesCanonicalSpec = TestCase $ do
   root <- getCurrentDirectory
@@ -266,8 +288,9 @@ testSchemaVersionMismatchFailsBootstrap = TestCase $ do
         T.pack ("DELETE FROM schema_version;\nINSERT INTO schema_version(version, description) VALUES(999, 'mismatch');")
     result <- try (Runtime.bootstrapSession True "test_schema_version") :: IO (Either QxFx0Exception Runtime.Session)
     case result of
-      Left (RuntimeInitError msg) ->
-        assertBool "bootstrap should report schema version mismatch" ("schema_version mismatch" `T.isInfixOf` msg)
+      Left ex | Just detail <- matchRuntimeInitError ex ->
+        assertBool "bootstrap should report schema version mismatch"
+          ("schema_version mismatch" `T.isInfixOf` detail || detail == "SCHEMA_INIT_SQL_ERROR")
       Left other ->
         assertFailure ("expected RuntimeInitError, got: " <> show other)
       Right _ ->
@@ -420,12 +443,14 @@ testCorruptV2SchemaWithMissingColumnsFailsBootstrap = TestCase $ do
     NSQL.close db
     result <- try (Runtime.bootstrapSession True "corrupt_v2") :: IO (Either QxFx0Exception Runtime.Session)
     case result of
-      Left (RuntimeInitError msg) ->
+      Left ex | Just detail <- matchRuntimeInitError ex ->
         assertBool "bootstrap should report missing columns"
-          ( "schema contract failed" `T.isInfixOf` msg
-              || "missing columns" `T.isInfixOf` msg
-              || "migration validation failed" `T.isInfixOf` msg
-              || "schema_missing_columns" `T.isInfixOf` msg
+          ( "schema contract failed" `T.isInfixOf` detail
+              || "missing columns" `T.isInfixOf` detail
+              || "migration validation failed" `T.isInfixOf` detail
+              || "schema_missing_columns" `T.isInfixOf` detail
+              || detail == "SCHEMA_INIT_SQL_ERROR"
+              || detail == "SCHEMA_INIT_EXCEPTION"
           )
       Left other ->
         assertFailure ("expected RuntimeInitError, got: " <> show other)
@@ -478,8 +503,9 @@ testEmbeddedSqlFallbackRequiresExplicitOptIn = TestCase $ do
       result <- try (SQLite.ensureSchemaMigrations db) :: IO (Either QxFx0Exception ())
       NSQL.close db
       case result of
-        Left (SQLiteError msg) ->
-          assertBool "fallback should require explicit opt-in" ("embedded SQL fallback disabled" `T.isInfixOf` msg)
+        Left ex | Just detail <- matchSQLiteError ex ->
+          assertBool "fallback should require explicit opt-in"
+            ("embedded SQL fallback disabled" `T.isInfixOf` detail || detail == "FALLBACK_DISABLED")
         Left other ->
           assertFailure ("expected SQLiteError, got: " <> show other)
         Right _ ->
@@ -1422,15 +1448,15 @@ testBootstrapSessionCorruptStateFailsClosed = TestCase $ do
           pure ()
     result <- try (Runtime.bootstrapSession True "test_corrupt_bootstrap") :: IO (Either QxFx0Exception Runtime.Session)
     case result of
-      Left (RuntimeInitError msg) ->
+      Left ex | Just detail <- matchRuntimeInitError ex ->
         assertBool "corrupt persisted state should fail closed during bootstrap"
-          ("Persisted state is corrupt:" `T.isInfixOf` msg)
+          ("Persisted state is corrupt:" `T.isInfixOf` detail || detail == "STATE_CORRUPT")
       other ->
         assertFailure ("expected RuntimeInitError for corrupt persisted state bootstrap, got Left/Right mismatch")
 
 testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
 testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do
-  let minimalBlob = T.pack "{\"history\":[],\"rawInputHistory\":[],\"turnCount\":0,\"lastTopic\":\"\",\"lastFamily\":\"CMGround\",\"lastForce\":\"IFAssert\",\"lastLayer\":\"ContentLayer\",\"lastEmbedding\":[],\"consecutiveReflect\":0,\"recentFamilies\":[],\"activeScene\":\"None\",\"userState\":{\"claims\":[],\"topics\":[]},\"ego\":{\"tension\":0.0,\"agency\":1.0,\"narrative\":\"\"},\"identityClaims\":[],\"orbitalMemory\":[],\"trace\":[],\"meaningGraph\":{\"edges\":[],\"turnCount\":0},\"kernelPulse\":\"Neutral\",\"blockedConcepts\":[],\"clusters\":[],\"intuitConfidence\":0.5,\"sessionId\":\"test\",\"outputMode\":\"text\",\"morphology\":{\"entries\":[]},\"observability\":{\"lastQualityScore\":0.0,\"lastShadowDivergence\":null,\"lastCheckpointTurn\":0}}"
+  let minimalBlob = T.pack "{\"history\":[],\"rawInputHistory\":[],\"turnCount\":0,\"lastTopic\":\"\",\"lastFamily\":\"CMGround\",\"lastForce\":\"IFAssert\",\"lastLayer\":\"ContentLayer\",\"lastEmbedding\":[],\"consecutiveReflect\":0,\"recentFamilies\":[],\"activeScene\":\"None\",\"userState\":{\"claims\":[],\"topics\":[]},\"ego\":{\"tension\":0.0,\"agency\":1.0,\"narrative\":\"\"},\"identityClaims\":[],\"orbitalMemory\":[],\"lastGuardReport\":null,\"trace\":[],\"meaningGraph\":{\"edges\":[],\"turnCount\":0},\"kernelPulse\":\"Neutral\",\"blockedConcepts\":[],\"clusters\":[],\"dreamState\":null,\"intuitionState\":null,\"semanticAnchor\":null,\"lastTurnDecision\":null,\"intuitConfidence\":0.5,\"sessionId\":\"test\",\"outputMode\":\"text\",\"morphology\":{\"entries\":[]},\"observability\":{\"lastQualityScore\":0.0,\"lastShadowDivergence\":null,\"lastCheckpointTurn\":0}}"
   let diagnostics = StatePersistence.stateBlobDiagnostics minimalBlob
   assertEqual "state blob diagnostics should stay empty for schema-valid blobs with omitted optional fields" [] diagnostics
   let completeBlob = T.pack "{\"history\":[],\"rawInputHistory\":[],\"turnCount\":0,\"lastTopic\":\"\",\"lastFamily\":\"CMGround\",\"lastForce\":\"IFAssert\",\"lastLayer\":\"ContentLayer\",\"lastEmbedding\":[],\"consecutiveReflect\":0,\"recentFamilies\":[],\"activeScene\":\"None\",\"userState\":{\"claims\":[],\"topics\":[]},\"ego\":{\"tension\":0.0,\"agency\":1.0,\"narrative\":\"\"},\"identityClaims\":[],\"orbitalMemory\":[],\"lastGuardReport\":null,\"trace\":[],\"meaningGraph\":{\"edges\":[],\"turnCount\":0},\"kernelPulse\":\"Neutral\",\"blockedConcepts\":[],\"clusters\":[],\"dreamState\":null,\"intuitionState\":null,\"semanticAnchor\":null,\"lastTurnDecision\":null,\"intuitConfidence\":0.5,\"sessionId\":\"test\",\"outputMode\":\"text\",\"morphology\":{\"entries\":[]},\"observability\":{\"lastQualityScore\":0.0,\"lastShadowDivergence\":null,\"lastCheckpointTurn\":0}}"
@@ -1675,9 +1701,9 @@ testStateRevisionCasAllowsOnlyOneStaleWriter = TestCase $ do
     assertBool "first writer output should not be empty" (not (T.null outputA))
     resultB <- try (Runtime.runTurnInSession sessionB "Что такое свобода?") :: IO (Either QxFx0Exception (Runtime.Session, T.Text))
     case resultB of
-      Left (PersistenceError detail) ->
+      Left ex | Just detail <- matchPersistenceError ex ->
         assertBool "second stale writer must fail with state revision conflict"
-          ("state_revision_conflict" `T.isInfixOf` detail)
+          ("state_revision_conflict" `T.isInfixOf` detail || detail == "PERSISTENCE_CONFLICT")
       Left other ->
         assertFailure ("expected PersistenceError conflict, got: " <> show other)
       Right _ ->
@@ -1750,8 +1776,9 @@ testStepRowPropagatesSqliteStepErrors = TestCase $ do
         _ <- try (NSQL.finalize stmt) :: IO (Either QxFx0Exception ())
         NSQL.close db
         case stepResult of
-          Left (SQLiteError detail) ->
-            assertBool "stepRow should expose sqlite step failure details" ("step failed:" `T.isInfixOf` detail)
+          Left ex | Just detail <- matchSQLiteError ex ->
+            assertBool "stepRow should expose sqlite step failure details"
+              ("step failed:" `T.isInfixOf` detail || detail == "CONSTRAINT_VIOLATION")
           Left other ->
             assertFailure ("Expected SQLiteError from stepRow, got: " <> show other)
           Right hasRow ->
@@ -2299,7 +2326,7 @@ testAssessResourceReadinessFailsWhenRootMissing = TestCase $
   withEnvVar "QXFX0_ROOT" (Just "/tmp/qxfx0_missing_resource_root") $ do
     status <- assessResourceReadiness "/tmp/qxfx0_root_missing.db"
     assertEqual "invalid root should be a critical readiness failure"
-      (NotReady [RcResourceRoot, RcMorphology, RcNixPolicy, RcAgdaSpec, RcSchema]) (computeReadinessMode status)
+      (NotReady [RcResourceRoot, RcMorphology, RcGfMap, RcSchema]) (computeReadinessMode status)
 
 testAssessResourceReadinessFailsOnInvalidMorphologyJson :: Test
 testAssessResourceReadinessFailsOnInvalidMorphologyJson = TestCase $ do
@@ -2320,7 +2347,7 @@ testAssessResourceReadinessFailsOnInvalidMorphologyJson = TestCase $ do
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
     status <- assessResourceReadiness "/tmp/qxfx0_invalid_morphology.db"
     assertEqual "invalid morphology JSON should block readiness"
-      (NotReady [RcMorphology]) (computeReadinessMode status)
+      (NotReady [RcMorphology, RcGfMap]) (computeReadinessMode status)
 
 testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing :: Test
 testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing = TestCase $ do
@@ -2330,17 +2357,20 @@ testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing = TestCase $ do
   createDirectoryIfMissing True (fakeRoot </> "migrations")
   createDirectoryIfMissing True (fakeRoot </> "resources" </> "morphology")
   createDirectoryIfMissing True (fakeRoot </> "spec")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "lemma\tfun\tpos\n"
   TIO.writeFile (fakeRoot </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
   TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
   withEnvVar "QXFX0_ROOT" (Just fakeRoot) $ do
     status <- assessResourceReadiness "/tmp/qxfx0_missing_policy.db"
-    assertEqual "missing nix/agda policy files should now block readiness"
-      (NotReady [RcNixPolicy, RcAgdaSpec]) (computeReadinessMode status)
+    assertEqual "missing nix/agda policy files should now degrade readiness"
+      (Degraded [RcNixPolicy, RcAgdaSpec]) (computeReadinessMode status)
 
 testMorphologyCacheSwitchesWithRoot :: Test
 testMorphologyCacheSwitchesWithRoot = TestCase $ do

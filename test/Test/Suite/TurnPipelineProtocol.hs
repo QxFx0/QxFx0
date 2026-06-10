@@ -51,7 +51,7 @@ import QxFx0.Core.PipelineIO
   , pipelineUpdateHistory
   , pipelineParseAuthoritySurface
   )
-import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), PersistenceErrorDetails(..))
 import QxFx0.Core.TurnPipeline.Protocol
   ( RoutingDecision(..)
   , TurnArtifacts(..)
@@ -318,6 +318,13 @@ import Test.Support (withEnvVar)
 -- Authoritative-turn finalize fixture (forces canonical artifacts) for the
 -- governed perspective-commit path; the other fixtures here are local copies.
 import Test.Support.TurnPipelineFixtures (buildAuthoritativePerspectiveFinalizeFixture)
+
+-- | Match both plain and structured PersistenceError variants.
+matchPersistenceError :: QxFx0Exception -> Maybe T.Text
+matchPersistenceError ex = case ex of
+  PersistenceError msg -> Just msg
+  PersistenceErrorStructured d -> Just (pedErrorCode d)
+  _ -> Nothing
 
 turnPipelineProtocolTests :: [Test]
 turnPipelineProtocolTests =
@@ -648,7 +655,7 @@ testFinalizeCommitRollsBackPersistedStateAfterRecoveryFailure = TestCase $
     let commitPlan = planFinalizeCommit "session-rollback" ss ti ts ta bundle
     result <- try (resolveFinalizeCommit rollbackPio 0 commitPlan) :: IO (Either QxFx0Exception FinalizeCommitResults)
     case result of
-      Left (PersistenceError detail) -> do
+      Left ex | Just detail <- matchPersistenceError ex -> do
         let hasProjectionRollback = "projections rollback=ok" `T.isInfixOf` detail
             hasStateRollback = "state rollback=ok" `T.isInfixOf` detail
         unless (hasProjectionRollback && hasStateRollback) $
