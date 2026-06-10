@@ -106,7 +106,13 @@ detectCommitmentEngagement store inputTopic atomSet =
           Contradiction tokL tokR -> isPoorToken tokL && isPoorToken tokR
           _ -> False
         ) contradictionAtoms
+      matchKind
+        | null engagedIds = NoMatch
+        | not (null engagedIds) && contradictionScoped = ContradictedStrong
+        | not (null engagedIds) && hasPoorContradiction = ContradictedWeak
+        | otherwise = EngagedOnly
   in CommitmentEngagement
        { ceEngaged      = engagedIds
        , ceContradicted = not (null engagedIds) && (contradictionScoped || hasPoorContradiction)
+       , ceMatchKind    = matchKind
        }

@@ -9,6 +9,7 @@ import QxFx0.Observability.TraceAnalysis
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Self.Field
   ( Field(..)
   , Resonance(..)
@@ -166,8 +167,9 @@ minimalTrace = TurnReplayTrace
   , trcCommitmentStoreDecision = CsaAdmitCanonical
    , trcCommitmentEngaged = 0
    , trcCommitmentContradicted = False
+   , trcCommitmentMatchKind = NoMatch
    , trcCommitmentFamilyHint = Nothing
-  , trcCognitiveSignals = emptyCognitiveSignals
+   , trcCognitiveSignals = emptyCognitiveSignals
   , trcDoubtScore = Nothing
   , trcEpisodicRetrievalCount = Nothing
   , trcContentSaliencyDominantCluster = Nothing

@@ -8,6 +8,7 @@ module Test.Suite.StatePersistence
 
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
+import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import Control.Exception (try)
 import Control.Monad (forM_)
 import qualified Data.Aeson as Aeson
@@ -866,11 +867,12 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
   , trcSemanticCommitmentCount = 0
   , trcQuarantinedCommitmentCount = 0
   , trcPromotedFromQuarantineCount = 0
-  , trcCommitmentStoreDecision = CsaAdmitCanonical
-   , trcCommitmentEngaged = 0
-   , trcCommitmentContradicted = False
-   , trcCommitmentFamilyHint = Nothing
-  , trcCognitiveSignals = emptyCognitiveSignals
+   , trcCommitmentStoreDecision = CsaAdmitCanonical
+    , trcCommitmentEngaged = 0
+    , trcCommitmentContradicted = False
+    , trcCommitmentMatchKind = NoMatch
+    , trcCommitmentFamilyHint = Nothing
+   , trcCognitiveSignals = emptyCognitiveSignals
     , trcDoubtScore = Nothing
     , trcEpisodicRetrievalCount = Nothing
     , trcContentSaliencyDominantCluster = Nothing

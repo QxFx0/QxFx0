@@ -8,6 +8,7 @@ module Test.Suite.RuntimeInfrastructure
 
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
+import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import Data.Aeson (Value(..), eitherDecodeStrict')
 import qualified Data.Aeson.KeyMap as KeyMap
 import Test.HUnit hiding (Testable)
@@ -1620,8 +1621,9 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                    , trcPromotedFromQuarantineCount = 0
                    , trcCommitmentStoreDecision = CsaAdmitCanonical
    , trcCommitmentEngaged = 0
-   , trcCommitmentContradicted = False
-   , trcCommitmentFamilyHint = Nothing
+    , trcCommitmentContradicted = False
+    , trcCommitmentMatchKind = NoMatch
+    , trcCommitmentFamilyHint = Nothing
                   , trcCognitiveSignals = emptyCognitiveSignals
                  , trcDoubtScore = Nothing
                  , trcEpisodicRetrievalCount = Nothing
@@ -2143,8 +2145,9 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                    , trcPromotedFromQuarantineCount = 0
                    , trcCommitmentStoreDecision = CsaAdmitCanonical
    , trcCommitmentEngaged = 0
-   , trcCommitmentContradicted = False
-   , trcCommitmentFamilyHint = Nothing
+    , trcCommitmentContradicted = False
+    , trcCommitmentMatchKind = NoMatch
+    , trcCommitmentFamilyHint = Nothing
                   , trcCognitiveSignals = emptyCognitiveSignals
                  , trcDoubtScore = Nothing
                  , trcEpisodicRetrievalCount = Nothing

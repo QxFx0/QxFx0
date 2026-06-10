@@ -332,7 +332,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
            , trcCommitmentStoreDecision = commitDecision
            , trcCommitmentEngaged = length (ceEngaged commitmentEngagement)
            , trcCommitmentContradicted = ceContradicted commitmentEngagement
-           , trcCommitmentFamilyHint = commitmentFamilyHint (tpCommitmentEngagement tp)
+           , trcCommitmentMatchKind = ceMatchKind commitmentEngagement
+           , trcCommitmentFamilyHint = commitmentFamilyHint commitmentEngagement
            , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs
           , trcDoubtScore = doubtScore
           , trcEpisodicRetrievalCount = episodicRetrievalCount

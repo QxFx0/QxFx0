@@ -24,6 +24,7 @@ import QxFx0.Types.State.Perspective (PerspectiveProjection)
 import QxFx0.Types.Sense (SenseAxis, SenseOperator, RhetoricalMove)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import QxFx0.Types.Domain.User (IdentityClaimRef)
+import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Field (Field)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
@@ -279,10 +280,13 @@ data TurnReplayTrace = TurnReplayTrace
    , trcCommitmentContradicted :: !Bool
     -- ^ SUBJECT-SEAM-1: True when the turn both engaged a held commitment
     --   AND carried a Contradiction atom.
-   , trcCommitmentFamilyHint :: !(Maybe CanonicalMoveFamily)
-    -- ^ SUBJECT-SEAM-1: family hint derived from commitment engagement
-    --   (e.g. CMReflect when contradicted). Nothing when no engagement.
-   , trcCognitiveSignals :: !CognitiveSignals
+    , trcCommitmentFamilyHint :: !(Maybe CanonicalMoveFamily)
+     -- ^ SUBJECT-SEAM-1: family hint derived from commitment engagement
+     --   (e.g. CMReflect when contradicted). Nothing when no engagement.
+    , trcCommitmentMatchKind :: !MatchKind
+     -- ^ SUBJECT-SEAM-2 Phase 3: observability grade for why the commitment
+     --   was engaged/contradicted (Strong/Weak/EngagedOnly/NoMatch).
+    , trcCognitiveSignals :: !CognitiveSignals
     -- ^ WP-S: the compute-once derived-signal bundle (counterfactual entropy,
     --   field confidence, shadow disagreement, max posterior) shared by the
     --   doubt loop (WP-D) and affect (WP-E). Surfaced here as the living

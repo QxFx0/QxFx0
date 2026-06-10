@@ -83,7 +83,7 @@ import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily, diagnosticPropositionFamilyTyped)
 import QxFx0.Semantic.Retrieve (detectCommitmentEngagement)
 import QxFx0.Types
-import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..))
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), MatchKind(..))
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.Thresholds
   ( agdaVerificationPenalty
@@ -240,7 +240,7 @@ buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
       commitmentEngagement =
         case ssSemanticCommitments ss of
           Just store -> detectCommitmentEngagement store (tiBestTopic ti) atomSet
-          Nothing    -> CommitmentEngagement [] False
+          Nothing    -> CommitmentEngagement [] False NoMatch
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
           . recordThresholdProbe "legitimacy_pass" legitimacyPassThreshold

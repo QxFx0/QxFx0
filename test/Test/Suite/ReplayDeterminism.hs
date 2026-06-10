@@ -37,7 +37,7 @@ import QxFx0.Types.ShadowDivergence (ShadowDivergence(..), ShadowDivergenceKind(
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..), TurnProjection(..))
-import QxFx0.Types.State.SemanticCommitment (emptyCommitmentEngagement)
+import QxFx0.Types.State.SemanticCommitment (MatchKind(..), emptyCommitmentEngagement)
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
 import QxFx0.Core.TurnPipeline (TurnSignals(..))
@@ -153,11 +153,12 @@ minimalReplayTrace apiHealthy =
   , trcSemanticCommitmentCount = 0
   , trcQuarantinedCommitmentCount = 0
   , trcPromotedFromQuarantineCount = 0
-  , trcCommitmentStoreDecision = CsaAdmitCanonical
-   , trcCommitmentEngaged = 0
-   , trcCommitmentContradicted = False
-   , trcCommitmentFamilyHint = Nothing
-  , trcCognitiveSignals = emptyCognitiveSignals
+   , trcCommitmentStoreDecision = CsaAdmitCanonical
+    , trcCommitmentEngaged = 0
+    , trcCommitmentContradicted = False
+    , trcCommitmentMatchKind = NoMatch
+    , trcCommitmentFamilyHint = Nothing
+   , trcCognitiveSignals = emptyCognitiveSignals
     , trcDoubtScore = Nothing
     , trcEpisodicRetrievalCount = Nothing
     , trcContentSaliencyDominantCluster = Nothing

@@ -30,6 +30,7 @@ import QxFx0.Types.State.SemanticCommitment
   , CommitmentOrigin(..)
   , FactualClaimPayload(..)
   , LineageEvent(..)
+  , MatchKind(..)
   , SemanticCommitmentStore(..)
   , TurnSeq(..)
   , emptySemanticCommitmentStore
@@ -40,6 +41,7 @@ import QxFx0.Types.TurnProjection
   ( tqpReplayTrace
   , trcCommitmentEngaged
   , trcCommitmentContradicted
+  , trcCommitmentMatchKind
   , trcCommitmentFamilyHint
   )
 import QxFx0.Core.TurnPipeline.Protocol
@@ -153,6 +155,8 @@ unitEngagedNotContradicted = TestLabel "engaged without contradiction atom" $
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
+    assertEqual "ceMatchKind should be EngagedOnly"
+      EngagedOnly (ceMatchKind result)
 
 unitContradicted :: Test
 unitContradicted = TestLabel "engaged with contradiction atom" $
@@ -163,6 +167,8 @@ unitContradicted = TestLabel "engaged with contradiction atom" $
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be True"
       True (ceContradicted result)
+    assertEqual "ceMatchKind should be ContradictedStrong"
+      ContradictedStrong (ceMatchKind result)
 
 unitNotEngaged :: Test
 unitNotEngaged = TestLabel "no overlap" $
@@ -173,6 +179,8 @@ unitNotEngaged = TestLabel "no overlap" $
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
+    assertEqual "ceMatchKind should be NoMatch"
+      NoMatch (ceMatchKind result)
 
 unitEmptyStore :: Test
 unitEmptyStore = TestLabel "empty store" $
@@ -182,6 +190,8 @@ unitEmptyStore = TestLabel "empty store" $
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
+    assertEqual "ceMatchKind should be NoMatch"
+      NoMatch (ceMatchKind result)
 
 unitInfixNoEngage :: Test
 unitInfixNoEngage = TestLabel "infix does not engage (word boundary)" $
@@ -192,6 +202,8 @@ unitInfixNoEngage = TestLabel "infix does not engage (word boundary)" $
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
       False (ceContradicted result)
+    assertEqual "ceMatchKind should be NoMatch"
+      NoMatch (ceMatchKind result)
 
 -- | Cross-topic contradiction: overlap exists, but contradiction atom is about a different topic.
 unitCrossTopicNoContradiction :: Test
@@ -203,6 +215,8 @@ unitCrossTopicNoContradiction = TestLabel "cross-topic contradiction is not cont
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be False (cross-topic)"
       False (ceContradicted result)
+    assertEqual "ceMatchKind should be EngagedOnly"
+      EngagedOnly (ceMatchKind result)
 
 -- | Poor-token contradiction: "amplified" fallback keeps contradicted = True.
 unitPoorTokenFallback :: Test
@@ -214,6 +228,8 @@ unitPoorTokenFallback = TestLabel "poor-token contradiction falls back to contra
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be True (poor fallback)"
       True (ceContradicted result)
+    assertEqual "ceMatchKind should be ContradictedWeak"
+      ContradictedWeak (ceMatchKind result)
 
 -- ---------------------------------------------------------------------------
 -- Integration test: through the pipeline with overridden atom set
@@ -265,6 +281,10 @@ integrationContradictionTraceAndLedger = TestLabel "contradiction trace and ledg
     -- Phase 2 assertions
     assertEqual "trcCommitmentFamilyHint should be Just CMReflect"
       (Just CMReflect) (trcCommitmentFamilyHint trace)
+
+    -- Phase 3 assertions
+    assertEqual "trcCommitmentMatchKind should be ContradictedStrong"
+      ContradictedStrong (trcCommitmentMatchKind trace)
 
     -- Ledger assertion
     let mStore = ssSemanticCommitments nextSs
@@ -328,6 +348,10 @@ integrationNoContradictionNoHint = TestLabel "no contradiction -> no CMReflect h
     -- Phase 2 assertions
     assertEqual "trcCommitmentFamilyHint should be Nothing"
       Nothing (trcCommitmentFamilyHint trace)
+
+    -- Phase 3 assertions
+    assertEqual "trcCommitmentMatchKind should be EngagedOnly"
+      EngagedOnly (trcCommitmentMatchKind trace)
 
     -- Ledger assertion: no contradictions recorded
     let mStore = ssSemanticCommitments nextSs

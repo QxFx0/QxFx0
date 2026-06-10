@@ -16,6 +16,7 @@ module QxFx0.Types.State.SemanticCommitment
   , RetractionReason(..)
   , ContradictionKind(..)
   , CommitmentEngagement(..)
+  , MatchKind(..)
   , emptySemanticCommitmentStore
   , emptyCommitmentEngagement
   , quarantinedClaims
@@ -137,17 +138,32 @@ emptySemanticCommitmentStore = SemanticCommitmentStore
   , scsNextId     = 1
   }
 
+-- | Observability grade for why a commitment was engaged or contradicted.
+-- Added in SEAM-2 Phase 3 for corpus calibration visibility.
+--   NoMatch          — no overlap with active store.
+--   EngagedOnly      — overlap exists, no contradiction signal.
+--   ContradictedStrong — contradiction token scoped to engaged claim.
+--   ContradictedWeak — poor-token fallback (engaged + uninformative contradiction atom).
+data MatchKind
+  = NoMatch
+  | EngagedOnly
+  | ContradictedStrong
+  | ContradictedWeak
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
 -- | Result of detecting whether a turn engages or contradicts held commitments.
 -- Engaged = words overlap with active store; Contradicted = engaged + Contradiction atom.
 data CommitmentEngagement = CommitmentEngagement
   { ceEngaged      :: ![CommitmentId]      -- active commitments touched by the turn
   , ceContradicted :: !Bool                -- engaged and carries a Contradiction signal
+  , ceMatchKind    :: !MatchKind            -- observability: why (SEAM-2 Phase 3)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Empty engagement (no overlap, no contradiction).
 emptyCommitmentEngagement :: CommitmentEngagement
-emptyCommitmentEngagement = CommitmentEngagement [] False
+emptyCommitmentEngagement = CommitmentEngagement [] False NoMatch
 
 -- | Review-visibility accessor: claims currently in quarantine.
 quarantinedClaims :: SemanticCommitmentStore -> [FactualClaimPayload]

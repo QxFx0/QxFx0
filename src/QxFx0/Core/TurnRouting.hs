@@ -52,7 +52,7 @@ import QxFx0.Self.Salience
 import QxFx0.Self.Adjunction (holisticFormalContextSplitActive)
 import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from Spectral, WP-I Tier-0)
 import QxFx0.Memory.Episodic (EpisodicEvent)
-import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..))
+import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), MatchKind(..))
 import QxFx0.Core.TurnRouting.Cascade
   ( applyConatusGateRestriction
   , applyGuardGating
@@ -139,7 +139,7 @@ routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss his
       commitmentEngagement =
         case ssSemanticCommitments ss of
           Just store -> detectCommitmentEngagement store currentTopic atomSet
-          Nothing    -> CommitmentEngagement [] False
+          Nothing    -> CommitmentEngagement [] False NoMatch
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience conatusEnergy doubt retrievedEpisodes commitmentEngagement
       FamilyCascade{..} = cascade
 
