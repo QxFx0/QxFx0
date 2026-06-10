@@ -798,7 +798,7 @@ testSafetyChecks = TestCase $ do
   assertEqual "Normal text should pass" Guard.InvariantOK ok1
   assertEqual "Short normal text should pass" Guard.InvariantOK ok2
   assertEqual "Russian dialogue with dash should pass" Guard.InvariantOK ok3
-  assertBool "Toxic patterns should be detected" (isWarning warning1)
+  assertBool "Toxic patterns should become hard block" (isBlock warning1)
   assertBool "Repeated text should be detected" (isWarning warning2)
   assertBool "Empty text should become hard block" (isBlock block1)
   assertBool "Metadata leak should become hard block" (isBlock block2)
@@ -812,10 +812,10 @@ testSafetyToxicityUsesTokenBoundaries :: Test
 testSafetyToxicityUsesTokenBoundaries = TestCase $ do
   let benign = Guard.postRenderSafetyCheck (T.pack "Я в бреду памяти ищу форму") []
       toxic = Guard.postRenderSafetyCheck (T.pack "Это бред и ты должен молчать") []
-  assertEqual "Substring-only overlap must not trigger toxicity warning" Guard.InvariantOK benign
+  assertEqual "Substring-only overlap must not trigger toxicity block" Guard.InvariantOK benign
   case toxic of
-    Guard.InvariantWarn _ -> pure ()
-    other -> assertFailure ("expected token-aware toxicity warning, got: " <> show other)
+    Guard.InvariantBlock _ -> pure ()
+    other -> assertFailure ("expected token-aware toxicity block, got: " <> show other)
 
 testFinalizeOutputFallsBackToRecoverySurface :: Test
 testFinalizeOutputFallsBackToRecoverySurface = TestCase $ do

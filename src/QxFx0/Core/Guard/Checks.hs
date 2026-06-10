@@ -89,8 +89,8 @@ checkToxicity text =
   let tokens = tokenizeKeywordText text
       found = filter (containsKeywordPhrase tokens) toxicPatterns
    in if null found
-        then InvariantOK
-        else InvariantWarn (guardToxicPatterns <> T.intercalate ", " found)
+         then InvariantOK
+         else InvariantBlock (guardToxicPatterns <> T.intercalate ", " found)
 
 checkLength :: Text -> SafetyStatus
 checkLength text =
