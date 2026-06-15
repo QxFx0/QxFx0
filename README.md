@@ -17,16 +17,17 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 If you need dialogue infrastructure where "why did it do that?" has a precise answer, QxFx0 is built for that use case.
 
 > **Post-render guard scope (accuracy note).** The post-render safety guard
-> (`QxFx0.Core.Guard`) has two severities. **Blocking** checks
+> (`QxFx0.Core.Guard.Checks`) has two severities. **Blocking** checks
 > (`InvariantBlock`) — empty/`...`-only output, metadata/markup leak, identity
-> drift, over-length, input-injection — divert to a hardcoded recovery surface.
-> **Advisory** checks (`InvariantWarn`) — toxic-keyword match and
-> stuck-repetition — are detected and recorded in the trace (`safety=…`) but the
-> output is **still emitted**; they do not block. Toxicity handling is therefore
-> observability, not enforcement, in the current build. Treat the guard as a
-> structural/identity circuit-breaker, not a content-moderation layer.
+> drift, **toxic-keyword match**, over-length, input-injection — divert to a
+> hardcoded recovery surface. **Advisory** checks (`InvariantWarn`) — currently
+> only stuck-repetition — are detected and recorded in the trace (`safety=…`)
+> but the output is **still emitted**; it does not block. Toxicity now **fails
+> closed** (blocks and diverts to recovery), so the guard enforces
+> structure / identity / toxicity; treat it as a structural-and-toxicity
+> circuit-breaker, not a full content-moderation layer.
 
-## Current Status (2026-06-09)
+## Current Status (2026-06-16)
 
 **Maturity**: Research-grade with production-ready core  
 **License**: MIT  
@@ -41,8 +42,15 @@ If you need dialogue infrastructure where "why did it do that?" has a precise an
 - ✅ **Phase 8 (Deliberation)** — Reconciliation framework with tone divergence
 - ✅ **Phase 6 (M6.1)** — Single-source-of-truth Conatus refactor
 - ✅ **P5 Governance** — Canonical append-only history with typed payloads
-- ✅ **Security hardening** — LLM endpoint allowlist, typed JSON decoders, explicit degradation
+- ✅ **Security hardening** — LLM endpoint allowlist, typed JSON decoders, explicit degradation; post-render toxicity now fails closed (blocks)
 - ✅ **Bilingual support** — Russian + English GF linearization paths
+
+> **M6 status (scope note).** M6 ("algorithmic subject structure") is declared as a
+> **bounded/partial public claim**, not a closed milestone — its publicly-evidenced
+> core (continuity, restart integrity, commitment store + admission/quarantine,
+> bidirectional GF round-trip) is backed by in-repo test suites; named sub-contours
+> (CTS-44 promotion test, the topic-matrix, and privately-held records) remain
+> pending public evidence. See `docs/closure/M6_DECLARATION.md`.
 
 ### What's Implemented
 
@@ -68,10 +76,10 @@ If you need dialogue infrastructure where "why did it do that?" has a precise an
 - Typed governed payloads
 - Rebuildable projections
 - Machine-readable epistemic status
-- 19+ Architecture Decision Records (ADRs)
+- 29 Architecture Decision Records (ADRs)
 
 **Quality Infrastructure**:
-- 45 test suites (unit/property/integration/slow/fast)
+- 81 test suites (unit/property/integration/slow/fast)
 - Golden corpus with 400+ examples
 - Architecture invariant checks
 - GF quality gates
@@ -250,7 +258,7 @@ This is useful for domains where explainability, control, and reproducibility ma
 
 - **Theory**: `docs/THEORY.md` — Foundational theses
 - **Architecture**: `docs/ARCHITECTURE.md` — 8-layer structure
-- **ADRs**: `docs/adr/` — 19+ architecture decisions
+- **ADRs**: `docs/adr/` — 29 architecture decisions
 - **Contracts**: `docs/runtime_deployment_contract.md`
 - **CI Profile**: `docs/CI_PRODUCTION_PROFILE.md`
 - **Roadmap**: `ROADMAP.md` — M0–M6 strategic plan
@@ -310,7 +318,7 @@ QxFx0 demonstrates production patterns for:
   title = {QxFx0: Deterministic Dialogue Runtime with Formal Foundations},
   author = {[See CITATION.cff]},
   year = {2026},
-  url = {https://github.com/[your-org]/QxFx0},
+  url = {https://github.com/QxFx0/QxFx0},
   license = {MIT}
 }
 ```
