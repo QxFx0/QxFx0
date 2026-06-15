@@ -1,8 +1,13 @@
 # M6 Witness Protocol
 
-**Status:** Active (first slice, 2026-06-03)
+**Status:** Active — reconciled 2026-06-16 (consistent with `M6_DECLARATION.md`)
 **Governed by:** ROADMAP.md §M6
-**Activation gate:** H1 ✅, H2 ✅ (materially satisfied), H3 in-progress
+**Activation gate:** H1 ✅, H2 ⏳ (records private), H3 ✅ (M5Regime public)
+
+> This protocol and `M6_DECLARATION.md` are reconciled to one public truth: a
+> contour is marked ✅ only when a real, in-repo public test/script targets it;
+> otherwise ⏳ *pending public evidence*. Test pass/fail is not asserted (suites
+> not re-run this revision).
 
 ---
 
@@ -26,13 +31,14 @@ regime rules:
    residue, and quoted external output** — enforced by architecture rules, not
    by prose alone
 5. **Bidirectional semantic participation** — words → atoms → families → words,
-   with each stage having an explicit admission seam (CTS-01 through CTS-40)
+   with each stage having an explicit admission seam
 
 **What this is NOT:**
 - Not consciousness, personhood, or general intelligence
 - Not surface fluency (fluency alone is not subject structure)
 - Not persistence alone (persistence alone is not subject structure)
 - Not heuristic adaptation alone
+- Not a privately-held result record (a record without a public test is ⏳, not ✅)
 
 ---
 
@@ -49,42 +55,50 @@ Meaningful domain dialogue is dialogue in which the system can:
 3. **Expose replay-visible and governance-visible reasons** for persistence,
    revision, refusal, or fallback — via `TurnReplayTrace.trc*` fields
 4. **Remain bounded** by declared authority, reconstruction, and recovery contours
-   — enforced by `check_architecture.sh` 20 rules and `check_replay_gate.sh`
+   — enforced by `scripts/check_architecture.sh` and `scripts/check_replay_gate.sh`
 
 ---
 
 ## 3. The 4 explicit evidence contours
 
-M6 evidence is **not** a single claim. It is distributed across 4 separate contours:
+M6 evidence is **not** a single claim. It is distributed across 4 separate contours,
+each with a publicly-evidenced core and (some) pending rows:
 
-### Contour C1: Continuity and coherence
-- **What it proves:** the system's self-description (Conatus, Field, Essence)
-  is stable across turns and visible in replay
-- **How to check:** `trcConatusEnergy`, `trcField`, `trcEssenceMode` in
-  `TurnReplayTrace` are non-trivial and consistent with the turn's routing decision
-- **Current status:** fields present (P4 OK for all 6 canonical contours)
+### Contour C1: Continuity and coherence — **publicly evidenced**
+- **What it proves:** the system's self-description (Conatus, Field, Essence,
+  regime version) is present and visible in replay across turns
+- **Public check:** `trcConatusEnergy`, `trcField`, `trcRegimeVersion` in
+  `TurnReplayTrace` — `Test.Suite.TraceSchema`, `Test.Suite.M5Regime`,
+  `scripts/check_replay_gate.sh`
+- **Status:** ✅ public
 
-### Contour C2: Restart integrity
+### Contour C2: Restart integrity — **core publicly evidenced**
 - **What it proves:** restarts do not silently re-admit non-authoritative state
   as authority
-- **How to check:** `demoteNonAuthoritativeRestartCarry` fires on non-authoritative
-  restart contours; `trcRegimeVersion` is present so replay knows which math
-  version was active
-- **Current status:** code exists; `trcRegimeVersion` added 2026-06-03
+- **Public check:** `Test.Suite.StatePersistence.testBootstrapRejectsNonAuthoritativePersistedState`
+  (non-auth persisted state rejected at bootstrap); `trcRegimeVersion` via
+  `Test.Suite.M5Regime`
+- **Status:** ✅ core public; ⏳ SR-04 bootstrap-phase classification record is private
 
-### Contour C3: Commitment accountability
-- **What it proves:** semantic commitments are typed, versioned, and traceable
-- **How to check:** `ssSemanticCommitments` is a `Maybe SemanticCommitmentStore`;
-  `trcSemanticCommitment` trace field exists (Package 2 promotes this)
-- **Current status:** `SemanticCommitmentStore` type exists; `trcSemanticCommitment`
-  trace field is Package 2 work (needs-work per REPLAY_GATE_TRIAGE.md §2.13)
+### Contour C3: Commitment accountability — **core publicly evidenced**
+- **What it proves:** semantic commitments are typed, versioned, traceable, and
+  admitted/quarantined under the constitution
+- **Public check:** `Test.Suite.SemanticCommitmentCorpus` (store populated turn 1,
+  grows multi-turn, `trcSemanticCommitmentCount` matches store, 3-turn corpus);
+  `Test.Suite.CommitmentStoreAdmission` (CTS-42); `Test.Suite.CommitmentQuarantine`
+  (CTS-43)
+- **Status:** ✅ core public (store + corpus + CTS-42/43); ⏳ **CTS-44 promotion**
+  (`Test.Suite.CommitmentPromotion`) not yet written — runtime functions
+  (`promoteMatchingQuarantine`, `LineagePromoted`) exist but are untested in public
 
-### Contour C4: Bounded domain-dialogue competence
+### Contour C4: Bounded domain-dialogue competence — **core publicly evidenced**
 - **What it proves:** the system participates bidirectionally in a declared domain
   under governed conditions
-- **How to check:** GF dual-surface architecture (5 topics × 3 languages),
-  CTS-01 through CTS-40 admission chain, `familyDivergenceActive` routing
-- **Current status:** GF-E1b proven; CTS-40 closed; familyDivergenceActive = True
+- **Public check:** `Test.Suite.AuthoritySurface` (24 GF round-trips, ≥99% coverage,
+  negative corpus); `Test.Suite.M5Regime.m5FamilyDivergenceActiveIsStamped`
+- **Status:** ✅ core public (bidirectional GF round-trip + live family divergence);
+  ⏳ "5 topics × 3 languages" topic-matrix (GF-E1b record private, no public test)
+  and the CTS-01–40 aggregate record (private)
 
 ---
 
@@ -98,6 +112,7 @@ The following are **explicitly rejected** as sufficient evidence of M6:
 - Untracked fallback behavior (compatibility routes without explicit classification)
 - External-tool paraphrase mistaken for subject continuity (LLM output ≠ system commitment)
 - Persistence alone (a field being persisted does not make it authoritative)
+- A privately-held result record with no public test (marked ⏳, never ✅)
 
 ---
 
@@ -109,12 +124,13 @@ A complete M6 evidence package for a bounded domain dialogue session must includ
    trcField, trcRegimeVersion) and C4 (trcFinalFamily, trcSalienceDriver)
 2. **`ssSemanticCommitments` snapshot** — showing which commitments were made,
    revised, or retracted across the session
-3. **`check_replay_gate.sh` passing** — static proof that all 6 canonical contours
+3. **`scripts/check_replay_gate.sh` passing** — static proof that canonical contours
    have trace fields
-4. **`check_architecture.sh` passing** — 20 rules confirm no authority boundary
-   violations
+4. **`scripts/check_architecture.sh` passing** — authority-boundary rules confirm
+   no violations
 5. **At least one commitment revision** — the system must have revised or repaired
-   a commitment under challenge (not just repeated the same surface output)
+   a commitment under challenge (not just repeated the same surface output). *Note:
+   the public test for the promotion/repair path (CTS-44) is still pending.*
 6. **No non-authoritative restart carry** — a session interrupted and resumed must
    produce the same family/force routing on the same input (within the regime)
 
@@ -124,25 +140,36 @@ A complete M6 evidence package for a bounded domain dialogue session must includ
 
 | Gate | Criterion | Status |
 |------|-----------|--------|
-| H1 | SLICE-NA-001 closed | ✅ closed |
-| H2 | Deferred arch queue materially satisfied | ✅ SR-03/SR-04/SR-05 classified |
-| H3 | M5 as live governed regime | ⬜ in-progress (REGIME_GOVERNANCE.md created, trcRegimeVersion wired) |
-| C1 | All 6 canonical contours P4 OK | ✅ |
-| C2 | Restart integrity code exists + trcRegimeVersion present | ✅ |
-| C3 | SemanticCommitmentStore typed + trace field | ⬜ trace field (Package 2) |
-| C4 | GF proven + CTS complete + familyDivergence live | ✅ GF-E1b + CTS-40 + ADR-0019 |
+| H1 | SLICE-NA-001 closed (non-auth restart re-entry) | ✅ `Test.Suite.StatePersistence` |
+| H2 | Deferred arch queue (SR-03/04/05) classified | ⏳ records held privately — no public artifact |
+| H3 | M5 as live governed regime | ✅ `Test.Suite.M5Regime` (public) |
+| C1 | Canonical contours carry trace fields | ✅ `TraceSchema` + `M5Regime` + `check_replay_gate.sh` |
+| C2 | Restart non-auth rejection + trcRegimeVersion | ✅ core (`StatePersistence`, `M5Regime`); ⏳ SR-04 record |
+| C3 | Commitment store + corpus + CTS admission | ✅ core (`SemanticCommitmentCorpus`, CTS-42/43); ⏳ CTS-44 promotion test |
+| C4 | GF bidirectional + familyDivergence live | ✅ core (`AuthoritySurface`, `M5Regime`); ⏳ 5×3 topic-matrix + CTS aggregate |
 
-**M6 activation rule:** H1 ✅ + H2 ✅ + H3 (needs M5 regime test) + C3 (needs Package 2)
+**Reconciled activation reading:** the **publicly-evidenced core** of all four
+contours holds (H1 ✅, H3 ✅, C1 ✅, C2/C3/C4 core ✅). A **total** M6 claim is
+**not** yet supportable in public: it is blocked on the CTS-44 promotion test, the
+C4 topic-matrix test, and the public status of the H2 / GF-E1b / CTS-aggregate
+records. The declaration is therefore made as **bounded/partial** (see
+`M6_DECLARATION.md` §1, §3).
 
 ---
 
-## 7. Next steps toward M6 activation
+## 7. Next steps toward a total (non-partial) M6 claim
 
-1. **H3 / M5 completion:** Add `Test.Suite.M5Regime` that verifies `trcRegimeVersion > 0`
-   in a produced turn trace — this makes M5 a tested regime, not just documented
-2. **C3 / Package 2:** Promote `ssSemanticAnchor` to typed `SemanticCommitments`;
-   add `trcSemanticCommitment` to `TurnReplayTrace`
-3. **Bounded benchmark:** Create a fixture family that exercises multi-turn domain
-   dialogue with at least one commitment revision
-4. **M6 declaration:** Once H3 and C3 are closed, write the bounded claim package
-   (`docs/closure/M6_CLAIM_PACKAGE.md`) with the evidence references
+1. **C3 / CTS-44 public test:** write `Test.Suite.CommitmentPromotion` exercising
+   `promoteMatchingQuarantine` / `LineagePromoted` / `trcPromotedFromQuarantineCount`
+   — the one runtime-present-but-publicly-untested path. *(Highest-value gap.)*
+2. **C4 / topic-matrix public test:** a public fixture exercising the 5-topic ×
+   3-language GF dual-surface, replacing reliance on the private GF-E1b record.
+3. **H2 / records decision:** either publish public summaries of SR-03/04/05 and the
+   CTS-01–40 aggregate, or leave them ⏳ and keep the claim bounded — do **not**
+   cite them as ✅ while they are private.
+4. **Bounded benchmark:** a multi-turn domain-dialogue fixture with at least one
+   commitment revision, tying C1–C4 together in one replay-visible session.
+
+> Done (no longer blocking): H3 `Test.Suite.M5Regime` exists and is public; the C3
+> `trcSemanticCommitmentCount` trace field exists and is tested by
+> `Test.Suite.SemanticCommitmentCorpus`.
