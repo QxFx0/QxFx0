@@ -1,7 +1,7 @@
-# QxFx0_v3 Roadmap
+# QxFx0 Roadmap
 
-This roadmap tracks the independent experimental direction of `QxFx0_v3`.
-The baseline system remains available in `../QxFx0` for comparison.
+This roadmap tracks the active development direction of `QxFx0`.
+(Historical note: earlier revisions framed this tree as an experimental `QxFx0_v3` fork of a separate `../QxFx0` baseline; that split no longer applies — this directory *is* `QxFx0`. Remaining "fork"/"baseline" wording below is legacy phrasing pending a fuller doctrine pass.)
 
 ## North Star — Terminal Goal (load-bearing; do not drift from it)
 
@@ -1058,12 +1058,12 @@ Activation rule:
 ## Notes
 
 - Package identifiers are intentionally unchanged for now.
-- The absence of `.git` in this fork is deliberate.
-- If the fork later needs a separate repository, initialize git inside `QxFx0_v3` explicitly and attach a new remote rather than reusing the baseline one.
+- This project is a git repository (`main`, tracked on `origin`); an earlier note claiming the absence of `.git` was deliberate is no longer true.
+- A future separate repository, if ever needed, would be a controlled migration; the earlier "initialize git inside `QxFx0_v3`" plan is obsolete.
 
 ## Infrastructure Hardening Program (Post-Audit 2026-06-08)
 
-This program does not replace or interrupt the M0–M6 spine. It runs alongside the companion programs (SG0–SG4, AS0–AS4), motivated by the comprehensive audit of 466 modules. Organized by implementation dependency, not priority number.
+This program does not replace or interrupt the M0–M6 spine. It runs alongside the companion programs (SG0–SG4, AS0–AS4), motivated by the comprehensive audit of the library module tree (383 modules). Organized by implementation dependency, not priority number.
 
 ### Gate: Tree Cleanup
 - Remove 4 dead modules from cabal: `QxFx0.Internal.Process`, `QxFx0.Evaluation.ModelComparison`, `QxFx0.Bridge.SQLite.SchemaContractCheck`, `QxFx0.Bridge.SQLite.SchemaConsistency`.
