@@ -36,13 +36,12 @@ This claim is:
   or general intelligence of any kind
 
 **What is publicly evidenced today:** C1 (continuity) in full; the core of C2
-(restart integrity), C3 (commitment store + corpus + CTS-42/43 admission and
-quarantine), and C4 (bidirectional GF round-trip + live family divergence).
+(restart integrity), C3 (commitment store + corpus + CTS-42/43/44 admission,
+quarantine, promotion), and C4 (bidirectional GF round-trip + live family divergence).
 
-**What is pending public evidence:** the CTS-44 commitment-*promotion* test suite
-(code exists, suite unwritten); the C4 "5 topics × 3 languages" topic-matrix and
-the CTS-01–40 aggregate record (held privately); the H2 / SR-03/04/05 deferred-queue
-records (held privately).
+**What is pending public evidence:** the C4 "5 topics × 3 languages" topic-matrix
+and the CTS-01–40 aggregate record (held privately); the H2 / SR-03/04/05
+deferred-queue records (held privately).
 
 ---
 
@@ -119,7 +118,7 @@ in code or in a privately-held record, but has no public test/artifact yet.
 | Architecture authority rules hold | `scripts/check_architecture.sh` | ✅ CI gate (`scripts/check_architecture.sh`) |
 | Bootstrap phases classified (SR-04) | SR-04 record | ⏳ pending public evidence — record held privately |
 
-### C3 — Commitment accountability — **core publicly evidenced**
+### C3 — Commitment accountability — **publicly evidenced**
 
 | Claim | Evidence (code) | Public check |
 |-------|-----------------|--------------|
@@ -139,11 +138,11 @@ authoritative vs non-authoritative distinguished, corrections replay-visible:
 |-------|-----------------|--------------|
 | Only faithful-authority surfaces persist as canonical (CTS-42) | `admitCommitmentToStore` on `TruthContractStatus`; `trcCommitmentStoreDecision` | ✅ `Test.Suite.CommitmentStoreAdmission` |
 | Suppressed claims quarantined, not dropped; replay-visible (CTS-43) | `quarantineObservation`; `trcQuarantinedCommitmentCount` | ✅ `Test.Suite.CommitmentQuarantine` |
-| Quarantined claim promoted to canonical on re-establishment (CTS-44) | `promoteMatchingQuarantine`; `LineagePromoted`; `trcPromotedFromQuarantineCount` (code present) | ⏳ pending public evidence — `Test.Suite.CommitmentPromotion` **not yet written** |
+| Quarantined claim promoted to canonical on re-establishment (CTS-44) | `promoteMatchingQuarantine`; `LineagePromoted`; `trcPromotedFromQuarantineCount` | ✅ `Test.Suite.CommitmentQuarantine` (`unitPromoteMatchingQuarantine`, `unitPromoteNormalizedMatch`, `unitPromoteNoMatch`, `unitPromoteEmptyQuarantine`) |
 
 The CTS-44 *promotion/repair* axis — the system refining a quarantined commitment
-under a later authoritative correction — is the part of C3 that is **not yet
-publicly tested**, though its runtime functions exist. `currentConstitutionVersion = 44`.
+under a later authoritative correction — is publicly tested by the four
+`unitPromote*` cases in `Test.Suite.CommitmentQuarantine`. `currentConstitutionVersion = 44`.
 
 ### C4 — Bidirectional semantic participation — **core publicly evidenced**
 
@@ -200,8 +199,8 @@ The following are **explicitly rejected** as sufficient evidence:
    contour is flag-off; it is not counted as active subject evidence
 5. **Calibrated parameters** — all thresholds remain hand-set (CALIBRATION_BACKLOG.md);
    empirical calibration requires the production-trace corpus
-6. **The pending contours of §3** — CTS-44 promotion test, C4 topic-matrix, and the
-   private SR / CTS-aggregate records are **not** claimed as closed
+6. **The pending contours of §3** — the C4 topic-matrix and the private SR /
+   CTS-aggregate records are **not** claimed as closed
 
 ---
 
@@ -232,7 +231,7 @@ bash scripts/gf_quality_gate.sh      # GF surface generation
 | CTS-43 commitment quarantine | `src/QxFx0/Semantic/Commitment.hs` | `Test.Suite.CommitmentQuarantine` | ✅ |
 | ADR-0019 family divergence live | `src/QxFx0/Core/TurnRouting/Cascade.hs:74` | `Test.Suite.M5Regime` | ✅ |
 | Architecture authority rules | `scripts/check_architecture.sh` | CI gate | ✅ |
-| CTS-44 commitment promotion | `promoteMatchingQuarantine` (code present) | `Test.Suite.CommitmentPromotion` (unwritten) | ⏳ pending |
+| CTS-44 commitment promotion | `promoteMatchingQuarantine`; `LineagePromoted` | `Test.Suite.CommitmentQuarantine` (`unitPromote*`) | ✅ |
 | GF dual-surface 5 topics × 3 langs | `spec/gf/`, GF-E1b record (private) | topic-matrix test (none) | ⏳ pending |
 | CTS-01–40 admission aggregate | per-stage admission modules (live) | aggregate record (private) | ⏳ pending |
 | H2 deferred queue (SR-03/04/05) | SR result records (private) | result records | ⏳ pending |
@@ -253,7 +252,7 @@ claim holds while these public checks pass simultaneously:
   `Test.Suite.PromotionFlagDiscipline` pass
 - C3 (core) holds iff `Test.Suite.SemanticCommitmentCorpus` (3-turn corpus),
   `Test.Suite.AuthoritySurface` (≥99% GF coverage), `Test.Suite.CommitmentStoreAdmission`
-  (CTS-42), and `Test.Suite.CommitmentQuarantine` (CTS-43) pass
+  (CTS-42), and `Test.Suite.CommitmentQuarantine` (CTS-43 + CTS-44 promotion) pass
 - C4 (core) holds iff `Test.Suite.AuthoritySurface` and
   `Test.Suite.M5Regime.m5FamilyDivergenceActiveIsStamped` pass and
   `scripts/check_architecture.sh` exits 0
@@ -313,8 +312,9 @@ public-evidence scope and pending exceptions named in §3.
 - Removed 3 phantom test citations (`M6Witness.c1CanonicalContourCoverage`,
   `.c4GfTopicCoverage`, `.c4CTSAdmissionChainComplete`); repointed C1/C4 to real
   public suites (`TraceSchema`, `M5Regime`, `AuthoritySurface`, `check_replay_gate.sh`).
-- Marked `Test.Suite.CommitmentPromotion` (CTS-44) as **pending** — runtime code
-  exists, public suite unwritten.
+- CTS-44 promotion is publicly tested by `Test.Suite.CommitmentQuarantine`
+  (`unitPromote*`, already on `origin/main` as `fc4db34`); no separate
+  `Test.Suite.CommitmentPromotion` is required.
 - Marked private records (SR-03/04/05, GF-E1b, CTS-01–40 aggregate) as **pending
   public evidence**; did **not** restore them to public commits.
 - Downgraded the blanket "all contours ✅" claim to a **bounded/partial** public

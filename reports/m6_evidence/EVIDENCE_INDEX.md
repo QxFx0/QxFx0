@@ -35,7 +35,7 @@ record, but no public test/artifact yet. Test pass/fail is not asserted here.
 | 5 | M5Regime integration tests | `test/Test/Suite/M5Regime.hs` | `cabal test qxfx0-test-fast` | ✅ |
 | 6 | Bootstrap phases classified | SR-04 record (private) | result record | ⏳ pending |
 
-## C3 — Commitment accountability — ✅ core publicly evidenced
+## C3 — Commitment accountability — ✅ publicly evidenced
 
 | # | Evidence | Location | Public check | Status |
 |---|----------|----------|--------------|--------|
@@ -48,7 +48,7 @@ record, but no public test/artifact yet. Test pass/fail is not asserted here.
 | 7 | GF round-trip ≥99% + negative corpus | `src/QxFx0/Render/Authority.hs` | `Test.Suite.AuthoritySurface.coverageTest` / `.negativeCorpusTest` | ✅ |
 | 8 | CTS-42 truth-contract admission (`trcCommitmentStoreDecision`) | `src/QxFx0/Core/CommitmentStoreAdmission.hs` | `Test.Suite.CommitmentStoreAdmission` | ✅ |
 | 9 | CTS-43 quarantine (`trcQuarantinedCommitmentCount`) | `src/QxFx0/Semantic/Commitment.hs` | `Test.Suite.CommitmentQuarantine` | ✅ |
-| 10 | CTS-44 promotion on re-establishment (`LineagePromoted`, `trcPromotedFromQuarantineCount`) | `src/QxFx0/Semantic/Commitment.hs` (code present) | `Test.Suite.CommitmentPromotion` — **not written** | ⏳ pending |
+| 10 | CTS-44 promotion on re-establishment (`LineagePromoted`, `trcPromotedFromQuarantineCount`) | `src/QxFx0/Semantic/Commitment.hs` | `Test.Suite.CommitmentQuarantine` (`unitPromoteMatchingQuarantine`, `unitPromoteNormalizedMatch`, `unitPromoteNoMatch`, `unitPromoteEmptyQuarantine`) | ✅ |
 
 ## C4 — Bidirectional semantic participation — ✅ core publicly evidenced
 
@@ -74,7 +74,6 @@ Run to verify or falsify — pass/fail not asserted here (suites not re-run this
 
 ## Pending public evidence (summary)
 
-- `Test.Suite.CommitmentPromotion` (CTS-44 promotion/repair) — runtime present, suite unwritten
 - C4 5-topic × 3-language public topic-matrix test
 - Public status of SR-03/04/05, GF-E1b, and CTS-01–40 aggregate records (currently private)
 

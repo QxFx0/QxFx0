@@ -80,16 +80,14 @@ each with a publicly-evidenced core and (some) pending rows:
   `Test.Suite.M5Regime`
 - **Status:** ✅ core public; ⏳ SR-04 bootstrap-phase classification record is private
 
-### Contour C3: Commitment accountability — **core publicly evidenced**
+### Contour C3: Commitment accountability — **publicly evidenced**
 - **What it proves:** semantic commitments are typed, versioned, traceable, and
-  admitted/quarantined under the constitution
+  admitted / quarantined / promoted under the constitution
 - **Public check:** `Test.Suite.SemanticCommitmentCorpus` (store populated turn 1,
   grows multi-turn, `trcSemanticCommitmentCount` matches store, 3-turn corpus);
   `Test.Suite.CommitmentStoreAdmission` (CTS-42); `Test.Suite.CommitmentQuarantine`
-  (CTS-43)
-- **Status:** ✅ core public (store + corpus + CTS-42/43); ⏳ **CTS-44 promotion**
-  (`Test.Suite.CommitmentPromotion`) not yet written — runtime functions
-  (`promoteMatchingQuarantine`, `LineagePromoted`) exist but are untested in public
+  (CTS-43 + CTS-44 promotion: `unitPromoteMatchingQuarantine`, `unitPromoteNormalizedMatch`, `unitPromoteNoMatch`, `unitPromoteEmptyQuarantine`)
+- **Status:** ✅ public (store + corpus + CTS-42/43/44)
 
 ### Contour C4: Bounded domain-dialogue competence — **core publicly evidenced**
 - **What it proves:** the system participates bidirectionally in a declared domain
@@ -129,8 +127,8 @@ A complete M6 evidence package for a bounded domain dialogue session must includ
 4. **`scripts/check_architecture.sh` passing** — authority-boundary rules confirm
    no violations
 5. **At least one commitment revision** — the system must have revised or repaired
-   a commitment under challenge (not just repeated the same surface output). *Note:
-   the public test for the promotion/repair path (CTS-44) is still pending.*
+   a commitment under challenge (not just repeated the same surface output). The
+   promotion/repair path (CTS-44) is publicly tested by `Test.Suite.CommitmentQuarantine`.
 6. **No non-authoritative restart carry** — a session interrupted and resumed must
    produce the same family/force routing on the same input (within the regime)
 
@@ -145,31 +143,28 @@ A complete M6 evidence package for a bounded domain dialogue session must includ
 | H3 | M5 as live governed regime | ✅ `Test.Suite.M5Regime` (public) |
 | C1 | Canonical contours carry trace fields | ✅ `TraceSchema` + `M5Regime` + `check_replay_gate.sh` |
 | C2 | Restart non-auth rejection + trcRegimeVersion | ✅ core (`StatePersistence`, `M5Regime`); ⏳ SR-04 record |
-| C3 | Commitment store + corpus + CTS admission | ✅ core (`SemanticCommitmentCorpus`, CTS-42/43); ⏳ CTS-44 promotion test |
+| C3 | Commitment store + corpus + CTS admission/quarantine/promotion | ✅ (`SemanticCommitmentCorpus`, CTS-42/43/44 via `CommitmentQuarantine`) |
 | C4 | GF bidirectional + familyDivergence live | ✅ core (`AuthoritySurface`, `M5Regime`); ⏳ 5×3 topic-matrix + CTS aggregate |
 
 **Reconciled activation reading:** the **publicly-evidenced core** of all four
-contours holds (H1 ✅, H3 ✅, C1 ✅, C2/C3/C4 core ✅). A **total** M6 claim is
-**not** yet supportable in public: it is blocked on the CTS-44 promotion test, the
-C4 topic-matrix test, and the public status of the H2 / GF-E1b / CTS-aggregate
-records. The declaration is therefore made as **bounded/partial** (see
+contours holds (H1 ✅, H3 ✅, C1 ✅, C3 ✅, C2/C4 core ✅). A **total** M6 claim is
+**not** yet supportable in public: it is blocked on the C4 topic-matrix test and
+the public status of the H2 / GF-E1b / CTS-aggregate records. The declaration is
+therefore made as **bounded/partial** (see
 `M6_DECLARATION.md` §1, §3).
 
 ---
 
 ## 7. Next steps toward a total (non-partial) M6 claim
 
-1. **C3 / CTS-44 public test:** write `Test.Suite.CommitmentPromotion` exercising
-   `promoteMatchingQuarantine` / `LineagePromoted` / `trcPromotedFromQuarantineCount`
-   — the one runtime-present-but-publicly-untested path. *(Highest-value gap.)*
-2. **C4 / topic-matrix public test:** a public fixture exercising the 5-topic ×
+1. **C4 / topic-matrix public test:** a public fixture exercising the 5-topic ×
    3-language GF dual-surface, replacing reliance on the private GF-E1b record.
-3. **H2 / records decision:** either publish public summaries of SR-03/04/05 and the
+2. **H2 / records decision:** either publish public summaries of SR-03/04/05 and the
    CTS-01–40 aggregate, or leave them ⏳ and keep the claim bounded — do **not**
    cite them as ✅ while they are private.
-4. **Bounded benchmark:** a multi-turn domain-dialogue fixture with at least one
+3. **Bounded benchmark:** a multi-turn domain-dialogue fixture with at least one
    commitment revision, tying C1–C4 together in one replay-visible session.
 
-> Done (no longer blocking): H3 `Test.Suite.M5Regime` exists and is public; the C3
-> `trcSemanticCommitmentCount` trace field exists and is tested by
-> `Test.Suite.SemanticCommitmentCorpus`.
+> Done (no longer blocking): H3 `Test.Suite.M5Regime` is public; the C3
+> `trcSemanticCommitmentCount` trace field is tested by `Test.Suite.SemanticCommitmentCorpus`;
+> and CTS-44 promotion is publicly tested by `Test.Suite.CommitmentQuarantine` (`unitPromote*`).
