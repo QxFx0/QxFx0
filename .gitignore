@@ -71,8 +71,8 @@ reports/hardening_closure_20260522_baseline/
 reports/wp6_live/
 reports/releases/wp6_live_validation_closure.md
 
-# Oversized generated morphology index (>100MB); regenerate via scripts/export_lexicon.py
-resources/morphology/forms_by_surface.json
+# Other generated morphology artifacts are tracked; forms_by_surface.json is
+# also tracked as a required runtime resource (see SLICE-010).
 
 # Internal research / audit packs (not part of public runtime surface)
 research_packs/
@@ -82,6 +82,7 @@ docs/audits/
 *.log
 *.tmp
 .*.tmp
+.test-tmp
 
 # Internal work-orders / technician briefs (kept local, not published)
 docs/tz/

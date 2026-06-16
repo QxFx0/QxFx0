@@ -112,7 +112,8 @@ withFakeNixInstantiateOk action = do
     writeFile scriptPath (unlines fakeNixScript)
     perms <- getPermissions scriptPath
     setPermissions scriptPath perms { executable = True }
-    withEnvVar "PATH" (Just fakePath) action
+    withEnvVar "PATH" (Just fakePath) $
+      withEnvVar "QXFX0_NIX_INSTANTIATE_BIN" (Just scriptPath) action
   where
     fakeNixScript =
       [ "#!/bin/sh"
@@ -139,18 +140,19 @@ withRuntimeEnv dbName action = do
       mapM_ removeIfExists (runtimeArtifacts dbPath)
       removeDirIfExists stateDir)
     $ withEnvVar "QXFX0_ROOT" (Just root) $
-        withEnvVar "QXFX0_DB" (Just dbPath) $
-          withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
-            withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded") $
-              action
+        withEnvVar "QXFX0_RESOURCE_ROOT" (Just root) $
+          withEnvVar "QXFX0_DB" (Just dbPath) $
+            withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+              withEnvVar "QXFX0_RUNTIME_MODE" (Just "degraded") $
+                action
 
 withStrictRuntimeEnv :: FilePath -> IO a -> IO a
 withStrictRuntimeEnv dbName action = do
   root <- getCurrentDirectory
   dbPath <- freshTestDbPath dbName
-  witnessPath <- freshTestPath (dbName <> ".agda-witness.json")
   stateDir <- freshTestPath (dbName <> ".state")
-  let cleanup = witnessPath : runtimeArtifacts dbPath
+  let witnessPath = stateDir </> "agda-witness.json"
+      cleanup = witnessPath : runtimeArtifacts dbPath
   bracket_
     (do
       mapM_ removeIfExists cleanup
@@ -161,12 +163,14 @@ withStrictRuntimeEnv dbName action = do
     $ withFakeSouffle $
         withFakeNixInstantiateOk $
           withEnvVar "QXFX0_ROOT" (Just root) $
-            withEnvVar "QXFX0_DB" (Just dbPath) $
-              withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
-                withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
-                  withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
-                    withEnvVar "EMBEDDING_API_URL" Nothing $
-                      withEnvVar "QXFX0_AGDA_WITNESS" (Just witnessPath) $ do
+            withEnvVar "QXFX0_RESOURCE_ROOT" (Just root) $
+              withEnvVar "QXFX0_DB" (Just dbPath) $
+                withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+                  withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
+                    withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
+                      withEnvVar "EMBEDDING_API_URL" Nothing $
+                        withEnvVar "QXFX0_AGDA_WITNESS" (Just witnessPath) $ do
+                        createDirectoryIfMissing True stateDir
                         mAgda <- findExecutable "agda"
                         case mAgda of
                           Just _  -> do

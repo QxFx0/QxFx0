@@ -100,6 +100,7 @@ API_KEY = ARGS.api_key
 DEFAULT_SESSION_ID = ARGS.default_session_id
 SESSION_TTL_SECONDS = max(1.0, ARGS.session_ttl_seconds)
 WORKER_TIMEOUT_SECONDS = max(1.0, ARGS.worker_timeout_seconds)
+RUNTIME_PROBE_TIMEOUT_SECONDS = max(1.0, float(os.environ.get("QXFX0_RUNTIME_PROBE_TIMEOUT_SECONDS", "5")))
 MAX_SESSIONS = max(1, ARGS.max_sessions)
 LEGACY_WORKERS = ARGS.workers
 SESSION_TOKEN_ENFORCED = os.environ.get("QXFX0_REQUIRE_SESSION_TOKEN", "1" if API_KEY else "0") == "1"
@@ -760,7 +761,7 @@ def runtime_readiness_probe():
                 preexec_fn=os.setpgrp,
             )
             try:
-                stdout, stderr = proc.communicate(timeout=5)
+                stdout, stderr = proc.communicate(timeout=RUNTIME_PROBE_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()

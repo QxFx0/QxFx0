@@ -1,0 +1,8 @@
+.gitattributes text eol=lf
+# Force LF line endings for shell scripts so they are executable on all platforms.
+*.sh text eol=lf
+# Force LF for SQL so embedded string comparisons are deterministic across platforms.
+*.sql text eol=lf
+# Generated artifacts that must match LF source files.
+src/QxFx0/Bridge/EmbeddedSQL.hs text eol=lf
+resources/morphology/forms_by_surface.json text eol=lf
