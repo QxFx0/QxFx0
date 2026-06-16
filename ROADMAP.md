@@ -56,6 +56,8 @@ Document split:
 - `ROADMAP.md` = doctrine/program spine
 - `docs/execution_board.md` = brutally current execution coordinator
 - `docs/front_archive.md` = append-only historical memory
+- `docs/closure/REMAINING_CLOSURE_CHECKLIST.md` = compact remaining-debt list
+  for the path to the final anchor
 
 Update rules:
 - `ROADMAP.md` changes rarely and only when doctrine/program/gate logic changes
