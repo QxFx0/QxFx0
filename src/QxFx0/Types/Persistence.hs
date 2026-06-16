@@ -77,6 +77,7 @@ data PersistenceDiagnostic
   | PdStateRevisionConflict !Text !Int !Int !Int
   | PdSaveFailed !PersistenceStage !(Maybe Text) !(Maybe Text)
   | PdRollbackFailed !PersistenceStage !(Maybe Text) !(Maybe Text)
+  | PdNonAuthoritativeTruth
   deriving stock (Eq, Show)
 
 data LoadStateResult
@@ -107,3 +108,4 @@ renderPersistenceDiagnostics = T.intercalate "; " . map renderOne
       "rollback_failed stage=" <> renderPersistenceStage stage
       <> maybe "" (\t -> " table=" <> t) mTable
       <> maybe "" (\e -> " sqlite=\"" <> e <> "\"") mSqlite
+    renderOne PdNonAuthoritativeTruth = "non_authoritative_persisted_state"

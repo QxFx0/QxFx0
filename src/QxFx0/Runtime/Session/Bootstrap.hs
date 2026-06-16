@@ -77,6 +77,7 @@ import QxFx0.Types.State
   , ssTurnCount
   )
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (hPutStrLn, stderr)
@@ -204,8 +205,19 @@ bootstrapSession quiet sessionId = do
         unless quiet $
           hPutStrLn stderr $
             "[runtime_init_debug] persisted_state_corrupt session=" <> T.unpack sessionId <> " detail=" <> T.unpack rendered
-        throwQxFx0 $ mkRuntimeInitError "Bootstrap" "state_restore" "STATE_CORRUPT"
-          (M.fromList [("session_id", sessionId), ("diagnostics", rendered)])
+        case runtimeMode of
+          DegradedRuntime -> do
+            let recovered = freshState
+                  { ssSessionId = sessionId
+                  , ssGovernanceRuntimeFault = Just (GrfRecoveredCorruptBootstrap rendered)
+                  }
+            unless quiet $
+              hPutStrLn stderr $
+                "[runtime_init_debug] persisted_state_corrupt_degraded_recovery session=" <> T.unpack sessionId
+            pure (RecoveredCorruptOrigin, recovered)
+          StrictRuntime ->
+            throwQxFx0 $ mkRuntimeInitError "Bootstrap" "state_restore" "STATE_CORRUPT"
+              (M.fromList [("session_id", sessionId), ("diagnostics", rendered)])
       Right (LoadStateRestored ss) ->
         if ssTurnCount ss == 0 && null (ssHistory ss)
           then pure (FreshOrigin, freshState)

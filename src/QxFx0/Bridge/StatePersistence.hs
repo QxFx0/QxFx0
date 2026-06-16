@@ -21,7 +21,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Identity (IdentityState(..))
 import QxFx0.Types.State.Semantic (SemanticState(..))
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
-import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
+import QxFx0.Types.Decision (DialogueOutputMode(..), decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
 import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
 import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
@@ -212,10 +212,13 @@ loadState withDb sessionId = withDb $ \db -> do
             Right ss ->
               case rebuildDerivedViewsAfterLoad ss of
                 Right rebuilt -> do
-                  when (not (persistedTruthIsAuthoritative (ssTruthContractStatus ss))) $
-                    hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
-                  logPersistenceCounts "post_load" rebuilt
-                  pure (LoadStateRestored rebuilt)
+                  if persistedTruthIsAuthoritative (ssTruthContractStatus ss)
+                    then do
+                      logPersistenceCounts "post_load" rebuilt
+                      pure (LoadStateRestored rebuilt)
+                    else do
+                      hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
+                      pure (LoadStateCorrupt [PdNonAuthoritativeTruth])
                 Left err -> do
                   hPutStrLn stderr $ "[persistence_debug] governance_rebuild_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack err
                   pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["governance_rebuild_failed:" <> err]])
@@ -374,6 +377,9 @@ canonicalizePersistedState ss =
     , ssSemantic = canonicalizePersistedSemanticState (ssSemantic ss)
     , ssSelfState = selfState'
     , ssGovernanceProjection = ssGovernanceProjection emptySystemState
+    , ssOutputMode = DialogueOutput
+    , ssTruthContractStatus = AssembledSurfacePreserved
+    , ssGovernanceRuntimeFault = Nothing
     }
 
 -- | Compatibility-only identity fields are cleared before persistence.
