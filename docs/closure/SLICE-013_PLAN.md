@@ -35,11 +35,11 @@ failures and were intentionally kept out of the infra scope.
 
 ### 2. Sidecar persistence / session-token ownership (1 failure)
 
-#### HttpRuntime group (1)
+#### HttpRuntime group (1) — FIXED
 
-| Case | Test | Failure |
-|---|---|---|
-| 7 | `HttpRuntime.hs:268` | `testTurnSessionTokenSurvivesRestart`: graceful sidecar restart should clear stale ownership and allow fresh claim |
+| Case | Test | Failure | Fix |
+|---|---|---|---|
+| 7 | `HttpRuntime.hs:268` | `testTurnSessionTokenSurvivesRestart`: graceful sidecar restart should clear stale ownership and allow fresh claim | `scripts/http_runtime.py`: `SessionOwnershipStore.clear_store()` called in `graceful_shutdown()` so the session-token store is removed on sidecar shutdown; the next sidecar starts with no stale ownership. |
 
 ## Evidence
 
@@ -48,8 +48,13 @@ failures and were intentionally kept out of the infra scope.
 - `/home/liskil/slice011-state2.log` — `statePersistence` group result
 - `/tmp/opencode/slice011-slow-rerun.txt` — combined summary
 
+## Progress
+
+- 2026-06-16: `httpRuntime` group now passes 22/22 after sidecar session-token store
+  cleanup on shutdown. Evidence: `/home/liskil/slice011-http8.log`.
+
 ## Exit criteria
 
-- All 11 failures above pass.
+- All 10 remaining core-state/persistence failures pass.
 - Full `cabal test qxfx0-test-slow` (or per-group run) shows 135/135 green.
 - No new infra/harness regressions are introduced.

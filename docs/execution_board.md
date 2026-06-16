@@ -12,7 +12,7 @@ Purpose: authoritative source for what to do next.
 ## Current front
 
 - `front_id`: `SLICE-013 — persistence behavior hardening`
-- `current_state`: SLICE-011 infra/harness triage complete. 135 slow cases reached a clean final summary. All remaining non-passing cases (11 total) are persistence-behavior failures and were intentionally not fixed in SLICE-011. SLICE-013 will classify and target those failures.
+- `current_state`: SLICE-011 infra/harness triage complete. 135 slow cases reached a clean final summary. SLICE-013 opened and classified 11 deferred persistence failures; the sidecar session-token failure (httpRuntime 7) is already fixed. 10 core-state/persistence failures remain.
 - `last_updated`: `2026-06-16T20:00:00+03:00`
 - `evidence_or_result_ref`: `docs/closure/SLICE-013_PLAN.md` (also `/tmp/opencode/slice011-slow-rerun.txt`)
 

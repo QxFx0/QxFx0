@@ -7,7 +7,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
-| `SLICE-013` persistence behavior hardening | OPEN | 11 remaining persistence failures classified and fixed by design (runtime 17,25,45,50,51; statePersistence 0,3,4,8,11; httpRuntime 7); plan at `docs/closure/SLICE-013_PLAN.md` |
+| `SLICE-013` persistence behavior hardening | OPEN | 10 remaining core-state/persistence failures classified and fixed by design (runtime 17,25,45,50,51; statePersistence 0,3,4,8,11); httpRuntime 7 already fixed; plan at `docs/closure/SLICE-013_PLAN.md` |
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
 

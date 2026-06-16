@@ -226,6 +226,16 @@ class SessionOwnershipStore:
                 self._tokens.pop(session_id, None)
                 self._persist_locked()
 
+    def clear_store(self):
+        with self._lock:
+            self._tokens = {}
+            self._corrupt = False
+            try:
+                if os.path.exists(self.path):
+                    os.remove(self.path)
+            except OSError as exc:
+                log.warning(json.dumps({"event": "session_token_store_clear_failed", "detail": str(exc)[:256]}))
+
     def _load_tokens(self):
         try:
             with open(self.path, "r", encoding="utf-8") as handle:
@@ -1046,6 +1056,7 @@ def graceful_shutdown(signum, frame):
     running = False
     log.info(json.dumps({"event": "shutdown_signal", "signal": signum}))
     registry.shutdown()
+    session_owners.clear_store()
     sys.exit(0)
 
 
