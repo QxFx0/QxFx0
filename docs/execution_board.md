@@ -11,10 +11,23 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `M6-DECLARE — write final bounded evidence declaration`
-- `current_state`: **All M6 activation conditions met** (2026-06-03). H1+H2+H3+C1+C2+C3+C4 all closed. F-11 real GF parser implemented. 956/956 tests pass. Remaining: write the formal M6 declaration document and create the evidence index under `reports/m6_evidence/`.
-- `last_updated`: `2026-06-03T04:00:00+03:00`
-- `evidence_or_result_ref`: `docs/closure/M6_CLAIM_PACKAGE.md`
+- `front_id`: `SLICE-013 — persistence behavior hardening`
+- `current_state`: SLICE-011 infra/harness triage complete. 135 slow cases reached a clean final summary. All remaining non-passing cases (11 total) are persistence-behavior failures and were intentionally not fixed in SLICE-011. SLICE-013 will classify and target those failures.
+- `last_updated`: `2026-06-16T20:00:00+03:00`
+- `evidence_or_result_ref`: `/tmp/opencode/slice011-slow-rerun.txt`
+
+## Immediate next action
+
+1. Open `SLICE-013` branch and classify the 11 persistence failures into core state/persistence and sidecar session-token persistence.
+2. Produce targeted persistence fixes for the classified failures.
+3. Re-run `qxfx0-test-slow` groups to verify the persistence front is closed.
+
+## Completed this session (2026-06-16)
+
+- **SLICE-011 infra/harness triage** — closed with separate commit on `slice-011`.
+  - Scope: `.gitattributes`, LF rules, SQL/EmbeddedSQL sync, `.test-tmp` symlink, witness path, resource root, fake nix/souffle/gf-map isolation, CLI/Http option parsing, sidecar `executeFile`, sidecar SIGTERM/SIGKILL group cleanup, HTTP proxy bypass, runtime readiness probe timeout, slow-gate group split (`runtime`/`http`/`state`).
+  - Evidence: 135 slow cases reached a clean final summary; 93/93 runtime, 22/22 http, 20/20 state.
+  - Deferred: 11 persistence-behavior failures moved to `SLICE-013`.
 
 ## Completed this session (2026-06-03, full session)
 
@@ -28,12 +41,6 @@ Purpose: authoritative source for what to do next.
   - `Test.Suite.AuthoritySurface` — 24 gfExpr round-trip tests + 4 pattern tests + coverage ≥99% + negative corpus
 
 **Total: 956/956 tests pass. M6 activation checklist: all ✅**
-
-## Immediate next action
-
-1. Write `docs/closure/M6_DECLARATION.md` — the formal bounded claim package
-2. Create `reports/m6_evidence/` index with pointers to all evidence artifacts
-3. Optional: run `bash scripts/check_replay_gate.sh` to confirm 0 failures
 
 ## Completed this session (2026-06-03, second pass)
 
