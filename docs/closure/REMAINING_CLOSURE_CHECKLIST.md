@@ -7,7 +7,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
-| `SLICE-013` deferred failures (40/45/50/51) | OPEN | 4 pre-existing failures: corrupt-JSON bootstrap recovery, state-revision CAS, state-summary pre-actor failure, restart-capped status in summary; require separate triage slice |
+| `SLICE-014` runtime persistence residuals (40/45/50/51) | OPEN | 4 deferred failures classified and fixed or explicitly deferred again; SLICE-014 plan `docs/closure/SLICE-014_PLAN.md` |
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
 

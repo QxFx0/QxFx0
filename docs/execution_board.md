@@ -11,26 +11,29 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `DOCSYNC — origin/main reconciliation after SLICE-013`
-- `current_state`: SLICE-013 closed. Branch `slice-013-truthcontract-fix` at `76fe6ba`. state 36/36 ✅, runtime 93/93 tried (4 pre-existing deferred: 40/45/50/51). Local reconcile with `main` pending (after technician stops). DOCSYNC of origin/main next.
+- `front_id`: `SLICE-014 — runtime persistence residuals (40/45/50/51)`
+- `current_state`: SLICE-013 landed on `main` via `1cc5752`. state 36/36 ✅, runtime 93/93 tried (4 pre-existing deferred: 40/45/50/51), unit 1216/1217 with 1 pre-existing GF-compile failure. CRLF mismatch in runtime schema fixture fixed post-merge. SLICE-014 opened for triage of the 4 deferred failures.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-013_PLAN.md`, commit `76fe6ba`
+- `evidence_or_result_ref`: `docs/closure/SLICE-014_PLAN.md`, `docs/closure/SLICE-013_PLAN.md`, gate logs `/home/liskil/slice013-merge-*.log`
 
 ## Immediate next action
 
-1. DOCSYNC: review origin/main for doc/roadmap drift vs current branch state.
-2. Local reconcile: merge/rebase `slice-013-truthcontract-fix` → `main` once technician is fully stopped.
-3. After merge: open 4 deferred failures (40/45/50/51) as a separate triage slice.
+1. Classify each of the 4 deferred failures as code regression vs known non-regression.
+2. For regressions: identify a minimal fix that does not violate the SLICE-013 policy.
+3. For non-regressions: decide whether to implement missing summary fields or defer.
 
 ## Completed this session (2026-06-17)
 
-- **SLICE-013 truth-contract persistence/load policy (Option 1)** — closed with `76fe6ba` on `slice-013-truthcontract-fix`.
+- **SLICE-013 truth-contract persistence/load policy (Option 1)** — landed on `main` via merge commit `1cc5752`.
+  - Reconciled local `main` to `origin/main`, resolved `.gitattributes` merge conflict, and merged `slice-013-truthcontract-fix`.
+  - Ran relevant gates: state 36/36 ✅, runtime 93/93 tried with 4 deferred failures (40/45/50/51), unit 1216/1217 with 1 pre-existing GF-compile failure.
+  - Post-merge fix: normalized CRLF line endings in `testEmbeddedSqlMatchesCanonicalSpec` to keep runtime case 0 green.
   - Policy: "strict rejects corruption, not compatibility." Persistence cleanup never manufactures truth-contract authority.
   - Save path: `canonicalizePersistedState` preserves `ssTruthContractStatus` verbatim (removed unconditional `=AssembledSurfacePreserved`).
   - Load path: removed duplicate non-auth reject gate from `loadState`; non-auth state → `LoadStateRestored` (demoted), not `LoadStateCorrupt`.
   - Tests: 3 StatePersistence tests renamed+rewritten (Rejects/Recovers→Restores); RuntimeInfrastructure tests 17/25 rewritten with explicit auth fixture marker (symmetric to non-auth twins, breaking nix-capability dependency).
   - Doctrine: `docs/commit_restore_state_machine.md §6.3` updated.
-  - Result: state 36/36 ✅, runtime 93/93 tried, 4 pre-existing failures deferred.
+  - Result: SLICE-013 closed; 4 deferred failures moved to SLICE-014.
 
 ## Completed this session (2026-06-16)
 
