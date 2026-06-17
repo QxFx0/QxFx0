@@ -73,11 +73,11 @@ import Test.Support (assertExec, queryCount, withEnvVar, withRuntimeEnv, withStr
 
 statePersistenceFastTests :: [Test]
 statePersistenceFastTests =
-  [ testBootstrapRejectsNonAuthoritativePersistedState
+  [ testBootstrapRestoresNonAuthoritativePersistedState
   , testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory
   , testBootstrapSessionRestoresCanonicalGovernanceViews
-  , testBootstrapSessionStrictRejectsNonAuthoritativePersistedState
-  , testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState
+  , testBootstrapSessionStrictRestoresNonAuthoritativePersistedState
+  , testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState
   , testLoadStateCorruptBlobIsReported
   , testLoadStateCorruptUtf8BlobIsReported
   , testLoadStateLegacyNumericTrajectoryHashRestores
@@ -85,6 +85,8 @@ statePersistenceFastTests =
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
   , testSaveStateReturnsRightOnSuccess
+  , testPersistedStatePreservesTruthContractStatusVerbatim
+  , testPersistedStateCanonicalizeIsIdempotent
   , testPersistedStateEnvelopeRoundTrip
   , testPersistedStateBareRoundTrip
   ]
@@ -140,8 +142,14 @@ testReplayTraceDbRoundTripFeedsReplayPipeline = TestCase $
 statePersistenceTests :: [Test]
 statePersistenceTests = statePersistenceFastTests ++ statePersistenceSlowTests
 
-testBootstrapRejectsNonAuthoritativePersistedState :: Test
-testBootstrapRejectsNonAuthoritativePersistedState = TestCase $ do
+-- SLICE-013 Option 1: a non-authoritative persisted blob (valid JSON, marker
+-- LegacyIncompleteSurface) is a valid compatibility/provenance state, NOT
+-- corruption. loadState must RESTORE it with the marker preserved verbatim and
+-- restart authority demoted (semanticAnchor / lastTurnDecision -> Nothing). It is
+-- no longer LoadStateCorrupt. (Truly corrupt JSON is still corrupt — see
+-- testLoadStateCorruptBlobIsReported.)
+testBootstrapRestoresNonAuthoritativePersistedState :: Test
+testBootstrapRestoresNonAuthoritativePersistedState = TestCase $ do
   withRuntimeEnv "qxfx0_test_bootstrap_non_authoritative.db" $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative"
     let rt = Runtime.sessRuntime session0
@@ -153,8 +161,17 @@ testBootstrapRejectsNonAuthoritativePersistedState = TestCase $ do
     writeNonAuthoritativePersistedTruthBlob rt "bootstrap_non_authoritative"
     result <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "bootstrap_non_authoritative"
     case result of
-      LoadStateCorrupt _ -> pure ()
-      other -> assertFailure ("expected non-authoritative persisted state to be rejected, got: " <> show other)
+      LoadStateRestored restored -> do
+        assertEqual "non-authoritative persisted state must remain restorable with its marker preserved verbatim"
+          LegacyIncompleteSurface
+          (ssTruthContractStatus restored)
+        assertEqual "non-authoritative restore must deny restart authority: semantic anchor stripped"
+          Nothing
+          (ssSemanticAnchor restored)
+        assertEqual "non-authoritative restore must deny restart authority: last turn decision stripped"
+          Nothing
+          (ssLastTurnDecision restored)
+      other -> assertFailure ("expected non-authoritative persisted state to remain restorable, got: " <> show other)
 
 testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory :: Test
 testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
@@ -223,8 +240,13 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
       (ssGovernanceProjection governedState)
       (ssGovernanceProjection restoredState)
 
-testBootstrapSessionStrictRejectsNonAuthoritativePersistedState :: Test
-testBootstrapSessionStrictRejectsNonAuthoritativePersistedState = TestCase $ do
+-- SLICE-013 Option 1: strict rejects corruption, not compatibility. A
+-- non-authoritative (LegacyIncompleteSurface) persisted blob is valid
+-- compatibility state, so STRICT bootstrap must RESTORE it (marker preserved,
+-- restart authority demoted), not fail closed. NA-001/H1 holds because the
+-- semantic anchor is denied, not because the state is rejected.
+testBootstrapSessionStrictRestoresNonAuthoritativePersistedState :: Test
+testBootstrapSessionStrictRestoresNonAuthoritativePersistedState = TestCase $ do
   withStrictRuntimeEnv "qxfx0_test_bootstrap_non_authoritative_strict.db" $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_strict"
     let rt = Runtime.sessRuntime session0
@@ -236,16 +258,23 @@ testBootstrapSessionStrictRejectsNonAuthoritativePersistedState = TestCase $ do
     writeNonAuthoritativePersistedTruthBlob rt "bootstrap_non_authoritative_strict"
     result <- try (Runtime.bootstrapSession True "bootstrap_non_authoritative_strict") :: IO (Either QxFx0Exception Runtime.Session)
     case result of
-      Left ex | Just detail <- matchRuntimeInitError ex ->
-        assertBool "strict bootstrap should reject non-authoritative persisted state"
-          ("non_authoritative_persisted_state" `T.isInfixOf` detail || detail == "STATE_CORRUPT")
-      Left other ->
-        assertFailure ("expected RuntimeInitError for strict non-authoritative restore, got: " <> show other)
-      Right _ ->
-        assertFailure "strict bootstrap should fail closed on non-authoritative persisted state"
+      Right restored -> do
+        assertEqual "strict bootstrap must restore non-authoritative state with its marker preserved"
+          LegacyIncompleteSurface
+          (ssTruthContractStatus (Runtime.sessSystemState restored))
+        assertEqual "strict restore of non-authoritative state must deny semantic anchor restart authority"
+          Nothing
+          (ssSemanticAnchor (Runtime.sessSystemState restored))
+      Left ex ->
+        assertFailure ("strict bootstrap must not fail closed on a valid non-authoritative (compatibility) persisted state, got: " <> show ex)
 
-testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState :: Test
-testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState = TestCase $ do
+-- SLICE-013 Option 1: a non-authoritative persisted blob is compatibility state,
+-- not corruption, so DEGRADED bootstrap RESTORES it (marker preserved, restart
+-- authority demoted) rather than reporting RecoveredCorruptOrigin / surfacing a
+-- corrupt-recovery governance fault. (RecoveredCorruptOrigin is reserved for truly
+-- corrupt blobs — see testBootstrapSessionMarksRecoveredCorruption.)
+testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState :: Test
+testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState = TestCase $ do
   withRuntimeEnv "qxfx0_test_bootstrap_non_authoritative_degraded.db" $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_degraded"
     let rt = Runtime.sessRuntime session0
@@ -255,16 +284,18 @@ testBootstrapSessionDegradedRecoversNonAuthoritativePersistedState = TestCase $ 
       Left err -> assertFailure ("failed to persist degraded non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
     writeNonAuthoritativePersistedTruthBlob rt "bootstrap_non_authoritative_degraded"
-    recovered <- Runtime.bootstrapSession True "bootstrap_non_authoritative_degraded"
-    assertEqual "degraded bootstrap should recover corrupt/non-authoritative persisted state"
-      Runtime.RecoveredCorruptOrigin
-      (Runtime.sessStateOrigin recovered)
-    case ssGovernanceRuntimeFault (Runtime.sessSystemState recovered) of
-      Just (GrfRecoveredCorruptBootstrap detail) ->
-        assertBool "degraded bootstrap should surface non-authoritative persisted-state cause"
-          ("non_authoritative_persisted_state" `T.isInfixOf` detail)
-      other ->
-        assertFailure ("expected recovered-corrupt bootstrap governance fault, got: " <> show other)
+    restored <- Runtime.bootstrapSession True "bootstrap_non_authoritative_degraded"
+    assertBool "degraded bootstrap must NOT treat a valid non-authoritative state as recovered-corrupt"
+      (Runtime.sessStateOrigin restored /= Runtime.RecoveredCorruptOrigin)
+    assertEqual "degraded bootstrap must restore the non-authoritative marker verbatim"
+      LegacyIncompleteSurface
+      (ssTruthContractStatus (Runtime.sessSystemState restored))
+    assertEqual "degraded restore of non-authoritative state must deny semantic anchor restart authority"
+      Nothing
+      (ssSemanticAnchor (Runtime.sessSystemState restored))
+    assertEqual "degraded restore of a valid non-authoritative state must not raise a corrupt-recovery governance fault"
+      Nothing
+      (ssGovernanceRuntimeFault (Runtime.sessSystemState restored))
 
 testLoadStateCorruptBlobIsReported :: Test
 testLoadStateCorruptBlobIsReported = TestCase $ do
@@ -542,8 +573,8 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
             assertEqual "persisted canonical state must clear output mode"
               DialogueOutput
               (ssOutputMode persistedState)
-            assertEqual "persisted canonical state must retain authoritative truth for restore/rebuild"
-              AssembledSurfacePreserved
+            assertEqual "persisted state must preserve truth-contract status verbatim (no manufactured authority: non-authoritative marker is neither upgraded nor collapsed)"
+              NonExpansiveRecoverySurface
               (ssTruthContractStatus persistedState)
             assertEqual "persisted canonical state must clear runtime governance fault"
               Nothing
@@ -551,6 +582,89 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
             assertEqual "persisted canonical state must not carry rebuildable registry"
                (selfPerspectiveRegistry (ssSelfState emptySystemState))
                (selfPerspectiveRegistry (ssSelfState persistedState))
+
+-- | SLICE-013 truth-contract policy: persistence cleanup preserves the
+-- truth-contract status verbatim and never manufactures authority. For every
+-- status — authoritative or non-authoritative — the persisted artifact must
+-- carry exactly the same status it went in with: no upgrade, no downgrade, no
+-- collapse of one marker into another. (Restart-authority demotion is the
+-- restore path's concern, tested separately.) This is the explicit guard for
+-- the StatePersistence-case-11 vs RuntimeInfrastructure-18/19/26 conflict.
+testPersistedStatePreservesTruthContractStatusVerbatim :: Test
+testPersistedStatePreservesTruthContractStatusVerbatim =
+  TestList
+    [ TestLabel ("persist preserves " <> show status) (mkCase status)
+    | status <- [minBound .. maxBound] :: [TruthContractStatus]
+    ]
+  where
+    mkCase status = TestCase $
+      withRuntimeEnv "qxfx0_test_truthcontract_verbatim.db" $ do
+        session0 <- Runtime.bootstrapSession True "truthcontract_verbatim"
+        let rt = Runtime.sessRuntime session0
+            ss0 = (authoritativeGovernedState (Runtime.sessSystemState session0))
+              { ssTruthContractStatus = status }
+        result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "truthcontract_verbatim"
+        case result of
+          Left err ->
+            assertFailure ("saveState should succeed, got Left: " <> T.unpack (renderPersistenceDiagnostics [err]))
+          Right _ -> do
+            persistedBlob <- Runtime.withRuntimeDb rt $ \db -> do
+              mStmt <- NSQL.prepare db "SELECT value FROM dialogue_state WHERE session_id = ? AND key = ? ORDER BY updated_at DESC LIMIT 1"
+              stmt <- case mStmt of
+                Left sqlErr -> assertFailure ("Failed to prepare persisted-state query: " <> T.unpack sqlErr) >> fail "unreachable"
+                Right s -> pure s
+              _ <- NSQL.bindText stmt 1 "truthcontract_verbatim"
+              _ <- NSQL.bindText stmt 2 "__system_state__"
+              hasRow <- NSQL.stepRow stmt
+              payload <- if hasRow then NSQL.columnText stmt 0 else pure ""
+              NSQL.finalize stmt
+              pure payload
+            case (eitherDecodeStrict' (encodeUtf8 persistedBlob) :: Either String SystemState) of
+              Left decodeErr ->
+                assertFailure ("Persisted system state should decode as JSON: " <> decodeErr)
+              Right persistedState -> do
+                assertEqual ("truth-contract status must be preserved verbatim for " <> show status)
+                  status
+                  (ssTruthContractStatus persistedState)
+                -- Save-path cleanup still happens regardless of status.
+                assertEqual "persisted state must still clear output mode"
+                  DialogueOutput
+                  (ssOutputMode persistedState)
+
+-- | Idempotency: re-persisting an already-persisted state changes neither the
+-- truth-contract status nor the cleared derived/runtime-local views, for every
+-- status. canonicalize is monotonic-by-authority with a fixed point on
+-- already-canonical state.
+testPersistedStateCanonicalizeIsIdempotent :: Test
+testPersistedStateCanonicalizeIsIdempotent =
+  TestList
+    [ TestLabel ("idempotent persist for " <> show status) (mkCase status)
+    | status <- [minBound .. maxBound] :: [TruthContractStatus]
+    ]
+  where
+    mkCase status = TestCase $
+      withRuntimeEnv "qxfx0_test_truthcontract_idem.db" $ do
+        session0 <- Runtime.bootstrapSession True "truthcontract_idem"
+        let rt = Runtime.sessRuntime session0
+            ss0 = (authoritativeGovernedState (Runtime.sessSystemState session0))
+              { ssTruthContractStatus = status }
+        r1 <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "truthcontract_idem"
+        case r1 of
+          Left err -> assertFailure ("first saveState failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+          Right s1 -> do
+            r2 <- StatePersistence.saveState (Runtime.withRuntimeDb rt) s1 "truthcontract_idem"
+            case r2 of
+              Left err -> assertFailure ("second saveState failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+              Right s2 -> do
+                assertEqual ("status stable across re-persist for " <> show status)
+                  (ssTruthContractStatus s1)
+                  (ssTruthContractStatus s2)
+                assertEqual ("status still equals input for " <> show status)
+                  status
+                  (ssTruthContractStatus s2)
+                assertEqual "output mode stable across re-persist"
+                  (ssOutputMode s1)
+                  (ssOutputMode s2)
 
 testPersistedStateEnvelopeRoundTrip :: Test
 testPersistedStateEnvelopeRoundTrip = TestCase $ do

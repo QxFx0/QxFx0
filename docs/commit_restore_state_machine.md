@@ -169,6 +169,8 @@ Restore must demote on non-authoritative contours:
 Evidence:
 - `src/QxFx0/Bridge/StatePersistence.hs:386-394`
 
+**Doctrine (SLICE-013):** Persistence cleanup never manufactures truth-contract authority; truth-contract status is preserved verbatim unless earned by an explicit upstream authority step.
+
 ### 6.4 Runtime-hydrate-only scope
 
 Hydrate-only runtime continuity:

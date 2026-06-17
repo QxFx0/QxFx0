@@ -603,28 +603,42 @@ testRuntimeModeAcceptsDegradedLocalAlias = TestCase $
     mode <- Runtime.resolveRuntimeMode
     assertEqual "degraded-local alias should resolve to degraded runtime" Runtime.DegradedRuntime mode
 
+-- SLICE-013: AUTHORITATIVE persistence contract — an authoritative persisted state
+-- preserves its truth-contract marker AND retains restart authority (semanticAnchor /
+-- lastTurnDecision survive load). The turn here only populates the semantic carry
+-- fields; authority is asserted by EXPLICITLY marking the fixture authoritative
+-- (ssTruthContractStatus = AssembledSurfacePreserved), NOT by assuming the turn earned
+-- it — whether a real turn earns authority is nix/GF-capability dependent and belongs
+-- to a separate env-capability test. Mirrors the non-authoritative twin below.
 testLoadStatePreservesAuthorityRetainedSemanticFields :: Test
 testLoadStatePreservesAuthorityRetainedSemanticFields = TestCase $ do
   withRuntimeEnv "qxfx0_test_load_semantic_authority.db" $ do
     session0 <- Runtime.bootstrapSession True "load_semantic_authority"
     let rt = Runtime.sessRuntime session0
     (session1, output1) <- Runtime.runTurnInSession session0 "Что такое свобода?"
-    let ss1 = Runtime.sessSystemState session1
-    assertBool "semantic authority fixture should produce non-empty output" (not (T.null output1))
+    let ss1 = (Runtime.sessSystemState session1) { ssTruthContractStatus = AssembledSurfacePreserved }
+    assertBool "authoritative semantic fixture should produce non-empty output" (not (T.null output1))
     assertBool "semantic anchor should be populated after a real turn"
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "last turn decision should be populated after a real turn"
       (ssLastTurnDecision ss1 /= Nothing)
+    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "load_semantic_authority"
+    case saveResult of
+      Left err -> assertFailure ("failed to persist authoritative semantic fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
     loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) "load_semantic_authority"
     case loaded of
       LoadStateRestored restored -> do
-        assertEqual "semanticAnchor must survive persisted load"
+        assertEqual "authoritative truth-contract marker must be preserved on load"
+          AssembledSurfacePreserved
+          (ssTruthContractStatus restored)
+        assertEqual "authoritative semanticAnchor must survive persisted load"
           (ssSemanticAnchor ss1)
           (ssSemanticAnchor restored)
-        assertEqual "lastTurnDecision must survive persisted load"
+        assertEqual "authoritative lastTurnDecision must survive persisted load"
           (ssLastTurnDecision ss1)
           (ssLastTurnDecision restored)
-      other -> assertFailure ("expected restored semantic authority state, got: " <> show other)
+      other -> assertFailure ("expected restored authoritative semantic state, got: " <> show other)
 
 testLoadStatePreservesAuthorityRetainedSemanticFieldsForNonAuthoritativeState :: Test
 testLoadStatePreservesAuthorityRetainedSemanticFieldsForNonAuthoritativeState = TestCase $ do
@@ -866,26 +880,38 @@ testBootstrapSessionRestoresAssembledGovernanceViews = TestCase $ do
       (ssGovernanceProjection governedState)
       (ssGovernanceProjection restoredState)
 
+-- SLICE-013: AUTHORITATIVE bootstrap-restore contract. Mirrors the non-authoritative
+-- twin below. The turn only populates the semantic carry fields; authority is asserted
+-- by EXPLICITLY marking the fixture authoritative (AssembledSurfacePreserved), not by
+-- assuming the turn earned it (nix/GF-capability dependent — covered separately).
 testBootstrapSessionPreservesAuthorityRetainedSemanticFields :: Test
 testBootstrapSessionPreservesAuthorityRetainedSemanticFields = TestCase $ do
   withRuntimeEnv "qxfx0_test_bootstrap_semantic_authority.db" $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_semantic_authority"
+    let rt = Runtime.sessRuntime session0
     (session1, output1) <- Runtime.runTurnInSession session0 "Что такое свобода?"
-    let ss1 = Runtime.sessSystemState session1
-    assertBool "semantic bootstrap fixture should produce non-empty output" (not (T.null output1))
+    let ss1 = (Runtime.sessSystemState session1) { ssTruthContractStatus = AssembledSurfacePreserved }
+    assertBool "authoritative semantic bootstrap fixture should produce non-empty output" (not (T.null output1))
     assertBool "semantic anchor should be populated before bootstrap restore"
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "last turn decision should be populated before bootstrap restore"
       (ssLastTurnDecision ss1 /= Nothing)
+    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "bootstrap_semantic_authority"
+    case saveResult of
+      Left err -> assertFailure ("failed to persist authoritative semantic bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
     restored <- Runtime.bootstrapSession True "bootstrap_semantic_authority"
     let restoredState = Runtime.sessSystemState restored
-    assertEqual "bootstrap should report restored origin for semantic authority state"
+    assertEqual "bootstrap should report restored origin for authoritative semantic state"
       Runtime.RestoredOrigin
       (Runtime.sessStateOrigin restored)
-    assertEqual "semanticAnchor must survive bootstrap restore"
+    assertEqual "authoritative bootstrap must preserve truth contract status"
+      AssembledSurfacePreserved
+      (ssTruthContractStatus restoredState)
+    assertEqual "authoritative semanticAnchor must survive bootstrap restore"
       (ssSemanticAnchor ss1)
       (ssSemanticAnchor restoredState)
-    assertEqual "lastTurnDecision must survive bootstrap restore"
+    assertEqual "authoritative lastTurnDecision must survive bootstrap restore"
       (ssLastTurnDecision ss1)
       (ssLastTurnDecision restoredState)
 
