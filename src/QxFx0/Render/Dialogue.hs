@@ -18,6 +18,10 @@ module QxFx0.Render.Dialogue
 
 import Data.Text (Text)
 import QxFx0.Self.Field (Field, emptyField)
+import QxFx0.Semantic.Content
+  ( SemanticPredicate(..), DefinitionContent(..), DistinctionContent(..)
+  , lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic, isCoveredPair
+  )
 import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
 import qualified Data.Char as Char
@@ -471,17 +475,27 @@ structuredBody propositionType frame rmp renderStyle morph rp =
                    then "Да, я знаю, что солнце — это звезда и источник света и тепла для Земли. Для меня это базовое понятийное знание о явлениях внешнего мира, а не результат текущего наблюдения."
                    else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
       | isEn ->
-          let ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")))) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
+          let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")
+              mContent = lookupDefinitionContent topicRef
+              ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme topicRef)) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
               claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
+              contentText = case mContent of
+                Just dc -> ". " <> T.intercalate " " (map spEn (dcPredicates dc))
+                Nothing -> ""
           in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
               <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
-              <> clText claim) ast claim "en_GF_MVP"
+              <> clText claim <> contentText) ast claim "en_GF_MVP"
       | otherwise ->
-          let ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
+          let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
+              mContent = lookupDefinitionContent topicRef
+              ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
               claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
+              contentText = case mContent of
+                Just dc -> ". " <> T.intercalate " " (map spRu (dcPredicates dc))
+                Nothing -> ""
           in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
               <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
-              <> clText claim) ast claim
+              <> clText claim <> contentText) ast claim
     PurposeQ ->
       let topicRef = nonEmptyOr (T.strip (ipfSemanticSubject frame)) (nonEmptyOr (T.strip (rmpTopic rmp)) (if isEn then "object" else "объект"))
           topicNom = if isEn then topicRef else toNominative morph topicRef
@@ -569,11 +583,15 @@ structuredBody propositionType frame rmp renderStyle morph rp =
         left:right:_ ->
           let leftNom = if isEn then left else toNominative morph left
               rightNom = if isEn then right else toNominative morph right
+              mDist = lookupDistinctionContent leftNom rightNom
               ast = claimAstOrFallback (MoveDistinguish (MkNP (resolveTopicLexeme leftNom)) (MkNP (resolveTopicLexeme rightNom))) (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
               claim = linFn "distinguish" ast renderStyle morph rp (rmpPrimaryClaim rmp)
-              bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> clText claim
-                else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> clText claim
+              distText = case mDist of
+                Just dc -> ". " <> T.intercalate " " (map (if isEn then spEn else spRu) (dcDifferentiators dc))
+                Nothing -> ""
+              bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> clText claim <> distText
+                else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> clText claim <> distText
           in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
         _ ->
           plain (if isEn then "Distinction requires an explicit frame of criteria. " <> rmpPrimaryClaim rmp
