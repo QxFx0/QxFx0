@@ -200,10 +200,12 @@ testEmbeddedSqlMatchesCanonicalSpec = TestCase $ do
   clustersSql <- TIO.readFile (root </> "spec" </> "sql" </> "seed_clusters.sql")
   identitySql <- TIO.readFile (root </> "spec" </> "sql" </> "seed_identity.sql")
   templatesSql <- TIO.readFile (root </> "spec" </> "sql" </> "seed_templates.sql")
-  assertEqual "embedded schema should match canonical spec/sql schema" schemaSql EmbeddedSQL.schemaSQL
-  assertEqual "embedded cluster seed should match canonical spec/sql" clustersSql EmbeddedSQL.seedClustersSQL
-  assertEqual "embedded identity seed should match canonical spec/sql" identitySql EmbeddedSQL.seedIdentitySQL
-  assertEqual "embedded template seed should match canonical spec/sql" templatesSql EmbeddedSQL.seedTemplatesSQL
+  let normalizeCRLF = T.replace "\r\n" "\n"
+  assertEqual "embedded schema should match canonical spec/sql schema" (normalizeCRLF schemaSql) (normalizeCRLF EmbeddedSQL.schemaSQL)
+  assertEqual "embedded cluster seed should match canonical spec/sql" (normalizeCRLF clustersSql) (normalizeCRLF EmbeddedSQL.seedClustersSQL)
+  assertEqual "embedded identity seed should match canonical spec/sql" (normalizeCRLF identitySql) (normalizeCRLF EmbeddedSQL.seedIdentitySQL)
+  assertEqual "embedded template seed should match canonical spec/sql" (normalizeCRLF templatesSql) (normalizeCRLF EmbeddedSQL.seedTemplatesSQL)
+
 
 testMigrationMatchesCanonicalSpec :: Test
 testMigrationMatchesCanonicalSpec = TestCase $ do
