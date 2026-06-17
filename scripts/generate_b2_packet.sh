@@ -48,9 +48,9 @@ fi
 echo "[3/6] Generating System transcripts..."
 # System: run the full pipeline with all features enabled.
 # Each task_id is a multi-turn session; turns within a task are sequential.
- cabal run -v0 qxfx0-main -- --serve-http 0 2>/dev/null &
+ cabal run -v0 qxfx0-main -- --serve-http 9180 2>/dev/null &
 HTTP_PID=$!
-sleep 2
+sleep 5
 
 SYSTEM_ARGS=""
 TASK_IDS=$(grep -o '"task_id":"[^"]*"' "$CORPUS" | sort -u | sed 's/"task_id":"//;s/"//')
@@ -61,11 +61,17 @@ for task_id in $TASK_IDS; do
   grep "\"$task_id\"" "$CORPUS" | while IFS= read -r line; do
     user_text=$(echo "$line" | python3 -c "import json,sys; print(json.load(sys.stdin)['user_text'])" 2>/dev/null || echo "")
     if [ -n "$user_text" ]; then
-      response=$(curl -s -X POST http://localhost:0/turn \
+      response=$(curl -s -X POST http://localhost:9180/turn \
         -H "Content-Type: application/json" \
         -d "{\"session_id\":\"$task_id\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
-      echo "{\"task_id\":\"$task_id\",\"user\":\"$user_text\",\"system\":\"$response\"}" \
-        >> "$OUTPUT/system/${task_id}.jsonl"
+      python3 -c "
+import json, sys
+task_id = sys.argv[1]
+user_text = sys.argv[2]
+response = sys.argv[3]
+record = {'task_id': task_id, 'user': user_text, 'response': response}
+print(json.dumps(record, ensure_ascii=False))
+" "$task_id" "$user_text" "$response" >> "$OUTPUT/system/${task_id}.jsonl"
     fi
   done
 done
@@ -79,20 +85,26 @@ export QXFX0_CONTROL_A_DISABLE_ADMISSION=1
 export QXFX0_CONTROL_A_DISABLE_REPAIR=1
 export QXFX0_CONTROL_A_DISABLE_CONTENT=1
 
- cabal run -v0 qxfx0-main -- --serve-http 0 2>/dev/null &
+ cabal run -v0 qxfx0-main -- --serve-http 9181 2>/dev/null &
 HTTP_PID=$!
-sleep 2
+sleep 5
 
 for task_id in $TASK_IDS; do
   echo "  Control-A: $task_id"
   grep "\"$task_id\"" "$CORPUS" | while IFS= read -r line; do
     user_text=$(echo "$line" | python3 -c "import json,sys; print(json.load(sys.stdin)['user_text'])" 2>/dev/null || echo "")
     if [ -n "$user_text" ]; then
-      response=$(curl -s -X POST http://localhost:0/turn \
+      response=$(curl -s -X POST http://localhost:9181/turn \
         -H "Content-Type: application/json" \
         -d "{\"session_id\":\"ctrl-${task_id}\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
-      echo "{\"task_id\":\"$task_id\",\"user\":\"$user_text\",\"control_a\":\"$response\"}" \
-        >> "$OUTPUT/control-a/${task_id}.jsonl"
+      python3 -c "
+import json, sys
+task_id = sys.argv[1]
+user_text = sys.argv[2]
+response = sys.argv[3]
+record = {'task_id': task_id, 'user': user_text, 'response': response}
+print(json.dumps(record, ensure_ascii=False))
+" "$task_id" "$user_text" "$response" >> "$OUTPUT/control-a/${task_id}.jsonl"
     fi
   done
 done

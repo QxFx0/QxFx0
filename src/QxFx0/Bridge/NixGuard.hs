@@ -51,10 +51,10 @@ checkConstitution nixPath concept agency tension =
                    <> "; tension = " <> T.pack (show tension)
                    <> "; data = import " <> nixStringLiteral (T.pack nixPath)
                    <> "; key = " <> nixStringLiteral conceptKey
-                    <> "; match = builtins.filter (c: builtins.toLower c.id == builtins.toLower key) data.concepts;"
+                    <> "; match = builtins.filter (c: c.id == key) data.concepts;"
                     <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
-                    <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
-                    <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"
+                    <> "  agencyOk = concept != null && (builtins.isNull concept.minAgency || agency >= concept.minAgency);"
+                    <> "  tensionOk = concept != null && (builtins.isNull concept.minTension || tension >= concept.minTension);"
                     <> " in if concept != null then agencyOk && tensionOk else true"
       result <- runNixEval nixExpr
       case result of
