@@ -9,7 +9,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 |---|---|---|
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
-| `SLICE-012` GF/toolchain environment contract | OPEN | intended GHC/freeze/GF runtime documented; local env limitations separated from release-blocking failures; freeze decision recorded |
+| `SLICE-012` governed evidence admissibility | CLOSED (with pre-existing morphology blocker) | `EvidenceAdmissibility` type + `QXFX0_GOVERNED_EVIDENCE` fail-closed; `trcEvidenceAdmissibility` in every trace; CI extended contract governed; `ENV_CONTRACT.md` documents the contract; fast gate 0 new failures (8 errors + 2 failures pre-existing morphology, SLICE-010B); commits `b12cafb` + `6755b0e` on `origin/main` |
 
 ## Deferred feature gaps
 
@@ -21,7 +21,8 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
-| `SLICE-010B` morphology resource contract | CLOSED | runtime morphology derives from `paradigms.json` + `exceptions.json`; no public `origin/main` dependency on `forms_by_surface.json`; code reviewed, Python simulation of real paradigms/exceptions passes; full fast gate not run due to environment blockers (GHC/base freeze mismatch + missing GF C runtime, SLICE-012) |
+| `SLICE-010B` morphology resource contract | CLOSED | runtime morphology derives from `paradigms.json` + `exceptions.json`; no public `origin/main` dependency on `forms_by_surface.json`; code reviewed, Python simulation of real paradigms/exceptions passes; full fast gate not run due to environment blockers (GHC/base freeze mismatch + missing GF C runtime) |
+| `SLICE-012` governed evidence admissibility | CLOSED (with pre-existing morphology blocker) | see open-fronts table above for exit summary; commits `b12cafb` + `6755b0e` |
 | `SLICE-014` runtime persistence residuals | CLOSED | runtime 93/93 tried; 40/45 fixed; 50/51 moved to SLICE-015 as documented feature gaps; plan `docs/closure/SLICE-014_PLAN.md` |
 | `SLICE-013` persistence behavior hardening | CLOSED | state 36/36, runtime 93/93 tried; Option 1 policy (verbatim preserve, no manufacture); 4 pre-existing failures deferred; commit `76fe6ba` on `slice-013-truthcontract-fix` |
 | `SLICE-009` / `SLICE-011` slow-suite / HTTP runtime infra triage | CLOSED | 135 slow cases reach clean final summary; all infra/line-ending/hermetic/proxy/sidecar-hang issues fixed; 11 persistence failures explicitly deferred to `SLICE-013` |

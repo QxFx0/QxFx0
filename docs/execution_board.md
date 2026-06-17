@@ -11,19 +11,34 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `SLICE-012`
-- `current_state`: SLICE-010B closed on `slice-010b-morphology-contract` (commit `0219d0e`); SLICE-012 now open to define the GF/toolchain environment contract. Open fronts remain `DATALOG-ROLE-001` and `M7` per `docs/closure/REMAINING_CLOSURE_CHECKLIST.md`.
+- `front_id`: `B3 — semantic-core MVS gate (design only)`
+- `current_state`: SLICE-012 closed (governed evidence admissibility implemented + pushed). Next front is B3 design — content-quality gate docs, no runtime code. M6-FELT remains NOT PROVEN.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-012_PLAN.md`, `docs/closure/SLICE-010B_PLAN.md`, `docs/closure/REMAINING_CLOSURE_CHECKLIST.md`
+- `evidence_or_result_ref`: `docs/closure/SLICE-012_PLAN.md` (closed), `docs/closure/ENV_CONTRACT.md`, `audit-objective-2026-06-17.md`
 
 ## Immediate next action
 
-- Document the intended GHC/freeze policy for the fast unit gate (`cabal test qxfx0-test-fast`).
-- Document the GF C runtime dependency (`libpgf`, `libgu`) and how to verify it.
-- Decide whether to keep `cabal.project.freeze` on GHC 9.6.6 or update it for GHC 9.6.7, and record the decision in `docs/closure/SLICE-012_PLAN.md`.
-- Do not change morphology or runtime logic in this front.
+- B3 design: define content-quality pass/fail gates for definition, distinction/comparison, repair under challenge, commitment accountability, non-fallback semantic engagement.
+- B3 is docs/design only: no runtime code, no tests, no claim upgrade.
+- B2 (human-eval) goes after B3 — B2 must evaluate an already-defined semantic-core floor.
 
-## Completed this session (2026-06-17)
+## Completed this session (2026-06-17, second pass)
+
+- **SLICE-012 governed evidence admissibility** — closed (commits `b12cafb` + `6755b0e` pushed to `origin/main`).
+  - `EvidenceAdmissibility` type: `EvidenceGoverned` / `EvidenceDegradedGuardUnavailable` / `EvidenceInadmissible` (`src/QxFx0/Types/Evidence.hs`).
+  - `QXFX0_GOVERNED_EVIDENCE=1` env var: governed-evidence mode fail-closes on Unavailable guard (`EvidenceInadmissibleFailure`); normal mode preserves fail-open degraded behavior.
+  - Every `TurnReplayTrace` now carries `trcEvidenceAdmissibility`.
+  - CI extended contract: `QXFX0_GOVERNED_EVIDENCE=1` + `QXFX0_CONCEPTS_PATH`; core contract explicitly disclaims governed evidence (nix not installed).
+  - Docs: `ENV_CONTRACT.md`, `M6_DECLARATION.md` C1 evidence-admissibility row, `SLICE-012_PLAN.md`.
+  - **Pre-existing morphology blocker**: fast gate 1124 cases, 8 errors + 2 failures all pre-existing (`Morphology resource_load MORPHOLOGY_ERROR` + `forms_by_surface.json` — SLICE-010B). 0 new failures from SLICE-012.
+  - Status: **closed-with-pre-existing-morphology-blocker**. The morphology resource issue (SLICE-010B) blocks local fresh-runtime runs but does not affect SLICE-012's evidence-admissibility contract.
+
+- **ESSENCE-REGIME-RECONCILE (Policy A)** — closed (commit `b12cafb` pushed).
+  - Essence is law-driven (unconditional `shouldCommit`/`validatePlan`/`EssenceRupture` since 2026-05-19); `essenceCommitmentEnabled` flag was never implemented.
+  - 19 docs + 1 discipline test reconciled; `Self.Essence` reclassified `canonical-flag-off` → `canonical`.
+  - Essence = structural/runtime scaffold only, NOT M6-FELT evidence.
+
+## Completed this session (2026-06-17, first pass)
 
 - **SLICE-010B morphology resource contract** — closed on `slice-010b-morphology-contract` (commit `0219d0e`).
   - `src/QxFx0/Resources/Paths.hs`: morphology directory marker switched from `prepositional.json` to `paradigms.json` with `lexicon_quality.json` fallback for test-tree compatibility.
