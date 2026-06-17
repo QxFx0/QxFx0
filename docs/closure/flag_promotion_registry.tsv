@@ -1,5 +1,6 @@
 flag	state	file	adr
-essenceCommitmentEnabled	off	-	ADR-0036
+essenceCommitmentEnabled	non-implemented	historical (ADR-0012 §10.1 design; never built)	ADR-0036
+rrEssenceActive	promoted	src/QxFx0/Types/RuntimeRegime.hs	ADR-0036
 QXFX0_PERSPECTIVE_OPERATOR_ENABLED	off	-	ADR-0020
 QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED	off	-	ADR-0021
 QXFX0_ADAPTIVE_MUTATION_ENABLED	off	-	ADR-0022

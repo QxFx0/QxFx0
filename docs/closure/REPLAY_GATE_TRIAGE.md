@@ -120,11 +120,13 @@ Perspective, Learning, Calibration, Metacognition. The
 **Note on Essence**: Essence has 4 trc\* fields in
 the type (Phase 9-10, 2026-05-19), so its
 P1-P4 status is **OK** at the schema level.
-But the contour is **flag-off** (`essenceCommitmentEnabled = False`),
-so the runtime gate is not run. The discipline
-is "the fields exist; the gate runs at
-promotion time". This is **deferred** status
-in the triage vocabulary.
+The contour is **law-driven** (Policy A, 2026-06-17):
+`essenceCommitmentEnabled` was never implemented;
+`shouldCommit`/`validatePlan` run unconditionally and
+`rrEssenceActive = True`. The discipline is "the fields
+exist and the law runs every turn". This is **live**
+status in the triage vocabulary (structural law; not
+M6-FELT evidence — see `M6_DECLARATION.md §6`).
 
 ## 2. The triage
 
@@ -210,12 +212,12 @@ Each contour is classified as one of:
 - **P4**: OK. The trace exposes the active identity
   claim set for the turn.
 
-### 2.6 Essence — deferred (rev. 2: fields landed, flag-off)
+### 2.6 Essence — live (rev. 3: law-driven, Policy A 2026-06-17)
 
-`essenceCommitmentEnabled = False` is the default
-(integration level, per AGENTS.md). The closure
-plan defers the gate to the post-promotion pass
-(per F-14 ADR-0036). The four `trcEssence*` fields
+`essenceCommitmentEnabled` was **never implemented**
+(designed in ADR-0012 §10.1). Policy A (2026-06-17)
+accepts Essence as law-driven: `shouldCommit` evaluates
+unconditionally, `rrEssenceActive = True`. The four `trcEssence*` fields
 are **landed and serializable** (Phase 9-10,
 2026-05-19); the gate is not run because the
 contour is flag-off.

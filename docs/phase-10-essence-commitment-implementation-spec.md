@@ -1,6 +1,14 @@
 # Phase 10 — Forced Commitment and Post-commitment Guard
 ## Implementation Specification for KIMI
 
+> **Historical note (2026-06-17).** This spec describes a feature flag
+> `essenceCommitmentEnabled` that was **never implemented**. Essence landed
+> law-driven (unconditional `shouldCommit`/`validatePlan`/`EssenceRupture`)
+> on 2026-05-19. Policy A (`ESSENCE-REGIME-RECONCILE.md`, 2026-06-17)
+> accepts this as structural runtime law. The spec is retained as the
+> record of the original design; the "flag flips to True" language below
+> describes a gate that does not exist. See ADR-0036 §6 (authoritative).
+
 - **Authoritative architecture**: [`ADR-0012`](./adr/0012-essence-commitment.md).
 - **Predecessor spec**: [`Phase 9`](./phase-9-essence-implementation-spec.md). Phase 9 is assumed landed (574/574 PASS, ADR-0012 = *Accepted (Phase 9, infrastructure only)*).
 - **Status**: Completed (all 10 steps, 582/582 PASS, zero ruptures on corpus replay).

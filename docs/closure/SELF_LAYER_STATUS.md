@@ -56,7 +56,7 @@ For each module the table below records:
 
 | Module | Phase | Status | Flag | Last touched | Replay-visible | Promotion / demotion criterion |
 |---|---|---|---|---|---|---|
-| `Self.Essence` | 9–10 | `production-flag-off` | `essenceCommitmentEnabled :: Bool` default `False` (AGENTS.md, ADR-0012) | 2026-05-19 (Phase 10 closure) | yes (`trcEssenceMode`, `trcEssenceCommitted`, `trcEssenceAngstLevel`, `trcEssenceTrigger`) | **promotion** requires (a) corpus replay with 0 `EssenceRupture` events on production trace (>1k turns), (b) angst-dynamics verification against real `Deliberation` data (ADR-0012 §15.2 notes synthetic corpora cannot do this), (c) `extractMode` coherence locks (E1–E5 in ADR-0012 §9). **demotion** would mean retiring the entire layer; an explicit demotion ADR is required. |
+| `Self.Essence` | 9–10 | `production` (law-driven) | `essenceCommitmentEnabled` (ADR-0012 §10.1 design) **never implemented**; Essence is unconditionally active since 2026-05-19. `rrEssenceActive = True` stamps the regime. Reclassified from `production-flag-off` via Policy A (2026-06-17, `ESSENCE-REGIME-RECONCILE.md`). | yes (`trcEssenceMode`, `trcEssenceCommitted`, `trcEssenceAngstLevel`, `trcEssenceTrigger`) | `EssenceModulation` hand-set; angst side deferred per ADR-0012 §15.2 | **Structural/runtime law** — not M6-FELT evidence until SLICE-012 + felt-evidence gate land. Demotion would require implementing the gate (Policy B), a separate ADR. |
 | `Self.Perspective` (file) | 4-P4 | `production-flag-off` | per AGENTS.md P4 — `PerspectiveRegistry` is canonical lineage, `PerspectiveOperator` is the operator, both gated; `PerspectiveProjection` is what replay/render may consume. **No explicit feature flag in code today — flag is implicit in "replay/render must consume only PerspectiveProjection".** | P4 work | yes via projection | **promotion** requires an explicit `QXFX0_PERSPECTIVE_OPERATOR_ENABLED` flag + a promote-ADR; **clarification** requires AGENTS.md update to name the flag. |
 | `Self.Perspective` family divergence (in `routeFamily`) | 8-D | `production-flag-off` | `familyDivergenceEnabled :: Bool` default `False` (ADR-0011 §5.3, Package D) | 2026-05-18 (Package D) | yes (when enabled) | **promotion** requires Package B/C/D stabilisation; **demotion** is the current default. |
 
@@ -114,17 +114,18 @@ under default flags.
 | `Self.Blanket` | yes | guard for `IdentityRupture`. |
 | `Self.Conatus` | yes | gate in `Route/Render.buildLocalRecoveryPlan`. |
 | `Self.Deliberation` | yes | reconcile is the merge point. |
-| `Self.Essence` | **no** | `essenceCommitmentEnabled = False` default. |
+| `Self.Essence` | **yes** | Law-driven, unconditionally active since 2026-05-19 (Policy A, 2026-06-17). `essenceCommitmentEnabled` was never implemented. |
 | `Self.Field` | yes | consumed by Salience. |
 | `Self.Invariants` | yes (test-only assertion) | properties run on every CI. |
 | `Self.Perspective` (file) | **partial** | `PerspectiveRegistry` is canonical lineage; `PerspectiveOperator` is flag-off. Replay/render reads `PerspectiveProjection` only. |
 | `Self.Salience` | yes | gates narrative. |
 | `Self.Types` | yes (type-only) | used everywhere. |
 
-**This is the table that matters for Package 10 closure.** Any
-documentation, README, or marketing claim that lists
-`Self.Essence` or `Self.Perspective.Operator` as "core runtime
-logic" is wrong.
+**This is the table that matters for Package 10 closure.** Essence is
+now core runtime (Policy A, 2026-06-17); `Self.Perspective.Operator`
+remains flag-off. Any documentation, README, or marketing claim that
+lists `Self.Perspective.Operator` as "core runtime logic" is wrong.
+**Essence is core runtime but is structural law, not M6-FELT evidence.**
 
 ## 7. Open items for the closure plan
 

@@ -60,7 +60,7 @@ sites in `Core/TurnPipeline/*`.
 | `Self.Blanket` | 1 | (implicit) | **canonical** | `computeSelfBlanket`, `checkInitialBlanket`. Guard for `IdentityRupture`. |
 | `Self.Conatus` | 2 | 0007 | **canonical** | `computeConatusEnergy`, `computeConatusGradient`. Hard gate in `Route/Render.buildLocalRecoveryPlan` (see §6). |
 | `Self.Deliberation` | 8 | 0011 | **canonical** | `reconcile` morphism. `holisticProposal` / `formalProposal` constructors. Single-output discipline. |
-| `Self.Essence` | 9–10 | 0012 | **canonical-flag-off** | `essenceCommitmentEnabled = False` default (AGENTS.md). Σ-type carrier, `witness`, `shouldCommit`, `commit`, `validatePlan`. Landed 2026-05-19, corpus replay showed 0 spurious ruptures. |
+| `Self.Essence` | 9–10 | 0012 | **canonical** | Law-driven Essence commitment (`shouldCommit`/`commit`/`validatePlan`/`EssenceRupture`), unconditionally active since 2026-05-19. The `essenceCommitmentEnabled` flag (ADR-0012 §10.1) was **never implemented**; `rrEssenceActive = True` stamps the regime. Reclassified from `canonical-flag-off` to `canonical` via Policy A (2026-06-17, `ESSENCE-REGIME-RECONCILE.md`). **Scope limit**: structural/runtime law only — not M6-FELT evidence until SLICE-012 + a felt-evidence gate land. |
 | `Self.Field` | 4 | 0009 | **canonical** | Five-component `Field`. Read by `Salience.computeSalience`; threaded by M6 single-source-of-truth. |
 | `Self.Invariants` | (continuous) | — | **canonical** | Pure property assertions over Self/*. |
 | `Self.Perspective` | 4-P4 | (0009 addendum) | **canonical-flag-off** | `PerspectiveOperator` (per AGENTS.md P4); `PerspectiveRegistry` is the canonical versioned lineage, `PerspectiveProjection` is what replay/render may consume. Replays/ renders **must not** read `PerspectiveRegistry` directly. Flag status: see `docs/closure/SELF_LAYER_STATUS.md §4`. |
@@ -139,7 +139,7 @@ closure plan's role split.
 
 | Feature | Flag | Default | Source | Promotion criteria |
 |---|---|---|---|---|
-| Essence commitment | `QXFX0_ESSENCE_COMMITMENT_ENABLED` (or `essenceCommitmentEnabled :: Bool` in `PrepareStatic`) | `False` | `Self.Essence`, ADR-0012 | Corpus replay with 0 ruptures over 1k+ turns, angst dynamics verified against production trace. |
+| Essence commitment | ~~`QXFX0_ESSENCE_COMMITMENT_ENABLED`~~ (never implemented; historical) | n/a | `Self.Essence`, ADR-0012/0036 | **Promoted (Policy A, 2026-06-17)**: law-driven, `rrEssenceActive = True`. The flag/env-var were never built. Structural law only; felt-evidence (G1–G3 corpus, angst calibration) remains the path to any M6-FELT claim. |
 | Family divergence | `familyDivergenceEnabled :: Bool` (in `TurnRouting.routeFamily`) | `False` | `Self.Adjunction` / `routeFamily`, ADR-0011 §5.3, Package D | Adjunction caller mapping audit by Package B/C/D. Already landing progressively. |
 | External LLM transport | `QXFX0_LLM_TRANSPORT` | off | `Bridge.ExternalLLM` | Provider keys provisioned + rate-limit discipline + cost gates + replay-trace discipline for LLM calls. **Closure plan's Package 2/3 make this more concrete.** |
 | Adaptive mutation | `QXFX0_ADAPTIVE_MUTATION` (or similar) | per AGENTS.md "weak acknowledgement phrases are observational and must not trigger strong mutation without a shared `AdaptiveMutationRecord`" | `Core.AdaptiveMutation` (if exists) | The record must be replay-visible; see Package 3. |
@@ -168,7 +168,9 @@ Inherited from `AUTHORITY_BOUNDARY.md §3` and extended. The closure
 plan's Package 1 reads each `ss*` field and classifies it. Full table
 in `docs/closure/SYSTEM_STATE_AUTHORITY.md` (follow-up). Highlights:
 
-- `ssEssence :: Essence` — **canonical-flag-off** (essence not active by default).
+- `ssEssence :: Essence` — **canonical** (law-driven, unconditionally active
+  since 2026-05-19; reclassified from `canonical-flag-off` via Policy A
+  2026-06-17).
 - `ssIdentityClaims`, `ssOrbitalMemory` — **canonical** (they are the carriers of identity).
 - `ssSemanticAnchor` — currently persisted for **compatibility/observability**; demoted on non-authoritative restore; not yet restart-authority. Closure plan's Package 2 promotes this to typed semantic commitments.
 - `ssLastTurnDecision` — persisted but `whole-field authority is NOT PROVEN` (`AUTHORITY_BOUNDARY.md §3`); under `SLICE-TD-001` review. Closure plan's Package 6 (test audit) lists this as a candidate for `rewrite-required` test class.

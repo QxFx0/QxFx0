@@ -27,7 +27,7 @@ and stamped into every `TurnReplayTrace` as `trcRegimeVersion`. This means:
 **Math version:** 1
 **Constitution version:** 40 (CTS-01 through CTS-40, all proposition consumers admitted)
 **familyDivergenceActive:** `True` (ADR-0019 promoted 2026-06-02)
-**essenceActive:** `False` (ADR-0036 pending production corpus)
+**essenceActive:** `True` (Policy A, 2026-06-17 — law-driven, not flag-gated; `rrEssenceActive = True` matches unconditional runtime. Structural law only, not M6-FELT evidence.)
 
 See `QxFx0.Types.RuntimeRegime.defaultRuntimeRegime` for the Haskell value.
 

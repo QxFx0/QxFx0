@@ -135,7 +135,7 @@ post-flights. This table is the **summary**.
 
 | ADR | Feature | G1 | G2 | G3 | G4 | Release event | Post-flight |
 |---|---|---|---|---|---|---|---|
-| 0018 | Essence commitment | corpus 0 ruptures | angst dynamics in range | E1–E5 coherence | — | `essenceCommitmentEnabled = True` | 1k turns, 0 ruptures |
+| 0018 | ~~Essence commitment~~ (Policy A 2026-06-17: law-driven, flag never built) | — | — | — | — | `rrEssenceActive = True` (already so) | structural law only; FELT needs G1–G3 |
 | 0019 | Family divergence | caller audit | replay parity | divergence observability | — | `familyDivergenceEnabled = True` | trace shows non-neutral divergence |
 | 0020 | Perspective operator | lineage audit | projection coherence | replay parity | — | `perspectiveOperatorEnabled = True` | projection derivable from registry |
 | 0021 | External LLM transport | provider keys | rate limits | cost gates | replay-trace | `QXFX0_LLM_TRANSPORT=on` | local-first path unchanged |

@@ -673,7 +673,9 @@ cabal test qxfx0-test-slow
 Do **not** implement any of the following in this ticket. They
 are Phase 10 work and require their own ADR review:
 
-- `essenceCommitmentEnabled` feature flag.
+- `essenceCommitmentEnabled` feature flag. *(Historical note 2026-06-17:
+  this flag was designed here and in ADR-0012 §10.1 but never implemented.
+  Essence is law-driven per Policy A — see `ESSENCE-REGIME-RECONCILE.md`.)*
 - `validatePlan` and the `EssenceViolation` / `EssenceRupture`
   machinery.
 - The `QxFx0.ExceptionPolicy.EssenceRupture` constructor.

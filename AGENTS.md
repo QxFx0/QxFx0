@@ -20,8 +20,14 @@
     `PrepareStatic`, four nullable trace fields in `TurnReplayTrace`,
     `EssenceRupture` exception in `QxFx0.ExceptionPolicy`,
     reconcile-time courtesy via optional predicate to `reconcile`.
-    Default `essenceCommitmentEnabled = False`; flag-on integration
-    replay confirms zero spurious ruptures.
+    `essenceCommitmentEnabled` (designed in ADR-0012 §10.1 but **never
+    implemented** — Essence is law-driven, not flag-gated). Essence is
+    unconditionally active since 2026-05-19: `shouldCommit` evaluates every
+    turn, `validatePlan` is reachable, `EssenceRupture` is a real
+    exception. `rrEssenceActive = True` stamps the regime. Policy A
+    (2026-06-17, `ESSENCE-REGIME-RECONCILE.md`) accepts this as structural
+    runtime law; it is **not** M6-FELT evidence until SLICE-012 + a
+    felt-evidence gate land.
 
   **Phase 7 (structural calibration infrastructure) completed 2026-05-18**:
   `FieldHeuristics` + 3 compute functions extracted from Phase-5.5d

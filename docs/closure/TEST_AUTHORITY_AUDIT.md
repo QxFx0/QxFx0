@@ -70,9 +70,9 @@ The list below is the per-file audit. The test file is the
 - **verdict**: keep as is. Property tests cover reconcile (Conatus override, agreement idempotence, recovery preservation, tied fallback, divergence boundedness, determinism, render totality) per ADR-0011 §8.
 
 ### 1.7 `Test.Suite.SelfEssence`
-- **class**: `canonical-flag-off`
-- **module-under-test**: `Self.Essence` (canonical-flag-off)
-- **verdict**: keep as is. Property tests E1–E5 (ADR-0012 §9). These run on CI but are not part of the **canonical runtime** regression lock until `essenceCommitmentEnabled` flips to `True`.
+- **class**: `canonical` (reclassified from `canonical-flag-off` via Policy A, 2026-06-17)
+- **module-under-test**: `Self.Essence` (canonical, law-driven)
+- **verdict**: keep as is. Property tests E1–E5 (ADR-0012 §9). These run on CI and are part of the canonical runtime regression lock (Essence is unconditionally active).
 
 ### 1.8 `Test.Suite.SelfEssenceCommit`
 - **class**: `canonical-flag-off`

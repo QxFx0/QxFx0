@@ -335,10 +335,11 @@ not the script. The script is post-Package 3.
 
 F-14 produced 5 promotion ADRs in `docs/adr/proposed/`:
 
-1. `0036-promote-essence-commitment.md` — gates
-   `essenceCommitmentEnabled` flip on G1 (corpus replay
-   0 ruptures), G2 (angst dynamics in range), G3
-   (E1–E5 coherence locks).
+1. `0036-promote-essence-commitment.md` — Policy A
+   (2026-06-17): Essence is law-driven, `rrEssenceActive = True`;
+   the `essenceCommitmentEnabled` flag was never implemented.
+   G1–G3 (corpus, angst, E1–E5) remain the path to any
+   **felt-evidence** (M6-FELT) claim, not to structural status.
 2. `0019-promote-family-divergence.md` — gates
    `familyDivergenceEnabled` flip on G1 (adjunction
    caller audit), G2 (replay parity on no-modulation

@@ -42,7 +42,7 @@ The table is sorted by field name for stable diffs.
 
 | Field | Role | Writer | Reader | Replay-visible | Notes |
 |---|---|---|---|---|---|
-| `ssEssence :: !Essence` | `canonical-flag-off` | `Core.TurnPipeline.Finalize.State` (gated by `essenceCommitmentEnabled`) | `Self.Essence`, `Self.Deliberation` (reconcile courtesy) | yes (`trcEssence*`) | Flag-off default; per AGENTS.md "landed but default False". |
+| `ssEssence :: !Essence` | `canonical` | `Core.TurnPipeline.Finalize.State` (law-driven, unconditional) | `Self.Essence`, `Self.Deliberation` (reconcile courtesy) | yes (`trcEssence*`) | Reclassified from `canonical-flag-off` via Policy A (2026-06-17). `essenceCommitmentEnabled` was never implemented; Essence is unconditionally active since 2026-05-19. Structural law only — not M6-FELT evidence. |
 | `ssSalienceWeights :: !SalienceWeights` | `canonical` | `Self.Salience.defaultSalienceWeights` (init); `QxFx0.Learning.Contour` (when bounded learning lands) | `Self.Salience.computeSalience` | yes (`trcSalience*`) | Calibration-knob per Package 11. |
 | `ssFieldHeuristics :: !FieldHeuristics` | `canonical` | `Self.Field.defaultFieldHeuristics` (init); `QxFx0.Learning.Contour` | `Self.Field` | yes | Calibration-knob per Package 11. |
 | `ssShadowVetoState :: !ShadowVetoState` | `derived` | rebuilt from canonical history on load | `Core.TurnPipeline.Route.Render` | yes | Demoted on non-authoritative restore per `AUTHORITY_BOUNDARY.md §3`. |
@@ -132,11 +132,12 @@ corresponding package lands.
    a `canonical` field must be added to this table before
    being merged. The CI check is: every module that writes to
    a `canonical` `ss*` field appears in the `Writer` column.
-2. **Flag-off fields are written only when the flag is on.**
-   A write to `ssEssence` (or other `canonical-flag-off`
-   fields) when the flag is off is a `check_architecture.sh`
-   violation. The runtime gate is `essenceCommitmentEnabled`
-   (or equivalent).
+ 2. **Former flag-off fields.** `ssEssence` was reclassified from
+    `canonical-flag-off` to `canonical` via Policy A (2026-06-17):
+    `essenceCommitmentEnabled` was never implemented and Essence is
+    law-driven (unconditional). There is no runtime gate for `ssEssence`;
+    the write happens every turn. A future demotion (Policy B) would
+    require implementing the gate first.
 3. **Derived fields are never directly written.** A
    `derived` field is computed from canonical sources on
    load; it is **not** persisted as a writer's output.

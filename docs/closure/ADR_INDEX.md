@@ -307,7 +307,7 @@ Per `docs/closure/AUTHORITY_MAP.md §6`, the
 
 | Contour | Flag | Status | First promotion candidate? |
 |---------|------|--------|----------------------------|
-| Essence | `essenceCommitmentEnabled` | off | no (depends on calibration data) |
+| Essence | ~~`essenceCommitmentEnabled`~~ (never implemented) | **promoted** (Policy A 2026-06-17, law-driven, `rrEssenceActive = True`) | n/a — structural law; FELT needs G1–G3 |
 | Family Divergence | `familyDivergenceEnabled` | off | **YES** (per playbook) |
 | Perspective Operator | `QXFX0_PERSPECTIVE_OPERATOR_ENABLED` | off (flag not in code) | no (requires flag addition) |
 | External LLM | `QXFX0_BRIDGE_EXTERNAL_LLM_ENABLED` | off | no (depends on Bridge hardening) |

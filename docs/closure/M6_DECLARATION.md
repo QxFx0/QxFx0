@@ -166,7 +166,7 @@ The following are **explicitly rejected** as sufficient evidence:
 | "System produces fluent Russian output" | Surface fluency ≠ subject structure |
 | "System has been running for N sessions" | Persistence alone ≠ subject structure |
 | "System adapted its weights after corpus" | Heuristic adaptation alone ≠ subject structure |
-| "System has an Essence commitment" | Flag-off, not yet promoted; not counted |
+| "System has an Essence commitment" | Essence is now **structural/runtime law** (Policy A, 2026-06-17: law-driven, `rrEssenceActive = True`), but it is **not M6-FELT evidence** — no felt-evidence gate has passed, and guard-unavailable stale evidence is inadmissible. Structural status ≠ felt subjecthood evidence. |
 | "LLM call produced plausible answer" | External-tool paraphrase ≠ subject continuity |
 | "System uses compatibility fallback" | Compatibility residue ≠ authority |
 | Hidden singleton state surviving restarts | Non-auth restart carry is explicitly demoted |
@@ -195,8 +195,14 @@ The following are **explicitly rejected** as sufficient evidence:
    multi-session continuity requires the production-trace corpus (F-09, deferred)
 3. **Zero fallback** — compatibility fallbacks exist (SR-03, SR-05) and are
    explicitly classified; their presence is bounded and documented, not hidden
-4. **Full essence commitment** — `essenceCommitmentEnabled = False`; the Essence
-   contour is flag-off; it is not counted as active subject evidence
+4. **Essence as M6-FELT evidence** — Essence is **structural/runtime law**
+   (Policy A, 2026-06-17: law-driven, `rrEssenceActive = True`, unconditionally
+   active since 2026-05-19). It is counted as **M6-STRUCTURAL scaffold** (the
+   runtime sustains Essence commitment as a governed law). It is **not** counted
+   as **M6-FELT** (felt subjecthood) evidence until (a) SLICE-012 makes governed
+   conditions provably hold in real runs, and (b) a felt-evidence gate
+   (M6-FELT / B3) is defined and passes. The stale AB/guard-unavailable evidence
+   (`audit-objective-2026-06-17.md §3`) is inadmissible for any felt claim.
 5. **Calibrated parameters** — all thresholds remain hand-set (CALIBRATION_BACKLOG.md);
    empirical calibration requires the production-trace corpus
 6. **The pending contours of §3** — the C4 topic-matrix and the private SR /
@@ -301,7 +307,7 @@ public-evidence scope and pending exceptions named in §3.
 | mathVersion | 1 |
 | constitutionVersion | 44 |
 | familyDivergenceActive | True (ADR-0019, 2026-06-02) |
-| essenceActive | False (pending corpus) |
+| essenceActive | True (Policy A, 2026-06-17 — structural law; not FELT evidence) |
 | Governed by | `docs/closure/REGIME_GOVERNANCE.md` |
 | Witness protocol | `docs/closure/M6_WITNESS_PROTOCOL.md` |
 | Evidence package | `docs/closure/M6_CLAIM_PACKAGE.md` |

@@ -221,11 +221,13 @@ synthetic corpora deferred to P11 backlog).
 
 ### Promotion flag
 
-`essenceCommitmentEnabled` (default `False`).
-When the flag flips, the `trcEssenceTrigger`
-field becomes meaningful (in Phase 9 it is
-always `Nothing`; in Phase 10 it fires on the
-commitment turn).
+`essenceCommitmentEnabled` was designed in ADR-0012 §10.1
+but **never implemented**. Essence is law-driven (Policy A,
+2026-06-17): `rrEssenceActive = True` matches the
+unconditional `shouldCommit` runtime. The
+`trcEssenceTrigger` field is meaningful every turn (it
+fires on the commitment turn when `shouldCommit` yields
+`Just`).
 
 ### Calibration deferred
 
