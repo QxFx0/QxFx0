@@ -39,7 +39,7 @@ import QxFx0.ExceptionPolicy
   , throwQxFx0
   , tryAsync
   )
-import QxFx0.Types.Persistence (PersistenceStage(StageStateBlobUpsert, StageUnknown))
+import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(StageStateBlobUpsert, StageUnknown))
 import QxFx0.Self.Essence (EssenceViolation, renderEssenceViolation)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
@@ -100,11 +100,24 @@ resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
       TurnResSaveState (Right savedSystemState) -> pure savedSystemState
       TurnResSaveState (Left err) -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_failed session=" <> T.unpack (fcpSessionId commitPlan) <> " detail=" <> T.unpack (renderPersistenceDiagnostics [err])
-        throwQxFx0 (mkPersistenceError
-          StageStateBlobUpsert
-          (T.pack "saveStateWithProjection")
-          (T.pack "PERSISTENCE_SAVE_FAILED")
-          (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan), (T.pack "detail", renderPersistenceDiagnostics [err])]))
+        case err of
+          PdStateRevisionConflict sid expected actual priorTurn ->
+            throwQxFx0 (mkPersistenceError
+              StageStateBlobUpsert
+              (T.pack "saveStateWithProjection")
+              (T.pack "PERSISTENCE_CONFLICT")
+              (Map.fromList
+                [ (T.pack "session_id", sid)
+                , (T.pack "expected_revision", T.pack (show expected))
+                , (T.pack "actual_revision", T.pack (show actual))
+                , (T.pack "expected_prior_turn", T.pack (show priorTurn))
+                ]))
+          _ ->
+            throwQxFx0 (mkPersistenceError
+              StageStateBlobUpsert
+              (T.pack "saveStateWithProjection")
+              (T.pack "PERSISTENCE_SAVE_FAILED")
+              (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan), (T.pack "detail", renderPersistenceDiagnostics [err])]))
       _ -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
         throwQxFx0 (mkPersistenceError

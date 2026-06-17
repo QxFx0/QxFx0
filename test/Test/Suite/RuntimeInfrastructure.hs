@@ -1469,7 +1469,7 @@ testLoadStateCorruptUtf8BlobIsReported = TestCase $ do
 
 testBootstrapSessionCorruptStateFailsClosed :: Test
 testBootstrapSessionCorruptStateFailsClosed = TestCase $ do
-  withRuntimeEnv "qxfx0_test_corrupt_bootstrap.db" $ do
+  withStrictRuntimeEnv "qxfx0_test_corrupt_bootstrap.db" $ do
     session0 <- Runtime.bootstrapSession True "test_corrupt_bootstrap"
     let rt = Runtime.sessRuntime session0
     Runtime.withRuntimeDb rt $ \db -> do
