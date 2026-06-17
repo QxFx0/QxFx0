@@ -7,6 +7,7 @@ module Test.Suite.LexiconTests
   ) where
 
 import Test.HUnit
+import Control.Monad (unless)
 import Data.Aeson (eitherDecodeStrict')
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -23,6 +24,8 @@ import QxFx0.Types.Domain.Atoms
   , LexemeNumber(..)
   , SourceTier(..)
   )
+import QxFx0.Types.Lexicon.RuntimeParadigms (ParadigmEntry)
+import QxFx0.Resources.Morphology (loadMorphologyData, morphologyDataFromParadigms)
 import QxFx0.Lexicon.Inflection (toNominative, genitiveForm, accusativeForm, prepositionalForm)
 import QxFx0.Lexicon.Resolver (resolveLexemeForm, tierPriority)
 
@@ -42,8 +45,9 @@ lexiconTests =
   , TestLabel "candidate fallback: genitiveForm uses mdFormsBySurface" (TestCase testCandidateGenitiveFallback)
   , TestLabel "candidate fallback: accusativeForm inherits genitive fallback" (TestCase testCandidateAccusativeFallback)
   , TestLabel "JSON backward compatibility: MorphologyData parses without mdFormsBySurface" (TestCase testJsonBackwardCompatibility)
-  , TestLabel "generated artifact: forms_by_surface.json is valid JSON" (TestCase testFormsBySurfaceValidJson)
-  , TestLabel "generated artifact: forms_by_surface.json has expected object structure" (TestCase testFormsBySurfaceStructure)
+  , TestLabel "canonical artifact: paradigms.json is valid and structured" (TestCase testParadigmsJsonValid)
+  , TestLabel "canonical artifact: exceptions.json is valid and structured" (TestCase testExceptionsJsonValid)
+  , TestLabel "derived morphology: morphologyDataFromParadigms matches known forms" (TestCase testMorphologyDataFromParadigms)
   , TestLabel "tierPriority: curated=4, brainReviewed=3, autoVerified=2, autoCoverage=1" (TestCase testTierPriorityValues)
   ]
 
@@ -185,34 +189,52 @@ testJsonBackwardCompatibility = do
     Right (md :: MorphologyData) ->
       assertEqual "mdFormsBySurface should be empty map" Map.empty (mdFormsBySurface md)
 
--- 5. Generated artifact check: forms_by_surface.json is valid and contains expected structure
+-- 5. Canonical artifact checks: paradigms.json and exceptions.json are the
+--    checked-in morphology substrate. forms_by_surface.json is no longer required.
 
-testFormsBySurfaceValidJson :: Assertion
-testFormsBySurfaceValidJson = do
-  let formsPath = "resources" </> "morphology" </> "forms_by_surface.json"
-  exists <- doesFileExist formsPath
-  if not exists
-    then assertFailure ("forms_by_surface.json not found at " <> formsPath)
-    else do
-      raw <- TIO.readFile formsPath
-      case eitherDecodeStrict' (TE.encodeUtf8 raw) of
-        Left err -> assertFailure ("forms_by_surface.json is not valid JSON: " <> err)
-        Right (_ :: Map.Map Text [LexemeForm]) -> pure ()
+testParadigmsJsonValid :: Assertion
+testParadigmsJsonValid = do
+  let path = "resources" </> "morphology" </> "paradigms.json"
+  exists <- doesFileExist path
+  unless exists (assertFailure ("paradigms.json not found at " <> path))
+  raw <- TIO.readFile path
+  case eitherDecodeStrict' (TE.encodeUtf8 raw) of
+    Left err -> assertFailure ("paradigms.json parse error: " <> err)
+    Right (mp :: Map.Map Text ParadigmEntry) -> do
+      assertBool "paradigms.json should be non-empty" (not (Map.null mp))
+      let allHaveForms = all (not . Map.null . peForms) (Map.elems mp)
+      assertBool "every paradigm entry should have forms" allHaveForms
 
-testFormsBySurfaceStructure :: Assertion
-testFormsBySurfaceStructure = do
-  let formsPath = "resources" </> "morphology" </> "forms_by_surface.json"
-  exists <- doesFileExist formsPath
-  if not exists
-    then assertFailure ("forms_by_surface.json not found at " <> formsPath)
-    else do
-      raw <- TIO.readFile formsPath
-      case eitherDecodeStrict' (TE.encodeUtf8 raw) of
-        Left err -> assertFailure ("forms_by_surface.json parse error: " <> err)
-        Right (m :: Map.Map Text [LexemeForm]) -> do
-          assertBool "forms_by_surface.json should be a JSON object (Map)" True
-          let allFormsNonEmpty = all (not . null) (Map.elems m)
-          assertBool "each surface key should have at least one form" allFormsNonEmpty
+testExceptionsJsonValid :: Assertion
+testExceptionsJsonValid = do
+  let path = "resources" </> "morphology" </> "exceptions.json"
+  exists <- doesFileExist path
+  unless exists (assertFailure ("exceptions.json not found at " <> path))
+  raw <- TIO.readFile path
+  case eitherDecodeStrict' (TE.encodeUtf8 raw) of
+    Left err -> assertFailure ("exceptions.json parse error: " <> err)
+    Right (mp :: Map.Map Text ParadigmEntry) -> do
+      let allHaveForms = all (not . Map.null . peForms) (Map.elems mp)
+      assertBool "every exception entry should have forms" allHaveForms
+
+testMorphologyDataFromParadigms :: Assertion
+testMorphologyDataFromParadigms = do
+  md <- loadMorphologyData
+  assertEqual "nominative reverse index for косе" (Just "коса") (Map.lookup "косе" (mdNominative md))
+  assertEqual "nominative reverse index for выборов" (Just "выборы") (Map.lookup "выборов" (mdNominative md))
+  assertEqual "genitive singular for коса" (Just "косы") (Map.lookup "коса" (mdGenitive md))
+  assertEqual "prepositional singular for коса" (Just "косе") (Map.lookup "коса" (mdPrepositional md))
+  assertEqual "genitive singular for любовь" (Just "любви") (Map.lookup "любовь" (mdGenitive md))
+  assertEqual "genitive plural for выборы" (Just "выборов") (Map.lookup "выборы" (mdGenitive md))
+  case Map.lookup "косе" (mdFormsBySurface md) of
+    Just forms ->
+      case filter (\f -> lfLemma f == "коса" && lfCase f == PrepositionalCase && lfNumber f == SingularNumber) forms of
+        (form : _) -> do
+          assertEqual "косе lemma" "коса" (lfLemma form)
+          assertEqual "косе case" PrepositionalCase (lfCase form)
+          assertEqual "косе number" SingularNumber (lfNumber form)
+        [] -> assertFailure "expected a prepositional singular form for lemma коса among косе candidates"
+    Nothing -> assertFailure "surface forms for косе should exist"
 
 -- Additional: tier priority values are correct
 

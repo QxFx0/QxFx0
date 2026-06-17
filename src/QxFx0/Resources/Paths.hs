@@ -60,10 +60,7 @@ resolveResourcePaths = do
       Left err -> throwResourceError (T.pack err)
       Right mRoot -> pure mRoot
   migrationSql <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["migrations/001_initial_schema.sql"]
-  morphologyPrepositional <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["resources/morphology/prepositional.json"]
-  _morphologyGenitive <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["resources/morphology/genitive.json"]
-  _morphologyNominative <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["resources/morphology/nominative.json"]
-  _morphologyQuality <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["resources/morphology/lexicon_quality.json"]
+  morphologyMarker <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["resources/morphology/paradigms.json", "resources/morphology/lexicon_quality.json"]
   nixGuard <- resolveConceptsPath (not explicitRootConfigured) mResourceRoot mConceptsOverride
   agdaSpec <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["spec/R5Core.agda"]
   agdaSnapshot <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["spec/r5-snapshot.tsv"]
@@ -73,7 +70,7 @@ resolveResourcePaths = do
   seedTemplates <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["spec/sql/seed_templates.sql"]
   seedIdentity <- resolveResourceFile (not explicitRootConfigured) mResourceRoot ["spec/sql/seed_identity.sql"]
   let migrationDir = takeDirectory migrationSql
-      morphologyDir = takeDirectory morphologyPrepositional
+      morphologyDir = takeDirectory morphologyMarker
       resourceDir = maybe (deriveResourceRoot schemaSql migrationDir morphologyDir) id mResourceRoot
   pure ResourcePaths
     { rpResourceDir = resourceDir
@@ -111,8 +108,8 @@ resolveReadinessResourcePaths = do
           Left err -> throwResourceError (T.pack err)
           Right resolved -> pure resolved
   migrationSql <- resolveReadinessFile mResourceRoot ["migrations/001_initial_schema.sql"]
-  morphologyPrepositional <- resolveReadinessFile mResourceRoot ["resources/morphology/prepositional.json"]
-  morphologyDir <- pure (takeDirectory morphologyPrepositional)
+  morphologyMarker <- resolveReadinessFile mResourceRoot ["resources/morphology/paradigms.json", "resources/morphology/lexicon_quality.json"]
+  morphologyDir <- pure (takeDirectory morphologyMarker)
   schemaSql <- resolveReadinessFile mResourceRoot ["spec/sql/schema.sql"]
   nixGuard <- resolveReadinessConceptsPath mResourceRoot mConceptsOverride
   agdaSpec <- resolveReadinessFile mResourceRoot ["spec/R5Core.agda"]

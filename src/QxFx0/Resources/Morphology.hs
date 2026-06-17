@@ -1,57 +1,64 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
 
 {-| Morphology resource loading and validation.
 
-    forms_by_surface.json (131 MB) is loaded lazily and cached on first
-    access to avoid paying the memory cost at startup when morphology
-    is not needed (e.g. health checks, readiness probes).
+    The canonical runtime morphology substrate is the compact checked-in pair
+    @resources/morphology/paradigms.json@ plus @resources/morphology/exceptions.json@.
+    From these we derive the legacy 'MorphologyData' view in memory, avoiding the
+    need to ship or depend on the generated 131 MB @forms_by_surface.json@ blob.
+
+    This is a backwards-compatible shim: the exported 'MorphologyData' has the
+    same shape as before, so existing consumers (inflection, resolution, GF
+    morphology, learning, etc.) continue to work without changes.
 -}
 module QxFx0.Resources.Morphology
   ( loadMorphologyData
   , validateMorphologyResources
-  , clearFormsCache  -- for testing
+  , clearFormsCache  -- for testing; no-op because there is no mutable cache
+  , morphologyDataFromParadigms  -- exported for testing / incremental migration
   ) where
 
 import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as BL
-import Data.IORef
-import Data.Map.Strict (Map)
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
-import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.ExceptionPolicy
-  ( QxFx0Exception(RuntimeInitError)
-  , catchIO
+  ( catchIO
   , mkRuntimeInitError
   , throwQxFx0
   )
 import QxFx0.Resources.Paths (getMorphologyDir)
-import QxFx0.Types (MorphologyData(..), LexemeForm(..))
-import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms(..))
+import QxFx0.Types
+  ( LexemeCase(..)
+  , LexemeForm(..)
+  , LexemeNumber(..)
+  , MorphologyData(..)
+  , SourceTier(AutoVerifiedTier)
+  )
+import QxFx0.Types.Lexicon.RuntimeParadigms
+  ( ParadigmEntry(..)
+  , PartOfSpeech(..)
+  , partOfSpeechText
+  )
+import System.Directory (canonicalizePath, doesDirectoryExist)
 import System.FilePath ((</>))
-import System.IO.Unsafe (unsafePerformIO)
 
--- | Cached forms_by_surface data. Loaded on first access, then reused.
-{-# NOINLINE cachedFormsBySurface #-}
-cachedFormsBySurface :: IORef (Maybe (Map.Map Text [LexemeForm]))
-cachedFormsBySurface = unsafePerformIO (newIORef Nothing)
-
--- | Clear the forms cache (for testing only).
+-- | Clear the derived morphology cache (for testing only).
+--
+-- There is no longer a mutable in-memory cache because the substrate is now
+-- derived from the compact checked-in paradigms. This function is kept as a
+-- no-op so callers that clear the cache between tests do not need to change.
 clearFormsCache :: IO ()
-clearFormsCache = writeIORef cachedFormsBySurface Nothing
+clearFormsCache = pure ()
 
 loadMorphologyData :: IO MorphologyData
 loadMorphologyData = do
   mDirRaw <- getMorphologyDir
   mDir <- canonicalizePath mDirRaw
-  prep <- loadMorphologyDict (mDir </> "prepositional.json")
-  gen <- loadMorphologyDict (mDir </> "genitive.json")
-  nom <- loadMorphologyDict (mDir </> "nominative.json")
-  forms <- loadFormsBySurfaceCached (mDir </> "forms_by_surface.json")
-  _ <- loadJsonValueStrict (mDir </> "lexicon_quality.json")
-  pure (MorphologyData prep gen nom forms)
+  rp <- loadRuntimeParadigmsFromDir mDir
+  pure (morphologyDataFromParadigms rp)
 
 validateMorphologyResources :: FilePath -> IO (Bool, String)
 validateMorphologyResources morphDir = do
@@ -59,86 +66,119 @@ validateMorphologyResources morphDir = do
   if not hasMorphDir
     then pure (False, "Morphology directory missing: " ++ morphDir)
     else do
-      prep <- readMorphologyDict (morphDir </> "prepositional.json")
-      gen <- readMorphologyDict (morphDir </> "genitive.json")
-      nom <- readMorphologyDict (morphDir </> "nominative.json")
-      forms <- readFormsBySurface (morphDir </> "forms_by_surface.json")
-      quality <- loadJsonValueChecked (morphDir </> "lexicon_quality.json")
-      let problems =
-            [err | Left err <- [prep, gen, nom]]
-              ++ either (:[]) (const []) forms
-              ++ either (:[]) (const []) quality
+      paradigms <- readParadigmsMap (morphDir </> "paradigms.json")
+      exceptions <- readParadigmsMap (morphDir </> "exceptions.json")
+      let problems = [err | Left err <- [paradigms, exceptions]]
       pure $
         if null problems
           then (True, "Morphology resources validated")
           else (False, unwordsWith "; " problems)
 
-loadMorphologyDict :: FilePath -> IO (Map.Map Text Text)
-loadMorphologyDict path = do
-  result <- readMorphologyDict path
+loadRuntimeParadigmsFromDir :: FilePath -> IO RuntimeParadigms
+loadRuntimeParadigmsFromDir dir = do
+  paradigms <- loadParadigmsMap (dir </> "paradigms.json")
+  exceptions <- loadParadigmsMap (dir </> "exceptions.json")
+  pure RuntimeParadigms { rpMap = paradigms, rpExceptions = exceptions }
+
+loadParadigmsMap :: FilePath -> IO (M.Map Text ParadigmEntry)
+loadParadigmsMap path = do
+  result <- readParadigmsMap path
   case result of
-    Right parsed -> pure parsed
+    Right mp -> pure mp
     Left err -> throwMorphologyError err
 
-readMorphologyDict :: FilePath -> IO (Either String (Map.Map Text Text))
-readMorphologyDict path = do
-  contentResult <- catchIO (Right <$> BL.readFile path) (\_ -> pure (Left ("Morphology file missing or unreadable: " ++ path)))
+readParadigmsMap :: FilePath -> IO (Either String (M.Map Text ParadigmEntry))
+readParadigmsMap path = do
+  contentResult <- catchIO (Right <$> BS.readFile path) (\_ -> pure (Left ("Morphology file missing or unreadable: " ++ path)))
   case contentResult of
     Left err -> pure (Left err)
     Right content ->
-      case Aeson.eitherDecode content of
+      case Aeson.eitherDecodeStrict content of
         Right parsed -> pure (Right parsed)
         Left err -> pure (Left ("Morphology JSON parse failed for " ++ path ++ ": " ++ err))
 
-loadJsonValueStrict :: FilePath -> IO Aeson.Value
-loadJsonValueStrict path = do
-  result <- loadJsonValueChecked path
-  case result of
-    Right value -> pure value
-    Left err -> throwMorphologyError err
-
-loadJsonValueChecked :: FilePath -> IO (Either String Aeson.Value)
-loadJsonValueChecked path = do
-  contentResult <- catchIO (Right <$> BL.readFile path) (\_ -> pure (Left ("JSON resource missing or unreadable: " ++ path)))
-  case contentResult of
-    Left err -> pure (Left err)
-    Right content ->
-      case Aeson.eitherDecode content of
-        Right parsed -> pure (Right parsed)
-        Left err -> pure (Left ("JSON parse failed for " ++ path ++ ": " ++ err))
-
-loadFormsBySurface :: FilePath -> IO (Map.Map Text [LexemeForm])
-loadFormsBySurface path = do
-  result <- readFormsBySurface path
-  case result of
-    Right parsed -> pure parsed
-    Left err -> throwMorphologyError err
-
--- | Lazy-loading variant: loads forms_by_surface.json on first call,
--- caches the result for subsequent calls. Saves ~131 MB at startup
--- when morphology is not immediately needed.
-loadFormsBySurfaceCached :: FilePath -> IO (Map.Map Text [LexemeForm])
-loadFormsBySurfaceCached path = do
-  mCached <- readIORef cachedFormsBySurface
-  case mCached of
-    Just forms -> pure forms
-    Nothing -> do
-      forms <- loadFormsBySurface path
-      writeIORef cachedFormsBySurface (Just forms)
-      pure forms
-
-readFormsBySurface :: FilePath -> IO (Either String (Map.Map Text [LexemeForm]))
-readFormsBySurface path = do
-  contentResult <- catchIO (Right <$> BL.readFile path) (\_ -> pure (Left ("forms_by_surface missing or unreadable: " ++ path)))
-  case contentResult of
-    Left err -> pure (Left err)
-    Right content ->
-      case Aeson.eitherDecode content of
-        Right parsed -> pure (Right (Map.map (map enforceQuality) parsed))
-        Left err -> pure (Left ("forms_by_surface JSON parse failed for " ++ path ++ ": " ++ err))
+-- | Derive a legacy 'MorphologyData' view from compact 'RuntimeParadigms'.
+--
+-- The result is semantically equivalent to the old checked-in/generated JSON
+-- files:
+--
+-- * 'mdNominative' is a broad surface -> lemma reverse index over every stored
+--   form.
+-- * 'mdGenitive' and 'mdPrepositional' map a nominative surface to the
+--   corresponding genitive / prepositional form in the same number.
+-- * 'mdFormsBySurface' is the full form inventory.
+--
+-- Nouns get accurate case/number tags; non-noun keys that do not match the
+-- known noun case/number pattern are defaulted to nominative singular, which
+-- matches the behaviour of the previous generated @forms_by_surface.json@.
+morphologyDataFromParadigms :: RuntimeParadigms -> MorphologyData
+morphologyDataFromParadigms rp =
+  MorphologyData
+    { mdPrepositional = nomSurfaceToCase PrepositionalCase
+    , mdGenitive      = nomSurfaceToCase GenitiveCase
+    , mdNominative    = allSurfaceToLemma
+    , mdFormsBySurface = formsBySurface
+    }
   where
-    enforceQuality :: LexemeForm -> LexemeForm
-    enforceQuality lf = lf { lfQuality = max 0.0 (min 1.0 (lfQuality lf)) }
+    allEntries = M.toList (rpMap rp) ++ M.toList (rpExceptions rp)
+
+    allSurfaceToLemma =
+      M.fromList
+        [ (surface, lemma)
+        | (lemma, entry) <- allEntries
+        , (_, surface) <- M.toList (peForms entry)
+        ]
+
+    nomSurfaceToCase targetCase =
+      M.fromList
+        [ (nomSurface, targetSurface)
+        | (lemma, entry) <- allEntries
+        , pePos entry == PosNoun
+        , let formByKey = M.fromList
+                [ (parseParadigmKey key, surface)
+                | (key, surface) <- M.toList (peForms entry)
+                ]
+        , ((NominativeCase, number), nomSurface) <- M.toList formByKey
+        , Just targetSurface <- [M.lookup (targetCase, number) formByKey]
+        ]
+
+    formsBySurface =
+      M.fromListWith (++)
+        [ (surface, [LexemeForm surface lemma posText caseTag numberTag AutoVerifiedTier 1.0])
+        | (lemma, entry) <- allEntries
+        , let posText = partOfSpeechText (pePos entry)
+        , (key, surface) <- M.toList (peForms entry)
+        , let (caseTag, numberTag) = parseParadigmKey key
+        ]
+
+-- | Parse a paradigm form key into a case/number pair. Known noun keys are
+-- "NomSg", "GenPl", etc. Other keys (verbs, adjectives, fixed expressions)
+-- default to nominative/singular, which is what the previous generated
+-- @forms_by_surface.json@ used for non-noun entries.
+parseParadigmKey :: Text -> (LexemeCase, LexemeNumber)
+parseParadigmKey key =
+  let (number, maybeCasePrefix) = extractNumber key
+      caseTag = maybe NominativeCase parseCasePrefix maybeCasePrefix
+  in (caseTag, number)
+  where
+    extractNumber k
+      | "Sg" `T.isSuffixOf` k = (SingularNumber, stripSuffix "Sg" k)
+      | "Pl" `T.isSuffixOf` k = (PluralNumber, stripSuffix "Pl" k)
+      | otherwise = (SingularNumber, Just k)
+
+    stripSuffix suffix k
+      | suffix `T.isSuffixOf` k = Just (T.dropEnd (T.length suffix) k)
+      | otherwise = Just k
+
+    parseCasePrefix p =
+      case p of
+        _ | "Nom" `T.isSuffixOf` p -> NominativeCase
+          | "Gen" `T.isSuffixOf` p -> GenitiveCase
+          | "Dat" `T.isSuffixOf` p -> DativeCase
+          | "Acc" `T.isSuffixOf` p -> AccusativeCase
+          | "Ins" `T.isSuffixOf` p -> InstrumentalCase
+          | "Loc" `T.isSuffixOf` p -> PrepositionalCase
+          | otherwise -> NominativeCase
 
 unwordsWith :: String -> [String] -> String
 unwordsWith _ [] = ""
