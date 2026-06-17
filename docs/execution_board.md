@@ -11,17 +11,31 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `None — awaiting next approved front`
-- `current_state`: SLICE-013/014 landed and pushed to `origin/main` (`62cf43a..c46ebb5`). `runtime` 93/93 tried with 2 known feature gaps (50/51). SLICE-015 is explicitly deferred; morphology resource contract (`forms_by_surface.json`) remains unresolved and belongs to SLICE-010B.
+- `front_id`: `SLICE-012`
+- `current_state`: SLICE-010B closed on `slice-010b-morphology-contract` (commit `0219d0e`); SLICE-012 now open to define the GF/toolchain environment contract. Open fronts remain `DATALOG-ROLE-001` and `M7` per `docs/closure/REMAINING_CLOSURE_CHECKLIST.md`.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-014_PLAN.md`, `docs/closure/SLICE-015_PLAN.md`, gate log `/home/liskil/slice014-fix-runtime.log`
+- `evidence_or_result_ref`: `docs/closure/SLICE-012_PLAN.md`, `docs/closure/SLICE-010B_PLAN.md`, `docs/closure/REMAINING_CLOSURE_CHECKLIST.md`
 
 ## Immediate next action
 
-- No active front. Return to roadmap/public coherence only via a separate approved front.
-- SLICE-015 remains a documented deferred feature gap; do not implement without a new approved front.
+- Document the intended GHC/freeze policy for the fast unit gate (`cabal test qxfx0-test-fast`).
+- Document the GF C runtime dependency (`libpgf`, `libgu`) and how to verify it.
+- Decide whether to keep `cabal.project.freeze` on GHC 9.6.6 or update it for GHC 9.6.7, and record the decision in `docs/closure/SLICE-012_PLAN.md`.
+- Do not change morphology or runtime logic in this front.
 
 ## Completed this session (2026-06-17)
+
+- **SLICE-010B morphology resource contract** — closed on `slice-010b-morphology-contract` (commit `0219d0e`).
+  - `src/QxFx0/Resources/Paths.hs`: morphology directory marker switched from `prepositional.json` to `paradigms.json` with `lexicon_quality.json` fallback for test-tree compatibility.
+  - `src/QxFx0/Resources/Morphology.hs`: rewritten to load `paradigms.json` + `exceptions.json` and derive `MorphologyData` via `morphologyDataFromParadigms`. No cache; `clearFormsCache` kept as no-op.
+  - `.gitignore`: `resources/morphology/forms_by_surface.json` now ignored; comment updated to SLICE-010B contract.
+  - `test/Test/Suite/LexiconTests.hs`: removed `forms_by_surface.json` existence tests; added canonical artifact tests for `paradigms.json`/`exceptions.json` and a regression test for derived forms (`косе`, `выборов`, `любовь`, `коса`).
+  - `test/Test/Suite/RuntimeInfrastructure.hs`: fake resource trees now create `paradigms.json`/`exceptions.json`; readiness-invalid and morphology-cache tests updated to exercise the new substrate.
+  - Evidence: code reviewed; `git diff --name-only origin/main..HEAD` does not contain `forms_by_surface.json`; `git ls-tree -r HEAD resources/morphology/forms_by_surface.json` is empty; Python simulation over real `paradigms.json`/`exceptions.json` passes the regression examples.
+  - Gate status: full `cabal test qxfx0-test-fast` NOT RUN due to environment blockers, not code defects:
+    - GHC 9.6.7 / `base-4.18.3.0` locally vs `cabal.project.freeze` `base ==4.18.2.1` (intended CI is GHC 9.6.6).
+    - Missing GF C runtime (`libpgf`, `libgu`) for `pgf2` — tracked by SLICE-012, out of scope for SLICE-010B.
+  - If a CI/intended environment with GHC 9.6.6 + GF libs is available, the fast gate should run there. A separate future front (`SLICE-012` toolchain environment contract) is needed for any local toolchain migration.
 
 - **Push to `origin/main`** — `62cf43a..c46ebb5` fast-forward pushed.
   - Removed `resources/morphology/forms_by_surface.json` (125 MB blob) from local history via `git filter-branch` before push; backup branch `backup/main-with-forms-blob-20260617` retained.

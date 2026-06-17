@@ -9,18 +9,19 @@ Purpose: compact list of the remaining public debt to the final anchor.
 |---|---|---|
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
+| `SLICE-012` GF/toolchain environment contract | OPEN | intended GHC/freeze/GF runtime documented; local env limitations separated from release-blocking failures; freeze decision recorded |
 
 ## Deferred feature gaps
 
 | Front | Status | Exit |
 |---|---|---|
 | `SLICE-015` runtime summary observability gaps (50/51) | DEFERRED | `stateSummaryLines` must surface pre-actor failure kind and restart authority status; documented in `docs/closure/SLICE-015_PLAN.md`; not in active scope |
-| `SLICE-010B` morphology resource / `forms_by_surface.json` | DEFERRED | resolve 125 MB generated artifact: LFS, generator/preflight, or IH-4/paradigms contract; blob removed from `main` history |
 
 ## Closed this cycle
 
 | Front | Status | Exit |
 |---|---|---|
+| `SLICE-010B` morphology resource contract | CLOSED | runtime morphology derives from `paradigms.json` + `exceptions.json`; no public `origin/main` dependency on `forms_by_surface.json`; code reviewed, Python simulation of real paradigms/exceptions passes; full fast gate not run due to environment blockers (GHC/base freeze mismatch + missing GF C runtime, SLICE-012) |
 | `SLICE-014` runtime persistence residuals | CLOSED | runtime 93/93 tried; 40/45 fixed; 50/51 moved to SLICE-015 as documented feature gaps; plan `docs/closure/SLICE-014_PLAN.md` |
 | `SLICE-013` persistence behavior hardening | CLOSED | state 36/36, runtime 93/93 tried; Option 1 policy (verbatim preserve, no manufacture); 4 pre-existing failures deferred; commit `76fe6ba` on `slice-013-truthcontract-fix` |
 | `SLICE-009` / `SLICE-011` slow-suite / HTTP runtime infra triage | CLOSED | 135 slow cases reach clean final summary; all infra/line-ending/hermetic/proxy/sidecar-hang issues fixed; 11 persistence failures explicitly deferred to `SLICE-013` |
