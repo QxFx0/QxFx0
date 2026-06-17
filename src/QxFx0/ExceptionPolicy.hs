@@ -112,6 +112,14 @@ data QxFx0Exception
     -- Indicates a programming error or corrupted state that prevents
     -- safe continuation of the turn. The turn should be aborted and
     -- the system should attempt graceful degradation.
+  | EvidenceInadmissibleFailure !Text
+    -- ^ Guard was 'Unavailable' under governed-evidence mode
+    -- (@QXFX0_GOVERNED_EVIDENCE=1@). The turn may have produced output
+    -- (degraded behavior is a separate axis), but the evidence is
+    -- /forbidden/ as a proof substrate. Fail-closed for evidence
+    -- collection (SLICE-012). Co-located with 'EssenceRupture' in
+    -- finalize; the two failures are orthogonal — this one is about
+    -- /evidence admissibility/, not self-identity.
   deriving stock (Eq)
 
 instance Show QxFx0Exception where
@@ -141,6 +149,7 @@ toErrorCode ex =
     IdentityRupture _ -> T.pack "IDENTITY_RUPTURE"
     EssenceRupture _ -> T.pack "ESSENCE_RUPTURE"
     StateInvariantViolation _ -> T.pack "STATE_INVARIANT_VIOLATION"
+    EvidenceInadmissibleFailure _ -> T.pack "EVIDENCE_INADMISSIBLE"
 
 -- | Extract human-readable log message from exception
 toLogMessage :: QxFx0Exception -> Text
@@ -222,6 +231,7 @@ renderQxFx0ExceptionForLog ex =
     IdentityRupture _ -> T.pack "category=IdentityRupture, detail=<redacted>"
     EssenceRupture _ -> T.pack "category=EssenceRupture, detail=<redacted>"
     StateInvariantViolation _ -> T.pack "category=StateInvariantViolation, detail=<redacted>"
+    EvidenceInadmissibleFailure _ -> T.pack "category=EvidenceInadmissible, detail=<redacted>"
 
 -- | Debug variant: reveals full error details for PersistenceTxError
 -- (and other detail-redacted constructors) when the caller opts in.

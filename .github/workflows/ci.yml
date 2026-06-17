@@ -42,6 +42,10 @@ jobs:
       QXFX0_ENABLE_COVERAGE_GATE: 0
       QXFX0_RELEASE_SMOKE_MODE: degraded-local
       QXFX0_GF_RUNTIME: 1
+      # NOTE: nix-instantiate is NOT installed in core contract. The
+      # constitutional guard will be Unavailable; evidence from this job
+      # is NOT governed (SLICE-012). Do not set QXFX0_GOVERNED_EVIDENCE
+      # here — that would fail-closed on every guard-checked turn.
       # GF C runtime built into /tmp/gf-install; help gcc/ld + runtime find it.
       LIBRARY_PATH: /tmp/gf-install/usr/lib
       C_INCLUDE_PATH: /tmp/gf-install/usr/include
@@ -154,6 +158,8 @@ jobs:
       QXFX0_RELEASE_SMOKE_MODE: strict
       QXFX0_SKIP_AGDA: 0
       QXFX0_GF_RUNTIME: 1
+      QXFX0_GOVERNED_EVIDENCE: 1
+      QXFX0_CONCEPTS_PATH: semantics/concepts.nix
     steps:
       - name: Checkout
         uses: actions/checkout@v4

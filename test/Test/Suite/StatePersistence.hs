@@ -70,6 +70,7 @@ import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
 import Test.Support (assertExec, queryCount, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
+import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 
 statePersistenceFastTests :: [Test]
 statePersistenceFastTests =
@@ -1067,6 +1068,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcFamilyDerivationChain = []
     , trcGenerationTrace = []
     , trcEffectSnapshot = Nothing
+    , trcEvidenceAdmissibility = EvidenceGoverned
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

@@ -43,6 +43,13 @@ import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
+import QxFx0.Core.EvidenceAdmissibility (classifyEvidenceIO)
+import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
+import QxFx0.ExceptionPolicy (QxFx0Exception(..))
+import QxFx0.Types.Decision (TurnDecision(..))
+import qualified Data.Text as T
+import Control.Monad (when)
+import Control.Exception (throwIO)
 import QxFx0.Types
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
@@ -152,7 +159,13 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
       -- belief stance after base/external learning state has settled.
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
       nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
-      projection =
+      guardStatus = tdGuardStatus (taDecision turnArtifacts)
+  evidenceAdmissibility <- classifyEvidenceIO guardStatus
+  when (evidenceAdmissibility == EvidenceInadmissible) $
+    throwIO (EvidenceInadmissibleFailure $
+      "governed-evidence mode: guard Unavailable, evidence inadmissible. Guard reason: "
+      <> T.pack (show guardStatus))
+  let projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)
           (fprShadowPolicy precommitResults)
@@ -168,6 +181,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
           commitDecision
           promotedCount
           (tpCommitmentEngagement turnPlan)
+          evidenceAdmissibility
       wantIntrospection =
         fprSemanticIntrospectionEnabled precommitResults
           || ssOutputMode systemState == SemanticIntrospectionOutput

@@ -107,6 +107,7 @@ in code or in a privately-held record, but has no public test/artifact yet.
 | trcField in every trace | `TurnProjection.hs:200` | ✅ `Test.Suite.TraceSchema` |
 | trcRegimeVersion in every trace | `TurnProjection.hs` (M5) | ✅ `Test.Suite.M5Regime.m5RegimeVersionIsStamped` |
 | Regime version matches currentMathVersion | `defaultRuntimeRegime` | ✅ `Test.Suite.M5Regime.m5RegimeVersionMatchesCurrent` |
+| Evidence admissibility classified per turn (SLICE-012) | `trcEvidenceAdmissibility` in `TurnProjection.hs`; `EvidenceAdmissibility.hs` | ✅ `Test.Suite.ReplayDeterminism` (trace round-trip includes field); `QXFX0_GOVERNED_EVIDENCE=1` fail-closes on Unavailable guard |
 
 ### C2 — Restart integrity — **core publicly evidenced**
 

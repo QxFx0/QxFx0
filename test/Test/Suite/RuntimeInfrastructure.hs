@@ -73,6 +73,7 @@ import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport(..))
 
 import Test.Support (assertExec, queryCount, withFakeSouffle, withRuntimeEnv, withStrictRuntimeEnv, withEnvVar, removeIfExists)
+import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 
 runtimeInfrastructureTests :: [Test]
 runtimeInfrastructureTests =
@@ -1708,6 +1709,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcFamilyDerivationChain = []
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
+                 , trcEvidenceAdmissibility = EvidenceGoverned
                  }
            , tqpDivergence = True
            }
@@ -2233,6 +2235,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcFamilyDerivationChain = []
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
+                 , trcEvidenceAdmissibility = EvidenceGoverned
                  }
            , tqpDivergence = True
            }

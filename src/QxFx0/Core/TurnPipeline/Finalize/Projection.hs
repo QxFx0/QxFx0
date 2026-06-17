@@ -27,6 +27,7 @@ import QxFx0.Core.TruthContract
   , replayProvenanceStatusForOutcome
   , truthContractIsAuthoritative
   )
+import QxFx0.Types.Evidence (EvidenceAdmissibility)
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.Guardrails (ExternalActionDecisionReason(..), ExternalActionDecisionTrace(..), ExternalActionKind(..))
 import QxFx0.Semantic.Embedding (embeddingQualityText)
@@ -109,8 +110,9 @@ buildTurnProjection
   -> CommitmentStoreAdmissionDecision
   -> Int
   -> CommitmentEngagement
+  -> EvidenceAdmissibility
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount commitmentEngagement =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount commitmentEngagement evidenceAdmissibility =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -365,6 +367,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcEffectSnapshot = Just EffectSnapshot
               { esApiHealthy = tsApiHealthy ts
               }
+          , trcEvidenceAdmissibility = evidenceAdmissibility
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

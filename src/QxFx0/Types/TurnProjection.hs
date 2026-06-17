@@ -28,6 +28,7 @@ import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Field (Field)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
+import QxFx0.Types.Evidence (EvidenceAdmissibility)
 import QxFx0.Memory.Episodic
   ( EpisodicQuery
   , EpisodicId
@@ -374,6 +375,12 @@ data TurnReplayTrace = TurnReplayTrace
     --   Consumed by replay to make legitimacy-score deterministic.
     --   'Nothing' for traces recorded before this field was added
     --   (pre-vX — not apiHealthy-deterministic).
+  , trcEvidenceAdmissibility :: !EvidenceAdmissibility
+    -- ^ SLICE-012: evidence admissibility classification based on guard
+    --   availability. 'EvidenceGoverned' when guard was present; 
+    --   'EvidenceDegradedGuardUnavailable' when guard was absent (normal
+    --   mode); 'EvidenceInadmissible' when guard was absent under
+    --   governed-evidence mode. See 'QxFx0.Types.Evidence'.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

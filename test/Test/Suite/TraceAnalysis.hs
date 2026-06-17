@@ -25,6 +25,7 @@ import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind(..), ShadowDivergenceS
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
+import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 
 traceAnalysisTests :: [Test]
 traceAnalysisTests =
@@ -189,6 +190,7 @@ minimalTrace = TurnReplayTrace
   , trcFamilyDerivationChain = []
   , trcGenerationTrace = []
   , trcEffectSnapshot = Nothing
+  , trcEvidenceAdmissibility = EvidenceGoverned
   }
 
 testRecoveryNoTrigger :: Test

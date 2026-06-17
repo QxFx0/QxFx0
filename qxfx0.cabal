@@ -61,6 +61,7 @@ library
     QxFx0.Types.Domain.Atoms
     QxFx0.Types.Decision
     QxFx0.Types.Dream
+    QxFx0.Types.Evidence
     QxFx0.Types.Intuition
     QxFx0.Types.Observability
     QxFx0.Types.Persistence
@@ -153,6 +154,7 @@ library
     QxFx0.Runtime.GF.Morphology
     QxFx0.Runtime.Session
     QxFx0.Core.Observability
+    QxFx0.Core.EvidenceAdmissibility
      QxFx0.Core.SessionLock
      QxFx0.Core.TruthContract
      QxFx0.Core.R5Dynamics
