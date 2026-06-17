@@ -18,6 +18,7 @@ import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
 import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, contradict)
+import qualified QxFx0.Semantic.Content as Content
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore, CommitmentEngagement(..), CommitmentId(..), ContradictionKind(..))
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
@@ -811,10 +812,24 @@ dedupePreservingOrder = go Set.empty
 -- The anchor captures which dialogue channel is dominant at a turn; the
 -- payload records this as a factual observation about the dialogue state
 -- so that the 'SemanticCommitmentStore' reflects anchor continuity.
+--
+-- M4-002: for covered topics (per 'QxFx0.Semantic.Content'), the payload
+-- statement includes the topic name and its substantive predicates. This
+-- makes the commitment domain-bearing — 'detectCommitmentEngagement' can
+-- find it when a later turn challenges the same topic, enabling Gate 3
+-- (repair under challenge) and Gate 4 (commitment accountability).
 anchorToFactualClaim :: SemanticAnchor -> TurnSeq -> FactualClaimPayload
 anchorToFactualClaim anchor tseq =
   let channel = dominantChannelText (saDominantChannel anchor)
+      topic = fromMaybe "" (saSecondaryChannel anchor)
+      mContent = Content.lookupDefinitionContent topic
+      contentStmt = case mContent of
+        Just dc ->
+          let preds = map Content.spRu (Content.dcPredicates dc)
+          in " Topic: " <> topic <> ". " <> T.intercalate " " preds
+        Nothing -> ""
       stmt = "Dialogue channel: " <> channel
+             <> contentStmt
              <> " (established at turn " <> T.pack (show (saEstablishedAtTurn anchor)) <> ")"
       conf = min 1.0 (saStrength anchor * saStability anchor)
   in FactualClaimPayload

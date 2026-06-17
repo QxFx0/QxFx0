@@ -597,13 +597,25 @@ structuredBody propositionType frame rmp renderStyle morph rp =
           plain (if isEn then "Distinction requires an explicit frame of criteria. " <> rmpPrimaryClaim rmp
                  else "Различение требует явной рамки критериев. " <> rmpPrimaryClaim rmp)
     MisunderstandingReport ->
-      let ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
+          mContent = lookupDefinitionContent topicRef
+          acknowledgePrior = case mContent of
+            Just dc ->
+              if isEn
+                then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                   <> ". If this was wrong, I will revise."
+                else " Я ранее полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                   <> ". Если это неверно, я пересмотрю."
+            Nothing -> ""
+          ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           fallback = if isEn
                        then "I accept this as a signal of misunderstanding. " <> rmpPrimaryClaim rmp
                          <> " Let us clarify where exactly the response diverged from your request: in meaning, tone, or reasoning."
+                         <> acknowledgePrior
                        else "Я принимаю это как сигнал сбоя взаимопонимания. " <> rmpPrimaryClaim rmp
                          <> " Давай уточним, где именно ответ разошёлся с твоим запросом: в смысле, тоне или ходе рассуждения."
+                         <> acknowledgePrior
           claim = linFn "misunderstanding" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
