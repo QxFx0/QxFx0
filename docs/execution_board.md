@@ -11,16 +11,16 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `B2 — human-eval protocol (design only) + M4 semantic-core deepening (future implementation)`
-- `current_state`: B3 finalized (`b7e4ec3`); B2 design doc written. Both are docs/design only. M6-FELT remains NOT PROVEN. Next implementation front is M4 (semantic-core deepening to pass B3 gates); B2 cannot run until B3 gates mechanically pass.
+- `front_id`: `SLICE-010B — morphology resource contract (re-applied from 0219d0e)`
+- `current_state`: SLICE-010B code (Morphology.hs, Paths.hs, LexiconTests, RuntimeInfrastructure) re-applied from `0219d0e` onto current `origin/main` (which includes B2/B3/SLICE-012). Morphology now derives from `paradigms.json` + `exceptions.json`; `forms_by_surface.json` is gitignored. Next: verify fast gate in intended env.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`, `docs/closure/B2_HUMAN_EVAL_PROTOCOL.md`, `audit-objective-2026-06-17.md`
+- `evidence_or_result_ref`: `docs/closure/SLICE-010B_PLAN.md`, `audit-objective-2026-06-17.md`
 
 ## Immediate next action
 
-- B2 design is complete (docs only). No runtime/code/tests.
-- M4 semantic-core deepening is the next implementation front — make the system pass B3 Gates 1-5 under governed-evidence conditions.
-- B2 human-eval cannot run until B3 gates mechanically pass (B2 §4 hard guard).
+- Verify `cabal test qxfx0-test-fast` in intended env (GHC 9.6.6 + GF runtime).
+- Expected: morphology errors gone; GF issue not mixed if env configured.
+- After SLICE-010B closes: M4 semantic-core deepening (Gates 1-2 first).
 - M6-FELT remains NOT PROVEN.
 
 ## Completed this session (2026-06-17, second pass)
@@ -52,6 +52,18 @@ Purpose: authoritative source for what to do next.
     - GHC 9.6.7 / `base-4.18.3.0` locally vs `cabal.project.freeze` `base ==4.18.2.1` (intended CI is GHC 9.6.6).
     - Missing GF C runtime (`libpgf`, `libgu`) for `pgf2` — tracked by SLICE-012, out of scope for SLICE-010B.
   - If a CI/intended environment with GHC 9.6.6 + GF libs is available, the fast gate should run there. A separate future front (`SLICE-012` toolchain environment contract) is needed for any local toolchain migration.
+
+- **SLICE-010B morphology resource contract** — closed on `slice-010b-morphology-contract`.
+  - `src/QxFx0/Resources/Paths.hs`: morphology directory marker switched from `prepositional.json` to `paradigms.json` with `lexicon_quality.json` fallback for test-tree compatibility.
+  - `src/QxFx0/Resources/Morphology.hs`: rewritten to load `paradigms.json` + `exceptions.json` and derive `MorphologyData` via `morphologyDataFromParadigms`. No cache; `clearFormsCache` kept as no-op.
+  - `.gitignore`: `resources/morphology/forms_by_surface.json` now ignored; comment updated to SLICE-010B contract.
+  - `test/Test/Suite/LexiconTests.hs`: removed `forms_by_surface.json` existence tests; added canonical artifact tests for `paradigms.json`/`exceptions.json` and a regression test for derived forms (`косе`, `выборов`, `любовь`, `коса`).
+  - `test/Test/Suite/RuntimeInfrastructure.hs`: fake resource trees now create `paradigms.json`/`exceptions.json`; readiness-invalid and morphology-cache tests updated to exercise the new substrate.
+  - Evidence: code reviewed; `git diff --name-only origin/main..HEAD` does not contain `forms_by_surface.json`; `git ls-tree -r HEAD resources/morphology/forms_by_surface.json` is empty; Python simulation over real `paradigms.json`/`exceptions.json` passes the regression examples.
+  - Gate status: full `cabal test qxfx0-test-fast` NOT RUN due to environment blockers, not code defects:
+    - GHC 9.6.7 / `base-4.18.3.0` locally vs `cabal.project.freeze` `base ==4.18.2.1` (intended CI is GHC 9.6.6).
+    - Missing GF C runtime (`libpgf`, `libgu`) for `pgf2` — tracked by SLICE-012, out of scope for SLICE-010B.
+  - If a CI/intended environment with GHC 9.6.6 + GF libs is available, the fast gate should run there. A separate future front (`SLICE-016` toolchain environment contract) is needed for any local toolchain migration.
 
 - **Push to `origin/main`** — `62cf43a..c46ebb5` fast-forward pushed.
   - Removed `resources/morphology/forms_by_surface.json` (125 MB blob) from local history via `git filter-branch` before push; backup branch `backup/main-with-forms-blob-20260617` retained.

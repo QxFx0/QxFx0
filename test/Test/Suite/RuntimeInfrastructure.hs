@@ -525,9 +525,8 @@ testEmbeddedSqlFallbackRequiresExplicitOptIn = TestCase $ do
             ]
       mapM_ (createDirectoryIfMissing True) dirs
       TIO.writeFile (base </> "semantics" </> "concepts.nix") "{}"
-      TIO.writeFile (base </> "resources" </> "morphology" </> "prepositional.json") "{}"
-      TIO.writeFile (base </> "resources" </> "morphology" </> "genitive.json") "{}"
-      TIO.writeFile (base </> "resources" </> "morphology" </> "nominative.json") "{}"
+      TIO.writeFile (base </> "resources" </> "morphology" </> "paradigms.json") "{}"
+      TIO.writeFile (base </> "resources" </> "morphology" </> "exceptions.json") "{}"
       TIO.writeFile (base </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
 
 testSpecSqlSeedsAreCompatible :: Test
@@ -2378,9 +2377,8 @@ testAssessResourceReadinessFailsOnInvalidMorphologyJson = TestCase $ do
   createDirectoryIfMissing True (fakeRoot </> "spec")
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
   TIO.writeFile (fakeRoot </> "semantics" </> "concepts.nix") "{}"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{invalid"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "paradigms.json") "{invalid"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "exceptions.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
   TIO.writeFile (fakeRoot </> "spec" </> "R5Core.agda") "module R5Core where"
   TIO.writeFile (fakeRoot </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
@@ -2402,11 +2400,9 @@ testAssessResourceReadinessFailsWhenCriticalPolicyFilesMissing = TestCase $ do
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
   TIO.writeFile (fakeRoot </> "migrations" </> "001_initial_schema.sql") "SELECT 1;"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "prepositional.json") "{}"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "genitive.json") "{}"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "nominative.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "paradigms.json") "{}"
+  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "exceptions.json") "{}"
   TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
-  TIO.writeFile (fakeRoot </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
   TIO.writeFile (fakeRoot </> "spec" </> "datalog" </> "semantic_rules.dl") ""
   TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "TestFun\ttestlemma\tpos\ttestlemma\ttestlemma\ttestlemma\n"
   TIO.writeFile (fakeRoot </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
@@ -2433,11 +2429,13 @@ testMorphologyCacheSwitchesWithRoot = TestCase $ do
     createDirectoryIfMissing True (root </> "spec" </> "sql")
     TIO.writeFile (root </> "migrations" </> "001_initial_schema.sql") "SELECT 1;"
     TIO.writeFile (root </> "semantics" </> "concepts.nix") "{}"
-    TIO.writeFile (root </> "resources" </> "morphology" </> "prepositional.json") ("{\"" <> T.pack (takeFileName root) <> "\":\"A\"}")
-    TIO.writeFile (root </> "resources" </> "morphology" </> "genitive.json") "{}"
-    TIO.writeFile (root </> "resources" </> "morphology" </> "nominative.json") "{}"
+    let rootName = takeFileName root
+        rootKey = T.pack rootName
+        firstChar = T.pack (take 1 rootName)
+    TIO.writeFile (root </> "resources" </> "morphology" </> "paradigms.json")
+      ("{\"" <> rootKey <> "\":{\"pos\":\"Noun\",\"forms\":{\"NomSg\":\"" <> rootKey <> "\",\"LocSg\":\"" <> firstChar <> "\"}}}")
+    TIO.writeFile (root </> "resources" </> "morphology" </> "exceptions.json") "{}"
     TIO.writeFile (root </> "resources" </> "morphology" </> "lexicon_quality.json") "{}"
-    TIO.writeFile (root </> "resources" </> "morphology" </> "forms_by_surface.json") "{}"
     TIO.writeFile (root </> "spec" </> "R5Core.agda") "module R5Core where"
     TIO.writeFile (root </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
     TIO.writeFile (root </> "spec" </> "datalog" </> "semantic_rules.dl") ""
