@@ -1017,36 +1017,33 @@ Activation rule:
   target field is required on decode or represented by a richer canonical empty
   value than `null` / missing
 
-### Post-SLICE-009 evidence/front sequence
+### Post-SLICE-011 evidence/front sequence
 
-This sequence governs the safe integration of recovered historical artifacts from
-`/home/liskil/Grid_cod` into the current `QxFx0` roadmap. These artifacts are
-**not code donors by default** — they are treated as specification, corpus,
-fixture, or historical-evidence sources until a front proves otherwise.
+SLICE-011 (slow-suite infra/harness triage) is complete. The slow gate ran
+all 135 cases to a clean final summary; every remaining non-passing case is a
+persistence-behavior failure and was intentionally deferred to SLICE-013.
+`GRID-COD-GAP-001` is closed. The live checkout is no longer owned by the
+SLICE-009/011 HTTP-runtime work-in-progress.
 
 Ordering:
-1. Finish or explicitly pause `SLICE-009` before editing the live checkout. The
-   current HTTP-runtime slow-suite WIP owns the main working tree and must not be
-   disturbed by roadmap or evidence cleanup.
-2. If a documentation-only fix is needed before `SLICE-009` pauses, use an
+1. SLICE-013 (persistence behavior hardening) is the active front. It targets
+   the 11 deferred persistence failures: runtime 17, 25, 45, 50, 51;
+   statePersistence 0, 3, 4, 8, 11; httpRuntime 7.
+2. If a documentation-only fix is needed before SLICE-013 pauses, use an
    isolated worktree from `origin/main`; do not touch the live checkout.
-3. Close the Datalog role-doc gap first (`DATALOG-ROLE-001`): architecture rules
-   `[23]`/`[25]` already enforce "shadow-validator only" and reference
-   `docs/closure/DATALOG_ROLE.md`, which must exist before any Datalog claim is
-   expanded.
-4. Build a `Grid_cod` gap matrix before importing anything (`GRID-COD-GAP-001`):
-   classes `already_landed`, `reference_only`, `fixture_candidate`,
-   `unsafe_authority_risk`, `deferred_enhancement`.
-5. Only after the matrix exists may a later front propose imports, fixture
-   extraction, or replay/corpus use.
+3. Close the Datalog role-doc gap (`DATALOG-ROLE-001`) before expanding any
+   Datalog claim: architecture rules `[23]`/`[25]` already enforce
+   "shadow-validator only" and reference `docs/closure/DATALOG_ROLE.md`.
+4. Only after SLICE-013 closes may a later front propose imports, fixture
+   extraction, or replay/corpus use from the classified Grid_cod artifacts.
 
 Fronts (full deliverables tracked internally, not in the public spine;
-`DATALOG-*` and `GRID-COD-*` are front families alongside `SLICE-XX-NNN`):
+`DATALOG-*` are front families alongside `SLICE-XX-NNN`):
+- **`SLICE-013`** — persistence behavior hardening. Targeted fixes for the
+  11 deferred persistence failures, then a full `qxfx0-test-slow` re-run.
 - **`DATALOG-ROLE-001`** — author the missing `docs/closure/DATALOG_ROLE.md`
   declaring Datalog as a bounded shadow-validator (not rerouter/authority).
   It cites architecture rules `[23]`/`[25]` and `semantic_rules.dl` as superseded design.
-- **`GRID-COD-GAP-001`** — produce the gap matrix over the Grid_cod artifacts and
-  give each one explicit status before any use (classes: `already_landed` / `reference_only` / `fixture_candidate` / `unsafe_authority_risk` / `deferred_enhancement`).
 
 ## Near Term
 

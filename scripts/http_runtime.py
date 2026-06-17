@@ -100,6 +100,7 @@ API_KEY = ARGS.api_key
 DEFAULT_SESSION_ID = ARGS.default_session_id
 SESSION_TTL_SECONDS = max(1.0, ARGS.session_ttl_seconds)
 WORKER_TIMEOUT_SECONDS = max(1.0, ARGS.worker_timeout_seconds)
+RUNTIME_PROBE_TIMEOUT_SECONDS = max(1.0, float(os.environ.get("QXFX0_RUNTIME_PROBE_TIMEOUT_SECONDS", "5")))
 MAX_SESSIONS = max(1, ARGS.max_sessions)
 LEGACY_WORKERS = ARGS.workers
 SESSION_TOKEN_ENFORCED = os.environ.get("QXFX0_REQUIRE_SESSION_TOKEN", "1" if API_KEY else "0") == "1"
@@ -224,6 +225,16 @@ class SessionOwnershipStore:
             if session_token and self._tokens.get(session_id) == session_token:
                 self._tokens.pop(session_id, None)
                 self._persist_locked()
+
+    def clear_store(self):
+        with self._lock:
+            self._tokens = {}
+            self._corrupt = False
+            try:
+                if os.path.exists(self.path):
+                    os.remove(self.path)
+            except OSError as exc:
+                log.warning(json.dumps({"event": "session_token_store_clear_failed", "detail": str(exc)[:256]}))
 
     def _load_tokens(self):
         try:
@@ -760,7 +771,7 @@ def runtime_readiness_probe():
                 preexec_fn=os.setpgrp,
             )
             try:
-                stdout, stderr = proc.communicate(timeout=5)
+                stdout, stderr = proc.communicate(timeout=RUNTIME_PROBE_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
@@ -1045,6 +1056,7 @@ def graceful_shutdown(signum, frame):
     running = False
     log.info(json.dumps({"event": "shutdown_signal", "signal": signum}))
     registry.shutdown()
+    session_owners.clear_store()
     sys.exit(0)
 
 

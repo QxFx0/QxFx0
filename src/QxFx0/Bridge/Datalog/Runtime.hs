@@ -13,7 +13,7 @@ import Control.Exception (IOException, finally, try)
 import Control.Monad (filterM)
 import Data.Char (isSpace)
 import Data.List (nub)
-import Data.Maybe (maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -121,10 +121,14 @@ resolveSouffleExecutable = do
     Just candidate ->
       resolveConfiguredSouffleExecutable candidate
     Nothing -> do
-      localPath <- findExecutable "souffle"
-      case localPath of
-        Just path -> pure (Right path)
-        Nothing -> resolveSouffleExecutableFromFlake
+      mNixBin <- lookupEnv "QXFX0_NIX_BIN"
+      case nonEmptyString (fmap stripWhitespace mNixBin) of
+        Just _ -> resolveSouffleExecutableFromFlake
+        Nothing -> do
+          localPath <- findExecutable "souffle"
+          case localPath of
+            Just path -> pure (Right path)
+            Nothing -> resolveSouffleExecutableFromFlake
 
 resolveConfiguredSouffleExecutable :: FilePath -> IO (Either Text FilePath)
 resolveConfiguredSouffleExecutable configuredPath
@@ -237,10 +241,10 @@ resolveSouffleExecutableFromFlake =
 
 resolveSouffleExecutablePathFromFlake :: FilePath -> IO (Either Text FilePath)
 resolveSouffleExecutablePathFromFlake repoRoot = do
-  let command =
-        flakeCommand
-          repoRoot
-          ["eval", "--raw", ".#apps.x86_64-linux.souffle-runtime.program"]
+  command <-
+    flakeCommand
+      repoRoot
+      ["eval", "--raw", ".#apps.x86_64-linux.souffle-runtime.program"]
   (exitCode, stdout, stderr) <- readCreateProcessWithExitCode command ""
   pure $
     case exitCode of
@@ -250,10 +254,10 @@ resolveSouffleExecutablePathFromFlake repoRoot = do
 
 materializeSouffleExecutableFromFlake :: FilePath -> IO (Either Text FilePath)
 materializeSouffleExecutableFromFlake repoRoot = do
-  let command =
-        flakeCommand
-          repoRoot
-          ["build", "--no-link", "--print-out-paths", ".#souffle-runtime"]
+  command <-
+    flakeCommand
+      repoRoot
+      ["build", "--no-link", "--print-out-paths", ".#souffle-runtime"]
   (exitCode, stdout, stderr) <- readCreateProcessWithExitCode command ""
   case exitCode of
     ExitSuccess -> do
@@ -263,10 +267,13 @@ materializeSouffleExecutableFromFlake repoRoot = do
     ExitFailure _ ->
       pure (Left ("nix build for souffle-runtime failed: " <> compactDiagnostic (T.pack stderr)))
 
-flakeCommand :: FilePath -> [String] -> CreateProcess
-flakeCommand repoRoot args =
-  (proc "nix" (["--option", "warn-dirty", "false", "--extra-experimental-features", "nix-command flakes"] <> args))
-    { cwd = Just repoRoot }
+flakeCommand :: FilePath -> [String] -> IO CreateProcess
+flakeCommand repoRoot args = do
+  mNixBin <- lookupEnv "QXFX0_NIX_BIN"
+  let nixBin = fromMaybe "nix" (nonEmptyString (fmap stripWhitespace mNixBin))
+  pure $
+    (proc nixBin (["--option", "warn-dirty", "false", "--extra-experimental-features", "nix-command flakes"] <> args))
+      { cwd = Just repoRoot }
 
 validateResolvedSouffleExecutable :: Text -> FilePath -> IO (Either Text FilePath)
 validateResolvedSouffleExecutable sourceLabel path = do

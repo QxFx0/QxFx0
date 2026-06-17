@@ -11,10 +11,33 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `M6-DECLARE — write final bounded evidence declaration`
-- `current_state`: **All M6 activation conditions met** (2026-06-03). H1+H2+H3+C1+C2+C3+C4 all closed. F-11 real GF parser implemented. 956/956 tests pass. Remaining: write the formal M6 declaration document and create the evidence index under `reports/m6_evidence/`.
-- `last_updated`: `2026-06-03T04:00:00+03:00`
-- `evidence_or_result_ref`: `docs/closure/M6_CLAIM_PACKAGE.md`
+- `front_id`: `DOCSYNC — origin/main reconciliation after SLICE-013`
+- `current_state`: SLICE-013 closed. Branch `slice-013-truthcontract-fix` at `76fe6ba`. state 36/36 ✅, runtime 93/93 tried (4 pre-existing deferred: 40/45/50/51). Local reconcile with `main` pending (after technician stops). DOCSYNC of origin/main next.
+- `last_updated`: `2026-06-17`
+- `evidence_or_result_ref`: `docs/closure/SLICE-013_PLAN.md`, commit `76fe6ba`
+
+## Immediate next action
+
+1. DOCSYNC: review origin/main for doc/roadmap drift vs current branch state.
+2. Local reconcile: merge/rebase `slice-013-truthcontract-fix` → `main` once technician is fully stopped.
+3. After merge: open 4 deferred failures (40/45/50/51) as a separate triage slice.
+
+## Completed this session (2026-06-17)
+
+- **SLICE-013 truth-contract persistence/load policy (Option 1)** — closed with `76fe6ba` on `slice-013-truthcontract-fix`.
+  - Policy: "strict rejects corruption, not compatibility." Persistence cleanup never manufactures truth-contract authority.
+  - Save path: `canonicalizePersistedState` preserves `ssTruthContractStatus` verbatim (removed unconditional `=AssembledSurfacePreserved`).
+  - Load path: removed duplicate non-auth reject gate from `loadState`; non-auth state → `LoadStateRestored` (demoted), not `LoadStateCorrupt`.
+  - Tests: 3 StatePersistence tests renamed+rewritten (Rejects/Recovers→Restores); RuntimeInfrastructure tests 17/25 rewritten with explicit auth fixture marker (symmetric to non-auth twins, breaking nix-capability dependency).
+  - Doctrine: `docs/commit_restore_state_machine.md §6.3` updated.
+  - Result: state 36/36 ✅, runtime 93/93 tried, 4 pre-existing failures deferred.
+
+## Completed this session (2026-06-16)
+
+- **SLICE-011 infra/harness triage** — closed with separate commit on `slice-011`.
+  - Scope: `.gitattributes`, LF rules, SQL/EmbeddedSQL sync, `.test-tmp` symlink, witness path, resource root, fake nix/souffle/gf-map isolation, CLI/Http option parsing, sidecar `executeFile`, sidecar SIGTERM/SIGKILL group cleanup, HTTP proxy bypass, runtime readiness probe timeout, slow-gate group split (`runtime`/`http`/`state`).
+  - Evidence: 135 slow cases reached a clean final summary; 93/93 runtime, 22/22 http, 20/20 state.
+  - Deferred: 11 persistence-behavior failures moved to `SLICE-013`.
 
 ## Completed this session (2026-06-03, full session)
 
@@ -28,12 +51,6 @@ Purpose: authoritative source for what to do next.
   - `Test.Suite.AuthoritySurface` — 24 gfExpr round-trip tests + 4 pattern tests + coverage ≥99% + negative corpus
 
 **Total: 956/956 tests pass. M6 activation checklist: all ✅**
-
-## Immediate next action
-
-1. Write `docs/closure/M6_DECLARATION.md` — the formal bounded claim package
-2. Create `reports/m6_evidence/` index with pointers to all evidence artifacts
-3. Optional: run `bash scripts/check_replay_gate.sh` to confirm 0 failures
 
 ## Completed this session (2026-06-03, second pass)
 

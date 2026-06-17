@@ -18,7 +18,7 @@ import System.Exit (ExitCode(..))
 import System.Environment (lookupEnv)
 import QxFx0.ExceptionPolicy (catchIO)
 import Data.Char (isAlphaNum, isAscii, isLetter)
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 
 isSafeChar :: Char -> Bool
 isSafeChar c = isAscii c && (isAlphaNum c || c == '-' || c == '_')
@@ -86,9 +86,10 @@ runNixInstantiate restricted nixExpr = do
       timeoutSec = 5
       modeArgs = if restricted then ["--restricted"] else []
       modeLabel = if restricted then "restricted" else "unrestricted"
+  nixInstantiateBin <- fromMaybe "nix-instantiate" <$> lookupEnv "QXFX0_NIX_INSTANTIATE_BIN"
   result <- catchIO
     (do (exitCode, stdout, stderr) <- readProcessWithExitCode
-          "timeout" ([show timeoutSec, "nix-instantiate"] <> modeArgs <> ["--eval", "--expr", T.unpack nixExpr]) ""
+          "timeout" ([show timeoutSec, nixInstantiateBin] <> modeArgs <> ["--eval", "--expr", T.unpack nixExpr]) ""
         case exitCode of
           ExitSuccess ->
             let output = T.strip (T.pack stdout)

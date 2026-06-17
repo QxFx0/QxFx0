@@ -21,7 +21,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Identity (IdentityState(..))
 import QxFx0.Types.State.Semantic (SemanticState(..))
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
-import QxFx0.Types.Decision (decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
+import QxFx0.Types.Decision (DialogueOutputMode(..), decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
 import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
 import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
@@ -212,8 +212,18 @@ loadState withDb sessionId = withDb $ \db -> do
             Right ss ->
               case rebuildDerivedViewsAfterLoad ss of
                 Right rebuilt -> do
-                  when (not (persistedTruthIsAuthoritative (ssTruthContractStatus ss))) $
-                    hPutStrLn stderr $ "[persistence_debug] non_authoritative_persisted_state session=" <> T.unpack sessionId
+                  -- SLICE-013 truth-contract policy: a non-authoritative persisted
+                  -- state is a valid compatibility/provenance state, NOT corruption.
+                  -- 'rebuildDerivedViewsAfterLoad' has already demoted restart authority
+                  -- (semanticAnchor / lastTurnDecision -> Nothing) for non-authoritative
+                  -- contours and rebuilt governed views for authoritative ones, so it is
+                  -- safe to restore here regardless of contour, in both strict and
+                  -- degraded runtime. Corruption is handled by the decode / governance-
+                  -- rebuild failure branches below; the truth-contract marker is preserved
+                  -- verbatim. Strict rejects corruption, not compatibility.
+                  -- ('PdNonAuthoritativeTruth' is retained for a future contract that
+                  -- explicitly declares a non-authoritative blob invalid; it is no longer
+                  -- emitted for a merely non-authoritative provenance marker.)
                   logPersistenceCounts "post_load" rebuilt
                   pure (LoadStateRestored rebuilt)
                 Left err -> do
@@ -366,6 +376,15 @@ persistedTruthIsAuthoritative _ = False
 
 -- | Persisted state keeps only canonical authority plus compatibility-retained
 -- fields. Derived governance views and runtime-local carry-over are stripped.
+--
+-- Truth-contract policy: persistence cleanup NEVER manufactures truth-contract
+-- authority. 'ssTruthContractStatus' is preserved verbatim here — an authoritative
+-- status (Canonical/Assembled) is never downgraded, and a non-authoritative
+-- provenance marker (recovery/fallback/shim/defaulted/legacy/generated) is never
+-- upgraded or collapsed into another marker. Authority is only ever earned by an
+-- explicit upstream authority step, not by the act of persisting. Restart-authority
+-- demotion (semantic anchor / last-turn-decision strip) is the RESTORE path's job
+-- ('demoteNonAuthoritativeRestartCarry'), not this SAVE-path cleanup.
 canonicalizePersistedState :: SystemState -> SystemState
 canonicalizePersistedState ss =
   let selfState' = (ssSelfState ss) { selfPerspectiveRegistry = emptyPerspectiveRegistry }
@@ -374,6 +393,8 @@ canonicalizePersistedState ss =
     , ssSemantic = canonicalizePersistedSemanticState (ssSemantic ss)
     , ssSelfState = selfState'
     , ssGovernanceProjection = ssGovernanceProjection emptySystemState
+    , ssOutputMode = DialogueOutput
+    , ssGovernanceRuntimeFault = Nothing
     }
 
 -- | Compatibility-only identity fields are cleared before persistence.

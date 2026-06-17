@@ -33,12 +33,14 @@ import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
 import System.IO (Handle)
 import System.IO.Error ()
+import System.Posix.Signals (sigKILL, signalProcessGroup)
 import System.Timeout (timeout)
 import System.Process
-  ( CreateProcess(std_err, std_out)
+  ( CreateProcess(create_group, std_err, std_out)
     , ProcessHandle
   , StdStream(Inherit)
     , createProcess
+    , getPid
     , proc
     , readProcess
     , readProcessWithExitCode
@@ -533,7 +535,11 @@ testHttpSidecarStartupFailsWhenPortInUse = TestCase $
 withHttpSocketCapability :: IO () -> IO ()
 withHttpSocketCapability action = do
   ready <- localhostSocketBindingAvailable
-  when ready action
+  when ready $
+    withEnvVar "HTTP_PROXY" Nothing $
+      withEnvVar "HTTPS_PROXY" Nothing $
+        withEnvVar "NO_PROXY" (Just "127.0.0.1,localhost") $
+          withEnvVar "QXFX0_RUNTIME_PROBE_TIMEOUT_SECONDS" (Just "20") action
 
 localhostSocketBindingAvailable :: IO Bool
 localhostSocketBindingAvailable = do
@@ -593,6 +599,7 @@ startSidecar binPath args =
     (proc binPath (["--serve-http"] <> args))
       { std_out = Inherit
       , std_err = Inherit
+      , create_group = True
       }
 
 startPortOccupier :: Int -> IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
@@ -606,13 +613,24 @@ startPortOccupier port = do
       ])
       { std_out = Inherit
       , std_err = Inherit
+      , create_group = True
       }
 
 stopSidecar :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
 stopSidecar (_, _, _, ph) = do
+  mPid <- getPid ph
   terminateProcess ph
-  _ <- waitForProcess ph
-  pure ()
+  result <- timeout (2 * 1000000) (waitForProcess ph)
+  case result of
+    Just _ -> pure ()
+    Nothing -> do
+      case mPid of
+        Just pid -> do
+          _ <- try (signalProcessGroup sigKILL pid) :: IO (Either SomeException ())
+          pure ()
+        Nothing -> pure ()
+      _ <- waitForProcess ph
+      pure ()
 
 waitUntilSidecarHealthy :: Int -> IO ()
 waitUntilSidecarHealthy port = loop 80
