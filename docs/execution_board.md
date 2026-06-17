@@ -11,18 +11,21 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `SLICE-015 — runtime summary observability gaps (50/51)`
-- `current_state`: SLICE-014 closed. 40/45 fixed; 50/51 remain as documented feature gaps. `runtime` group now 93/93 tried with only 50/51 failures. SLICE-015 opened for observability/summary enrichment work.
+- `front_id`: `None — awaiting next approved front`
+- `current_state`: SLICE-013/014 landed and pushed to `origin/main` (`62cf43a..c46ebb5`). `runtime` 93/93 tried with 2 known feature gaps (50/51). SLICE-015 is explicitly deferred; morphology resource contract (`forms_by_surface.json`) remains unresolved and belongs to SLICE-010B.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-015_PLAN.md`, `docs/closure/SLICE-014_PLAN.md`, gate log `/home/liskil/slice014-fix-runtime.log`
+- `evidence_or_result_ref`: `docs/closure/SLICE-014_PLAN.md`, `docs/closure/SLICE-015_PLAN.md`, gate log `/home/liskil/slice014-fix-runtime.log`
 
 ## Immediate next action
 
-1. Decide whether to implement `stateSummaryLines` fields for cases 50/51 or keep deferred.
-2. If implemented, add the summary fields without touching core persistence contracts.
-3. Re-run `runtime` gate and confirm 50/51 pass.
+- No active front. Return to roadmap/public coherence only via a separate approved front.
+- SLICE-015 remains a documented deferred feature gap; do not implement without a new approved front.
 
 ## Completed this session (2026-06-17)
+
+- **Push to `origin/main`** — `62cf43a..c46ebb5` fast-forward pushed.
+  - Removed `resources/morphology/forms_by_surface.json` (125 MB blob) from local history via `git filter-branch` before push; backup branch `backup/main-with-forms-blob-20260617` retained.
+  - `git log origin/main..HEAD -- resources/morphology/forms_by_surface.json` empty; `git diff --name-only origin/main..HEAD` does not contain the file.
 
 - **SLICE-014 runtime persistence residuals** — closed.
   - 40: switched `testBootstrapSessionCorruptStateFailsClosed` to `withStrictRuntimeEnv`; strict corrupt-state bootstrap now fails closed as expected.

@@ -7,9 +7,15 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
-| `SLICE-015` runtime summary observability gaps (50/51) | OPEN | implement or explicitly defer `stateSummaryLines` pre-actor failure and restart-capped-non-authoritative fields; plan `docs/closure/SLICE-015_PLAN.md` |
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
+
+## Deferred feature gaps
+
+| Front | Status | Exit |
+|---|---|---|
+| `SLICE-015` runtime summary observability gaps (50/51) | DEFERRED | `stateSummaryLines` must surface pre-actor failure kind and restart authority status; documented in `docs/closure/SLICE-015_PLAN.md`; not in active scope |
+| `SLICE-010B` morphology resource / `forms_by_surface.json` | DEFERRED | resolve 125 MB generated artifact: LFS, generator/preflight, or IH-4/paradigms contract; blob removed from `main` history |
 
 ## Closed this cycle
 

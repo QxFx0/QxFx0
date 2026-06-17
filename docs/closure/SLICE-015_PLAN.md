@@ -1,7 +1,7 @@
 # SLICE-015 Plan — Runtime Summary Observability Gaps
 
-Status: Open
-Purpose: track and eventually implement the two runtime-state-summary observability fields that remain as deferred feature gaps after SLICE-014.
+Status: Deferred
+Purpose: track the two runtime-state-summary observability fields that remain as deferred feature gaps after SLICE-014. Not in active scope.
 
 ## Origin
 
