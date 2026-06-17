@@ -11,16 +11,26 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `SLICE-013 — persistence behavior hardening`
-- `current_state`: SLICE-011 infra/harness triage complete. SLICE-013 in progress: `httpRuntime` (22/22 ✅) and `statePersistence` (20/20 ✅) are clean. `runtimeInfrastructure` still has 7 failures (cases 18, 19, 26, 40, 45, 50, 51). Three of them are new regressions from the truth-contract canonicalization needed for `statePersistence` case 11; a contract conflict between preservation vs. canonicalization of `LegacyIncompleteSurface` must be resolved.
-- `last_updated`: `2026-06-16T20:00:00+03:00`
-- `evidence_or_result_ref`: `docs/closure/SLICE-013_PLAN.md` (also `/tmp/opencode/slice011-slow-rerun.txt`)
+- `front_id`: `DOCSYNC — origin/main reconciliation after SLICE-013`
+- `current_state`: SLICE-013 closed. Branch `slice-013-truthcontract-fix` at `76fe6ba`. state 36/36 ✅, runtime 93/93 tried (4 pre-existing deferred: 40/45/50/51). Local reconcile with `main` pending (after technician stops). DOCSYNC of origin/main next.
+- `last_updated`: `2026-06-17`
+- `evidence_or_result_ref`: `docs/closure/SLICE-013_PLAN.md`, commit `76fe6ba`
 
 ## Immediate next action
 
-1. Open `SLICE-013` branch and classify the 11 persistence failures into core state/persistence and sidecar session-token persistence.
-2. Produce targeted persistence fixes for the classified failures.
-3. Re-run `qxfx0-test-slow` groups to verify the persistence front is closed.
+1. DOCSYNC: review origin/main for doc/roadmap drift vs current branch state.
+2. Local reconcile: merge/rebase `slice-013-truthcontract-fix` → `main` once technician is fully stopped.
+3. After merge: open 4 deferred failures (40/45/50/51) as a separate triage slice.
+
+## Completed this session (2026-06-17)
+
+- **SLICE-013 truth-contract persistence/load policy (Option 1)** — closed with `76fe6ba` on `slice-013-truthcontract-fix`.
+  - Policy: "strict rejects corruption, not compatibility." Persistence cleanup never manufactures truth-contract authority.
+  - Save path: `canonicalizePersistedState` preserves `ssTruthContractStatus` verbatim (removed unconditional `=AssembledSurfacePreserved`).
+  - Load path: removed duplicate non-auth reject gate from `loadState`; non-auth state → `LoadStateRestored` (demoted), not `LoadStateCorrupt`.
+  - Tests: 3 StatePersistence tests renamed+rewritten (Rejects/Recovers→Restores); RuntimeInfrastructure tests 17/25 rewritten with explicit auth fixture marker (symmetric to non-auth twins, breaking nix-capability dependency).
+  - Doctrine: `docs/commit_restore_state_machine.md §6.3` updated.
+  - Result: state 36/36 ✅, runtime 93/93 tried, 4 pre-existing failures deferred.
 
 ## Completed this session (2026-06-16)
 

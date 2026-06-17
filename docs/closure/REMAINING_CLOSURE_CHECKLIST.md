@@ -7,7 +7,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
-| `SLICE-013` persistence behavior hardening | OPEN | 7 remaining `runtimeInfrastructure` failures (18, 19, 26, 40, 45, 50, 51); `statePersistence` 0,3,4,8,11 and `httpRuntime` 7 already fixed; open contract conflict on truth-contract canonicalization; plan at `docs/closure/SLICE-013_PLAN.md` |
+| `SLICE-013` deferred failures (40/45/50/51) | OPEN | 4 pre-existing failures: corrupt-JSON bootstrap recovery, state-revision CAS, state-summary pre-actor failure, restart-capped status in summary; require separate triage slice |
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
 
@@ -15,6 +15,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 | Front | Status | Exit |
 |---|---|---|
+| `SLICE-013` persistence behavior hardening | CLOSED | state 36/36, runtime 93/93 tried; Option 1 policy (verbatim preserve, no manufacture); 4 pre-existing failures deferred; commit `76fe6ba` on `slice-013-truthcontract-fix` |
 | `SLICE-009` / `SLICE-011` slow-suite / HTTP runtime infra triage | CLOSED | 135 slow cases reach clean final summary; all infra/line-ending/hermetic/proxy/sidecar-hang issues fixed; 11 persistence failures explicitly deferred to `SLICE-013` |
 | `GRID-COD-GAP-001` historical artifact matrix | CLOSED | dependency for `SLICE-013` satisfied; artifacts classified before any import |
 
