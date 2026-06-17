@@ -526,6 +526,7 @@ common test-common
     Test.Suite.PromotionFlagDiscipline
     Test.Suite.SemanticContentB3
     Test.Suite.SemanticRepairB3
+    Test.Suite.B3MechanicalGateExecution
     Test.Suite.ReplayGate
     Test.Suite.ReplayDeterminism
     Test.Suite.AdmissionEquivalence
