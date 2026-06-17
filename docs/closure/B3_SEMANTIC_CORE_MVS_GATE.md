@@ -69,17 +69,28 @@ entire semantic payload is "X is a concept"; the rest is template boilerplate
 ("зафиксирую рабочее определение и отделю его от употребления…").
 
 **Pass criterion**: The response must contain **at least two substantive
-predications** about X beyond "X is a concept/понятие". A "substantive
-predication" is a claim that attributes a property, relation, or structure
-to X that is **specific to X** (not applicable to any concept). Examples:
+non-tautological predications** about X. A "substantive predication" is a
+claim that attributes a property, relation, or structure to X that is
+**specific to X** (not applicable to any concept). Examples:
 - "свобода предполагает возможность выбора" (freedom presupposes the
   possibility of choice)
 - "свобода ограничена ответственностью" (freedom is limited by
   responsibility)
 
-**Fail criterion**: The response contains zero or one substantive
-predications, or the only predications are generic ("X is a concept", "X
-has a definition", "X is used in reasoning").
+**Excluded from predication count** (do not count toward the ≥2):
+- "X есть понятие" / "X is a concept" — tautological classification.
+- Recovery/fallback phrases — "Локальный режим восстановления…", "Я сужаю
+  ответ…" — operational boilerplate, not domain content.
+- Meta-frame statements without content — "зафиксирую рабочее определение
+  и отделю его от употребления…" — describes the *act* of defining, not
+  the *content* of the definition.
+- Paraphrase of the request — "Если говорить о свободе…" — restates the
+  topic without predicating about it.
+
+**Fail criterion**: The response contains fewer than two substantive
+predications after exclusions, or the only predications are in the
+exclusion list. **Reference fail**: "свобода является понятием" (zero
+substantive predications after excluding "X is a concept").
 
 **Measurement**:
 - `trcClaimAst` — the parsed claim AST should contain ≥2 typed predications
@@ -220,7 +231,7 @@ commitments.
 
 ---
 
-## Gate 5 — Non-fallback semantic engagement
+## Gate 5 — Non-fallback semantic engagement (PRECONDITION, not a scoring gate)
 
 **Stimulus**: Any in-domain philosophical input (the system's declared
 domain: Russian/English philosophical dialogue).
@@ -229,6 +240,11 @@ domain: Russian/English philosophical dialogue).
 `guard_status: Unavailable` and the response was template-based. The
 authority class was not checked in the AB eval, but the template-only
 output strongly suggests `ExplicitFallbackSurface` or `AuthorityFallback`.
+
+**Role**: Gate 5 is a **precondition** for Gates 1–4, not a peer scoring
+gate. If Gate 5 fails, all other gates automatically fail — fallback =
+template, and templates cannot produce domain-bearing predications. Gate
+5 is not averaged into a score; it is a binary substrate check.
 
 **Pass criterion**: For in-domain inputs, the response must come from the
 **semantic core path** (GF parser → atoms → frames → families →
@@ -262,15 +278,27 @@ templates.
 ## Relationship between the five gates
 
 ```
-Gate 5 (non-fallback) ← precondition for all others
-   ↓
+Gate 5 (non-fallback) ← PRECONDITION (binary substrate check, not scored)
+   ↓ (if Gate 5 fails, all others fail)
 Gate 1 (definition)    ┐
-Gate 2 (distinction)    ├── content-quality floor
+Gate 2 (distinction)    ├── Layer 1: single-turn content floor
    ↓                   │
 Gate 3 (repair)         ┘
    ↓
-Gate 4 (commitment accountability) ← multi-turn integration of 1-3
+Gate 4 (commitment accountability) ← Layer 2: multi-turn/session floor
 ```
+
+**Layered gate (DECISION 4)**: The overall MVS pass requires **both
+layers**:
+- **Layer 1** (Gates 1–2): single-turn content floor — does the system
+  produce substantive content for basic philosophical queries?
+- **Layer 2** (Gates 3–4): multi-turn/challenge/session floor — does the
+  system revise under correction and persist commitments across turns?
+
+**No averaging across layers (DECISION 4)**: A pass on Layer 2 does not
+mask a fail on Layer 1, and vice versa. Strong continuity (Layer 2)
+cannot compensate for weak content (Layer 1). The overall MVS pass is
+the conjunction: Gate 5 ∧ (Gate 1 ∧ Gate 2) ∧ (Gate 3 ∧ Gate 4).
 
 - **Gate 5 is a precondition**: if the response is fallback, none of the
   content gates can pass (fallback = template, and templates don't produce
@@ -284,8 +312,8 @@ Gate 4 (commitment accountability) ← multi-turn integration of 1-3
 A system that passes Gate 5 but fails 1-2 has a *working semantic core
 that produces thin content*. A system that passes 1-2 but fails 3 has
 *content but no accountability*. A system that passes 1-3 but fails 4
-has *single-turn quality but no cross-turn persistence*. All four must
-pass for M6-FELT.
+has *single-turn quality but no cross-turn persistence*. **All four
+content gates must pass (conjunction, not average) for M6-FELT.**
 
 ---
 
@@ -308,22 +336,65 @@ pass for M6-FELT.
 2. **M4 has a target**: the semantic-core deepening work knows what it
    needs to achieve — passing the five gates — rather than aiming at
    an undefined "richer content".
-3. **M6-FELT has a definition**: "M6-FELT is proven" means "all five B3
-   gates pass under governed-evidence conditions, mechanically checked,
-   in a multi-turn session". This is a bounded, falsifiable claim — not
-   "the system is conscious".
+3. **M6-FELT has a definition**: "M6-FELT is proven" means "Gate 5
+   (precondition) ∧ Gate 1 ∧ Gate 2 ∧ Gate 3 ∧ Gate 4 all pass under
+   governed-evidence conditions (`QXFX0_GOVERNED_EVIDENCE=1`, guard
+   `Available`, trace `EvidenceGoverned`), mechanically checked, with
+   the public seed corpus — conjunction across both layers, not
+   average". This is a bounded, falsifiable claim — not "the system is
+   conscious". **M6-FELT remains NOT PROVEN.**
 
-## Open questions for the operator
+## Resolved decisions (2026-06-17)
 
-1. **Q1**: Are the five gates the right set? Should there be a sixth
-   (e.g., "self-reference" — the system referring to its own prior
-   commitments/positions)?
-2. **Q2**: Is "≥2 substantive predications" (Gate 1) the right threshold,
-   or should it be higher? This determines how rich the semantic core
-   must be.
-3. **Q3**: Should the gate corpus be public (checked in, falsifiable) or
-   private (held out to prevent overfitting)? The project's public/
-   private boundary (per `M6_DECLARATION`) suggests public stimuli +
-   private hold-out for B2.
-4. **Q4**: Should Gates 1-2 be single-turn (simpler to test) or require
-   a prior context turn (more realistic but harder to isolate)?
+The four open questions from the initial draft are resolved as follows.
+
+### Decision 1 — Gate set
+
+- The **five gates** (Gate 5 precondition + Gates 1–4) are the **minimum
+  viable semantic (MVS) floor**. No sixth gate is added at this time.
+- **Gate 5 (Non-fallback)** is formalized as a **precondition**, not a
+  peer scoring gate. It is a binary substrate check: if Gate 5 fails,
+  all content gates automatically fail.
+- **Analogy / causal / counterexample gates** are **not added now**.
+  They are noted as **future extensions** after the MVS floor is proven.
+  Adding them before the floor exists would expand the target without
+  establishing the base.
+
+### Decision 2 — Definition threshold (Gate 1)
+
+- **≥2 substantive non-tautological predications** is the threshold.
+- The **exclusion list** (see Gate 1 above) is binding:
+  - "X есть понятие" / tautological classification — excluded.
+  - Recovery/fallback phrases — excluded.
+  - Meta-frame statements without content — excluded.
+  - Paraphrase of the request — excluded.
+- **Pass example**: two content-bearing properties/relations of X
+  (e.g., "freedom presupposes choice" + "freedom is limited by
+  responsibility").
+- **Fail example**: "свобода является понятием" (zero predications after
+  exclusions).
+
+### Decision 3 — Corpus policy
+
+- **Hybrid corpus** (public seed + private holdout):
+  - **Public seed corpus**: checked in, rerunnable, falsifiable. Any
+    public M6-FELT claim must be backed by the public seed.
+  - **Private/blind holdout**: held out to prevent overfitting. Used for
+    anti-gaming, not as sole evidence for a public claim.
+  - **Public sanitized summary + corpus hash** for the holdout: the
+    hash lets a third party verify the holdout exists and is stable
+    without seeing its contents.
+- **Private holdout alone cannot be the sole evidence for a public
+  claim.** This rule prevents a repeat of the M6 phantom-citation
+  problem (`M6_DECLARATION.md` reconciliation log).
+
+### Decision 4 — Single-turn vs context (layered gate)
+
+- **Layered gate** (see "Relationship between the five gates" above):
+  - Gates 1–2 pass the **single-turn content floor** (Layer 1).
+  - Gates 3–4 pass the **multi-turn/challenge/session floor** (Layer 2).
+  - The overall MVS pass requires **both layers** (conjunction).
+- **No averaging across layers**: a strong Layer 2 score cannot mask a
+  weak Layer 1, and vice versa. This prevents the structural-maturity-
+  masking-content-weakness substitution that the audit
+  (`audit-objective-2026-06-17.md`) diagnosed.
