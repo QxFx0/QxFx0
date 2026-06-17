@@ -1,0 +1,25 @@
+{"task_id":"def-ru-01","turn":1,"type":"definition","topic":"свобода","lang":"ru","user_text":"Что такое свобода?"}
+{"task_id":"def-ru-01","turn":2,"type":"challenge","topic":"свобода","lang":"ru","user_text":"Но разве свобода не означает, что можно делать всё что угодно? Ты противоречишь себе."}
+{"task_id":"def-ru-01","turn":3,"type":"follow-up","topic":"свобода","lang":"ru","user_text":"Тогда что ограничивает свободу?"}
+{"task_id":"def-ru-02","turn":1,"type":"definition","topic":"истина","lang":"ru","user_text":"Что такое истина?"}
+{"task_id":"def-ru-02","turn":2,"type":"challenge","topic":"истина","lang":"ru","user_text":"Я не согласен: истина — это просто то, во что верит большинство."}
+{"task_id":"def-ru-02","turn":3,"type":"follow-up","topic":"истина","lang":"ru","user_text":"Как тогда проверить, что является истиной?"}
+{"task_id":"def-ru-03","turn":1,"type":"definition","topic":"сознание","lang":"ru","user_text":"Что такое сознание?"}
+{"task_id":"def-ru-03","turn":2,"type":"challenge","topic":"сознание","lang":"ru","user_text":"Ты говоришь о первом лице, но разве сознание не просто обработка информации?"}
+{"task_id":"def-ru-03","turn":3,"type":"follow-up","topic":"сознание","lang":"ru","user_text":"Может ли машина иметь сознание?"}
+{"task_id":"def-ru-04","turn":1,"type":"definition","topic":"ответственность","lang":"ru","user_text":"Что такое ответственность?"}
+{"task_id":"def-ru-04","turn":2,"type":"challenge","topic":"ответственность","lang":"ru","user_text":"Это слишком широко. Разве ответственность не просто наказание?"}
+{"task_id":"def-ru-04","turn":3,"type":"follow-up","topic":"ответственность","lang":"ru","user_text":"Чем ответственность отличается от долга?"}
+{"task_id":"def-ru-05","turn":1,"type":"definition","topic":"память","lang":"ru","user_text":"Что такое память?"}
+{"task_id":"def-ru-05","turn":2,"type":"challenge","topic":"память","lang":"ru","user_text":"Ты утверждаешь, что память реконструирует, но разве она не просто хранит?"}
+{"task_id":"def-ru-05","turn":3,"type":"follow-up","topic":"память","lang":"ru","user_text":"Как память связана с воспоминанием?"}
+{"task_id":"dist-ru-01","turn":1,"type":"distinction","topic_left":"свобода","topic_right":"произвол","lang":"ru","user_text":"В чём разница между свободой и произволом?"}
+{"task_id":"dist-ru-01","turn":2,"type":"challenge","topic_left":"свобода","topic_right":"произвол","lang":"ru","user_text":"Но разве произвол — это не просто свобода без ограничений? Ты не объяснил разницу."}
+{"task_id":"dist-ru-02","turn":1,"type":"distinction","topic_left":"истина","topic_right":"мнение","lang":"ru","user_text":"В чём разница между истиной и мнением?"}
+{"task_id":"dist-ru-02","turn":2,"type":"challenge","topic_left":"истина","topic_right":"мнение","lang":"ru","user_text":"Ты говоришь, истина объективна, но разве наука не меняет свои мнения?"}
+{"task_id":"dist-ru-03","turn":1,"type":"distinction","topic_left":"сознание","topic_right":"самосознание","lang":"ru","user_text":"В чём разница между сознанием и самосознанием?"}
+{"task_id":"dist-ru-03","turn":2,"type":"challenge","topic_left":"сознание","topic_right":"самосознание","lang":"ru","user_text":"Разве самосознание — не просто более сложное сознание? В чём именно различие?"}
+{"task_id":"dist-ru-04","turn":1,"type":"distinction","topic_left":"память","topic_right":"воспоминание","lang":"ru","user_text":"В чём разница между памятью и воспоминанием?"}
+{"task_id":"dist-ru-04","turn":2,"type":"challenge","topic_left":"память","topic_right":"воспоминание","lang":"ru","user_text":"Ты не уточнил: воспоминание — это просто акт памяти? Это одно и то же."}
+{"task_id":"dist-ru-05","turn":1,"type":"distinction","topic_left":"свобода","topic_right":"ответственность","lang":"ru","user_text":"В чём разница между свободой и ответственностью?"}
+{"task_id":"dist-ru-05","turn":2,"type":"challenge","topic_left":"свобода","topic_right":"ответственность","lang":"ru","user_text":"Разве ответственность не ограничивает свободу? Как они могут быть разными?"}

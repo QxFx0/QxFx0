@@ -1,0 +1,33 @@
+{
+  "control_id": "Control-A",
+  "description": "Structure-ablated, fluency-matched control. The same system with commitment continuity, Essence, repair-under-challenge, and constitution-admission disabled. Surface engine unchanged — fluency is preserved, subject-structure is removed.",
+  "disabled_features": [
+    {
+      "feature": "essence_commitment",
+      "mechanism": "shouldCommit always returns Nothing; no EssenceCommitted state reached",
+      "env_var": "QXFX0_CONTROL_A_DISABLE_ESSENCE=1"
+    },
+    {
+      "feature": "commitment_admission",
+      "mechanism": "CTS-42 admission bypassed: all claims admitted as canonical (CsaAdmitAll, no quarantine)",
+      "env_var": "QXFX0_CONTROL_A_DISABLE_ADMISSION=1"
+    },
+    {
+      "feature": "repair_routing",
+      "mechanism": "Challenge/ConfrontQ/MisunderstandingReport routed to generic response, not repair path",
+      "env_var": "QXFX0_CONTROL_A_DISABLE_REPAIR=1"
+    },
+    {
+      "feature": "semantic_content_layer",
+      "mechanism": "Semantic.Content predicates not appended to surface (covered topics get template-only output)",
+      "env_var": "QXFX0_CONTROL_A_DISABLE_CONTENT=1"
+    }
+  ],
+  "preserved_features": [
+    "GF linearization (surface engine unchanged)",
+    "Morphology resolver (fluency preserved)",
+    "Turn pipeline structure (Prepare → Route → Render → Finalize)",
+    "Trace fields (for admissibility verification)"
+  ],
+  "fluency_matching_rationale": "Control-A uses the identical surface engine as System. The only difference is the removal of subject-structure (Essence, admission, repair, content predicates). This isolates whether subject-structure produces a perceptible difference, holding fluency constant."
+}
