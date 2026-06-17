@@ -311,6 +311,7 @@ library
     QxFx0.Types.PropositionAffectiveSupportProbeAdmission
     QxFx0.Types.PropositionAffectiveSupportPhraseAdmission
     QxFx0.Legal.Adapter
+    QxFx0.Resources.Morphology
   other-modules:
     Paths_qxfx0
     QxFx0.Lexicon.PGFStatus
@@ -366,7 +367,6 @@ library
     QxFx0.Bridge.SQLite.Bootstrap
     QxFx0.Bridge.SQLite.Queries
     QxFx0.Resources.Paths
-    QxFx0.Resources.Morphology
     QxFx0.Resources.Readiness
     QxFx0.Runtime.Gate
     QxFx0.Runtime.Mode
