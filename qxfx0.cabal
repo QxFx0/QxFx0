@@ -267,8 +267,9 @@ library
      QxFx0.Semantic.Proposition.Semantic
      QxFx0.Semantic.Proposition.Detection
      QxFx0.Semantic.Proposition.Detectors
-     QxFx0.Semantic.Proposition.Parse
-     QxFx0.Semantic.Sense
+      QxFx0.Semantic.Proposition.Parse
+      QxFx0.Semantic.Content
+      QxFx0.Semantic.Sense
      QxFx0.Semantic.Sense.Extract
      QxFx0.Semantic.Sense.Adjacency
      QxFx0.Semantic.SemanticScene
@@ -523,6 +524,7 @@ common test-common
     Test.Suite.TraceSchema
     Test.Suite.RegenerableDerived
     Test.Suite.PromotionFlagDiscipline
+    Test.Suite.SemanticContentB3
     Test.Suite.ReplayGate
     Test.Suite.ReplayDeterminism
     Test.Suite.AdmissionEquivalence

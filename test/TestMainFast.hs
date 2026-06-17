@@ -47,11 +47,12 @@ import Test.Suite.AffectModel (affectModelTests)
 import Test.Suite.ContentSalience (contentSalienceTests)
 import Test.Suite.DerivedInference (derivedInferenceTests)
 import Test.Suite.GFParityHarness (gfParityHarnessTests)
+import Test.Suite.SemanticContentB3 (semanticContentB3Tests)
 import Test.Suite.RoundTrip (roundTripTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests ++ [roundTripTests])
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests ++ semanticContentB3Tests ++ [roundTripTests])
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
