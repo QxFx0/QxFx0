@@ -11,16 +11,17 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `B3 — semantic-core MVS gate (design only)`
-- `current_state`: SLICE-012 closed (governed evidence admissibility implemented + pushed). Next front is B3 design — content-quality gate docs, no runtime code. M6-FELT remains NOT PROVEN.
+- `front_id`: `B2 — human-eval protocol (design only) + M4 semantic-core deepening (future implementation)`
+- `current_state`: B3 finalized (`b7e4ec3`); B2 design doc written. Both are docs/design only. M6-FELT remains NOT PROVEN. Next implementation front is M4 (semantic-core deepening to pass B3 gates); B2 cannot run until B3 gates mechanically pass.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-012_PLAN.md` (closed), `docs/closure/ENV_CONTRACT.md`, `audit-objective-2026-06-17.md`
+- `evidence_or_result_ref`: `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`, `docs/closure/B2_HUMAN_EVAL_PROTOCOL.md`, `audit-objective-2026-06-17.md`
 
 ## Immediate next action
 
-- B3 design: define content-quality pass/fail gates for definition, distinction/comparison, repair under challenge, commitment accountability, non-fallback semantic engagement.
-- B3 is docs/design only: no runtime code, no tests, no claim upgrade.
-- B2 (human-eval) goes after B3 — B2 must evaluate an already-defined semantic-core floor.
+- B2 design is complete (docs only). No runtime/code/tests.
+- M4 semantic-core deepening is the next implementation front — make the system pass B3 Gates 1-5 under governed-evidence conditions.
+- B2 human-eval cannot run until B3 gates mechanically pass (B2 §4 hard guard).
+- M6-FELT remains NOT PROVEN.
 
 ## Completed this session (2026-06-17, second pass)
 
