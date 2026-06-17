@@ -11,18 +11,24 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `SLICE-014 — runtime persistence residuals (40/45/50/51)`
-- `current_state`: SLICE-013 landed on `main` via `1cc5752`. state 36/36 ✅, runtime 93/93 tried (4 pre-existing deferred: 40/45/50/51), unit 1216/1217 with 1 pre-existing GF-compile failure. CRLF mismatch in runtime schema fixture fixed post-merge. SLICE-014 opened for triage of the 4 deferred failures.
+- `front_id`: `SLICE-015 — runtime summary observability gaps (50/51)`
+- `current_state`: SLICE-014 closed. 40/45 fixed; 50/51 remain as documented feature gaps. `runtime` group now 93/93 tried with only 50/51 failures. SLICE-015 opened for observability/summary enrichment work.
 - `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-014_PLAN.md`, `docs/closure/SLICE-013_PLAN.md`, gate logs `/home/liskil/slice013-merge-*.log`
+- `evidence_or_result_ref`: `docs/closure/SLICE-015_PLAN.md`, `docs/closure/SLICE-014_PLAN.md`, gate log `/home/liskil/slice014-fix-runtime.log`
 
 ## Immediate next action
 
-1. Classify each of the 4 deferred failures as code regression vs known non-regression.
-2. For regressions: identify a minimal fix that does not violate the SLICE-013 policy.
-3. For non-regressions: decide whether to implement missing summary fields or defer.
+1. Decide whether to implement `stateSummaryLines` fields for cases 50/51 or keep deferred.
+2. If implemented, add the summary fields without touching core persistence contracts.
+3. Re-run `runtime` gate and confirm 50/51 pass.
 
 ## Completed this session (2026-06-17)
+
+- **SLICE-014 runtime persistence residuals** — closed.
+  - 40: switched `testBootstrapSessionCorruptStateFailsClosed` to `withStrictRuntimeEnv`; strict corrupt-state bootstrap now fails closed as expected.
+  - 45: `Commit.hs` now emits `PERSISTENCE_CONFLICT` for `PdStateRevisionConflict`, restoring the stale-writer CAS contract.
+  - 50/51: classified as documented feature gaps and moved to SLICE-015.
+  - Result: `runtime` 93/93 tried with only 50/51 failures; `unit` unchanged at 1216/1217 with 1 pre-existing GF failure.
 
 - **SLICE-013 truth-contract persistence/load policy (Option 1)** — landed on `main` via merge commit `1cc5752`.
   - Reconciled local `main` to `origin/main`, resolved `.gitattributes` merge conflict, and merged `slice-013-truthcontract-fix`.
