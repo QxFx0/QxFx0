@@ -2,14 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Space
-  ( PredicateVector(..)
-  , FieldDimension(..)
-  , DimensionPrototype(..)
-  , SemanticSpace(..)
-  , emptySemanticSpace
+  ( module QxFx0.Semantic.Space.Types
   , buildPredicateVector
   , computeFieldAffinity
-  , fieldDimensionPrototypes
   ) where
 
 import Data.Map.Strict (Map)
@@ -19,53 +14,9 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
-import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Network (SemanticNetwork(..))
-
-data PredicateVector = PredicateVector
-  { pvPredicateId :: !Text
-  , pvAtoms       :: !(Set Text)
-  , pvVector      :: !(Vector Double)
-  } deriving (Eq, Show, Generic)
-
-data FieldDimension
-  = FdResonance
-  | FdAtmosphere
-  | FdConfidence
-  | FdConsolidation
-  | FdCounterfactual
-  deriving (Eq, Ord, Show, Generic, Enum, Bounded)
-
-data DimensionPrototype = DimensionPrototype
-  { dpDimension :: !FieldDimension
-  , dpAtoms     :: !(Set Text)
-  , dpVector    :: !(Vector Double)
-  } deriving (Eq, Show, Generic)
-
-data SemanticSpace = SemanticSpace
-  { ssDimensionCount   :: !Int
-  , ssAtomIndex        :: !(Map Text Int)
-  , ssPrototypes       :: !(Map FieldDimension DimensionPrototype)
-  , ssPredicateVectors :: !(Map Text PredicateVector)
-  } deriving (Eq, Show, Generic)
-
-emptySemanticSpace :: SemanticSpace
-emptySemanticSpace = SemanticSpace
-  { ssDimensionCount = 0
-  , ssAtomIndex = M.empty
-  , ssPrototypes = M.empty
-  , ssPredicateVectors = M.empty
-  }
-
-fieldDimensionPrototypes :: Map FieldDimension [Text]
-fieldDimensionPrototypes = M.fromList
-  [ (FdResonance, ["связь", "отношение", "контекст", "система"])
-  , (FdAtmosphere, ["эффект", "свойство", "аналогия", "выражение"])
-  , (FdConfidence, ["количество", "единица", "открыватель", "факт"])
-  , (FdConsolidation, ["субъект", "предикат", "причина", "нарратив"])
-  , (FdCounterfactual, ["условие", "масштаб", "аналогия", "альтернатива"])
-  ]
+import QxFx0.Semantic.Space.Types
 
 buildPredicateVector :: SemanticNetwork -> Text -> Set Text -> PredicateVector
 buildPredicateVector sn predicateId atoms =
@@ -89,3 +40,4 @@ computeFieldAffinity space dim pv =
       in if normPV == 0 || normProto == 0
          then 0.5
          else dotProduct / (normPV * normProto)
+

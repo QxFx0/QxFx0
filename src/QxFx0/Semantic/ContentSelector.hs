@@ -1,12 +1,9 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.ContentSelector
-  ( ContentSelector(..)
-  , SelectedPredicate(..)
-  , emptyContentSelector
-  , selectPredicates
+  ( module QxFx0.Semantic.ContentSelector.Types
   , buildContentSelector
+  , selectPredicates
   ) where
 
 import Data.Map.Strict (Map)
@@ -16,27 +13,10 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as V
-import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Space
+import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
-
-data ContentSelector = ContentSelector
-  { csSpace       :: !SemanticSpace
-  , csTopicAtoms  :: !(Map Text (Set Text))
-  } deriving (Eq, Show, Generic)
-
-data SelectedPredicate = SelectedPredicate
-  { spPredicateId :: !Text
-  , spScore       :: !Double
-  , spAtoms       :: !(Set Text)
-  } deriving (Eq, Show, Generic)
-
-emptyContentSelector :: ContentSelector
-emptyContentSelector = ContentSelector
-  { csSpace = emptySemanticSpace
-  , csTopicAtoms = M.empty
-  }
 
 buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> ContentSelector
 buildContentSelector = ContentSelector

@@ -175,6 +175,9 @@ import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicIndex, emptyIndex)
 import qualified Data.HashSet as HS
 import qualified Data.Sequence as Seq
 import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
+import QxFx0.Semantic.Network.Types (SemanticNetwork, emptySemanticNetwork)
+import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
+import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -285,6 +288,18 @@ data SystemState = SystemState
     --   math version and feature flags are in effect, making governance
     --   machine-visible. Initialised to 'defaultRuntimeRegime' on
     --   bootstrap; updated when a promotion ADR is executed.
+  , ssSemanticNetwork :: !SemanticNetwork
+    -- ^ Phase 1: semantic network built from MeaningGraph edges.
+    --   Used for spreading activation and content density gating.
+    --   Initialised to 'emptySemanticNetwork'.
+  , ssSemanticSpace :: !SemanticSpace
+    -- ^ Phase 1: vector space for predicate affinity computation.
+    --   Built from semantic network nodes. Used by ContentSelector.
+    --   Initialised to 'emptySemanticSpace'.
+  , ssContentSelector :: !ContentSelector
+    -- ^ Phase 1: selects predicates based on Field state and topic.
+    --   Replaces direct definitionCorpus lookup in rendering.
+    --   Initialised to 'emptyContentSelector'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -347,11 +362,14 @@ instance ToJSON SystemState where
           , "semanticCommitments" .= ssSemanticCommitments ss
            , "metacognition" .= ssMetacognition ss
            , "episodic" .= ssEpisodic ss
-           , "userModel" .= ssUserModel ss
-           , "mood" .= ssMood ss
-           , "currentRegime" .= ssCurrentRegime ss
-           , "runtimeParadigms" .= ssRuntimeParadigms ss
-           ]
+            , "userModel" .= ssUserModel ss
+            , "mood" .= ssMood ss
+            , "currentRegime" .= ssCurrentRegime ss
+            , "runtimeParadigms" .= ssRuntimeParadigms ss
+            , "semanticNetwork" .= ssSemanticNetwork ss
+            , "semanticSpace" .= ssSemanticSpace ss
+            , "contentSelector" .= ssContentSelector ss
+            ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -463,6 +481,9 @@ instance FromJSON SystemState where
             <*> o .:? "userModel" .!= initialBeliefs
             <*> o .:? "mood" .!= 0.0
             <*> o .:? "currentRegime" .!= defaultRuntimeRegime
+            <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
+            <*> o .:? "semanticSpace" .!= emptySemanticSpace
+            <*> o .:? "contentSelector" .!= emptyContentSelector
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -647,6 +668,9 @@ emptySystemState = SystemState
   , ssUserModel = initialBeliefs
   , ssMood = 0.0
   , ssCurrentRegime = defaultRuntimeRegime
+  , ssSemanticNetwork = emptySemanticNetwork
+  , ssSemanticSpace = emptySemanticSpace
+  , ssContentSelector = emptyContentSelector
   }
 
 emptyGovernanceProjection :: GovernanceProjection

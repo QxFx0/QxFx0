@@ -1,10 +1,7 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Network
-  ( SemanticEdge(..)
-  , SemanticNetwork(..)
-  , emptySemanticNetwork
+  ( module QxFx0.Semantic.Network.Types
   , buildSemanticNetwork
   , activate
   , getActivatedAtoms
@@ -16,32 +13,8 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
-import GHC.Generics (Generic)
 import QxFx0.Core.MeaningGraph (MeaningGraph(..), MeaningEdge(..))
-
-data SemanticEdge = SemanticEdge
-  { seFrom         :: !Text
-  , seTo           :: !Text
-  , seWeight       :: !Double
-  , seCoOccurrence :: !Int
-  } deriving (Eq, Show, Generic)
-
-data SemanticNetwork = SemanticNetwork
-  { snNodes      :: !(Set Text)
-  , snEdges      :: !(Map (Text, Text) SemanticEdge)
-  , snActivation :: !(Map Text Double)
-  , snDecayRate  :: !Double
-  , snMaxHops    :: !Int
-  } deriving (Eq, Show, Generic)
-
-emptySemanticNetwork :: SemanticNetwork
-emptySemanticNetwork = SemanticNetwork
-  { snNodes = S.empty
-  , snEdges = M.empty
-  , snActivation = M.empty
-  , snDecayRate = 0.5
-  , snMaxHops = 3
-  }
+import QxFx0.Semantic.Network.Types
 
 buildSemanticNetwork :: MeaningGraph -> SemanticNetwork
 buildSemanticNetwork mg =
