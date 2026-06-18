@@ -489,7 +489,9 @@ comparisonCandidates :: Text -> [Text]
 comparisonCandidates rawText =
   case splitByEither normalized of
     pair@(_:_:_) -> take 2 pair
-    _ -> splitByFrom normalized
+    _ -> case splitByBetween normalized of
+      pair@(_:_:_) -> take 2 pair
+      _ -> splitByFrom normalized
   where
     normalized = T.unwords (T.words (T.toLower (T.replace "\n" " " rawText)))
     splitByEither txt =
@@ -501,6 +503,22 @@ comparisonCandidates rawText =
                   leftCandidate = cleanCandidate left
                   rightCandidate = cleanCandidate (trimAtQuestion right)
               in filter (not . T.null) [leftCandidate, rightCandidate]
+    -- Handle "между X и Y" — the most common Russian distinction pattern.
+    -- Also handles "разница между X и Y" and "различие между X и Y".
+    splitByBetween txt =
+      case T.breakOn "между " txt of
+        (_, afterMezhdu)
+          | T.null afterMezhdu -> []
+          | otherwise ->
+              let rest = T.drop 6 afterMezhdu  -- drop "между "
+              in case T.breakOn " и " rest of
+                   (left, rightRaw)
+                     | T.null rightRaw -> []
+                     | otherwise ->
+                         let right = T.drop 3 rightRaw  -- drop " и "
+                             leftCandidate = cleanCandidate left
+                             rightCandidate = cleanCandidate (trimAtQuestion right)
+                         in filter (not . T.null) [leftCandidate, rightCandidate]
     splitByFrom txt =
       case T.breakOn " от " txt of
         (left, rightRaw)

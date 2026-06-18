@@ -90,7 +90,6 @@ import Control.Concurrent.Async (forConcurrently)
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import Data.Maybe (fromMaybe)
-import Text.Read (readMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
@@ -224,11 +223,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
               else forceFinalized
           Nothing -> forceFinalized
       renderWithContext = finalRender
-      narrativeFragment = maybe "" id (tsNarrativeFragment ts)
-      narrativeEnriched =
-        if structuredSurface || T.null narrativeFragment
-          then renderWithContext
-          else renderWithContext <> "\n" <> T.take 40 narrativeFragment
+      narrativeEnriched = renderWithContext
       surfacingFragment =
         case structuredSurface of
           True -> ""
@@ -361,10 +356,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
               if not (not structuredSurface && tpFinalFamily tp == CMAnchor)
                 then ""
                 else maybe "" renderAnchorPrefix semanticAnchor
-          , rsNarrativeFragmentText =
-              if structuredSurface
-                then ""
-                else narrativeFragment
+          , rsNarrativeFragmentText = ""
           , rsSurfacingFragmentText = surfacingFragment
           }
       , repTurnInput = ti
@@ -871,125 +863,73 @@ selectLearningRecoveryStrategy NeedKeywordEnrichment   = StrategyRequestConcept
 selectLearningRecoveryStrategy NeedLexiconExtension    = StrategyRequestConcept
 selectLearningRecoveryStrategy NeedNone                = StrategySafeRecovery
 
--- | Parse Conatus gradient components (m, c, t) from recovery evidence.
--- Graceful fallback: returns Nothing for missing or unparsable markers.
-parseGradient :: [Text] -> Maybe (Double, Double, Double)
-parseGradient evidence =
-  let findMarker prefix =
-        case T.stripPrefix prefix =<< L.find (T.isPrefixOf prefix) evidence of
-          Nothing    -> Nothing
-          Just rest  -> readMaybe (T.unpack (T.takeWhile (/= ' ') rest))
-      m = findMarker "conatus_gradient_m="
-      c = findMarker "conatus_gradient_c="
-      t = findMarker "conatus_gradient_t="
-  in case (m, c, t) of
-       (Just m', Just c', Just t') -> Just (m', c', t')
-       _                           -> Nothing
-
-renderGradientFragment :: Maybe (Double, Double, Double) -> Text
-renderGradientFragment Nothing           = ""
-renderGradientFragment (Just (m, c, t)) =
-  T.concat [ "gradient(m=" , T.pack (show m)
-           , ", c=" , T.pack (show c)
-           , ", t=" , T.pack (show t) , ")"
-           ]
-
 renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> [Text] -> Text
-renderLocalRecoverySurface gfLang cause strategy topic evidence =
-  let baseSurface =
-        if gfLangTelemetryTag gfLang == "en"
-          then renderLocalRecoverySurfaceEn cause strategy topic
-          else renderLocalRecoverySurfaceRu strategy topic
-      gradientFrag = renderGradientFragment (parseGradient evidence)
-  in if T.null gradientFrag
-       then baseSurface
-       else baseSurface <> "\n[" <> gradientFrag <> "]"
+renderLocalRecoverySurface gfLang cause strategy topic _evidence =
+  if gfLangTelemetryTag gfLang == "en"
+    then renderLocalRecoverySurfaceEn cause strategy topic
+    else renderLocalRecoverySurfaceRu strategy topic
 
 renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceRu strategy topic =
   let topicText = if T.null topic then "этот вопрос" else topic
-      header = case strategy of
-        StrategyAskClarification -> "Локальный режим восстановления. Режим advisory."
-        StrategyDistinguishCandidates -> "Локальный режим восстановления. Режим advisory."
-        StrategyExposeUncertainty -> "Локальный режим восстановления. Режим advisory."
-        StrategyDefineKnownTerms -> "Локальный режим восстановления. Режим fallback."
-        StrategyNarrowScope -> "Локальный режим восстановления. Режим degraded."
-        StrategySafeRecovery -> "Локальный режим восстановления. Режим degraded recovery."
-        StrategyMorphologyExpansion -> "Локальный режим восстановления. Режим degraded recovery."
-        StrategyIdentityReinforcement -> "Локальный режим восстановления. Режим degraded recovery."
-        StrategyTemporalDeepening -> "Локальный режим восстановления. Режим degraded recovery."
-        StrategyRequestCalibration -> "Локальный режим восстановления. Режим fallback."
-        StrategyRequestRule -> "Локальный режим восстановления. Режим fallback."
-        StrategyRequestConcept -> "Локальный режим восстановления. Режим fallback."
-        StrategyExternalDialogue -> "Локальный режим восстановления. Режим fallback."
    in case strategy of
         StrategyAskClarification ->
-          header <> " Уточни, тебе нужно определение, различение или пример по теме: " <> topicText <> "?"
+          "Уточни, тебе нужно определение, различение или пример по теме: " <> topicText <> "?"
         StrategyNarrowScope ->
-          header <> " Я сужаю ответ до устойчивой части и не буду достраивать непроверенные выводы."
+          "Я удержу только устойчивую часть ответа и не буду достраивать непроверенные выводы."
         StrategyDefineKnownTerms ->
-          header <> " Я могу опереться только на известные локальные термины; для нового термина нужна рамка употребления: " <> topicText <> "."
+          "Чтобы ответ был точнее, нужна рамка употребления для темы: " <> topicText <> "."
         StrategyDistinguishCandidates ->
-          header <> " Я различу возможные чтения и отмечу, где локальных данных недостаточно."
+          "Я разделю возможные чтения и отмечу, где данных недостаточно."
         StrategyExposeUncertainty ->
-          header <> " Уверенность снижена; продолжу с явной пометкой неопределенности вместо внешней догадки."
+          "Уверенность здесь ограничена, поэтому отвечу осторожно и не буду подменять недостающие основания догадкой."
         StrategySafeRecovery ->
-          header <> " Ответ переведен в безопасную форму восстановления хода."
+          "Остановлю расширение ответа и вернусь к проверяемой части хода."
         StrategyMorphologyExpansion ->
-          header <> " Расширяю морфологический субстрат для восстановления структурной целостности."
+          "Сначала уточню форму ключевых слов, чтобы не потерять смысловую связь."
         StrategyIdentityReinforcement ->
-          header <> " Укрепляю идентичностные утверждения для восстановления структурной когерентности."
+          "Удержу устойчивую рамку ответа и отделю её от непроверенных утверждений о себе."
         StrategyTemporalDeepening ->
-          header <> " Углубляю темпоральную непрерывность для восстановления структурной устойчивости."
+          "Свяжу этот ход с предыдущим контекстом, чтобы не отвечать как на изолированную фразу."
         StrategyRequestCalibration ->
-          header <> " Запрашиваю внешнюю калибровку весов для устранения систематического смещения."
+          "Для точной калибровки здесь не хватает внешнего критерия; пока зафиксирую осторожную рабочую версию."
         StrategyRequestRule ->
-          header <> " Запрашиваю внешнее правило маршрутизации для восполнения локального пробела."
+          "Для уверенного выбора хода не хватает правила различения; зафиксирую ближайшую безопасную рамку."
         StrategyRequestConcept ->
-          header <> " Запрашиваю внешнее понятие или ключевое слово для расширения локальной онтологии."
+          "Для темы " <> topicText <> " не хватает понятия или ключевого признака; сначала задам рабочую границу смысла."
         StrategyExternalDialogue ->
-          header <> " Инициирую внешний диалог для автономного исследования: " <> topicText <> "."
+          "Эту тему лучше разворачивать через отдельное исследование; сейчас удержу исходный вопрос: " <> topicText <> "."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurfaceEn cause strategy topic =
+renderLocalRecoverySurfaceEn _cause strategy topic =
   let topicText = if T.null topic then "this question" else topic
-      header = case cause of
-        RecoveryConatusGate -> "Degraded recovery mode."
-        RecoveryRuntimeDegraded -> "Degraded mode."
-        RecoveryRenderBlocked -> "Degraded recovery mode."
-        RecoveryShadowUnavailable -> "Advisory mode."
-        RecoveryShadowDivergence -> "Advisory mode."
-        RecoveryParserLowConfidence -> "Advisory mode."
-        RecoveryLowLegitimacy -> "Advisory mode."
-        RecoveryUnknownTopic -> "Fallback mode."
-        RecoveryLearningNeed -> "Fallback mode."
    in case strategy of
         StrategyAskClarification ->
-          header <> " Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."
+          "Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."
         StrategyNarrowScope ->
-          header <> " I will keep the answer within stable local evidence and avoid speculative completion."
+          "I will keep the answer within stable evidence and avoid speculative completion."
         StrategyDefineKnownTerms ->
-          header <> " I can rely only on known local terms; for a new term, provide usage context: " <> topicText <> "."
+          "To answer precisely, I need usage context for: " <> topicText <> "."
         StrategyDistinguishCandidates ->
-          header <> " I will separate candidate readings and mark where local evidence is insufficient."
+          "I will separate candidate readings and mark where the evidence is insufficient."
         StrategyExposeUncertainty ->
-          header <> " Confidence is reduced; I will proceed with explicit uncertainty instead of external guessing."
+          "Confidence is limited here, so I will answer cautiously instead of filling gaps with guesses."
         StrategySafeRecovery ->
-          header <> " The response was switched to a safe recovery form."
+          "I will stop expanding the answer and return to the verifiable part of the turn."
         StrategyMorphologyExpansion ->
-          header <> " Expanding morphological substrate to restore structural integrity."
+          "I will first clarify the form of the key terms so the meaning stays connected."
         StrategyIdentityReinforcement ->
-          header <> " Reinforcing identity claims to restore structural coherence."
+          "I will keep the answer within a stable self-description and avoid unchecked claims."
         StrategyTemporalDeepening ->
-          header <> " Deepening temporal continuity to restore structural persistence."
+          "I will connect this turn to the previous context instead of treating it as isolated."
         StrategyRequestCalibration ->
-          header <> " Requesting external calibration data to correct systematic salience bias."
+          "A precise calibration would need an external criterion; for now I will state a cautious working version."
         StrategyRequestRule ->
-          header <> " Requesting external routing rule to cover a local deliberation gap."
+          "A confident next move needs a clearer rule of distinction; I will keep the safest local frame."
         StrategyRequestConcept ->
-          header <> " Requesting external concept or keyword to extend local ontology."
+          "The topic " <> topicText <> " needs a clearer concept or key feature; I will start by setting a working boundary."
         StrategyExternalDialogue ->
-          header <> " Initiating external dialogue for autonomous exploration: " <> topicText <> "."
+          "This topic is better developed through a separate inquiry; I will keep the current question in view: " <> topicText <> "."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =

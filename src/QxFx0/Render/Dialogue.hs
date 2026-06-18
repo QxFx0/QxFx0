@@ -341,6 +341,7 @@ structuredDialogueType propositionType =
     , SelfStateQ
     , ComparisonPlausibilityQ
     , DistinctionQ
+    , ConfrontQ
     , MisunderstandingReport
     , GenerativePrompt
     , ContemplativeTopic
@@ -617,6 +618,26 @@ structuredBody propositionType frame rmp renderStyle morph rp =
                          <> " Давай уточним, где именно ответ разошёлся с твоим запросом: в смысле, тоне или ходе рассуждения."
                          <> acknowledgePrior
           claim = linFn "misunderstanding" ast renderStyle morph rp fallback
+      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
+    ConfrontQ ->
+      let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
+          mContent = lookupDefinitionContent topicRef
+          acknowledgePrior = case mContent of
+            Just dc ->
+              if isEn
+                then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                   <> ". You challenge this — let me respond."
+                else " Я полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                   <> ". Ты оспариваешь это — отвечу."
+            Nothing -> ""
+          ast = claimAstOrFallback (MoveConfront (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "тема")))) (rmpPrimaryClaimAst rmp)
+          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
+          fallback = if isEn
+                       then "I hear your objection. " <> acknowledgePrior
+                         <> " Let me clarify my position: the claim I made is based on a working frame, not an absolute. If your counter-argument holds within that frame, I will revise."
+                       else "Я слышу твоё возражение. " <> acknowledgePrior
+                         <> " Уточню свою позицию: мой тезис опирается на рабочую рамку, а не на абсолют. Если твой контраргумент действует в этой рамке, я пересмотрю."
+          claim = linFn "confront" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
       let ast = claimAstOrFallback MoveGenerativeThought (rmpPrimaryClaimAst rmp)
