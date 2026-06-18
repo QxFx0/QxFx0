@@ -77,7 +77,7 @@ import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, int
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
-import QxFx0.Semantic.Content (isCoveredTopic, lookupDefinitionContent)
+import QxFx0.Semantic.Content (isCoveredTopic, lookupDefinitionContent, lookupDistinctionContent)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
 import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
@@ -98,7 +98,7 @@ import Data.Char (isAlpha, isSpace)
 import Control.Concurrent.Async (forConcurrently)
 import qualified Data.Foldable as F
 import qualified Data.List as L
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
@@ -212,9 +212,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           _ -> Nothing
       -- WP2: GF-first rendering. Assembly path is primary for all dialogue branches.
       -- Template fallback is only used when assembly produces empty text (no PGF/runtime).
-      -- M4-SEMANTIC-CORE-003 Phase B: semantic-first path before assembly.
-      -- When the feature-based classifier produces a non-unknown intent,
-      -- build a frame and generate text compositionally. Old paths remain as fallback.
+      -- M4-SEMANTIC-CORE-003 Phase C: semantic-first path is now PRIMARY
+      -- for ALL input (not just covered topics). isCoveredTopic gate removed.
+      -- Old assembly/template paths remain as fallback when semantic-first
+      -- does not produce text or when morphology is not ready (test fixtures).
       semanticInput = input
       semanticTokens = map T.toLower (T.words (T.strip input))
       semanticMorph = ssMorphology ss
@@ -224,16 +225,23 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticNonUnknown = case semanticIntent of
         IntentUnknown _ -> False
         _               -> True
-      -- M4-SEMANTIC-CORE-003 Phase B: only use semantic-first path for
-      -- covered topics where Semantic.Content predicates are available.
-      -- This prevents regression on uncovered topics while still closing
-      -- the B3 Gate 5 gap for the seed corpus.
-      semanticTopicCovered = isCoveredTopic bestTopic
+      -- M4-SEMANTIC-CORE-003 Phase C: content source classification for trace
+      semanticContentSource =
+        let isCovered = isCoveredTopic bestTopic
+            hasExactDef = isJust (lookupDefinitionContent bestTopic)
+            hasExactDist = case semanticIntent of
+              IntentDistinguish l r -> isJust (lookupDistinctionContent l r)
+              _ -> False
+        in if hasExactDef || hasExactDist
+           then "covered_exact"
+           else if isCovered
+                then "covered_generic"
+                else "uncovered_generic"
       -- Only fire semantic-first when morphology has real data (not test fixture).
       -- This prevents regression in tests that use minimal MorphologyData.
       semanticMorphReady = not (Data.Map.null (mdNominative semanticMorph))
       viaSemantic
-        | semanticNonUnknown && semanticTopicCovered && semanticMorphReady && not (T.null semanticText) =
+        | semanticNonUnknown && semanticMorphReady && not (T.null semanticText) =
             Just mkSemanticArtifact
         | otherwise = Nothing
       mkSemanticArtifact = DialogueRenderArtifact
@@ -252,6 +260,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             [ "surface=semantic_intent"
             , "intent=" <> T.pack (show semanticIntent)
             , "frame=" <> frameTypeText semanticFrame
+            , "content_source=" <> semanticContentSource
             ]
         , draDialogAtoms = emptyDialogAtoms
         , draGenerationTrace =

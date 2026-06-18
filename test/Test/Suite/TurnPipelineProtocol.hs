@@ -3978,7 +3978,9 @@ mkSystemStateWithNeedForExploration topic need =
   in emptySystemState
     { ssDialogue = dialogue { dsLastTopic = topic }
     , ssSessionId = "test-session"
-    , ssMorphology = MorphologyData Map.empty Map.empty (Map.singleton "a" "b") Map.empty
+    -- Phase C: empty mdNominative prevents semantic-first path from
+    -- intercepting the turn, preserving old learning pipeline behavior.
+    , ssMorphology = MorphologyData Map.empty Map.empty Map.empty Map.empty
     , ssLearningNeedState = emptyLearningNeedState
         { lnsCurrentNeed = need
         , lnsLevel = 0.5  -- below request threshold (0.6) so no request strategy

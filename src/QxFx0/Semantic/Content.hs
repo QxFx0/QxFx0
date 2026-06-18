@@ -52,12 +52,24 @@ module QxFx0.Semantic.Content
   , DefinitionContent(..)
   , DistinctionContent(..)
   , PredicateRole(..)
+  , ConceptCategory(..)
+  , ChallengeContent(..)
+  , GroundContent(..)
+  , PurposeContent(..)
     -- * Lookup
   , lookupDefinitionContent
   , lookupDistinctionContent
+  , lookupChallengeContent
+  , lookupGroundContent
+  , lookupPurposeContent
+  , lookupDefinitionWithGeneric
+  , lookupDistinctionWithGeneric
   , isCoveredTopic
   , isCoveredPair
   , coveredTopics
+  , classifyConceptCategory
+  , genericDefinitionPredicates
+  , genericDistinctionPredicates
     -- * B3 helpers
   , substantivePredicateCount
   , hasMinimumPredicates
@@ -276,3 +288,207 @@ substantivePredicateCount = length . dcPredicates
 -- substantive predicates).
 hasMinimumPredicates :: DefinitionContent -> Bool
 hasMinimumPredicates dc = substantivePredicateCount dc >= 2
+
+-- ============================================================================
+-- Phase C: Concept categories + generic predicates (C.1)
+-- ============================================================================
+
+-- | Category of a concept, used for category-typed generic predicates.
+-- Generic predicates are NOT universal templates — they differ by category,
+-- ensuring non-tautological content for uncovered topics.
+data ConceptCategory
+  = CategoryPhilosophical
+    -- ^ Abstract philosophical concepts (свобода, истина, сознание, etc.)
+  | CategorySocial
+    -- ^ Social/interpersonal concepts (ответственность, доверие, долг)
+  | CategoryPsychological
+    -- ^ Psychological/mental concepts (память, восприятие, эмоция)
+  | CategoryPhysical
+    -- ^ Physical/concrete concepts (тело, пространство, время)
+  | CategoryGeneral
+    -- ^ Fallback for unclassifiable topics
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Classify a topic into a concept category using deterministic rules.
+-- Based on lexical features, not statistics.
+classifyConceptCategory :: Text -> ConceptCategory
+classifyConceptCategory topic =
+  let t = normalizeTopic topic
+  in case () of
+    _ | any (`T.isInfixOf` t) philosophicalMarkers -> CategoryPhilosophical
+      | any (`T.isInfixOf` t) socialMarkers -> CategorySocial
+      | any (`T.isInfixOf` t) psychologicalMarkers -> CategoryPsychological
+      | any (`T.isInfixOf` t) physicalMarkers -> CategoryPhysical
+      | otherwise -> CategoryGeneral
+  where
+    philosophicalMarkers =
+      ["свобод", "истин", "смысл", "сознан", "бытие", "ничто", "вечн", "разум"
+      , "познан", "реальн", "иллюз", "пустот", "сущнос"]
+    socialMarkers =
+      ["ответств", "довер", "долг", "обяз", "справедлив", "право", "закон"
+      , "обществ", "нравств", "этик"]
+    psychologicalMarkers =
+      ["памят", "воспомин", "эмоц", "чувств", "восприят", "мышлен", "вниман"
+      , "воображ", "сон", "мечт"]
+    physicalMarkers =
+      ["тел", "пространств", "времен", "матер", "энерг", "свет", "звук", "движен"
+      , "природ"]
+
+-- | Category-typed generic definition predicates.
+-- These are NOT universal templates — each category gets different predicates
+-- that are non-tautological for concepts in that category.
+genericDefinitionPredicates :: Text -> [SemanticPredicate]
+genericDefinitionPredicates topic =
+  let cat = classifyConceptCategory topic
+  in case cat of
+    CategoryPhilosophical ->
+      [ SemanticPredicate RoleProperty
+          (topic <> " предполагает наличие внутренней структуры")
+          (topic <> " presupposes an internal structure")
+      , SemanticPredicate RoleRelation
+          (topic <> " связан с условиями возможности опыта")
+          (topic <> " is connected to conditions of possible experience")
+      ]
+    CategorySocial ->
+      [ SemanticPredicate RoleProperty
+          (topic <> " возникает во взаимодействии между субъектами")
+          (topic <> " arises in interaction between subjects")
+      , SemanticPredicate RoleRelation
+          (topic <> " ограничен нормами и ожиданиями сообщества")
+          (topic <> " is bounded by norms and expectations of community")
+      ]
+    CategoryPsychological ->
+      [ SemanticPredicate RoleProperty
+          (topic <> " формируется через опыт и воспоминание")
+          (topic <> " is formed through experience and recollection")
+      , SemanticPredicate RoleStructure
+          (topic <> " имеет субъективный характер и доступ от первого лица")
+          (topic <> " has subjective character and first-person access")
+      ]
+    CategoryPhysical ->
+      [ SemanticPredicate RoleProperty
+          (topic <> " обладает протяжённостью в пространстве или времени")
+          (topic <> " has extension in space or time")
+      , SemanticPredicate RoleRelation
+          (topic <> " подчиняется устойчивым закономерностям")
+          (topic <> " obeys stable regularities")
+      ]
+    CategoryGeneral ->
+      [ SemanticPredicate RoleProperty
+          (topic <> " проявляется через устойчивые связи в своём контексте")
+          (topic <> " manifests through stable connections in its context")
+      , SemanticPredicate RoleRelation
+          (topic <> " зависит от рамки, в которой рассматривается")
+          (topic <> " depends on the frame in which it is considered")
+      ]
+
+-- | Category-typed generic distinction predicates.
+genericDistinctionPredicates :: Text -> Text -> [SemanticPredicate]
+genericDistinctionPredicates left right =
+  let catL = classifyConceptCategory left
+      catR = classifyConceptCategory right
+  in case (catL, catR) of
+    (CategoryPhilosophical, CategoryPhilosophical) ->
+      [ SemanticPredicate RoleDifferentiator
+          (left <> " относится к сфере должного, " <> right <> " — к сфере сущего")
+          (left <> " belongs to the normative, " <> right <> " — to the descriptive")
+      ]
+    (CategorySocial, CategoryPhilosophical) ->
+      [ SemanticPredicate RoleDifferentiator
+          (left <> " регулирует взаимодействие, " <> right <> " описывает устройство мира")
+          (left <> " regulates interaction, " <> right <> " describes the structure of reality")
+      ]
+    (CategoryPsychological, CategoryPhysical) ->
+      [ SemanticPredicate RoleDifferentiator
+          (left <> " принадлежит внутреннему опыту, " <> right <> " — внешнему миру")
+          (left <> " belongs to inner experience, " <> right <> " — to the outer world")
+      ]
+    _ ->
+      [ SemanticPredicate RoleDifferentiator
+          (left <> " и " <> right <> " различаются по области применимости и набору устойчивых признаков")
+          (left <> " and " <> right <> " differ by scope of application and stable properties")
+      ]
+
+-- | Look up definition content, falling back to generic predicates for
+-- uncovered topics. Always returns content (never Nothing).
+lookupDefinitionWithGeneric :: Text -> DefinitionContent
+lookupDefinitionWithGeneric topic =
+  case lookupDefinitionContent topic of
+    Just dc -> dc
+    Nothing ->
+      let n = normalizeTopic topic
+      in DefinitionContent n (genericDefinitionPredicates n)
+
+-- | Look up distinction content, falling back to generic predicates.
+lookupDistinctionWithGeneric :: Text -> Text -> DistinctionContent
+lookupDistinctionWithGeneric left right =
+  case lookupDistinctionContent left right of
+    Just dc -> dc
+    Nothing ->
+      DistinctionContent (normalizeTopic left) (normalizeTopic right)
+        (genericDistinctionPredicates left right)
+
+-- ============================================================================
+-- Phase C: Content for additional frame types (C.3)
+-- ============================================================================
+
+-- | Content for challenge responses.
+data ChallengeContent = ChallengeContent
+  { ccTarget :: !Text
+  , ccBasis :: !Text
+  , ccStrength :: !Text
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Content for grounding responses.
+data GroundContent = GroundContent
+  { gcTopic :: !Text
+  , gcPredicates :: ![SemanticPredicate]
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Content for purpose responses.
+data PurposeContent = PurposeContent
+  { pcTopic :: !Text
+  , pcPredicates :: ![SemanticPredicate]
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Look up challenge content for a topic.
+lookupChallengeContent :: Text -> Maybe ChallengeContent
+lookupChallengeContent topic =
+  let n = normalizeTopic topic
+  in case lookupDefinitionContent n of
+    Just dc | not (null (dcPredicates dc)) ->
+      let firstPred = spRu (head (dcPredicates dc))
+      in Just ChallengeContent
+           { ccTarget = n
+           , ccBasis = "Моя позиция опиралась на: " <> firstPred
+           , ccStrength = "soft"
+           }
+    Nothing -> Nothing
+
+-- | Look up ground content for a topic.
+lookupGroundContent :: Text -> Maybe GroundContent
+lookupGroundContent topic =
+  let n = normalizeTopic topic
+  in case lookupDefinitionContent n of
+    Just dc -> Just GroundContent { gcTopic = n, gcPredicates = dcPredicates dc }
+    Nothing ->
+      let generics = genericDefinitionPredicates n
+      in if null generics
+         then Nothing
+         else Just GroundContent { gcTopic = n, gcPredicates = generics }
+
+-- | Look up purpose content for a topic.
+lookupPurposeContent :: Text -> Maybe PurposeContent
+lookupPurposeContent topic =
+  let n = normalizeTopic topic
+  in case lookupDefinitionContent n of
+    Just dc -> Just PurposeContent { pcTopic = n, pcPredicates = dcPredicates dc }
+    Nothing ->
+      let generics = genericDefinitionPredicates n
+      in if null generics
+         then Nothing
+         else Just PurposeContent { pcTopic = n, pcPredicates = generics }

@@ -392,6 +392,12 @@ data TurnReplayTrace = TurnReplayTrace
     --   @Just "definition"@
     --   when the compositional generator was invoked.
     --   @Nothing@ when template path was used (legacy).
+  , trcContentSource :: !(Maybe Text)
+    -- ^ M4-SEMANTIC-CORE-003 Phase C: content source classification.
+    --   @Just "covered_exact"@ — predicates from seed corpus.
+    --   @Just "covered_generic"@ — generic predicates for covered topics.
+    --   @Just "uncovered_generic"@ — generic predicates for uncovered topics.
+    --   @Nothing@ — old template path used.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

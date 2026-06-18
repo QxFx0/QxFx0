@@ -1071,6 +1071,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcEvidenceAdmissibility = EvidenceGoverned
     , trcIntentType = Nothing
     , trcFrameType = Nothing
+    , trcContentSource = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

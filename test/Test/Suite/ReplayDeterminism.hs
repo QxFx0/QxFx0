@@ -182,6 +182,7 @@ minimalReplayTrace apiHealthy =
     , trcEvidenceAdmissibility = EvidenceGoverned
     , trcIntentType = Nothing
     , trcFrameType = Nothing
+    , trcContentSource = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.

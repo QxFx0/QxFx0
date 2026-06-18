@@ -128,3 +128,11 @@
   - Library builds clean; test-suite recompile blocked by pre-existing
     GHC 9.6 `BlockArguments`/`do`-in-pattern issue in
     `RuntimeInfrastructure.hs:1476`
+
+  **M4-SEMANTIC-CORE-003 Phase C cutover (2026-06-18)**: semantic-first
+  path is now PRIMARY for ALL input. `isCoveredTopic` gate removed from
+  `Render.hs` — semantic-first fires for any non-unknown intent when
+  morphology is ready. Uncovered topics receive category-typed generic
+  predicates (not universal templates). Old assembly/template paths
+  remain as fallback. `trcContentSource` trace field records content
+  origin: `covered_exact`, `covered_generic`, `uncovered_generic`.

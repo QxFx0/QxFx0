@@ -370,6 +370,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcEvidenceAdmissibility = evidenceAdmissibility
           , trcIntentType = extractIntentTag (taDerivationTags ta)
           , trcFrameType = extractFrameTag (taDerivationTags ta)
+          , trcContentSource = extractContentSourceTag (taDerivationTags ta)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -542,4 +543,12 @@ extractFrameTag :: [Text] -> Maybe Text
 extractFrameTag tags =
   case filter (T.isPrefixOf "frame=") tags of
     (tag:_) -> Just (T.drop 6 tag)
+    []      -> Nothing
+
+-- | Extract content source from derivation tags (M4-SEMANTIC-CORE-003 Phase C).
+-- Tags are formatted as "content_source=covered_exact" etc.
+extractContentSourceTag :: [Text] -> Maybe Text
+extractContentSourceTag tags =
+  case filter (T.isPrefixOf "content_source=") tags of
+    (tag:_) -> Just (T.drop 15 tag)
     []      -> Nothing

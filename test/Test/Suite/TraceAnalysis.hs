@@ -193,6 +193,7 @@ minimalTrace = TurnReplayTrace
   , trcEvidenceAdmissibility = EvidenceGoverned
   , trcIntentType = Nothing
   , trcFrameType = Nothing
+    , trcContentSource = Nothing
   }
 
 testRecoveryNoTrigger :: Test
