@@ -11,6 +11,8 @@ module QxFx0.Core.TurnPipeline.Finalize.Precommit
 
 import Control.Concurrent.Async (forConcurrently)
 import Data.Sequence (Seq)
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import QxFx0.Observability.TraceAnalysis (analyzeTrace, logTraceAnomalies)
 
@@ -51,12 +53,14 @@ import qualified Data.Text as T
 import Control.Monad (when)
 import Control.Exception (throwIO)
 import QxFx0.Types
+import QxFx0.Types.Domain.Atoms (maText, asAtoms)
+import QxFx0.Core.TurnPipeline.Types (tiAtomSet)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
-planFinalizePrecommit systemState _turnInput _turnSignals turnPlan turnArtifacts =
+planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =
   let decision = taDecision turnArtifacts
       outcomeFamily = tdFamily decision
       outcomeVerdict = mkVerdict outcomeFamily
@@ -66,8 +70,11 @@ planFinalizePrecommit systemState _turnInput _turnSignals turnPlan turnArtifacts
           then ssConsecutiveReflect systemState + 1
           else 0
       transitionWon = etoTransitionWon executedOutcome
+      turnAtoms :: Set Text
+      turnAtoms = S.fromList $ map maText (asAtoms (tiAtomSet turnInput))
       meaningGraphBase =
         recordTransition
+          turnAtoms
           (tpFromMs turnPlan)
           (tpToMs turnPlan)
           (tpRenderStrategy turnPlan)
@@ -83,8 +90,8 @@ planFinalizePrecommit systemState _turnInput _turnSignals turnPlan turnArtifacts
           }
     in FinalizePrecommitPlan
         { fppStatic = static
-        , fppCapturedCurrentTime = tiStartTime _turnInput
-        , fppConatusEnergy = tiConatusEnergy _turnInput
+        , fppCapturedCurrentTime = tiStartTime turnInput
+        , fppConatusEnergy = tiConatusEnergy turnInput
         , fppIntrospectionRequest = FinalizeReqSemanticIntrospectionEnv
         }
 

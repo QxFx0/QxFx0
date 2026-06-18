@@ -32,6 +32,7 @@ import Data.Maybe (listToMaybe)
 
 import qualified Data.Vector as V
 import qualified Data.Text as T
+import qualified Data.Set as S
 
 import QxFx0.Types
 import QxFx0.Types.PropositionType (PropositionType(..), propositionTypeText)
@@ -1081,9 +1082,9 @@ testGeodesicRouterUsesDirectedBridge = TestCase $ do
       strategy = ResponseStrategy ShallowResp OpenStance ValidateMove DensityLow
       mg = MeaningGraph
         { mgEdges =
-            [ MeaningEdge "a" "b" stateNode stateNode strategy 1 1 0 Nothing
-            , MeaningEdge "b" "c" stateNode stateNode strategy 1 1 0 Nothing
-            , MeaningEdge "c" "b" stateNode stateNode strategy 1 1 0 Nothing
+            [ MeaningEdge "a" "b" stateNode stateNode strategy 1 1 0 Nothing S.empty
+            , MeaningEdge "b" "c" stateNode stateNode strategy 1 1 0 Nothing S.empty
+            , MeaningEdge "c" "b" stateNode stateNode strategy 1 1 0 Nothing S.empty
             ]
         , mgTurnCount = 0
         }
@@ -1342,7 +1343,7 @@ testMeaningGraphPredictsSuccessfulStrategy = TestCase $ do
   let fromState = MeaningState ResonanceMed PressNone DepthShallow
       toState = MeaningState ResonanceHigh PressLight DepthPattern
       strat = ResponseStrategy ModerateResp OpenStance ValidateMove DensityMed
-      graph = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
+      graph = MeaningGraph.recordTransition S.empty fromState toState strat True MeaningGraph.emptyMeaningGraph
   assertEqual "successful transition should be reusable as predicted strategy"
     (Just strat)
     (MeaningGraph.predictStrategy fromState toState graph)
@@ -1353,8 +1354,8 @@ testMeaningGraphDreamBiasCanPromoteBorderlineStrategy = TestCase $ do
   let fromState = MeaningState ResonanceMed PressNone DepthShallow
       toState = MeaningState ResonanceHigh PressLight DepthPattern
       strat = ResponseStrategy ModerateResp OpenStance ValidateMove DensityMed
-      graph0 = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
-      graph1 = MeaningGraph.recordTransition fromState toState strat False graph0
+      graph0 = MeaningGraph.recordTransition S.empty fromState toState strat True MeaningGraph.emptyMeaningGraph
+      graph1 = MeaningGraph.recordTransition S.empty fromState toState strat False graph0
       edge0 = case mgEdges graph1 of
         []    -> error "testMeaningGraphDreamBiasCanPromoteBorderlineStrategy: expected at least one edge in graph1"
         (e:_) -> e
@@ -1369,7 +1370,7 @@ testMeaningGraphRewireClampsBias = TestCase $ do
   let fromState = MeaningState ResonanceMed PressNone DepthShallow
       toState = MeaningState ResonanceHigh PressLight DepthPattern
       strat = ResponseStrategy ModerateResp OpenStance ValidateMove DensityMed
-      graph0 = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
+      graph0 = MeaningGraph.recordTransition S.empty fromState toState strat True MeaningGraph.emptyMeaningGraph
       edge0 = case mgEdges graph0 of
         []    -> error "testMeaningGraphRewireClampsBias: expected at least one edge in graph0"
         (e:_) -> e
@@ -2718,7 +2719,7 @@ testMeaningGraphEdgeCapProperty = quickCheckTest "meaning graph edge cap" $
         graph =
           foldl'
             (\acc (fromState, toState) ->
-              MeaningGraph.recordTransition fromState toState (MeaningGraph.defaultStrategy fromState) True acc
+              MeaningGraph.recordTransition S.empty fromState toState (MeaningGraph.defaultStrategy fromState) True acc
             )
             MeaningGraph.emptyMeaningGraph
             transitions
@@ -2747,7 +2748,7 @@ testMeaningGraphSuccessRateBoundedProperty = quickCheckTest "meaning graph succe
             (MeaningState ResonanceLow PressNone DepthShallow)
             (MeaningState ResonanceLow PressNone DepthShallow)
             (MeaningGraph.defaultStrategy (MeaningState ResonanceLow PressNone DepthShallow))
-            count wins 0.0 Nothing
+            count wins 0.0 Nothing S.empty
       in MeaningGraph.successRate edge >= 0.0 && MeaningGraph.successRate edge <= 1.0
 
 testMeaningGraphRecordPreservesEdgesProperty :: Test
@@ -2756,8 +2757,8 @@ testMeaningGraphRecordPreservesEdgesProperty = quickCheckTest "recordTransition 
     let fromState = MeaningState ResonanceHigh PressHeavy DepthAxiom
         toState = MeaningState ResonanceLow PressNone DepthShallow
         strat = MeaningGraph.defaultStrategy fromState
-        g0 = MeaningGraph.recordTransition fromState toState strat True MeaningGraph.emptyMeaningGraph
-        g1 = foldl' (\acc _ -> MeaningGraph.recordTransition fromState toState strat True acc) g0 [1..extraSteps]
+        g0 = MeaningGraph.recordTransition S.empty fromState toState strat True MeaningGraph.emptyMeaningGraph
+        g1 = foldl' (\acc _ -> MeaningGraph.recordTransition S.empty fromState toState strat True acc) g0 [1..extraSteps]
     in length (mgEdges g1) == 1
 
 testMeaningStateIdInjectiveProperty :: Test

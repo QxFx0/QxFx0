@@ -57,6 +57,8 @@ import Data.Aeson
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
@@ -357,6 +359,7 @@ data MeaningEdge = MeaningEdge
   , meWins       :: !Int
   , meDreamBias  :: !Double
   , meLastRewiredAt :: !(Maybe UTCTime)
+  , meAtoms      :: !(Set Text)
   } deriving stock (Show, Read, Eq, Generic)
   deriving anyclass (NFData)
 instance ToJSON MeaningEdge where toJSON = genericToJSON defaultOptions

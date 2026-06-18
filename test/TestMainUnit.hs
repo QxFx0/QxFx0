@@ -53,6 +53,7 @@ import Test.Suite.CommitmentStoreAdmission (commitmentStoreAdmissionTests)
 import Test.Suite.CommitmentQuarantine (commitmentQuarantineTests)
 import Test.Suite.CommitmentAwareRouting (commitmentAwareRoutingTests)
 import Test.Suite.IntentClassifier (intentClassifierTests)
+import Test.Suite.SemanticNetwork (semanticNetworkTests)
 
 main :: IO ()
 main = do
@@ -108,6 +109,7 @@ main = do
                 ++ commitmentQuarantineTests
                 ++ commitmentAwareRoutingTests
                 ++ intentClassifierTests
+                ++ semanticNetworkTests
              )
   if errors testCounts + failures testCounts > 0
     then exitFailure

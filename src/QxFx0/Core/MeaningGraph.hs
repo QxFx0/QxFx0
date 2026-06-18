@@ -25,6 +25,8 @@ module QxFx0.Core.MeaningGraph
   ) where
 
 import Data.List (find)
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -75,8 +77,8 @@ successRate e
   | otherwise       = fromIntegral (meWins e) / fromIntegral (meCount e)
 
 -- | Record one observed transition and update edge counters.
-recordTransition :: MeaningState -> MeaningState -> ResponseStrategy -> Bool -> MeaningGraph -> MeaningGraph
-recordTransition fromState toState strat win g =
+recordTransition :: Set Text -> MeaningState -> MeaningState -> ResponseStrategy -> Bool -> MeaningGraph -> MeaningGraph
+recordTransition atoms fromState toState strat win g =
   let fid = meaningStateId fromState
       tid = meaningStateId toState
       mEdge = find (\e -> meFromId e == fid && meToId e == tid) (mgEdges g)
@@ -85,6 +87,7 @@ recordTransition fromState toState strat win g =
          let updated = edge
                { meCount = meCount edge + 1
                , meWins  = meWins edge + if win then 1 else 0
+               , meAtoms = S.union (meAtoms edge) atoms
                }
          in g { mgEdges = replaceEdge (mgEdges g) updated }
        Nothing ->
@@ -98,6 +101,7 @@ recordTransition fromState toState strat win g =
                , meWins = if win then 1 else 0
                , meDreamBias = 0.0
                , meLastRewiredAt = Nothing
+               , meAtoms = atoms
                }
          in g { mgEdges = take maxEdges (newEdge : mgEdges g)
               , mgTurnCount = mgTurnCount g + 1 }
