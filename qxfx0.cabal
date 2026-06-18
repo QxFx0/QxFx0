@@ -252,8 +252,10 @@ library
      QxFx0.Semantic.MeaningDecompose
      QxFx0.Semantic.MeaningDecompose.Core
      QxFx0.Semantic.MeaningDecompose.Domains
-     QxFx0.Semantic.Network
-     QxFx0.Semantic.Syntax.Combinators
+      QxFx0.Semantic.Network
+      QxFx0.Semantic.Space
+      QxFx0.Semantic.ContentSelector
+      QxFx0.Semantic.Syntax.Combinators
     QxFx0.Semantic.Logic
     QxFx0.Semantic.DialogAssembly
     QxFx0.Semantic.DialogAtom
@@ -577,6 +579,9 @@ common test-common
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine
     Test.Suite.CommitmentAwareRouting
+    Test.Suite.SemanticNetwork
+    Test.Suite.SemanticSpace
+    Test.Suite.ContentSelector
 
 test-suite qxfx0-test-unit
   import:        test-common
