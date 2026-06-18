@@ -399,6 +399,14 @@ collectRawDistinctionTriggers lowered tokens =
       (T.isInfixOf " differ " lowered)
   , RawPropositionDistinctionTrigger "contrast_text"
       (T.isInfixOf "contrast" lowered)
+  , RawPropositionDistinctionTrigger "ru_raznitsa_mezhdu"
+      (T.isInfixOf "разница между" lowered)
+  , RawPropositionDistinctionTrigger "ru_raznitsa_i"
+      (T.isInfixOf "разница" lowered && T.isInfixOf " и " lowered)
+  , RawPropositionDistinctionTrigger "ru_chem_raznitsa"
+      (containsKeywordPhrase tokens "в чём разница" || containsKeywordPhrase tokens "в чем разница")
+  , RawPropositionDistinctionTrigger "ru_otlichie"
+      (T.isInfixOf "отличие" lowered && T.isInfixOf " между " lowered)
   ]
 
 buildDistinctionFromTriggers :: [RawPropositionDistinctionTrigger] -> Maybe PropositionType
@@ -424,6 +432,10 @@ buildDistinctionFromTriggers admittedTriggers
   | matched "differ_period_text" = Just DistinctionQ
   | matched "differ_spaced_text" = Just DistinctionQ
   | matched "contrast_text" = Just DistinctionQ
+  | matched "ru_raznitsa_mezhdu" = Just DistinctionQ
+  | matched "ru_raznitsa_i" = Just DistinctionQ
+  | matched "ru_chem_raznitsa" = Just DistinctionQ
+  | matched "ru_otlichie" = Just DistinctionQ
   | otherwise = Nothing
   where
     matched label = any (\trigger -> rpdtLabel trigger == label && rpdtMatched trigger) admittedTriggers
@@ -445,9 +457,13 @@ collectRawConfrontTriggers rawText tokens =
   , RawPropositionConfrontTrigger "disagree_fem" (containsKeywordPhrase tokens "я не согласна")
   , RawPropositionConfrontTrigger "contradiction_noun" ("противоречие" `elem` tokens)
   , RawPropositionConfrontTrigger "contradicts_verb" ("противоречит" `elem` tokens)
+  , RawPropositionConfrontTrigger "contradicts_verb_2sg" ("противоречишь" `elem` tokens)
   , RawPropositionConfrontTrigger "doubt_marker" ("сомневаюсь" `elem` tokens)
   , RawPropositionConfrontTrigger "disputable_marker" ("спорно" `elem` tokens)
   , RawPropositionConfrontTrigger "does_not_follow" (T.isInfixOf "does not follow" (T.toLower rawText))
+  , RawPropositionConfrontTrigger "ru_razve" ("разве" `elem` tokens)
+  , RawPropositionConfrontTrigger "ru_neverno" (T.isInfixOf "это неверно" (T.toLower rawText) || T.isInfixOf "ты ошибаешься" (T.toLower rawText))
+  , RawPropositionConfrontTrigger "ru_ne_prav" (T.isInfixOf "не прав" (T.toLower rawText) || T.isInfixOf "неправ" (T.toLower rawText))
   ]
 
 buildConfrontSignalFromTriggers :: Text -> [RawPropositionConfrontTrigger] -> Maybe PropositionType
@@ -460,6 +476,10 @@ buildConfrontSignalFromTriggers rawText admittedTriggers
   | matched "doubt_marker" = Just ConfrontQ
   | matched "disputable_marker" = Just ConfrontQ
   | matched "does_not_follow" = Just ConfrontQ
+  | matched "contradicts_verb_2sg" = Just ConfrontQ
+  | matched "ru_razve" = Just ConfrontQ
+  | matched "ru_neverno" = Just ConfrontQ
+  | matched "ru_ne_prav" = Just ConfrontQ
   | otherwise = Nothing
   where
     _unused = rawText

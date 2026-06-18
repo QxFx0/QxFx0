@@ -1723,7 +1723,12 @@ testRouteFamilyNixBlocked = TestCase $ do
       nextUserState = inferUserState (ssClusters ss) input
       atomSet = collectAtoms input []
       rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input True "свобода" Nothing 0.0 dummyConatusEnergy emptyField 0.5 Nothing []
-  assertEqual "Nix-blocked should force CMRepair" CMRepair (rdFamily rd)
+  -- After Fix 1 (remove forced Blocked → CMRepair), the cascaded family
+  -- is preserved. For "Расскажи про свободу" with CMDescribe input,
+  -- the cascade may still adjust via identity/narrative hints, so we
+  -- only assert that it's not forced to CMRepair by the guard.
+  assertBool "Nix-blocked should not force CMRepair (cascaded family preserved)"
+             (rdFamily rd /= CMRepair)
 
 testNixGuardCyrillicConceptDoesNotUnsafeBlock :: Test
 testNixGuardCyrillicConceptDoesNotUnsafeBlock = TestCase $ do
