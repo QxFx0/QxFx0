@@ -368,6 +368,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
               { esApiHealthy = tsApiHealthy ts
               }
           , trcEvidenceAdmissibility = evidenceAdmissibility
+          , trcIntentType = extractIntentTag (taDerivationTags ta)
+          , trcFrameType = extractFrameTag (taDerivationTags ta)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -525,3 +527,19 @@ renderExternalActionKind actionKind =
 
 eadtNeedTagText :: ExternalActionDecisionTrace -> Text
 eadtNeedTagText trace = maybe "none" id (eadtNeedTag trace)
+
+-- | Extract intent type from derivation tags (M4-SEMANTIC-CORE-003).
+-- Tags are formatted as "intent=IntentDefine ..." — extract the intent constructor name.
+extractIntentTag :: [Text] -> Maybe Text
+extractIntentTag tags =
+  case filter (T.isPrefixOf "intent=") tags of
+    (tag:_) -> Just (T.drop 8 tag)
+    []      -> Nothing
+
+-- | Extract frame type from derivation tags (M4-SEMANTIC-CORE-003).
+-- Tags are formatted as "frame=definition" — extract the frame type name.
+extractFrameTag :: [Text] -> Maybe Text
+extractFrameTag tags =
+  case filter (T.isPrefixOf "frame=") tags of
+    (tag:_) -> Just (T.drop 6 tag)
+    []      -> Nothing

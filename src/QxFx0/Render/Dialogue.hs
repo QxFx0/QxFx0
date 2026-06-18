@@ -14,6 +14,8 @@ module QxFx0.Render.Dialogue
   , linearizeClaimAstRus
   -- v2 assembly path
   , renderArtifactViaAssembly
+  -- M4-SEMANTIC-CORE-003: compositional generator
+  , generateFromFrame
   ) where
 
 import Data.Text (Text)
@@ -65,6 +67,7 @@ import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
 import QxFx0.Types.State.System (ssDiscourse)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
 import QxFx0.Semantic.Embedding.Fallback (stableHash)
+import qualified QxFx0.Semantic.Frame.Types as FT
 import QxFx0.Policy.RenderLexicon
   ( stanceExplore, stanceTentative, stanceFirm, stanceHonest
   , stanceHoldBack, stanceCurated
@@ -1769,3 +1772,132 @@ gfMapAuthorityTags =
   case gfMapLoadStatus of
     GfMapLoaded _ -> []
     GfMapLoadFailed reason -> ["gf_map_non_authoritative:" <> reason]
+
+-- ---------------------------------------------------------------------------
+-- Compositional generator from SemanticFrame (M4-SEMANTIC-CORE-003)
+-- ---------------------------------------------------------------------------
+
+-- | Generate text from a SemanticFrame using compositional rules.
+--
+-- This replaces hardcoded template dispatch with a frame-driven approach.
+-- The frame carries semantic payload; this function assembles surface text
+-- from that payload using morphological forms and style modifiers.
+--
+-- Invariant: same frame + same morph → same output. Pure, deterministic.
+generateFromFrame :: FT.SemanticFrame -> MorphologyData -> Text
+generateFromFrame frame morph = case frame of
+  FT.DefinitionFrame topic scope authority ->
+    let topicNom = toNominative morph topic
+        scopeText = renderFrameScope scope
+        authorityText = renderFrameAuthority authority
+        mDefContent = lookupDefinitionContent topic
+    in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
+
+  FT.DistinctionFrame left right criteria ->
+    let leftNom = toNominative morph left
+        rightNom = toNominative morph right
+        criteriaText = case criteria of
+          [] -> "в одной рамке критериев"
+          cs -> "по критерию " <> T.intercalate ", " (map (toNominative morph) cs)
+        mDistContent = lookupDistinctionContent left right
+    in "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
+       <> renderDistinctionBody mDistContent leftNom rightNom morph
+
+  FT.ChallengeFrame target basis strength ->
+    let targetText = T.strip target
+        basisText = T.strip basis
+    in case strength of
+         FT.Soft -> "Понимаю позицию. " <> basisText
+                  <> " Но " <> targetText <> " требует уточнения."
+         FT.Firm -> "Возражу: " <> basisText
+                  <> " Это противоречит " <> targetText <> "."
+
+  FT.GroundFrame topic depth ->
+    let topicNom = toNominative morph topic
+    in case depth of
+         FT.Shallow -> "Держу " <> topicNom <> " как устойчивую опору для дальнейшего разбора."
+         FT.Detailed -> "Конкретизирую " <> topicNom <> ": фиксирую это как рабочую опору и продолжаю от неё."
+
+  FT.RepairFrame ->
+    "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
+
+  FT.ContactFrame greeting ->
+    greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+
+  FT.ReflectFrame topic ->
+    let topicNom = toNominative morph topic
+    in "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
+
+  FT.LearnFrame topic depth ->
+    let topicNom = toNominative morph topic
+    in case depth of
+         FT.Shallow -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение."
+         FT.Detailed -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания."
+
+  FT.HelpFrame task ->
+    let taskNom = toNominative morph task
+    in "Помогу с " <> taskNom <> ". Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку."
+
+  FT.PurposeFrame topic ->
+    let topicNom = toNominative morph topic
+    in "Функция " <> topicNom <> " проявляется через повторяемую роль в действии."
+
+  FT.WorldCauseFrame topic ->
+    let topicNom = toNominative morph topic
+    in "Если говорить о причине " <> topicNom <> ", различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+
+  FT.DeepenFrame topic ->
+    let topicNom = toNominative morph topic
+    in "Углубимся в " <> topicNom <> " через одно устойчивое фокусирование."
+
+  FT.NextStepFrame ->
+    "Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его."
+
+  FT.ExploratoryFrame ->
+    "Если представить другой контекст, можно увидеть новые связи. Давай проследим одну гипотезу до конкретного следствия."
+
+  FT.OperationalFrame ->
+    "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+
+  FT.SelfReferenceFrame ->
+    "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора."
+
+  FT.GenericFrame content ->
+    content
+
+-- | Render scope modifier.
+renderFrameScope :: FT.FrameScope -> Text
+renderFrameScope FT.GeneralScope      = "В общем смысле"
+renderFrameScope FT.SpecificScope     = "В контексте"
+renderFrameScope (FT.DomainScope d)   = "В области " <> d
+
+-- | Render authority modifier.
+renderFrameAuthority :: FT.FrameAuthority -> Text
+renderFrameAuthority FT.Known     = "Известно, что"
+renderFrameAuthority FT.Probable  = "Вероятно,"
+renderFrameAuthority FT.Uncertain = "Мне кажется,"
+
+-- | Render definition body using content predicates from M4-001.
+-- When predicates are available, renders substantive content.
+-- When not available, falls back to generic definition text.
+renderDefinitionBody :: Maybe DefinitionContent -> Text -> MorphologyData -> Text
+renderDefinitionBody mDefContent topic morph =
+  let topicNom = toNominative morph topic
+  in case mDefContent of
+       Just dc | not (null (dcPredicates dc)) ->
+         let predicates = T.intercalate ". " (map spRu (dcPredicates dc))
+         in " — " <> predicates <> "."
+       _ ->
+         " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
+
+-- | Render distinction body using content predicates from M4-001.
+-- When differentiators are available, renders substantive content.
+-- When not available, falls back to generic distinction text.
+renderDistinctionBody :: Maybe DistinctionContent -> Text -> Text -> MorphologyData -> Text
+renderDistinctionBody mDistContent leftNom rightNom _morph =
+  case mDistContent of
+    Just dc | not (null (dcDifferentiators dc)) ->
+      let diffText = T.intercalate ". " (map spRu (dcDifferentiators dc))
+      in leftNom <> " и " <> rightNom <> " различаются: " <> diffText <> "."
+    _ ->
+      leftNom <> " и " <> rightNom <> " различаются по набору признаков. Без явной рамки сравнение остаётся зависимым от принятых допущений."

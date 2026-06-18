@@ -381,6 +381,17 @@ data TurnReplayTrace = TurnReplayTrace
     --   'EvidenceDegradedGuardUnavailable' when guard was absent (normal
     --   mode); 'EvidenceInadmissible' when guard was absent under
     --   governed-evidence mode. See 'QxFx0.Types.Evidence'.
+  , trcIntentType :: !(Maybe Text)
+    -- ^ M4-SEMANTIC-CORE-003: deterministic intent classification result.
+    --   @Just "IntentDefine"@
+    --   when the feature-based classifier determined intent.
+    --   @Nothing@ when classifier was not invoked (legacy path).
+    --   @Just "IntentUnknown"@ when no compositional rule matched.
+  , trcFrameType :: !(Maybe Text)
+    -- ^ M4-SEMANTIC-CORE-003: semantic frame type used for generation.
+    --   @Just "definition"@
+    --   when the compositional generator was invoked.
+    --   @Nothing@ when template path was used (legacy).
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

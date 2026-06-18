@@ -1709,6 +1709,8 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
+                 , trcIntentType = Nothing
+                 , trcFrameType = Nothing
                  }
            , tqpDivergence = True
            }
@@ -2235,6 +2237,8 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
+                 , trcIntentType = Nothing
+                 , trcFrameType = Nothing
                  }
            , tqpDivergence = True
            }

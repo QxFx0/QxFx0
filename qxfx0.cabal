@@ -268,15 +268,19 @@ library
      QxFx0.Semantic.Proposition.Detection
      QxFx0.Semantic.Proposition.Detectors
       QxFx0.Semantic.Proposition.Parse
-      QxFx0.Semantic.Content
-      QxFx0.Semantic.Sense
-     QxFx0.Semantic.Sense.Extract
-     QxFx0.Semantic.Sense.Adjacency
-     QxFx0.Semantic.SemanticScene
-     QxFx0.Semantic.SemanticInput
-     QxFx0.Semantic.AuthorityParse
-     QxFx0.Semantic.Authority.GfExprParse
-     QxFx0.Semantic.Retrieve
+       QxFx0.Semantic.Content
+       QxFx0.Semantic.Sense
+      QxFx0.Semantic.Sense.Extract
+      QxFx0.Semantic.Sense.Adjacency
+      QxFx0.Semantic.SemanticScene
+      QxFx0.Semantic.SemanticInput
+      QxFx0.Semantic.AuthorityParse
+      QxFx0.Semantic.Authority.GfExprParse
+      QxFx0.Semantic.Retrieve
+      QxFx0.Semantic.Intent.Features
+      QxFx0.Semantic.Intent.Classifier
+      QxFx0.Semantic.Frame.Types
+      QxFx0.Semantic.Frame.Builder
      QxFx0.Core.DialogueThread
      QxFx0.Core.SensePlan
      QxFx0.Render.Authority

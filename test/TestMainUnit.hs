@@ -52,6 +52,7 @@ import Test.Suite.ConfigExternalize (configExternalizeTests)
 import Test.Suite.CommitmentStoreAdmission (commitmentStoreAdmissionTests)
 import Test.Suite.CommitmentQuarantine (commitmentQuarantineTests)
 import Test.Suite.CommitmentAwareRouting (commitmentAwareRoutingTests)
+import Test.Suite.IntentClassifier (intentClassifierTests)
 
 main :: IO ()
 main = do
@@ -106,6 +107,7 @@ main = do
                 ++ commitmentStoreAdmissionTests
                 ++ commitmentQuarantineTests
                 ++ commitmentAwareRoutingTests
+                ++ intentClassifierTests
              )
   if errors testCounts + failures testCounts > 0
     then exitFailure

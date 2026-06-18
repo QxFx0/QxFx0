@@ -180,6 +180,8 @@ minimalReplayTrace apiHealthy =
     , trcGenerationTrace = []
     , trcEffectSnapshot = Just EffectSnapshot { esApiHealthy = apiHealthy }
     , trcEvidenceAdmissibility = EvidenceGoverned
+    , trcIntentType = Nothing
+    , trcFrameType = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.
