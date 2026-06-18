@@ -142,6 +142,11 @@ coveredTopics :: [Text]
 coveredTopics =
   [ "свобода", "произвол", "ответственность", "истина", "мнение"
   , "память", "воспоминание", "сознание", "самосознание"
+  -- Phase D: expanded topics
+  , "вера", "красота", "долг", "доверие", "страх", "надежда"
+  , "справедливость", "время", "разум", "бытие", "история"
+  , "язык", "воля", "смерть", "одиночество", "любовь"
+  , "труд", "покой", "власть", "правда", "молчание"
   ]
 
 -- | Check if a topic is in the covered seed corpus.
@@ -212,7 +217,134 @@ definitionCorpus = M.fromList
       [ prop "самосознание направлено на собственные состояния субъекта"
              "self-awareness is directed at the subject's own states"
       , rel "самосознание предполагает наличие сознания как своего основания"
-            "self-awareness presupposes consciousness as its ground"
+             "self-awareness presupposes consciousness as its ground"
+      ]
+  -- Phase D: expanded topics
+  , entry "вера"
+      [ prop "вера требует принятия без полного доказательства"
+             "faith requires acceptance without full proof"
+      , rel "вера связана с доверием к источнику или опыту"
+            "faith is connected to trust in a source or experience"
+      ]
+  , entry "красота"
+      [ prop "красота вызывает эстетическое переживание"
+             "beauty evokes aesthetic experience"
+      , rel "красота зависит от воспринимающего и культурной рамки"
+            "beauty depends on the perceiver and cultural frame"
+      ]
+  , entry "долг"
+      [ prop "долг предписывает действия независимо от желания"
+             "duty prescribes actions regardless of desire"
+      , rel "долг опирается на моральные или социальные обязательства"
+            "duty rests on moral or social obligations"
+      ]
+  , entry "доверие"
+      [ prop "доверие предполагает уязвимость перед другим"
+             "trust presupposes vulnerability before another"
+      , rel "доверие строится через повторяемый позитивный опыт"
+            "trust is built through repeated positive experience"
+      ]
+  , entry "страх"
+      [ prop "страх сигнализирует об угрозе целостности субъекта"
+             "fear signals a threat to the subject's integrity"
+      , rel "страх может парализовать действие или мобилизовать его"
+            "fear can paralyze action or mobilize it"
+      ]
+  , entry "надежда"
+      [ prop "надежда ориентирует на возможность будущего"
+             "hope orients toward the possibility of the future"
+      , rel "надежда поддерживает действие в условиях неопределённости"
+            "hope sustains action under uncertainty"
+      ]
+  , entry "справедливость"
+      [ prop "справедливость требует соразмерности между деянием и воздаянием"
+             "justice requires proportionality between deed and reward"
+      , rel "справедливость предполагает равенство перед правилом"
+            "justice presupposes equality before the rule"
+      ]
+  , entry "время"
+      [ prop "время задаёт порядок следования событий"
+             "time defines the order of event succession"
+      , rel "время необратимо — прошлое недоступно для изменения"
+            "time is irreversible — the past is not amenable to change"
+      ]
+  , entry "разум"
+      [ prop "разум способен к обобщению и абстракции"
+             "reason is capable of generalization and abstraction"
+      , rel "разум отличается от интуиции потребностью в доказательстве"
+            "reason differs from intuition by requiring proof"
+      ]
+  , entry "бытие"
+      [ prop "бытие обозначает сам факт существования"
+             "being denotes the very fact of existence"
+      , rel "бытие рассматривается как условие возможности любого суждения"
+            "being is considered the condition for any judgement"
+      ]
+  , entry "история"
+      [ prop "история связывает прошлое с настоящим через интерпретацию"
+             "history connects past to present through interpretation"
+      , rel "история зависит от точки зрения рассказчика"
+            "history depends on the narrator's perspective"
+      ]
+  , entry "язык"
+      [ prop "язык структурирует опыт через различение и именование"
+             "language structures experience through distinction and naming"
+      , rel "язык связан с мышлением — он не только выражает, но и формирует мысль"
+            "language is connected to thought — it not only expresses but shapes thought"
+      ]
+  , entry "воля"
+      [ prop "воля направляет действие к выбранной цели"
+             "will directs action toward a chosen goal"
+      , rel "воля требует преодоления препятствий и конкурирующих мотивов"
+            "will requires overcoming obstacles and competing motives"
+      ]
+  , entry "смерть"
+      [ prop "смерть обозначает необратимое прекращение существования"
+             "death denotes the irreversible cessation of existence"
+      , rel "смерть задаёт границу, через которую жизнь обретает конечную форму"
+            "death sets a boundary through which life gains finite form"
+      ]
+  , entry "одиночество"
+      [ prop "одиночество выражает отсутствие значимого другого"
+             "loneliness expresses the absence of a significant other"
+      , rel "одиночество может быть избрано или навязано обстоятельствами"
+            "loneliness can be chosen or imposed by circumstances"
+      ]
+  , entry "любовь"
+      [ prop "любовь направлена на конкретного другого как на безусловно ценного"
+             "love is directed at a specific other as unconditionally valuable"
+      , rel "любовь предполагает уязвимость и риск потери"
+            "love presupposes vulnerability and the risk of loss"
+      ]
+  , entry "труд"
+      [ prop "труд преобразует материал через целенаправленное усилие"
+             "labor transforms material through purposeful effort"
+      , rel "труд связан с потребностью и распределением ресурсов"
+            "labor is connected to need and resource distribution"
+      ]
+  , entry "покой"
+      [ prop "покой обозначает отсутствие движения и напряжения"
+             "rest denotes the absence of movement and tension"
+      , rel "покой необходим для восстановления и интеграции опыта"
+            "rest is necessary for recovery and integration of experience"
+      ]
+  , entry "власть"
+      [ prop "власть означает способность влиять на действия других"
+             "power means the capacity to influence others' actions"
+      , rel "власть требует легитимности для устойчивости"
+            "power requires legitimacy for sustainability"
+      ]
+  , entry "правда"
+      [ prop "правда претендует на соответствие тому, что произошло"
+             "truthfulness claims correspondence with what happened"
+      , rel "правда отличается от истины личной вовлечённостью рассказчика"
+            "truthfulness differs from truth by the narrator's personal involvement"
+      ]
+  , entry "молчание"
+      [ prop "молчание может быть актом отказа или знаком присутствия"
+             "silence can be an act of refusal or a sign of presence"
+      , rel "молчание контрастирует с речью, но не тождественно пустоте"
+            "silence contrasts with speech but is not identical to emptiness"
       ]
   ]
   where
@@ -246,6 +378,35 @@ distinctionCorpus = M.fromList
   , dEntry "свобода" "ответственность"
       [ diff "свобода — возможность действовать, ответственность — учёт последствий"
              "freedom is the possibility to act, responsibility is accounting for consequences"
+      ]
+  -- Phase D: expanded distinction pairs
+  , dEntry "вера" "знание"
+      [ diff "вера принимает без доказательства, знание требует обоснования"
+             "faith accepts without proof, knowledge requires justification"
+      ]
+  , dEntry "долг" "желание"
+      [ diff "долг предписывает независимо от желания, желание движет от внутреннего побуждения"
+             "duty prescribes regardless of desire, desire drives from inner impulse"
+      ]
+  , dEntry "страх" "тревога"
+      [ diff "страх имеет конкретный объект, тревога направлена на неопределённость"
+             "fear has a concrete object, anxiety is directed at uncertainty"
+      ]
+  , dEntry "правда" "истина"
+      [ diff "правда включает личную позицию, истина претендует на надличностную объективность"
+             "truthfulness includes personal stance, truth claims transpersonal objectivity"
+      ]
+  , dEntry "власть" "авторитет"
+      [ diff "власть принуждает, авторитет убеждает"
+             "power coerces, authority persuades"
+      ]
+  , dEntry "покой" "действие"
+      [ diff "покой удерживает от движения, действие его инициирует"
+             "rest holds back from movement, action initiates it"
+      ]
+  , dEntry "одиночество" "уединение"
+      [ diff "одиночество переживается как лишение, уединение выбирается как потребность"
+             "loneliness is experienced as deprivation, solitude is chosen as a need"
       ]
   ]
   where
@@ -311,7 +472,8 @@ data ConceptCategory
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Classify a topic into a concept category using deterministic rules.
--- Based on lexical features, not statistics.
+-- Based on lexical features (keyword markers + morphological suffixes),
+-- not statistics.
 classifyConceptCategory :: Text -> ConceptCategory
 classifyConceptCategory topic =
   let t = normalizeTopic topic
@@ -320,20 +482,36 @@ classifyConceptCategory topic =
       | any (`T.isInfixOf` t) socialMarkers -> CategorySocial
       | any (`T.isInfixOf` t) psychologicalMarkers -> CategoryPsychological
       | any (`T.isInfixOf` t) physicalMarkers -> CategoryPhysical
+      -- Morphological suffix heuristics for Russian abstract nouns
+      | any (`T.isSuffixOf` t) abstractSuffixes -> CategoryPhilosophical
+      | any (`T.isSuffixOf` t) socialSuffixes -> CategorySocial
+      | any (`T.isSuffixOf` t) psychologicalSuffixes -> CategoryPsychological
       | otherwise -> CategoryGeneral
   where
     philosophicalMarkers =
       ["свобод", "истин", "смысл", "сознан", "бытие", "ничто", "вечн", "разум"
-      , "познан", "реальн", "иллюз", "пустот", "сущнос"]
+      , "познан", "реальн", "иллюз", "пустот", "сущнос", "вер", "красот"
+      , "добр", "благ", "мудрост", "истин", "справедлив"]
     socialMarkers =
       ["ответств", "довер", "долг", "обяз", "справедлив", "право", "закон"
-      , "обществ", "нравств", "этик"]
+      , "обществ", "нравств", "этик", "морал", "совест", "чест", "верност"
+      , "предан", "уважен"]
     psychologicalMarkers =
       ["памят", "воспомин", "эмоц", "чувств", "восприят", "мышлен", "вниман"
-      , "воображ", "сон", "мечт"]
+      , "воображ", "сон", "мечт", "страх", "надежд", "радост", "груст"
+      , "тревог", "пережив", "интуиц"]
     physicalMarkers =
       ["тел", "пространств", "времен", "матер", "энерг", "свет", "звук", "движен"
-      , "природ"]
+      , "природ", "вод", "огн", "воздух", "земл", "камен", "дерев"]
+    -- Russian abstract noun suffixes → likely philosophical/abstract
+    abstractSuffixes =
+      ["ость", "ствие", "тие", "ние", "тие", "ество", "ство", "ие", "ье"]
+    -- Suffixes typical of social concepts
+    socialSuffixes =
+      ["ность", "ние"]
+    -- Suffixes typical of psychological states
+    psychologicalSuffixes =
+      ["ость", "ение", "ание"]
 
 -- | Category-typed generic definition predicates.
 -- These are NOT universal templates — each category gets different predicates
