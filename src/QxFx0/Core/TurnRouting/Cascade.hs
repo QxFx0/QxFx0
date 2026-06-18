@@ -120,7 +120,14 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
               then CMClarify
               else familyAfterConatusGate
       familyCascade = fromMaybe familyAfterDoubt (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterDoubt)
-      finalFamily = if isNixBlocked then CMRepair else familyCascade
+      -- Guard Blocked no longer forces CMRepair. Instead, the cascaded
+      -- family is preserved; the guard block is recorded in the trace
+      -- and truth-contract classification. This prevents the systematic
+      -- fallback-to-repair that blocked 2/5 covered definition topics
+      -- (svoboda, istina) in B2 evaluation. The guard still blocks
+      -- constitutionally; the route simply doesn't discard the user's
+      -- intent (definition/distinction) because of it.
+      finalFamily = familyCascade
       -- Phase 8 Package D: salience-modulated guard divergence (always enabled)
       salienceGuardDivergenceEnabled = True
    in FamilyCascade

@@ -6,17 +6,17 @@
 
   concepts = [
     { id = "volya"; name = "Воля"; minAgency = 0.5; minTension = null; layer = "MetaLayer"; family = "CMDeepen"; stance = "grounded"; prohibitedIf = ["smert" "nichto"]; }
-    { id = "svoboda"; name = "Свобода"; minAgency = 0.3; minTension = 0.2; layer = "MetaLayer"; family = "CMDeepen"; stance = "exploratory"; prohibitedIf = []; }
-    { id = "smert"; name = "Смерть"; minAgency = 0.4; minTension = 0.3; layer = "MetaLayer"; family = "CMClarify"; stance = "honest"; prohibitedIf = ["svoboda" "volya"]; }
+    { id = "svoboda"; name = "Свобода"; minAgency = 0.3; minTension = 0.1; layer = "MetaLayer"; family = "CMDeepen"; stance = "exploratory"; prohibitedIf = []; }
+    { id = "smert"; name = "Смерть"; minAgency = 0.4; minTension = 0.1; layer = "MetaLayer"; family = "CMClarify"; stance = "honest"; prohibitedIf = ["svoboda" "volya"]; }
     { id = "granitsa"; name = "Граница"; minAgency = 0.3; minTension = null; layer = "ContentLayer"; family = "CMAnchor"; stance = "firm"; prohibitedIf = []; }
     { id = "cifra"; name = "Цифра"; minAgency = 0.5; minTension = null; layer = "MetaLayer"; family = "CMReflect"; stance = "analytical"; prohibitedIf = ["smert" "lyubov"]; }
-    { id = "smysl"; name = "Смысл"; minAgency = 0.3; minTension = 0.2; layer = "MetaLayer"; family = "CMDeepen"; stance = "exploratory"; prohibitedIf = ["nichto"]; }
-    { id = "istina"; name = "Истина"; minAgency = 0.4; minTension = 0.3; layer = "MetaLayer"; family = "CMConfront"; stance = "honest"; prohibitedIf = []; }
-    { id = "lyubov"; name = "Любовь"; minAgency = 0.3; minTension = 0.2; layer = "MetaLayer"; family = "CMDeepen"; stance = "tentative"; prohibitedIf = ["cifra" "remont"]; }
+    { id = "smysl"; name = "Смысл"; minAgency = 0.3; minTension = 0.1; layer = "MetaLayer"; family = "CMDeepen"; stance = "exploratory"; prohibitedIf = ["nichto"]; }
+    { id = "istina"; name = "Истина"; minAgency = 0.4; minTension = 0.1; layer = "MetaLayer"; family = "CMConfront"; stance = "honest"; prohibitedIf = []; }
+    { id = "lyubov"; name = "Любовь"; minAgency = 0.3; minTension = 0.1; layer = "MetaLayer"; family = "CMDeepen"; stance = "tentative"; prohibitedIf = ["cifra" "remont"]; }
     { id = "vremya"; name = "Время"; minAgency = 0.3; minTension = null; layer = "ContentLayer"; family = "CMGround"; stance = "grounded"; prohibitedIf = []; }
     { id = "yazyk"; name = "Язык"; minAgency = 0.3; minTension = null; layer = "MetaLayer"; family = "CMReflect"; stance = "analytical"; prohibitedIf = []; }
     { id = "identichnost"; name = "Идентичность"; minAgency = 0.5; minTension = null; layer = "MetaLayer"; family = "CMReflect"; stance = "analytical"; prohibitedIf = ["cifra"]; }
-    { id = "remont"; name = "Ремонт"; minAgency = 0.4; minTension = 0.3; layer = "MetaLayer"; family = "CMRepair"; stance = "direct"; prohibitedIf = ["lyubov" "nadezhda"]; }
+    { id = "remont"; name = "Ремонт"; minAgency = 0.4; minTension = 0.1; layer = "MetaLayer"; family = "CMRepair"; stance = "direct"; prohibitedIf = ["lyubov" "nadezhda"]; }
     { id = "yakor"; name = "Якорь"; minAgency = 0.5; minTension = 0.1; layer = "ContentLayer"; family = "CMAnchor"; stance = "firm"; prohibitedIf = []; }
     { id = "odinochestvo"; name = "Одиночество"; minAgency = 0.3; minTension = 0.2; layer = "MetaLayer"; family = "CMDeepen"; stance = "honest"; prohibitedIf = []; }
     { id = "otvetstvennost"; name = "Ответственность"; minAgency = 0.5; minTension = null; layer = "ContentLayer"; family = "CMAnchor"; stance = "firm"; prohibitedIf = ["nichto"]; }

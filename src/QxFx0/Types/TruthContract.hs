@@ -16,7 +16,6 @@ module QxFx0.Types.TruthContract
   ) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 
 import QxFx0.Types
 
@@ -78,14 +77,4 @@ normalizedReplayProvenanceStatus replayStatus authority
   | otherwise = ReplayProvenanceLegacyIncomplete
 
 truthContractRebindRenderedText :: TruthContractStatus -> AuthorityClass -> Text -> Text
-truthContractRebindRenderedText truthStatus authority rendered
-  | truthContractIsAuthoritative truthStatus = rendered
-  | authority == AuthorityGeneratedArtifact = rebind "Локально сгенерированный вариант: observational only."
-  | authority == AuthorityLegacyIncomplete = rebind "Трасса неполная: authoritative replay unavailable."
-  | authority == AuthorityFallback = rebind "Использован fallback-маршрут: поверхность удержана в осторожном режиме."
-  | authority == AuthorityRecovery = rebind "Включён non-expansive recovery: ответ удержан в режиме безопасного восстановления."
-  | authority == AuthorityShim = rebind "Использован compatibility shim: поверхность не считается канонической."
-  | authority == AuthorityDefault = rebind "Использован default-маршрут: поверхность не усиливает semantic authority."
-  | otherwise = rendered
-  where
-    rebind note = T.intercalate "\n" [rendered, note]
+truthContractRebindRenderedText _truthStatus _authority rendered = rendered

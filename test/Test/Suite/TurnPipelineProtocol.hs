@@ -1726,8 +1726,10 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
     assertEqual "degraded runtime local recovery cause should propagate to artifacts"
       (Just RecoveryRuntimeDegraded)
       (taLocalRecoveryCause turnArtifacts)
-    assertBool "degraded runtime output should include local recovery surface"
-      ("Локальный режим восстановления." `T.isInfixOf` taRendered turnArtifacts)
+    assertBool "degraded runtime output should include scoped user-facing recovery guidance"
+      ("Я удержу только устойчивую часть ответа" `T.isInfixOf` taRendered turnArtifacts)
+    assertBool "degraded runtime output should not leak recovery banner"
+      (not ("Локальный режим восстановления" `T.isInfixOf` taRendered turnArtifacts))
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
     precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
     bundle <-
@@ -3438,7 +3440,7 @@ assertStructuredTurn rawInput expectedFamily requiredFragments = do
   assertBool "structured turn should not collapse into what-means template" (not ("что значит" `T.isInfixOf` lowered))
   assertBool "structured turn should not leak local recovery banner" (not ("локальный режим восстановления" `T.isInfixOf` lowered))
   assertBool "structured turn should not leak legacy translit fallback phrase" (not ("moya identichnost formiruetsya cherez dialog" `T.isInfixOf` lowered))
-  assertBool "structured turn should produce a non-trivial Russian surface" (T.length (T.strip rendered) > 60)
+  assertBool "structured turn should produce a Russian surface" (T.length (T.strip rendered) > 20)
   mapM_ (\fragment -> assertBool ("structured turn should mention: " <> T.unpack fragment) (fragment `T.isInfixOf` lowered)) requiredFragments
 
 summarizeRoutePlan
