@@ -50,7 +50,16 @@ echo "[3/6] Generating System transcripts..."
 # Each task_id is a multi-turn session; turns within a task are sequential.
  cabal run -v0 qxfx0-main -- --serve-http 9180 2>/dev/null &
 HTTP_PID=$!
-sleep 5
+
+# Warmup: wait for sidecar health endpoint to respond before sending turns
+echo "  Warming up sidecar..."
+for i in $(seq 1 30); do
+  if curl -s http://localhost:9180/sidecar-health >/dev/null 2>&1; then
+    echo "  Sidecar ready (attempt $i)"
+    break
+  fi
+  sleep 1
+done
 
 SYSTEM_ARGS=""
 TASK_IDS=$(grep -o '"task_id":"[^"]*"' "$CORPUS" | sort -u | sed 's/"task_id":"//;s/"//')
@@ -61,9 +70,18 @@ for task_id in $TASK_IDS; do
   grep "\"$task_id\"" "$CORPUS" | while IFS= read -r line; do
     user_text=$(echo "$line" | python3 -c "import json,sys; print(json.load(sys.stdin)['user_text'])" 2>/dev/null || echo "")
     if [ -n "$user_text" ]; then
-      response=$(curl -s -X POST http://localhost:9180/turn \
-        -H "Content-Type: application/json" \
-        -d "{\"session_id\":\"$task_id\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
+      # Bounded retry: up to 3 attempts with 2s gap
+      response="ERROR"
+      for attempt in 1 2 3; do
+        response=$(curl -s --max-time 15 -X POST http://localhost:9180/turn \
+          -H "Content-Type: application/json" \
+          -d "{\"session_id\":\"$task_id\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
+        if [ "$response" != "ERROR" ] && [ -n "$response" ]; then
+          break
+        fi
+        echo "    retry $attempt for $task_id..."
+        sleep 2
+      done
       python3 -c "
 import json, sys
 task_id = sys.argv[1]
@@ -87,16 +105,33 @@ export QXFX0_CONTROL_A_DISABLE_CONTENT=1
 
  cabal run -v0 qxfx0-main -- --serve-http 9181 2>/dev/null &
 HTTP_PID=$!
-sleep 5
+
+# Warmup: wait for sidecar health endpoint
+echo "  Warming up Control-A sidecar..."
+for i in $(seq 1 30); do
+  if curl -s http://localhost:9181/sidecar-health >/dev/null 2>&1; then
+    echo "  Control-A sidecar ready (attempt $i)"
+    break
+  fi
+  sleep 1
+done
 
 for task_id in $TASK_IDS; do
   echo "  Control-A: $task_id"
   grep "\"$task_id\"" "$CORPUS" | while IFS= read -r line; do
     user_text=$(echo "$line" | python3 -c "import json,sys; print(json.load(sys.stdin)['user_text'])" 2>/dev/null || echo "")
     if [ -n "$user_text" ]; then
-      response=$(curl -s -X POST http://localhost:9181/turn \
-        -H "Content-Type: application/json" \
-        -d "{\"session_id\":\"ctrl-${task_id}\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
+      response="ERROR"
+      for attempt in 1 2 3; do
+        response=$(curl -s --max-time 15 -X POST http://localhost:9181/turn \
+          -H "Content-Type: application/json" \
+          -d "{\"session_id\":\"ctrl-${task_id}\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
+        if [ "$response" != "ERROR" ] && [ -n "$response" ]; then
+          break
+        fi
+        echo "    retry $attempt for ctrl-$task_id..."
+        sleep 2
+      done
       python3 -c "
 import json, sys
 task_id = sys.argv[1]
