@@ -1712,6 +1712,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcIntentType = Nothing
                  , trcFrameType = Nothing
     , trcContentSource = Nothing
+    , trcAnalogicalSource = Nothing
                  }
            , tqpDivergence = True
            }
@@ -2241,6 +2242,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcIntentType = Nothing
                  , trcFrameType = Nothing
     , trcContentSource = Nothing
+    , trcAnalogicalSource = Nothing
                  }
            , tqpDivergence = True
            }

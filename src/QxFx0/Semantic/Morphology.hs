@@ -24,6 +24,9 @@ module QxFx0.Semantic.Morphology
   , genitiveForm
   , accusativeForm
   , prepositionalForm
+  , buildLemmaMap
+  , normalizeToken
+  , normalizeAtoms
   ) where
 
 import QxFx0.Types (MorphologyData(..))
@@ -58,8 +61,11 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Char (isLetter)
 import System.Environment (lookupEnv)
+import QxFx0.Types.Domain.Atoms (LexemeForm(..))
 
 data POS = Noun | Verb | Adj | Adv | Pron | Prep | Conj | Part | Num | UnknownPOS
   deriving stock (Eq, Ord, Show, Read, Bounded, Enum)
@@ -279,3 +285,25 @@ hasKnownMorphologyForm md w =
       || present (mdGenitive md)
       || present (mdPrepositional md)
       || presentSurfaceForms
+
+buildLemmaMap :: MorphologyData -> Map Text Text
+buildLemmaMap md = M.unions
+  [ M.mapKeys T.toLower (mdNominative md)
+  , M.mapKeys T.toLower (mdGenitive md)
+  , M.mapKeys T.toLower (mdPrepositional md)
+  , formsBySurfaceMap
+  ]
+  where
+    formsBySurfaceMap = M.fromList
+      [ (T.toLower surface, T.toLower (lfLemma form))
+      | (surface, forms) <- M.toList (mdFormsBySurface md)
+      , form <- forms
+      ]
+
+normalizeToken :: Map Text Text -> Text -> Text
+normalizeToken lemmaMap token =
+  M.findWithDefault (T.toLower token) (T.toLower token) lemmaMap
+
+normalizeAtoms :: Map Text Text -> Set Text -> Set Text
+normalizeAtoms lemmaMap atoms = S.map (normalizeToken lemmaMap) atoms
+

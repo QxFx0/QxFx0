@@ -93,7 +93,7 @@ revisionTests =
               result = revisePosition cid kind angst conatus
           assertEqual "scope contradiction should revise" (RcRevised cid kind) result
       ]
-  , TestLabel "applyRevisionDecision" $ TestList
+  , TestLabel "applyRevisionDecision M.empty" $ TestList
       [ TestCase $ do
           let cid = CommitmentId 1
               ts = TurnSeq 5
@@ -103,7 +103,7 @@ revisionTests =
                 , scsNextId = 2
                 }
               decision = RcQuarantined cid ContradictionStatement
-              result = applyRevisionDecision ts store Nothing decision
+              result = applyRevisionDecision M.empty ts store Nothing decision
           assertBool "should be removed from active" $ HashMap.null (scsActive result)
           assertBool "should be in quarantine" $ HashMap.member cid (scsQuarantine result)
 
@@ -116,7 +116,7 @@ revisionTests =
                 , scsNextId = 3
                 }
               decision = RcRetained cid ContradictionStatement
-              result = applyRevisionDecision ts store Nothing decision
+              result = applyRevisionDecision M.empty ts store Nothing decision
           assertBool "should remain in active" $ HashMap.member cid (scsActive result)
           assertBool "should not be in quarantine" $ HashMap.null (scsQuarantine result)
 
@@ -129,7 +129,7 @@ revisionTests =
                 , scsNextId = 4
                 }
               decision = RcRevised cid ContradictionStatement
-              result = applyRevisionDecision ts store Nothing decision
+              result = applyRevisionDecision M.empty ts store Nothing decision
           assertBool "should remain in active" $ HashMap.member cid (scsActive result)
           assertBool "should not be in quarantine" $ HashMap.null (scsQuarantine result)
           let (revisedPayload, _) = HashMap.lookupDefault (payload, TurnSeq 0) cid (scsActive result)
@@ -152,7 +152,7 @@ revisionTests =
               decisions = [ RcQuarantined cid1 ContradictionStatement
                           , RcRetained cid2 ContradictionStatement
                           ]
-              result = foldl (\s dec -> applyRevisionDecision ts s Nothing dec) store decisions
+              result = foldl (\s dec -> applyRevisionDecision M.empty ts s Nothing dec) store decisions
           assertBool "cid1 should be removed from active" $ not (HashMap.member cid1 (scsActive result))
           assertBool "cid2 should remain in active" $ HashMap.member cid2 (scsActive result)
           assertBool "cid1 should be in quarantine" $ HashMap.member cid1 (scsQuarantine result)
@@ -163,14 +163,14 @@ revisionTests =
               ts = TurnSeq 5
               store = emptySemanticCommitmentStore { scsNextId = 1 }
               decision = RcQuarantined cid ContradictionStatement
-              result = applyRevisionDecision ts store Nothing decision
+              result = applyRevisionDecision M.empty ts store Nothing decision
           assertBool "store should be unchanged" $ result == store
       ]
-  , TestLabel "synthesizeResolution" $ TestList
+  , TestLabel "synthesizeResolution M.empty" $ TestList
       [ TestCase $ do
           let oldPayload = FactualClaimPayload "свобода предполагает выбор" 0.8 OriginManual (TurnSeq 1) [] "свобода"
               newPayload = FactualClaimPayload "свобода требует ответственности" 0.9 OriginManual (TurnSeq 2) [] "свобода"
-              result = synthesizeResolution oldPayload newPayload
+              result = synthesizeResolution M.empty oldPayload newPayload
           assertBool "should return Just" $ isJust result
           let Just resolution = result
           assertEqual "should be Conjunction" Conjunction (srType resolution)
@@ -181,7 +181,7 @@ revisionTests =
       , TestCase $ do
           let oldPayload = FactualClaimPayload "свобода это выбор" 0.8 OriginManual (TurnSeq 1) [] "свобода"
               newPayload = FactualClaimPayload "ответственность это долг" 0.9 OriginManual (TurnSeq 2) [] "ответственность"
-              result = synthesizeResolution oldPayload newPayload
+              result = synthesizeResolution M.empty oldPayload newPayload
           assertBool "should return Just" $ isJust result
           let Just resolution = result
           assertEqual "should be Irreducible" Irreducible (srType resolution)
@@ -199,7 +199,7 @@ revisionTests =
                 , scsNextId = 2
                 }
               decision = RcRevised cid ContradictionStatement
-              result = applyRevisionDecision ts store (Just newPayload) decision
+              result = applyRevisionDecision M.empty ts store (Just newPayload) decision
           assertBool "should have synthesized commitment" $ HashMap.size (scsActive result) == 2
           let synthesizedCid = CommitmentId 2
           assertBool "synthesized commitment should be in active" $ HashMap.member synthesizedCid (scsActive result)
@@ -248,7 +248,7 @@ revisionTests =
       ]
   , TestLabel "seedFromCorpus" $ TestList
       [ TestCase $ do
-          let net = seedFromCorpus
+          let net = seedFromCorpus M.empty
               nodeCount = S.size (snNodes net)
               edgeCount = M.size (snEdges net)
           -- Content density gate requires >= 50 edges and >= 15 nodes
@@ -257,7 +257,7 @@ revisionTests =
       ]
   , TestLabel "mergeSemanticNetworks" $ TestList
       [ TestCase $ do
-          let base = seedFromCorpus
+          let base = seedFromCorpus M.empty
               update = SemanticNetwork
                 { snNodes = S.fromList ["newNode1", "newNode2"]
                 , snEdges = M.singleton ("newNode1", "newNode2")

@@ -15,11 +15,12 @@ import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), Semantic
 
 -- | Seed a SemanticNetwork from definitionCorpus.
 -- Creates edges between topics that share atoms in their predicates.
-seedFromCorpus :: SemanticNetwork
-seedFromCorpus =
+-- Uses lemmaMap to normalize tokens to lemmas for consistency with runtime.
+seedFromCorpus :: Map Text Text -> SemanticNetwork
+seedFromCorpus lemmaMap =
   let topicAtoms :: [(Text, Set Text)]
       topicAtoms =
-        [ (topic, S.unions [tokenizePredicate (spRu p) | p <- dcPredicates dc])
+        [ (topic, S.unions [tokenizePredicate lemmaMap (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList definitionCorpus
         ]
       
@@ -47,13 +48,14 @@ seedFromCorpus =
     , snMaxHops = 3
     }
 
--- | Extract content words from a Russian predicate, filtering stop words.
--- Inlined here to avoid circular dependency with Semantic.Space.
-tokenizePredicate :: Text -> Set Text
-tokenizePredicate text =
+-- | Extract content words from a Russian predicate, filtering stop words and normalizing to lemmas.
+-- Uses lemmaMap to normalize tokens for consistency with runtime tokenization.
+tokenizePredicate :: Map Text Text -> Text -> Set Text
+tokenizePredicate lemmaMap text =
   let ws = T.words (T.toLower text)
       filtered = filter (\w -> T.length w > 3 && not (isStopWord w)) ws
-  in S.fromList filtered
+      normalized = map (\token -> M.findWithDefault token token lemmaMap) filtered
+  in S.fromList normalized
   where
     isStopWord :: Text -> Bool
     isStopWord w = w `elem`

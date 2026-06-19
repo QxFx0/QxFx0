@@ -43,6 +43,7 @@ import QxFx0.Semantic.Space.Types (SemanticSpace(..))
 import qualified QxFx0.Semantic.Content as Content
 import QxFx0.Semantic.Space (tokenizePredicate)
 import QxFx0.Types.PropositionType (PropositionType(..))
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import QxFx0.Semantic.Proposition (parsePropositionWithFrame)
@@ -353,7 +354,7 @@ buildPrepareEffectPlan ss input currentTime =
       logicResults = runSemanticLogic logicAtomSet
       sortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) logicResults
       geoClassification = if useGeometricIntent
-                            then case buildGeometricClassifier (ssSemanticSpace ss) of
+                            then case buildGeometricClassifier (ssLemmaMap ss) (ssSemanticSpace ss) of
                                    Just classifier ->
                                      let atomTexts = S.fromList (map maText (asAtoms logicAtomSet))
                                      in Just (classifyIntent classifier atomTexts)
@@ -538,12 +539,12 @@ buildPrepareEffectPlan ss input currentTime =
 useGeometricIntent :: Bool
 useGeometricIntent = True
 
-buildGeometricClassifier :: SemanticSpace -> Maybe IntentClassifier
-buildGeometricClassifier space
+buildGeometricClassifier :: Map Text Text -> SemanticSpace -> Maybe IntentClassifier
+buildGeometricClassifier lemmaMap space
   | ssDimensionCount space == 0 = Nothing
   | otherwise =
     let labeled = M.fromListWith S.union
-          [ (categoryToPropositionType (Content.classifyConceptCategory topic), tokenizePredicate (Content.spRu pred))
+          [ (categoryToPropositionType (Content.classifyConceptCategory topic), tokenizePredicate lemmaMap (Content.spRu pred))
           | topic <- Content.coveredTopics
           , Just dc <- [Content.lookupDefinitionContent topic]
           , pred <- Content.dcPredicates dc

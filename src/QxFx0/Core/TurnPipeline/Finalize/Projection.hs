@@ -371,6 +371,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcIntentType = extractIntentTag (taDerivationTags ta)
           , trcFrameType = extractFrameTag (taDerivationTags ta)
           , trcContentSource = extractContentSourceTag (taDerivationTags ta)
+          , trcAnalogicalSource = extractAnalogicalSourceTag (taDerivationTags ta)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -551,4 +552,12 @@ extractContentSourceTag :: [Text] -> Maybe Text
 extractContentSourceTag tags =
   case filter (T.isPrefixOf "content_source=") tags of
     (tag:_) -> Just (T.drop 15 tag)
+    []      -> Nothing
+
+-- | Extract analogical source topic from derivation tags.
+-- Tags are formatted as "analogical_source=TOPIC".
+extractAnalogicalSourceTag :: [Text] -> Maybe Text
+extractAnalogicalSourceTag tags =
+  case filter (T.isPrefixOf "analogical_source=") tags of
+    (tag:_) -> Just (T.drop 18 tag)
     []      -> Nothing

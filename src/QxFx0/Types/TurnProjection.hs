@@ -398,6 +398,11 @@ data TurnReplayTrace = TurnReplayTrace
     --   @Just "covered_generic"@ — generic predicates for covered topics.
     --   @Just "uncovered_generic"@ — generic predicates for uncovered topics.
     --   @Nothing@ — old template path used.
+  , trcAnalogicalSource :: !(Maybe Text)
+    -- ^ Axis 2.1: source topic for analogical response.
+    --   @Just sourceTopic@ when the response was generated via
+    --   @findNearestCoveredTopic@ + @analogicalResponse@.
+    --   @Nothing@ when the response used direct predicates.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

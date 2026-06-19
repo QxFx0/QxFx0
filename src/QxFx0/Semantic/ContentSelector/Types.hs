@@ -24,6 +24,7 @@ data ContentSelector = ContentSelector
   { csSpace           :: !SemanticSpace
   , csTopicAtoms      :: !(Map Text (Set Text))
   , csTopicPredicates :: !(Map Text [SemanticPredicate])
+  , csLemmaMap        :: !(Map Text Text)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -39,4 +40,5 @@ emptyContentSelector = ContentSelector
   { csSpace = emptySemanticSpace
   , csTopicAtoms = M.empty
   , csTopicPredicates = M.empty
+  , csLemmaMap = M.empty
   }

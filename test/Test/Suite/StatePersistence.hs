@@ -1072,6 +1072,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcIntentType = Nothing
     , trcFrameType = Nothing
     , trcContentSource = Nothing
+    , trcAnalogicalSource = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

@@ -28,23 +28,23 @@ import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 
-buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> Map Text [SemanticPredicate] -> ContentSelector
-buildContentSelector space atoms predicates = ContentSelector space atoms predicates
+buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> Map Text [SemanticPredicate] -> Map Text Text -> ContentSelector
+buildContentSelector space atoms predicates lemmaMap = ContentSelector space atoms predicates lemmaMap
 
 selectPredicates :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> [SelectedPredicate]
 selectPredicates cs field topic mActivatedNetwork =
   case M.lookup topic (csTopicPredicates cs) of
     Nothing -> []
     Just preds ->
-      let scored = mapMaybe (scorePred field (csSpace cs) mActivatedNetwork) preds
+      let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) mActivatedNetwork) preds
       in case scored of
-           [] -> []
-           _  -> let (bestPred, bestScore) = maximumBy (comparing snd) scored
-                 in [SelectedPredicate topic bestScore [bestPred]]
+            [] -> []
+            _  -> let (bestPred, bestScore) = maximumBy (comparing snd) scored
+                  in [SelectedPredicate topic bestScore [bestPred]]
 
-scorePred :: Field -> SemanticSpace -> Maybe SemanticNetwork -> SemanticPredicate -> Maybe (SemanticPredicate, Double)
-scorePred field space mNetwork pred =
-  let atoms = tokenizePredicate (spRu pred)
+scorePred :: Field -> SemanticSpace -> Map Text Text -> Maybe SemanticNetwork -> SemanticPredicate -> Maybe (SemanticPredicate, Double)
+scorePred field space lemmaMap mNetwork pred =
+  let atoms = tokenizePredicate lemmaMap (spRu pred)
       pv = PredicateVector (spRu pred) atoms (buildVector space atoms)
       contribs = [(dim, computeFieldAffinity space dim pv) | dim <- [FdResonance .. FdCounterfactual]]
       baseScore = sum [fieldWeight field dim * s | (dim, s) <- contribs]
@@ -84,7 +84,7 @@ composePredicates cs field preds mNetwork =
     [] -> []
     [p] -> [p]
     _ ->
-      let scored = mapMaybe (scorePred field (csSpace cs) mNetwork) preds
+      let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) mNetwork) preds
           totalScore = sum (map snd scored)
       in if totalScore < 0.1
          then []
@@ -103,7 +103,7 @@ composeFromActivation cs field topic network =
         case M.lookup t (csTopicPredicates cs) of
           Nothing -> Nothing
           Just preds ->
-            let scored = mapMaybe (scorePred field (csSpace cs) (Just activatedNetwork)) preds
+            let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) (Just activatedNetwork)) preds
             in case scored of
                  [] -> Nothing
                  _ -> let (bestPred, _) = maximumBy (comparing snd) scored

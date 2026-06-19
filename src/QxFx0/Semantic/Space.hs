@@ -26,6 +26,7 @@ import qualified Data.Vector as V
 
 import QxFx0.Semantic.Network (SemanticNetwork(..))
 import QxFx0.Semantic.Space.Types
+import QxFx0.Semantic.Morphology (normalizeToken)
 import QxFx0.Types.State.SemanticCommitment (CommitmentId(..), SemanticCommitmentStore(..), SemanticCommitment(..), FactualClaimPayload(..))
 
 buildPredicateVector :: SemanticNetwork -> Text -> Set Text -> PredicateVector
@@ -103,10 +104,10 @@ cosineDistance v1 v2 = 1.0 - cosineSimilarity v1 v2
 -- | Build fact vectors from CommitmentStore for geometric classification.
 -- Extracts all active commitments, tokenizes their statements,
 -- and projects them into the semantic space.
-buildFactVectors :: SemanticSpace -> SemanticCommitmentStore -> Map CommitmentId AtomVector
-buildFactVectors space store =
+buildFactVectors :: Map Text Text -> SemanticSpace -> SemanticCommitmentStore -> Map CommitmentId AtomVector
+buildFactVectors lemmaMap space store =
   M.fromList
-    [ (cid, projectAtoms (tokenizePredicate (fcpStatement payload)) space)
+    [ (cid, projectAtoms (tokenizePredicate lemmaMap (fcpStatement payload)) space)
     | (cid, (payload, _)) <- HashMap.toList (scsActive store)
     ]
 
@@ -123,13 +124,14 @@ projectAtoms atoms space =
         ) vec (S.toList atoms)
   in AtomVector vec'
 
--- | Extract content words from a Russian predicate, filtering stop words.
+-- | Extract content words from a Russian predicate, filtering stop words and normalizing via lemma map.
 -- Used to bridge predicate text to graph atoms for ContentSelector.
-tokenizePredicate :: Text -> Set Text
-tokenizePredicate text =
+tokenizePredicate :: Map Text Text -> Text -> Set Text
+tokenizePredicate lemmaMap text =
   let words = T.words (T.toLower text)
       filtered = filter (\w -> T.length w > 3 && not (isStopWord w)) words
-  in S.fromList filtered
+      normalized = map (normalizeToken lemmaMap) filtered
+  in S.fromList normalized
   where
     isStopWord :: Text -> Bool
     isStopWord w = w `elem`

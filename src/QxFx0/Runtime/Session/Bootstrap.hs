@@ -88,6 +88,7 @@ import QxFx0.Types.State
   , ssTurnCount
   )
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Semantic.Morphology (buildLemmaMap)
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
@@ -196,14 +197,15 @@ bootstrapSession quiet sessionId = do
         [] -> ssActiveScene emptySystemState
       
       -- Initialize ContentSelector from seed network and definition corpus
-      seedNetwork = seedFromCorpus
+      lemmaMap = buildLemmaMap morphology
+      seedNetwork = seedFromCorpus lemmaMap
       topicAtoms = M.fromList
         [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList definitionCorpus
         ]
       topicPredicates = M.map dcPredicates definitionCorpus
       seedSpace = buildSemanticSpace seedNetwork topicAtoms
-      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates
+      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap
       
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}
@@ -213,6 +215,7 @@ bootstrapSession quiet sessionId = do
         , ssSemantic = (ssSemantic emptySystemState) {semClusters = clusters}
         , ssSessionId = sessionId
         , ssContentSelector = seedSelector
+        , ssLemmaMap = buildLemmaMap morphology
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
   (stateOrigin, restored) <- do

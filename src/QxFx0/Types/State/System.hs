@@ -306,6 +306,11 @@ data SystemState = SystemState
     -- ^ Phase 2: A/B validation metrics for geometric intent classifier.
     --   Tracks agreement/disagreement with runSemanticLogic.
     --   Initialised to 'emptyIntentClassifierMetrics'.
+  , ssLemmaMap :: !(M.Map Text Text)
+    -- ^ Morphological normalization: surface form → lemma mapping.
+    --   Built from MorphologyData via buildLemmaMap.
+    --   Used to normalize atoms before prototype matching.
+    --   Initialised to 'M.empty', populated in Bootstrap.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -374,8 +379,9 @@ instance ToJSON SystemState where
             , "runtimeParadigms" .= ssRuntimeParadigms ss
             , "semanticNetwork" .= ssSemanticNetwork ss
             , "semanticSpace" .= ssSemanticSpace ss
-            , "contentSelector" .= ssContentSelector ss
-            ]
+             , "contentSelector" .= ssContentSelector ss
+             , "lemmaMap" .= ssLemmaMap ss
+             ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -489,8 +495,9 @@ instance FromJSON SystemState where
             <*> o .:? "currentRegime" .!= defaultRuntimeRegime
             <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
             <*> o .:? "semanticSpace" .!= emptySemanticSpace
-            <*> o .:? "contentSelector" .!= emptyContentSelector
-            <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
+             <*> o .:? "contentSelector" .!= emptyContentSelector
+             <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
+             <*> o .:? "lemmaMap" .!= M.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -675,10 +682,11 @@ emptySystemState = SystemState
   , ssUserModel = initialBeliefs
   , ssMood = 0.0
   , ssCurrentRegime = defaultRuntimeRegime
-  , ssSemanticNetwork = seedFromCorpus
+  , ssSemanticNetwork = seedFromCorpus M.empty
   , ssSemanticSpace = emptySemanticSpace
   , ssContentSelector = emptyContentSelector
   , ssGeometricMetrics = emptyIntentClassifierMetrics
+  , ssLemmaMap = M.empty
   }
 
 emptyGovernanceProjection :: GovernanceProjection

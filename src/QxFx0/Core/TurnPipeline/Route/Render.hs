@@ -20,6 +20,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
 import QxFx0.Types
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Data.Map
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Core.TurnPipeline.Effects
@@ -78,6 +79,7 @@ import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
 import QxFx0.Semantic.Content (isCoveredTopic, lookupDefinitionContent, lookupDistinctionContent)
+import QxFx0.Semantic.Analogy (findNearestCoveredTopic)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
 import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
@@ -237,6 +239,11 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
            else if isCovered
                 then "covered_generic"
                 else "uncovered_generic"
+      -- Analogical response: when no exact definition but findNearestCoveredTopic finds source
+      mAnalogicalSourceTag = case findNearestCoveredTopic bestTopic of
+        Just sourceTopic | isNothing (lookupDefinitionContent bestTopic) ->
+          ["analogical_source=" <> sourceTopic]
+        _ -> []
       -- Only fire semantic-first when morphology has real data (not test fixture).
       -- This prevents regression in tests that use minimal MorphologyData.
       semanticMorphReady = not (Data.Map.null (mdNominative semanticMorph))
@@ -261,7 +268,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , "intent=" <> T.pack (show semanticIntent)
             , "frame=" <> frameTypeText semanticFrame
             , "content_source=" <> semanticContentSource
-            ]
+            ] ++ mAnalogicalSourceTag
         , draDialogAtoms = emptyDialogAtoms
         , draGenerationTrace =
             [ GenerationAttempt "semantic_intent" "ok"

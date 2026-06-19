@@ -555,12 +555,12 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
       }
       semanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
       topicAtomsMap = M.fromList
-        [ (topic, Set.toList $ Set.unions [tokenizePredicate (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu pred) | pred <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics
         , Just dc <- [Content.lookupDefinitionContent topic]
         ]
       topicAtomsSetMap = M.fromList
-        [ (topic, Set.unions [tokenizePredicate (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        [ (topic, Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu pred) | pred <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics
         , Just dc <- [Content.lookupDefinitionContent topic]
         ]
@@ -568,8 +568,8 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
                       then buildSemanticSpace semanticNetwork topicAtomsSetMap
                       else emptySemanticSpace
       contentSelector = if contentDensityGate semanticNetwork
-                        then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap
-                        else emptyContentSelector
+                         then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss)
+                         else emptyContentSelector
       topicPredicatesMap = M.fromList
         [ (topic, Content.dcPredicates dc)
         | topic <- Content.coveredTopics
@@ -636,10 +636,14 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
                in map (\engagedCid -> revisePosition engagedCid ContradictionStatement angst conatus)
                       (filter (/= newCid) engaged)
                else []
-      store4 = F.foldl' (\s dec -> applyRevisionDecision turnSeq s mClaimPayload dec) store3 revisionDecisions
+      admittedClaimPayload = case commitDecision of
+        CsaAdmitCanonical -> mClaimPayload
+        _ -> Nothing
+      lemmaMap = ssLemmaMap ss
+      store4 = F.foldl' (\s dec -> applyRevisionDecision lemmaMap turnSeq s admittedClaimPayload dec) store3 revisionDecisions
       nextWithCommitments = nextWithLog
         { ssSemanticCommitments = Just store4
-        , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors semanticSpace store4 }
+        , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors lemmaMap semanticSpace store4 }
         }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of

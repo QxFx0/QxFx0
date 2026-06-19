@@ -194,6 +194,7 @@ minimalTrace = TurnReplayTrace
   , trcIntentType = Nothing
   , trcFrameType = Nothing
     , trcContentSource = Nothing
+    , trcAnalogicalSource = Nothing
   }
 
 testRecoveryNoTrigger :: Test

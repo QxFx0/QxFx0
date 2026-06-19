@@ -251,8 +251,8 @@ library
      QxFx0.Semantic.MeaningAssembly
      QxFx0.Semantic.MeaningDecompose
      QxFx0.Semantic.MeaningDecompose.Core
-     QxFx0.Semantic.MeaningDecompose.Domains
-      QxFx0.Semantic.Network
+      QxFx0.Semantic.MeaningDecompose.Domains
+       QxFx0.Semantic.Network
       QxFx0.Semantic.Network.Types
       QxFx0.Semantic.Network.Seed
       QxFx0.Semantic.Space
@@ -593,6 +593,7 @@ common test-common
     Test.Suite.Analogy
     Test.Suite.GeometricClassifier
     Test.Suite.Revision
+    Test.Suite.MorphologicalNormalization
 
 test-suite qxfx0-test-unit
   import:        test-common

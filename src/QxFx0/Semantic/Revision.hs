@@ -19,6 +19,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (Text)
+import Data.Map.Strict (Map)
 import QxFx0.Types.State.SemanticCommitment
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
 import QxFx0.Semantic.Space (tokenizePredicate)
@@ -51,10 +52,10 @@ data SynthesizedResolution = SynthesizedResolution
 
 -- | Synthesize a resolution from two contradictory commitments.
 -- Returns Conjunction if >=2 shared atoms, Irreducible otherwise.
-synthesizeResolution :: FactualClaimPayload -> FactualClaimPayload -> Maybe SynthesizedResolution
-synthesizeResolution old new =
-  let oldAtoms = tokenizePredicate (fcpStatement old)
-      newAtoms = tokenizePredicate (fcpStatement new)
+synthesizeResolution :: Map Text Text -> FactualClaimPayload -> FactualClaimPayload -> Maybe SynthesizedResolution
+synthesizeResolution lemmaMap old new =
+  let oldAtoms = tokenizePredicate lemmaMap (fcpStatement old)
+      newAtoms = tokenizePredicate lemmaMap (fcpStatement new)
       shared   = S.intersection oldAtoms newAtoms
       combined = fcpStatement old <> ", и вместе с тем " <> fcpStatement new
       irred    = fcpStatement old <> " и " <> fcpStatement new <> " несовместимы в текущей рамке"
@@ -107,12 +108,13 @@ revisePosition cid kind angst conatus
 --   If newPayload is provided, synthesize a resolution and add it as a new commitment.
 -- RcRetained: no action.
 applyRevisionDecision
-  :: TurnSeq
+  :: Map Text Text
+  -> TurnSeq
   -> SemanticCommitmentStore
   -> Maybe FactualClaimPayload
   -> RevisedCommitment
   -> SemanticCommitmentStore
-applyRevisionDecision ts store _mNewPayload (RcQuarantined cid _kind) =
+applyRevisionDecision _lemmaMap ts store _mNewPayload (RcQuarantined cid _kind) =
   case HashMap.lookup cid (scsActive store) of
     Nothing -> store
     Just entry ->
@@ -120,7 +122,7 @@ applyRevisionDecision ts store _mNewPayload (RcQuarantined cid _kind) =
         { scsActive = HashMap.delete cid (scsActive store)
         , scsQuarantine = HashMap.insert cid entry (scsQuarantine store)
         }
-applyRevisionDecision ts store mNewPayload (RcRevised cid kind) =
+applyRevisionDecision lemmaMap ts store mNewPayload (RcRevised cid kind) =
   case HashMap.lookup cid (scsActive store) of
     Nothing -> store
     Just (payload, meta) ->
@@ -133,7 +135,7 @@ applyRevisionDecision ts store mNewPayload (RcRevised cid kind) =
             , ceTurnSeq = ts
             }
           mResolution = case mNewPayload of
-            Just newPayload -> synthesizeResolution payload newPayload
+            Just newPayload -> synthesizeResolution lemmaMap payload newPayload
             Nothing -> Nothing
           nextCid = CommitmentId (scsNextId store)
           storeWithNextId = store { scsNextId = scsNextId store + 1 }
@@ -150,4 +152,4 @@ applyRevisionDecision ts store mNewPayload (RcRevised cid kind) =
         , scsLineage = HashMap.insert cid (oldLineage ++ [LineageRevised ts revisedPayload]) (scsLineage storeWithResolution)
         , scsContradictions = revisionEvent : scsContradictions storeWithResolution
         }
-applyRevisionDecision _ts _store _mNewPayload (RcRetained _cid _kind) = _store
+applyRevisionDecision _lemmaMap _ts _store _mNewPayload (RcRetained _cid _kind) = _store
