@@ -91,9 +91,10 @@ import QxFx0.Types.Thresholds
   , legitimacyPassThreshold
   , parserLowConfidenceThreshold
   )
+import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
-buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan fmarMode shadowPolicy mAnomaly ss ti ts effectPlan effectResults =
   let atomSet = tiAtomSet ti
       intuitPosterior = tsIntuitPosterior ts
       rd = rsRoutingDecision (repStatic effectPlan)
@@ -279,6 +280,8 @@ buildRouteTurnPlan fmarMode shadowPolicy ss ti ts effectPlan effectResults =
             , tpFamilyDerivationChain = familyDerivationChain
             , tpResponseAdmission = arcDecision
             , tpCommitmentEngagement = commitmentEngagement
+            , tpAnomalySurface = fmap aSurface mAnomaly
+            , tpAnomalyTrace = fmap aTrace mAnomaly
             }
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
@@ -308,7 +311,7 @@ routeTurnPlan pio ss ti ts = do
   let effectPlan = planRouteEffects ss ti ts
   effectResults <- resolveRouteEffects pio effectPlan
   fmarMode <- readFmarModeIO pio
-  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) ss ti ts effectPlan effectResults)
+  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) Nothing ss ti ts effectPlan effectResults)
 
 -- | Read 'QXFX0_FMAR' once via the pipeline IO boundary and parse it into
 -- an 'FmarMode'. Mirrors 'shouldUseGfRuntime' in the render stage.

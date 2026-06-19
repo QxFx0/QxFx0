@@ -73,10 +73,13 @@ library
     QxFx0.Types.State.DialogueDevelopment
     QxFx0.Types.State.Perspective
     QxFx0.Types.State.SemanticCommitment
+    QxFx0.Types.State.Stance
     QxFx0.Types.Sense
     QxFx0.Types.State.SelfState
     QxFx0.Types.State.System
     QxFx0.Types.State.Governance
+    QxFx0.Types.Collection.BoundedSet
+    QxFx0.Types.Anomaly
     QxFx0.Types.Thresholds
     QxFx0.Types.Orbital
     QxFx0.Types.IdentityGuard
@@ -218,6 +221,7 @@ library
     QxFx0.Core.TurnLegitimacy
     QxFx0.Core.TurnPipeline
     QxFx0.Core.TurnPipeline.Protocol
+    QxFx0.Core.TurnPipeline.Route.Anomaly
     QxFx0.Bridge.NixGuard
     QxFx0.Bridge.NixCache
     QxFx0.Bridge.SQLite
@@ -290,6 +294,7 @@ library
       QxFx0.Semantic.Intent.GeometricClassifier
       QxFx0.Semantic.Intent.Metrics
       QxFx0.Semantic.Revision
+      QxFx0.Semantic.Stance
       QxFx0.Semantic.Frame.Types
       QxFx0.Semantic.Frame.Builder
      QxFx0.Core.DialogueThread
@@ -592,8 +597,10 @@ common test-common
     Test.Suite.ContentSelector
     Test.Suite.Analogy
     Test.Suite.GeometricClassifier
+    Test.Suite.Stance
     Test.Suite.Revision
     Test.Suite.MorphologicalNormalization
+    Test.Suite.Anomaly
 
 test-suite qxfx0-test-unit
   import:        test-common

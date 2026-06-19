@@ -418,7 +418,7 @@ buildPlannedFixture rawInput = do
   let routePlan = planRouteEffects ss ti ts
       pio = mkTestPipelineIO defaultTestPipelineConfig
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

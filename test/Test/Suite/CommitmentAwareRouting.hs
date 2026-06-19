@@ -255,7 +255,7 @@ integrationContradictionTraceAndLedger = TestLabel "contradiction trace and ledg
     -- Rebuild route plan with overridden input
     let routePlan = planRouteEffects ss tiOverride ts
     routeResults <- resolveRouteEffects pio routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss tiOverride ts routePlan routeResults
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss tiOverride ts routePlan routeResults
 
     -- Render
     let renderPlan = planRenderEffects LocalRecoveryEnabled ss tiOverride ts tp
@@ -322,7 +322,7 @@ integrationNoContradictionNoHint = TestLabel "no contradiction -> no CMReflect h
     -- Rebuild route plan with overridden input
     let routePlan = planRouteEffects ss tiOverride ts
     routeResults <- resolveRouteEffects pio routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) ss tiOverride ts routePlan routeResults
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss tiOverride ts routePlan routeResults
 
     -- Render
     let renderPlan = planRenderEffects LocalRecoveryEnabled ss tiOverride ts tp

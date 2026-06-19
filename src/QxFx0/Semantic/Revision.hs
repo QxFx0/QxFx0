@@ -23,6 +23,8 @@ import Data.Map.Strict (Map)
 import QxFx0.Types.State.SemanticCommitment
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
 import QxFx0.Semantic.Space (tokenizePredicate)
+import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), stanceConfidence, emptyStanceDefense)
+import QxFx0.Semantic.Stance (defendOrAdapt, Collapse(..))
 
 -- | Result of contradiction-driven revision.
 data RevisedCommitment
@@ -85,22 +87,33 @@ synthesizeResolution lemmaMap old new =
            }
        }
 
--- | Determine revision action based on self-state.
+-- | Determine revision action based on stance defense state (v3.0 pentagon).
 --
--- Decision thresholds:
--- - angst > 0.7 → RcRevised (high anxiety → flexibility)
--- - conatus < 5.0 → RcQuarantined (weak energy → quarantine)
--- - otherwise → RcRetained (stable → retain)
+-- This is now a wrapper around defendOrAdapt that maps StanceDefense back to
+-- RevisedCommitment for backward compatibility with applyRevisionDecision.
+--
+-- Pentagon transitions:
+-- - StanceHeld + weak challenge → StanceHeld → RcRetained
+-- - StanceHeld + strong challenge → StanceDoubted → RcRetained (defending)
+-- - StanceDoubted + strong challenge → StanceRevised → RcRevised
+-- - StanceDoubted + low conatus → CollapseConatusExhausted → RcQuarantined
+-- - StanceRevised → AdversaryClassified → RcRetained (exit defense cycle)
 revisePosition
   :: CommitmentId
   -> ContradictionKind
-  -> Double  -- ^ angst level
+  -> StanceDefense
   -> ConatusEnergy
-  -> RevisedCommitment
-revisePosition cid kind angst conatus
-  | angst > 0.7 = RcRevised cid kind
-  | ceScalar conatus < 5.0 = RcQuarantined cid kind
-  | otherwise = RcRetained cid kind
+  -> Set Text  -- ^ Atoms from user's challenge
+  -> Either Collapse RevisedCommitment
+revisePosition cid kind sd conatus challengeAtoms =
+  case defendOrAdapt sd conatus challengeAtoms of
+    Left collapse -> Left collapse
+    Right newSd ->
+      let newStance = sdStance newSd
+      in case newStance of
+           StanceRevised _ -> Right $ RcRevised cid kind
+           StanceDoubted _ -> Right $ RcRetained cid kind  -- defending, not yet revised
+           StanceHeld _ -> Right $ RcRetained cid kind     -- successfully defended
 
 -- | Apply a revision decision to the commitment store.
 -- RcQuarantined: move from active to quarantine.

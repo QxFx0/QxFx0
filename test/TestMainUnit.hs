@@ -59,6 +59,8 @@ import Test.Suite.ContentSelector (contentSelectorTests)
 import Test.Suite.Analogy (analogyTests)
 import Test.Suite.GeometricClassifier (geometricClassifierTests)
 import Test.Suite.Revision (revisionTests)
+import Test.Suite.Anomaly (anomalyTests)
+import Test.Suite.Stance (stanceTests)
 
 main :: IO ()
 main = do
@@ -117,9 +119,11 @@ main = do
                   ++ semanticNetworkTests
                    ++ semanticSpaceTests
                    ++ contentSelectorTests
-                   ++ [analogyTests]
-                   ++ geometricClassifierTests
-               )
+                    ++ [analogyTests]
+                    ++ geometricClassifierTests
+                    ++ [anomalyTests]
+                    ++ stanceTests
+                )
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

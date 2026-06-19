@@ -51,6 +51,7 @@ import QxFx0.Memory.Episodic (EpisodicEvent)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement)
 import QxFx0.Semantic.Network.Types (SemanticNetwork)
 import QxFx0.Semantic.Intent.GeometricClassifier (ClassificationResult)
+import QxFx0.Types.Anomaly (AnomalySurface, AnomalyTrace)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -217,6 +218,12 @@ data TurnPlan = TurnPlan
     -- ^ SUBJECT-SEAM-1: whether the turn engages or contradicts held
     --   commitments. Populated in 'buildRouteTurnPlan' from the active
     --   store and current atom set.
+  , tpAnomalySurface :: !(Maybe AnomalySurface)
+    -- ^ Anomaly detection: typed render payload when an anomaly is detected.
+    --   Populated by 'buildAnomalyTurnPlan' in Route phase. Nothing on normal path.
+  , tpAnomalyTrace :: !(Maybe AnomalyTrace)
+    -- ^ Anomaly detection: trace information for observability when anomaly detected.
+    --   Populated alongside tpAnomalySurface. Nothing on normal path.
   }
 
 tpNewEgo :: TurnPlan -> EgoState

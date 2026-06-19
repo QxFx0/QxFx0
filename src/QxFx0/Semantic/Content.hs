@@ -73,6 +73,8 @@ module QxFx0.Semantic.Content
     -- * B3 helpers
   , substantivePredicateCount
   , hasMinimumPredicates
+    -- * Utilities
+  , extractTopicForm
     -- * Corpus data
   , definitionCorpus
   ) where

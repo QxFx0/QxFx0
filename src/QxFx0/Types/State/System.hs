@@ -180,6 +180,16 @@ import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
 import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
+import QxFx0.Semantic.Content (ConceptCategory)
+import QxFx0.Types.State.Stance
+  ( StanceState
+  , StanceDefense
+  , UserStanceTracker
+  , StanceLineage
+  , emptyStanceDefense
+  , emptyUserStanceTracker
+  , emptyStanceLineage
+  )
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -311,6 +321,27 @@ data SystemState = SystemState
     --   Built from MorphologyData via buildLemmaMap.
     --   Used to normalize atoms before prototype matching.
     --   Initialised to 'M.empty', populated in Bootstrap.
+  , ssCategoryMap :: !(M.Map Text ConceptCategory)
+    -- ^ Anomaly detection: topic → concept category mapping.
+    --   Built from definitionCorpus topics via classifyConceptCategory.
+    --   Used to constrain predicate selection within same category.
+    --   Initialised to 'M.empty', populated in Bootstrap.
+  , ssStances :: !(M.Map Text StanceState)
+    -- ^ Anomaly detection: topic → current stance state.
+    --   Tracks system's stance on each topic for revision detection.
+    --   Initialised to 'M.empty'.
+  , ssStanceDefenses :: !(M.Map Text StanceDefense)
+    -- ^ Anomaly detection: topic → stance defense state.
+    --   Tracks attack count, evidence seen, recovery counter per topic.
+    --   Initialised to 'M.empty'.
+  , ssUserStanceTrackers :: !(M.Map Text UserStanceTracker)
+    -- ^ Anomaly detection: topic → user stance tracker.
+    --   Tracks user's stance history for consistency detection.
+    --   Initialised to 'M.empty'.
+  , ssStanceLineages :: !(M.Map Text StanceLineage)
+    -- ^ Anomaly detection: topic → stance lineage.
+    --   Tracks stance transitions for temporal anomaly detection.
+    --   Initialised to 'M.empty'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -380,8 +411,13 @@ instance ToJSON SystemState where
             , "semanticNetwork" .= ssSemanticNetwork ss
             , "semanticSpace" .= ssSemanticSpace ss
              , "contentSelector" .= ssContentSelector ss
-             , "lemmaMap" .= ssLemmaMap ss
-             ]
+              , "lemmaMap" .= ssLemmaMap ss
+              , "categoryMap" .= ssCategoryMap ss
+              , "stances" .= ssStances ss
+              , "stanceDefenses" .= ssStanceDefenses ss
+              , "userStanceTrackers" .= ssUserStanceTrackers ss
+              , "stanceLineages" .= ssStanceLineages ss
+              ]
 
 instance FromJSON SystemState where
   parseJSON = withObject "SystemState" $ \o -> do
@@ -496,8 +532,13 @@ instance FromJSON SystemState where
             <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
             <*> o .:? "semanticSpace" .!= emptySemanticSpace
              <*> o .:? "contentSelector" .!= emptyContentSelector
-             <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
-             <*> o .:? "lemmaMap" .!= M.empty
+              <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
+              <*> o .:? "lemmaMap" .!= M.empty
+              <*> o .:? "categoryMap" .!= M.empty
+              <*> o .:? "stances" .!= M.empty
+              <*> o .:? "stanceDefenses" .!= M.empty
+              <*> o .:? "userStanceTrackers" .!= M.empty
+              <*> o .:? "stanceLineages" .!= M.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -687,6 +728,11 @@ emptySystemState = SystemState
   , ssContentSelector = emptyContentSelector
   , ssGeometricMetrics = emptyIntentClassifierMetrics
   , ssLemmaMap = M.empty
+  , ssCategoryMap = M.empty
+  , ssStances = M.empty
+  , ssStanceDefenses = M.empty
+  , ssUserStanceTrackers = M.empty
+  , ssStanceLineages = M.empty
   }
 
 emptyGovernanceProjection :: GovernanceProjection

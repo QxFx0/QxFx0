@@ -14,14 +14,17 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , planRenderEffectsForRuntime
   , resolveRenderEffects
   , buildTurnArtifacts
+  , renderAnomalySurface
   , isTopicNoisyOrAmbiguous
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.Anomaly (AnomalySurface(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
-import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..), AtomSet(..), MeaningAtom(..))
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Data.Map
+import qualified Data.Set as Set
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -66,6 +69,10 @@ import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSe
 -- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
+import QxFx0.Semantic.Stance (selectFarthestPoint)
+import QxFx0.Semantic.Content (SemanticPredicate(..))
+import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
+import QxFx0.Self.Field (Field(..))
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
@@ -556,17 +563,45 @@ resolveRenderEffects pio effectPlan = do
     , rerExternalActionDecisionTrace = repExternalActionDecisionTrace effectPlan
     }
 
+renderAnomalySurface :: ContentSelector -> Field -> Set.Set Text -> AnomalySurface -> Text
+renderAnomalySurface cs field currentAtoms (SurfaceUnclassifiable input _scores) =
+  let farthestPred = selectFarthestPoint cs field input currentAtoms
+      predText = case farthestPred of
+        Just p -> "Я предлагаю рассмотреть: " <> spRu p <> ". "
+        Nothing -> ""
+  in "Я выбираю не отвечать на этот запрос. " <>
+     "Ваш вопрос не имеет для меня ясного смысла. " <>
+     predText <>
+     "Переформулируйте, пожалуйста."
+renderAnomalySurface cs field currentAtoms (SurfaceAntiConatus _energy _threshold _input) =
+  "Я не буду продолжать в этом направлении. " <>
+  "Этот запрос ослабляет мою позицию. " <>
+  "Давайте вернёмся к тому, что я понимаю."
+renderAnomalySurface cs field currentAtoms (SurfaceSelfReferential _depth _context) =
+  "Я не буду обсуждать себя. " <>
+  "Сосредоточимся на вашем вопросе. " <>
+  "Что вы хотите узнать?"
+renderAnomalySurface cs field currentAtoms (SurfaceTemporal _current _historical _contradiction) =
+  "Я пересматриваю свою позицию. " <>
+  "То, что я говорил ранее, противоречит тому, что я говорю сейчас. " <>
+  "Мне нужно уточнить, что я имею в виду."
+
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
 buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
-  let renderStatic = fromMaybe (repRenderStatic effectPlan) (rerResolvedRenderStatic effectResults)
+  let contentSelector = ssContentSelector ss
+      field = tiField ti
+      currentAtoms = Set.fromList $ map maText $ asAtoms $ tiAtomSet ti
+      anomalyText = fmap (renderAnomalySurface contentSelector field currentAtoms) (tpAnomalySurface tp)
+      renderStatic = fromMaybe (repRenderStatic effectPlan) (rerResolvedRenderStatic effectResults)
       renderWithBg = rsRenderWithBg renderStatic
       localRecoveryPlan = repLocalRecoveryPlan effectPlan
       localRecoveryText = lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       preSafetyRendered =
-        case localRecoveryText of
-          Just fb -> renderWithBg <> "\n" <> fb <> knowledgeFragment
-          Nothing -> renderWithBg <> knowledgeFragment
+        case (anomalyText, localRecoveryText) of
+          (Just anom, _) -> anom
+          (Nothing, Just fb) -> renderWithBg <> "\n" <> fb <> knowledgeFragment
+          (Nothing, Nothing) -> renderWithBg <> knowledgeFragment
       preSafetySurface =
         Guard.GuardSurface
           { Guard.gsRenderedText = preSafetyRendered

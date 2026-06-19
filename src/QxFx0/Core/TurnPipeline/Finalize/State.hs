@@ -20,7 +20,10 @@ import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
 import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, contradict)
 import qualified QxFx0.Semantic.Content as Content
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore, CommitmentEngagement(..), CommitmentId(..), ContradictionKind(..))
-import QxFx0.Semantic.Revision (RevisedCommitment(..), revisePosition, applyRevisionDecision)
+import QxFx0.Semantic.Revision (RevisedCommitment(..), applyRevisionDecision)
+import QxFx0.Semantic.Stance (defendOrAdapt, recoverStance, Collapse(..))
+import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), emptyStanceDefense, incrementRecoveryCounter)
+import qualified Data.Set as S
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
@@ -73,6 +76,7 @@ import QxFx0.Self.Essence
   , EssenceCommitment (..)
   , CommitmentTrigger (..)
   , EssenceViolation(..)
+  , EssenceResetEvent(..)
   , defaultEssenceModulation
   , renderEssenceMode
   , renderCommitmentTrigger
@@ -80,6 +84,7 @@ import QxFx0.Self.Essence
   , commit
   , validatePlan
   , witness
+  , collapseEssence
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
 import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..), Atmosphere(..), updateMood)
@@ -622,28 +627,53 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
                       else contradict engagedCid newCid ContradictionStatement turnSeq s
                   ) store2 engaged
               else store2
-      -- Phase E: revision decisions for contradicted commitments
-      revisionDecisions =
+      -- Phase E: revision decisions for contradicted commitments (v3.0 pentagon)
+      (revisionDecisions, mCollapse) =
         let ce = tpCommitmentEngagement tp
-            angst = case tiEssence ti of
-                      EssenceUncommitted traj -> etAngstLevel traj
-                      EssenceCommitted traj _ -> etAngstLevel traj
             conatus = tiConatusEnergy ti
+            topic = tiBestTopic ti
+            sd = M.findWithDefault emptyStanceDefense topic (ssStanceDefenses ss)
+            challengeAtoms = S.fromList $ map maText $ asAtoms $ tiAtomSet ti
         in if ceContradicted ce
-             then
-               let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
-                   engaged = ceEngaged ce
-               in map (\engagedCid -> revisePosition engagedCid ContradictionStatement angst conatus)
-                      (filter (/= newCid) engaged)
-               else []
+              then
+                let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
+                    engaged = ceEngaged ce
+                    results = map (\engagedCid ->
+                          (engagedCid, defendOrAdapt sd conatus challengeAtoms)
+                        ) (filter (/= newCid) engaged)
+                    decisions = map (\(engagedCid, result) ->
+                          case result of
+                            Left _collapse -> RcQuarantined engagedCid ContradictionStatement
+                            Right newSd ->
+                              case sdStance newSd of
+                                StanceRevised _ -> RcRevised engagedCid ContradictionStatement
+                                _ -> RcRetained engagedCid ContradictionStatement
+                        ) results
+                    hasCollapse = any (\(_, r) -> case r of Left _ -> True; Right _ -> False) results
+                in (decisions, if hasCollapse then Just () else Nothing)
+              else ([], Nothing)
       admittedClaimPayload = case commitDecision of
         CsaAdmitCanonical -> mClaimPayload
         _ -> Nothing
       lemmaMap = ssLemmaMap ss
       store4 = F.foldl' (\s dec -> applyRevisionDecision lemmaMap turnSeq s admittedClaimPayload dec) store3 revisionDecisions
+      -- Recovery Slice: increment sdRecoveryCounter, then recover if threshold met
+      updatedStanceDefenses = M.map (recoverStance . incrementRecoveryCounter) (ssStanceDefenses ss)
+      -- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3)
+      selfStateAfterCollapse = case mCollapse of
+        Just _ ->
+          let currentEssence = selfEssence (ssSelfState ss)
+              currentTraj = case currentEssence of
+                EssenceUncommitted traj -> traj
+                EssenceCommitted traj _ -> traj
+              (resetTraj, _resetEvent) = collapseEssence (unTurnSeq turnSeq) currentTraj
+          in (ssSelfState ss) { selfEssence = EssenceUncommitted resetTraj }
+        Nothing -> ssSelfState ss
       nextWithCommitments = nextWithLog
         { ssSemanticCommitments = Just store4
         , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors lemmaMap semanticSpace store4 }
+        , ssStanceDefenses = updatedStanceDefenses
+        , ssSelfState = selfStateAfterCollapse
         }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of

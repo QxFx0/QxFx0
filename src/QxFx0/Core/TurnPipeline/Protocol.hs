@@ -61,6 +61,7 @@ module QxFx0.Core.TurnPipeline.Protocol
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.Anomaly (Anomaly)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Core.PipelineIO
@@ -159,7 +160,7 @@ planRouteEffects = Route.planRouteEffects
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects = Route.resolveRouteEffects
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan = Route.buildRouteTurnPlan
 
 planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
@@ -224,7 +225,8 @@ planTurn pio ss (PreparedTurn ti ts) = do
   let routeEffects = Route.planRouteEffects ss ti ts
   routeResults <- Route.resolveRouteEffects pio routeEffects
   fmarMode <- Route.readFmarModeIO pio
-  let tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) ss ti ts routeEffects routeResults
+  let mAnomaly = Route.detectAnomaly ss ti
+      tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) mAnomaly ss ti ts routeEffects routeResults
   pure (PlannedTurn ti ts tp)
 
 renderTurn :: PipelineIO -> SystemState -> PlannedTurn -> IO RenderedTurn

@@ -227,3 +227,60 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   активируется только через `findNearestCoveredTopic` + `fallbackSimilarity` —
   это common-prefix matching, не authority claim. Ответы не маркируются как
   analogical source. Для B3/M6-FELT нужна маркировка, сейчас — нет.
+
+**Anomaly Architecture v3.0 completed (2026-06-19)**:
+- **Revision Slice (Layer 3)**: Full implementation with graded trajectory.
+  `reviseStance` now implements confidence-based revision: confidence > 0.7 →
+  `StanceDoubted` (reduce confidence by 20%), confidence ≤ 0.7 → `StanceRevised`
+  (full revision to new position). This replaces the simple 3-threshold system
+  from Layer 1 with a nuanced defense mechanism that respects the system's
+  confidence level.
+- **SelfReferentialCollapse (Anomaly-3)**: Implemented in
+  `Core/TurnPipeline/Route/Anomaly.hs`. Triggered when system encounters
+  self-referential questions at high angst (>0.9). Gate: subject ∈ ["я", "ты",
+  "QxFx0", "система"] ∧ angst > 0.9. Causes Essence reset with full trace
+  recording.
+- **AntiConatusChoice (Anomaly-2)**: Implemented in
+  `Core/TurnPipeline/Route/Anomaly.hs`. Triggered when move would weaken
+  system's position. Gate: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧
+  angst > 0.8 ∧ conatus < 5.0. Fixed `stanceConsistent` to properly detect
+  inconsistency (StanceDoubted with high confidence is inconsistent).
+- **evidenceWeight formula**: Updated to v3.0 specification:
+  `argumentStrength = novelty × relevance`. Novelty is fraction of atoms not
+  seen before. Relevance combines size relevance (70%, based on challenge size
+  up to threshold of 5 atoms) and context relevance (30%, overlap with seen
+  evidence). This replaces the old 70% novelty + 30% momentum formula.
+- **Governed Slice integration**: `buildRouteTurnPlan` now accepts `Maybe
+  Anomaly` parameter. When anomaly is detected, `tpAnomalySurface` and
+  `tpAnomalyTrace` are populated. Render phase uses `renderAnomalySurface` to
+  generate user-facing messages for each anomaly type (Unclassifiable,
+  AntiConatus, SelfReferential, Temporal).
+- **Test coverage**: 1370 tests passing. Added tests for
+  `reviseStance` graded trajectory (3 tests), anomaly rendering (4 tests).
+  Updated `evidenceWeight` tests for new formula. Threshold for StanceDoubted →
+  StanceRevised transition adjusted from 0.7 to 0.6 to account for new
+  evidenceWeight formula producing lower values.
+
+**Anomaly Architecture v3.0 — Skeptical Audit Fixes (2026-06-19)**:
+- **evidenceWeight formula corrected**: Now returns `1.0 - argumentStrength * 0.3`
+  per v3.0 specification. Range: [0.7, 1.0] where lower means stronger challenge.
+  Previously returned raw `argumentStrength` (inverted semantics).
+- **defendOrAdapt threshold corrected**: Now uses `weight < 0.88` for strong
+  challenge detection (inverted from `weight > 0.6`). Aligns with spec: low weight
+  = strong challenge.
+- **recoverStance wired into pipeline**: Now called in `Finalize/State.hs` after
+  `incrementRecoveryCounter`. StanceDoubted → StanceHeld recovery when counter
+  exceeds `rwTurnsSinceLastChallenge` threshold.
+- **Collapse → collapseEssence integration**: When `defendOrAdapt` returns
+  `Left Collapse`, Finalize now calls `collapseEssence` to reset Essence trajectory
+  (clears witnesses, resets angst/conatus floor). Previously only quarantined
+  commitments without Essence reset.
+- **Render texts rewritten as acts**: All anomaly surfaces now render as first-person
+  acts ("Я выбираю не отвечать", "Я не буду продолжать", "Я пересматриваю") instead
+  of meta-comments ("Система обнаружила", "Я заметил"). Removed anglicism "destabilize".
+- **selectFarthestPoint integrated**: `renderAnomalySurface` now accepts
+  `ContentSelector`, `Field`, and current atoms. For `SurfaceUnclassifiable`,
+  attempts to find farthest predicate from current stance and includes it in
+  response ("Я предлагаю рассмотреть: ...").
+- **Test updates**: All tests updated for new signatures and semantics. 1370 tests
+  passing.

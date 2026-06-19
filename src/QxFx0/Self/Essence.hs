@@ -23,7 +23,7 @@ forcing dynamics (Phase 10) live behind a feature flag; until
 then, every essence remains 'EssenceUncommitted'.
 -}
 module QxFx0.Self.Essence
-  ( -- * Carriers
+  ( -- * Core types
     Essence (..)
   , EssenceTrajectory (..)
   , EssenceWitness (..)
@@ -35,6 +35,9 @@ module QxFx0.Self.Essence
   , EssenceMode (..)
   , CommitmentTrigger (..)
   , EssenceCommitment (..)
+    -- * Anomaly-3: Self-referential collapse
+  , EssenceResetEvent (..)
+  , collapseEssence
     -- * Violations and validation (Phase 10)
   , EssenceViolation (..)
   , validatePlan
@@ -221,6 +224,44 @@ data EssenceCommitment = EssenceCommitment
   , ecWitnessHash  :: !TrajectoryHash
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- ---------------------------------------------------------------------------
+-- Anomaly-3: Self-referential collapse
+-- ---------------------------------------------------------------------------
+
+-- | Event recorded when the system performs a self-referential collapse.
+-- This is a replay-visible record of Essence reset, not a silent failure.
+data EssenceResetEvent = EssenceResetEvent
+  { ereTurn               :: !Int      -- ^ Turn ordinal when collapse occurred
+  , erePreviousAngst      :: !Double   -- ^ Angst level before reset
+  , erePreviousWitnessCount :: !Int    -- ^ Number of witnesses before reset
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Perform a self-referential collapse: reset the Essence trajectory
+-- while preserving the replay-visible record of what was lost.
+--
+-- This implements Anomaly-3 from the Anomaly Architecture v3.0 specification.
+-- When the system encounters a self-referential question at high angst
+-- (subject ∈ ["я", "ты", "QxFx0", "система"] ∧ angst > 0.9), it performs
+-- a structural reset: clears witnesses, resets angst and conatus floor.
+--
+-- The reset is replay-visible via 'EssenceResetEvent', making the loss
+-- observable in traces. This is "losing what you've been through", not
+-- silent amnesia.
+collapseEssence :: Int -> EssenceTrajectory -> (EssenceTrajectory, EssenceResetEvent)
+collapseEssence turn traj =
+  let resetEvent = EssenceResetEvent
+        { ereTurn               = turn
+        , erePreviousAngst      = etAngstLevel traj
+        , erePreviousWitnessCount = Seq.length (etWitnesses traj)
+        }
+      resetTraj = traj
+        { etWitnesses    = Seq.empty
+        , etAngstLevel   = 0.0
+        , etConatusFloor = 1.0  -- Reset to initial floor
+        }
+  in (resetTraj, resetEvent)
 
 -- ---------------------------------------------------------------------------
 -- Modulation

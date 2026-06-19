@@ -148,6 +148,25 @@ import QxFx0.Core.EarlyFamilyAdmission
   , AdmittedEarlyFamily(..)
   , admitEarlyFamilyRecommendation
   )
+import QxFx0.Types.Anomaly
+  ( Anomaly(..)
+  , AnomalyType(..)
+  , AnomalySurface(..)
+  , AnomalyTrace(..)
+  )
+import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
+import QxFx0.Core.TurnPipeline.Route.Anomaly
+  ( detectAnomaly
+  , detectSelfReferentialCollapse
+  , detectAntiConatusChoice
+  , selfReferentialCollapse
+  )
+import QxFx0.Types.State.Stance (StanceState(..))
+import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
+import QxFx0.Types.State.SelfState (SelfState(..), emptySelfState)
+import qualified Data.Set as Set
+import Data.Time.Clock (getCurrentTime)
 import QxFx0.Core.AtomContributionAdmission
   ( AtomContributionAdmissionInput(..)
   , AtomContributionAdmissionDecision(..)
@@ -549,10 +568,15 @@ turnPipelineProtocolTests =
          , testPerspectiveFinalizeRecordsGovernedMutation
          , testPerspectiveFinalizeReplayUsesSafeProjectionOnly
         , testDialogueDevelopmentBoundsAdaptiveMaps
-       , testSpeechPolicyBiasesRouteStyle
-       , testSpeechPolicyDoesNotDowngradeRecoveryStyle
-       , testFinalizeMetricsPopulatesLearningTelemetry
-       ]
+        , testSpeechPolicyBiasesRouteStyle
+        , testSpeechPolicyDoesNotDowngradeRecoveryStyle
+        , testFinalizeMetricsPopulatesLearningTelemetry
+        -- Anomaly v3.0 integration tests
+        , testAnomalyDetectionInPipeline
+        , testSelfReferentialCollapseDetection
+        , testAntiConatusChoiceDetection
+        , testAnomalyRenderedInArtifacts
+        ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
@@ -829,7 +853,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
     let ts = ts0 { tsNarrativeFragment = Just "narrative_override_attempt" }
         routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects strictShadowPio routePlan
-    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) ss ti ts routePlan routeResults
+    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) Nothing ss ti ts routePlan routeResults
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts turnPlan
     renderResults <- resolveRenderEffects strictShadowPio renderPlan
     let turnArtifacts = buildTurnArtifacts ss ti ts turnPlan renderPlan renderResults
@@ -927,7 +951,7 @@ testShadowVetoAllowedWithinWindow = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger when count < max"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must increment"
@@ -955,7 +979,7 @@ testShadowVetoExhaustedAfterMax = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
     assertBool "shadow gate must be bypassed when exhausted"
       (not (tpShadowGateTriggered turnPlan))
     assertBool "shadow message must contain exhaustion telemetry"
@@ -982,7 +1006,7 @@ testShadowVetoWindowResets = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger after window reset"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must reset to 1 after expiry"
@@ -1758,8 +1782,8 @@ testFmarLiveOverridesRouting = TestCase $
     let routePlan = planRouteEffects ss ti ts
         pio = testProtocolPipelineIO
     routeResults <- resolveRouteEffects pio routePlan
-    let tpOff  = buildRouteTurnPlan FmarOff  (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
-        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) ss ti ts routePlan routeResults
+    let tpOff  = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
+        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
     case tpFmarDirective tpOff of
       Just _  -> assertFailure "FmarOff must not produce an FMAR directive"
       Nothing -> pure ()
@@ -2401,7 +2425,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixture rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -2471,7 +2495,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -4611,3 +4635,95 @@ testFinalizeMetricsPopulatesLearningTelemetry = TestCase $
       (T.isInfixOf "lexicon_pressure" (tmLexiconNeedTriggerReason metrics))
     assertEqual "dedup skip reason must be preserved from artifacts"
       (taExternalQuerySkipReason ta) (tmDedupSkipReason metrics)
+
+-- | Anomaly v3.0: detectAnomaly must be callable in pipeline context.
+testAnomalyDetectionInPipeline :: Test
+testAnomalyDetectionInPipeline = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = emptySystemState { ssSessionId = "anomaly-test" }
+    (_ss, ti, _ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
+    let mAnomaly = detectAnomaly ss0 ti
+    -- Normal input should not trigger anomaly
+    assertBool "normal input should not trigger anomaly" (mAnomaly == Nothing)
+
+-- | Anomaly v3.0: SelfReferentialCollapse must trigger on self-reference with high angst.
+testSelfReferentialCollapseDetection :: Test
+testSelfReferentialCollapseDetection = TestCase $ do
+  -- Test the core function directly with controlled inputs
+  let traj = emptyTrajectory { etAngstLevel = 0.95 }
+      selfState = emptySelfState { selfEssence = EssenceUncommitted traj }
+      ss0 = emptySystemState
+        { ssSessionId = "self-ref-test"
+        , ssSelfState = selfState
+        }
+      frame = emptyInputPropositionFrame { ipfSemanticSubject = "я" }
+  -- High angst + self-reference should trigger
+  assertBool "self-reference with high angst should trigger collapse"
+    (selfReferentialCollapse traj frame)
+  -- Low angst should not trigger
+  let trajLow = emptyTrajectory { etAngstLevel = 0.5 }
+  assertBool "self-reference with low angst should not trigger"
+    (not $ selfReferentialCollapse trajLow frame)
+  -- Non-self-reference should not trigger
+  let frameOther = emptyInputPropositionFrame { ipfSemanticSubject = "свобода" }
+  assertBool "non-self-reference should not trigger"
+    (not $ selfReferentialCollapse traj frameOther)
+
+-- | Anomaly v3.0: AntiConatusChoice must trigger on inconsistent stance with low energy.
+testAntiConatusChoiceDetection :: Test
+testAntiConatusChoiceDetection = TestCase $
+  withDeterministicEmbedding $ do
+    let traj = emptyTrajectory { etAngstLevel = 0.9 }
+        selfState = emptySelfState { selfEssence = EssenceUncommitted traj }
+        -- Create inconsistent stance: StanceDoubted with high confidence
+        inconsistentStance = StanceDoubted 0.85
+        stances = Map.singleton "свобода" inconsistentStance
+        ss0 = emptySystemState
+          { ssSessionId = "anti-conatus-test"
+          , ssSelfState = selfState
+          , ssStances = stances
+          }
+    (_ss, ti, _ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
+    -- Override conatus to be low
+    let tiLowConatus = ti { tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0) }
+    let mAnomaly = detectAntiConatusChoice ss0 tiLowConatus
+    -- Inconsistent stance + low conatus + high angst should trigger
+    assertBool "inconsistent stance with low conatus should trigger anti-conatus"
+      (case mAnomaly of
+         Just a -> aType a == AnomalyAntiConatus
+         Nothing -> False)
+
+-- | Anomaly v3.0: Anomaly must be rendered in TurnArtifacts when detected.
+testAnomalyRenderedInArtifacts :: Test
+testAnomalyRenderedInArtifacts = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = emptySystemState { ssSessionId = "render-test" }
+    (ss, ti, ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
+    -- Create a fake anomaly
+    now <- getCurrentTime
+    let fakeAnomaly = Anomaly
+          { aType = AnomalyUnclassifiable
+          , aSurface = SurfaceUnclassifiable
+              { susInput = "test input"
+              , susFamilyScores = [("CMDefine", 0.1)]
+              }
+          , aTrace = AnomalyTrace
+              { atTurn = TurnSeq 1
+              , atCommitmentId = Nothing
+              , atDetectedAtoms = Set.fromList ["test"]
+              , atConfidence = 0.8
+              }
+          }
+    -- Build route plan with anomaly
+    let routePlan = planRouteEffects ss ti ts
+    routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just fakeAnomaly) ss ti ts routePlan routeResults
+    -- Check that anomaly is wired into TurnPlan
+    assertBool "anomaly surface must be populated in TurnPlan"
+      (case tpAnomalySurface tp of
+         Just _ -> True
+         Nothing -> False)
+    assertBool "anomaly trace must be populated in TurnPlan"
+      (case tpAnomalyTrace tp of
+         Just _ -> True
+         Nothing -> False)
