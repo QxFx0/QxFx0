@@ -129,6 +129,7 @@ canonicalPayloads =
       , fcpOrigin     = OriginParser origin
       , fcpTurnSeq    = TurnSeq 0
       , fcpDeps       = []
+      , fcpTopic      = ""
       }
 
 -- ---------------------------------------------------------------------------

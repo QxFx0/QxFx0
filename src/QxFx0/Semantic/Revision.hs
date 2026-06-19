@@ -1,19 +1,27 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Revision
   ( RevisedCommitment(..)
+  , ResolutionType(..)
+  , SynthesizedResolution(..)
   , revisePosition
   , applyRevisionDecision
+  , synthesizeResolution
   ) where
 
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON, FromJSON)
+import Data.Set (Set)
+import qualified Data.Set as S
 import qualified Data.HashMap.Strict as HashMap
-import QxFx0.Types.State.SemanticCommitment (CommitmentId, ContradictionKind, SemanticCommitmentStore(..), TurnSeq, LineageEvent(..), ContradictionEvent(..), FactualClaimPayload(..))
+import Data.Text (Text)
+import QxFx0.Types.State.SemanticCommitment
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Semantic.Space (tokenizePredicate)
 
 -- | Result of contradiction-driven revision.
 data RevisedCommitment
@@ -25,6 +33,56 @@ data RevisedCommitment
     -- ^ Stable state → retain the commitment despite contradiction
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Type of contradiction resolution.
+data ResolutionType
+  = Conjunction     -- ^ "X, и вместе с тем Y" (>=2 shared atoms)
+  | Irreducible     -- ^ "X и Y несовместимы в текущей рамке" (<2 shared atoms)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Synthesized resolution of contradictory commitments.
+data SynthesizedResolution = SynthesizedResolution
+  { srType      :: !ResolutionType
+  , srStatement :: !Text
+  , srPayload   :: !FactualClaimPayload
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Synthesize a resolution from two contradictory commitments.
+-- Returns Conjunction if >=2 shared atoms, Irreducible otherwise.
+synthesizeResolution :: FactualClaimPayload -> FactualClaimPayload -> Maybe SynthesizedResolution
+synthesizeResolution old new =
+  let oldAtoms = tokenizePredicate (fcpStatement old)
+      newAtoms = tokenizePredicate (fcpStatement new)
+      shared   = S.intersection oldAtoms newAtoms
+      combined = fcpStatement old <> ", и вместе с тем " <> fcpStatement new
+      irred    = fcpStatement old <> " и " <> fcpStatement new <> " несовместимы в текущей рамке"
+  in if S.size shared >= 2
+     then Just SynthesizedResolution
+       { srType = Conjunction
+       , srStatement = combined
+       , srPayload = FactualClaimPayload
+           { fcpStatement = combined
+           , fcpConfidence = 0.5
+           , fcpOrigin = OriginSynthetic
+           , fcpTurnSeq = fcpTurnSeq new
+           , fcpDeps = []
+           , fcpTopic = fcpTopic new
+           }
+       }
+     else Just SynthesizedResolution
+       { srType = Irreducible
+       , srStatement = irred
+       , srPayload = FactualClaimPayload
+           { fcpStatement = irred
+           , fcpConfidence = 0.3
+           , fcpOrigin = OriginSynthetic
+           , fcpTurnSeq = fcpTurnSeq new
+           , fcpDeps = []
+           , fcpTopic = fcpTopic new
+           }
+       }
 
 -- | Determine revision action based on self-state.
 --
@@ -46,13 +104,15 @@ revisePosition cid kind angst conatus
 -- | Apply a revision decision to the commitment store.
 -- RcQuarantined: move from active to quarantine.
 -- RcRevised: reduce confidence by 0.9, record LineageRevised and ContradictionEvent.
+--   If newPayload is provided, synthesize a resolution and add it as a new commitment.
 -- RcRetained: no action.
 applyRevisionDecision
   :: TurnSeq
   -> SemanticCommitmentStore
+  -> Maybe FactualClaimPayload
   -> RevisedCommitment
   -> SemanticCommitmentStore
-applyRevisionDecision ts store (RcQuarantined cid _kind) =
+applyRevisionDecision ts store _mNewPayload (RcQuarantined cid _kind) =
   case HashMap.lookup cid (scsActive store) of
     Nothing -> store
     Just entry ->
@@ -60,7 +120,7 @@ applyRevisionDecision ts store (RcQuarantined cid _kind) =
         { scsActive = HashMap.delete cid (scsActive store)
         , scsQuarantine = HashMap.insert cid entry (scsQuarantine store)
         }
-applyRevisionDecision ts store (RcRevised cid kind) =
+applyRevisionDecision ts store mNewPayload (RcRevised cid kind) =
   case HashMap.lookup cid (scsActive store) of
     Nothing -> store
     Just (payload, meta) ->
@@ -72,9 +132,22 @@ applyRevisionDecision ts store (RcRevised cid kind) =
             , ceKind = kind
             , ceTurnSeq = ts
             }
-      in store
-        { scsActive = HashMap.insert cid (revisedPayload, meta) (scsActive store)
-        , scsLineage = HashMap.insert cid (oldLineage ++ [LineageRevised ts revisedPayload]) (scsLineage store)
-        , scsContradictions = revisionEvent : scsContradictions store
+          mResolution = case mNewPayload of
+            Just newPayload -> synthesizeResolution payload newPayload
+            Nothing -> Nothing
+          nextCid = CommitmentId (scsNextId store)
+          storeWithNextId = store { scsNextId = scsNextId store + 1 }
+          storeWithResolution = case mResolution of
+            Just resolution ->
+              let resMeta = (srPayload resolution, meta)
+              in storeWithNextId
+                { scsActive = HashMap.insert nextCid resMeta (scsActive storeWithNextId)
+                , scsLineage = HashMap.insert nextCid [LineageCommitted ts] (scsLineage storeWithNextId)
+                }
+            Nothing -> storeWithNextId
+      in storeWithResolution
+        { scsActive = HashMap.insert cid (revisedPayload, meta) (scsActive storeWithResolution)
+        , scsLineage = HashMap.insert cid (oldLineage ++ [LineageRevised ts revisedPayload]) (scsLineage storeWithResolution)
+        , scsContradictions = revisionEvent : scsContradictions storeWithResolution
         }
-applyRevisionDecision _ts store (RcRetained _cid _kind) = store
+applyRevisionDecision _ts _store _mNewPayload (RcRetained _cid _kind) = _store

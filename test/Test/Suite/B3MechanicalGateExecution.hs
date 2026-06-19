@@ -120,6 +120,7 @@ b3GateVerdict =
               , fcpOrigin = OriginParser "anchor:define"
               , fcpTurnSeq = TurnSeq 1
               , fcpDeps = []
+              , fcpTopic = topic
               }
             store0 = emptySemanticCommitmentStore
             (store1, _) = commitObservation payload store0
@@ -137,13 +138,14 @@ b3GateVerdict =
             stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
                    <> T.intercalate " " preds
                    <> " (established at turn " <> T.pack (show turn) <> ")"
-        in FactualClaimPayload
-          { fcpStatement = stmt
-          , fcpConfidence = 0.5
-          , fcpOrigin = OriginParser "anchor:define"
-          , fcpTurnSeq = TurnSeq turn
-          , fcpDeps = []
-          }
+         in FactualClaimPayload
+           { fcpStatement = stmt
+           , fcpConfidence = 0.5
+           , fcpOrigin = OriginParser "anchor:define"
+           , fcpTurnSeq = TurnSeq turn
+           , fcpDeps = []
+           , fcpTopic = topic
+           }
         ) (zip topics10 [1..])
       storeS = foldr (\p s -> fst (commitObservation p s)) emptySemanticCommitmentStore payloads10
       activeCount = HashMap.size (scsActive storeS)

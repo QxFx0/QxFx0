@@ -52,7 +52,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
           cs = buildContentSelector space topicAtoms topicPredicates
           field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
           result = selectPredicates cs field "test_topic" Nothing
@@ -71,7 +71,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
           cs = buildContentSelector space topicAtoms topicPredicates
           field1 = emptyField { fieldResonance = Resonance 0.9, fieldAtmosphere = Atmosphere 0.1 0.5 }
           field2 = emptyField { fieldResonance = Resonance 0.2, fieldAtmosphere = Atmosphere 0.9 0.5 }
@@ -92,7 +92,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
           cs = buildContentSelector space topicAtoms topicPredicates
           field = emptyField { fieldResonance = Resonance 1.0 }
           result = selectPredicates cs field "test_topic" Nothing
@@ -101,8 +101,8 @@ contentSelectorTests =
       assertBool "score should not be exactly 0.5" (abs (spScore sp - 0.5) > 0.01)
 
   , TestLabel "real definitionCorpus atom overlap" $ TestCase $ do
-      let predicates = [ SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence with reality"
-                       , SemanticPredicate RoleRelation "ответственность требует осознания последствий" "responsibility requires awareness of consequences"
+      let predicates = [ SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence with reality" "истина"
+                       , SemanticPredicate RoleRelation "ответственность требует осознания последствий" "responsibility requires awareness of consequences" "ответственность"
                        ]
           tokenizedAtoms = S.unions [tokenizePredicate (spRu p) | p <- predicates]
           mg = MeaningGraph
@@ -136,8 +136,8 @@ contentSelectorTests =
       assertBool "different field → different total scores" (abs (totalScore1 - totalScore2) > 0.01)
 
   , TestLabel "different Field selects different predicates for same topic" $ TestCase $ do
-      let pred1 = SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence"
-          pred2 = SemanticPredicate RoleStructure "истина проверяется через воспроизводимость" "truth is verified through reproducibility"
+      let pred1 = SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence" "истина"
+          pred2 = SemanticPredicate RoleStructure "истина проверяется через воспроизводимость" "truth is verified through reproducibility" "истина"
           atoms1 = tokenizePredicate (spRu pred1)
           atoms2 = tokenizePredicate (spRu pred2)
           allAtoms = S.union atoms1 atoms2
@@ -179,7 +179,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
           cs = buildContentSelector space topicAtoms topicPredicates
           field = emptyField { fieldResonance = Resonance 0.8 }
           activatedNetwork = SemanticNetwork
@@ -197,4 +197,136 @@ contentSelectorTests =
           scoreWith = spScore (head resultWith)
       assertBool "activation should increase score" (scoreWith > scoreWithout)
       assertBool "score increase should be significant" (scoreWith > scoreWithout * 1.1)
+
+  , TestLabel "composePredicates returns empty for empty input" $ TestCase $ do
+      let cs = emptyContentSelector
+          field = emptyField
+          result = composePredicates cs field [] Nothing
+      assertEqual "should return empty list" [] result
+
+  , TestLabel "composePredicates combines multiple predicates" $ TestCase $ do
+      let space = emptySemanticSpace
+            { ssDimensionCount = 2
+            , ssAtomIndex = M.fromList [("atom1", 0), ("atom2", 1)]
+            , ssPrototypes = M.fromList
+                [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0]))
+                , (FdAtmosphere, DimensionPrototype FdAtmosphere (S.fromList ["atom2"]) (V.fromList [0.0, 1.0]))
+                ]
+            }
+          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "test_topic"
+          pred2 = SemanticPredicate RoleRelation "atom2 atom1" "atom2 atom1" "test_topic"
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2])
+          field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
+          result = composePredicates cs field [pred1, pred2] Nothing
+      assertBool "should return at least one predicate" (not (null result))
+      assertBool "should return at most 2 predicates" (length result <= 2)
+
+  , TestLabel "composePredicates filters low-activation predicates" $ TestCase $ do
+      let space = emptySemanticSpace
+            { ssDimensionCount = 2
+            , ssAtomIndex = M.fromList [("atom1", 0), ("atom2", 1)]
+            , ssPrototypes = M.fromList
+                [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0]))
+                ]
+            }
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic"
+          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "test_topic"
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2])
+          field = emptyField { fieldResonance = Resonance 0.9 }
+          result = composePredicates cs field [pred1, pred2] Nothing
+      assertBool "should return predicates" (not (null result))
+      assertBool "high-activation pred1 should be included" (pred1 `elem` result)
+      assertBool "low-activation pred2 should be filtered" (pred2 `notElem` result)
+
+  , TestLabel "composePredicates respects activation from network" $ TestCase $ do
+      let space = emptySemanticSpace
+            { ssDimensionCount = 2
+            , ssAtomIndex = M.fromList [("atom1", 0), ("atom2", 1)]
+            , ssPrototypes = M.fromList
+                [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0]))
+                ]
+            }
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic"
+          pred2 = SemanticPredicate RoleRelation "atom1 atom2" "atom1 atom2" "test_topic"
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2])
+          field = emptyField { fieldResonance = Resonance 0.5 }
+          activatedNetwork = SemanticNetwork
+            { snNodes = S.fromList ["atom1", "atom2"]
+            , snEdges = M.empty
+            , snActivation = M.fromList [("atom2", 5.0)]
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            }
+          resultWithout = composePredicates cs field [pred1, pred2] Nothing
+          resultWith = composePredicates cs field [pred1, pred2] (Just activatedNetwork)
+      assertBool "should return predicates without activation" (not (null resultWithout))
+      assertBool "should return predicates with activation" (not (null resultWith))
+      assertBool "activation should include more predicates" (length resultWith >= length resultWithout)
+
+  , TestLabel "composeFromActivation finds overlapping topics" $ TestCase $ do
+      let space = emptySemanticSpace
+            { ssDimensionCount = 3
+            , ssAtomIndex = M.fromList [("atom1", 0), ("atom2", 1), ("atom3", 2)]
+            , ssPrototypes = M.fromList
+                [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0, 0.0]))
+                ]
+            }
+          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "topic1"
+          pred2 = SemanticPredicate RoleRelation "atom2 atom3" "atom2 atom3" "topic2"
+          topicAtoms = M.fromList
+            [ ("topic1", S.fromList ["atom1", "atom2"])
+            , ("topic2", S.fromList ["atom2", "atom3"])
+            ]
+          topicPreds = M.fromList
+            [ ("topic1", [pred1])
+            , ("topic2", [pred2])
+            ]
+          cs = buildContentSelector space topicAtoms topicPreds
+          field = emptyField { fieldResonance = Resonance 0.8 }
+          network = SemanticNetwork
+            { snNodes = S.fromList ["atom1", "atom2", "atom3"]
+            , snEdges = M.fromList
+                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.8 10)
+                , (("atom2", "atom3"), SemanticEdge "atom2" "atom3" 0.8 10)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            }
+          result = composeFromActivation cs field "topic1" network
+      assertBool "should return predicates from overlapping topics" (length result >= 1)
+      assertBool "pred1 from topic1 should be included" (pred1 `elem` result)
+
+  , TestLabel "composeFromActivation weights by activation" $ TestCase $ do
+      let space = emptySemanticSpace
+            { ssDimensionCount = 2
+            , ssAtomIndex = M.fromList [("atom1", 0), ("atom2", 1)]
+            , ssPrototypes = M.fromList
+                [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1", "atom2"]) (V.fromList [1.0, 1.0]))
+                ]
+            }
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "topic1"
+          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "topic2"
+          topicAtoms = M.fromList
+            [ ("topic1", S.fromList ["atom1"])
+            , ("topic2", S.fromList ["atom2"])
+            ]
+          topicPreds = M.fromList
+            [ ("topic1", [pred1])
+            , ("topic2", [pred2])
+            ]
+          cs = buildContentSelector space topicAtoms topicPreds
+          field = emptyField { fieldResonance = Resonance 0.9 }
+          network = SemanticNetwork
+            { snNodes = S.fromList ["atom1", "atom2"]
+            , snEdges = M.fromList
+                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.9 10)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            }
+          result = composeFromActivation cs field "topic1" network
+      assertBool "should return predicates" (not (null result))
+      assertBool "should return at most 3 predicates" (length result <= 3)
   ]

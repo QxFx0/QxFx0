@@ -56,6 +56,7 @@ import Test.Suite.IntentClassifier (intentClassifierTests)
 import Test.Suite.SemanticNetwork (semanticNetworkTests)
 import Test.Suite.SemanticSpace (semanticSpaceTests)
 import Test.Suite.ContentSelector (contentSelectorTests)
+import Test.Suite.Analogy (analogyTests)
 import Test.Suite.GeometricClassifier (geometricClassifierTests)
 import Test.Suite.Revision (revisionTests)
 
@@ -114,9 +115,10 @@ main = do
                  ++ commitmentAwareRoutingTests
                   ++ intentClassifierTests
                   ++ semanticNetworkTests
-                  ++ semanticSpaceTests
-                  ++ contentSelectorTests
-                  ++ geometricClassifierTests
+                   ++ semanticSpaceTests
+                   ++ contentSelectorTests
+                   ++ [analogyTests]
+                   ++ geometricClassifierTests
                )
   if errors testCounts + failures testCounts > 0
     then exitFailure

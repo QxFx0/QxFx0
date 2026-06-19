@@ -45,6 +45,7 @@ data CommitmentOrigin
   = OriginParser !Text
   | OriginDialogueOutcome !Int
   | OriginManual
+  | OriginSynthetic
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -61,8 +62,19 @@ data FactualClaimPayload = FactualClaimPayload
   , fcpOrigin     :: !CommitmentOrigin
   , fcpTurnSeq    :: !TurnSeq
   , fcpDeps       :: ![CommitmentId]
+  , fcpTopic      :: !Text
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
+    deriving anyclass (NFData, ToJSON)
+
+instance FromJSON FactualClaimPayload where
+  parseJSON = withObject "FactualClaimPayload" $ \o ->
+    FactualClaimPayload
+      <$> o .:  "fcpStatement"
+      <*> o .:  "fcpConfidence"
+      <*> o .:  "fcpOrigin"
+      <*> o .:  "fcpTurnSeq"
+      <*> o .:  "fcpDeps"
+      <*> o .:? "fcpTopic" .!= ""
 
 -- | Reason for retraction.
 data RetractionReason

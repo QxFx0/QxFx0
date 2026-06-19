@@ -4,16 +4,18 @@ module QxFx0.Semantic.ContentSelector
   ( module QxFx0.Semantic.ContentSelector.Types
   , buildContentSelector
   , selectPredicates
+  , composePredicates
+  , composeFromActivation
   , buildTopicAtoms
   , tokenizePredicate
   , scorePred
   ) where
 
-import Data.List (maximumBy)
+import Data.List (maximumBy, sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (mapMaybe)
-import Data.Ord (comparing)
+import Data.Ord (comparing, Down(..))
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -21,7 +23,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 
 import QxFx0.Semantic.Space (tokenizePredicate, SemanticSpace(..), FieldDimension(..), PredicateVector(..), computeFieldAffinity)
-import QxFx0.Semantic.Network (SemanticNetwork(..))
+import QxFx0.Semantic.Network (SemanticNetwork(..), activateTopic, getActivatedAtoms)
 import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
@@ -75,3 +77,44 @@ fieldWeight f dim = case dim of
 
 buildTopicAtoms :: Map Text [Text] -> Map Text (Set Text)
 buildTopicAtoms = M.map S.fromList
+
+composePredicates :: ContentSelector -> Field -> [SemanticPredicate] -> Maybe SemanticNetwork -> [SemanticPredicate]
+composePredicates cs field preds mNetwork =
+  case preds of
+    [] -> []
+    [p] -> [p]
+    _ ->
+      let scored = mapMaybe (scorePred field (csSpace cs) mNetwork) preds
+          totalScore = sum (map snd scored)
+      in if totalScore < 0.1
+         then []
+         else
+           let threshold = totalScore * 0.3
+               filtered = filter (\(_, s) -> s >= threshold) scored
+           in map fst filtered
+
+composeFromActivation :: ContentSelector -> Field -> Text -> SemanticNetwork -> [SemanticPredicate]
+composeFromActivation cs field topic network =
+  let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
+      activatedNetwork = activateTopic topicAtoms network
+      activatedAtoms = S.fromList (map fst (getActivatedAtoms activatedNetwork))
+      overlappingTopics = M.keys (M.filter (not . S.null . S.intersection activatedAtoms) (csTopicAtoms cs))
+      perTopicPreds = mapMaybe (\t ->
+        case M.lookup t (csTopicPredicates cs) of
+          Nothing -> Nothing
+          Just preds ->
+            let scored = mapMaybe (scorePred field (csSpace cs) (Just activatedNetwork)) preds
+            in case scored of
+                 [] -> Nothing
+                 _ -> let (bestPred, _) = maximumBy (comparing snd) scored
+                      in Just (t, bestPred)
+        ) overlappingTopics
+      totalActivation = sum [snd a | a <- getActivatedAtoms activatedNetwork]
+      weightedPreds = map (\(t, p) ->
+        let topicAct = sum [snd a | a <- getActivatedAtoms activatedNetwork
+                                   , S.member (fst a) (M.findWithDefault S.empty t (csTopicAtoms cs))]
+            weight = if totalActivation > 0 then topicAct / totalActivation else 0.0
+        in (p, weight)
+        ) perTopicPreds
+      sortedPreds = sortBy (comparing (Down . snd)) weightedPreds
+  in map fst (take 3 sortedPreds)

@@ -110,6 +110,9 @@ data SemanticPredicate = SemanticPredicate
     -- ^ Russian realization of the predicate.
   , spEn :: !Text
     -- ^ English realization of the predicate.
+  , spTopicForm :: !Text
+    -- ^ Nominative form of the topic (first word of spRu).
+    -- Used for analogical adaptation in Axis 2.
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -351,9 +354,14 @@ definitionCorpus = M.fromList
   ]
   where
     entry topic preds = (topic, DefinitionContent topic preds)
-    prop ru en = SemanticPredicate RoleProperty ru en
-    rel ru en = SemanticPredicate RoleRelation ru en
-    structure ru en = SemanticPredicate RoleStructure ru en
+    prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru)
+    rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru)
+    structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru)
+
+-- | Extract the first word from a predicate text as the topic form.
+-- Used for analogical adaptation in Axis 2.
+extractTopicForm :: Text -> Text
+extractTopicForm = T.toLower . head . T.words
 
 -- ============================================================================
 -- Distinction corpus
@@ -414,7 +422,7 @@ distinctionCorpus = M.fromList
   where
     dEntry left right preds =
       ((left, right), DistinctionContent left right preds)
-    diff ru en = SemanticPredicate RoleDifferentiator ru en
+    diff ru en = SemanticPredicate RoleDifferentiator ru en (extractTopicForm ru)
 
 -- ============================================================================
 -- Lookup functions
@@ -526,41 +534,51 @@ genericDefinitionPredicates topic =
       [ SemanticPredicate RoleProperty
           (topic <> " предполагает наличие внутренней структуры")
           (topic <> " presupposes an internal structure")
+          topic
       , SemanticPredicate RoleRelation
           (topic <> " связан с условиями возможности опыта")
           (topic <> " is connected to conditions of possible experience")
+          topic
       ]
     CategorySocial ->
       [ SemanticPredicate RoleProperty
           (topic <> " возникает во взаимодействии между субъектами")
           (topic <> " arises in interaction between subjects")
+          topic
       , SemanticPredicate RoleRelation
           (topic <> " ограничен нормами и ожиданиями сообщества")
           (topic <> " is bounded by norms and expectations of community")
+          topic
       ]
     CategoryPsychological ->
       [ SemanticPredicate RoleProperty
           (topic <> " формируется через опыт и воспоминание")
           (topic <> " is formed through experience and recollection")
+          topic
       , SemanticPredicate RoleStructure
           (topic <> " имеет субъективный характер и доступ от первого лица")
           (topic <> " has subjective character and first-person access")
+          topic
       ]
     CategoryPhysical ->
       [ SemanticPredicate RoleProperty
           (topic <> " обладает протяжённостью в пространстве или времени")
           (topic <> " has extension in space or time")
+          topic
       , SemanticPredicate RoleRelation
           (topic <> " подчиняется устойчивым закономерностям")
           (topic <> " obeys stable regularities")
+          topic
       ]
     CategoryGeneral ->
       [ SemanticPredicate RoleProperty
           (topic <> " проявляется через устойчивые связи в своём контексте")
           (topic <> " manifests through stable connections in its context")
+          topic
       , SemanticPredicate RoleRelation
           (topic <> " зависит от рамки, в которой рассматривается")
           (topic <> " depends on the frame in which it is considered")
+          topic
       ]
 
 -- | Category-typed generic distinction predicates.
@@ -573,21 +591,25 @@ genericDistinctionPredicates left right =
       [ SemanticPredicate RoleDifferentiator
           (left <> " относится к сфере должного, " <> right <> " — к сфере сущего")
           (left <> " belongs to the normative, " <> right <> " — to the descriptive")
+          left
       ]
     (CategorySocial, CategoryPhilosophical) ->
       [ SemanticPredicate RoleDifferentiator
           (left <> " регулирует взаимодействие, " <> right <> " описывает устройство мира")
           (left <> " regulates interaction, " <> right <> " describes the structure of reality")
+          left
       ]
     (CategoryPsychological, CategoryPhysical) ->
       [ SemanticPredicate RoleDifferentiator
           (left <> " принадлежит внутреннему опыту, " <> right <> " — внешнему миру")
           (left <> " belongs to inner experience, " <> right <> " — to the outer world")
+          left
       ]
     _ ->
       [ SemanticPredicate RoleDifferentiator
           (left <> " и " <> right <> " различаются по области применимости и набору устойчивых признаков")
           (left <> " and " <> right <> " differ by scope of application and stable properties")
+          left
       ]
 
 -- | Look up definition content, falling back to generic predicates for

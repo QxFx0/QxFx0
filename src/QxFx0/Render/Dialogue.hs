@@ -23,9 +23,11 @@ import QxFx0.Self.Field (Field, emptyField)
 import QxFx0.Semantic.Content
   ( SemanticPredicate(..), DefinitionContent(..), DistinctionContent(..)
   , lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic, isCoveredPair
+  , coveredTopics
   )
-import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..))
+import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
+import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
 import qualified Data.Set as Set
 import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
@@ -1813,10 +1815,14 @@ generateFromFrame cs field mNetwork frame morph = case frame of
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
-        selectedPreds = selectPredicates cs field topic mNetwork
-        mDefContent = case selectedPreds of
-          (sp:_) -> Just $ DefinitionContent topic (spPredicates sp)
+        composedPreds = case mNetwork of
+          Just network -> composeFromActivation cs field topic network
+          Nothing -> case selectPredicates cs field topic Nothing of
+            (sp:_) -> spPredicates sp
+            [] -> []
+        mDefContent = case composedPreds of
           [] -> lookupDefinitionContent topic
+          preds -> Just $ DefinitionContent topic preds
     in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
 
   FT.DistinctionFrame left right criteria ->
@@ -1913,8 +1919,11 @@ renderDefinitionBody mDefContent topic morph =
        Just dc | not (null (dcPredicates dc)) ->
          let predicates = T.intercalate ". " (map spRu (dcPredicates dc))
          in " — " <> predicates <> "."
-       _ ->
-         " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
+       _ -> case findNearestCoveredTopic topic of
+              Just sourceTopic -> case analogicalResponse topic sourceTopic of
+                Just analogText -> " — " <> analogText <> "."
+                Nothing -> " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
+              Nothing -> " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
 
 -- | Render distinction body using content predicates from M4-001.
 -- When differentiators are available, renders substantive content.

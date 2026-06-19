@@ -46,6 +46,7 @@ canonicalPayload = FactualClaimPayload
   , fcpOrigin = OriginParser "en:UserIs"
   , fcpTurnSeq = TurnSeq 0
   , fcpDeps = []
+  , fcpTopic = ""
   }
 
 tests :: TestTree

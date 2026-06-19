@@ -58,6 +58,7 @@ claimAstToFactualClaim surface ast =
     , fcpOrigin     = OriginParser ("gf:pgf2:" <> claimAstTag ast)
     , fcpTurnSeq    = TurnSeq 0
     , fcpDeps       = []
+    , fcpTopic      = ""
     }
   where
     claimAstTag (MoveGround _)          = "ground"
@@ -114,6 +115,7 @@ parseEnUserRole txt = do
     , fcpOrigin = OriginParser "en:UserIs"
     , fcpTurnSeq = TurnSeq 0
     , fcpDeps = []
+    , fcpTopic = ""
     }
 
 parseRuUserRole :: Text -> Maybe FactualClaimPayload
@@ -127,6 +129,7 @@ parseRuUserRole txt = do
     , fcpOrigin = OriginParser "ru:UserIs"
     , fcpTurnSeq = TurnSeq 0
     , fcpDeps = []
+    , fcpTopic = ""
     }
 
 parseEnTopic :: Text -> Maybe FactualClaimPayload
@@ -140,6 +143,7 @@ parseEnTopic txt = do
     , fcpOrigin = OriginParser "en:TopicIs"
     , fcpTurnSeq = TurnSeq 0
     , fcpDeps = []
+    , fcpTopic = topic
     }
 
 parseRuTopic :: Text -> Maybe FactualClaimPayload
@@ -153,6 +157,7 @@ parseRuTopic txt = do
     , fcpOrigin = OriginParser "ru:TopicIs"
     , fcpTurnSeq = TurnSeq 0
     , fcpDeps = []
+    , fcpTopic = topic
     }
 
 guard :: Bool -> Maybe ()

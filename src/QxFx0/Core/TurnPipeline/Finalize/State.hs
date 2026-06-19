@@ -636,7 +636,7 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
                in map (\engagedCid -> revisePosition engagedCid ContradictionStatement angst conatus)
                       (filter (/= newCid) engaged)
                else []
-      store4 = F.foldl' (applyRevisionDecision turnSeq) store3 revisionDecisions
+      store4 = F.foldl' (\s dec -> applyRevisionDecision turnSeq s mClaimPayload dec) store3 revisionDecisions
       nextWithCommitments = nextWithLog
         { ssSemanticCommitments = Just store4
         , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors semanticSpace store4 }
@@ -897,4 +897,5 @@ anchorToFactualClaim anchor tseq =
        , fcpOrigin     = OriginParser ("anchor:" <> channel)
        , fcpTurnSeq    = tseq
        , fcpDeps       = []
+       , fcpTopic      = topic
        }

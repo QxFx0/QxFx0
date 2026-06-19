@@ -6,6 +6,8 @@ import Test.HUnit
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Aeson (decodeStrict')
 import Data.Maybe (fromJust)
 import QxFx0.Semantic.Revision
 import QxFx0.Types.State.SemanticCommitment (CommitmentId(..), ContradictionKind(..), SemanticCommitmentStore(..), FactualClaimPayload(..), TurnSeq(..), CommitmentOrigin(..), CommitmentEngagement(..), MatchKind(..), LineageEvent(..), emptySemanticCommitmentStore)
@@ -95,39 +97,39 @@ revisionTests =
       [ TestCase $ do
           let cid = CommitmentId 1
               ts = TurnSeq 5
-              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) []
+              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) [] ""
               store = emptySemanticCommitmentStore
                 { scsActive = HashMap.singleton cid (payload, TurnSeq 0)
                 , scsNextId = 2
                 }
               decision = RcQuarantined cid ContradictionStatement
-              result = applyRevisionDecision ts store decision
+              result = applyRevisionDecision ts store Nothing decision
           assertBool "should be removed from active" $ HashMap.null (scsActive result)
           assertBool "should be in quarantine" $ HashMap.member cid (scsQuarantine result)
 
       , TestCase $ do
           let cid = CommitmentId 2
               ts = TurnSeq 5
-              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) []
+              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) [] ""
               store = emptySemanticCommitmentStore
                 { scsActive = HashMap.singleton cid (payload, TurnSeq 0)
                 , scsNextId = 3
                 }
               decision = RcRetained cid ContradictionStatement
-              result = applyRevisionDecision ts store decision
+              result = applyRevisionDecision ts store Nothing decision
           assertBool "should remain in active" $ HashMap.member cid (scsActive result)
           assertBool "should not be in quarantine" $ HashMap.null (scsQuarantine result)
 
       , TestCase $ do
           let cid = CommitmentId 3
               ts = TurnSeq 5
-              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) []
+              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) [] ""
               store = emptySemanticCommitmentStore
                 { scsActive = HashMap.singleton cid (payload, TurnSeq 0)
                 , scsNextId = 4
                 }
               decision = RcRevised cid ContradictionStatement
-              result = applyRevisionDecision ts store decision
+              result = applyRevisionDecision ts store Nothing decision
           assertBool "should remain in active" $ HashMap.member cid (scsActive result)
           assertBool "should not be in quarantine" $ HashMap.null (scsQuarantine result)
           let (revisedPayload, _) = HashMap.lookupDefault (payload, TurnSeq 0) cid (scsActive result)
@@ -139,7 +141,7 @@ revisionTests =
           let cid1 = CommitmentId 1
               cid2 = CommitmentId 2
               ts = TurnSeq 5
-              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) []
+              payload = FactualClaimPayload "test" 0.8 OriginManual (TurnSeq 0) [] ""
               store = emptySemanticCommitmentStore
                 { scsActive = HashMap.fromList
                     [ (cid1, (payload, TurnSeq 0))
@@ -150,7 +152,7 @@ revisionTests =
               decisions = [ RcQuarantined cid1 ContradictionStatement
                           , RcRetained cid2 ContradictionStatement
                           ]
-              result = foldl (applyRevisionDecision ts) store decisions
+              result = foldl (\s dec -> applyRevisionDecision ts s Nothing dec) store decisions
           assertBool "cid1 should be removed from active" $ not (HashMap.member cid1 (scsActive result))
           assertBool "cid2 should remain in active" $ HashMap.member cid2 (scsActive result)
           assertBool "cid1 should be in quarantine" $ HashMap.member cid1 (scsQuarantine result)
@@ -161,8 +163,49 @@ revisionTests =
               ts = TurnSeq 5
               store = emptySemanticCommitmentStore { scsNextId = 1 }
               decision = RcQuarantined cid ContradictionStatement
-              result = applyRevisionDecision ts store decision
+              result = applyRevisionDecision ts store Nothing decision
           assertBool "store should be unchanged" $ result == store
+      ]
+  , TestLabel "synthesizeResolution" $ TestList
+      [ TestCase $ do
+          let oldPayload = FactualClaimPayload "свобода предполагает выбор" 0.8 OriginManual (TurnSeq 1) [] "свобода"
+              newPayload = FactualClaimPayload "свобода требует ответственности" 0.9 OriginManual (TurnSeq 2) [] "свобода"
+              result = synthesizeResolution oldPayload newPayload
+          assertBool "should return Just" $ isJust result
+          let Just resolution = result
+          assertEqual "should be Conjunction" Conjunction (srType resolution)
+          assertBool "statement should contain 'и вместе с тем'" $ T.isInfixOf "и вместе с тем" (srStatement resolution)
+          assertEqual "confidence should be 0.5" 0.5 (fcpConfidence (srPayload resolution))
+          assertEqual "origin should be OriginSynthetic" OriginSynthetic (fcpOrigin (srPayload resolution))
+
+      , TestCase $ do
+          let oldPayload = FactualClaimPayload "свобода это выбор" 0.8 OriginManual (TurnSeq 1) [] "свобода"
+              newPayload = FactualClaimPayload "ответственность это долг" 0.9 OriginManual (TurnSeq 2) [] "ответственность"
+              result = synthesizeResolution oldPayload newPayload
+          assertBool "should return Just" $ isJust result
+          let Just resolution = result
+          assertEqual "should be Irreducible" Irreducible (srType resolution)
+          assertBool "statement should contain 'несовместимы'" $ T.isInfixOf "несовместимы" (srStatement resolution)
+          assertEqual "confidence should be 0.3" 0.3 (fcpConfidence (srPayload resolution))
+          assertEqual "origin should be OriginSynthetic" OriginSynthetic (fcpOrigin (srPayload resolution))
+
+      , TestCase $ do
+          let cid = CommitmentId 1
+              ts = TurnSeq 5
+              oldPayload = FactualClaimPayload "свобода предполагает выбор" 0.8 OriginManual (TurnSeq 1) [] "свобода"
+              newPayload = FactualClaimPayload "свобода требует ответственности" 0.9 OriginManual (TurnSeq 2) [] "свобода"
+              store = emptySemanticCommitmentStore
+                { scsActive = HashMap.singleton cid (oldPayload, TurnSeq 1)
+                , scsNextId = 2
+                }
+              decision = RcRevised cid ContradictionStatement
+              result = applyRevisionDecision ts store (Just newPayload) decision
+          assertBool "should have synthesized commitment" $ HashMap.size (scsActive result) == 2
+          let synthesizedCid = CommitmentId 2
+          assertBool "synthesized commitment should be in active" $ HashMap.member synthesizedCid (scsActive result)
+          let (synthPayload, _) = HashMap.lookupDefault (oldPayload, TurnSeq 0) synthesizedCid (scsActive result)
+          assertEqual "synthesized should have OriginSynthetic" OriginSynthetic (fcpOrigin synthPayload)
+          assertBool "synthesized should contain 'и вместе с тем'" $ T.isInfixOf "и вместе с тем" (fcpStatement synthPayload)
       ]
   , TestLabel "integration" $ TestList
       [ TestCase $
@@ -171,7 +214,7 @@ revisionTests =
             (ss, ti, ts, tp, ta) <- buildRenderedFixture "что такое свобода"
             -- Add a commitment to the store so we have something to engage
             let cid = CommitmentId 1
-                payload = FactualClaimPayload "свобода" 0.9 OriginManual (TurnSeq 0) []
+                payload = FactualClaimPayload "свобода" 0.9 OriginManual (TurnSeq 0) [] "свобода"
                 store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments ss)
                 store1 = store0
                   { scsActive = HashMap.insert cid (payload, TurnSeq 0) (scsActive store0)
@@ -235,6 +278,15 @@ revisionTests =
           assertBool "merged activation should be empty" (M.null (snActivation merged))
           assertBool ("merged should have >= base nodes, got " ++ show mergedNodes) (mergedNodes >= S.size (snNodes base))
           assertBool ("merged should have >= base edges, got " ++ show mergedEdges) (mergedEdges >= M.size (snEdges base))
+      ]
+  , TestLabel "fcpTopic backward compatibility" $ TestList
+      [ TestCase $ do
+          let oldJson = "{\"fcpStatement\":\"test\",\"fcpConfidence\":0.8,\"fcpOrigin\":\"OriginManual\",\"fcpTurnSeq\":1,\"fcpDeps\":[]}"
+          let parsed = decodeStrict' oldJson :: Maybe FactualClaimPayload
+          assertBool "should parse old JSON without fcpTopic" (isJust parsed)
+          let payload = fromJust parsed
+          assertEqual "fcpTopic should default to empty" "" (fcpTopic payload)
+          assertEqual "fcpStatement should be preserved" "test" (fcpStatement payload)
       ]
   ]
   where

@@ -5,6 +5,7 @@ module QxFx0.Semantic.Network
   , buildSemanticNetwork
   , mergeSemanticNetworks
   , activate
+  , activateTopic
   , getActivatedAtoms
   , contentDensityGate
   ) where
@@ -51,6 +52,11 @@ mergeSemanticNetworks base update =
 activate :: Text -> SemanticNetwork -> SemanticNetwork
 activate seed sn =
   let initialActivation = M.singleton seed 1.0
+  in spreadActivation sn initialActivation 0
+
+activateTopic :: Set Text -> SemanticNetwork -> SemanticNetwork
+activateTopic topicAtoms sn =
+  let initialActivation = M.fromList [(atom, 1.0) | atom <- S.toList topicAtoms]
   in spreadActivation sn initialActivation 0
 
 spreadActivation :: SemanticNetwork -> Map Text Double -> Int -> SemanticNetwork

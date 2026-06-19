@@ -40,6 +40,7 @@ testGate3CommitmentEngagementForCoveredTopic =
             , fcpOrigin = OriginParser "anchor:define"
             , fcpTurnSeq = TurnSeq 1
             , fcpDeps = []
+            , fcpTopic = topic
             }
           store0 = emptySemanticCommitmentStore
           (store1, _cid) = commitObservation payload store0
@@ -68,6 +69,7 @@ testGate3CommitmentEngagementForConsciousness =
             , fcpOrigin = OriginParser "anchor:define"
             , fcpTurnSeq = TurnSeq 1
             , fcpDeps = []
+            , fcpTopic = "сознание"
             }
           store0 = emptySemanticCommitmentStore
           (store1, _cid) = commitObservation payload store0
@@ -82,27 +84,29 @@ testGate3PriorClaimFindableByTopicWords :: Test
 testGate3PriorClaimFindableByTopicWords =
   TestLabel "B3 Gate 3: prior claim findable by topic words (all covered topics)" $
     TestCase $ do
-      let failures = [ topic
-                     | topic <- coveredTopics
-                     , let Just dc = lookupDefinitionContent topic
-                           preds = map spRu (dcPredicates dc)
-                           stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
-                                  <> T.intercalate " " preds
-                                  <> " (established at turn 1)"
-                           payload = FactualClaimPayload
-                             { fcpStatement = stmt
-                             , fcpConfidence = 0.5
-                             , fcpOrigin = OriginParser "anchor:define"
-                             , fcpTurnSeq = TurnSeq 1
-                             , fcpDeps = []
-                             }
-                           store0 = emptySemanticCommitmentStore
-                           (store1, _) = commitObservation payload store0
-                           engagement = detectCommitmentEngagement store1 topic emptyAtomSet
-                     , null (ceEngaged engagement)
-                     ]
-      assertBool ("Topics where prior claim is not found: " <> show failures)
-                 (null failures)
+       let mkPayload topic =
+             let Just dc = lookupDefinitionContent topic
+                 preds = map spRu (dcPredicates dc)
+                 stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
+                        <> T.intercalate " " preds
+                        <> " (established at turn 1)"
+             in FactualClaimPayload
+                  { fcpStatement = stmt
+                  , fcpConfidence = 0.5
+                  , fcpOrigin = OriginParser "anchor:define"
+                  , fcpTurnSeq = TurnSeq 1
+                  , fcpDeps = []
+                  , fcpTopic = topic
+                  }
+           checkTopic topic =
+             let payload = mkPayload topic
+                 store0 = emptySemanticCommitmentStore
+                 (store1, _) = commitObservation payload store0
+                 engagement = detectCommitmentEngagement store1 topic emptyAtomSet
+             in null (ceEngaged engagement)
+           failures = filter checkTopic coveredTopics
+       assertBool ("Topics where prior claim is not found: " <> show failures)
+                  (null failures)
 
 -- | Gate 3: the old-style anchor (without domain content) does NOT engage
 -- for philosophical topics — proving the M4-002 change is load-bearing.
@@ -118,6 +122,7 @@ testGate3OldAnchorDoesNotEngage =
             , fcpOrigin = OriginParser "anchor:define"
             , fcpTurnSeq = TurnSeq 1
             , fcpDeps = []
+            , fcpTopic = ""
             }
           store0 = emptySemanticCommitmentStore
           (store1, _) = commitObservation payload store0
@@ -135,25 +140,26 @@ testGate4MultiTurnCommitmentAccumulation :: Test
 testGate4MultiTurnCommitmentAccumulation =
   TestLabel "B3 Gate 4: commitments accumulate across 3 covered-topic turns" $
     TestCase $ do
-      let topics = ["свобода", "истина", "сознание"]
-          payloads = map (\(topic, turn) ->
-            let Just dc = lookupDefinitionContent topic
-                preds = map spRu (dcPredicates dc)
-                stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
-                       <> T.intercalate " " preds
-                       <> " (established at turn " <> T.pack (show turn) <> ")"
-            in FactualClaimPayload
-              { fcpStatement = stmt
-              , fcpConfidence = 0.5
-              , fcpOrigin = OriginParser "anchor:define"
-              , fcpTurnSeq = TurnSeq turn
-              , fcpDeps = []
-              }
-            ) (zip topics [1..])
-          store0 = emptySemanticCommitmentStore
-          store1 = foldr (\payload s -> fst (commitObservation payload s)) store0 payloads
-          activeCount = HashMap.size (scsActive store1)
-      assertEqual "should have 3 active commitments" 3 activeCount
+       let topics = ["свобода", "истина", "сознание"]
+           mkPayload topic turn =
+             let Just dc = lookupDefinitionContent topic
+                 preds = map spRu (dcPredicates dc)
+                 stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
+                        <> T.intercalate " " preds
+                        <> " (established at turn " <> T.pack (show turn) <> ")"
+             in FactualClaimPayload
+                  { fcpStatement = stmt
+                  , fcpConfidence = 0.5
+                  , fcpOrigin = OriginParser "anchor:define"
+                  , fcpTurnSeq = TurnSeq turn
+                  , fcpDeps = []
+                  , fcpTopic = topic
+                  }
+           payloads = [mkPayload t n | (t, n) <- zip topics [1..]]
+           store0 = emptySemanticCommitmentStore
+           store1 = foldr (\p s -> fst (commitObservation p s)) store0 payloads
+           activeCount = HashMap.size (scsActive store1)
+       assertEqual "should have 3 active commitments" 3 activeCount
 
 -- | Gate 4: a 10-turn session accumulates commitments and they persist.
 testGate4TenTurnSessionPersistence :: Test
@@ -162,23 +168,23 @@ testGate4TenTurnSessionPersistence =
     TestCase $ do
       let topics = ["свобода", "произвол", "ответственность", "истина", "мнение"
                    ,"память","воспоминание","сознание","самосознание","свобода"]
-          -- 10 turns, each creating a commitment for a covered topic
-          payloads = map (\(topic, turn) ->
+          mkPayload topic turn =
             let Just dc = lookupDefinitionContent topic
                 preds = map spRu (dcPredicates dc)
                 stmt = "Dialogue channel: define. Topic: " <> topic <> ". "
                        <> T.intercalate " " preds
                        <> " (established at turn " <> T.pack (show turn) <> ")"
             in FactualClaimPayload
-              { fcpStatement = stmt
-              , fcpConfidence = 0.5
-              , fcpOrigin = OriginParser "anchor:define"
-              , fcpTurnSeq = TurnSeq turn
-              , fcpDeps = []
-              }
-            ) (zip topics [1..])
+                 { fcpStatement = stmt
+                 , fcpConfidence = 0.5
+                 , fcpOrigin = OriginParser "anchor:define"
+                 , fcpTurnSeq = TurnSeq turn
+                 , fcpDeps = []
+                 , fcpTopic = topic
+                 }
+          payloads = [mkPayload t n | (t, n) <- zip topics [1..]]
           store0 = emptySemanticCommitmentStore
-          store1 = foldr (\payload s -> fst (commitObservation payload s)) store0 payloads
+          store1 = foldr (\p s -> fst (commitObservation p s)) store0 payloads
           activeCount = HashMap.size (scsActive store1)
       assertBool "should have ≥1 active commitment after 10 turns"
                  (activeCount >= 1)
@@ -206,6 +212,7 @@ testGate4CommitmentsAreDomainBearing =
             , fcpOrigin = OriginParser "anchor:define"
             , fcpTurnSeq = TurnSeq 1
             , fcpDeps = []
+            , fcpTopic = topic
             }
       -- The statement must contain domain-bearing words from predicates
       assertBool "statement should contain 'выбор' (from predicates)"

@@ -87,6 +87,7 @@ makeStoreWithClaim stmt =
         , fcpOrigin = OriginParser "test"
         , fcpTurnSeq = TurnSeq 1
         , fcpDeps = []
+        , fcpTopic = ""
         }
       cid = CommitmentId 1
   in emptySemanticCommitmentStore

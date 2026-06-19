@@ -161,23 +161,69 @@
   `"что такое свобода?"` now returns `"Известно, что свобода — свобода
   предполагает возможность выбора. свобода ограничена ответственностью."`
 
-  **Per-predicate selection (2026-06-19)**: ContentSelector теперь выбирает
-  предикаты индивидуально, а не всем набором топика. Ранее `selectPredicates`
-  возвращал все предикаты топика с одним aggregate score. Теперь каждый
-  предикат оценивается отдельно через `scorePred`, вычисляя cosine similarity
-  между вектором предиката и Field-прототипами. Это позволяет разным
-  Field-состояниям выбирать разные предикаты для одного топика. Например,
-  для "истина" при высоком Confidence выбирается "претендует на соответствие
-  реальности", при высоком Counterfactual — "проверяется через
-  воспроизводимость". Тест "different Field selects different predicates for
-  same topic" подтверждает архитектурное расширение. **Калибровка выбора**:
-  в живой сессии все предикаты проходили порог 0.1 из-за широких прототипов
-  в seeded network. Изменено на выбор top-1 предиката (максимальный score)
-  вместо фильтрации по порогу. Это гарантирует детерминированный выбор
-  одного предиката, наиболее релевантного текущему Field-состоянию.
-  **Инициализация**: ContentSelector инициализируется в Bootstrap.hs из
-  seedFromCorpus и definitionCorpus (не в System.hs из-за циклического
-  импорта). `generateFromFrame` теперь принимает ContentSelector, Field и
-  SemanticNetwork, использует selectPredicates для выбора предикатов.
-  Все 1320 тестов проходят. Живая сессия: "что такое истина?" → "Известно,
-  что истина — истина претендует на соответствие реальности." (один предикат).
+**Per-predicate selection (2026-06-19)**: ContentSelector теперь выбирает
+предикаты индивидуально, а не всем набором топика. Ранее `selectPredicates`
+возвращал все предикаты топика с одним aggregate score. Теперь каждый
+предикат оценивается отдельно через `scorePred`, вычисляя cosine similarity
+между вектором предиката и Field-прототипами. Это позволяет разным
+Field-состояниям выбирать разные предикаты для одного топика. Например,
+для "истина" при высоком Confidence выбирается "претендует на соответствие
+реальности", при высоком Counterfactual — "проверяется через
+воспроизводимость". Тест "different Field selects different predicates for
+same topic" подтверждает архитектурное расширение. **Калибровка выбора**:
+в живой сессии все предикаты проходили порог 0.1 из-за широких прототипов
+в seeded network. Изменено на выбор top-1 предиката (максимальный score)
+вместо фильтрации по порогу. Это гарантирует детерминированный выбор
+одного предиката, наиболее релевантного текущему Field-состоянию.
+**Инициализация**: ContentSelector инициализируется в Bootstrap.hs из
+seedFromCorpus и definitionCorpus (не в System.hs из-за циклического
+импорта). `generateFromFrame` теперь принимает ContentSelector, Field и
+SemanticNetwork, использует selectPredicates для выбора предикатов.
+Все 1320 тестов проходят. Живая сессия: "что такое истина?" → "Известно,
+что истина — истина претендует на соответствие реальности." (один предикат).
+
+**Spreading activation composition (2026-06-19)**: Реализована полноценная
+композиция предикатов из нескольких топиков через spreading activation
+по спецификации Axis 2. `activateTopic` активирует все атомы топика
+одновременно в SemanticNetwork. `composeFromActivation` находит все топики
+с пересекающимися активированными атомами, для каждого выбирает top-1
+предикат (через `scorePred` с учётом активации), взвешивает по доле
+активации топика, возвращает top-3 предиката отсортированных по весу.
+Интегрировано в `generateFromFrame`: при наличии SemanticNetwork используется
+`composeFromActivation`, иначе fallback на `selectPredicates`. Это позволяет
+комбинировать предикаты из разных топиков, связанных через атомы (например,
+"свобода" → "ответственность" через общие атомы). Добавлены 6 тестов для
+`composePredicates` и `composeFromActivation`. Все 1333 теста проходят.
+
+**Contradiction synthesis (2026-06-19)**: Axis 2.3 завершён. Добавлены типы
+`ResolutionType` (Conjunction / Irreducible) и `SynthesizedResolution` в
+`Semantic/Revision.hs`. Функция `synthesizeResolution` синтезирует резолюцию
+из двух противоречивых commitment'ов: >=2 общих атомов → Conjunction
+("X, и вместе с тем Y", confidence 0.5), <2 общих → Irreducible
+("X и Y несовместимы в текущей рамке", confidence 0.3). Оба получают
+`OriginSynthetic` (новый конструктор `CommitmentOrigin`). Интегрировано в
+`applyRevisionDecision`: ветка `RcRevised` с `Just newPayload` вызывает
+`synthesizeResolution` и добавляет синтезированный commitment в store.
+`applyRevisionDecision` теперь принимает 4-й аргумент `Maybe FactualClaimPayload`.
+Finalize/State.hs передаёт `mClaimPayload` при вызове. Добавлены 3 теста:
+Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграция
+с `applyRevisionDecision` (synthesized commitment в active store). Все 1333
+теста проходят.
+
+**GPT-аудит Axis 2.3 (2026-06-19)**:
+- **Блокер 1 (исправлен)**: `applyRevisionDecision` использовал
+  `CommitmentId (size active + size quarantine + 1)` вместо `scsNextId`.
+  При удалении/карантине коммитментов возможны коллизии ID. Фикс:
+  `nextCid = CommitmentId (scsNextId store)`, `scsNextId = scsNextId store + 1`.
+- **Блокер 2 (отложен)**: `mClaimPayload` в State.hs:639 — raw-parsed, не
+  admitted. Если `commitDecision = CsaSuppress`, suppressed claim всё равно
+  используется для `synthesizeResolution`. `OriginSynthetic` + низкая
+  confidence (0.5/0.3) — честная маркировка. Не corruption, а архитектурная
+  неопрятность. Средний приоритет.
+- **Блокер 3 (известное ограничение)**: `fcpTopic` обязателен в `FromJSON` —
+  старые persisted stores упадут. Для development — ок. Для production —
+  нужна миграция. Зафиксировано ранее.
+- **Блокер 4 (premature)**: Analogy без provenance tag. Сейчас analogy
+  активируется только через `findNearestCoveredTopic` + `fallbackSimilarity` —
+  это common-prefix matching, не authority claim. Ответы не маркируются как
+  analogical source. Для B3/M6-FELT нужна маркировка, сейчас — нет.

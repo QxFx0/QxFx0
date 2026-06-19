@@ -64,6 +64,7 @@ samplePayload = FactualClaimPayload
   , fcpOrigin     = OriginParser "test"
   , fcpTurnSeq    = TurnSeq 1
   , fcpDeps       = []
+  , fcpTopic      = ""
   }
 
 unitQuarantineWritesToQuarantine :: Test
