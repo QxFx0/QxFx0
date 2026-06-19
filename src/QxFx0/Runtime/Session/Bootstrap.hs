@@ -63,6 +63,17 @@ import QxFx0.Runtime.Paths (resolveDbPath)
 import QxFx0.Runtime.Session.Types
 import QxFx0.Semantic.SemanticScene (defaultScenes)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, allParadigmLemmas, emptyRuntimeParadigms)
+import QxFx0.Semantic.ContentSelector (buildContentSelector)
+import QxFx0.Semantic.Space (buildSemanticSpace)
+import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
+import QxFx0.Semantic.Network.Seed (seedFromCorpus)
+import qualified Data.Set as S
+import QxFx0.Semantic.ContentSelector (buildContentSelector)
+import QxFx0.Semantic.Space (buildSemanticSpace)
+import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
+import QxFx0.Semantic.Network.Seed (seedFromCorpus)
+import qualified Data.Set as S
+import qualified Data.Text as T
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrRglMorphologyActive)
 import QxFx0.Types.State
   ( SystemState(..)
@@ -183,6 +194,17 @@ bootstrapSession quiet sessionId = do
   let firstScene = case (scenes ++ defaultScenes) of
         s : _ -> s
         [] -> ssActiveScene emptySystemState
+      
+      -- Initialize ContentSelector from seed network and definition corpus
+      seedNetwork = seedFromCorpus
+      topicAtoms = M.fromList
+        [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
+        | (topic, dc) <- M.toList definitionCorpus
+        ]
+      topicPredicates = M.map dcPredicates definitionCorpus
+      seedSpace = buildSemanticSpace seedNetwork topicAtoms
+      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates
+      
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}
         , ssMorphology = morphology
@@ -190,6 +212,7 @@ bootstrapSession quiet sessionId = do
         , ssIdentity = (ssIdentity emptySystemState) {idsIdentityClaims = idClaims}
         , ssSemantic = (ssSemantic emptySystemState) {semClusters = clusters}
         , ssSessionId = sessionId
+        , ssContentSelector = seedSelector
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
   (stateOrigin, restored) <- do
@@ -312,3 +335,23 @@ checkSessionReadiness :: Session -> IO ReadinessMode
 checkSessionReadiness session = do
   readiness <- assessResourceReadiness (sessDbPath session)
   pure (computeReadinessMode readiness)
+
+-- | Tokenize predicate text into atoms for ContentSelector initialization.
+-- Filters stop words and short words (≤3 chars).
+tokenizePredicateForSeed :: T.Text -> S.Set T.Text
+tokenizePredicateForSeed text =
+  let words = T.words (T.toLower text)
+      filtered = filter (\w -> T.length w > 3 && not (isStopWord w)) words
+  in S.fromList filtered
+  where
+    isStopWord w = w `elem`
+      [ "это", "есть", "является", "быть", "было", "будет"
+      , "и", "или", "но", "а", "в", "на", "с", "по", "для"
+      , "что", "как", "когда", "где", "кто", "который", "которая"
+      , "не", "ни", "же", "ли", "бы", "то", "так", "только"
+      , "может", "могут", "должен", "должна", "должно"
+      , "через", "между", "перед", "после", "при", "во", "со"
+      , "the", "and", "or", "but", "is", "are", "was", "were"
+      , "of", "to", "in", "on", "at", "for", "with", "by"
+      , "that", "which", "who", "when", "where", "how"
+      ]

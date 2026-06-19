@@ -221,7 +221,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticMorph = ssMorphology ss
       semanticIntent = classifyIntent semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
-      semanticText = generateFromFrame semanticFrame semanticMorph
+      semanticText = generateFromFrame (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) semanticFrame semanticMorph
       semanticNonUnknown = case semanticIntent of
         IntentUnknown _ -> False
         _               -> True
@@ -276,7 +276,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         | Just semanticArtifact <- viaSemantic = semanticArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
-            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti))
+            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) (ssContentSelector ss) (tiActivatedNetwork ti))
               { draFallbackReason = Just assemblyFallbackReason }
       forceFinalized =
         if structuredSurface

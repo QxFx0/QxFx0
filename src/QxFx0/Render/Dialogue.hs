@@ -24,6 +24,9 @@ import QxFx0.Semantic.Content
   ( SemanticPredicate(..), DefinitionContent(..), DistinctionContent(..)
   , lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic, isCoveredPair
   )
+import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..))
+import QxFx0.Semantic.Network (SemanticNetwork)
+import qualified Data.Set as Set
 import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
 import qualified Data.Char as Char
@@ -218,11 +221,11 @@ linearizeClaimAstEn ast =
 
 renderDialogueUtterance :: ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> Text
 renderDialogueUtterance rmp rcp topic claims morph =
-  draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph emptyRuntimeParadigms emptyField)
+  draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph emptyRuntimeParadigms emptyField emptyContentSelector Nothing)
 
-renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> DialogueRenderArtifact
-renderDialogueArtifact frame rmp rcp topic claims morph rp field =
-  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph rp field of
+renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> DialogueRenderArtifact
+renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector mActivatedNetwork =
+  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph rp field contentSelector mActivatedNetwork of
     Just artifact -> artifact
     Nothing ->
       let fallbackReason =
@@ -293,14 +296,14 @@ hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
 hasStructuredDialogueSurface frame =
   structuredDialogueType (ipfPropositionType frame)
 
-renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> Maybe DialogueRenderArtifact
-renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field =
+renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> Maybe DialogueRenderArtifact
+renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field contentSelector mActivatedNetwork =
   let propositionType = ipfPropositionType frame
   in if not (structuredDialogueType propositionType)
      then Nothing
      else
       let (body0, claimAst, mLang, linearizationOk, fallbackReason) =
-            structuredBody propositionType frame rmp renderStyle morph rp
+            structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork
           body1 = applyMicroPlanToStructuredBody rmp renderStyle field body0
           continuationText = structuredContinuationText frame rmp rcp rp morph
           body = appendContinuation (rmpMicroPlan rmp) body1 continuationText
@@ -351,8 +354,8 @@ structuredDialogueType propositionType =
     , NextStepQ
     ]
 
-structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
-structuredBody propositionType frame rmp renderStyle morph rp =
+structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
+structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
   let isEn = isEnglishInput (ipfRawText frame)
       hardKnowledgeTone = truthContractAllowsHardKnowledgeTone (rmpTruthContractStatus rmp)
   in case propositionType of
@@ -478,28 +481,32 @@ structuredBody propositionType frame rmp renderStyle morph rp =
           plain (if hardKnowledgeTone
                    then "Да, я знаю, что солнце — это звезда и источник света и тепла для Земли. Для меня это базовое понятийное знание о явлениях внешнего мира, а не результат текущего наблюдения."
                    else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
-      | isEn ->
-          let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")
-              mContent = lookupDefinitionContent topicRef
-              ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme topicRef)) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
-              claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
-              contentText = case mContent of
-                Just dc -> ". " <> T.intercalate " " (map spEn (dcPredicates dc))
-                Nothing -> ""
-          in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
-              <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
-              <> clText claim <> contentText) ast claim "en_GF_MVP"
-      | otherwise ->
-          let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
-              mContent = lookupDefinitionContent topicRef
-              ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
-              claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
-              contentText = case mContent of
-                Just dc -> ". " <> T.intercalate " " (map spRu (dcPredicates dc))
-                Nothing -> ""
-          in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
-              <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
-              <> clText claim <> contentText) ast claim
+        | isEn ->
+            let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")
+                selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+                ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme topicRef)) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
+                claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
+                contentText = case selectedPreds of
+                 (sp:_) -> ". " <> T.intercalate " " (map spEn (spPredicates sp))
+                 [] -> case lookupDefinitionContent topicRef of
+                         Just dc -> ". " <> T.intercalate " " (map spEn (dcPredicates dc))
+                         Nothing -> ""
+           in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
+               <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
+               <> clText claim <> contentText) ast claim "en_GF_MVP"
+        | otherwise ->
+            let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
+                selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+                ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
+                claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
+                contentText = case selectedPreds of
+                  (sp:_) -> ". " <> T.intercalate " " (map spRu (spPredicates sp))
+                  [] -> case lookupDefinitionContent topicRef of
+                          Just dc -> ". " <> T.intercalate " " (map spRu (dcPredicates dc))
+                          Nothing -> ""
+            in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
+                <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
+                <> clText claim <> contentText) ast claim
     PurposeQ ->
       let topicRef = nonEmptyOr (T.strip (ipfSemanticSubject frame)) (nonEmptyOr (T.strip (rmpTopic rmp)) (if isEn then "object" else "объект"))
           topicNom = if isEn then topicRef else toNominative morph topicRef
@@ -602,15 +609,22 @@ structuredBody propositionType frame rmp renderStyle morph rp =
                  else "Различение требует явной рамки критериев. " <> rmpPrimaryClaim rmp)
     MisunderstandingReport ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          mContent = lookupDefinitionContent topicRef
-          acknowledgePrior = case mContent of
-            Just dc ->
+          selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+          acknowledgePrior = case selectedPreds of
+            (sp:_) ->
               if isEn
-                then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                then " I held that " <> T.intercalate " " (map spEn (spPredicates sp))
                    <> ". If this was wrong, I will revise."
-                else " Я ранее полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                else " Я ранее полагал, что " <> T.intercalate " " (map spRu (spPredicates sp))
                    <> ". Если это неверно, я пересмотрю."
-            Nothing -> ""
+            [] -> case lookupDefinitionContent topicRef of
+              Just dc ->
+                if isEn
+                  then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                     <> ". If this was wrong, I will revise."
+                  else " Я ранее полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                     <> ". Если это неверно, я пересмотрю."
+              Nothing -> ""
           ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           fallback = if isEn
@@ -624,15 +638,22 @@ structuredBody propositionType frame rmp renderStyle morph rp =
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConfrontQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          mContent = lookupDefinitionContent topicRef
-          acknowledgePrior = case mContent of
-            Just dc ->
+          selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+          acknowledgePrior = case selectedPreds of
+            (sp:_) ->
               if isEn
-                then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                then " I held that " <> T.intercalate " " (map spEn (spPredicates sp))
                    <> ". You challenge this — let me respond."
-                else " Я полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                else " Я полагал, что " <> T.intercalate " " (map spRu (spPredicates sp))
                    <> ". Ты оспариваешь это — отвечу."
-            Nothing -> ""
+            [] -> case lookupDefinitionContent topicRef of
+              Just dc ->
+                if isEn
+                  then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
+                     <> ". You challenge this — let me respond."
+                  else " Я полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
+                     <> ". Ты оспариваешь это — отвечу."
+              Nothing -> ""
           ast = claimAstOrFallback (MoveConfront (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "тема")))) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           fallback = if isEn
@@ -1634,52 +1655,54 @@ renderArtifactViaAssembly :: RuntimeParadigms -> SystemState -> InputProposition
                            -> MorphologyData -> RenderStyle -> ParsedInput
                            -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
 renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field =
-   -- For EN input, skip Russian-only assembly path and use template rendering directly.
-   -- Template rendering now supports EN via structuredBody language detection.
-    if isEnglishInput (ipfRawText frame)
-    then
-      let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field
-      in templateArtifact { draFallbackReason = Just "en_skip_assembly"
-                          , draGenerationTrace = [GenerationAttempt "assembly" "skipped_en_input"]
-                          }
-     else
-      let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
-          da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
-          dialogText = case assembleTurn rp da style (ssDiscourse ss) of
-            Right txt | not (T.null (T.strip txt)) -> Just txt
-            _ -> Nothing
-          factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
-          -- WP2: GF-first with telemetry. Fallback chain records exact reason.
-          templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field
-          templateText = let txt = draTemplateBodyText templateArtifact
-            in if T.null (T.strip txt) then Nothing else Just txt
-          structuredFallback
-            | hasStructuredDialogueSurface frame = fallbackStructuredText frame
-            | otherwise = Nothing
-          fallbackReason
-            | isJust dialogText = Nothing
-            | isJust factualText = Nothing
-            | isJust templateText = Just "gf_template_fallback"
-            | isJust structuredFallback = Just "gf_structured_fallback"
-            | otherwise = Just "gf_no_output"
-          rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
-          -- COMPAT GLUE: preserve old template path finalization when falling back.
-          -- Assembly-generated text is finalized with rmpForce; fallback text is
-          -- already finalized inside templateArtifact (e.g. IFAssert for structured).
-          isFreshAssembly = isJust dialogText || isJust factualText
-          finalRendered
-            | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
-            | otherwise = draRenderedText templateArtifact
-          generationTrace =
-            [ GenerationAttempt "dialog_assembly"
-                (maybe "empty" (const "ok") dialogText)
-            , GenerationAttempt "factual_explanation"
-                (maybe "not_found" (const "ok") factualText)
-            , GenerationAttempt "template"
-                (maybe "empty" (const "ok") templateText)
-            , GenerationAttempt "structured_fallback"
-                (maybe "not_applicable" (const "ok") structuredFallback)
-            ]
+   let contentSelector = ssContentSelector ss
+   in
+    -- For EN input, skip Russian-only assembly path and use template rendering directly.
+    -- Template rendering now supports EN via structuredBody language detection.
+      if isEnglishInput (ipfRawText frame)
+      then
+        let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector Nothing
+        in templateArtifact { draFallbackReason = Just "en_skip_assembly"
+                            , draGenerationTrace = [GenerationAttempt "assembly" "skipped_en_input"]
+                            }
+         else
+          let t = nonEmptyOr (rmpTopic rmp) (ipfFocusEntity frame)
+              da = buildDialogAtoms frame rmp ss morph parsedInput mnarr
+              dialogText = case assembleTurn rp da style (ssDiscourse ss) of
+                Right txt | not (T.null (T.strip txt)) -> Just txt
+                _ -> Nothing
+              factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
+              -- WP2: GF-first with telemetry. Fallback chain records exact reason.
+              templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector Nothing
+              templateText = let txt = draTemplateBodyText templateArtifact
+                             in if T.null (T.strip txt) then Nothing else Just txt
+              structuredFallback
+                | hasStructuredDialogueSurface frame = fallbackStructuredText frame
+                | otherwise = Nothing
+              fallbackReason
+                | isJust dialogText = Nothing
+                | isJust factualText = Nothing
+                | isJust templateText = Just "gf_template_fallback"
+                | isJust structuredFallback = Just "gf_structured_fallback"
+                | otherwise = Just "gf_no_output"
+              rendered = fromMaybe "" (dialogText <|> factualText <|> templateText <|> structuredFallback)
+              -- COMPAT GLUE: preserve old template path finalization when falling back.
+              -- Assembly-generated text is finalized with rmpForce; fallback text is
+              -- already finalized inside templateArtifact (e.g. IFAssert for structured).
+              isFreshAssembly = isJust dialogText || isJust factualText
+              finalRendered
+                | isFreshAssembly = finalizeForce (rmpForce rmp) (T.strip rendered)
+                | otherwise = draRenderedText templateArtifact
+              generationTrace =
+                [ GenerationAttempt "dialog_assembly"
+                    (maybe "empty" (const "ok") dialogText)
+                , GenerationAttempt "factual_explanation"
+                    (maybe "not_found" (const "ok") factualText)
+                , GenerationAttempt "template"
+                    (maybe "empty" (const "ok") templateText)
+                , GenerationAttempt "structured_fallback"
+                    (maybe "not_applicable" (const "ok") structuredFallback)
+                ]
       in templateArtifact
              { draRenderedText = finalRendered
              , draTemplateBodyText = rendered
@@ -1784,13 +1807,16 @@ gfMapAuthorityTags =
 -- from that payload using morphological forms and style modifiers.
 --
 -- Invariant: same frame + same morph → same output. Pure, deterministic.
-generateFromFrame :: FT.SemanticFrame -> MorphologyData -> Text
-generateFromFrame frame morph = case frame of
+generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> FT.SemanticFrame -> MorphologyData -> Text
+generateFromFrame cs field mNetwork frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
-        mDefContent = lookupDefinitionContent topic
+        selectedPreds = selectPredicates cs field topic mNetwork
+        mDefContent = case selectedPreds of
+          (sp:_) -> Just $ DefinitionContent topic (spPredicates sp)
+          [] -> lookupDefinitionContent topic
     in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
 
   FT.DistinctionFrame left right criteria ->

@@ -49,6 +49,8 @@ import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
 import QxFx0.Memory.Episodic (EpisodicEvent)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement)
+import QxFx0.Semantic.Network.Types (SemanticNetwork)
+import QxFx0.Semantic.Intent.GeometricClassifier (ClassificationResult)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -152,6 +154,14 @@ data TurnInput = TurnInput
     --   re-asking established facts or repeating recent decisions.
     --   Empty list when 'episodicRecallActive' is False or no relevant
     --   episodes exist.  Living consumer of 'QxFx0.Memory.Episodic.retrieve'.
+  , tiActivatedNetwork :: !(Maybe SemanticNetwork)
+    -- ^ Phase 1: semantic network after spreading activation, populated
+    --   when 'contentDensityGate' passes.  Enables content selection
+    --   to use activated atoms for predicate filtering.  Nothing when
+    --   gate fails or network is empty.
+  , tiGeoResult :: !(Maybe ClassificationResult)
+    -- ^ Phase 2: geometric classifier result for A/B validation.
+    --   Populated in Prepare stage, consumed in Finalize for metrics.
   }
 
 data TurnSignals = TurnSignals

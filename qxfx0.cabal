@@ -254,6 +254,7 @@ library
      QxFx0.Semantic.MeaningDecompose.Domains
       QxFx0.Semantic.Network
       QxFx0.Semantic.Network.Types
+      QxFx0.Semantic.Network.Seed
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
@@ -285,6 +286,9 @@ library
       QxFx0.Semantic.Retrieve
       QxFx0.Semantic.Intent.Features
       QxFx0.Semantic.Intent.Classifier
+      QxFx0.Semantic.Intent.GeometricClassifier
+      QxFx0.Semantic.Intent.Metrics
+      QxFx0.Semantic.Revision
       QxFx0.Semantic.Frame.Types
       QxFx0.Semantic.Frame.Builder
      QxFx0.Core.DialogueThread
@@ -585,6 +589,8 @@ common test-common
     Test.Suite.SemanticNetwork
     Test.Suite.SemanticSpace
     Test.Suite.ContentSelector
+    Test.Suite.GeometricClassifier
+    Test.Suite.Revision
 
 test-suite qxfx0-test-unit
   import:        test-common

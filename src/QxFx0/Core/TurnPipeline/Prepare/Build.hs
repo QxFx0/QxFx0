@@ -37,6 +37,7 @@ import QxFx0.Semantic.Embedding
   , embeddingSourceText
   )
 import QxFx0.Types
+import QxFx0.Semantic.Network (activate, contentDensityGate)
 
 import Data.Text (Text)
 
@@ -79,8 +80,8 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
           metrics0
       !metrics2 =
         (addPhase
-          (recordPhase "embedding" (ptlEmbeddingStart timeline) (ptlEmbeddingDone timeline))
-          metrics1)
+           (recordPhase "embedding" (ptlEmbeddingStart timeline) (ptlEmbeddingDone timeline))
+           metrics1)
             { tmEmbeddingSource = embeddingSourceText (erSource embResult) }
       !metrics3 =
         addPhase
@@ -101,6 +102,12 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       nixStatus = perNixStatus effectResults
       nixAvailable = case nixStatus of Unavailable _ -> False; _ -> True
       isNixBlocked = case nixStatus of Blocked _ -> True; _ -> False
+      -- Phase 1: spreading activation on semantic network
+      activatedNetwork =
+        let network = ssSemanticNetwork ss
+        in if contentDensityGate network
+           then Just (activate (psBestTopic prepareStatic) network)
+           else Nothing
    in TurnInput
       { tiStartTime = perTurnCurrentTime effectResults
       , tiEmbedding = emb
@@ -127,12 +134,14 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
         , tiSenseVector = psSenseVector prepareStatic
        , tiDialogueThread = psDialogueThread prepareStatic
        , tiDialogueCommitmentLedger = psDialogueCommitmentLedger prepareStatic
-       , tiDialoguePhase = psDialoguePhase prepareStatic
-       , tiTruthContractStatus = psTruthContractStatus prepareStatic
-        , tiEssence = psEssence prepareStatic
-        , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
-        , tiRetrievedEpisodes = retrievedEpisodes
-        }
+        , tiDialoguePhase = psDialoguePhase prepareStatic
+        , tiTruthContractStatus = psTruthContractStatus prepareStatic
+          , tiEssence = psEssence prepareStatic
+          , tiGeoResult = psGeoResult prepareStatic
+         , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
+         , tiRetrievedEpisodes = retrievedEpisodes
+         , tiActivatedNetwork = activatedNetwork
+         }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals
 buildTurnSignals effectResults =

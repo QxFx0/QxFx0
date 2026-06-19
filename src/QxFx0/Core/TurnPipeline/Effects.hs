@@ -31,6 +31,20 @@ import QxFx0.Semantic.MeaningAtoms
   , extractObjectFromAtom
   )
 import QxFx0.Semantic.Logic (runSemanticLogic)
+import QxFx0.Semantic.Intent.GeometricClassifier
+  ( IntentClassifier(..)
+  , buildClassifier
+  , classifyIntent
+  , intentToFamily
+  , geometricFamilyRecommendation
+  , ClassificationResult(..)
+  )
+import QxFx0.Semantic.Space.Types (SemanticSpace(..))
+import qualified QxFx0.Semantic.Content as Content
+import QxFx0.Semantic.Space (tokenizePredicate)
+import QxFx0.Types.PropositionType (PropositionType(..))
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import QxFx0.Semantic.Proposition (parsePropositionWithFrame)
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
@@ -290,6 +304,9 @@ data PrepareStatic = PrepareStatic
     -- ^ Phase 9: pre-turn essence carrier from 'ssEssence'.
     --   Threaded through 'tiEssence' so witness ingestion in
     --   'buildNextSystemState' sees the canonical trajectory.
+  , psGeoResult :: !(Maybe ClassificationResult)
+    -- ^ Phase 2: geometric classifier result for A/B validation.
+    --   Stored for metrics recording in Finalize stage.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -335,7 +352,21 @@ buildPrepareEffectPlan ss input currentTime =
       logicAtomSet = semanticAtomSet { asAtoms = aacAtoms admittedAtomContributions }
       logicResults = runSemanticLogic logicAtomSet
       sortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) logicResults
-      rawRecommendedFamily = case sortedLogic of
+      geoClassification = if useGeometricIntent
+                            then case buildGeometricClassifier (ssSemanticSpace ss) of
+                                   Just classifier ->
+                                     let atomTexts = S.fromList (map maText (asAtoms logicAtomSet))
+                                     in Just (classifyIntent classifier atomTexts)
+                                   Nothing -> Nothing
+                            else Nothing
+      geoResults = case geoClassification of
+                     Just (Classified intent score) ->
+                       case intentToFamily intent of
+                         Just fam -> [(fam, score)]
+                         Nothing -> []
+                     _ -> []
+      mergedLogicGeo = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) (sortedLogic ++ geoResults)
+      rawRecommendedFamily = case mergedLogicGeo of
         ((fam, _):_) -> fam
         [] -> CMGround
       rawSemanticFrame = buildUtteranceSemanticFrame input
@@ -484,11 +515,12 @@ buildPrepareEffectPlan ss input currentTime =
        , psCurrentTime = currentTime
        , psSenseVector = admittedSenseVector
       , psDialogueThread = dialogueThread
-       , psDialogueCommitmentLedger = dialogueLedger
-      , psDialoguePhase = dialoguePhase
-      , psTruthContractStatus = ssTruthContractStatus ss
-      , psEssence = selfEssence (ssSelfState ss)
-      }
+        , psDialogueCommitmentLedger = dialogueLedger
+       , psDialoguePhase = dialoguePhase
+       , psTruthContractStatus = ssTruthContractStatus ss
+       , psEssence = selfEssence (ssSelfState ss)
+       , psGeoResult = geoClassification
+       }
   in PrepareEffectPlan
       { pepStatic = static
       , pepCapturedCurrentTime = currentTime
@@ -502,3 +534,28 @@ buildPrepareEffectPlan ss input currentTime =
       }
   where
     firstNonEmpty = fromMaybe "" . listToMaybe . filter (not . T.null)
+
+useGeometricIntent :: Bool
+useGeometricIntent = True
+
+buildGeometricClassifier :: SemanticSpace -> Maybe IntentClassifier
+buildGeometricClassifier space
+  | ssDimensionCount space == 0 = Nothing
+  | otherwise =
+    let labeled = M.fromListWith S.union
+          [ (categoryToPropositionType (Content.classifyConceptCategory topic), tokenizePredicate (Content.spRu pred))
+          | topic <- Content.coveredTopics
+          , Just dc <- [Content.lookupDefinitionContent topic]
+          , pred <- Content.dcPredicates dc
+          ]
+    in if M.null labeled
+         then Nothing
+         else Just (buildClassifier space labeled)
+  where
+    categoryToPropositionType :: Content.ConceptCategory -> PropositionType
+    categoryToPropositionType cat = case cat of
+      Content.CategoryPhilosophical -> DefinitionalQ
+      Content.CategorySocial -> PurposeQ
+      Content.CategoryPsychological -> SelfKnowledgeQ
+      Content.CategoryPhysical -> WorldCauseQ
+      Content.CategoryGeneral -> ConceptKnowledgeQ

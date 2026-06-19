@@ -54,6 +54,10 @@ import Test.Suite.CommitmentQuarantine (commitmentQuarantineTests)
 import Test.Suite.CommitmentAwareRouting (commitmentAwareRoutingTests)
 import Test.Suite.IntentClassifier (intentClassifierTests)
 import Test.Suite.SemanticNetwork (semanticNetworkTests)
+import Test.Suite.SemanticSpace (semanticSpaceTests)
+import Test.Suite.ContentSelector (contentSelectorTests)
+import Test.Suite.GeometricClassifier (geometricClassifierTests)
+import Test.Suite.Revision (revisionTests)
 
 main :: IO ()
 main = do
@@ -107,10 +111,13 @@ main = do
               ++ configExternalizeTests
                 ++ commitmentStoreAdmissionTests
                 ++ commitmentQuarantineTests
-                ++ commitmentAwareRoutingTests
-                ++ intentClassifierTests
-                ++ semanticNetworkTests
-             )
+                 ++ commitmentAwareRoutingTests
+                  ++ intentClassifierTests
+                  ++ semanticNetworkTests
+                  ++ semanticSpaceTests
+                  ++ contentSelectorTests
+                  ++ geometricClassifierTests
+               )
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

@@ -38,7 +38,7 @@ newtype TurnSeq = TurnSeq { unTurnSeq :: Int }
 -- | Unique commitment identifier within a session.
 newtype CommitmentId = CommitmentId { unCommitmentId :: Int }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (Hashable, NFData, ToJSON, FromJSON)
+  deriving anyclass (Hashable, NFData, ToJSON, FromJSON, ToJSONKey, FromJSONKey)
 
 -- | Where a commitment originated.
 data CommitmentOrigin

@@ -20,6 +20,7 @@ import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
 import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, contradict)
 import qualified QxFx0.Semantic.Content as Content
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore, CommitmentEngagement(..), CommitmentId(..), ContradictionKind(..))
+import QxFx0.Semantic.Revision (RevisedCommitment(..), revisePosition, applyRevisionDecision)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
@@ -132,6 +133,13 @@ import QxFx0.Semantic.AtomAccretion
   , decayProvisionalAtoms
   , resolveCollisions
   )
+import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate)
+import QxFx0.Semantic.Space (buildSemanticSpace, buildFactVectors)
+import QxFx0.Semantic.Space.Types (emptySemanticSpace, ssFactVectors)
+import QxFx0.Semantic.ContentSelector (buildContentSelector, buildTopicAtoms, tokenizePredicate)
+import QxFx0.Semantic.ContentSelector.Types (emptyContentSelector)
+import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics)
+import QxFx0.Semantic.Intent.GeometricClassifier (recordABValidation)
 import QxFx0.Types.Text (textShow)
 import QxFx0.Types.State.DialogueDevelopment
   ( CommitmentStatus(..)
@@ -145,6 +153,7 @@ import Data.Maybe (fromMaybe)
 import Control.Applicative ((<$>), (<*>), (<|>))
 import Data.Sequence (Seq, empty)
 import qualified Data.Foldable as F
+import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -540,7 +549,32 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
         -- ^ Phase 7: rooted knowledge tree.  Root updated from
         --   committed essence; structural pruning applied each turn.
       , ssCalibrationSnapshots = calibrationSnapshots
+      , ssSemanticNetwork = semanticNetwork
+      , ssSemanticSpace = semanticSpace
+      , ssContentSelector = contentSelector
       }
+      semanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
+      topicAtomsMap = M.fromList
+        [ (topic, Set.toList $ Set.unions [tokenizePredicate (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        | topic <- Content.coveredTopics
+        , Just dc <- [Content.lookupDefinitionContent topic]
+        ]
+      topicAtomsSetMap = M.fromList
+        [ (topic, Set.unions [tokenizePredicate (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        | topic <- Content.coveredTopics
+        , Just dc <- [Content.lookupDefinitionContent topic]
+        ]
+      semanticSpace = if contentDensityGate semanticNetwork
+                      then buildSemanticSpace semanticNetwork topicAtomsSetMap
+                      else emptySemanticSpace
+      contentSelector = if contentDensityGate semanticNetwork
+                        then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap
+                        else emptyContentSelector
+      topicPredicatesMap = M.fromList
+        [ (topic, Content.dcPredicates dc)
+        | topic <- Content.coveredTopics
+        , Just dc <- [Content.lookupDefinitionContent topic]
+        ]
       nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext
       -- P4: parse the rendered authority surface; commit if recognised.
       -- Nothing parse is silently skipped (non-authority surface).
@@ -575,6 +609,7 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
         _ -> (store1, 0, Nothing)
       -- SUBJECT-SEAM-1: if the turn contradicted held commitments, record each
       -- contradiction pair (new claim ↔ engaged commitment) in the ledger.
+      -- Phase E: apply revision decisions based on angst/conatus thresholds.
       store3 =
         let ce = tpCommitmentEngagement tp
         in if ceContradicted ce
@@ -586,8 +621,26 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
                       then s
                       else contradict engagedCid newCid ContradictionStatement turnSeq s
                   ) store2 engaged
-             else store2
-      nextWithCommitments = nextWithLog { ssSemanticCommitments = Just store3 }
+              else store2
+      -- Phase E: revision decisions for contradicted commitments
+      revisionDecisions =
+        let ce = tpCommitmentEngagement tp
+            angst = case tiEssence ti of
+                      EssenceUncommitted traj -> etAngstLevel traj
+                      EssenceCommitted traj _ -> etAngstLevel traj
+            conatus = tiConatusEnergy ti
+        in if ceContradicted ce
+             then
+               let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
+                   engaged = ceEngaged ce
+               in map (\engagedCid -> revisePosition engagedCid ContradictionStatement angst conatus)
+                      (filter (/= newCid) engaged)
+               else []
+      store4 = F.foldl' (applyRevisionDecision turnSeq) store3 revisionDecisions
+      nextWithCommitments = nextWithLog
+        { ssSemanticCommitments = Just store4
+        , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors semanticSpace store4 }
+        }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of
         Just c  -> Just c
@@ -644,10 +697,16 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
       nextWithMood = nextWithUserModel
         { ssMood = updateMood (ssMood nextWithUserModel) turnValence
         }
+      -- Phase 2: record A/B validation metrics for geometric classifier
+      nextWithMetrics = case tiGeoResult ti of
+        Just geoResult -> nextWithMood
+          { ssGeometricMetrics = recordABValidation (ssGeometricMetrics ss) geoResult outcomeFamily
+          }
+        Nothing -> nextWithMood
       -- CTS-42: compute the admission decision once, apply to both
       -- anchor and surface-parsed claims.
       commitDecision = admitCommitmentToStore (etoTruthContractStatus executedOutcome)
-      in ( nextWithMood
+      in ( nextWithMetrics
     , commitmentTrigger
     , commitDecision
     , promotedCount

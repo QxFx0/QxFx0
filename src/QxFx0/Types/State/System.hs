@@ -176,7 +176,9 @@ import qualified Data.HashSet as HS
 import qualified Data.Sequence as Seq
 import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
 import QxFx0.Semantic.Network.Types (SemanticNetwork, emptySemanticNetwork)
+import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
+import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
 
 data SystemState = SystemState
@@ -300,6 +302,10 @@ data SystemState = SystemState
     -- ^ Phase 1: selects predicates based on Field state and topic.
     --   Replaces direct definitionCorpus lookup in rendering.
     --   Initialised to 'emptyContentSelector'.
+  , ssGeometricMetrics :: !IntentClassifierMetrics
+    -- ^ Phase 2: A/B validation metrics for geometric intent classifier.
+    --   Tracks agreement/disagreement with runSemanticLogic.
+    --   Initialised to 'emptyIntentClassifierMetrics'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -484,6 +490,7 @@ instance FromJSON SystemState where
             <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
             <*> o .:? "semanticSpace" .!= emptySemanticSpace
             <*> o .:? "contentSelector" .!= emptyContentSelector
+            <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -668,9 +675,10 @@ emptySystemState = SystemState
   , ssUserModel = initialBeliefs
   , ssMood = 0.0
   , ssCurrentRegime = defaultRuntimeRegime
-  , ssSemanticNetwork = emptySemanticNetwork
+  , ssSemanticNetwork = seedFromCorpus
   , ssSemanticSpace = emptySemanticSpace
   , ssContentSelector = emptyContentSelector
+  , ssGeometricMetrics = emptyIntentClassifierMetrics
   }
 
 emptyGovernanceProjection :: GovernanceProjection

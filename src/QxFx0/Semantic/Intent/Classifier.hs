@@ -207,9 +207,10 @@ extractTopicAfter :: Text -> Text -> Text
 extractTopicAfter rawText marker =
   let lower = T.toLower (T.strip rawText)
       markerLower = T.toLower marker
-  in if markerLower `T.isPrefixOf` lower
-     then T.strip (T.drop (T.length marker + 1) (T.strip rawText))
-     else T.strip rawText
+      raw = if markerLower `T.isPrefixOf` lower
+            then T.strip (T.drop (T.length marker + 1) (T.strip rawText))
+            else T.strip rawText
+  in T.dropWhileEnd (`elem` ("?!.,;:" :: String)) raw
 
 -- | Extract left concept from comparison utterance.
 -- "разница между свободой и волей" → "свободой"
@@ -229,7 +230,7 @@ extractComparisonLeft rawText =
       skipPreposition t
         | "между " `T.isPrefixOf` t = T.strip (T.drop 6 t)
         | otherwise = t
-  in T.strip (T.takeWhile (/= ' ') (skipPreposition afterPrefix))
+  in T.dropWhileEnd (`elem` ("?!.,;:" :: String)) (T.strip (T.takeWhile (/= ' ') (skipPreposition afterPrefix)))
 
 -- | Extract right concept from comparison utterance.
 -- "разница между свободой и волей" → "волей"
@@ -238,22 +239,23 @@ extractComparisonLeft rawText =
 extractComparisonRight :: Text -> Text
 extractComparisonRight rawText =
   let lower = T.toLower (T.strip rawText)
+      stripPunct = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
   in case () of
     _ | "разница " `T.isPrefixOf` lower ->
         -- "разница между X и Y" → take word after " и "
         case T.breakOn " и " lower of
-          (_, rest) | not (T.null rest) -> T.strip (T.drop 3 rest)
+          (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 3 rest))
           _ -> ""
     _ | "отличие " `T.isPrefixOf` lower ->
         -- "отличие X от Y" → take word after " от "
         case T.breakOn " от " lower of
-          (_, rest) | not (T.null rest) -> T.strip (T.drop 4 rest)
+          (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 4 rest))
           _ -> ""
     _ | "сравни " `T.isPrefixOf` lower ->
         -- "сравни A и B" → take word after " и "
         let afterPrefix = T.drop 7 lower
         in case T.breakOn " и " afterPrefix of
-             (_, rest) | not (T.null rest) -> T.strip (T.drop 3 rest)
+             (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 3 rest))
              _ -> ""
     _ -> ""
 

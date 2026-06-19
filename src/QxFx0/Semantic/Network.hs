@@ -3,6 +3,7 @@
 module QxFx0.Semantic.Network
   ( module QxFx0.Semantic.Network.Types
   , buildSemanticNetwork
+  , mergeSemanticNetworks
   , activate
   , getActivatedAtoms
   , contentDensityGate
@@ -35,6 +36,16 @@ buildSemanticNetwork mg =
     , snActivation = M.empty
     , snDecayRate = 0.5
     , snMaxHops = 3
+    }
+
+mergeSemanticNetworks :: SemanticNetwork -> SemanticNetwork -> SemanticNetwork
+mergeSemanticNetworks base update =
+  SemanticNetwork
+    { snNodes = S.union (snNodes base) (snNodes update)
+    , snEdges = M.union (snEdges update) (snEdges base)
+    , snActivation = M.empty
+    , snDecayRate = snDecayRate base
+    , snMaxHops = snMaxHops base
     }
 
 activate :: Text -> SemanticNetwork -> SemanticNetwork

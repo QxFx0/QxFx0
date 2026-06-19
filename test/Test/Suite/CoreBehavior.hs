@@ -35,6 +35,7 @@ import qualified Data.Text as T
 import qualified Data.Set as S
 
 import QxFx0.Types
+import QxFx0.Semantic.ContentSelector (emptyContentSelector)
 import QxFx0.Types.PropositionType (PropositionType(..), propositionTypeText)
 import QxFx0.Types.Sense (ImplicationDirection(..), RhetoricalMove(..), FallbackPolicy(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceSeverity(..))
@@ -2149,8 +2150,8 @@ testClaimAstSameTreeVariedSurface = TestCase $ do
       rcpFormal = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleFormal }
       rcpWarm = (TurnPlanning.buildRCP family rmp) { rcpStyle = StyleWarm }
       md = ssMorphology emptySystemState
-      artFormal = Dialogue.renderDialogueArtifact frame rmp rcpFormal (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField
-      artWarm = Dialogue.renderDialogueArtifact frame rmp rcpWarm (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField
+      artFormal = Dialogue.renderDialogueArtifact frame rmp rcpFormal (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
+      artWarm = Dialogue.renderDialogueArtifact frame rmp rcpWarm (ipfFocusEntity frame) [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
   assertBool "define question should build claim AST" (rmpPrimaryClaimAst rmp /= Nothing)
   assertBool "structured render should mark linearization as successful" (Dialogue.draLinearizationOk artFormal)
   assertEqual "same AST should stay stable across styles for GF linearization"
@@ -2177,7 +2178,7 @@ testStructuredDialogueRespectsBoundedContinuation = TestCase $ do
       rmp = rmp0 { rmpImplicationDirection = DirBounded }
       rcp = TurnPlanning.buildRCP family rmp
       md = ssMorphology emptySystemState
-      artifact = Dialogue.renderDialogueArtifact frame rmp rcp "свобода" [] md emptyRuntimeParadigms emptyField
+      artifact = Dialogue.renderDialogueArtifact frame rmp rcp "свобода" [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
   assertBool "bounded structured dialogue should expose a boundary continuation"
     ("Проведём границу:" `T.isInfixOf` Dialogue.draTemplateBodyText artifact)
 

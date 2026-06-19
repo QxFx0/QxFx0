@@ -30,7 +30,7 @@ semanticSpaceTests =
           affinity = computeFieldAffinity space FdResonance pv
       assertBool "affinity should be 1.0" (abs (affinity - 1.0) < 0.001)
 
-  , TestLabel "computeFieldAffinity returns 0.5 for unknown prototype" $ TestCase $ do
+  , TestLabel "computeFieldAffinity returns 0.0 for unknown prototype" $ TestCase $ do
       let space = emptySemanticSpace
             { ssDimensionCount = 3
             , ssAtomIndex = M.fromList [("a", 0), ("b", 1), ("c", 2)]
@@ -42,7 +42,7 @@ semanticSpaceTests =
             , pvVector = V.fromList [1.0, 1.0, 0.0]
             }
           affinity = computeFieldAffinity space FdResonance pv
-      assertBool "affinity should be 0.5 (fallback)" (abs (affinity - 0.5) < 0.001)
+      assertBool "affinity should be 0.0 (no prototype)" (abs (affinity - 0.0) < 0.001)
 
   , TestLabel "computeFieldAffinity changes with prototype" $ TestCase $ do
       let space1 = emptySemanticSpace

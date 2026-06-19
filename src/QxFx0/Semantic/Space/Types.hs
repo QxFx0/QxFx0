@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Space.Types
   ( PredicateVector(..)
+  , AtomVector(..)
   , FieldDimension(..)
   , DimensionPrototype(..)
   , SemanticSpace(..)
@@ -21,12 +23,18 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 
+import QxFx0.Types.State.SemanticCommitment (CommitmentId)
+
 data PredicateVector = PredicateVector
   { pvPredicateId :: !Text
   , pvAtoms       :: !(Set Text)
   , pvVector      :: !(Vector Double)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
+
+newtype AtomVector = AtomVector { unAtomVector :: Vector Double }
+  deriving stock (Eq, Show, Generic)
+  deriving newtype (NFData, ToJSON, FromJSON)
 
 data FieldDimension
   = FdResonance
@@ -49,6 +57,7 @@ data SemanticSpace = SemanticSpace
   , ssAtomIndex        :: !(Map Text Int)
   , ssPrototypes       :: !(Map FieldDimension DimensionPrototype)
   , ssPredicateVectors :: !(Map Text PredicateVector)
+  , ssFactVectors      :: !(Map CommitmentId AtomVector)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -58,13 +67,14 @@ emptySemanticSpace = SemanticSpace
   , ssAtomIndex = M.empty
   , ssPrototypes = M.empty
   , ssPredicateVectors = M.empty
+  , ssFactVectors = M.empty
   }
 
 fieldDimensionPrototypes :: Map FieldDimension [Text]
 fieldDimensionPrototypes = M.fromList
-  [ (FdResonance, ["связь", "отношение", "контекст", "система"])
-  , (FdAtmosphere, ["эффект", "свойство", "аналогия", "выражение"])
-  , (FdConfidence, ["количество", "единица", "открыватель", "факт"])
-  , (FdConsolidation, ["субъект", "предикат", "причина", "нарратив"])
-  , (FdCounterfactual, ["условие", "масштаб", "аналогия", "альтернатива"])
+  [ (FdResonance, ["связана", "связан", "зависит", "контекст"])
+  , (FdAtmosphere, ["выражает", "обозначает", "сигнализирует", "вызывает"])
+  , (FdConfidence, ["претендует", "требует", "доказательства", "факт"])
+  , (FdConsolidation, ["субъекта", "действие", "ответственность", "последствий"])
+  , (FdCounterfactual, ["возможность", "независимо", "границу", "условиях"])
   ]

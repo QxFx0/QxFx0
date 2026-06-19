@@ -18,17 +18,19 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
+import QxFx0.Semantic.Content (SemanticPredicate)
 
 data ContentSelector = ContentSelector
-  { csSpace       :: !SemanticSpace
-  , csTopicAtoms  :: !(Map Text (Set Text))
+  { csSpace           :: !SemanticSpace
+  , csTopicAtoms      :: !(Map Text (Set Text))
+  , csTopicPredicates :: !(Map Text [SemanticPredicate])
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
 data SelectedPredicate = SelectedPredicate
-  { spPredicateId :: !Text
-  , spScore       :: !Double
-  , spAtoms       :: !(Set Text)
+  { spPredicateId :: Text
+  , spScore :: Double
+  , spPredicates :: [SemanticPredicate]
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -36,4 +38,5 @@ emptyContentSelector :: ContentSelector
 emptyContentSelector = ContentSelector
   { csSpace = emptySemanticSpace
   , csTopicAtoms = M.empty
+  , csTopicPredicates = M.empty
   }

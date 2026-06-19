@@ -26,6 +26,7 @@ import QxFx0.Render.Dialogue
   , draLinearizationOk
   , moveToText
   )
+import QxFx0.Semantic.ContentSelector (emptyContentSelector)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms
   ( RuntimeParadigms(..)
   , emptyRuntimeParadigms
@@ -107,7 +108,7 @@ testTaggedFallbackReason = TestCase $ do
       rmp0 = TurnPlanning.buildRMP CMGround emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector "система" emptyEgoState emptyAtomTrace True 0.5
       rcp = TurnPlanning.buildRCP CMGround rmp0
       rmpBroken = rmp0 { rmpPrimaryClaimAst = Just (ClaimPurpose "") }
-      artifact = renderDialogueArtifact frame rmpBroken rcp "система" [] md emptyRuntimeParadigms emptyField
+      artifact = renderDialogueArtifact frame rmpBroken rcp "система" [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
   assertBool "forced broken AST should trigger linearization fallback"
     (not (draLinearizationOk artifact))
   assertEqual "fallback reason should preserve exact branch tag"
@@ -121,7 +122,7 @@ assertPromptRenders md prompt = do
       topic = nonEmpty (ipfFocusEntity frame) "тема"
       rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True 0.5
       rcp = TurnPlanning.buildRCP family rmp
-      artifact = renderDialogueArtifact frame rmp rcp topic [] md emptyRuntimeParadigms emptyField
+      artifact = renderDialogueArtifact frame rmp rcp topic [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
       rendered = draRenderedText artifact
   assertBool ("rendered text must be non-empty for prompt: " <> T.unpack prompt)
     (not (T.null (T.strip rendered)))
@@ -162,7 +163,7 @@ renderForPrompt md prompt =
       topic = nonEmpty (ipfFocusEntity frame) "тема"
       rmp = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True 0.5
       rcp = TurnPlanning.buildRCP family rmp
-      artifact = renderDialogueArtifact frame rmp rcp topic [] md emptyRuntimeParadigms emptyField
+      artifact = renderDialogueArtifact frame rmp rcp topic [] md emptyRuntimeParadigms emptyField emptyContentSelector Nothing
   in T.strip (draRenderedText artifact)
 
 nonEmpty :: Text -> Text -> Text
@@ -392,7 +393,7 @@ renderArtifactFor rp md prompt =
       topic  = nonEmpty (ipfFocusEntity frame) "тема"
       rmp    = TurnPlanning.buildRMP family emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector topic emptyEgoState emptyAtomTrace True 0.5
       rcp    = TurnPlanning.buildRCP family rmp
-  in T.strip (draRenderedText (renderDialogueArtifact frame rmp rcp topic [] md rp emptyField))
+  in T.strip (draRenderedText (renderDialogueArtifact frame rmp rcp topic [] md rp emptyField emptyContentSelector Nothing))
 
 -- | Live A/B over the real Russian dialogue corpus: render every prompt through
 -- the full pipeline twice — JSON path (empty paradigms = flag off) vs RGL path

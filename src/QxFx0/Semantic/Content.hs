@@ -73,6 +73,8 @@ module QxFx0.Semantic.Content
     -- * B3 helpers
   , substantivePredicateCount
   , hasMinimumPredicates
+    -- * Corpus data
+  , definitionCorpus
   ) where
 
 import Control.DeepSeq (NFData)

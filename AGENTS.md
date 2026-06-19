@@ -136,3 +136,48 @@
   predicates (not universal templates). Old assembly/template paths
   remain as fallback. `trcContentSource` trace field records content
   origin: `covered_exact`, `covered_generic`, `uncovered_generic`.
+
+  **Phase E Revision + Network Seeding (2026-06-18)**: contradiction-driven
+  revision pipeline completed. `revisePosition` determines revision action
+  based on self-state: high angst (>0.7) → RcRevised (confidence decay 0.9),
+  low conatus (<5.0) → RcQuarantined (move to quarantine), stable → RcRetained.
+  `applyRevisionDecision` applies decisions to `SemanticCommitmentStore` with
+  full lineage tracking (LineageRevised events, ContradictionEvent records).
+  Integration test verifies pipeline fires when `ceContradicted = True`.
+  `seedFromCorpus` creates initial `SemanticNetwork` from `definitionCorpus`
+  (34 topics, edges between topics sharing atoms), ensuring `contentDensityGate`
+  (≥50 edges, ≥15 nodes) passes from first turn. `emptySystemState` now
+  initializes `ssSemanticNetwork = seedFromCorpus` instead of empty network.
+  `mergeSemanticNetworks` merges seeded network with runtime MeaningGraph edges
+  (union of nodes, update-wins for edges, preserves base decayRate/maxHops),
+  preventing seed overwrite on each turn. All 1319 tests pass.
+
+  **Topic normalization fix (2026-06-19)**: semantic predicates now surface
+  in live sessions. Root cause: `extractTopicAfter` in `Intent/Classifier.hs`
+  did not strip trailing punctuation, so `"что такое свобода?"` produced
+  topic `"свобода?"` instead of `"свобода"`, causing `lookupDefinitionContent`
+  to return `Nothing`. Fix: added `T.dropWhileEnd` for `?!.,;:` in
+  `extractTopicAfter` and `extractTopic` (Frame/Builder.hs). Verified:
+  `"что такое свобода?"` now returns `"Известно, что свобода — свобода
+  предполагает возможность выбора. свобода ограничена ответственностью."`
+
+  **Per-predicate selection (2026-06-19)**: ContentSelector теперь выбирает
+  предикаты индивидуально, а не всем набором топика. Ранее `selectPredicates`
+  возвращал все предикаты топика с одним aggregate score. Теперь каждый
+  предикат оценивается отдельно через `scorePred`, вычисляя cosine similarity
+  между вектором предиката и Field-прототипами. Это позволяет разным
+  Field-состояниям выбирать разные предикаты для одного топика. Например,
+  для "истина" при высоком Confidence выбирается "претендует на соответствие
+  реальности", при высоком Counterfactual — "проверяется через
+  воспроизводимость". Тест "different Field selects different predicates for
+  same topic" подтверждает архитектурное расширение. **Калибровка выбора**:
+  в живой сессии все предикаты проходили порог 0.1 из-за широких прототипов
+  в seeded network. Изменено на выбор top-1 предиката (максимальный score)
+  вместо фильтрации по порогу. Это гарантирует детерминированный выбор
+  одного предиката, наиболее релевантного текущему Field-состоянию.
+  **Инициализация**: ContentSelector инициализируется в Bootstrap.hs из
+  seedFromCorpus и definitionCorpus (не в System.hs из-за циклического
+  импорта). `generateFromFrame` теперь принимает ContentSelector, Field и
+  SemanticNetwork, использует selectPredicates для выбора предикатов.
+  Все 1320 тестов проходят. Живая сессия: "что такое истина?" → "Известно,
+  что истина — истина претендует на соответствие реальности." (один предикат).

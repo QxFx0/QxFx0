@@ -111,13 +111,18 @@ extractTopic :: Text -> Text
 extractTopic rawText =
   let stripped = T.strip rawText
       lower = T.toLower stripped
-  in if "что такое " `T.isPrefixOf` lower
-     then T.drop 10 stripped
-     else if "расскажи о " `T.isPrefixOf` lower
-          then T.drop 11 stripped
-          else if "помоги с " `T.isPrefixOf` lower
-               then T.drop 9 stripped
-               else stripped
+      raw = if "что такое " `T.isPrefixOf` lower
+            then T.drop 10 stripped
+            else if "расскажи о " `T.isPrefixOf` lower
+                 then T.drop 11 stripped
+                 else if "помоги с " `T.isPrefixOf` lower
+                      then T.drop 9 stripped
+                      else stripped
+  in stripTrailingPunctuation raw
+
+-- | Strip trailing punctuation marks (?, !, ., etc.) from topic.
+stripTrailingPunctuation :: Text -> Text
+stripTrailingPunctuation = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
 
 -- | Extract the target of a challenge from raw text.
 -- E.g., "это неверно" → "это"
