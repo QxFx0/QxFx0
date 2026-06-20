@@ -259,6 +259,7 @@ library
        QxFx0.Semantic.Network
       QxFx0.Semantic.Network.Types
       QxFx0.Semantic.Network.Seed
+      QxFx0.Semantic.Network.Substrate
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
@@ -573,6 +574,7 @@ common test-common
      Test.Suite.ReliabilityHardening
     Test.Suite.M5Regime
     Test.Suite.M6Witness
+    Test.Suite.SubstrateNetwork
     Test.Suite.DatalogSafety
     Test.Suite.SandboxBoundary
     Test.Suite.PGFErrorHandling

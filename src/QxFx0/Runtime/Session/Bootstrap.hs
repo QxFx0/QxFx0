@@ -65,13 +65,11 @@ import QxFx0.Semantic.SemanticScene (defaultScenes)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, allParadigmLemmas, emptyRuntimeParadigms)
 import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
-import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
+import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
-import qualified Data.Set as S
-import QxFx0.Semantic.ContentSelector (buildContentSelector)
-import QxFx0.Semantic.Space (buildSemanticSpace)
-import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
-import QxFx0.Semantic.Network.Seed (seedFromCorpus)
+import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
+import qualified QxFx0.Semantic.Network.Types as NetTypes
+import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..))
 import qualified Data.Set as S
 import qualified Data.Text as T
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrRglMorphologyActive)
@@ -192,6 +190,10 @@ bootstrapSession quiet sessionId = do
   clusters <- withRuntimeDb runtime loadClusters
   scenes <- withRuntimeDb runtime loadScenes
 
+  -- Load brain_kb for substrate network enrichment
+  brainKBPath <- resolveBrainKBPath
+  brainKBEntries <- loadBrainKB brainKBPath
+
   let firstScene = case (scenes ++ defaultScenes) of
         s : _ -> s
         [] -> ssActiveScene emptySystemState
@@ -204,7 +206,18 @@ bootstrapSession quiet sessionId = do
         | (topic, dc) <- M.toList definitionCorpus
         ]
       topicPredicates = M.map dcPredicates definitionCorpus
-      seedSpace = buildSemanticSpace seedNetwork topicAtoms
+      -- Substrate: build substrate edges from brain_kb
+      explicitTopicSet = S.fromList coveredTopics
+      substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
+      substrateEdgeMap = M.fromList
+        [ ((seiFrom e, seiTo e), NetTypes.SemanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
+        | e <- substrateEdges
+        ]
+      -- Merge: explicit edges win at same key, substrate adds new edges
+      mergedEdges = M.union seedEdges substrateEdgeMap
+      seedEdges = NetTypes.snEdges seedNetwork
+      mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
+      seedSpace = buildSemanticSpace mergedNetwork topicAtoms
       seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap
       
       freshState = emptySystemState

@@ -66,7 +66,7 @@ semanticNetworkTests =
       let sn = SemanticNetwork
             { snNodes = S.fromList ["seed", "neighbor"]
             , snEdges = M.fromList
-                [ (("seed", "neighbor"), SemanticEdge "seed" "neighbor" 0.8 5)
+                [ (("seed", "neighbor"), SemanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 0.5
@@ -83,10 +83,10 @@ semanticNetworkTests =
       let sn = SemanticNetwork
             { snNodes = S.fromList ["a", "b", "c", "d", "e"]
             , snEdges = M.fromList
-                [ (("a", "b"), SemanticEdge "a" "b" 1.0 5)
-                , (("b", "c"), SemanticEdge "b" "c" 1.0 5)
-                , (("c", "d"), SemanticEdge "c" "d" 1.0 5)
-                , (("d", "e"), SemanticEdge "d" "e" 1.0 5)
+                [ (("a", "b"), SemanticEdge "a" "b" 1.0 5 ExplicitEdge)
+                , (("b", "c"), SemanticEdge "b" "c" 1.0 5 ExplicitEdge)
+                , (("c", "d"), SemanticEdge "c" "d" 1.0 5 ExplicitEdge)
+                , (("d", "e"), SemanticEdge "d" "e" 1.0 5 ExplicitEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 1.0
@@ -113,7 +113,7 @@ semanticNetworkTests =
   , TestLabel "contentDensityGateBelowThreshold" $ TestCase $ do
       let sn = SemanticNetwork
             { snNodes = S.fromList ["a", "b", "c"]
-            , snEdges = M.fromList [(("a", "b"), SemanticEdge "a" "b" 1.0 1)]
+            , snEdges = M.fromList [(("a", "b"), SemanticEdge "a" "b" 1.0 1 ExplicitEdge)]
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
@@ -122,7 +122,7 @@ semanticNetworkTests =
 
   , TestLabel "contentDensityGateAboveThreshold" $ TestCase $ do
       let nodes = S.fromList [T.pack $ "n" <> show i | i <- [1..20 :: Int]]
-          edges = M.fromList [((T.pack $ "n" <> show i, T.pack $ "n" <> show (i+1)), SemanticEdge (T.pack $ "n" <> show i) (T.pack $ "n" <> show (i+1)) 1.0 1) | i <- [1..60 :: Int]]
+          edges = M.fromList [((T.pack $ "n" <> show i, T.pack $ "n" <> show (i+1)), SemanticEdge (T.pack $ "n" <> show i) (T.pack $ "n" <> show (i+1)) 1.0 1 ExplicitEdge) | i <- [1..60 :: Int]]
           sn = SemanticNetwork
             { snNodes = nodes
             , snEdges = edges

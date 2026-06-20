@@ -195,6 +195,8 @@ minimalTrace = TurnReplayTrace
   , trcFrameType = Nothing
     , trcContentSource = Nothing
     , trcAnalogicalSource = Nothing
+    , trcSubstrateActivated = []
+    , trcSubstrateEdgesUsed = 0
   }
 
 testRecoveryNoTrigger :: Test

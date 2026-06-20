@@ -284,3 +284,19 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   response ("Я предлагаю рассмотреть: ...").
 - **Test updates**: All tests updated for new signatures and semantics. 1370 tests
   passing.
+
+**Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
+  - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),
+    from `seedFromCorpus` (definitionCorpus predicates). Only source of output.
+  - **Substrate layer**: same 30 topics, ~78 edges (weight 0.3),
+    from `buildSubstrateEdges` (brain_kb co-occurrence in triggers).
+    Routes spreading activation only, never appears in output.
+  - **Integration**: `Bootstrap.hs` loads `brain_kb.jsonl`, builds substrate
+    edges, merges into `SemanticNetwork` (explicit wins at same key).
+  - **Data source**: `brain_kb.jsonl` (53K entries), filtered by
+    `layer ∈ {ontology, dialogue, metaphor, dialog_moves, human_signals}`
+    and `≥2 philosophical triggers` via substring match.
+  - **Trace observability**: `trcSubstrateActivated`, `trcSubstrateEdgesUsed`
+    in `TurnReplayTrace`.
+  - **Module**: `QxFx0.Semantic.Network.Substrate`.
+  - **Tests**: `Test.Suite.SubstrateNetwork` (6 tests).

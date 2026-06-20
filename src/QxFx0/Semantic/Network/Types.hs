@@ -4,6 +4,7 @@
 
 module QxFx0.Semantic.Network.Types
   ( SemanticEdge(..)
+  , EdgeSource(..)
   , SemanticNetwork(..)
   , emptySemanticNetwork
   ) where
@@ -17,11 +18,21 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
+-- | Source of an edge in the SemanticNetwork.
+data EdgeSource
+  = ExplicitEdge
+    -- ^ Edge from seedFromCorpus (definitionCorpus predicates)
+  | SubstrateEdge
+    -- ^ Edge from brain_kb co-occurrence
+  deriving stock (Eq, Show, Ord, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
 data SemanticEdge = SemanticEdge
   { seFrom         :: !Text
   , seTo           :: !Text
   , seWeight       :: !Double
   , seCoOccurrence :: !Int
+  , seSource       :: !EdgeSource
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 

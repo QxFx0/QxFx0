@@ -23,7 +23,7 @@ buildSemanticNetwork mg =
   let edges = mgEdges mg
       nodes = S.fromList $ concatMap (\e -> S.toList (meAtoms e)) edges
       edgeMap = M.fromList
-        [ ((a1, a2), SemanticEdge a1 a2 (fromIntegral count / fromIntegral maxCount) count)
+        [ ((a1, a2), SemanticEdge a1 a2 (fromIntegral count / fromIntegral maxCount) count ExplicitEdge)
         | e <- edges
         , a1 <- S.toList (meAtoms e)
         , a2 <- S.toList (meAtoms e)

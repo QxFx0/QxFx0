@@ -184,6 +184,8 @@ minimalReplayTrace apiHealthy =
     , trcFrameType = Nothing
     , trcContentSource = Nothing
     , trcAnalogicalSource = Nothing
+    , trcSubstrateActivated = []
+    , trcSubstrateEdgesUsed = 0
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.

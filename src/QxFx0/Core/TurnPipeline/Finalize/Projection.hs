@@ -11,10 +11,12 @@ module QxFx0.Core.TurnPipeline.Finalize.Projection
   ) where
 
 import Control.Applicative ((<|>))
+import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
+import Text.Read (readMaybe)
 
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Core.TurnRouting.Cascade (commitmentFamilyHint)
@@ -372,6 +374,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcFrameType = extractFrameTag (taDerivationTags ta)
           , trcContentSource = extractContentSourceTag (taDerivationTags ta)
           , trcAnalogicalSource = extractAnalogicalSourceTag (taDerivationTags ta)
+          , trcSubstrateActivated = extractSubstrateActivated (taDerivationTags ta)
+          , trcSubstrateEdgesUsed = extractSubstrateEdgesUsed (taDerivationTags ta)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -561,3 +565,19 @@ extractAnalogicalSourceTag tags =
   case filter (T.isPrefixOf "analogical_source=") tags of
     (tag:_) -> Just (T.drop 18 tag)
     []      -> Nothing
+
+-- | Extract substrate-activated topics from derivation tags.
+-- Tags are formatted as "substrate_activated=topic1,topic2,topic3".
+extractSubstrateActivated :: [Text] -> [Text]
+extractSubstrateActivated tags =
+  case filter (T.isPrefixOf "substrate_activated=") tags of
+    (tag:_) -> T.splitOn "," (T.drop 20 tag)
+    []      -> []
+
+-- | Extract substrate edges used count from derivation tags.
+-- Tags are formatted as "substrate_edges_used=N".
+extractSubstrateEdgesUsed :: [Text] -> Int
+extractSubstrateEdgesUsed tags =
+  case filter (T.isPrefixOf "substrate_edges_used=") tags of
+    (tag:_) -> fromMaybe 0 (readMaybe (T.unpack (T.drop 21 tag)))
+    []      -> 0

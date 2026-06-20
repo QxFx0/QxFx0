@@ -286,8 +286,8 @@ contentSelectorTests =
           network = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2", "atom3"]
             , snEdges = M.fromList
-                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.8 10)
-                , (("atom2", "atom3"), SemanticEdge "atom2" "atom3" 0.8 10)
+                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.8 10 ExplicitEdge)
+                , (("atom2", "atom3"), SemanticEdge "atom2" "atom3" 0.8 10 ExplicitEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 0.5
@@ -320,7 +320,7 @@ contentSelectorTests =
           network = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2"]
             , snEdges = M.fromList
-                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.9 10)
+                [ (("atom1", "atom2"), SemanticEdge "atom1" "atom2" 0.9 10 ExplicitEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 0.5

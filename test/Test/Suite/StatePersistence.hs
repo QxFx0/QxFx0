@@ -1073,6 +1073,8 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcFrameType = Nothing
     , trcContentSource = Nothing
     , trcAnalogicalSource = Nothing
+    , trcSubstrateActivated = []
+    , trcSubstrateEdgesUsed = 0
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

@@ -72,6 +72,7 @@ import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
 import QxFx0.Self.Field (Field(..))
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
@@ -251,6 +252,11 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         Just sourceTopic | isNothing (lookupDefinitionContent bestTopic) ->
           ["analogical_source=" <> sourceTopic]
         _ -> []
+      -- Substrate trace: count substrate edges in network, identify activated topics
+      substrateEdges = [ (seFrom e, seTo e) | e <- Data.Map.elems (snEdges (ssSemanticNetwork ss)), seSource e == SubstrateEdge ]
+      substrateEdgeCount = length substrateEdges
+      -- Topics reachable via substrate edges from bestTopic
+      substrateActivatedTopics = [ to | (from, to) <- substrateEdges, from == bestTopic ]
       -- Only fire semantic-first when morphology has real data (not test fixture).
       -- This prevents regression in tests that use minimal MorphologyData.
       semanticMorphReady = not (Data.Map.null (mdNominative semanticMorph))
@@ -276,6 +282,11 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , "frame=" <> frameTypeText semanticFrame
             , "content_source=" <> semanticContentSource
             ] ++ mAnalogicalSourceTag
+              ++ (if not (null substrateActivatedTopics)
+                  then [ "substrate_activated=" <> T.intercalate "," substrateActivatedTopics
+                       , "substrate_edges_used=" <> T.pack (show substrateEdgeCount)
+                       ]
+                  else [])
         , draDialogAtoms = emptyDialogAtoms
         , draGenerationTrace =
             [ GenerationAttempt "semantic_intent" "ok"

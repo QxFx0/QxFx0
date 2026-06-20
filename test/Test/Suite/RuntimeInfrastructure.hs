@@ -1710,10 +1710,12 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcEffectSnapshot = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
                  , trcIntentType = Nothing
-                 , trcFrameType = Nothing
+                  , trcFrameType = Nothing
     , trcContentSource = Nothing
     , trcAnalogicalSource = Nothing
-                 }
+    , trcSubstrateActivated = []
+    , trcSubstrateEdgesUsed = 0
+                  }
            , tqpDivergence = True
            }
     beforeCount <- Runtime.withRuntimeDb rt $ \db ->
@@ -2240,10 +2242,12 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcEffectSnapshot = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
                  , trcIntentType = Nothing
-                 , trcFrameType = Nothing
+                  , trcFrameType = Nothing
     , trcContentSource = Nothing
     , trcAnalogicalSource = Nothing
-                 }
+    , trcSubstrateActivated = []
+    , trcSubstrateEdgesUsed = 0
+                  }
            , tqpDivergence = True
            }
     result <- StatePersistence.saveStateWithProjectionExpected

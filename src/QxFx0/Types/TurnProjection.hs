@@ -403,6 +403,12 @@ data TurnReplayTrace = TurnReplayTrace
     --   @Just sourceTopic@ when the response was generated via
     --   @findNearestCoveredTopic@ + @analogicalResponse@.
     --   @Nothing@ when the response used direct predicates.
+  , trcSubstrateActivated :: ![Text]
+    -- ^ Substrate Network: topics activated through substrate edges.
+    --   Empty list when no substrate edges were used in activation.
+  , trcSubstrateEdgesUsed :: !Int
+    -- ^ Substrate Network: number of substrate edges used in activation path.
+    --   0 when activation used only explicit edges.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
