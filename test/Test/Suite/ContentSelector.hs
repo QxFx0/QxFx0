@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Suite.ContentSelector (contentSelectorTests) where
+import qualified Data.Sequence as Seq
 
 import Test.HUnit
 import qualified Data.Map.Strict as M
@@ -188,6 +189,7 @@ contentSelectorTests =
             , snActivation = M.fromList [("atom1", 1.0), ("atom2", 0.5)]
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           resultWithout = selectPredicates cs field "test_topic" Nothing
           resultWith = selectPredicates cs field "test_topic" (Just activatedNetwork)
@@ -256,6 +258,7 @@ contentSelectorTests =
             , snActivation = M.fromList [("atom2", 5.0)]
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           resultWithout = composePredicates cs field [pred1, pred2] Nothing
           resultWith = composePredicates cs field [pred1, pred2] (Just activatedNetwork)
@@ -292,6 +295,7 @@ contentSelectorTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           result = composeFromActivation cs field "topic1" network
       assertBool "should return predicates from overlapping topics" (length result >= 1)
@@ -325,6 +329,7 @@ contentSelectorTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           result = composeFromActivation cs field "topic1" network
       assertBool "should return predicates" (not (null result))

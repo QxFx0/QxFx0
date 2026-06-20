@@ -11,6 +11,7 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
+import qualified Data.Sequence as Seq
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
 
 -- | Seed a SemanticNetwork from definitionCorpus.
@@ -46,6 +47,7 @@ seedFromCorpus lemmaMap =
     , snActivation = M.empty
     , snDecayRate = 0.5
     , snMaxHops = 3
+    , snActivationLog = Seq.empty
     }
 
 -- | Extract content words from a Russian predicate, filtering stop words and normalizing to lemmas.

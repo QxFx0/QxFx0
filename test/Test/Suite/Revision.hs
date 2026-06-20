@@ -11,6 +11,7 @@ import Data.Aeson (decodeStrict')
 import Data.Maybe (fromJust)
 import QxFx0.Semantic.Revision
 import QxFx0.Types.State.SemanticCommitment (CommitmentId(..), ContradictionKind(..), SemanticCommitmentStore(..), FactualClaimPayload(..), TurnSeq(..), CommitmentOrigin(..), CommitmentEngagement(..), MatchKind(..), LineageEvent(..), emptySemanticCommitmentStore)
+import qualified Data.Sequence as Seq
 import QxFx0.Types.State.System (ssSemanticCommitments)
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
@@ -288,6 +289,7 @@ revisionTests =
                 , snActivation = M.empty
                 , snDecayRate = 0.3
                 , snMaxHops = 5
+                , snActivationLog = Seq.empty
                 }
               merged = mergeSemanticNetworks base update
               mergedNodes = S.size (snNodes merged)

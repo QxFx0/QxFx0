@@ -6,6 +6,7 @@ module Test.Suite.RuntimeInfrastructure
   ( runtimeInfrastructureTests
   ) where
 
+import qualified Data.Sequence as Seq
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
@@ -1715,6 +1716,8 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
     , trcAnalogicalSource = Nothing
     , trcSubstrateActivated = []
     , trcSubstrateEdgesUsed = 0
+    , trcActivationSteps = Seq.empty
+    , trcSubstrateHops = 0
                   }
            , tqpDivergence = True
            }
@@ -2247,6 +2250,8 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
     , trcAnalogicalSource = Nothing
     , trcSubstrateActivated = []
     , trcSubstrateEdgesUsed = 0
+    , trcActivationSteps = Seq.empty
+    , trcSubstrateHops = 0
                   }
            , tqpDivergence = True
            }

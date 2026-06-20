@@ -70,6 +70,9 @@ import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), ActivationStep(..), EdgeSource(..))
+import qualified Data.Sequence as Seq
+import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HashMap
 import QxFx0.Types.Thresholds
   ( LegitimacyStatus(..)
@@ -376,6 +379,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcAnalogicalSource = extractAnalogicalSourceTag (taDerivationTags ta)
           , trcSubstrateActivated = extractSubstrateActivated (taDerivationTags ta)
           , trcSubstrateEdgesUsed = extractSubstrateEdgesUsed (taDerivationTags ta)
+          , trcActivationSteps = maybe Seq.empty snActivationLog (tiActivatedNetwork ti)
+          , trcSubstrateHops = maybe 0 (\net -> length (filter (\s -> asSource s == SubstrateEdge) (F.toList (snActivationLog net)))) (tiActivatedNetwork ti)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

@@ -2,6 +2,7 @@
 
 module Test.Suite.TraceAnalysis (traceAnalysisTests) where
 
+import qualified Data.Sequence as Seq
 import Test.HUnit
 import Data.Aeson (decode, encode)
 
@@ -197,6 +198,8 @@ minimalTrace = TurnReplayTrace
     , trcAnalogicalSource = Nothing
     , trcSubstrateActivated = []
     , trcSubstrateEdgesUsed = 0
+    , trcActivationSteps = Seq.empty
+    , trcSubstrateHops = 0
   }
 
 testRecoveryNoTrigger :: Test

@@ -14,6 +14,7 @@ module Test.Suite.ReplayDeterminism
   ( replayDeterminismTests
   ) where
 
+import qualified Data.Sequence as Seq
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
@@ -186,6 +187,8 @@ minimalReplayTrace apiHealthy =
     , trcAnalogicalSource = Nothing
     , trcSubstrateActivated = []
     , trcSubstrateEdgesUsed = 0
+    , trcActivationSteps = Seq.empty
+    , trcSubstrateHops = 0
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.

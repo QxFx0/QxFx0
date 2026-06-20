@@ -4,6 +4,7 @@ module Test.Suite.SemanticNetwork
   ( semanticNetworkTests
   ) where
 
+import qualified Data.Sequence as Seq
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
@@ -57,6 +58,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           sn' = activate "seed" sn
           act = snActivation sn'
@@ -71,6 +73,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
           sn' = activate "seed" sn
           act = snActivation sn'
@@ -91,6 +94,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 1.0
             , snMaxHops = 2
+            , snActivationLog = Seq.empty
             }
           sn' = activate "a" sn
           act = snActivation sn'
@@ -107,6 +111,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
       assertBool "should fail gate" (not (contentDensityGate sn))
 
@@ -117,6 +122,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
       assertBool "should fail gate (3 nodes < 15)" (not (contentDensityGate sn))
 
@@ -129,6 +135,7 @@ semanticNetworkTests =
             , snActivation = M.empty
             , snDecayRate = 0.5
             , snMaxHops = 3
+            , snActivationLog = Seq.empty
             }
       assertBool "should pass gate (20 nodes >= 15, 60 edges >= 50)" (contentDensityGate sn)
   ]

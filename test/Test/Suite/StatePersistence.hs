@@ -6,6 +6,7 @@ module Test.Suite.StatePersistence
   , statePersistenceTests
   ) where
 
+import qualified Data.Sequence as Seq
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
@@ -1075,6 +1076,8 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcAnalogicalSource = Nothing
     , trcSubstrateActivated = []
     , trcSubstrateEdgesUsed = 0
+    , trcActivationSteps = Seq.empty
+    , trcSubstrateHops = 0
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

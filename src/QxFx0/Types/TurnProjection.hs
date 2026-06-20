@@ -18,6 +18,9 @@ import QxFx0.Types.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, ResponseSurfaceKind, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
+import QxFx0.Semantic.Network.Types (ActivationStep(..))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
 import QxFx0.Types.Decision (ClaimAst)
 import QxFx0.Types.State.Perspective (PerspectiveProjection)
@@ -409,6 +412,12 @@ data TurnReplayTrace = TurnReplayTrace
   , trcSubstrateEdgesUsed :: !Int
     -- ^ Substrate Network: number of substrate edges used in activation path.
     --   0 when activation used only explicit edges.
+  , trcActivationSteps :: !(Seq ActivationStep)
+    -- ^ Activation Trace: full spreading activation log.
+    --   Each step records node, edge source (explicit/substrate),
+    --   via node, hop number, and weight.
+  , trcSubstrateHops :: !Int
+    -- ^ Activation Trace: count of steps that used SubstrateEdge.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
