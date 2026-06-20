@@ -398,3 +398,22 @@ The four open questions from the initial draft are resolved as follows.
   weak Layer 1, and vice versa. This prevents the structural-maturity-
   masking-content-weakness substitution that the audit
   (`audit-objective-2026-06-17.md`) diagnosed.
+
+### Decision 5 — Substrate activation is associative traversal, not inference
+
+- **Substrate network** (brain_kb co-occurrence edges) enriches the
+  SemanticNetwork with non-obvious paths between explicit topics.
+- **Spreading activation** traverses these paths and activates
+  explicit-predicates that would be unreachable through explicit-only
+  edges.
+- This is **associative traversal over explicit predicates**, not
+  inference, not reasoning, not knowledge creation. The substrate does
+  not generate new content — it opens non-obvious paths to existing
+  explicit predicates under governed retrieval.
+- All output predicates come from the explicit `definitionCorpus`
+  (80 predicates). Substrate text never appears in output (verified by
+  property tests in `Test.Suite.SubstrateNetwork`).
+- **Relation Graph** (formal relation extraction) is **deferred** until
+  a curated relation corpus exists. It must not be reconstructed by
+  regex over reflective `brain_kb` prose (pre-flight check: 1/80
+  patterns extracted — gate failed, correctly).
