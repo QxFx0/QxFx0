@@ -285,6 +285,7 @@ library
       QxFx0.Semantic.Content.Argued
       QxFx0.Semantic.Content.Challenges
       QxFx0.Semantic.Content.AtomStore
+      QxFx0.Semantic.Content.PathFinder
      QxFx0.Semantic.Analogy
      QxFx0.Semantic.Sense
       QxFx0.Semantic.Sense.Extract
