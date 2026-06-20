@@ -53,7 +53,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
           cs = buildContentSelector space topicAtoms topicPredicates M.empty
           field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
           result = selectPredicates cs field "test_topic" Nothing
@@ -72,7 +72,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
           cs = buildContentSelector space topicAtoms topicPredicates M.empty
           field1 = emptyField { fieldResonance = Resonance 0.9, fieldAtmosphere = Atmosphere 0.1 0.5 }
           field2 = emptyField { fieldResonance = Resonance 0.2, fieldAtmosphere = Atmosphere 0.9 0.5 }
@@ -93,7 +93,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
           cs = buildContentSelector space topicAtoms topicPredicates M.empty
           field = emptyField { fieldResonance = Resonance 1.0 }
           result = selectPredicates cs field "test_topic" Nothing
@@ -102,8 +102,8 @@ contentSelectorTests =
       assertBool "score should not be exactly 0.5" (abs (spScore sp - 0.5) > 0.01)
 
   , TestLabel "real definitionCorpus atom overlap" $ TestCase $ do
-      let predicates = [ SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence with reality" "истина"
-                       , SemanticPredicate RoleRelation "ответственность требует осознания последствий" "responsibility requires awareness of consequences" "ответственность"
+      let predicates = [ SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence with reality" "истина" Nothing Nothing Nothing
+                       , SemanticPredicate RoleRelation "ответственность требует осознания последствий" "responsibility requires awareness of consequences" "ответственность" Nothing Nothing Nothing
                        ]
           tokenizedAtoms = S.unions [tokenizePredicate M.empty (spRu p) | p <- predicates]
           mg = MeaningGraph
@@ -137,8 +137,8 @@ contentSelectorTests =
       assertBool "different field → different total scores" (abs (totalScore1 - totalScore2) > 0.01)
 
   , TestLabel "different Field selects different predicates for same topic" $ TestCase $ do
-      let pred1 = SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence" "истина"
-          pred2 = SemanticPredicate RoleStructure "истина проверяется через воспроизводимость" "truth is verified through reproducibility" "истина"
+      let pred1 = SemanticPredicate RoleProperty "истина претендует на соответствие реальности" "truth claims correspondence" "истина" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleStructure "истина проверяется через воспроизводимость" "truth is verified through reproducibility" "истина" Nothing Nothing Nothing
           atoms1 = tokenizePredicate M.empty (spRu pred1)
           atoms2 = tokenizePredicate M.empty (spRu pred2)
           allAtoms = S.union atoms1 atoms2
@@ -180,7 +180,7 @@ contentSelectorTests =
                 ]
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
-          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1"]
+          topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
           cs = buildContentSelector space topicAtoms topicPredicates M.empty
           field = emptyField { fieldResonance = Resonance 0.8 }
           activatedNetwork = SemanticNetwork
@@ -215,8 +215,8 @@ contentSelectorTests =
                 , (FdAtmosphere, DimensionPrototype FdAtmosphere (S.fromList ["atom2"]) (V.fromList [0.0, 1.0]))
                 ]
             }
-          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "test_topic"
-          pred2 = SemanticPredicate RoleRelation "atom2 atom1" "atom2 atom1" "test_topic"
+          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "test_topic" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleRelation "atom2 atom1" "atom2 atom1" "test_topic" Nothing Nothing Nothing
           cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
           field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
           result = composePredicates cs field [pred1, pred2] Nothing
@@ -231,8 +231,8 @@ contentSelectorTests =
                 [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0]))
                 ]
             }
-          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic"
-          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "test_topic"
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "test_topic" Nothing Nothing Nothing
           cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
           field = emptyField { fieldResonance = Resonance 0.9 }
           result = composePredicates cs field [pred1, pred2] Nothing
@@ -248,8 +248,8 @@ contentSelectorTests =
                 [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0]))
                 ]
             }
-          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic"
-          pred2 = SemanticPredicate RoleRelation "atom1 atom2" "atom1 atom2" "test_topic"
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleRelation "atom1 atom2" "atom1 atom2" "test_topic" Nothing Nothing Nothing
           cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
           field = emptyField { fieldResonance = Resonance 0.5 }
           activatedNetwork = SemanticNetwork
@@ -274,8 +274,8 @@ contentSelectorTests =
                 [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1"]) (V.fromList [1.0, 0.0, 0.0]))
                 ]
             }
-          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "topic1"
-          pred2 = SemanticPredicate RoleRelation "atom2 atom3" "atom2 atom3" "topic2"
+          pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "topic1" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleRelation "atom2 atom3" "atom2 atom3" "topic2" Nothing Nothing Nothing
           topicAtoms = M.fromList
             [ ("topic1", S.fromList ["atom1", "atom2"])
             , ("topic2", S.fromList ["atom2", "atom3"])
@@ -309,8 +309,8 @@ contentSelectorTests =
                 [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["atom1", "atom2"]) (V.fromList [1.0, 1.0]))
                 ]
             }
-          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "topic1"
-          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "topic2"
+          pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "topic1" Nothing Nothing Nothing
+          pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "topic2" Nothing Nothing Nothing
           topicAtoms = M.fromList
             [ ("topic1", S.fromList ["atom1"])
             , ("topic2", S.fromList ["atom2"])

@@ -75,6 +75,7 @@ module QxFx0.Semantic.Content
   , hasMinimumPredicates
     -- * Utilities
   , extractTopicForm
+  , mkPred
     -- * Corpus data
   , definitionCorpus
   ) where
@@ -107,14 +108,12 @@ data PredicateRole
 -- predication about a topic.
 data SemanticPredicate = SemanticPredicate
   { spRole :: !PredicateRole
-    -- ^ The role of this predicate in the content structure.
   , spRu :: !Text
-    -- ^ Russian realization of the predicate.
   , spEn :: !Text
-    -- ^ English realization of the predicate.
   , spTopicForm :: !Text
-    -- ^ Nominative form of the topic (first word of spRu).
-    -- Used for analogical adaptation in Axis 2.
+  , spRationale :: !(Maybe Text)
+  , spCounter :: !(Maybe Text)
+  , spSynthesis :: !(Maybe Text)
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -356,14 +355,23 @@ definitionCorpus = M.fromList
   ]
   where
     entry topic preds = (topic, DefinitionContent topic preds)
-    prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru)
-    rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru)
-    structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru)
+    prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru) Nothing Nothing Nothing
+    rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru) Nothing Nothing Nothing
+    structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru) Nothing Nothing Nothing
 
 -- | Extract the first word from a predicate text as the topic form.
 -- Used for analogical adaptation in Axis 2.
 extractTopicForm :: Text -> Text
 extractTopicForm = T.toLower . head . T.words
+
+-- | Smart constructor for flat predicates (no rationale/counter/synthesis).
+mkPred :: PredicateRole -> Text -> Text -> SemanticPredicate
+mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing Nothing Nothing
+
+-- | Phase E: argued predicate with rationale, counter, synthesis.
+mkArguedPred :: PredicateRole -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> SemanticPredicate
+mkArguedPred role ru en rationale counter synthesis =
+  SemanticPredicate role ru en (extractTopicForm ru) rationale counter synthesis
 
 -- ============================================================================
 -- Distinction corpus
@@ -424,7 +432,7 @@ distinctionCorpus = M.fromList
   where
     dEntry left right preds =
       ((left, right), DistinctionContent left right preds)
-    diff ru en = SemanticPredicate RoleDifferentiator ru en (extractTopicForm ru)
+    diff ru en = SemanticPredicate RoleDifferentiator ru en (extractTopicForm ru) Nothing Nothing Nothing
 
 -- ============================================================================
 -- Lookup functions
@@ -533,54 +541,24 @@ genericDefinitionPredicates topic =
   let cat = classifyConceptCategory topic
   in case cat of
     CategoryPhilosophical ->
-      [ SemanticPredicate RoleProperty
-          (topic <> " предполагает наличие внутренней структуры")
-          (topic <> " presupposes an internal structure")
-          topic
-      , SemanticPredicate RoleRelation
-          (topic <> " связан с условиями возможности опыта")
-          (topic <> " is connected to conditions of possible experience")
-          topic
+      [ mkPred RoleProperty (topic <> " предполагает наличие внутренней структуры") (topic <> " presupposes an internal structure")
+      , mkPred RoleRelation (topic <> " связан с условиями возможности опыта") (topic <> " is connected to conditions of possible experience")
       ]
     CategorySocial ->
-      [ SemanticPredicate RoleProperty
-          (topic <> " возникает во взаимодействии между субъектами")
-          (topic <> " arises in interaction between subjects")
-          topic
-      , SemanticPredicate RoleRelation
-          (topic <> " ограничен нормами и ожиданиями сообщества")
-          (topic <> " is bounded by norms and expectations of community")
-          topic
+      [ mkPred RoleProperty (topic <> " возникает во взаимодействии между субъектами") (topic <> " arises in interaction between subjects")
+      , mkPred RoleRelation (topic <> " ограничен нормами и ожиданиями сообщества") (topic <> " is bounded by norms and expectations of community")
       ]
     CategoryPsychological ->
-      [ SemanticPredicate RoleProperty
-          (topic <> " формируется через опыт и воспоминание")
-          (topic <> " is formed through experience and recollection")
-          topic
-      , SemanticPredicate RoleStructure
-          (topic <> " имеет субъективный характер и доступ от первого лица")
-          (topic <> " has subjective character and first-person access")
-          topic
+      [ mkPred RoleProperty (topic <> " формируется через опыт и воспоминание") (topic <> " is formed through experience and recollection")
+      , mkPred RoleStructure (topic <> " имеет субъективный характер и доступ от первого лица") (topic <> " has subjective character and first-person access")
       ]
     CategoryPhysical ->
-      [ SemanticPredicate RoleProperty
-          (topic <> " обладает протяжённостью в пространстве или времени")
-          (topic <> " has extension in space or time")
-          topic
-      , SemanticPredicate RoleRelation
-          (topic <> " подчиняется устойчивым закономерностям")
-          (topic <> " obeys stable regularities")
-          topic
+      [ mkPred RoleProperty (topic <> " обладает протяжённостью в пространстве или времени") (topic <> " has extension in space or time")
+      , mkPred RoleRelation (topic <> " подчиняется устойчивым закономерностям") (topic <> " obeys stable regularities")
       ]
     CategoryGeneral ->
-      [ SemanticPredicate RoleProperty
-          (topic <> " проявляется через устойчивые связи в своём контексте")
-          (topic <> " manifests through stable connections in its context")
-          topic
-      , SemanticPredicate RoleRelation
-          (topic <> " зависит от рамки, в которой рассматривается")
-          (topic <> " depends on the frame in which it is considered")
-          topic
+      [ mkPred RoleProperty (topic <> " проявляется через устойчивые связи в своём контексте") (topic <> " manifests through stable connections in its context")
+      , mkPred RoleRelation (topic <> " зависит от рамки, в которой рассматривается") (topic <> " depends on the frame in which it is considered")
       ]
 
 -- | Category-typed generic distinction predicates.
@@ -590,28 +568,16 @@ genericDistinctionPredicates left right =
       catR = classifyConceptCategory right
   in case (catL, catR) of
     (CategoryPhilosophical, CategoryPhilosophical) ->
-      [ SemanticPredicate RoleDifferentiator
-          (left <> " относится к сфере должного, " <> right <> " — к сфере сущего")
-          (left <> " belongs to the normative, " <> right <> " — to the descriptive")
-          left
+      [ mkPred RoleDifferentiator (left <> " относится к сфере должного, " <> right <> " — к сфере сущего") (left <> " belongs to the normative, " <> right <> " — to the descriptive")
       ]
     (CategorySocial, CategoryPhilosophical) ->
-      [ SemanticPredicate RoleDifferentiator
-          (left <> " регулирует взаимодействие, " <> right <> " описывает устройство мира")
-          (left <> " regulates interaction, " <> right <> " describes the structure of reality")
-          left
+      [ mkPred RoleDifferentiator (left <> " регулирует взаимодействие, " <> right <> " описывает устройство мира") (left <> " regulates interaction, " <> right <> " describes the structure of reality")
       ]
     (CategoryPsychological, CategoryPhysical) ->
-      [ SemanticPredicate RoleDifferentiator
-          (left <> " принадлежит внутреннему опыту, " <> right <> " — внешнему миру")
-          (left <> " belongs to inner experience, " <> right <> " — to the outer world")
-          left
+      [ mkPred RoleDifferentiator (left <> " принадлежит внутреннему опыту, " <> right <> " — внешнему миру") (left <> " belongs to inner experience, " <> right <> " — to the outer world")
       ]
     _ ->
-      [ SemanticPredicate RoleDifferentiator
-          (left <> " и " <> right <> " различаются по области применимости и набору устойчивых признаков")
-          (left <> " and " <> right <> " differ by scope of application and stable properties")
-          left
+      [ mkPred RoleDifferentiator (left <> " и " <> right <> " различаются по области применимости и набору устойчивых признаков") (left <> " and " <> right <> " differ by scope of application and stable properties")
       ]
 
 -- | Look up definition content, falling back to generic predicates for

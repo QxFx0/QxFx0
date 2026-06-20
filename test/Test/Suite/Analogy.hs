@@ -25,6 +25,9 @@ testAdaptPredicate = TestCase $ do
         , spRu = "свобода предполагает выбор"
         , spEn = "freedom presupposes choice"
         , spTopicForm = "свобода"
+        , spRationale = Nothing
+        , spCounter = Nothing
+        , spSynthesis = Nothing
         }
       adapted = adaptPredicate "ответственность" pred
   assertEqual "адаптация предиката"
