@@ -271,8 +271,9 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       -- Only fire semantic-first when morphology has real data (not test fixture).
       -- This prevents regression in tests that use minimal MorphologyData.
       semanticMorphReady = not (Data.Map.null (mdNominative semanticMorph))
+      semanticFirstAblated = tpSemanticFirstDisabled tp
       viaSemantic
-        | semanticNonUnknown && semanticMorphReady && not (T.null semanticText) =
+        | semanticNonUnknown && semanticMorphReady && not semanticFirstAblated && not (T.null semanticText) =
             Just mkSemanticArtifact
         | otherwise = Nothing
       mkSemanticArtifact = DialogueRenderArtifact

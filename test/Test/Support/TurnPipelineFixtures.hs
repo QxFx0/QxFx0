@@ -80,7 +80,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio defaultProtocolFixtureState rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -154,7 +154,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -256,7 +256,7 @@ buildPlannedFixtureWithPipeline pio startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixtureWithPipeline :: PipelineIO -> SystemState -> T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

@@ -95,8 +95,8 @@ import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
-buildRouteTurnPlan fmarMode shadowPolicy mAnomaly ss ti ts effectPlan effectResults =
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults =
   let atomSet = tiAtomSet ti
       intuitPosterior = tsIntuitPosterior ts
       rd = rsRoutingDecision (repStatic effectPlan)
@@ -286,6 +286,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly ss ti ts effectPlan effectResu
             , tpCommitmentEngagement = commitmentEngagement
             , tpAnomalySurface = fmap aSurface mAnomaly
             , tpAnomalyTrace = fmap aTrace mAnomaly
+            , tpSemanticFirstDisabled = semanticFirstDisabled
             }
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
@@ -315,7 +316,11 @@ routeTurnPlan pio ss ti ts = do
   let effectPlan = planRouteEffects ss ti ts
   effectResults <- resolveRouteEffects pio effectPlan
   fmarMode <- readFmarModeIO pio
-  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) Nothing ss ti ts effectPlan effectResults)
+  mSemanticDisable <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST")
+  let semanticFirstDisabled = case mSemanticDisable of
+        TurnResReadEnv (Just "1") -> True
+        _ -> False
+  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) Nothing semanticFirstDisabled ss ti ts effectPlan effectResults)
 
 -- | Read 'QXFX0_FMAR' once via the pipeline IO boundary and parse it into
 -- an 'FmarMode'. Mirrors 'shouldUseGfRuntime' in the render stage.

@@ -224,6 +224,10 @@ data TurnPlan = TurnPlan
   , tpAnomalyTrace :: !(Maybe AnomalyTrace)
     -- ^ Anomaly detection: trace information for observability when anomaly detected.
     --   Populated alongside tpAnomalySurface. Nothing on normal path.
+  , tpSemanticFirstDisabled :: !Bool
+    -- ^ B2 Control-A ablation: when True, render pipeline skips semantic-first
+    --   path and uses assembly/template fallback only. Set from env var
+    --   QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST in routeTurnPlan.
   }
 
 tpNewEgo :: TurnPlan -> EgoState

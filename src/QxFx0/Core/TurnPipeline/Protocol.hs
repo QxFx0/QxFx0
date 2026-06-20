@@ -160,7 +160,7 @@ planRouteEffects = Route.planRouteEffects
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects = Route.resolveRouteEffects
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan = Route.buildRouteTurnPlan
 
 planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
@@ -226,7 +226,7 @@ planTurn pio ss (PreparedTurn ti ts) = do
   routeResults <- Route.resolveRouteEffects pio routeEffects
   fmarMode <- Route.readFmarModeIO pio
   let mAnomaly = Route.detectAnomaly ss ti
-      tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) mAnomaly ss ti ts routeEffects routeResults
+      tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) mAnomaly False ss ti ts routeEffects routeResults
   pure (PlannedTurn ti ts tp)
 
 renderTurn :: PipelineIO -> SystemState -> PlannedTurn -> IO RenderedTurn

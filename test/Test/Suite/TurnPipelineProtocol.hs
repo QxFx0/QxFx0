@@ -853,7 +853,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
     let ts = ts0 { tsNarrativeFragment = Just "narrative_override_attempt" }
         routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects strictShadowPio routePlan
-    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) Nothing ss ti ts routePlan routeResults
+    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) Nothing False ss ti ts routePlan routeResults
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts turnPlan
     renderResults <- resolveRenderEffects strictShadowPio renderPlan
     let turnArtifacts = buildTurnArtifacts ss ti ts turnPlan renderPlan renderResults
@@ -951,7 +951,7 @@ testShadowVetoAllowedWithinWindow = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger when count < max"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must increment"
@@ -979,7 +979,7 @@ testShadowVetoExhaustedAfterMax = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
     assertBool "shadow gate must be bypassed when exhausted"
       (not (tpShadowGateTriggered turnPlan))
     assertBool "shadow message must contain exhaustion telemetry"
@@ -1006,7 +1006,7 @@ testShadowVetoWindowResets = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger after window reset"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must reset to 1 after expiry"
@@ -1782,8 +1782,8 @@ testFmarLiveOverridesRouting = TestCase $
     let routePlan = planRouteEffects ss ti ts
         pio = testProtocolPipelineIO
     routeResults <- resolveRouteEffects pio routePlan
-    let tpOff  = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
-        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) Nothing ss ti ts routePlan routeResults
+    let tpOff  = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
     case tpFmarDirective tpOff of
       Just _  -> assertFailure "FmarOff must not produce an FMAR directive"
       Nothing -> pure ()
@@ -2425,7 +2425,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixture rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -2495,7 +2495,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -4717,7 +4717,7 @@ testAnomalyRenderedInArtifacts = TestCase $
     -- Build route plan with anomaly
     let routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just fakeAnomaly) ss ti ts routePlan routeResults
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just fakeAnomaly) False ss ti ts routePlan routeResults
     -- Check that anomaly is wired into TurnPlan
     assertBool "anomaly surface must be populated in TurnPlan"
       (case tpAnomalySurface tp of
