@@ -95,33 +95,19 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
--- | The role a predicate plays in the content structure.
-data PredicateRole
-  = RoleProperty
-    -- ^ A property of the topic (e.g., "freedom presupposes choice").
-  | RoleRelation
-    -- ^ A relation between the topic and another concept (e.g.,
-    --   "freedom is limited by responsibility").
-  | RoleStructure
-    -- ^ A structural feature of the topic (e.g., "consciousness has
-    --   a first-person aspect").
-  | RoleDifferentiator
-    -- ^ A property that distinguishes X from Y in a distinction.
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | A single typed semantic predicate — a substantive, non-tautological
--- predication about a topic.
-data SemanticPredicate = SemanticPredicate
-  { spRole :: !PredicateRole
-  , spRu :: !Text
-  , spEn :: !Text
-  , spTopicForm :: !Text
-  , spRationale :: !(Maybe Text)
-  , spCounter :: !(Maybe Text)
-  , spSynthesis :: !(Maybe Text)
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Semantic.Content.Base
+  ( PredicateRole(..)
+  , SemanticPredicate(..)
+  , ChallengeResponse(..)
+  , mkPred
+  , mkArguedPred
+  , extractTopicForm
+  , renderPredicateArgued
+  , challengeIntros
+  , pickChallengeIntro
+  )
+import QxFx0.Semantic.Content.Argued (arguedPredicates)
+import QxFx0.Semantic.Content.Challenges (challengeResponseCorpusFull)
 
 -- | Definition content for a topic: ≥2 substantive predicates.
 data DefinitionContent = DefinitionContent
@@ -354,75 +340,41 @@ definitionCorpus = M.fromList
       ]
   , entry "молчание"
       [ prop "молчание может быть актом отказа или знаком присутствия"
-             "silence can be an act of refusal or a sign of presence"
-      , rel "молчание контрастирует с речью, но не тождественно пустоте"
-            "silence contrasts with speech but is not identical to emptiness"
-      ]
+              "silence can be an act of refusal or a sign of presence"
+       , rel "молчание контрастирует с речью, но не тождественно пустоте"
+             "silence contrasts with speech but is not identical to emptiness"
+       ]
   ]
   where
-    entry topic preds = (topic, DefinitionContent topic preds)
+    entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))
     prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru) Nothing Nothing Nothing
     rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru) Nothing Nothing Nothing
     structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru) Nothing Nothing Nothing
 
--- | Extract the first word from a predicate text as the topic form.
--- Used for analogical adaptation in Axis 2.
-extractTopicForm :: Text -> Text
-extractTopicForm = T.toLower . head . T.words
-
--- | Smart constructor for flat predicates (no rationale/counter/synthesis).
-mkPred :: PredicateRole -> Text -> Text -> SemanticPredicate
-mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing Nothing Nothing
-
--- | Phase E: argued predicate with rationale, counter, synthesis.
-mkArguedPred :: PredicateRole -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> SemanticPredicate
-mkArguedPred role ru en rationale counter synthesis =
-  SemanticPredicate role ru en (extractTopicForm ru) rationale counter synthesis
+-- | Merge argued predicates into a topic's predicate list.
+-- Replaces flat predicates with their argued versions (matching by ru text),
+-- then appends any argued predicates not already present.
+-- Ensures each topic retains ≥2 predicates (B3 Gate 1).
+mergeArgued :: Text -> [SemanticPredicate] -> [SemanticPredicate]
+mergeArgued topic flatPreds =
+  case lookup topic arguedPredicates of
+    Nothing -> flatPreds
+    Just argued ->
+      let flatRuTexts = map spRu flatPreds
+          arguedRuTexts = map spRu argued
+          -- Replace flat predicates that have argued versions
+          upgraded = [ fromMaybe fp (findArgued (spRu fp) argued) | fp <- flatPreds ]
+          -- Add argued predicates not already in flat list
+          newArgued = [ ap | ap <- argued, spRu ap `notElem` flatRuTexts ]
+      in upgraded ++ newArgued
+  where
+    findArgued ruTxt argued = case [ a | a <- argued, spRu a == ruTxt ] of
+      (a:_) -> Just a
+      []    -> Nothing
 
 -- ============================================================================
 -- Phase E: Argumentative rendering
 -- ============================================================================
-
--- | Render a predicate as an argued statement with rationale, counter, synthesis.
--- When all optional fields are Nothing, falls back to flat spRu (backward compatible).
-renderPredicateArgued :: SemanticPredicate -> Text
-renderPredicateArgued p =
-  spRu p
-  <> maybe "" (". Потому что " <>) (spRationale p)
-  <> maybe "" (". Но " <>) (spCounter p)
-  <> maybe "" (". Именно поэтому " <>) (spSynthesis p)
-
--- ============================================================================
--- Phase E: Challenge-response
--- ============================================================================
-
--- | A contextual response to a user challenge/objection.
-data ChallengeResponse = ChallengeResponse
-  { crTopic :: !Text                     -- topic this response applies to
-  , crObjectionKeywords :: ![Text]      -- keywords in user input that trigger this response
-  , crRelevantPredicate :: !SemanticPredicate  -- predicate to use in the response
-  , crRestate :: !Text                   -- how to restate the user's objection
-  }
-
--- | Varied intro phrases for challenge responses (avoid new template feel).
--- Rotation by hash of input text mod length.
-challengeIntros :: [Text]
-challengeIntros =
-  [ "Ты указываешь на"
-  , "Твой вопрос затрагивает"
-  , "Это возражение касается"
-  , "Ты прав в том, что"
-  , "Здесь важно различие между"
-  , "Это возвращает нас к"
-  , "Интересно, что ты затронул"
-  ]
-
--- | Pick an intro phrase deterministically by hashing the input text.
-pickChallengeIntro :: Text -> Text
-pickChallengeIntro input =
-  let h = fromIntegral (T.length input * 31 + sum (map fromEnum (T.unpack input)))
-      idx = h `mod` length challengeIntros
-  in challengeIntros !! idx
 
 -- | Lookup a challenge response for a given topic and user objection text.
 -- Searches challengeResponseCorpus for keyword matches in the objection.
@@ -438,41 +390,9 @@ lookupChallengeResponse topic objectionText _availablePreds =
        [] -> Nothing
 
 -- | Challenge response corpus — maps topics to expected objections and responses.
--- Writer work: ~60-90 entries (30 topics × 2-3 common objections).
--- Currently minimal (3 topics seeded for infrastructure).
+-- 34 entries for 20 topics, with argued predicates (rationale/counter/synthesis).
 challengeResponseCorpus :: [ChallengeResponse]
-challengeResponseCorpus =
-  [ ChallengeResponse
-      "свобода"
-      ["делать всё что угодно", "безграничная", "всё что хочу"]
-      (mkArguedPred RoleProperty
-        "свобода ограничена ответственностью"
-        "freedom is limited by responsibility"
-        (Just "без ответственности свобода превращается в произвол")
-        (Just "не любое ограничение убивает свободу — только произвольное")
-        (Just "ответственность не враг свободы, а условие её осмысленности"))
-      "границу между свободой и произволом"
-  , ChallengeResponse
-      "свобода"
-      ["можно делать всё", "произвол", "без ограничений"]
-      (mkArguedPred RoleProperty
-        "свобода предполагает возможность выбора"
-        "freedom presupposes the possibility of choice"
-        (Just "без выбора действие не отличается от рефлекса")
-        (Just "не любой выбор — свободный: выбор под принуждением не делает действие свободным")
-        (Just "свобода требует не только возможности, но и осознанности выбора"))
-      "различие между свободой и простым отсутствием ограничений"
-  , ChallengeResponse
-      "истина"
-      ["истина — это мнение", "большинство", "верит большинство"]
-      (mkArguedPred RoleProperty
-        "истина претендует на соответствие реальности"
-        "truth claims correspondence with reality"
-        (Just "мнение зависит от перспективы наблюдателя, истина — нет")
-        (Just "не всегда легко проверить соответствие, но это не делает истину мнением")
-        (Just "различие между истиной и мнением не в сложности проверки, а в самой претензии"))
-      "различие между истиной и мнением большинства"
-  ]
+challengeResponseCorpus = challengeResponseCorpusFull
 
 -- ============================================================================
 -- Distinction corpus

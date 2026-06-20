@@ -509,9 +509,9 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
-                  (sp:_) -> ". " <> T.intercalate " " (map spRu (spPredicates sp))
+                  (sp:_) -> ". " <> T.intercalate " " (map renderPredicateArgued (spPredicates sp))
                   [] -> case lookupDefinitionContent topicRef of
-                          Just dc -> ". " <> T.intercalate " " (map spRu (dcPredicates dc))
+                          Just dc -> ". " <> T.intercalate " " (map renderPredicateArgued (dcPredicates dc))
                           Nothing -> ""
             in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
                 <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
@@ -1960,7 +1960,7 @@ renderDefinitionBody mDefContent topic morph =
   let topicNom = toNominative morph topic
   in case mDefContent of
        Just dc | not (null (dcPredicates dc)) ->
-         let predicates = T.intercalate ". " (map spRu (dcPredicates dc))
+         let predicates = T.intercalate ". " (map renderPredicateArgued (dcPredicates dc))
          in " — " <> predicates <> "."
        _ -> case findNearestCoveredTopic topic of
               Just sourceTopic -> case analogicalResponse topic sourceTopic of

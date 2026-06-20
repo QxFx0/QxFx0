@@ -279,10 +279,13 @@ library
      QxFx0.Semantic.Proposition.Semantic
      QxFx0.Semantic.Proposition.Detection
      QxFx0.Semantic.Proposition.Detectors
-      QxFx0.Semantic.Proposition.Parse
-        QxFx0.Semantic.Content
-        QxFx0.Semantic.Analogy
-        QxFx0.Semantic.Sense
+     QxFx0.Semantic.Proposition.Parse
+     QxFx0.Semantic.Content
+     QxFx0.Semantic.Content.Base
+     QxFx0.Semantic.Content.Argued
+     QxFx0.Semantic.Content.Challenges
+     QxFx0.Semantic.Analogy
+     QxFx0.Semantic.Sense
       QxFx0.Semantic.Sense.Extract
       QxFx0.Semantic.Sense.Adjacency
       QxFx0.Semantic.SemanticScene
