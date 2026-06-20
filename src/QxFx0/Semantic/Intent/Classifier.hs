@@ -219,45 +219,41 @@ extractTopicAfter rawText marker =
 extractComparisonLeft :: Text -> Text
 extractComparisonLeft rawText =
   let lower = T.toLower (T.strip rawText)
+      stripPunct = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
+      -- Try various prefix patterns to find the left concept
       afterPrefix =
         case () of
+          _ | "в чём разница " `T.isPrefixOf` lower -> T.strip (T.drop 15 (T.strip rawText))
+          _ | "в чем разница " `T.isPrefixOf` lower -> T.strip (T.drop 14 (T.strip rawText))
           _ | "разница " `T.isPrefixOf` lower -> T.strip (T.drop 8 (T.strip rawText))
           _ | "отличие " `T.isPrefixOf` lower -> T.strip (T.drop 8 (T.strip rawText))
           _ | "сравни " `T.isPrefixOf` lower -> T.strip (T.drop 7 (T.strip rawText))
           _ -> T.strip rawText
       afterPrefixLower = T.toLower afterPrefix
-      -- Skip prepositions like "между", "от" after prefix
       skipPreposition t
         | "между " `T.isPrefixOf` t = T.strip (T.drop 6 t)
         | otherwise = t
-  in T.dropWhileEnd (`elem` ("?!.,;:" :: String)) (T.strip (T.takeWhile (/= ' ') (skipPreposition afterPrefix)))
+  in stripPunct (T.strip (T.takeWhile (/= ' ') (skipPreposition afterPrefix)))
 
--- | Extract right concept from comparison utterance.
--- "разница между свободой и волей" → "волей"
--- "отличие несвободы от подчинения" → "подчинения"
--- "сравни A и B" → "B"
 extractComparisonRight :: Text -> Text
 extractComparisonRight rawText =
   let lower = T.toLower (T.strip rawText)
       stripPunct = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
-  in case () of
-    _ | "разница " `T.isPrefixOf` lower ->
-        -- "разница между X и Y" → take word after " и "
-        case T.breakOn " и " lower of
+      -- Find " и " in the text, take word after it
+      findRight text =
+        case T.breakOn " и " text of
           (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 3 rest))
           _ -> ""
+  in case () of
+    _ | "в чём разница " `T.isPrefixOf` lower -> findRight (T.drop 15 lower)
+    _ | "в чем разница " `T.isPrefixOf` lower -> findRight (T.drop 14 lower)
+    _ | "разница " `T.isPrefixOf` lower -> findRight (T.drop 8 lower)
     _ | "отличие " `T.isPrefixOf` lower ->
-        -- "отличие X от Y" → take word after " от "
         case T.breakOn " от " lower of
           (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 4 rest))
           _ -> ""
-    _ | "сравни " `T.isPrefixOf` lower ->
-        -- "сравни A и B" → take word after " и "
-        let afterPrefix = T.drop 7 lower
-        in case T.breakOn " и " afterPrefix of
-             (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 3 rest))
-             _ -> ""
-    _ -> ""
+    _ | "сравни " `T.isPrefixOf` lower -> findRight (T.drop 7 lower)
+    _ -> findRight lower
 
 -- ---------------------------------------------------------------------------
 -- Intent → existing type conversions

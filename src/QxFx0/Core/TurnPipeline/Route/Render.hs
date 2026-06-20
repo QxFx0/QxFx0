@@ -73,6 +73,7 @@ import QxFx0.Semantic.Stance (selectFarthestPoint)
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
+import System.Environment (lookupEnv)
 import QxFx0.Self.Field (Field(..))
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
@@ -177,6 +178,8 @@ data RenderEffectResults = RenderEffectResults
   , rerExternalQuerySkipReason :: !(Maybe Text)
     -- ^ WP3 dedup telemetry: mirrors repExternalQuerySkipReason.
   , rerExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
+  , rerSemanticFirstDisabled :: !Bool
+    -- ^ B2 Control-A ablation: True when QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST=1.
   }
   deriving stock (Eq, Show)
 
@@ -525,6 +528,9 @@ resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
   let tRender0 = tiStartTime (repTurnInput effectPlan)
   warnMorphologyFallback <- shouldWarnMorphologyFallback pio
+  -- B2 Control-A ablation: check if semantic-first path should be disabled
+  mSemanticDisable <- lookupEnv "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST"
+  let semanticFirstDisabled = mSemanticDisable == Just "1"
   case repRenderMorphologyWarning effectPlan of
     Just bestTopic | warnMorphologyFallback ->
       hPutStrLnWarning ("Morphology fallback: unknown topic lexeme: " <> bestTopic)
@@ -572,6 +578,7 @@ resolveRenderEffects pio effectPlan = do
     , rerExploratoryQueryResult = mExploratoryQueryResult
     , rerExternalQuerySkipReason = repExternalQuerySkipReason effectPlan
     , rerExternalActionDecisionTrace = repExternalActionDecisionTrace effectPlan
+    , rerSemanticFirstDisabled = semanticFirstDisabled
     }
 
 renderAnomalySurface :: ContentSelector -> Field -> Set.Set Text -> AnomalySurface -> Text
@@ -603,9 +610,13 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       field = tiField ti
       currentAtoms = Set.fromList $ map maText $ asAtoms $ tiAtomSet ti
       anomalyText = fmap (renderAnomalySurface contentSelector field currentAtoms) (tpAnomalySurface tp)
-      renderStatic = fromMaybe (repRenderStatic effectPlan) (rerResolvedRenderStatic effectResults)
+      renderStatic = if semanticFirstDisabled
+                     then repRenderStatic effectPlan
+                     else fromMaybe (repRenderStatic effectPlan) (rerResolvedRenderStatic effectResults)
       renderWithBg = rsRenderWithBg renderStatic
       localRecoveryPlan = repLocalRecoveryPlan effectPlan
+      -- B2 Control-A ablation: disable semantic-first path when flag is set
+      semanticFirstDisabled = rerSemanticFirstDisabled effectResults
       localRecoveryText = lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       preSafetyRendered =

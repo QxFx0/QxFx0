@@ -239,4 +239,5 @@ allowedReadEnvKeys =
     , "QXFX0_GF_RUNTIME"
     , "QXFX0_GF_LANG"
     , "QXFX0_GF_PGF_PATH"
+    , "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST"
     ]

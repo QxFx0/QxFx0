@@ -18,6 +18,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified QxFx0.Semantic.Content as Content
 import Data.Foldable (toList)
 
 import QxFx0.Types.Anomaly
@@ -126,22 +127,30 @@ detectUnclassifiableInput :: SystemState -> TurnInput -> Maybe Anomaly
 detectUnclassifiableInput ss ti =
   let inputAtoms = extractAtomsFromInput ti
       space = ssSemanticSpace ss
-      -- Count how many input atoms are in the semantic space
       atomIndex = ssAtomIndex space
       knownAtoms = Set.filter (`Map.member` atomIndex) inputAtoms
       knownCount = Set.size knownAtoms
       totalCount = Set.size inputAtoms
-      -- If less than 20% of atoms are known, it's unclassifiable
       threshold = 0.2
       ratio = if totalCount == 0 then 0 else fromIntegral knownCount / fromIntegral totalCount
       turnSeq = TurnSeq (ssTurnCount ss)
-  in if ratio < threshold && totalCount > 0
+      bestTopic = tiBestTopic ti
+      -- Do not trigger Unclassifiable for covered topics — even if atoms are sparse,
+      -- the topic is known and IntentClassifier should handle it.
+      isCovered = bestTopic `elem` Content.coveredTopics
+      -- Do not trigger if input contains challenge markers (разве, но, не согласен, etc.)
+      -- These are challenge turns, not unclassifiable input.
+      rawLower = T.toLower (ipfRawText (tiFrame ti))
+      hasChallengeMarker = any (`T.isInfixOf` rawLower)
+        [ "разве", "но ", "не согласен", "не согласна", "противореч", "неверно"
+        , "ошибаешься", "не прав", "спорю", "возраж", "считаю иначе" ]
+  in if not isCovered && not hasChallengeMarker && ratio < threshold && totalCount > 0
      then Just $ mkUnclassifiable
             (ipfRawText $ tiFrame ti)
             (buildSimpleFamilyScores knownCount totalCount)
             turnSeq
             inputAtoms
-            (1.0 - ratio)  -- Confidence based on how unknown the input is
+            (1.0 - ratio)
      else Nothing
   where
     buildSimpleFamilyScores known total =
