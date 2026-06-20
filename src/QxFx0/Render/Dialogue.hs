@@ -1865,18 +1865,27 @@ generateFromFrame cs field mNetwork frame morph = case frame of
     in "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
        <> renderDistinctionBody mDistContent leftNom rightNom morph
 
-  FT.ChallengeFrame target basis strength ->
+  FT.ChallengeFrame target basis strength rawObj ->
     let targetText = T.strip target
         basisText = T.strip basis
         safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
-    in case strength of
-         FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
-                  <> safeTarget <> " нужно проверить по явному критерию. "
-                  <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."
-         FT.Firm -> "Возражение принято как проверка тезиса. "
-                  <> safeBasis <> " не отменяет " <> safeTarget
-                  <> ", но требует явно назвать критерий и границу утверждения."
+        -- Phase E: try challenge-response first
+        mChallengeResp = lookupChallengeResponse targetText rawObj []
+        challengeText = case mChallengeResp of
+          Just (intro, cr) ->
+            intro <> " " <> crRestate cr <> ". "
+            <> renderPredicateArgued (crRelevantPredicate cr)
+          Nothing -> ""
+    in if not (T.null challengeText)
+         then challengeText
+         else case strength of
+           FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
+                    <> safeTarget <> " нужно проверить по явному критерию. "
+                    <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."
+           FT.Firm -> "Возражение принято как проверка тезиса. "
+                    <> safeBasis <> " не отменяет " <> safeTarget
+                    <> ", но требует явно назвать критерий и границу утверждения."
 
   FT.GroundFrame topic depth ->
     let topicNom = toNominative morph topic

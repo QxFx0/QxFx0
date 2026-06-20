@@ -52,6 +52,7 @@ data SemanticFrame
       { chTarget :: !Text
       , chBasis :: !Text
       , chStrength :: !FrameStrength
+      , chRawText :: !Text
       }
     -- ^ "Возражу: ... противоречит ...": response to challenge.
   | GroundFrame

@@ -138,6 +138,10 @@ classifyStructural :: Text -> SemanticFeatures -> Maybe SemanticIntent
 classifyStructural rawText f
   -- Challenge markers outrank broad definitional phrases like "это".
   | sfHasChallengeMark f = Just IntentChallenge
+  -- Competing definition (first-person assertion of own definition) → challenge
+  -- Must be checked before IntentDefine, since "что" triggers sfIsQuestion
+  -- and "это " triggers sfHasDefinitionMark, causing false IntentDefine.
+  | sfHasCompetingDefinition f = Just IntentChallenge
   -- Question + definition marker → define
   | sfIsQuestion f && sfHasDefinitionMark f = Just (IntentDefine (extractTopicAfter rawText "что такое"))
   -- Question + two concepts + comparison → distinguish
@@ -167,6 +171,8 @@ classifySemanticRoles rawText f
   | sfHasTwoConcepts f && sfHasComparisonMark f = Just (IntentDistinguish (extractComparisonLeft rawText) (extractComparisonRight rawText))
   -- Challenge mark → challenge
   | sfHasChallengeMark f = Just IntentChallenge
+  -- Competing definition (first-person assertion of own definition) → challenge
+  | sfHasCompetingDefinition f = Just IntentChallenge
   -- Repair mark → repair
   | sfHasRepairMark f = Just IntentRepair
   | otherwise = Nothing

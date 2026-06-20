@@ -98,6 +98,10 @@ data SemanticFeatures = SemanticFeatures
   , sfHasOperationalMark :: !Bool
     -- ^ Meta-linguistic: "ты работаешь", "ты онлайн", "ты живой",
     -- "что можешь". Signals operational status inquiry.
+  , sfHasCompetingDefinition :: !Bool
+    -- ^ Compound: first-person assertion ("я считаю", "по-моему",
+    -- "на мой взгляд") + definition mark ("это", "—").
+    -- Signals the user asserts a competing definition — a challenge.
   , sfTopicComplexity :: !Double
     -- ^ Semantic complexity of extracted topics (0-1).
     -- Higher when multiple abstract nouns present.
@@ -132,6 +136,7 @@ extractFeatures rawText tokens _morph =
     , sfHasExploratoryMark = extractHasExploratoryMark rawLower
     , sfHasAffectiveMark  = extractHasAffectiveMark rawLower
     , sfHasOperationalMark = extractHasOperationalMark rawLower
+    , sfHasCompetingDefinition = extractHasCompetingDefinition rawLower
     , sfTopicComplexity   = fromIntegral nounCount / 5.0
     }
 
@@ -251,3 +256,18 @@ extractHasOperationalMark rawLower =
     [ "ты работаешь", "ты онлайн", "ты живой", "что можешь"
     , "что ты умеешь", "какой ты", "что ты знаешь"
     ]
+
+extractHasCompetingDefinition :: Text -> Bool
+extractHasCompetingDefinition rawLower =
+  let hasFirstPersonAssertion =
+        any (`T.isInfixOf` rawLower)
+          [ "я считаю", "по-моему", "на мой взгляд", "я думаю что"
+          , "я полагаю", "мне кажется что", "по моему мнению"
+          ]
+      hasDefinitionConstruction =
+        any (`T.isInfixOf` rawLower)
+          [ "это просто", "это и есть", "— это", "это не", "это всего лишь"
+          , "это лишь", "означает просто", "сводится к"
+          ]
+      hasDash = " — " `T.isInfixOf` rawLower
+  in hasFirstPersonAssertion && (hasDefinitionConstruction || hasDash)

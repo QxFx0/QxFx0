@@ -47,6 +47,7 @@ buildFrame intent rawText = case intent of
       { chTarget = extractTarget rawText
       , chBasis = extractBasis rawText
       , chStrength = classifyStrength rawText
+      , chRawText = rawText
       }
 
   IntentGround topic ->
@@ -150,11 +151,36 @@ distinctionPairFromRaw rawText =
 extractTarget :: Text -> Text
 extractTarget rawText =
   let lowered = T.toLower rawText
-  in if "противореч" `T.isInfixOf` lowered
+      -- Check for explicit topic mentions first (before generic patterns)
+      hasFreedom = "свобод" `T.isInfixOf` lowered
+      hasTruth = "истин" `T.isInfixOf` lowered
+      hasConsciousness = "сознан" `T.isInfixOf` lowered
+      hasDeath = "смерт" `T.isInfixOf` lowered
+      hasFear = "страх" `T.isInfixOf` lowered
+      hasFaith = "вера" `T.isInfixOf` lowered
+      hasTime = "времен" `T.isInfixOf` lowered
+      hasMemory = "памят" `T.isInfixOf` lowered
+  in if hasFreedom
+       then "свобода"
+     else if hasTruth
+       then "истина"
+     else if hasConsciousness
+       then "сознание"
+     else if hasDeath
+       then "смерть"
+     else if hasFear
+       then "страх"
+     else if hasFaith
+       then "вера"
+     else if hasTime
+       then "время"
+     else if hasMemory
+       then "память"
+     else if "противореч" `T.isInfixOf` lowered
        then "возможное противоречие"
-     else if "произвол" `T.isInfixOf` lowered && "свобод" `T.isInfixOf` lowered
+     else if "произвол" `T.isInfixOf` lowered
        then "границу между свободой и произволом"
-     else if "мнение" `T.isInfixOf` lowered && "истин" `T.isInfixOf` lowered
+     else if "мнение" `T.isInfixOf` lowered
        then "границу между истиной и мнением"
      else "исходный тезис"
 

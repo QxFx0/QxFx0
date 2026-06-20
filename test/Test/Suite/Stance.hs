@@ -156,6 +156,7 @@ stanceTests =
                 , sfHasExploratoryMark = False
                 , sfHasAffectiveMark = False
                 , sfHasOperationalMark = False
+                , sfHasCompetingDefinition = False
                 , sfTopicComplexity = 0.0
                 }
               atoms = S.fromList ["a", "b", "c"]
@@ -184,6 +185,7 @@ stanceTests =
                 , sfHasExploratoryMark = False
                 , sfHasAffectiveMark = False
                 , sfHasOperationalMark = False
+                , sfHasCompetingDefinition = False
                 , sfTopicComplexity = 0.0
                 }
               atoms = S.fromList ["x", "y"]

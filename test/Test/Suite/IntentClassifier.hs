@@ -119,6 +119,8 @@ semanticRoleTests = TestLabel "SemanticRoleClassification" $ TestList
 
   , TestCase $ assertEqual "challenge" IntentChallenge (classify "это неверно")
 
+  , TestCase $ assertEqual "competing definition is challenge" IntentChallenge (classify "я считаю что истина — это просто то, во что верит большинство")
+
   , TestCase $ assertEqual "repair" IntentRepair (classify "не работает")
   ]
 
