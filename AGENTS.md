@@ -300,3 +300,9 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
     in `TurnReplayTrace`.
   - **Module**: `QxFx0.Semantic.Network.Substrate`.
   - **Tests**: `Test.Suite.SubstrateNetwork` (6 tests).
+  - **Doctrine**: substrate + activation is multi-hop associative traversal over
+    explicit predicates, not inference or reasoning. The substrate does not create
+    knowledge or derive new predicates; it opens non-obvious paths to existing
+    explicit predicates under governed retrieval. Relation Graph is deferred until
+    a curated relation corpus exists; it must not be reconstructed by regex over
+    reflective `brain_kb` prose.
