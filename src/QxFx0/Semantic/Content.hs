@@ -76,6 +76,12 @@ module QxFx0.Semantic.Content
     -- * Utilities
   , extractTopicForm
   , mkPred
+  , mkArguedPred
+  , renderPredicateArgued
+  , ChallengeResponse(..)
+  , lookupChallengeResponse
+  , challengeIntros
+  , pickChallengeIntro
     -- * Corpus data
   , definitionCorpus
   ) where
@@ -372,6 +378,101 @@ mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing N
 mkArguedPred :: PredicateRole -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> SemanticPredicate
 mkArguedPred role ru en rationale counter synthesis =
   SemanticPredicate role ru en (extractTopicForm ru) rationale counter synthesis
+
+-- ============================================================================
+-- Phase E: Argumentative rendering
+-- ============================================================================
+
+-- | Render a predicate as an argued statement with rationale, counter, synthesis.
+-- When all optional fields are Nothing, falls back to flat spRu (backward compatible).
+renderPredicateArgued :: SemanticPredicate -> Text
+renderPredicateArgued p =
+  spRu p
+  <> maybe "" (". Потому что " <>) (spRationale p)
+  <> maybe "" (". Но " <>) (spCounter p)
+  <> maybe "" (". Именно поэтому " <>) (spSynthesis p)
+
+-- ============================================================================
+-- Phase E: Challenge-response
+-- ============================================================================
+
+-- | A contextual response to a user challenge/objection.
+data ChallengeResponse = ChallengeResponse
+  { crTopic :: !Text                     -- topic this response applies to
+  , crObjectionKeywords :: ![Text]      -- keywords in user input that trigger this response
+  , crRelevantPredicate :: !SemanticPredicate  -- predicate to use in the response
+  , crRestate :: !Text                   -- how to restate the user's objection
+  }
+
+-- | Varied intro phrases for challenge responses (avoid new template feel).
+-- Rotation by hash of input text mod length.
+challengeIntros :: [Text]
+challengeIntros =
+  [ "Ты указываешь на"
+  , "Твой вопрос затрагивает"
+  , "Это возражение касается"
+  , "Ты прав в том, что"
+  , "Здесь важно различие между"
+  , "Это возвращает нас к"
+  , "Интересно, что ты затронул"
+  ]
+
+-- | Pick an intro phrase deterministically by hashing the input text.
+pickChallengeIntro :: Text -> Text
+pickChallengeIntro input =
+  let h = fromIntegral (T.length input * 31 + sum (map fromEnum (T.unpack input)))
+      idx = h `mod` length challengeIntros
+  in challengeIntros !! idx
+
+-- | Lookup a challenge response for a given topic and user objection text.
+-- Searches challengeResponseCorpus for keyword matches in the objection.
+lookupChallengeResponse :: Text -> Text -> [SemanticPredicate] -> Maybe (Text, ChallengeResponse)
+lookupChallengeResponse topic objectionText _availablePreds =
+  let lower = T.toLower objectionText
+      matches = [ cr | cr <- challengeResponseCorpus
+                     , crTopic cr == topic
+                     , any (`T.isInfixOf` lower) (crObjectionKeywords cr)
+                     ]
+  in case matches of
+       (cr:_) -> Just (pickChallengeIntro objectionText, cr)
+       [] -> Nothing
+
+-- | Challenge response corpus — maps topics to expected objections and responses.
+-- Writer work: ~60-90 entries (30 topics × 2-3 common objections).
+-- Currently minimal (3 topics seeded for infrastructure).
+challengeResponseCorpus :: [ChallengeResponse]
+challengeResponseCorpus =
+  [ ChallengeResponse
+      "свобода"
+      ["делать всё что угодно", "безграничная", "всё что хочу"]
+      (mkArguedPred RoleProperty
+        "свобода ограничена ответственностью"
+        "freedom is limited by responsibility"
+        (Just "без ответственности свобода превращается в произвол")
+        (Just "не любое ограничение убивает свободу — только произвольное")
+        (Just "ответственность не враг свободы, а условие её осмысленности"))
+      "границу между свободой и произволом"
+  , ChallengeResponse
+      "свобода"
+      ["можно делать всё", "произвол", "без ограничений"]
+      (mkArguedPred RoleProperty
+        "свобода предполагает возможность выбора"
+        "freedom presupposes the possibility of choice"
+        (Just "без выбора действие не отличается от рефлекса")
+        (Just "не любой выбор — свободный: выбор под принуждением не делает действие свободным")
+        (Just "свобода требует не только возможности, но и осознанности выбора"))
+      "различие между свободой и простым отсутствием ограничений"
+  , ChallengeResponse
+      "истина"
+      ["истина — это мнение", "большинство", "верит большинство"]
+      (mkArguedPred RoleProperty
+        "истина претендует на соответствие реальности"
+        "truth claims correspondence with reality"
+        (Just "мнение зависит от перспективы наблюдателя, истина — нет")
+        (Just "не всегда легко проверить соответствие, но это не делает истину мнением")
+        (Just "различие между истиной и мнением не в сложности проверки, а в самой претензии"))
+      "различие между истиной и мнением большинства"
+  ]
 
 -- ============================================================================
 -- Distinction corpus
