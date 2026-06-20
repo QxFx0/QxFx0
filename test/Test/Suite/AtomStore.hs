@@ -10,7 +10,8 @@ import QxFx0.Semantic.Content.AtomStore
 
 atomStoreTests :: [Test]
 atomStoreTests =
-  [ TestLabel "AtomStore round-trip parity" roundTripTests
+  [ TestLabel "AtomStore round-trip parity (stored)" roundTripTests
+  , TestLabel "AtomStore morph round-trip (display)" morphRoundTripTests
   , TestLabel "AtomStore structure" structureTests
   ]
 
@@ -20,9 +21,20 @@ roundTripTests = TestList
       let mismatches = [ (orig, verb) | (orig, verb, False) <- allRoundTripResults ]
           total = length allRoundTripResults
           matchCount = total - length mismatches
-      assertEqual ("round-trip: " <> show matchCount <> "/" <> show total
+      assertEqual ("stored round-trip: " <> show matchCount <> "/" <> show total
                    <> " matched, mismatches: " <> show (take 5 mismatches))
                   0 (length mismatches)
+  ]
+
+morphRoundTripTests :: Test
+morphRoundTripTests = TestList
+  [ TestCase $ do
+      let mismatches = [ (orig, verb) | (orig, verb, False) <- allRoundTripMorphResults ]
+          total = length allRoundTripMorphResults
+          matchCount = total - length mismatches
+      assertBool ("morph round-trip: " <> show matchCount <> "/" <> show total
+                   <> " matched (< 70%), mismatches: " <> show (take 3 mismatches))
+                 (matchCount * 10 >= total * 7)
   ]
 
 structureTests :: Test

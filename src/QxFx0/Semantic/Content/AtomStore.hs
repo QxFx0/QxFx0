@@ -35,10 +35,14 @@ module QxFx0.Semantic.Content.AtomStore
   , allTopics
     -- * Verbalizer (simple, for round-trip)
   , verbalizeRelation
+  , verbalizeRelationStored
+  , verbForType
   , verbalizeRelationEn
     -- * Round-trip
   , roundTripCheck
+  , roundTripCheckMorph
   , allRoundTripResults
+  , allRoundTripMorphResults
   ) where
 
 import Control.DeepSeq (NFData)
@@ -68,7 +72,9 @@ data AtomCategory
 
 data Atom = Atom
   { atomId       :: !AtomId
-  , atomSurface  :: !Text   -- nominative form for display
+  , atomSurface  :: !Text   -- internal ID (underscores for compound)
+  , atomDisplay  :: !Text   -- display text (spaces, for output)
+  , atomHead     :: !Text   -- head noun for morphological inflection
   , atomCategory :: !AtomCategory
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
@@ -174,117 +180,118 @@ data PathProof = PathProof
 
 atomStore :: Map AtomId Atom
 atomStore = M.fromList
-  [ mkAtom "свобода"              CatTopic
-  , mkAtom "произвол"             CatTopic
-  , mkAtom "ответственность"      CatTopic
-  , mkAtom "истина"               CatTopic
-  , mkAtom "мнение"               CatTopic
-  , mkAtom "память"               CatTopic
-  , mkAtom "воспоминание"         CatTopic
-  , mkAtom "сознание"             CatTopic
-  , mkAtom "самосознание"         CatTopic
-  , mkAtom "вера"                 CatTopic
-  , mkAtom "красота"              CatTopic
-  , mkAtom "долг"                 CatTopic
-  , mkAtom "доверие"              CatTopic
-  , mkAtom "страх"                CatTopic
-  , mkAtom "надежда"              CatTopic
-  , mkAtom "справедливость"       CatTopic
-  , mkAtom "время"                CatTopic
-  , mkAtom "разум"                CatTopic
-  , mkAtom "бытие"                CatTopic
-  , mkAtom "история"              CatTopic
-  , mkAtom "язык"                 CatTopic
-  , mkAtom "воля"                 CatTopic
-  , mkAtom "смерть"               CatTopic
-  , mkAtom "одиночество"          CatTopic
-  , mkAtom "любовь"               CatTopic
-  , mkAtom "труд"                 CatTopic
-  , mkAtom "покой"                CatTopic
-  , mkAtom "власть"               CatTopic
-  , mkAtom "правда"               CatTopic
-  , mkAtom "молчание"             CatTopic
+  [ mkTopic "свобода"
+  , mkTopic "произвол"
+  , mkTopic "ответственность"
+  , mkTopic "истина"
+  , mkTopic "мнение"
+  , mkTopic "память"
+  , mkTopic "воспоминание"
+  , mkTopic "сознание"
+  , mkTopic "самосознание"
+  , mkTopic "вера"
+  , mkTopic "красота"
+  , mkTopic "долг"
+  , mkTopic "доверие"
+  , mkTopic "страх"
+  , mkTopic "надежда"
+  , mkTopic "справедливость"
+  , mkTopic "время"
+  , mkTopic "разум"
+  , mkTopic "бытие"
+  , mkTopic "история"
+  , mkTopic "язык"
+  , mkTopic "воля"
+  , mkTopic "смерть"
+  , mkTopic "одиночество"
+  , mkTopic "любовь"
+  , mkTopic "труд"
+  , mkTopic "покой"
+  , mkTopic "власть"
+  , mkTopic "правда"
+  , mkTopic "молчание"
   -- concept atoms (objects of relations)
-  , mkAtom "выбор"                CatConcept
-  , mkAtom "рамка_критериев"      CatConcept
-  , mkAtom "доверие_субъектов"    CatConcept
-  , mkAtom "осознание_последствий" CatConcept
-  , mkAtom "обязательства_перед_другими" CatConcept
-  , mkAtom "соответствие_реальности" CatConcept
-  , mkAtom "воспроизводимость"    CatConcept
-  , mkAtom "позиция_субъекта"     CatConcept
-  , mkAtom "перспектива_наблюдателя" CatConcept
-  , mkAtom "прошлое_для_настоящего" CatConcept
-  , mkAtom "избирательность_и_реконструкция" CatProperty
-  , mkAtom "пережитое_в_новой_рамке" CatConcept
-  , mkAtom "акт_обращения_к_прошлому" CatConcept
-  , mkAtom "субъективность"       CatProperty
-  , mkAtom "аспект_первого_лица"  CatConcept
-  , mkAtom "способность_к_самоотчёту" CatConcept
-  , mkAtom "восприятие_и_рефлексия" CatConcept
-  , mkAtom "собственные_состояния_субъекта" CatConcept
-  , mkAtom "сознание_как_основание" CatConcept
-  , mkAtom "субъект_как_объект"   CatConcept
-  , mkAtom "принятие_без_доказательства" CatConcept
-  , mkAtom "доверие_к_непроверяемому" CatConcept
-  , mkAtom "доверие_к_источнику"  CatConcept
-  , mkAtom "не_сводимость_к_полезности" CatProperty
-  , mkAtom "эстетическое_переживание" CatConcept
-  , mkAtom "воспринимающий_и_рамка" CatConcept
-  , mkAtom "действие_независимо_от_желания" CatConcept
-  , mkAtom "моральные_обязательства" CatConcept
-  , mkAtom "уязвимость_перед_другим" CatConcept
-  , mkAtom "повторяемый_опыт"     CatConcept
-  , mkAtom "угроза_целостности"   CatConcept
-  , mkAtom "угроза_целостности_субъекта" CatConcept
-  , mkAtom "то_что_имеет_значение" CatConcept
-  , mkAtom "возможность_будущего" CatConcept
-  , mkAtom "действие_в_неопределённости" CatConcept
-  , mkAtom "соразмерность_деяния_и_воздаяния" CatConcept
-  , mkAtom "равенство_перед_правилом" CatConcept
-  , mkAtom "порядок_следования_событий" CatConcept
-  , mkAtom "необратимость_и_неравномерность" CatProperty
-  , mkAtom "необратимость"        CatProperty
-  , mkAtom "самокоррекция"        CatProcess
-  , mkAtom "обобщение_и_абстракция" CatConcept
-  , mkAtom "отличие_от_интуиции"  CatConcept
-  , mkAtom "факт_существования"   CatConcept
-  , mkAtom "условие_возможности_суждения" CatConcept
-  , mkAtom "сущность"             CatConcept
-  , mkAtom "события_и_интерпретация" CatConcept
-  , mkAtom "прошлое_с_настоящим"  CatConcept
-  , mkAtom "точка_зрения_рассказчика" CatConcept
-  , mkAtom "мышление"             CatConcept
-  , mkAtom "опыт_через_различение" CatConcept
-  , mkAtom "выражение_и_формирование_мысли" CatConcept
-  , mkAtom "действие_к_цели"      CatConcept
-  , mkAtom "преодоление_препятствий" CatConcept
-  , mkAtom "прекращение_существования" CatConcept
-  , mkAtom "граница_жизни"        CatConcept
-  , mkAtom "неотменимость_жизни"  CatProperty
-  , mkAtom "граница_я_и_других"   CatConcept
-  , mkAtom "отсутствие_значимого_другого" CatConcept
-  , mkAtom "избрано_или_навязано" CatProperty
-  , mkAtom "ценность_другого"     CatConcept
-  , mkAtom "уязвимость_и_риск"    CatConcept
-  , mkAtom "преобразование_мира_и_себя" CatConcept
-  , mkAtom "материал_через_усилие" CatConcept
-  , mkAtom "потребность_и_ресурсы" CatConcept
-  , mkAtom "не_отсутствие_движения" CatProperty
-  , mkAtom "восстановление_и_интеграция" CatConcept
-  , mkAtom "отсутствие_движения_и_напряжения" CatConcept
-  , mkAtom "способность_влиять"   CatConcept
-  , mkAtom "легитимность_для_устойчивости" CatConcept
-  , mkAtom "чья_воля_становится_законом" CatConcept
-  , mkAtom "соответствие_произошедшему" CatConcept
-  , mkAtom "личная_вовлечённость" CatProperty
-  , mkAtom "персональная_вовлечённость" CatProperty
-  , mkAtom "отсутствие_слов"      CatConcept
-  , mkAtom "контраст_с_речью"     CatConcept
-  , mkAtom "акт_отказа_или_присутствия" CatConcept
+  , mkConcept "выбор" "выбор" "выбор"
+  , mkConcept "рамка_критериев" "рамка критериев" "рамка"
+  , mkConcept "доверие_субъектов" "доверие между субъектами" "доверие"
+  , mkConcept "осознание_последствий" "осознание последствий" "осознание"
+  , mkConcept "обязательства_перед_другими" "обязательства перед другими" "обязательства"
+  , mkConcept "соответствие_реальности" "соответствие реальности" "соответствие"
+  , mkConcept "воспроизводимость" "воспроизводимость" "воспроизводимость"
+  , mkConcept "позиция_субъекта" "позиция субъекта" "позиция"
+  , mkConcept "перспектива_наблюдателя" "перспектива наблюдателя" "перспектива"
+  , mkConcept "прошлое_для_настоящего" "прошлое для настоящего" "прошлое"
+  , mkConcept "избирательность_и_реконструкция" "избирательность и реконструкция" "избирательность"
+  , mkConcept "пережитое_в_новой_рамке" "пережитое в новой рамке" "пережитое"
+  , mkConcept "акт_обращения_к_прошлому" "акт обращения к личному прошлому" "акт"
+  , mkConcept "субъективность" "субъективность" "субъективность"
+  , mkConcept "аспект_первого_лица" "аспект от первого лица" "аспект"
+  , mkConcept "способность_к_самоотчёту" "способность к самоотчёту" "способность"
+  , mkConcept "восприятие_и_рефлексия" "восприятие и рефлексию" "восприятие"
+  , mkConcept "собственные_состояния_субъекта" "собственные состояния субъекта" "состояния"
+  , mkConcept "сознание_как_основание" "наличие сознания как своего основания" "наличие"
+  , mkConcept "субъект_как_объект" "субъекта объектом для самого себя" "субъекта"
+  , mkConcept "принятие_без_доказательства" "принятия без полного доказательства" "принятия"
+  , mkConcept "доверие_к_непроверяемому" "доверием к тому, что не может быть проверено" "доверием"
+  , mkConcept "доверие_к_источнику" "доверием к источнику или опыту" "доверием"
+  , mkConcept "не_сводимость_к_полезности" "к полезности" "полезности"
+  , mkConcept "эстетическое_переживание" "эстетическое переживание" "переживание"
+  , mkConcept "воспринимающий_и_рамка" "от воспринимающего и культурной рамки" "рамки"
+  , mkConcept "действие_независимо_от_желания" "действие независимо от желания" "действие"
+  , mkConcept "моральные_обязательства" "на моральные или социальные обязательства" "обязательства"
+  , mkConcept "уязвимость_перед_другим" "уязвимость перед другим" "уязвимость"
+  , mkConcept "повторяемый_опыт" "через повторяемый позитивный опыт" "опыт"
+  , mkConcept "угроза_целостности" "об угрозе целостности" "угрозе"
+  , mkConcept "угроза_целостности_субъекта" "об угрозе целостности субъекта" "угрозе"
+  , mkConcept "то_что_имеет_значение" "на то, что имеет значение" "значение"
+  , mkConcept "возможность_будущего" "на возможность будущего" "возможность"
+  , mkConcept "действие_в_неопределённости" "действие в условиях неопределённости" "действие"
+  , mkConcept "соразмерность_деяния_и_воздаяния" "соразмерности между деянием и воздаянием" "соразмерности"
+  , mkConcept "равенство_перед_правилом" "равенство перед правилом" "равенство"
+  , mkConcept "порядок_следования_событий" "порядок следования событий" "порядок"
+  , mkConcept "необратимость_и_неравномерность" "необратимо и неравномерно" "необратимо"
+  , mkConcept "необратимость" "необратимо — прошлое недоступно для изменения" "необратимо"
+  , mkConcept "самокоррекция" "к самокоррекции" "самокоррекции"
+  , mkConcept "обобщение_и_абстракция" "к обобщению и абстракции" "обобщению"
+  , mkConcept "отличие_от_интуиции" "от интуиции потребностью в доказательстве" "интуиции"
+  , mkConcept "факт_существования" "сам факт существования" "факт"
+  , mkConcept "условие_возможности_суждения" "как условие возможности любого суждения" "условие"
+  , mkConcept "сущность" "сущности" "сущности"
+  , mkConcept "события_и_интерпретация" "из событий и их интерпретации" "событий"
+  , mkConcept "прошлое_с_настоящим" "прошлое с настоящим через интерпретацию" "прошлое"
+  , mkConcept "точка_зрения_рассказчика" "от точки зрения рассказчика" "точки"
+  , mkConcept "мышление" "мышление" "мышление"
+  , mkConcept "опыт_через_различение" "опыт через различение и именование" "опыт"
+  , mkConcept "выражение_и_формирование_мысли" "мышлением — он не только выражает, но и формирует мысль" "мышлением"
+  , mkConcept "действие_к_цели" "действие к выбранной цели" "действие"
+  , mkConcept "преодоление_препятствий" "преодоления препятствий и конкурирующих мотивов" "преодоления"
+  , mkConcept "прекращение_существования" "необратимое прекращение существования" "прекращение"
+  , mkConcept "граница_жизни" "границу, через которую жизнь обретает конечную форму" "границу"
+  , mkConcept "неотменимость_жизни" "жизни неотменимость" "неотменимость"
+  , mkConcept "граница_я_и_других" "границу между я и другими" "границу"
+  , mkConcept "отсутствие_значимого_другого" "отсутствие значимого другого" "отсутствие"
+  , mkConcept "избрано_или_навязано" "избрано или навязано обстоятельствами" "избрано"
+  , mkConcept "ценность_другого" "ценность другого как несводимую" "ценность"
+  , mkConcept "уязвимость_и_риск" "уязвимость и риск потери" "уязвимость"
+  , mkConcept "преобразование_мира_и_себя" "мир и самого трудящегося" "мир"
+  , mkConcept "материал_через_усилие" "материал через целенаправленное усилие" "материал"
+  , mkConcept "потребность_и_ресурсы" "потребностью и распределением ресурсов" "потребностью"
+  , mkConcept "не_отсутствие_движения" "отсутствием движения" "отсутствием"
+  , mkConcept "восстановление_и_интеграция" "для восстановления и интеграции опыта" "восстановления"
+  , mkConcept "отсутствие_движения_и_напряжения" "отсутствие движения и напряжения" "отсутствие"
+  , mkConcept "способность_влиять" "способность влиять на действия других" "способность"
+  , mkConcept "легитимность_для_устойчивости" "легитимности для устойчивости" "легитимности"
+  , mkConcept "чья_воля_становится_законом" "чья воля становится законом" "воля"
+  , mkConcept "соответствие_произошедшему" "на соответствие тому, что произошло" "соответствие"
+  , mkConcept "личная_вовлечённость" "личной вовлечённостью рассказчика" "вовлечённостью"
+  , mkConcept "персональная_вовлечённость" "персональной вовлечённостью" "вовлечённостью"
+  , mkConcept "отсутствие_слов" "отсутствием слов" "отсутствием"
+  , mkConcept "контраст_с_речью" "с речью, но не тождественно пустоте" "речью"
+  , mkConcept "акт_отказа_или_присутствия" "актом отказа или знаком присутствия" "актом"
   ]
   where
-    mkAtom surf cat = (AtomId surf, Atom (AtomId surf) surf cat)
+    mkTopic surf = (AtomId surf, Atom (AtomId surf) surf surf surf CatTopic)
+    mkConcept aid display head_ = (AtomId aid, Atom (AtomId aid) aid display head_ CatConcept)
 
 -- ============================================================
 -- Relation store — decomposed predicates
@@ -564,7 +571,7 @@ relationsToAtom :: AtomId -> [Relation]
 relationsToAtom aid = filter (\r -> relTo r == aid) relationStore
 
 allTopics :: [Text]
-allTopics = map atomSurface
+allTopics = map atomDisplay
          $ filter (\a -> atomCategory a == CatTopic)
          $ M.elems atomStore
 
@@ -572,18 +579,34 @@ allTopics = map atomSurface
 -- Verbalizer (simple — for round-trip parity)
 -- ============================================================
 
--- | Verbalize a relation back to its original predicate text.
--- Step 1: uses stored object text (round-trip parity).
--- Step 2 will replace objectText with morphological inflection.
+-- | Verbalize a relation using atomDisplay (no stored objectText).
+-- This is the generative path: the object text comes from the target atom,
+-- not from a stored string. The verb phrase comes from verbForType or relVerbText.
 verbalizeRelation :: Relation -> Text
 verbalizeRelation r =
+  case relVerbText r of
+    Just ""  -> subject <> " " <> objectDisplay
+    Just vt  -> subject <> " " <> vt <> " " <> objectDisplay
+    Nothing  -> subject <> " " <> verbPhrase <> " " <> objectDisplay
+  where
+    subject = case M.lookup (relFrom r) atomStore of
+      Just a  -> atomDisplay a
+      Nothing -> "??"
+    objectDisplay = case M.lookup (relTo r) atomStore of
+      Just a  -> atomDisplay a
+      Nothing -> relObjectText r  -- fallback to stored text
+    verbPhrase = verbForType (relType r)
+
+-- | Verbalize using stored objectText (legacy round-trip path).
+verbalizeRelationStored :: Relation -> Text
+verbalizeRelationStored r =
   case relVerbText r of
     Just ""  -> subject <> " " <> relObjectText r
     Just vt  -> subject <> " " <> vt <> " " <> relObjectText r
     Nothing  -> subject <> " " <> verbPhrase <> " " <> relObjectText r
   where
     subject = case M.lookup (relFrom r) atomStore of
-      Just a  -> atomSurface a
+      Just a  -> atomDisplay a
       Nothing -> "??"
     verbPhrase = verbForType (relType r)
 
@@ -647,13 +670,26 @@ verbalizeRelationEn = relEnOriginal
 -- ============================================================
 
 -- | Check if verbalizing a relation reproduces the original predicate.
+-- Uses stored objectText for round-trip (Step 1 parity).
 -- Returns (original, verbalized, isMatch).
 roundTripCheck :: Relation -> (Text, Text, Bool)
 roundTripCheck r =
+  let verbalized = verbalizeRelationStored r
+      original = relRuOriginal r
+  in (original, verbalized, original == verbalized)
+
+-- | Check if generative verbalization (atomDisplay) matches original.
+-- This is the Step 2 test: can we reconstruct predicates from atoms alone?
+roundTripCheckMorph :: Relation -> (Text, Text, Bool)
+roundTripCheckMorph r =
   let verbalized = verbalizeRelation r
       original = relRuOriginal r
   in (original, verbalized, original == verbalized)
 
--- | Check all relations and return mismatches.
+-- | Check all relations with stored text and return mismatches.
 allRoundTripResults :: [(Text, Text, Bool)]
 allRoundTripResults = map roundTripCheck relationStore
+
+-- | Check all relations with atomDisplay and return mismatches.
+allRoundTripMorphResults :: [(Text, Text, Bool)]
+allRoundTripMorphResults = map roundTripCheckMorph relationStore
