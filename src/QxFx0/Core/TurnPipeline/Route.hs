@@ -16,6 +16,7 @@ module QxFx0.Core.TurnPipeline.Route
   , planRouteEffects
   , resolveRouteEffects
   , buildRouteTurnPlan
+  , routeTurnPlan
   , detectAnomaly
   , planRenderEffects
   , planRenderEffectsForRuntime
@@ -26,6 +27,7 @@ module QxFx0.Core.TurnPipeline.Route
 
 import QxFx0.Core.TurnPipeline.Route.Build
   ( buildRouteTurnPlan
+  , routeTurnPlan
   , readFmarModeIO
   )
 import QxFx0.Core.TurnPipeline.Route.Anomaly

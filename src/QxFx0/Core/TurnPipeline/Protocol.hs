@@ -224,9 +224,7 @@ planTurn :: PipelineIO -> SystemState -> PreparedTurn -> IO PlannedTurn
 planTurn pio ss (PreparedTurn ti ts) = do
   let routeEffects = Route.planRouteEffects ss ti ts
   routeResults <- Route.resolveRouteEffects pio routeEffects
-  fmarMode <- Route.readFmarModeIO pio
-  let mAnomaly = Route.detectAnomaly ss ti
-      tp = Route.buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) mAnomaly False ss ti ts routeEffects routeResults
+  tp <- Route.routeTurnPlan pio ss ti ts
   pure (PlannedTurn ti ts tp)
 
 renderTurn :: PipelineIO -> SystemState -> PlannedTurn -> IO RenderedTurn
