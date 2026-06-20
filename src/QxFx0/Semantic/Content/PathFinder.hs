@@ -35,6 +35,7 @@ module QxFx0.Semantic.Content.PathFinder
     -- * Composition
   , composeDefinition
   , defaultFieldProfile
+  , composeDefinitionWithGates
     -- * Verbalization
   , verbalizePath
   ) where
@@ -50,6 +51,7 @@ import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.Base (renderPredicateArgued, SemanticPredicate(..), PredicateRole(..), mkArguedPred)
+import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissible, validatePath, GateVerdict(..))
 
 -- ============================================================
 -- Types
@@ -241,13 +243,14 @@ scorePath fp edges =
 rankPaths :: [RankedPath] -> [RankedPath]
 rankPaths = sortOn (\rp -> (Down (psTotal (rpScore rp)), relRuOriginal (head (ppEdges (rpProof rp)))))
 
--- | Select top-N paths after ranking.
+-- | Select top-N paths after ranking and gate filtering.
 selectTopPaths :: Int -> FieldProfile -> AtomId -> Int -> [RankedPath]
 selectTopPaths n fp start maxLen =
   take n
   $ rankPaths
   $ [ RankedPath (rpProof rp) (scorePath fp (ppEdges (rpProof rp)))
     | rp <- findPathsFrom maxLen start
+    , gvOverall (validatePath (rpProof rp))  -- gate filter
     ]
 
 -- ============================================================
@@ -255,7 +258,7 @@ selectTopPaths n fp start maxLen =
 -- ============================================================
 
 -- | Compose a definition for a topic: find top-N length-1 paths,
--- verbalize each, join with periods.
+-- verbalize each, join with periods. Paths are filtered through gates.
 composeDefinition :: FieldProfile -> Int -> AtomId -> Text
 composeDefinition fp n topic =
   let paths = selectTopPaths n fp topic 1
@@ -263,6 +266,24 @@ composeDefinition fp n topic =
   in if null texts
        then ""
        else T.intercalate ". " texts <> "."
+
+-- | Compose with explicit gate verdict for observability.
+-- Returns (text, number of paths that passed gates, number rejected).
+composeDefinitionWithGates :: FieldProfile -> Int -> AtomId -> (Text, Int, Int)
+composeDefinitionWithGates fp n topic =
+  let allPaths = findPathsFrom 1 topic
+      (passed, rejected) = splitPaths allPaths
+      ranked = rankPaths passed
+      selected = take n ranked
+      texts = map (verbalizePath . rpProof) selected
+      text = if null texts then "" else T.intercalate ". " texts <> "."
+  in (text, length passed, length rejected)
+  where
+    splitPaths rps =
+      let results = map (\rp -> (rp, validatePath (rpProof rp))) rps
+          p = [ rp | (rp, v) <- results, gvOverall v ]
+          r = [ rp | (rp, v) <- results, not (gvOverall v) ]
+      in (p, r)
 
 -- ============================================================
 -- Path verbalization
