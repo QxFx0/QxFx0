@@ -92,6 +92,8 @@ import QxFx0.Types.Thresholds
   , parserLowConfidenceThreshold
   )
 import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
+import Data.Text (Text)
+import qualified Data.Text as T
 
 buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan fmarMode shadowPolicy mAnomaly ss ti ts effectPlan effectResults =
@@ -127,7 +129,9 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly ss ti ts effectPlan effectResu
                  then (shadowResolution0 { srGateTriggered = False }, True, vetoCount, windowStart)
                  else (shadowResolution0, False, vetoCount + 1, windowStart)
           else (shadowResolution0, False, vetoCount, windowStart)
-      family0 = srEffectiveFamily shadowResolution
+      family0 = if hasChallengeMarker (ipfRawText (tiFrame ti))
+        then CMConfront
+        else srEffectiveFamily shadowResolution
       (family, _, _) = familySenseBundle family0 (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti) (tiDoubtScore ti)
       recoveryBonus =
         legitimacyRecoveryBonus
@@ -339,6 +343,15 @@ fieldDelta target current =
     , fieldCounterfactual = mkCounterfactual
         (unCounterfactual (fieldCounterfactual target) - unCounterfactual (fieldCounterfactual current))
     }
+
+hasChallengeMarker :: Text -> Bool
+hasChallengeMarker input =
+  let lowered = T.toLower input
+  in any (`T.isInfixOf` lowered)
+       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
+       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
+       , "ты говоришь", "оспариваю"
+       ]
 
 renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts
 renderTurnOutput pio ss ti ts tp = do

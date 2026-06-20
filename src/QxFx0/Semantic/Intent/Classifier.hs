@@ -38,6 +38,7 @@ import QxFx0.Semantic.Morphology (extractContentNouns)
 import QxFx0.Types (MorphologyData, CanonicalMoveFamily(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 
 -- | Semantic intent: what the user wants, not how they said it.
 --
@@ -135,6 +136,8 @@ classifyFromFeatures rawText features =
 -- "что дальше?" → IntentNextStep (question + next step mark)
 classifyStructural :: Text -> SemanticFeatures -> Maybe SemanticIntent
 classifyStructural rawText f
+  -- Challenge markers outrank broad definitional phrases like "это".
+  | sfHasChallengeMark f = Just IntentChallenge
   -- Question + definition marker → define
   | sfIsQuestion f && sfHasDefinitionMark f = Just (IntentDefine (extractTopicAfter rawText "что такое"))
   -- Question + two concepts + comparison → distinguish
@@ -218,42 +221,15 @@ extractTopicAfter rawText marker =
 -- "сравни A и B" → "A"
 extractComparisonLeft :: Text -> Text
 extractComparisonLeft rawText =
-  let lower = T.toLower (T.strip rawText)
-      stripPunct = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
-      -- Try various prefix patterns to find the left concept
-      afterPrefix =
-        case () of
-          _ | "в чём разница " `T.isPrefixOf` lower -> T.strip (T.drop 15 (T.strip rawText))
-          _ | "в чем разница " `T.isPrefixOf` lower -> T.strip (T.drop 14 (T.strip rawText))
-          _ | "разница " `T.isPrefixOf` lower -> T.strip (T.drop 8 (T.strip rawText))
-          _ | "отличие " `T.isPrefixOf` lower -> T.strip (T.drop 8 (T.strip rawText))
-          _ | "сравни " `T.isPrefixOf` lower -> T.strip (T.drop 7 (T.strip rawText))
-          _ -> T.strip rawText
-      afterPrefixLower = T.toLower afterPrefix
-      skipPreposition t
-        | "между " `T.isPrefixOf` t = T.strip (T.drop 6 t)
-        | otherwise = t
-  in stripPunct (T.strip (T.takeWhile (/= ' ') (skipPreposition afterPrefix)))
+  case comparisonCandidates rawText of
+    (left:_) -> left
+    _ -> ""
 
 extractComparisonRight :: Text -> Text
 extractComparisonRight rawText =
-  let lower = T.toLower (T.strip rawText)
-      stripPunct = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
-      -- Find " и " in the text, take word after it
-      findRight text =
-        case T.breakOn " и " text of
-          (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 3 rest))
-          _ -> ""
-  in case () of
-    _ | "в чём разница " `T.isPrefixOf` lower -> findRight (T.drop 15 lower)
-    _ | "в чем разница " `T.isPrefixOf` lower -> findRight (T.drop 14 lower)
-    _ | "разница " `T.isPrefixOf` lower -> findRight (T.drop 8 lower)
-    _ | "отличие " `T.isPrefixOf` lower ->
-        case T.breakOn " от " lower of
-          (_, rest) | not (T.null rest) -> stripPunct (T.strip (T.drop 4 rest))
-          _ -> ""
-    _ | "сравни " `T.isPrefixOf` lower -> findRight (T.drop 7 lower)
-    _ -> findRight lower
+  case comparisonCandidates rawText of
+    (_:right:_) -> right
+    _ -> ""
 
 -- ---------------------------------------------------------------------------
 -- Intent → existing type conversions

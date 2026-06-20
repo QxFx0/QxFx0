@@ -69,6 +69,7 @@ detectPropositionType :: TruthContractStatus -> Text -> [Text] -> PropositionTyp
 detectPropositionType truthContractStatus rawText tokens = fromMaybe PlainAssert $ listToMaybe $ catMaybes
   [ detectRegressionFamilyOverrides rawText
   , detectDistinctionQuestion truthContractStatus rawText tokens
+  , detectConfrontSignal truthContractStatus rawText tokens
   , detectContactSignal truthContractStatus rawText tokens
   , detectOperationalCause truthContractStatus rawText tokens
   , detectOperationalStatus truthContractStatus rawText tokens
@@ -82,7 +83,6 @@ detectPropositionType truthContractStatus rawText tokens = fromMaybe PlainAssert
   , detectSelfState truthContractStatus rawText tokens
   , detectAffectiveSupport truthContractStatus rawText tokens
   , detectComparisonPlausibility truthContractStatus rawText tokens
-  , detectConfrontSignal truthContractStatus rawText tokens
   , detectNextStepSignal truthContractStatus rawText tokens
   , detectMisunderstanding truthContractStatus rawText tokens
   , detectRepairDirective truthContractStatus rawText tokens

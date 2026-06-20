@@ -20,6 +20,7 @@ import QxFx0.Core.TurnPlanning.Modulation
   , threeStageModulation
   )
 import QxFx0.Semantic.Proposition (PropositionType(..))
+import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Types
 import QxFx0.Types.State.Perspective (PerspectiveScope(..), renderPerspectiveScope)
 
@@ -311,11 +312,14 @@ mkTopicNP topic =
 
 buildComparisonAst :: InputPropositionFrame -> GfNP -> ClaimAst
 buildComparisonAst frame fallbackTopic =
-  case ipfSemanticCandidates frame of
+  case comparisonCandidates (ipfRawText frame) of
     left : right : _ ->
       MoveDistinguish (mkTopicNP left) (mkTopicNP right)
-    _ ->
-      MoveCompare fallbackTopic (MkNP "ponyatie_N")
+    _ -> case ipfSemanticCandidates frame of
+      left : right : _ ->
+        MoveDistinguish (mkTopicNP left) (mkTopicNP right)
+      _ ->
+        MoveCompare fallbackTopic (MkNP "ponyatie_N")
 
 fallbackAstForFamily :: CanonicalMoveFamily -> GfNP -> ClaimAst
 fallbackAstForFamily family topicNP =

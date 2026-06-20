@@ -59,6 +59,7 @@ import QxFx0.Lexicon.PGFStatus (pgfFallbackReason)
 import QxFx0.Lexicon.Inflection (toNominative)
 import QxFx0.Types.Text (finalizeForce)
 import QxFx0.Semantic.Proposition (PropositionType(..))
+import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Policy.ParserKeywords
   ( vapidWords
   )
@@ -592,7 +593,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
           plain (if isEn then "Comparison of plausibility requires an explicit frame. " <> rmpPrimaryClaim rmp
                  else "Сравнение плаузибельности требует явной рамки. " <> rmpPrimaryClaim rmp)
     DistinctionQ ->
-      case ipfSemanticCandidates frame of
+      case distinctionCandidatesForRender frame of
         left:right:_ ->
           let leftNom = if isEn then left else toNominative morph left
               rightNom = if isEn then right else toNominative morph right
@@ -600,11 +601,14 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
               ast = claimAstOrFallback (MoveDistinguish (MkNP (resolveTopicLexeme leftNom)) (MkNP (resolveTopicLexeme rightNom))) (rmpPrimaryClaimAst rmp)
               linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
               claim = linFn "distinguish" ast renderStyle morph rp (rmpPrimaryClaim rmp)
+              claimText = if "ежду" `T.isInfixOf` clText claim
+                then leftNom <> " и " <> rightNom <> " различаются по набору признаков. Без явной рамки сравнение остаётся зависимым от принятых допущений."
+                else clText claim
               distText = case mDist of
                 Just dc -> ". " <> T.intercalate " " (map (if isEn then spEn else spRu) (dcDifferentiators dc))
                 Nothing -> ""
-              bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> clText claim <> distText
-                else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> clText claim <> distText
+              bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> claimText <> distText
+                else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> claimText <> distText
           in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
         _ ->
           plain (if isEn then "Distinction requires an explicit frame of criteria. " <> rmpPrimaryClaim rmp
@@ -717,6 +721,12 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
       , clFallbackReason linearization
       )
     withClaim body ast linearization = withClaimLang body ast linearization "ru_GF_MVP"
+
+distinctionCandidatesForRender :: InputPropositionFrame -> [Text]
+distinctionCandidatesForRender frame =
+  case comparisonCandidates (ipfRawText frame) of
+    candidates@(_:_:_) -> candidates
+    _ -> ipfSemanticCandidates frame
 
 data ClaimLinearization = ClaimLinearization
   { clText :: !Text
@@ -1838,11 +1848,15 @@ generateFromFrame cs field mNetwork frame morph = case frame of
   FT.ChallengeFrame target basis strength ->
     let targetText = T.strip target
         basisText = T.strip basis
+        safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
+        safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
     in case strength of
-         FT.Soft -> "Понимаю позицию. " <> basisText
-                  <> " Но " <> targetText <> " требует уточнения."
-         FT.Firm -> "Возражу: " <> basisText
-                  <> " Это противоречит " <> targetText <> "."
+         FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
+                  <> safeTarget <> " нужно проверить по явному критерию. "
+                  <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."
+         FT.Firm -> "Возражение принято как проверка тезиса. "
+                  <> safeBasis <> " не отменяет " <> safeTarget
+                  <> ", но требует явно назвать критерий и границу утверждения."
 
   FT.GroundFrame topic depth ->
     let topicNom = toNominative morph topic

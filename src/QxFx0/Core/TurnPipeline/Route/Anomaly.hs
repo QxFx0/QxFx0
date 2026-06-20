@@ -28,7 +28,8 @@ import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
 import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
 import QxFx0.Types.Decision.Model (InputPropositionFrame(..))
 import QxFx0.Types.Domain.Atoms (AtomSet(..), MeaningAtom(..))
-import QxFx0.Types.Domain (CanonicalMoveFamily)
+import QxFx0.Types.Domain (CanonicalMoveFamily(..))
+import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Space.Types (SemanticSpace(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), EssenceResetEvent(..), collapseEssence)
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
@@ -144,7 +145,11 @@ detectUnclassifiableInput ss ti =
       hasChallengeMarker = any (`T.isInfixOf` rawLower)
         [ "разве", "но ", "не согласен", "не согласна", "противореч", "неверно"
         , "ошибаешься", "не прав", "спорю", "возраж", "считаю иначе" ]
-  in if not isCovered && not hasChallengeMarker && ratio < threshold && totalCount > 0
+      knownDialogueMove = ipfPropositionType (tiFrame ti) `elem`
+        [ ConfrontQ, MisunderstandingReport, RepairSignal ]
+      knownStructuredMove = ipfPropositionType (tiFrame ti) /= PlainAssert
+        || tiRecommendedFamily ti `elem` [CMDefine, CMDistinguish, CMConfront, CMRepair]
+  in if not isCovered && not hasChallengeMarker && not knownDialogueMove && not knownStructuredMove && ratio < threshold && totalCount > 0
      then Just $ mkUnclassifiable
             (ipfRawText $ tiFrame ti)
             (buildSimpleFamilyScores knownCount totalCount)

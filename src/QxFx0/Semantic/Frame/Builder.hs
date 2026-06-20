@@ -32,9 +32,13 @@ buildFrame intent rawText = case intent of
       }
 
   IntentDistinguish left right ->
+    let (left', right') = case distinctionPairFromRaw rawText of
+          Just pair -> pair
+          Nothing -> (left, right)
+    in
     DistinctionFrame
-      { distLeft = left
-      , distRight = right
+      { distLeft = left'
+      , distRight = right'
       , distCriteria = []
       }
 
@@ -124,26 +128,48 @@ extractTopic rawText =
 stripTrailingPunctuation :: Text -> Text
 stripTrailingPunctuation = T.dropWhileEnd (`elem` ("?!.,;:" :: String))
 
+distinctionPairFromRaw :: Text -> Maybe (Text, Text)
+distinctionPairFromRaw rawText =
+  let normalized = T.unwords (T.words (T.toLower rawText))
+      clean = stripTrailingPunctuation . T.strip
+  in case T.breakOn "между " normalized of
+       (_, afterBetween)
+         | not (T.null afterBetween) -> do
+             rest <- T.stripPrefix "между " afterBetween
+             let (left, rightRaw) = T.breakOn " и " rest
+             right <- T.stripPrefix " и " rightRaw
+             let leftClean = clean left
+                 rightClean = clean right
+             if T.null leftClean || T.null rightClean
+               then Nothing
+               else Just (leftClean, rightClean)
+       _ -> Nothing
+
 -- | Extract the target of a challenge from raw text.
 -- E.g., "это неверно" → "это"
 extractTarget :: Text -> Text
 extractTarget rawText =
-  let stripped = T.strip (T.toLower rawText)
-  in if "это " `T.isPrefixOf` stripped
-     then T.drop 3 stripped
-     else stripped
+  let lowered = T.toLower rawText
+  in if "противореч" `T.isInfixOf` lowered
+       then "возможное противоречие"
+     else if "произвол" `T.isInfixOf` lowered && "свобод" `T.isInfixOf` lowered
+       then "границу между свободой и произволом"
+     else if "мнение" `T.isInfixOf` lowered && "истин" `T.isInfixOf` lowered
+       then "границу между истиной и мнением"
+     else "исходный тезис"
 
 -- | Extract the basis of a challenge from raw text.
 -- E.g., "противоречит опыту" → "противоречит опыту"
 extractBasis :: Text -> Text
 extractBasis rawText =
   let lower = T.toLower rawText
-  in if "противоречит " `T.isInfixOf` lower
-     then let idx = T.count "противоречит " lower
-          in T.take (idx + 20) rawText  -- crude but deterministic
+  in if "не соглас" `T.isInfixOf` lower
+       then "контрпример не сводится к исходному тезису"
+     else if "разве" `T.isInfixOf` lower || "противореч" `T.isInfixOf` lower
+       then "возражение указывает на возможный контрпример"
      else if "неверно" `T.isInfixOf` lower
-          then "это утверждение неверно"
-          else rawText
+       then "утверждение оспаривается"
+     else "возражение требует проверки рамки"
 
 -- | Classify challenge strength from text markers.
 classifyStrength :: Text -> FrameStrength

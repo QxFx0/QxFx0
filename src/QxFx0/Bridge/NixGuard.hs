@@ -16,6 +16,7 @@ import qualified Data.Text as T
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.Environment (lookupEnv)
+import System.Directory (makeAbsolute)
 import QxFx0.ExceptionPolicy (catchIO)
 import Data.Char (isAlphaNum, isAscii, isLetter)
 import Data.Maybe (fromMaybe, isJust)
@@ -47,9 +48,10 @@ checkConstitution nixPath concept agency tension =
             then return (Unavailable "constitution concept unsupported; policy check skipped")
             else return (Blocked "constitution concept unsupported")
     Just conceptKey -> do
+      absoluteNixPath <- makeAbsolute nixPath
       let nixExpr = "let agency = " <> T.pack (show agency)
                    <> "; tension = " <> T.pack (show tension)
-                   <> "; data = import " <> nixStringLiteral (T.pack nixPath)
+                    <> "; data = import " <> nixStringLiteral (T.pack absoluteNixPath)
                    <> "; key = " <> nixStringLiteral conceptKey
                     <> "; match = builtins.filter (c: c.id == key) data.concepts;"
                     <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"

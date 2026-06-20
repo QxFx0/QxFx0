@@ -487,11 +487,11 @@ asksAboutUser rawText =
 -- | Extract comparison candidates from text.
 comparisonCandidates :: Text -> [Text]
 comparisonCandidates rawText =
-  case splitByEither normalized of
+  case splitByBetween normalized of
     pair@(_:_:_) -> take 2 pair
-    _ -> case splitByBetween normalized of
+    _ -> case splitByFrom normalized of
       pair@(_:_:_) -> take 2 pair
-      _ -> splitByFrom normalized
+      _ -> splitByEither normalized
   where
     normalized = T.unwords (T.words (T.toLower (T.replace "\n" " " rawText)))
     splitByEither txt =
@@ -510,7 +510,7 @@ comparisonCandidates rawText =
         (_, afterMezhdu)
           | T.null afterMezhdu -> []
           | otherwise ->
-              let rest = T.drop 6 afterMezhdu  -- drop "между "
+              let rest = fromMaybe afterMezhdu (T.stripPrefix "между " afterMezhdu)
               in case T.breakOn " и " rest of
                    (left, rightRaw)
                      | T.null rightRaw -> []

@@ -63,11 +63,13 @@ commitmentFamilyHint ce
 
 runFamilyCascade :: RoutingPhase -> SystemState -> UserState -> InputPropositionFrame -> AtomSet -> [Text] -> Text
                  -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> ConatusEnergy -> Double -> [EpisodicEvent] -> CommitmentEngagement -> FamilyCascade
-runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history _input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes commitmentEngagement =
+runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes commitmentEngagement =
   let parserLockedFamily =
-        if ipfConfidence frame >= parserHighConfidenceThreshold
+        if (hasChallengeMarker input
+              || ipfPropositionType frame `elem` [ConfrontQ, MisunderstandingReport, RepairSignal]
+              || ipfConfidence frame >= parserHighConfidenceThreshold)
               && ipfPropositionType frame /= PlainAssert
-          then Just (ipfCanonicalFamily frame)
+          then Just (if hasChallengeMarker input then CMConfront else ipfCanonicalFamily frame)
           else Nothing
       familyAfterIdentity =
         case parserLockedFamily of
@@ -225,5 +227,14 @@ buildGuardReport lastGuard oldEgo newEgo =
         case lastGuard of
           Just _ -> (egoAgency oldEgo, egoTension oldEgo)
           Nothing -> (identityGuardDefaultAgencyBaseline, identityGuardDefaultTensionBaseline)
-   in buildIdentityGuardReportSimple defaultIdentityGuardCalibration
-        baseAgency (egoAgency newEgo) baseTension (egoTension newEgo)
+    in buildIdentityGuardReportSimple defaultIdentityGuardCalibration
+         baseAgency (egoAgency newEgo) baseTension (egoTension newEgo)
+
+hasChallengeMarker :: Text -> Bool
+hasChallengeMarker input =
+  let lowered = T.toLower input
+  in any (`T.isInfixOf` lowered) (map T.pack
+       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
+       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
+       , "ты говоришь", "оспариваю"
+       ])

@@ -73,15 +73,39 @@ for task_id in $TASK_IDS; do
       # Bounded retry: up to 3 attempts with 2s gap
       response="ERROR"
       for attempt in 1 2 3; do
-        response=$(curl -s --max-time 15 -X POST http://localhost:9180/turn \
+        response=$(curl -s --max-time 60 -X POST http://localhost:9180/turn \
           -H "Content-Type: application/json" \
           -d "{\"session_id\":\"$task_id\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
-        if [ "$response" != "ERROR" ] && [ -n "$response" ]; then
+        if RESPONSE="$response" python3 - <<'PYEOF'
+import json, os, sys
+
+raw = os.environ.get("RESPONSE", "")
+if raw == "ERROR" or not raw:
+    sys.exit(1)
+try:
+    payload = json.loads(raw)
+except Exception:
+    sys.exit(1)
+if payload.get("status") == "error":
+    sys.exit(1)
+PYEOF
+        then
           break
         fi
         echo "    retry $attempt for $task_id..."
         sleep 2
       done
+      RESPONSE="$response" python3 - <<'PYEOF'
+import json, os, sys
+
+raw = os.environ.get("RESPONSE", "")
+try:
+    payload = json.loads(raw)
+except Exception as exc:
+    raise SystemExit(f"FAIL: invalid System response JSON: {exc}: {raw[:200]}")
+if payload.get("status") == "error":
+    raise SystemExit(f"FAIL: System turn failed: {json.dumps(payload, ensure_ascii=False)}")
+PYEOF
       python3 -c "
 import json, sys
 task_id = sys.argv[1]
@@ -102,6 +126,7 @@ export QXFX0_CONTROL_A_DISABLE_ESSENCE=1
 export QXFX0_CONTROL_A_DISABLE_ADMISSION=1
 export QXFX0_CONTROL_A_DISABLE_REPAIR=1
 export QXFX0_CONTROL_A_DISABLE_CONTENT=1
+export QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST=1
 
  cabal run -v0 qxfx0-main -- --serve-http 9181 2>/dev/null &
 HTTP_PID=$!
@@ -123,15 +148,39 @@ for task_id in $TASK_IDS; do
     if [ -n "$user_text" ]; then
       response="ERROR"
       for attempt in 1 2 3; do
-        response=$(curl -s --max-time 15 -X POST http://localhost:9181/turn \
+        response=$(curl -s --max-time 60 -X POST http://localhost:9181/turn \
           -H "Content-Type: application/json" \
           -d "{\"session_id\":\"ctrl-${task_id}\",\"input\":\"$user_text\"}" 2>/dev/null || echo "ERROR")
-        if [ "$response" != "ERROR" ] && [ -n "$response" ]; then
+        if RESPONSE="$response" python3 - <<'PYEOF'
+import json, os, sys
+
+raw = os.environ.get("RESPONSE", "")
+if raw == "ERROR" or not raw:
+    sys.exit(1)
+try:
+    payload = json.loads(raw)
+except Exception:
+    sys.exit(1)
+if payload.get("status") == "error":
+    sys.exit(1)
+PYEOF
+        then
           break
         fi
         echo "    retry $attempt for ctrl-$task_id..."
         sleep 2
       done
+      RESPONSE="$response" python3 - <<'PYEOF'
+import json, os, sys
+
+raw = os.environ.get("RESPONSE", "")
+try:
+    payload = json.loads(raw)
+except Exception as exc:
+    raise SystemExit(f"FAIL: invalid Control-A response JSON: {exc}: {raw[:200]}")
+if payload.get("status") == "error":
+    raise SystemExit(f"FAIL: Control-A turn failed: {json.dumps(payload, ensure_ascii=False)}")
+PYEOF
       python3 -c "
 import json, sys
 task_id = sys.argv[1]
@@ -212,7 +261,7 @@ PYEOF
 
 echo "[6/6] Recording metadata..."
 python3 - "$OUTPUT" <<'PYEOF'
-import json, os, datetime, hashlib
+import json, os, datetime, hashlib, sys
 
 output = sys.argv[1]
 metadata = {

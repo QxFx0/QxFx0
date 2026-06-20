@@ -463,11 +463,13 @@ buildPrepareEffectPlan ss input currentTime =
       recommendedFamily = case admittedLogicFamilies of
         ((fam, _):_) -> fam
         [] -> CMGround
+      challengeAdjustedRecommendedFamily =
+        if hasChallengeMarker input then CMConfront else recommendedFamily
       earlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
         { efaiTruthContractStatus = ssTruthContractStatus ss
         , efaiConatusGateFired = conatusGateFired
         }
-      admittedEarlyFamily = admitEarlyFamilyRecommendation earlyFamilyAdmissionInput recommendedFamily admittedBaseFrame
+      admittedEarlyFamily = admitEarlyFamilyRecommendation earlyFamilyAdmissionInput challengeAdjustedRecommendedFamily admittedBaseFrame
       admittedRecommendedFamily = aefFamily admittedEarlyFamily
       interpretationAdmissionInput = InterpretationAdmissionInput
         { iaiTruthContractStatus = ssTruthContractStatus ss
@@ -538,6 +540,15 @@ buildPrepareEffectPlan ss input currentTime =
 
 useGeometricIntent :: Bool
 useGeometricIntent = True
+
+hasChallengeMarker :: Text -> Bool
+hasChallengeMarker input =
+  let lowered = T.toLower input
+  in any (`T.isInfixOf` lowered)
+       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
+       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
+       , "ты говоришь", "оспариваю"
+       ]
 
 buildGeometricClassifier :: Map Text Text -> SemanticSpace -> Maybe IntentClassifier
 buildGeometricClassifier lemmaMap space

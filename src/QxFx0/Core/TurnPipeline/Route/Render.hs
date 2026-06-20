@@ -127,6 +127,14 @@ data RenderStatic = RenderStatic
   , rsSurfacingFragmentText :: !Text
   } deriving stock (Eq, Show)
 
+semanticIntentForRender :: PropositionType -> Text -> [Text] -> MorphologyData -> SemanticIntent
+semanticIntentForRender propositionType input tokens morphology =
+  case propositionType of
+    ConfrontQ -> IntentChallenge
+    MisunderstandingReport -> IntentRepair
+    RepairSignal -> IntentRepair
+    _ -> classifyIntent input tokens morphology
+
 data LocalRecoveryPlan = LocalRecoveryPlan
   { lrpCause :: !LocalRecoveryCause
   , lrpStrategy :: !LocalRecoveryStrategy
@@ -232,7 +240,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticInput = input
       semanticTokens = map T.toLower (T.words (T.strip input))
       semanticMorph = ssMorphology ss
-      semanticIntent = classifyIntent semanticInput semanticTokens semanticMorph
+      semanticIntent = semanticIntentForRender (ipfPropositionType (tiFrame ti)) semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
       semanticText = generateFromFrame (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) semanticFrame semanticMorph
       semanticNonUnknown = case semanticIntent of
@@ -672,9 +680,17 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       -- (severity 100, dominates everything).
       delibRecoveryCause = tpDeliberation tp >>= planRecoveryCause . delibReconciled
       finalRecoveryCause = pickHigherSeverity delibRecoveryCause recoveryCause
+      decisionFamily = case surfaceProv of
+        FromRecovery -> CMRepair
+        _ | hasChallengeMarkerForDecision (ipfRawText (tiFrame ti)) -> CMConfront
+        _ -> tpFinalFamily tp
+      decisionForce = case surfaceProv of
+        FromRecovery -> IFOffer
+        _ | decisionFamily == CMConfront -> IFConfront
+        _ -> tpFinalForce tp
       decision = TurnDecision
-        { tdFamily = case surfaceProv of FromRecovery -> CMRepair; _ -> tpFinalFamily tp
-        , tdForce = case surfaceProv of FromRecovery -> IFOffer; _ -> tpFinalForce tp
+        { tdFamily = decisionFamily
+        , tdForce = decisionForce
         , tdRenderStrategy = tpRenderStrategy tp
         , tdRenderStyle = rcpStyle (tpRcpFinal tp)
         , tdGuardStatus =
@@ -811,6 +827,15 @@ safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assembl
             , etoArtifactManifest = manifest
             , etoTransitionWon = False
             }
+
+hasChallengeMarkerForDecision :: Text -> Bool
+hasChallengeMarkerForDecision input =
+  let lowered = T.toLower input
+  in any (`T.isInfixOf` lowered)
+       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
+       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
+       , "ты говоришь", "оспариваю"
+       ]
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
 buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = Nothing
