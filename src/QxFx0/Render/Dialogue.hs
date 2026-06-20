@@ -19,7 +19,7 @@ module QxFx0.Render.Dialogue
   ) where
 
 import Data.Text (Text)
-import QxFx0.Self.Field (Field, emptyField)
+import QxFx0.Self.Field (Field, emptyField, fieldConfidence, fieldCounterfactual, fieldConsolidation, fieldResonance, unFieldConfidence, unCounterfactual, unConsolidation, unResonance)
 import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
@@ -30,6 +30,11 @@ import QxFx0.Semantic.Content
   , lookupChallengeContent, lookupGroundContent, lookupPurposeContent
   , ChallengeContent(..), GroundContent(..), PurposeContent(..)
   , renderPredicateArgued, lookupChallengeResponse, ChallengeResponse(..)
+  , challengeIntros, pickChallengeIntro
+  )
+import QxFx0.Semantic.Content.AtomStore (AtomId(..))
+import QxFx0.Semantic.Content.PathFinder
+  ( FieldProfile(..), composeDefinition
   )
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -1845,15 +1850,26 @@ generateFromFrame cs field mNetwork frame morph = case frame of
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
-        composedPreds = case mNetwork of
-          Just network -> composeFromActivation cs field topic network
-          Nothing -> case selectPredicates cs field topic Nothing of
-            (sp:_) -> spPredicates sp
-            [] -> []
-        mDefContent = case composedPreds of
-          [] -> lookupDefinitionContent topic
-          preds -> Just $ DefinitionContent topic preds
-    in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
+        -- Generative path: compose from AtomStore graph via PathFinder
+        fp = FieldProfile
+               (unFieldConfidence (fieldConfidence field))
+               (unCounterfactual (fieldCounterfactual field))
+               (unConsolidation (fieldConsolidation field))
+               (unResonance (fieldResonance field))
+        genText = composeDefinition fp 3 (AtomId topic)
+    in if not (T.null genText)
+       then authorityText <> " " <> topicNom <> " — " <> genText
+       else
+         -- Fallback: existing corpus + activation path
+         let composedPreds = case mNetwork of
+               Just network -> composeFromActivation cs field topic network
+               Nothing -> case selectPredicates cs field topic Nothing of
+                 (sp:_) -> spPredicates sp
+                 [] -> []
+             mDefContent = case composedPreds of
+               [] -> lookupDefinitionContent topic
+               preds -> Just $ DefinitionContent topic preds
+         in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
