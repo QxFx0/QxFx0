@@ -21,9 +21,15 @@ module QxFx0.Render.Dialogue
 import Data.Text (Text)
 import QxFx0.Self.Field (Field, emptyField)
 import QxFx0.Semantic.Content
-  ( SemanticPredicate(..), DefinitionContent(..), DistinctionContent(..)
-  , lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic, isCoveredPair
-  , coveredTopics
+  ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
+  , isCoveredPair, coveredTopics, SemanticPredicate(..)
+  , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
+  , ConceptCategory(..), classifyConceptCategory
+  , genericDefinitionPredicates, genericDistinctionPredicates
+  , lookupDefinitionWithGeneric, lookupDistinctionWithGeneric
+  , lookupChallengeContent, lookupGroundContent, lookupPurposeContent
+  , ChallengeContent(..), GroundContent(..), PurposeContent(..)
+  , renderPredicateArgued, lookupChallengeResponse, ChallengeResponse(..)
   )
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -645,6 +651,12 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
     ConfrontQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
           selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+          objectionText = ipfRawText frame
+          -- Phase E: try challenge-response first, fall back to old template
+          mChallengeResp = if not isEn
+                           then lookupChallengeResponse topicRef objectionText
+                                  (concatMap spPredicates (maybe [] (:[]) (listToMaybe selectedPreds)))
+                           else Nothing
           acknowledgePrior = case selectedPreds of
             (sp:_) ->
               if isEn
@@ -662,11 +674,19 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
               Nothing -> ""
           ast = claimAstOrFallback (MoveConfront (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "тема")))) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          fallback = if isEn
-                       then "I hear your objection. " <> acknowledgePrior
-                         <> " Let me clarify my position: the claim I made is based on a working frame, not an absolute. If your counter-argument holds within that frame, I will revise."
-                       else "Я слышу твоё возражение. " <> acknowledgePrior
-                         <> " Уточню свою позицию: мой тезис опирается на рабочую рамку, а не на абсолют. Если твой контраргумент действует в этой рамке, я пересмотрю."
+          -- Phase E: challenge-response with argued predicate + varied intro
+          challengeResponseText = case mChallengeResp of
+            Just (intro, cr) ->
+              intro <> " " <> crRestate cr <> ". "
+              <> renderPredicateArgued (crRelevantPredicate cr)
+            Nothing -> ""
+          fallback = if challengeResponseText /= ""
+                       then challengeResponseText
+                       else if isEn
+                              then "I hear your objection. " <> acknowledgePrior
+                                <> " Let me clarify my position: the claim I made is based on a working frame, not an absolute. If your counter-argument holds within that frame, I will revise."
+                              else "Я слышу твоё возражение. " <> acknowledgePrior
+                                <> " Уточню свою позицию: мой тезис опирается на рабочую рамку, а не на абсолют. Если твой контраргумент действует в этой рамке, я пересмотрю."
           claim = linFn "confront" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
