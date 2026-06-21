@@ -41,6 +41,7 @@ module QxFx0.Semantic.Content.AtomStore
   , relationsFromAtom
   , relationsToAtom
   , allTopics
+  , allAtomIds
     -- * Verbalizer (simple, for round-trip)
   , verbalizeRelation
   , verbalizeRelationStored
@@ -349,12 +350,12 @@ atomStore = M.fromList
   , mkConcept "порядок_следования_событий" "порядок следования событий" "порядок"
   , mkConcept "необратимость_и_неравномерность" "необратимо и неравномерно" "необратимо"
   , mkConcept "необратимость" "необратимо — прошлое недоступно для изменения" "необратимо"
-  , mkConcept "самокоррекция" "к самокоррекции" "самокоррекции"
+  , mkConcept "самокоррекция" "самокоррекция" "самокоррекция"
   , mkConcept "обобщение_и_абстракция" "к обобщению и абстракции" "обобщению"
   , mkConcept "отличие_от_интуиции" "от интуиции потребностью в доказательстве" "интуиции"
   , mkConcept "факт_существования" "сам факт существования" "факт"
   , mkConcept "условие_возможности_суждения" "как условие возможности любого суждения" "условие"
-  , mkConcept "сущность" "сущности" "сущности"
+  , mkConcept "сущность" "сущность" "сущность"
   , mkConcept "события_и_интерпретация" "из событий и их интерпретации" "событий"
   , mkConcept "прошлое_с_настоящим" "прошлое с настоящим через интерпретацию" "прошлое"
   , mkConcept "точка_зрения_рассказчика" "от точки зрения рассказчика" "точки"
@@ -704,6 +705,21 @@ relationStore =
   , rel "доверие" "правда" RelRelatedTo CaseInstrumental "с правдой"
       "доверие связано с правдой" "trust is related to truthfulness"
       `withVerb` "связано"
+  -- ============================================================
+  -- Concept→topic reverse edges (mesh connectivity for PathFinder)
+  -- ============================================================
+  , rel "выбор" "свобода" RelSupports CaseAccusative "свободу"
+      "выбор поддерживает свободу" "choice supports freedom"
+  , rel "воспроизводимость" "истина" RelRelatedTo CaseInstrumental "с истиной"
+      "воспроизводимость связана с истиной" "reproducibility is related to truth"
+  , rel "сущность" "бытие" RelPrecedes CaseDative "за бытием"
+      "сущность следует за бытием" "essence follows being"
+      `withVerb` "следует"
+  , rel "мышление" "язык" RelDependsOn CaseGenitive "от языка"
+      "мышление зависит от языка" "thought depends on language"
+  , rel "самокоррекция" "разум" RelDirectedAt CaseAccusative "разум"
+      "самокоррекция направлена на разум" "self-correction is directed at reason"
+      `withVerb` "направлена на"
   ]
   where
     rel fromId toId rt oc objText ru en =
@@ -744,6 +760,12 @@ allTopics :: [Text]
 allTopics = map atomDisplay
          $ filter (\a -> atomCategory a == CatTopic)
          $ M.elems atomStore
+
+-- | All atom IDs in the store (topics + concepts + properties + processes).
+-- Used for substrate admission: candidates can target any known atom,
+-- not just philosophical topics.
+allAtomIds :: [AtomId]
+allAtomIds = M.keys atomStore
 
 -- ============================================================
 -- Verbalizer (simple — for round-trip parity)
