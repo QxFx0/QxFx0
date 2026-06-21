@@ -1,0 +1,511 @@
+# Эталонные вопросы для семантического тестирования QxFx0
+# C3.1: 50 эталонных вопросов
+# Формат: вопрос + темы + ожидаемые свойства ответа
+# Используется валидатором (C3.2) для проверки релевантности и качества ответов.
+
+version: 1
+questions:
+
+  - id: rq-01
+    question: "Что такое свобода?"
+    topics: ["svoboda"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["свобода", "возможность", "выбор"]
+    description: "Базовый определительный вопрос по концепту свобода"
+
+  - id: rq-02
+    question: "В чём смысл жизни?"
+    topics: ["smysl"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["смысл", "жизнь", "значение"]
+    description: "Фундаментальный вопрос о смысле"
+
+  - id: rq-03
+    question: "Что есть истина?"
+    topics: ["istina"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["истина", "правда", "соответствие"]
+    description: "Вопрос об истине — ключевой для философии"
+
+  - id: rq-04
+    question: "Что такое любовь?"
+    topics: ["lyubov"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["любовь", "чувство", "отношение"]
+    description: "Вопрос о любви — эмоционально-философский концепт"
+
+  - id: rq-05
+    question: "Как мы воспринимаем время?"
+    topics: ["vremya"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["время", "восприятие", "прошлое", "настоящее"]
+    description: "Вопрос о времени — феноменологический"
+
+  - id: rq-06
+    question: "Где граница между знанием и верой?"
+    topics: ["granitsa", "istina"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["граница", "знание", "вера"]
+    description: "Конфронтационный вопрос между знанием и верой через границу"
+
+  - id: rq-07
+    question: "Что определяет нашу идентичность?"
+    topics: ["identichnost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["идентичность", "определяет", "я"]
+    description: "Вопрос о природе идентичности"
+
+  - id: rq-08
+    question: "Как язык формирует наше мышление?"
+    topics: ["yazyk"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["язык", "мышление", "формирует"]
+    description: "Вопрос о языке и его влиянии на мысль"
+
+  - id: rq-09
+    question: "Что значит быть свободным?"
+    topics: ["svoboda", "volya"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["свобод", "воля", "быть"]
+    description: "Вопрос о свободе через волю — связка двух концептов"
+
+  - id: rq-10
+    question: "Чем цифра отличается от смысла?"
+    topics: ["cifra", "smysl"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["цифра", "смысл", "отличие"]
+    description: "Конфронтационный вопрос между количественным и качественным"
+
+  # --- Одиночные концепты (rq-11..rq-35) ---
+
+  - id: rq-11
+    question: "Чем произвол отличается от свободы?"
+    topics: ["proizvol", "svoboda"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["произвол", "свобода", "отличие"]
+    description: "Различение свободы и произвола"
+
+  - id: rq-12
+    question: "Что такое ответственность?"
+    topics: ["otvetstvennost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["ответственность", "ответ", "долг"]
+    description: "Вопрос о природе ответственности"
+
+  - id: rq-13
+    question: "Чем мнение отличается от истины?"
+    topics: ["mnenie", "istina"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["мнение", "истина", "отличие"]
+    description: "Различение мнения и истины"
+
+  - id: rq-14
+    question: "Как память формирует нашу идентичность?"
+    topics: ["pamyat", "identichnost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["память", "идентичность", "формирует"]
+    description: "Связь памяти и идентичности"
+
+  - id: rq-15
+    question: "Что такое воспоминание и как оно связано с памятью?"
+    topics: ["vospominanie", "pamyat"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["воспоминание", "память", "связь"]
+    description: "Воспоминание как акт памяти"
+
+  - id: rq-16
+    question: "Что такое сознание?"
+    topics: ["soznanie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["сознание", "осознание", "субъект"]
+    description: "Фундаментальный вопрос о сознании"
+
+  - id: rq-17
+    question: "Чем самосознание отличается от сознания?"
+    topics: ["samosoznanie", "soznanie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["самосознание", "сознание", "отличие"]
+    description: "Различение сознания и самосознания"
+
+  - id: rq-18
+    question: "Что такое вера?"
+    topics: ["vera"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["вера", "доверие", "убеждение"]
+    description: "Вопрос о природе веры"
+
+  - id: rq-19
+    question: "Что такое красота?"
+    topics: ["krasota"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["красота", "эстетика", "прекрасное"]
+    description: "Эстетический вопрос о красоте"
+
+  - id: rq-20
+    question: "Что такое долг?"
+    topics: ["dolg"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["долг", "обязанность", "мораль"]
+    description: "Вопрос о долге — этический концепт"
+
+  - id: rq-21
+    question: "Чем доверие отличается от веры?"
+    topics: ["doverie", "vera"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["доверие", "вера", "отличие"]
+    description: "Различение доверия и веры"
+
+  - id: rq-22
+    question: "Как страх связан со свободой?"
+    topics: ["strah", "svoboda"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["страх", "свобода", "связь"]
+    description: "Экзистенциальный вопрос о страхе и свободе"
+
+  - id: rq-23
+    question: "Что такое надежда?"
+    topics: ["nadezhda"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["надежда", "ожидание", "будущее"]
+    description: "Вопрос о природе надежды"
+
+  - id: rq-24
+    question: "Что такое справедливость?"
+    topics: ["spravedlivost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["справедливость", "равенство", "право"]
+    description: "Вопрос о справедливости — социально-этический концепт"
+
+  - id: rq-25
+    question: "Что такое разум?"
+    topics: ["razum"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["разум", "мышление", "рациональность"]
+    description: "Вопрос о разуме — ключевой для философии познания"
+
+  - id: rq-26
+    question: "Что такое бытие?"
+    topics: ["bytie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["бытие", "существование", "онтология"]
+    description: "Онтологический вопрос о бытии"
+
+  - id: rq-27
+    question: "Как история формирует наше понимание времени?"
+    topics: ["istoriya", "vremya"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["история", "время", "формирует"]
+    description: "Связь истории и времени"
+
+  - id: rq-28
+    question: "Что такое смерть?"
+    topics: ["smert"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["смерть", "конец", "жизнь"]
+    description: "Экзистенциальный вопрос о смерти"
+
+  - id: rq-29
+    question: "Что такое одиночество?"
+    topics: ["odinochestvo"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["одиночество", "изоляция", "я"]
+    description: "Вопрос об одиночестве — экзистенциальный концепт"
+
+  - id: rq-30
+    question: "Что такое труд?"
+    topics: ["trud"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["труд", "работа", "деятельность"]
+    description: "Вопрос о труде — философско-экономический концепт"
+
+  - id: rq-31
+    question: "Что такое покой?"
+    topics: ["pokoy"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["покой", "спокойствие", "тишина"]
+    description: "Вопрос о покое — философский концепт"
+
+  - id: rq-32
+    question: "Что такое власть?"
+    topics: ["vlast"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["власть", "господство", "контроль"]
+    description: "Вопрос о власти — социально-философский концепт"
+
+  - id: rq-33
+    question: "Чем правда отличается от истины?"
+    topics: ["pravda", "istina"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["правда", "истина", "отличие"]
+    description: "Различение правды и истины"
+
+  - id: rq-34
+    question: "Что такое молчание?"
+    topics: ["molchanie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["молчание", "тишина", "отсутствие"]
+    description: "Вопрос о молчании — философско-языковой концепт"
+
+  - id: rq-35
+    question: "Что означает концепт ремонт в философском смысле?"
+    topics: ["remont"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["ремонт", "восстановление", "исправление"]
+    description: "Вопрос о ремонте — метафорический концепт"
+
+  # --- Кросс-топические вопросы (rq-36..rq-50) ---
+
+  - id: rq-36
+    question: "Как ответственность связана со свободой?"
+    topics: ["otvetstvennost", "svoboda"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["ответственность", "свобода", "связь"]
+    description: "Свобода и ответственность — две стороны одного концепта"
+
+  - id: rq-37
+    question: "Как надежда связана со страхом?"
+    topics: ["nadezhda", "strah"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["надежда", "страх", "связь"]
+    description: "Надежда и страх — экзистенциальная пара"
+
+  - id: rq-38
+    question: "Как справедливость связана с долгом?"
+    topics: ["spravedlivost", "dolg"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["справедливость", "долг", "связь"]
+    description: "Справедливость и долг — этическая пара"
+
+  - id: rq-39
+    question: "Как разум связан с верой?"
+    topics: ["razum", "vera"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["разум", "вера", "связь"]
+    description: "Разум и вера — гносеологическая пара"
+
+  - id: rq-40
+    question: "Как красота связана с истиной?"
+    topics: ["krasota", "istina"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["красота", "истина", "связь"]
+    description: "Красота и истина — эстетико-гносеологическая пара"
+
+  - id: rq-41
+    question: "Как смерть связана со смыслом?"
+    topics: ["smert", "smysl"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["смерть", "смысл", "связь"]
+    description: "Смерть и смысл — экзистенциальная пара"
+
+  - id: rq-42
+    question: "Как власть связана с ответственностью?"
+    topics: ["vlast", "otvetstvennost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["власть", "ответственность", "связь"]
+    description: "Власть и ответственность — социально-этическая пара"
+
+  - id: rq-43
+    question: "Как молчание связано с языком?"
+    topics: ["molchanie", "yazyk"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["молчание", "язык", "связь"]
+    description: "Молчание и язык — философско-языковая пара"
+
+  - id: rq-44
+    question: "Как одиночество связано с самосознанием?"
+    topics: ["odinochestvo", "samosoznanie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["одиночество", "самосознание", "связь"]
+    description: "Одиночество и самосознание — экзистенциальная пара"
+
+  - id: rq-45
+    question: "Как труд связан со смыслом?"
+    topics: ["trud", "smysl"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["труд", "смысл", "связь"]
+    description: "Труд и смысл — философско-экономическая пара"
+
+  - id: rq-46
+    question: "Как покой связан с бытием?"
+    topics: ["pokoy", "bytie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["покой", "бытие", "связь"]
+    description: "Покой и бытие — онтологическая пара"
+
+  - id: rq-47
+    question: "Как доверие связано с ответственностью?"
+    topics: ["doverie", "otvetstvennost"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["доверие", "ответственность", "связь"]
+    description: "Доверие и ответственность — этическая пара"
+
+  - id: rq-48
+    question: "Как память связана с историей?"
+    topics: ["pamyat", "istoriya"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["память", "история", "связь"]
+    description: "Память и история — темпоральная пара"
+
+  - id: rq-49
+    question: "Как воля связана с властью?"
+    topics: ["volya", "vlast"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["воля", "власть", "связь"]
+    description: "Воля и власть — философско-политическая пара"
+
+  - id: rq-50
+    question: "Как сознание связано с бытием?"
+    topics: ["soznanie", "bytie"]
+    expected_properties:
+      min_length: 20
+      must_contain_topic_word: true
+      must_not_be_tautology: true
+      expected_keywords: ["сознание", "бытие", "связь"]
+    description: "Сознание и бытие — фундаментальная онтологическая пара"
