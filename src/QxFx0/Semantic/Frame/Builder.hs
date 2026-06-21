@@ -13,6 +13,7 @@ module QxFx0.Semantic.Frame.Builder
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import QxFx0.Semantic.Content.AtomStore (allTopics)
 
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..))
 import QxFx0.Semantic.Frame.Types
@@ -151,38 +152,24 @@ distinctionPairFromRaw rawText =
 extractTarget :: Text -> Text
 extractTarget rawText =
   let lowered = T.toLower rawText
-      -- Check for explicit topic mentions first (before generic patterns)
-      hasFreedom = "свобод" `T.isInfixOf` lowered
-      hasTruth = "истин" `T.isInfixOf` lowered
-      hasConsciousness = "сознан" `T.isInfixOf` lowered
-      hasDeath = "смерт" `T.isInfixOf` lowered
-      hasFear = "страх" `T.isInfixOf` lowered
-      hasFaith = "вера" `T.isInfixOf` lowered
-      hasTime = "времен" `T.isInfixOf` lowered
-      hasMemory = "памят" `T.isInfixOf` lowered
-  in if hasFreedom
-       then "свобода"
-     else if hasTruth
-       then "истина"
-     else if hasConsciousness
-       then "сознание"
-     else if hasDeath
-       then "смерть"
-     else if hasFear
-       then "страх"
-     else if hasFaith
-       then "вера"
-     else if hasTime
-       then "время"
-     else if hasMemory
-       then "память"
-     else if "противореч" `T.isInfixOf` lowered
-       then "возможное противоречие"
-     else if "произвол" `T.isInfixOf` lowered
-       then "границу между свободой и произволом"
-     else if "мнение" `T.isInfixOf` lowered
-       then "границу между истиной и мнением"
-     else "исходный тезис"
+      -- Check all known topics from AtomStore, not just hardcoded subset
+      matchTopic topic = if T.take 5 topic `T.isInfixOf` lowered
+                           then Just topic
+                           else Nothing
+      matchedTopic = case [ t | t <- allTopics, matchTopic t /= Nothing ] of
+        (t:_) -> Just t
+        [] -> Nothing
+  in case matchedTopic of
+       Just t -> t
+       Nothing ->
+         -- Fallback: generic patterns
+         if "противореч" `T.isInfixOf` lowered
+           then "возможное противоречие"
+         else if "произвол" `T.isInfixOf` lowered
+           then "границу между свободой и произволом"
+         else if "мнение" `T.isInfixOf` lowered
+           then "границу между истиной и мнением"
+         else "исходный тезис"
 
 -- | Extract the basis of a challenge from raw text.
 -- E.g., "противоречит опыту" → "противоречит опыту"

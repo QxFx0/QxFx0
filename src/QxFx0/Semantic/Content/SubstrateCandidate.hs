@@ -235,25 +235,29 @@ scoreCandidate cand topic text =
 -- ============================================================
 
 -- | Admit a single candidate. Returns Admitted or Rejected with reason.
+-- Requires both topic AND object atoms to exist in AtomStore.
 admitCandidate :: AdmissionConfig -> [AtomId] -> SubstrateCandidate -> AdmissionStatus
 admitCandidate config knownAtoms cand =
   let topicOk = not (acRequireTopicMatch config)
                 || AtomId (scFromTopic cand) `elem` knownAtoms
+      objOk = AtomId (scToAtomSurface cand) `elem` knownAtoms
       confOk = scConfidence cand >= acMinConfidence config
       verbOk = scRelTypeGuess cand `elem` acRelationWhitelist config
       notSelf = scToAtomSurface cand /= scFromTopic cand
       notEmpty = not (T.null (scToAtomSurface cand))
   in if not topicOk
        then Rejected "topic not in AtomStore"
-       else if not confOk
-         then Rejected ("confidence below threshold: " <> T.pack (show (scConfidence cand)))
-         else if not verbOk
-           then Rejected ("verb not in whitelist: " <> scRelTypeGuess cand)
-           else if not notSelf
-             then Rejected "self-referential"
-             else if not notEmpty
-               then Rejected "empty object"
-               else Admitted
+       else if not objOk
+         then Rejected "object atom not in AtomStore"
+         else if not confOk
+           then Rejected ("confidence below threshold: " <> T.pack (show (scConfidence cand)))
+           else if not verbOk
+             then Rejected ("verb not in whitelist: " <> scRelTypeGuess cand)
+             else if not notSelf
+               then Rejected "self-referential"
+               else if not notEmpty
+                 then Rejected "empty object"
+                 else Admitted
 
 -- | Admit a batch of candidates. Returns (admitted, rejected).
 admitCandidates :: AdmissionConfig -> [AtomId] -> [SubstrateCandidate]

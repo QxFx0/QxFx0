@@ -238,6 +238,7 @@ bootstrapSession quiet sessionId = do
         , ssSessionId = sessionId
         , ssContentSelector = seedSelector
         , ssLemmaMap = buildLemmaMap morphology
+        , ssSemanticNetwork = mergedNetwork
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
@@ -290,6 +291,8 @@ bootstrapSession quiet sessionId = do
                      { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
                      }
                    , ssSessionId = sessionId
+                   , ssSemanticNetwork = mergedNetwork
+                   , ssRuntimeGraph = withPromoted promotedRelations seedGraph
                    }
              in if truthContractIsAuthoritative (ssTruthContractStatus restored0)
                   then case rebuildGovernedSystemState restored0 of

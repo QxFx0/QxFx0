@@ -171,7 +171,7 @@ promotionTests = TestList
   , TestCase $ do
       let cands = [ SubstrateCandidate
                       { scFromTopic = "истина"
-                      , scToAtomSurface = "реальность"
+                      , scToAtomSurface = "истина"
                       , scRelTypeGuess = "претендует"
                       , scConfidence = 0.5
                       , scSourceSpan = SourceSpan "test" "ontology" "relation"
