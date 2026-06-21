@@ -26,6 +26,14 @@ module QxFx0.Semantic.Content.AtomStore
   , ObjectCase(..)
   , RelationSource(..)
   , PathProof(..)
+    -- * AtomGraph (runtime graph)
+  , AtomGraph(..)
+  , seedGraph
+  , withPromoted
+  , graphRelationsFromAtom
+  , graphAllRelations
+    -- * GeneratedSurface
+  , GeneratedSurface(..)
     -- * Stores
   , atomStore
   , relationStore
@@ -46,7 +54,9 @@ module QxFx0.Semantic.Content.AtomStore
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson
+import qualified Data.Set as S
+import Data.List (foldl', sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
@@ -60,7 +70,7 @@ import GHC.Generics (Generic)
 
 newtype AtomId = AtomId Text
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData, ToJSON, FromJSON, ToJSONKey, FromJSONKey)
 
 data AtomCategory
   = CatTopic       -- philosophical topic (свобода, истина, ...)
@@ -171,6 +181,94 @@ data Relation = Relation
 data PathProof = PathProof
   { ppEdges :: ![Relation]
   , ppTopic :: !Text
+  } deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- ============================================================
+-- AtomGraph — runtime graph with indexed lookups
+-- ============================================================
+
+data AtomGraph = AtomGraph
+  { agRelations :: ![Relation]          -- canonical sorted list
+  , agByFrom    :: !(Map AtomId [Relation])  -- index: from_atom → edges
+  , agVersion   :: !Text                -- version tag for trace
+  } deriving stock (Eq, Show, Generic)
+  deriving anyclass (NFData, ToJSON)
+
+-- | Seed graph: built from static relationStore, sorted canonically.
+seedGraph :: AtomGraph
+seedGraph =
+  let rels = sortRelations relationStore
+      idx = buildIndex rels
+  in AtomGraph rels idx "seed-v1"
+
+-- | Merge promoted relations into seed graph.
+-- Seed wins: if a promoted relation has the same (from, to, type) as a seed
+-- relation, the seed is kept. Promoted duplicates merge by first occurrence.
+-- Result is canonically sorted for deterministic path order.
+withPromoted :: [Relation] -> AtomGraph -> AtomGraph
+withPromoted promoted baseGraph =
+  let seedRels = agRelations baseGraph
+      seedKeys = S.fromList (map relKey seedRels)
+      -- Only keep promoted relations whose key is not in seed
+      newPromoted = filter (\r -> not (relKey r `S.member` seedKeys)) promoted
+      -- Dedup promoted by key (first wins)
+      dedupedPromoted = dedupByRelKey newPromoted
+      allRels = sortRelations (seedRels ++ dedupedPromoted)
+      idx = buildIndex allRels
+  in AtomGraph allRels idx (agVersion baseGraph <> "+promoted")
+
+-- | Relation identity key: (from, to, type).
+relKey :: Relation -> (AtomId, AtomId, RelationType)
+relKey r = (relFrom r, relTo r, relType r)
+
+-- | Deduplicate relations by key, keeping first occurrence.
+dedupByRelKey :: [Relation] -> [Relation]
+dedupByRelKey = go S.empty
+  where
+    go _ [] = []
+    go seen (r:rs)
+      | k `S.member` seen = go seen rs
+      | otherwise = r : go (S.insert k seen) rs
+      where k = relKey r
+
+-- | Sort relations canonically: by from, then to, then type.
+sortRelations :: [Relation] -> [Relation]
+sortRelations = sortOn (\r -> (relFrom r, relTo r, show (relType r)))
+
+-- | Build index: from_atom → list of relations.
+buildIndex :: [Relation] -> Map AtomId [Relation]
+buildIndex = foldl' (\acc r -> M.insertWith (++) (relFrom r) [r] acc) M.empty
+
+-- | Lookup relations from an atom in a specific graph.
+graphRelationsFromAtom :: AtomGraph -> AtomId -> [Relation]
+graphRelationsFromAtom g aid = fromMaybe [] (M.lookup aid (agByFrom g))
+
+-- | Get all relations in a graph.
+graphAllRelations :: AtomGraph -> [Relation]
+graphAllRelations = agRelations
+
+-- | Empty graph (for FromJSON fallback).
+emptyGraph :: AtomGraph
+emptyGraph = AtomGraph [] M.empty "empty"
+
+-- | Custom FromJSON: rebuild index if missing (old persisted state).
+instance FromJSON AtomGraph where
+  parseJSON = withObject "AtomGraph" $ \o -> do
+    rels <- o .: "agRelations"
+    mIdx <- o .:? "agByFrom" .!= M.empty
+    ver <- o .:? "agVersion" .!= "legacy"
+    let idx = if M.null mIdx && not (null rels) then buildIndex rels else mIdx
+    pure (AtomGraph rels idx ver)
+
+-- ============================================================
+-- GeneratedSurface — structured output with provenance
+-- ============================================================
+
+data GeneratedSurface = GeneratedSurface
+  { gsText       :: !Text
+  , gsPaths      :: ![PathProof]
+  , gsProvenance :: ![RelationSource]
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 

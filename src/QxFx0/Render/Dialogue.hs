@@ -32,9 +32,9 @@ import QxFx0.Semantic.Content
   , renderPredicateArgued, lookupChallengeResponse, ChallengeResponse(..)
   , challengeIntros, pickChallengeIntro
   )
-import QxFx0.Semantic.Content.AtomStore (AtomId(..))
+import QxFx0.Semantic.Content.AtomStore (AtomId(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
-  ( FieldProfile(..), composeDefinition
+  ( FieldProfile(..), composeDefinition, GeneratedSurface(..)
   )
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -1851,14 +1851,14 @@ generateFromFrame cs field mNetwork frame morph = case frame of
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
         -- Generative path: compose from AtomStore graph via PathFinder.
-        -- Uses relObjectText (correct case) + composeArguedPredicate
-        -- (rationale/counter/synthesis from length-2 paths).
+        -- Uses seedGraph for now; runtimeGraph integration in Step A5.
         fp = FieldProfile
                (unFieldConfidence (fieldConfidence field))
                (unCounterfactual (fieldCounterfactual field))
                (unConsolidation (fieldConsolidation field))
                (unResonance (fieldResonance field))
-        genText = composeDefinition fp 3 (AtomId topic)
+        genSurface = composeDefinition fp 3 seedGraph (AtomId topic)
+        genText = gsText genSurface
     in if not (T.null genText)
        then authorityText <> " " <> topicNom <> " — " <> genText
        else

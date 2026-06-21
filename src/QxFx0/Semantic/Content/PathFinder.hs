@@ -21,6 +21,8 @@ module QxFx0.Semantic.Content.PathFinder
     RankedPath(..)
   , PathScore(..)
   , FieldProfile(..)
+  , AtomGraph(..)
+  , GeneratedSurface(..)
     -- * Path finding
   , findPathsFrom
   , findPathsLength1
@@ -53,7 +55,6 @@ import GHC.Generics (Generic)
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.Base (renderPredicateArgued, SemanticPredicate(..), PredicateRole(..), mkArguedPred)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissible, validatePath, GateVerdict(..))
-
 -- ============================================================
 -- Types
 -- ============================================================
@@ -91,33 +92,30 @@ defaultFieldProfile = FieldProfile 0.5 0.5 0.5 0.5
 -- Path finding
 -- ============================================================
 
--- | Find all paths from an atom up to maxLen.
--- Returns paths grouped by length (shortest first).
-findPathsFrom :: Int -> AtomId -> [RankedPath]
-findPathsFrom maxLen start =
+-- | Find all paths from an atom up to maxLen in a specific graph.
+findPathsFrom :: AtomGraph -> Int -> AtomId -> [RankedPath]
+findPathsFrom graph maxLen start =
   case maxLen of
-    1 -> findPathsLength1 start
-    2 -> findPathsLength1 start ++ findPathsLength2 start
-    3 -> findPathsLength1 start ++ findPathsLength2 start ++ findPathsLength3 start
-    _ -> findPathsLength1 start
+    1 -> findPathsLength1 graph start
+    2 -> findPathsLength1 graph start ++ findPathsLength2 graph start
+    3 -> findPathsLength1 graph start ++ findPathsLength2 graph start ++ findPathsLength3 graph start
+    _ -> findPathsLength1 graph start
 
 -- | Length 1: start →rel→ object.
-findPathsLength1 :: AtomId -> [RankedPath]
-findPathsLength1 start =
-  let edges = relationsFromAtom start
+findPathsLength1 :: AtomGraph -> AtomId -> [RankedPath]
+findPathsLength1 graph start =
+  let edges = graphRelationsFromAtom graph start
   in [ RankedPath (PathProof [e] (relTopic e)) (scorePath defaultFieldProfile [e])
      | e <- edges
      ]
 
 -- | Length 2: start →rel1→ mid →rel2→ object.
--- Skips paths that revisit the start atom (no cycles).
-findPathsLength2 :: AtomId -> [RankedPath]
-findPathsLength2 start =
-  let firstEdges = relationsFromAtom start
+findPathsLength2 :: AtomGraph -> AtomId -> [RankedPath]
+findPathsLength2 graph start =
+  let firstEdges = graphRelationsFromAtom graph start
       extend e1 =
         let mid = relTo e1
-            secondEdges = relationsFromAtom mid
-            -- Skip cycles: don't go back to start
+            secondEdges = graphRelationsFromAtom graph mid
             validSecond = filter (\e2 -> relTo e2 /= start) secondEdges
         in [ RankedPath (PathProof [e1, e2] (relTopic e1))
                         (scorePath defaultFieldProfile [e1, e2])
@@ -126,13 +124,12 @@ findPathsLength2 start =
   in concatMap extend firstEdges
 
 -- | Length 3: start →rel1→ mid1 →rel2→ mid2 →rel3→ object.
-findPathsLength3 :: AtomId -> [RankedPath]
-findPathsLength3 start =
-  let firstEdges = relationsFromAtom start
+findPathsLength3 :: AtomGraph -> AtomId -> [RankedPath]
+findPathsLength3 graph start =
+  let firstEdges = graphRelationsFromAtom graph start
       extend2 e1 e2 =
         let mid2 = relTo e2
-            thirdEdges = relationsFromAtom mid2
-            -- Skip cycles: don't revisit start or mid1
+            thirdEdges = graphRelationsFromAtom graph mid2
             visited = [start, relTo e1]
             validThird = filter (\e3 -> relTo e3 `notElem` visited) thirdEdges
         in [ RankedPath (PathProof [e1, e2, e3] (relTopic e1))
@@ -141,7 +138,7 @@ findPathsLength3 start =
            ]
       extend1 e1 =
         let mid1 = relTo e1
-            secondEdges = relationsFromAtom mid1
+            secondEdges = graphRelationsFromAtom graph mid1
             validSecond = filter (\e2 -> relTo e2 /= start) secondEdges
         in concatMap (extend2 e1) validSecond
   in concatMap extend1 firstEdges
@@ -245,63 +242,57 @@ rankPaths :: [RankedPath] -> [RankedPath]
 rankPaths = sortOn (\rp -> (Down (psTotal (rpScore rp)), relRuOriginal (head (ppEdges (rpProof rp)))))
 
 -- | Select top-N paths after ranking and gate filtering.
-selectTopPaths :: Int -> FieldProfile -> AtomId -> Int -> [RankedPath]
-selectTopPaths n fp start maxLen =
+selectTopPaths :: Int -> FieldProfile -> AtomGraph -> AtomId -> Int -> [RankedPath]
+selectTopPaths n fp graph start maxLen =
   take n
   $ rankPaths
   $ [ RankedPath (rpProof rp) (scorePath fp (ppEdges (rpProof rp)))
-    | rp <- findPathsFrom maxLen start
-    , gvOverall (validatePath (rpProof rp))  -- gate filter
+    | rp <- findPathsFrom graph maxLen start
+    , gvOverall (validatePath (rpProof rp))
     ]
 
 -- ============================================================
 -- Composition: build a definition from paths
 -- ============================================================
 
--- | Compose a definition for a topic: find top-N length-1 paths,
--- verbalize each, join with periods. Paths are filtered through gates.
--- For each length-1 path, also find a length-2 rationale path
--- (topic →edge1→ intermediate →edge2→ consequence) to build argued structure.
--- Counter and synthesis are added only once per definition, not per predicate.
--- All rationale paths are deduplicated: no edge text appears more than once.
-composeDefinition :: FieldProfile -> Int -> AtomId -> Text
-composeDefinition fp n topic =
-  let paths = selectTopPaths n fp topic 1
-      allMainEdgeTexts = concatMap (map relRuOriginal . ppEdges . rpProof) paths
-      -- Compose each predicate with rationale, tracking used texts for dedup
-      (texts, usedTexts) = composePredicatesDedup fp topic allMainEdgeTexts paths
-      -- Counter: once per definition, from first path
+-- | Compose a definition for a topic using a specific graph.
+-- Returns GeneratedSurface with text, path proofs, and provenance.
+composeDefinition :: FieldProfile -> Int -> AtomGraph -> AtomId -> GeneratedSurface
+composeDefinition fp n graph topic =
+  let paths = selectTopPaths n fp graph topic 1
+      (texts, usedTexts) = composePredicatesDedup fp graph topic (concatMap (map relRuOriginal . ppEdges . rpProof) paths) paths
       firstEdges = case paths of (rp:_) -> ppEdges (rpProof rp); [] -> []
-      counterPaths = findCounterPaths fp topic firstEdges
+      counterPaths = findCounterPaths graph topic firstEdges
       counterText = case counterPaths of
         (rp3:_) -> verbalizePath (rpProof rp3)
         [] -> ""
-      -- Find best rationale from any path for synthesis
       bestRationale = case texts of
         (t:_) -> extractRationale t
         [] -> ""
       synthesisText = buildSynthesis firstEdges bestRationale
-  in if null texts
-       then ""
-       else T.intercalate ". " texts
-         <> (if T.null counterText then "" else ". Но " <> counterText)
-         <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
-         <> "."
+      fullText = if null texts
+        then ""
+        else T.intercalate ". " texts
+          <> (if T.null counterText then "" else ". Но " <> counterText)
+          <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
+          <> "."
+      allProofs = map rpProof paths
+      allSources = concatMap (map relSource . ppEdges) allProofs
+  in GeneratedSurface fullText allProofs allSources
 
 -- | Compose predicates with deduplication: track all used edge texts
 -- and exclude them from subsequent rationale searches.
-composePredicatesDedup :: FieldProfile -> AtomId -> [Text] -> [RankedPath] -> ([Text], [Text])
-composePredicatesDedup fp topic initialUsed paths =
+composePredicatesDedup :: FieldProfile -> AtomGraph -> AtomId -> [Text] -> [RankedPath] -> ([Text], [Text])
+composePredicatesDedup fp graph topic initialUsed paths =
   go paths initialUsed []
   where
     go [] _ acc = (reverse acc, initialUsed)
     go (rp:rps) used acc =
-      let (text, newUsed) = composeOneWithRationaleDedup fp topic used rp
+      let (text, newUsed) = composeOneWithRationaleDedup fp graph topic used rp
       in go rps newUsed (text : acc)
 
--- | Compose one predicate with rationale, excluding already-used texts.
-composeOneWithRationaleDedup :: FieldProfile -> AtomId -> [Text] -> RankedPath -> (Text, [Text])
-composeOneWithRationaleDedup fp topic usedTexts rp =
+composeOneWithRationaleDedup :: FieldProfile -> AtomGraph -> AtomId -> [Text] -> RankedPath -> (Text, [Text])
+composeOneWithRationaleDedup fp graph topic usedTexts rp =
   let mainText = verbalizePath (rpProof rp)
       mainEdges = ppEdges (rpProof rp)
       mainEdgeTexts = map relRuOriginal mainEdges
@@ -309,7 +300,7 @@ composeOneWithRationaleDedup fp topic usedTexts rp =
       -- Exclude both already-used and current main edge texts
       excluded = usedTexts ++ mainEdgeTexts
       -- Find rationale: length-2 path from objAtom, excluding used edges
-      objPaths = selectTopPaths 3 fp objAtom 2
+      objPaths = selectTopPaths 3 fp graph objAtom 2
       rationaleText = case [ verbalizePath (rpProof p)
                            | p <- objPaths
                            , not (any (\e -> relRuOriginal e `elem` excluded)
@@ -320,7 +311,7 @@ composeOneWithRationaleDedup fp topic usedTexts rp =
       -- Fallback: length-2 from topic, excluding used and main edges
       fallbackRationale = if T.null rationaleText
                             then case [ verbalizePath (rpProof p)
-                                      | p <- selectTopPaths 5 fp topic 2
+                                      | p <- selectTopPaths 5 fp graph topic 2
                                       , let firstEdge = case ppEdges (rpProof p) of (e:_) -> Just e; [] -> Nothing
                                       , firstEdge /= Nothing
                                       , Just (head mainEdges) /= firstEdge
@@ -353,51 +344,12 @@ extractRationale text =
     (_, rest) | not (T.null rest) -> T.drop (T.length "Потому что ") rest
     _ -> ""
 
--- | Compose a single predicate with rationale (no counter/synthesis).
--- Structure: [predicate]. Потому что [rationale from length-2 path].
--- Rationale must NOT duplicate the main edge.
-composePredicateWithRationale :: FieldProfile -> AtomId -> RankedPath -> Text
-composePredicateWithRationale fp topic rp =
-  let mainText = verbalizePath (rpProof rp)
-      mainEdges = ppEdges (rpProof rp)
-      mainEdgeTexts = map relRuOriginal mainEdges
-      objAtom = case mainEdges of (e:_) -> relTo e; [] -> topic
-      -- Find rationale: length-2 path from objAtom (if objAtom is a topic)
-      -- Exclude paths that contain the main edge (avoid duplication)
-      objPaths = selectTopPaths 1 fp objAtom 2
-      rationaleText = case [ verbalizePath (rpProof p)
-                           | p <- objPaths
-                           , not (any (\e -> relRuOriginal e `elem` mainEdgeTexts)
-                                      (ppEdges (rpProof p)))
-                           ] of
-        (t:_) -> t
-        [] -> ""
-      -- Fallback: length-2 from topic, excluding paths whose first edge
-      -- is the same as the main edge (would produce duplicate text)
-      fallbackRationale = if T.null rationaleText
-                            then case [ verbalizePath (rpProof p)
-                                      | p <- selectTopPaths 3 fp topic 2
-                                      , let firstEdge = case ppEdges (rpProof p) of (e:_) -> Just e; [] -> Nothing
-                                      , firstEdge /= Nothing
-                                      , Just (head mainEdges) /= firstEdge  -- different first edge
-                                      , not (any (\e -> relRuOriginal e `elem` mainEdgeTexts)
-                                                 (ppEdges (rpProof p)))
-                                      ] of
-                                   (t:_) -> t
-                                   [] -> ""
-                            else ""
-  in mainText
-     <> (if not (T.null rationaleText) then ". Потому что " <> rationaleText
-         else if not (T.null fallbackRationale) then ". Потому что " <> fallbackRationale
-         else "")
-
 -- | Find counter-paths: relations from the topic that contrast with the main edge.
-findCounterPaths :: FieldProfile -> AtomId -> [Relation] -> [RankedPath]
-findCounterPaths _ topic mainEdges =
+findCounterPaths :: AtomGraph -> AtomId -> [Relation] -> [RankedPath]
+findCounterPaths graph topic mainEdges =
   let mainTypes = map relType mainEdges
-      -- Counter types: contrast, negate, differ
       counterTypes = [RelContrastsWith, RelDiffersFrom, RelNotReducibleTo, RelIsNot, RelNegates]
-      allRels = relationsFromAtom topic
+      allRels = graphRelationsFromAtom graph topic
       -- Only keep edges that are NOT the same as main edges
       -- and are counter-typed
       counterRels = [ r | r <- allRels
@@ -484,9 +436,9 @@ stripPreposition text =
 
 -- | Compose with explicit gate verdict for observability.
 -- Returns (text, number of paths that passed gates, number rejected).
-composeDefinitionWithGates :: FieldProfile -> Int -> AtomId -> (Text, Int, Int)
-composeDefinitionWithGates fp n topic =
-  let allPaths = findPathsFrom 1 topic
+composeDefinitionWithGates :: FieldProfile -> Int -> AtomGraph -> AtomId -> (Text, Int, Int)
+composeDefinitionWithGates fp n graph topic =
+  let allPaths = findPathsFrom graph 1 topic
       (passed, rejected) = splitPaths allPaths
       ranked = rankPaths passed
       selected = take n ranked

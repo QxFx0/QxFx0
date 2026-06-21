@@ -22,7 +22,7 @@ generatedPredicateGateTests =
 
 -- Helper: get a valid path proof for свобода
 sampleProof :: PathProof
-sampleProof = case findPathsLength1 (AtomId "свобода") of
+sampleProof = case findPathsLength1 seedGraph (AtomId "свобода") of
   (rp:_) -> rpProof rp
   [] -> PathProof [] "свобода"
 
@@ -150,12 +150,12 @@ combinedTests = TestList
 composeWithGatesTests :: Test
 composeWithGatesTests = TestList
   [ TestCase $ do
-      let (text, passed, rejected) = composeDefinitionWithGates defaultFieldProfile 3 (AtomId "свобода")
+      let (text, passed, rejected) = composeDefinitionWithGates defaultFieldProfile 3 seedGraph (AtomId "свобода")
       assertBool ("text non-empty: " <> show text) (T.length text > 0)
       assertBool ("passed >= 1: " <> show passed) (passed >= 1)
       assertEqual "rejected = 0 for seed-only graph" 0 rejected
 
   , TestCase $ do
-      let (text, _, _) = composeDefinitionWithGates defaultFieldProfile 3 (AtomId "несуществующий")
+      let (text, _, _) = composeDefinitionWithGates defaultFieldProfile 3 seedGraph (AtomId "несуществующий")
       assertEqual "nonexistent topic → empty text" "" text
   ]
