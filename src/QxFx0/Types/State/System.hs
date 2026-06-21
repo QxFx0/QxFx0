@@ -181,6 +181,7 @@ import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
 import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
 import QxFx0.Semantic.Content (ConceptCategory)
+import QxFx0.Semantic.Content.AtomStore (AtomGraph, seedGraph)
 import QxFx0.Types.State.Stance
   ( StanceState
   , StanceDefense
@@ -342,6 +343,10 @@ data SystemState = SystemState
     -- ^ Anomaly detection: topic → stance lineage.
     --   Tracks stance transitions for temporal anomaly detection.
     --   Initialised to 'M.empty'.
+  , ssRuntimeGraph :: !AtomGraph
+    -- ^ Runtime atom graph: seed relations + promoted substrate relations.
+    --   Used by PathFinder for generative composition. Initialised to
+    --   'seedGraph', updated in Bootstrap with promoted substrate.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -417,6 +422,7 @@ instance ToJSON SystemState where
               , "stanceDefenses" .= ssStanceDefenses ss
               , "userStanceTrackers" .= ssUserStanceTrackers ss
               , "stanceLineages" .= ssStanceLineages ss
+              , "runtimeGraph" .= ssRuntimeGraph ss
               ]
 
 instance FromJSON SystemState where
@@ -539,6 +545,7 @@ instance FromJSON SystemState where
               <*> o .:? "stanceDefenses" .!= M.empty
               <*> o .:? "userStanceTrackers" .!= M.empty
               <*> o .:? "stanceLineages" .!= M.empty
+              <*> o .:? "runtimeGraph" .!= seedGraph
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -733,6 +740,7 @@ emptySystemState = SystemState
   , ssStanceDefenses = M.empty
   , ssUserStanceTrackers = M.empty
   , ssStanceLineages = M.empty
+  , ssRuntimeGraph = seedGraph
   }
 
 emptyGovernanceProjection :: GovernanceProjection

@@ -32,7 +32,7 @@ import QxFx0.Semantic.Content
   , renderPredicateArgued, lookupChallengeResponse, ChallengeResponse(..)
   , challengeIntros, pickChallengeIntro
   )
-import QxFx0.Semantic.Content.AtomStore (AtomId(..), seedGraph)
+import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
   ( FieldProfile(..), composeDefinition, composeArgument, GeneratedSurface(..)
   )
@@ -1844,8 +1844,8 @@ gfMapAuthorityTags =
 -- from that payload using morphological forms and style modifiers.
 --
 -- Invariant: same frame + same morph → same output. Pure, deterministic.
-generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> FT.SemanticFrame -> MorphologyData -> Text
-generateFromFrame cs field mNetwork frame morph = case frame of
+generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGraph -> FT.SemanticFrame -> MorphologyData -> Text
+generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
@@ -1857,7 +1857,7 @@ generateFromFrame cs field mNetwork frame morph = case frame of
                (unCounterfactual (fieldCounterfactual field))
                (unConsolidation (fieldConsolidation field))
                (unResonance (fieldResonance field))
-        genSurface = composeDefinition morph fp 3 seedGraph (AtomId topic)
+        genSurface = composeDefinition morph fp 3 runtimeGraph (AtomId topic)
         genText = gsText genSurface
     in if not (T.null genText)
        then authorityText <> " " <> topicNom <> " — " <> genText
@@ -1889,7 +1889,7 @@ generateFromFrame cs field mNetwork frame morph = case frame of
         safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
         -- Generative path: compose argument from graph
-        genArgSurface = composeArgument morph (FieldProfile 0.5 0.8 0.5 0.5) seedGraph targetText rawObj
+        genArgSurface = composeArgument morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph targetText rawObj
         genArgText = gsText genArgSurface
         -- Corpus fallback
         mChallengeResp = lookupChallengeResponse targetText rawObj []

@@ -70,7 +70,7 @@ import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
-import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, relationStore, Relation(..), RelationSource(..))
+import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted)
 import qualified QxFx0.Semantic.Network.Types as NetTypes
 import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..))
 import qualified Data.Set as S
@@ -238,6 +238,7 @@ bootstrapSession quiet sessionId = do
         , ssSessionId = sessionId
         , ssContentSelector = seedSelector
         , ssLemmaMap = buildLemmaMap morphology
+        , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
   (stateOrigin, restored) <- do

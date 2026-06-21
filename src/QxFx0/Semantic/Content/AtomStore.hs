@@ -683,6 +683,27 @@ relationStore =
       "молчание контрастирует с языком" "silence contrasts with language"
   , rel "надежда" "вера" RelRelatedTo CaseInstrumental "с верой"
       "надежда связана с верой" "hope is related to faith"
+  -- Additional inter-topic edges for sparse zones
+  , rel "истина" "разум" RelRelatedTo CaseInstrumental "с разумом"
+      "истина связана с разумом" "truth is related to reason"
+  , rel "истина" "правда" RelRelatedTo CaseInstrumental "с правдой"
+      "истина связана с правдой" "truth is related to truthfulness"
+  , rel "сознание" "память" RelRelatedTo CaseInstrumental "с памятью"
+      "сознание связано с памятью" "consciousness is related to memory"
+      `withVerb` "связано"
+  , rel "сознание" "язык" RelRelatedTo CaseInstrumental "с языком"
+      "сознание связано с языком" "consciousness is related to language"
+      `withVerb` "связано"
+  , rel "вера" "надежда" RelRelatedTo CaseInstrumental "с надеждой"
+      "вера связана с надеждой" "faith is related to hope"
+  , rel "вера" "истина" RelRelatedTo CaseInstrumental "с истиной"
+      "вера связана с истиной" "faith is related to truth"
+  , rel "доверие" "ответственность" RelRelatedTo CaseInstrumental "с ответственностью"
+      "доверие связано с ответственностью" "trust is related to responsibility"
+      `withVerb` "связано"
+  , rel "доверие" "правда" RelRelatedTo CaseInstrumental "с правдой"
+      "доверие связано с правдой" "trust is related to truthfulness"
+      `withVerb` "связано"
   ]
   where
     rel fromId toId rt oc objText ru en =

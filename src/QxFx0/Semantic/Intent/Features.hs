@@ -270,4 +270,13 @@ extractHasCompetingDefinition rawLower =
           , "это лишь", "означает просто", "сводится к"
           ]
       hasDash = " — " `T.isInfixOf` rawLower
-  in hasFirstPersonAssertion && (hasDefinitionConstruction || hasDash)
+      -- Reduction/equivalence patterns that work without first person:
+      -- "X — это просто Y", "X не более чем Y", "разве X не просто Y"
+      hasReductionPattern =
+        any (`T.isInfixOf` rawLower)
+          [ "это просто", "просто слабость", "не более чем"
+          , "разве не просто", "это всего лишь", "не более чем"
+          , "сводится к", "это лишь"
+          ]
+  in (hasFirstPersonAssertion && (hasDefinitionConstruction || hasDash))
+     || hasReductionPattern

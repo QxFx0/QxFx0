@@ -478,11 +478,30 @@ composeArgument morph fp graph topic objectionText =
                 in GeneratedSurface fullText allProofs allSources
               _ -> GeneratedSurface "" [] []
 
--- | Score an edge against objection text by keyword overlap.
--- Higher = more relevant to the objection.
+-- | Score an edge against objection text.
+-- Combines: lemma overlap (weak signal) + relation-type prior (strong signal).
+-- Relation types that are natural counters to reduction objections get a boost.
 scoreEdgeVsObjection :: Text -> Relation -> Double
 scoreEdgeVsObjection objection rel =
   let objLower = T.toLower objection
-      edgeWords = T.words (T.toLower (relRuOriginal rel))
-      overlap = length [ w | w <- edgeWords, w `T.isInfixOf` objLower ]
-  in fromIntegral overlap / fromIntegral (max 1 (length edgeWords))
+      edgeLower = T.toLower (relRuOriginal rel)
+      -- Lemma overlap: how many edge words appear in objection
+      edgeWords = T.words edgeLower
+      objWords = T.words objLower
+      overlap = length [ w | w <- edgeWords, w `elem` objWords || w `T.isInfixOf` objLower ]
+      overlapScore = fromIntegral overlap / fromIntegral (max 1 (length edgeWords))
+      -- Relation-type prior: certain types are natural counters to objections
+      typePrior = case relType rel of
+        RelLimitedBy      -> 0.5   -- "X ограничена Y" counters "X = just Y"
+        RelNotReducibleTo -> 0.7   -- "X не сводится к Y" directly counters reduction
+        RelContrastsWith  -> 0.4   -- "X контрастирует с Y"
+        RelDiffersFrom    -> 0.4   -- "X отличается от Y"
+        RelRequires       -> 0.3   -- "X требует Y" — adds constraint
+        RelPresupposes    -> 0.2   -- "X предполагает Y" — background
+        RelIsNot          -> 0.6   -- "X не является Y" — direct negation
+        _                 -> 0.1
+      -- Topic presence: if the edge's topic appears in objection, boost
+      topicWord = relTopic rel
+      topicInObj = topicWord `T.isInfixOf` objLower
+      topicBoost = if topicInObj then 0.3 else 0.0
+  in overlapScore * 0.3 + typePrior * 0.5 + topicBoost * 0.2
