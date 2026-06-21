@@ -34,9 +34,7 @@ import Test.QuickCheck
   , elements
   , forAll
   , listOf
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   , vectorOf
   , (==>)
   , property
@@ -69,6 +67,7 @@ import QxFx0.Self.Field
   , mkResonance
   )
 import QxFx0.Self.Salience (SalienceDriver (..))
+import Test.Support.QuickCheckConfig (qcArgs)
 
 -- ---------------------------------------------------------------------------
 -- Test-suite entry point
@@ -161,7 +160,8 @@ selfEssenceTests =
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   if isSuccess result
     then pure ()
     else assertFailure ("Property failed: " ++ label)

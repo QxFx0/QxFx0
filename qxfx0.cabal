@@ -36,7 +36,7 @@ source-repository head
 common warnings
   ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns
                -Wincomplete-record-updates -Wredundant-constraints
-               -Wmissing-deriving-strategies -Wno-unticked-promoted-constructors
+               -Wmissing-deriving-strategies -Wno-unticked-promoted-constructors -Werror -Wno-unused-imports -Wno-unused-matches -Wno-unused-local-binds -Wno-unused-do-bind -Wno-unused-top-binds -Wno-name-shadowing -Wno-type-defaults -Wno-missing-home-modules -Wno-missing-home-modules
 
 common base-deps
   default-language: Haskell2010
@@ -294,7 +294,6 @@ library
       QxFx0.Semantic.Sense.Adjacency
       QxFx0.Semantic.SemanticScene
       QxFx0.Semantic.SemanticInput
-      QxFx0.Semantic.AuthorityParse
       QxFx0.Semantic.Authority.GfExprParse
       QxFx0.Semantic.Retrieve
       QxFx0.Semantic.Intent.Features
@@ -444,6 +443,7 @@ library
     QxFx0.Core.Guard.Types
     QxFx0.Core.Guard.Checks
     QxFx0.Core.Guard.Recovery
+    QxFx0.Core.Guard.ContentQuality
     QxFx0.Core.Legitimacy.Scoring
     QxFx0.Core.Legitimacy.Policy
     QxFx0.Core.TurnLegitimacy.Plans
@@ -531,6 +531,7 @@ common test-common
     Test.Support
     Test.Support.TurnPipelineFixtures
     Test.Support.GFParityHarness
+    Test.Support.QuickCheckConfig
     Test.Suite.ArchitectureInvariants
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
@@ -610,6 +611,7 @@ common test-common
     Test.Suite.Revision
     Test.Suite.MorphologicalNormalization
     Test.Suite.Anomaly
+    Test.Suite.PathFinder
 
 test-suite qxfx0-test-unit
   import:        test-common

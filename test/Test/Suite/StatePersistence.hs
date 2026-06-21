@@ -26,9 +26,7 @@ import Test.HUnit hiding (Testable)
 import Test.QuickCheck
   ( Result(..)
   , Testable
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 
 import QxFx0.Learning.KnowledgeTree
@@ -71,6 +69,7 @@ import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
 import Test.Support (assertExec, queryCount, withEnvVar, withRuntimeEnv, withStrictRuntimeEnv)
+import Test.Support.QuickCheckConfig (qcArgs)
 import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 
 statePersistenceFastTests :: [Test]
@@ -931,8 +930,9 @@ normalizeReplayTraceValue (Object objectValue) =
 normalizeReplayTraceValue other = other
 
 quickCheckTest :: Testable prop => Int -> String -> prop -> Test
-quickCheckTest maxCases label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = maxCases } prop
+quickCheckTest _maxCases label prop = TestCase $ do
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)

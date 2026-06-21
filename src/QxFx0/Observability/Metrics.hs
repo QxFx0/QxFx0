@@ -14,7 +14,7 @@ module QxFx0.Observability.Metrics
   , formatMetrics
   ) where
 
-import Data.Aeson (ToJSON(..), object, (.=))
+import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=), (.:), withObject, withText)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -36,6 +36,14 @@ instance ToJSON MetricType where
   toJSON Histogram = "histogram"
   toJSON Timing    = "timing"
 
+instance FromJSON MetricType where
+  parseJSON = withText "MetricType" $ \t -> case t of
+    "counter"   -> pure Counter
+    "gauge"     -> pure Gauge
+    "histogram" -> pure Histogram
+    "timing"    -> pure Timing
+    _           -> fail $ "unknown MetricType: " ++ T.unpack t
+
 -- | Metric data point
 data Metric = Metric
   { mName      :: !Text
@@ -54,6 +62,15 @@ instance ToJSON Metric where
     , "tags"      .= mTags
     ]
 
+instance FromJSON Metric where
+  parseJSON = withObject "Metric" $ \o ->
+    Metric
+      <$> o .:  "name"
+      <*> o .:  "type"
+      <*> o .:  "value"
+      <*> o .:  "timestamp"
+      <*> o .:  "tags"
+
 -- | In-memory metric registry (simple implementation)
 type MetricRegistry = IORef [Metric]
 
@@ -70,51 +87,35 @@ recordCounter registry name value tags = do
 
 -- | Record gauge metric
 recordGauge :: MetricRegistry -> Text -> Double -> Map Text Text -> IO ()
-recordGauge registry name value tags = do
-  timestamp <- getCurrentTime
-  let metric = Metric name Gauge value timestamp tags
-  modifyIORef' registry (metric :)
+recordGauge = recordCounter
 
 -- | Record histogram metric
 recordHistogram :: MetricRegistry -> Text -> Double -> Map Text Text -> IO ()
-recordHistogram registry name value tags = do
-  timestamp <- getCurrentTime
-  let metric = Metric name Histogram value timestamp tags
-  modifyIORef' registry (metric :)
+recordHistogram = recordCounter
 
--- | Record timing metric (duration in seconds)
+-- | Record timing metric
 recordTiming :: MetricRegistry -> Text -> NominalDiffTime -> Map Text Text -> IO ()
 recordTiming registry name duration tags = do
   timestamp <- getCurrentTime
-  let value = realToFrac duration :: Double
-  let metric = Metric name Timing value timestamp tags
+  let metric = Metric name Timing (realToFrac duration) timestamp tags
   modifyIORef' registry (metric :)
 
--- | Get all recorded metrics
+-- | Get all metrics from registry
 getMetrics :: MetricRegistry -> IO [Metric]
 getMetrics = readIORef
 
--- | Format metrics for output (simple text format)
+-- | Format metrics as human-readable text
 formatMetrics :: [Metric] -> Text
-formatMetrics metrics =
-  T.intercalate "\n" $ map formatMetric metrics
+formatMetrics metrics = T.unlines (map fmtMetric (reverse metrics))
   where
-    formatMetric Metric{..} =
-      mName
-      <> "{" <> formatTags mTags <> "}"
-      <> " " <> T.pack (show mValue)
-      <> " [" <> T.pack (show mType) <> "]"
-      <> " @ " <> T.pack (show mTimestamp)
-    
-    formatTags tags =
-      T.intercalate "," $ map (\(k, v) -> k <> "=" <> v) $ Map.toList tags
-
--- | Helper: measure execution time of an action
-measureTime :: IO a -> IO (a, NominalDiffTime)
-measureTime action = do
-  start <- getCurrentTime
-  result <- action
-  end <- getCurrentTime
-  let duration = diffUTCTime end start
-  pure (result, duration)
-
+    fmtMetric Metric{..} =
+      T.pack (show mTimestamp) <> " [" <> metricTypeText mType <> "] "
+      <> mName <> " = " <> T.pack (show mValue)
+      <> tagsText mTags
+    metricTypeText Counter   = "counter"
+    metricTypeText Gauge     = "gauge"
+    metricTypeText Histogram = "histogram"
+    metricTypeText Timing    = "timing"
+    tagsText tags
+      | Map.null tags = ""
+      | otherwise     = " " <> T.pack (show (Map.toList tags))

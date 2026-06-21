@@ -114,6 +114,13 @@ rawQxFx0Exception err =
     AgdaGateError msg -> "AgdaGateError: " <> T.unpack msg
     IdentityRupture msg -> "IdentityRupture: " <> T.unpack msg
     EssenceRupture msg -> "EssenceRupture: " <> T.unpack msg
+    EvidenceInadmissibleFailure msg -> "EvidenceInadmissibleFailure: " <> T.unpack msg
+    StateInvariantViolation msg -> "StateInvariantViolation: " <> T.unpack msg
+    EmbeddingErrorStructured _ -> "EmbeddingErrorStructured"
+    RuntimeInitErrorStructured _ -> "RuntimeInitErrorStructured"
+    SQLiteErrorStructured _ -> "SQLiteErrorStructured"
+    PersistenceConflict _ _ _ _ -> "PersistenceConflict"
+    PersistenceErrorStructured _ -> "PersistenceErrorStructured"
 
 runTurnJsonInSession :: Runtime.Session -> RuntimeOutputMode -> Text -> IO (Runtime.Session, TurnJsonResponse)
 runTurnJsonInSession session0 mode inputText = do

@@ -28,6 +28,7 @@ Verifies, by QuickCheck, the laws asserted in
 module Test.Suite.SelfSalience
   ( selfSalienceTests
   ) where
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import Test.HUnit (Test (..), assertFailure)
 import Test.QuickCheck
@@ -35,9 +36,7 @@ import Test.QuickCheck
   , Property
   , choose
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -153,7 +152,8 @@ selfSalienceTests =
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   if isSuccess result
     then pure ()
     else assertFailure ("Property failed: " ++ label)

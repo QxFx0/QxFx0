@@ -1861,17 +1861,7 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
         genText = gsText genSurface
     in if not (T.null genText)
        then authorityText <> " " <> topicNom <> " — " <> genText
-       else
-         -- Fallback: existing corpus + activation path
-         let composedPreds = case mNetwork of
-               Just network -> composeFromActivation cs field topic network
-               Nothing -> case selectPredicates cs field topic Nothing of
-                 (sp:_) -> spPredicates sp
-                 [] -> []
-             mDefContent = case composedPreds of
-               [] -> lookupDefinitionContent topic
-               preds -> Just $ DefinitionContent topic preds
-         in authorityText <> " " <> topicNom <> renderDefinitionBody mDefContent topic morph
+       else authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
@@ -1891,18 +1881,9 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
         -- Generative path: compose argument from graph
         genArgSurface = composeArgument morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph targetText rawObj
         genArgText = gsText genArgSurface
-        -- Corpus fallback
-        mChallengeResp = lookupChallengeResponse targetText rawObj []
-        challengeText = case mChallengeResp of
-          Just (intro, cr) ->
-            intro <> " " <> crRestate cr <> ". "
-            <> renderPredicateArgued (crRelevantPredicate cr)
-          Nothing -> ""
     in if not (T.null genArgText)
          then genArgText
-         else if not (T.null challengeText)
-           then challengeText
-           else case strength of
+         else case strength of
            FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
                     <> safeTarget <> " нужно проверить по явному критерию. "
                     <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."

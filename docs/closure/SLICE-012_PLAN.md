@@ -41,9 +41,6 @@ upgrade M6-FELT.
     `readProcessWithExitCode "timeout" [5, nixInstantiateBin, --restricted?, --eval, --expr, …]`.
   - Binary resolved via `lookupEnv "QXFX0_NIX_INSTANTIATE_BIN"` (default
     `"nix-instantiate"`).
-  - On any failure → `Unavailable "nix evaluator unavailable: …"`.
-  - `isLenientMode` (`QXFX0_NIXGUARD_LENIENT_UNSUPPORTED=1`) → unsupported
-    concepts return `Unavailable "…skipped"` instead of `Blocked`.
 
 - **Concepts data**: `semantics/concepts.nix` (tracked). Runtime needs its
   path via `QXFX0_CONCEPTS_PATH` (flake sets `/data/concepts.nix`; CI does

@@ -43,7 +43,7 @@ import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.BackgroundProcess (surfacingToFragment)
 import QxFx0.Core.Observability
 import QxFx0.Core.TruthContract (truthContractRebindRenderedText)
-import QxFx0.Core.TurnLegitimacy (finalizeOutput)
+import QxFx0.Core.TurnLegitimacy (finalizeOutput, finalizeOutputWithTopic)
 import QxFx0.Core.TurnPlanning (integrateIdentityClaims)
 import QxFx0.Core.TurnRender
   ( renderAnchorPrefix
@@ -554,10 +554,10 @@ resolveRenderEffects pio effectPlan = do
       mKnowledgeSource = lfSourceId <$> mLegalFact
   let scheduledRequests =
         scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
-          (  [ ("request", TurnReqExternalQuery tool need queryText)
+          (  [ ("request" :: Text, TurnReqExternalQuery tool need queryText)
              | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
              ]
-          <> [ ("explore", TurnReqExternalQuery tool need queryText)
+          <> [ ("explore" :: Text, TurnReqExternalQuery tool need queryText)
              | Just (tool, need, queryText) <- [repExploratoryQueryRequest effectPlan]
              ]
           )
@@ -653,7 +653,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       !metrics4 = addPhase (recordPhase "render" (rtlRenderStart timeline) (rtlRenderEnd timeline)) (tpMetrics tp)
       guardSafety = Guard.postRenderSafetyCheckSurface preSafetySurface (F.toList (ssHistory ss))
       templateArtifact = rsTemplateArtifact renderStatic
-      (renderedSurface, finalizeSurfaceProv) = finalizeOutput preSafetySurface (F.toList (ssHistory ss))
+      (renderedSurface, finalizeSurfaceProv) = finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) (tiBestTopic ti)
       surfaceProv = case finalizeSurfaceProv of
         FromRecovery -> FromRecovery
         _ -> draSurfaceProvenance templateArtifact

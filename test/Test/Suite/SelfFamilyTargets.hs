@@ -28,9 +28,7 @@ import Test.QuickCheck
   , choose
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -57,6 +55,7 @@ import QxFx0.Self.FamilyTargets
   , familyTargets
   )
 import QxFx0.Types (CanonicalMoveFamily (..))
+import Test.Support.QuickCheckConfig (qcArgs)
 
 -- ---------------------------------------------------------------------------
 -- Test-suite entry point
@@ -174,5 +173,6 @@ genSpectral =
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   assertBool ("Property failed: " ++ label) (isSuccess result)

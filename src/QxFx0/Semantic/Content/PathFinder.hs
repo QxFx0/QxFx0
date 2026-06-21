@@ -285,9 +285,12 @@ composeDefinition morph fp n graph topic =
       allEdges = concatMap ppEdges allProofs
       allSources = map relSource allEdges
       -- Validate all edges through gates
-      combinedProof = PathProof allEdges (T.pack (show topic))
-      _gateVerdict = validatePath combinedProof
-  in GeneratedSurface fullText allProofs allSources
+      AtomId topicText = topic
+      combinedProof = PathProof allEdges topicText
+      gateVerdict = validatePath combinedProof
+  in if gvOverall gateVerdict
+       then GeneratedSurface fullText allProofs allSources
+       else GeneratedSurface "" [] []
 
 -- | Compose predicates with deduplication: track all used edge texts
 -- and exclude them from subsequent rationale searches.

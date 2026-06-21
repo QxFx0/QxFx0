@@ -11,9 +11,7 @@ import Test.QuickCheck
   , chooseInt
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Concurrent (threadDelay)
@@ -303,6 +301,7 @@ import QxFx0.ExceptionPolicy (QxFx0Exception(..), EmbeddingErrorDetails(..))
 import qualified QxFx0.Bridge.NixGuard as NixGuard
 import QxFx0.CLI.Parser (decodeWorkerCommand, parseMode, parseJsonStringArray, extractSessionArgs, RuntimeOutputMode(..), WorkerCommand(..))
 import Test.Support (withEnvVar)
+import Test.Support.QuickCheckConfig (qcArgs)
 
 dummyConatusEnergy :: ConatusEnergy
 dummyConatusEnergy = ConatusEnergy
@@ -2883,7 +2882,8 @@ testCandidatePrepositionalFallbackRealData = TestCase $ do
 
 quickCheckTest :: Testable prop => String -> prop -> Test
 quickCheckTest label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 100 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)

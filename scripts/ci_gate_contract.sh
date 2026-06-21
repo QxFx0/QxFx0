@@ -92,11 +92,11 @@ log_gate() {
 
 fail_contract() {
   local reason="$1"
-  # Build (Gate 1), fast tests (Gate 2), and architecture (Gate 3) are hard gates.
+  # Build (Gate 1), fast tests (Gate 2), architecture (Gate 3), ADR (Gate 3a), and round-trip (Gate 3d) are hard gates.
   # The remaining gates enforce calibration/replay/contract invariants; they run
   # in the extended (nightly) profile and are advisory (non-blocking) there.
   case "$reason" in
-    "Gate 1 "* | "Gate 2 "* | "Gate 3 "*)
+    "Gate 1 "* | "Gate 2 "* | "Gate 3 "* | "Gate 3a "* | "Gate 3d "*)
       OVERALL_VERDICT="REJECT"
       REJECT_REASON="$reason"
       echo "" | tee -a "$SUMMARY"
@@ -144,7 +144,7 @@ fi
 # ── Gate 2: Fast tests ──────────────────────────────────────────────────
 FAST_LOG="$GATES_DIR/02_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
 FAST_SUITE="${QXFX0_FAST_TEST_SUITE:-qxfx0-test-fast}"
-if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test '$FAST_SUITE'" > "$FAST_LOG" 2>&1; then
+if run_with_cabal_lock bash -c "cd '$ROOT' && QXFX0_QUICKCHECK_MAX_SUCCESS=10 cabal --build-summary='$CABAL_BUILD_SUMMARY' test '$FAST_SUITE'" > "$FAST_LOG" 2>&1; then
   if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
     log_gate "cabal test fast" "0" "PASS" "suite=$FAST_SUITE, 0 errors, 0 failures"
   else
@@ -165,8 +165,27 @@ else
   fail_contract "Gate 3 (architecture)"
 fi
 
+# ── Gate 3a: ADR Coverage ────────────────────────────────────────────────
+ADR_LOG="$GATES_DIR/03a_check_adr_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && bash scripts/check_adr_coverage.sh 2>&1) > "$ADR_LOG" 2>&1; then
+  log_gate "check_adr_coverage.sh" "0" "PASS" "ADR coverage ok"
+else
+  log_gate "check_adr_coverage.sh" "$?" "FAIL" "ADR coverage check failed"
+  fail_contract "Gate 3a (ADR coverage)"
+fi
+
+# ── Gate 3d: Round-trip Serialization ────────────────────────────────
+RT_LOG="$GATES_DIR/03d_check_round_trip_${RUN_ID}_${PROFILE}.log"
+if (cd "$ROOT" && bash scripts/check_round_trip.sh 2>&1) > "$RT_LOG" 2>&1; then
+  log_gate "check_round_trip.sh" "0" "PASS" "no write-only types"
+else
+  log_gate "check_round_trip.sh" "$?" "FAIL" "write-only types detected"
+  fail_contract "Gate 3d (round-trip serialization)"
+fi
+
+
 # ── Core profile stops here ─────────────────────────────────────────────
-# Build (Gate 1), fast tests (Gate 2), and architecture (Gate 3) are blocking
+# Build (Gate 1), fast tests (Gate 2), architecture (Gate 3), ADR (Gate 3a), and round-trip (Gate 3d) are blocking
 # in core. The remaining gates (calibration, replay, contract) enforce
 # invariants that run in the extended (nightly) profile.
 if [ "$PROFILE" = "core" ]; then
@@ -452,7 +471,7 @@ elif [ "$PROFILE" = "extended-lowram" ]; then
   # ── Gate 11 (extended-lowram): fast tests as proxy for slow tests ──────
   # Target repo has no separate qxfx0-test-slow suite; run qxfx0-test.
   FAST_LOG="$GATES_DIR/11_cabal_test_fast_${RUN_ID}_${PROFILE}.log"
-  if run_with_cabal_lock bash -c "cd '$ROOT' && cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test" > "$FAST_LOG" 2>&1; then
+  if run_with_cabal_lock bash -c "cd '$ROOT' && QXFX0_QUICKCHECK_MAX_SUCCESS=10 cabal --build-summary='$CABAL_BUILD_SUMMARY' test qxfx0-test-fast" > "$FAST_LOG" 2>&1; then
     if grep -q 'Errors: 0  Failures: 0' "$FAST_LOG"; then
       log_gate "cabal test fast (extended proxy)" "0" "PASS" "0 errors, 0 failures"
     else

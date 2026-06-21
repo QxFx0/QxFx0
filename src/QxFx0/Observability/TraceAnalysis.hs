@@ -65,7 +65,7 @@ module QxFx0.Observability.TraceAnalysis
   ) where
 
 import Control.Monad (when)
-import Data.Aeson (ToJSON(..), object, (.=))
+import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -113,7 +113,7 @@ data RecoveryAnalysis = RecoveryAnalysis
   , raAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Conatus dynamics analysis
 data ConatusAnalysis = ConatusAnalysis
@@ -128,7 +128,7 @@ data ConatusAnalysis = ConatusAnalysis
   , caAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Field state analysis
 data FieldAnalysis = FieldAnalysis
@@ -151,7 +151,7 @@ data FieldAnalysis = FieldAnalysis
   , faAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Essence commitment analysis
 data EssenceAnalysis = EssenceAnalysis
@@ -166,7 +166,7 @@ data EssenceAnalysis = EssenceAnalysis
   , eaAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Deliberation analysis
 data DeliberationAnalysis = DeliberationAnalysis
@@ -181,7 +181,7 @@ data DeliberationAnalysis = DeliberationAnalysis
   , daAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Salience analysis
 data SalienceAnalysis = SalienceAnalysis
@@ -194,7 +194,7 @@ data SalienceAnalysis = SalienceAnalysis
   , saAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Complete trace analysis summary
 data TraceAnalysisSummary = TraceAnalysisSummary
@@ -207,7 +207,7 @@ data TraceAnalysisSummary = TraceAnalysisSummary
   , tasAnomalyCount :: !Int
     -- ^ Total number of anomalies detected
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Analyze recovery pattern from trace
 analyzeRecoveryPattern :: TurnReplayTrace -> RecoveryAnalysis

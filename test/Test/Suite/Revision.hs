@@ -196,7 +196,7 @@ revisionTests =
               newPayload = FactualClaimPayload "свобода требует ответственности" 0.9 OriginManual (TurnSeq 2) [] "свобода"
               result = synthesizeResolution M.empty oldPayload newPayload
           assertBool "should return Just" $ isJust result
-          let Just resolution = result
+          resolution <- case result of { Just r -> pure r; Nothing -> assertFailure "expected Just" }
           assertEqual "should be Conjunction" Conjunction (srType resolution)
           assertBool "statement should contain 'и вместе с тем'" $ T.isInfixOf "и вместе с тем" (srStatement resolution)
           assertEqual "confidence should be 0.5" 0.5 (fcpConfidence (srPayload resolution))
@@ -207,7 +207,7 @@ revisionTests =
               newPayload = FactualClaimPayload "ответственность это долг" 0.9 OriginManual (TurnSeq 2) [] "ответственность"
               result = synthesizeResolution M.empty oldPayload newPayload
           assertBool "should return Just" $ isJust result
-          let Just resolution = result
+          resolution <- case result of { Just r -> pure r; Nothing -> assertFailure "expected Just" }
           assertEqual "should be Irreducible" Irreducible (srType resolution)
           assertBool "statement should contain 'несовместимы'" $ T.isInfixOf "несовместимы" (srStatement resolution)
           assertEqual "confidence should be 0.3" 0.3 (fcpConfidence (srPayload resolution))

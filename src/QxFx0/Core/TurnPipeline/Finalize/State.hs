@@ -560,12 +560,12 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
       }
       semanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
       topicAtomsMap = M.fromList
-        [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics
         , Just dc <- [Content.lookupDefinitionContent topic]
         ]
       topicAtomsSetMap = M.fromList
-        [ (topic, Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu pred) | pred <- Content.dcPredicates dc])
+        [ (topic, Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics
         , Just dc <- [Content.lookupDefinitionContent topic]
         ]

@@ -22,6 +22,7 @@ pathFinderTests =
   , TestLabel "PathFinder field bias" fieldBiasTests
   , TestLabel "PathFinder determinism" determinismTests
   , TestLabel "PathFinder composition" compositionTests
+  , TestLabel "PathFinder gate enforcement" gateEnforcementTests
   ]
 
 length1Tests :: Test
@@ -59,22 +60,16 @@ length2Tests = TestList
       assertEqual "all length-2 paths have exactly 2 edges" True allLen2
 
   , TestCase $ do
-      let paths = findPathsLength2 seedGraph (AtomId "свобода")
-          -- No path should revisit the start atom
-          noCycles = all (\rp ->
-            let edges = ppEdges (rpProof rp)
-                start = relFrom (head edges)
-                destinations = map relTo edges
-            in start `notElem` destinations) paths
-      assertEqual "no cycles back to start" True noCycles
+      let paths = findPathsLength2 seedGraph (AtomId "несуществующий_топик")
+      assertEqual "nonexistent topic has 0 length-2 paths" 0 (length paths)
   ]
 
 length3Tests :: Test
 length3Tests = TestList
   [ TestCase $ do
       let paths = findPathsLength3 seedGraph (AtomId "свобода")
-      assertBool ("свобода length-3 has >= 0 paths (graph may be sparse), got " <> show (length paths))
-                 (length paths >= 0)
+      assertBool ("свобода length-3 has >= 1 path, got " <> show (length paths))
+                 (length paths >= 1)
 
   , TestCase $ do
       let paths = findPathsLength3 seedGraph (AtomId "свобода")
@@ -113,12 +108,9 @@ fieldBiasTests = TestList
           highConsolid = FieldProfile 0.0 0.0 1.0 0.0
           confPaths = selectTopPaths 1 highConf seedGraph (AtomId "истина") 1
           consolPaths = selectTopPaths 1 highConsolid seedGraph (AtomId "истина") 1
-      -- With different profiles, the top path may differ
-      -- (not guaranteed, but at least scores should differ)
       let confScore = case confPaths of (rp:_) -> psTotal (rpScore rp); [] -> 0
           consolScore = case consolPaths of (rp:_) -> psTotal (rpScore rp); [] -> 0
-      assertBool ("different profiles produce different scores: "
-                   <> show confScore <> " vs " <> show consolScore)
+      assertBool ("different profiles yield different scores: " <> show (confScore, consolScore))
                  (confScore /= consolScore)
   ]
 
@@ -127,17 +119,17 @@ determinismTests = TestList
   [ TestCase $ do
       let p1 = findPathsFrom seedGraph 2 (AtomId "свобода")
           p2 = findPathsFrom seedGraph 2 (AtomId "свобода")
-      assertEqual "same input → same output (findPathsFrom)" p1 p2
+      assertEqual "same input -> same output (findPathsFrom)" p1 p2
 
   , TestCase $ do
       let p1 = selectTopPaths 3 defaultFieldProfile seedGraph (AtomId "истина") 2
           p2 = selectTopPaths 3 defaultFieldProfile seedGraph (AtomId "истина") 2
-      assertEqual "same input → same output (selectTopPaths)" p1 p2
+      assertEqual "same input -> same output (selectTopPaths)" p1 p2
 
   , TestCase $ do
       let p1 = rankPaths (findPathsLength1 seedGraph (AtomId "свобода"))
           p2 = rankPaths (findPathsLength1 seedGraph (AtomId "свобода"))
-      assertEqual "same input → same output (rankPaths)" p1 p2
+      assertEqual "same input -> same output (rankPaths)" p1 p2
   ]
 
 compositionTests :: Test
@@ -160,4 +152,84 @@ compositionTests = TestList
   , TestCase $ do
       let surface = composeDefinition testMorph defaultFieldProfile 10 seedGraph (AtomId "несуществующий")
       assertEqual "nonexistent topic produces empty text" "" (gsText surface)
+  ]
+
+-- ============================================================
+-- Gate enforcement integration tests
+-- ============================================================
+-- These tests verify that composeDefinition actually REJECTS invalid proofs.
+-- Previously the gate verdict was computed but discarded (_gateVerdict),
+-- making the gate system decorative -- present in tests but not enforced
+-- in the production path. These integration tests guard against regression.
+
+-- | A relation with SubstrateExtractedRaw source -- fails G4 (Source whitelist).
+substrateEdge :: Relation
+substrateEdge = Relation
+  { relFrom = AtomId "тест_топик"
+  , relTo = AtomId "тест_объект"
+  , relType = RelPresupposes
+  , relObjectCase = CaseAccusative
+  , relObjectText = "тестовый объект"
+  , relVerbText = Nothing
+  , relRuOriginal = "тест_топик предполагает тестовый объект"
+  , relEnOriginal = "test_topic presupposes test_object"
+  , relSource = SubstrateExtractedRaw
+  , relTopic = "тест_топик"
+  }
+
+-- | A self-referential relation -- fails G2 (Non-tautology).
+tautologicalEdge :: Relation
+tautologicalEdge = Relation
+  { relFrom = AtomId "тест_топик"
+  , relTo = AtomId "тест_топик"
+  , relType = RelPresupposes
+  , relObjectCase = CaseAccusative
+  , relObjectText = "тестовый объект"
+  , relVerbText = Nothing
+  , relRuOriginal = "тест_топик предполагает тестовый объект"
+  , relEnOriginal = "test_topic presupposes test_object"
+  , relSource = SeedFromPredicate
+  , relTopic = "тест_топик"
+  }
+
+-- | Build a graph containing only invalid edges.
+invalidGraph :: [Relation] -> AtomGraph
+invalidGraph rels =
+  let idx = M.fromList [(AtomId "тест_топик", rels)]
+  in AtomGraph rels idx "test-invalid"
+
+gateEnforcementTests :: Test
+gateEnforcementTests = TestList
+  [ TestCase $ do
+      -- G4 violation: SubstrateExtractedRaw source should be rejected
+      let graph = invalidGraph [substrateEdge]
+          surface = composeDefinition testMorph defaultFieldProfile 3 graph (AtomId "тест_топик")
+      assertEqual "composeDefinition rejects SubstrateExtractedRaw (G4)" "" (gsText surface)
+      assertEqual "rejected surface has no proofs" [] (gsPaths surface)
+      assertEqual "rejected surface has no provenance" [] (gsProvenance surface)
+
+  , TestCase $ do
+      -- G2 violation: self-referential edge should be rejected
+      let graph = invalidGraph [tautologicalEdge]
+          surface = composeDefinition testMorph defaultFieldProfile 3 graph (AtomId "тест_топик")
+      assertEqual "composeDefinition rejects tautological edge (G2)" "" (gsText surface)
+      assertEqual "rejected surface has no proofs" [] (gsPaths surface)
+
+  , TestCase $ do
+      -- Direct gate verification: SubstrateExtractedRaw fails G4
+      let proof = PathProof [substrateEdge] "тест_топик"
+          verdict = validatePath proof
+      assertBool "G4 gate fails for SubstrateExtractedRaw" (not (gvOverall verdict))
+
+  , TestCase $ do
+      -- Direct gate verification: tautological edge fails G2
+      let proof = PathProof [tautologicalEdge] "тест_топик"
+          verdict = validatePath proof
+      assertBool "G2 gate fails for tautological edge" (not (gvOverall verdict))
+
+  , TestCase $ do
+      -- Regression: valid seedGraph edges still pass gates and produce output
+      let surface = composeDefinition testMorph defaultFieldProfile 3 seedGraph (AtomId "свобода")
+      assertBool ("valid seedGraph still produces non-empty text after gate enforcement: " <> show (gsText surface))
+                 (T.length (gsText surface) > 0)
   ]

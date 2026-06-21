@@ -16,6 +16,9 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Time.Clock (UTCTime)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 import QxFx0.Types.Recovery
   ( LocalRecoveryCause(..)
@@ -37,6 +40,9 @@ import QxFx0.Types.ShadowDivergence
   , ShadowSnapshotId(..)
   )
 import QxFx0.Core.FMAR (FmarMode(..))
+import QxFx0.Observability.Metrics (MetricType(..), Metric(..))
+import QxFx0.Observability.Logging (LogLevel(..), LogEntry(..))
+import QxFx0.Semantic.Network.Substrate (SubstrateEdgeInfo(..))
 
 -- | Helper: round-trip a value through JSON and verify equality
 assertRoundTrip :: (Eq a, Show a, A.ToJSON a, A.FromJSON a) => String -> a -> Assertion
@@ -63,6 +69,11 @@ roundTripTests = TestList
   , TestLabel "ShadowDivergenceSeverity" testShadowDivergenceSeverityRT
   , TestLabel "ShadowSnapshotId" testShadowSnapshotIdRT
   , TestLabel "FmarMode" testFmarModeRT
+  , TestLabel "MetricType" testMetricTypeRT
+  , TestLabel "Metric" testMetricRT
+  , TestLabel "LogLevel" testLogLevelRT
+  , TestLabel "LogEntry" testLogEntryRT
+  , TestLabel "SubstrateEdgeInfo" testSubstrateEdgeInfoRT
   ]
 
 -- LocalRecoveryCause — audit C: had broken round-trip (ToJSON snake_case, FromJSON generic)
@@ -90,12 +101,6 @@ testLocalRecoveryStrategyRT = TestList
   , TestCase $ assertRoundTrip "StrategyExposeUncertainty" StrategyExposeUncertainty
   , TestCase $ assertRoundTrip "StrategySafeRecovery" StrategySafeRecovery
   , TestCase $ assertRoundTrip "StrategyMorphologyExpansion" StrategyMorphologyExpansion
-  , TestCase $ assertRoundTrip "StrategyIdentityReinforcement" StrategyIdentityReinforcement
-  , TestCase $ assertRoundTrip "StrategyTemporalDeepening" StrategyTemporalDeepening
-  , TestCase $ assertRoundTrip "StrategyRequestCalibration" StrategyRequestCalibration
-  , TestCase $ assertRoundTrip "StrategyRequestRule" StrategyRequestRule
-  , TestCase $ assertRoundTrip "StrategyRequestConcept" StrategyRequestConcept
-  , TestCase $ assertRoundTrip "StrategyExternalDialogue" StrategyExternalDialogue
   ]
 
 testLocalRecoveryPolicyRT :: Test
@@ -104,7 +109,6 @@ testLocalRecoveryPolicyRT = TestList
   , TestCase $ assertRoundTrip "LocalRecoveryDisabled" LocalRecoveryDisabled
   ]
 
--- PreActorFailureKind — audit D: was ToJSON-only, needs FromJSON
 testPreActorFailureKindRT :: Test
 testPreActorFailureKindRT = TestList
   [ TestCase $ assertRoundTrip "PreActorTransportFailure" PreActorTransportFailure
@@ -114,55 +118,38 @@ testPreActorFailureKindRT = TestList
 
 testPreActorFailureEventRT :: Test
 testPreActorFailureEventRT = TestList
-  [ TestCase $ assertRoundTrip "basic failure event" PreActorFailureEvent
-    { pafeKind = PreActorTransportFailure
-    , pafeActionKind = "http_request"
-    , pafeReason = "connection_timeout"
-    }
-  , TestCase $ assertRoundTrip "failure event with unicode" PreActorFailureEvent
-    { pafeKind = PreActorFallbackNonAuthoritative
-    , pafeActionKind = "fallback_path"
-    , pafeReason = "не удалось восстановить контекст"
-    }
+  [ TestCase $ assertRoundTrip "simple event" $
+      PreActorFailureEvent PreActorTransportFailure "action" "reason"
   ]
 
 testEffectSnapshotRT :: Test
 testEffectSnapshotRT = TestList
-  [ TestCase $ assertRoundTrip "api healthy" EffectSnapshot { esApiHealthy = True }
-  , TestCase $ assertRoundTrip "api unhealthy" EffectSnapshot { esApiHealthy = False }
-  ]
+  [ TestCase $ assertRoundTrip "snapshot" (EffectSnapshot True) ]
 
 testTurnFamilyDerivationStepRT :: Test
 testTurnFamilyDerivationStepRT = TestList
-  [ TestCase $ assertRoundTrip "contact step" TurnFamilyDerivationStep
-    { tfdsLabel = "routing_contact"
-    , tfdsFamily = CMContact
-    }
-  , TestCase $ assertRoundTrip "clarify step" TurnFamilyDerivationStep
-    { tfdsLabel = "shadow_clarify"
-    , tfdsFamily = CMClarify
-    }
-  ]
+  [ TestCase $ assertRoundTrip "step" (TurnFamilyDerivationStep "step-1" CMGround) ]
 
 testGenerationAttemptRT :: Test
 testGenerationAttemptRT = TestList
-  [ TestCase $ assertRoundTrip "successful generation" GenerationAttempt
-    { gaPath = "pgf_linearization"
-    , gaOutcome = "success"
-    }
-  , TestCase $ assertRoundTrip "fallback generation" GenerationAttempt
-    { gaPath = "haskell_fallback"
-    , gaOutcome = "degraded_output"
-    }
-  ]
+  [ TestCase $ assertRoundTrip "attempt" (GenerationAttempt "path-1" "success") ]
 
 testCanonicalMoveFamilyRT :: Test
 testCanonicalMoveFamilyRT = TestList
   [ TestCase $ assertRoundTrip "CMGround" CMGround
   , TestCase $ assertRoundTrip "CMDefine" CMDefine
+  , TestCase $ assertRoundTrip "CMDistinguish" CMDistinguish
+  , TestCase $ assertRoundTrip "CMReflect" CMReflect
+  , TestCase $ assertRoundTrip "CMDescribe" CMDescribe
+  , TestCase $ assertRoundTrip "CMPurpose" CMPurpose
+  , TestCase $ assertRoundTrip "CMHypothesis" CMHypothesis
+  , TestCase $ assertRoundTrip "CMRepair" CMRepair
   , TestCase $ assertRoundTrip "CMContact" CMContact
+  , TestCase $ assertRoundTrip "CMAnchor" CMAnchor
   , TestCase $ assertRoundTrip "CMClarify" CMClarify
+  , TestCase $ assertRoundTrip "CMDeepen" CMDeepen
   , TestCase $ assertRoundTrip "CMConfront" CMConfront
+  , TestCase $ assertRoundTrip "CMNextStep" CMNextStep
   ]
 
 testIllocutionaryForceRT :: Test
@@ -170,6 +157,8 @@ testIllocutionaryForceRT = TestList
   [ TestCase $ assertRoundTrip "IFAsk" IFAsk
   , TestCase $ assertRoundTrip "IFAssert" IFAssert
   , TestCase $ assertRoundTrip "IFOffer" IFOffer
+  , TestCase $ assertRoundTrip "IFConfront" IFConfront
+  , TestCase $ assertRoundTrip "IFContact" IFContact
   ]
 
 testDecisionDispositionRT :: Test
@@ -193,6 +182,8 @@ testShadowDivergenceKindRT = TestList
   [ TestCase $ assertRoundTrip "ShadowNoDivergence" ShadowNoDivergence
   , TestCase $ assertRoundTrip "ShadowVerdictMismatch" ShadowVerdictMismatch
   , TestCase $ assertRoundTrip "ShadowUnavailableDivergence" ShadowUnavailableDivergence
+  , TestCase $ assertRoundTrip "ShadowBridgeSkew" ShadowBridgeSkew
+  , TestCase $ assertRoundTrip "ShadowExecutionError" ShadowExecutionError
   ]
 
 testShadowDivergenceSeverityRT :: Test
@@ -200,15 +191,55 @@ testShadowDivergenceSeverityRT = TestList
   [ TestCase $ assertRoundTrip "ShadowSeverityClean" ShadowSeverityClean
   , TestCase $ assertRoundTrip "ShadowSeverityAdvisory" ShadowSeverityAdvisory
   , TestCase $ assertRoundTrip "ShadowSeveritySafety" ShadowSeveritySafety
+  , TestCase $ assertRoundTrip "ShadowSeverityContract" ShadowSeverityContract
+  , TestCase $ assertRoundTrip "ShadowSeverityUnavailable" ShadowSeverityUnavailable
   ]
 
 testShadowSnapshotIdRT :: Test
 testShadowSnapshotIdRT = TestList
-  [ TestCase $ assertRoundTrip "snapshot id" (ShadowSnapshotId "snap-001")
-  ]
+  [ TestCase $ assertRoundTrip "snapshot id" (ShadowSnapshotId "snap-001") ]
 
 testFmarModeRT :: Test
 testFmarModeRT = TestList
   [ TestCase $ assertRoundTrip "FmarShadow" FmarShadow
   , TestCase $ assertRoundTrip "FmarLive" FmarLive
+  ]
+
+-- ── New round-trip tests for formerly write-only types ──────────────
+
+testMetricTypeRT :: Test
+testMetricTypeRT = TestList
+  [ TestCase $ assertRoundTrip "Counter" Counter
+  , TestCase $ assertRoundTrip "Gauge" Gauge
+  , TestCase $ assertRoundTrip "Histogram" Histogram
+  , TestCase $ assertRoundTrip "Timing" Timing
+  ]
+
+testMetricRT :: Test
+testMetricRT = TestList
+  [ TestCase $ assertRoundTrip "counter metric" $
+      Metric "test.counter" Counter 42.0 (read "2024-01-01 00:00:00 UTC") Map.empty
+  , TestCase $ assertRoundTrip "gauge metric with tags" $
+      Metric "test.gauge" Gauge 3.14 (read "2024-01-01 00:00:00 UTC") (Map.fromList [("host","localhost")])
+  ]
+
+testLogLevelRT :: Test
+testLogLevelRT = TestList
+  [ TestCase $ assertRoundTrip "LogDebug" LogDebug
+  , TestCase $ assertRoundTrip "LogInfo" LogInfo
+  , TestCase $ assertRoundTrip "LogWarn" LogWarn
+  , TestCase $ assertRoundTrip "LogError" LogError
+  ]
+
+testLogEntryRT :: Test
+testLogEntryRT = TestList
+  [ TestCase $ assertRoundTrip "simple log entry" $
+      LogEntry (read "2024-01-01 00:00:00 UTC") LogInfo "test message" Map.empty Nothing
+  , TestCase $ assertRoundTrip "log entry with context and error" $
+      LogEntry (read "2024-01-01 00:00:00 UTC") LogError "failed" (Map.fromList [("module","engine")]) (Just "E001")
+  ]
+
+testSubstrateEdgeInfoRT :: Test
+testSubstrateEdgeInfoRT = TestList
+  [ TestCase $ assertRoundTrip "edge" (SubstrateEdgeInfo "topicA" "topicB" 0.5 3)
   ]

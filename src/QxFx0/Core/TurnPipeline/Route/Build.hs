@@ -221,7 +221,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
         , rcaiShadowDivergenceSeverity = scShadowDivergenceSeverity sc
         , rcaiLegitScore               = legitScore
         }
-      AdmittedResponseContent arcDecision arcRmp arcRcp =
+      AdmittedResponseContent admittedDecision admittedRmp admittedRcp =
         admitResponseContent admissionInput rmpAfterLegit rcpFinal
 
       -- FMAR directive for trace (shadow or live)
@@ -260,8 +260,8 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
           { tpRouting = rd
           , tpFamily = family
           , tpRenderStyle = renderStyleText renderStyle
-          , tpRmpAfterLegit = arcRmp
-          , tpRcpFinal = arcRcp
+          , tpRmpAfterLegit = admittedRmp
+          , tpRcpFinal = admittedRcp
           , tpFinalFamily = renderingFamily
           , tpFinalForce = renderingForce
           , tpLegitScore = legitScore
@@ -283,7 +283,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
             , tpDeliberation = rdDeliberation rd
             , tpFmarDirective = fmarDirective
             , tpFamilyDerivationChain = familyDerivationChain
-            , tpResponseAdmission = arcDecision
+            , tpResponseAdmission = admittedDecision
             , tpCommitmentEngagement = commitmentEngagement
             , tpAnomalySurface = fmap aSurface mAnomaly
             , tpAnomalyTrace = fmap aTrace mAnomaly
@@ -359,8 +359,8 @@ hasChallengeMarker input =
        , "ты говоришь", "оспариваю"
        ]
 
-renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts
-renderTurnOutput pio ss ti ts tp = do
-  let effectPlan = planRenderEffectsForRuntime (pipelineRuntimeMode pio) (pipelineLocalRecoveryPolicy pio) ss ti ts tp
-  effectResults <- resolveRenderEffects pio effectPlan
-  pure (buildTurnArtifacts ss ti ts tp effectPlan effectResults)
+-- renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts
+-- renderTurnOutput pio ss ti ts tp = do
+--   let effectPlan = planRenderEffectsForRuntime (pipelineRuntimeMode pio) (pipelineLocalRecoveryPolicy pio) ss ti ts tp
+--   effectResults <- resolveRenderEffects pio effectPlan
+--   pure (buildTurnArtifacts ss ti ts tp effectPlan effectResults)

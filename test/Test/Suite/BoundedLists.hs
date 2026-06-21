@@ -2,6 +2,7 @@
 module Test.Suite.BoundedLists
   ( boundedListsTests
   ) where
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import Test.HUnit (Test(..), assertFailure)
 import Test.QuickCheck
@@ -11,9 +12,7 @@ import Test.QuickCheck
   , chooseInt
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -66,7 +65,8 @@ boundedListsTests =
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop =
   TestCase $ do
-    result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+    args <- qcArgs
+    result <- quickCheckWithResult args prop
     unless (isSuccess result) $
       assertFailure (label <> ": QuickCheck failed")
   where

@@ -27,9 +27,7 @@ import Test.QuickCheck
   , elements
   , forAll
   , ioProperty
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 
 import QxFx0.Core.FMAR (FmarMode(..))
@@ -337,6 +335,7 @@ import Test.Support (withEnvVar)
 -- Authoritative-turn finalize fixture (forces canonical artifacts) for the
 -- governed perspective-commit path; the other fixtures here are local copies.
 import Test.Support.TurnPipelineFixtures (buildAuthoritativePerspectiveFinalizeFixture)
+import Test.Support.QuickCheckConfig (qcArgs)
 
 -- | Match both plain and structured PersistenceError variants.
 matchPersistenceError :: QxFx0Exception -> Maybe T.Text
@@ -3524,7 +3523,8 @@ summarizeFinalizeCommitPlan plan =
 
 quickCheckTest :: Testable prop => String -> prop -> Test
 quickCheckTest label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 100 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   case result of
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)

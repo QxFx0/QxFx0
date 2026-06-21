@@ -89,3 +89,9 @@ docs/audits/
 # Internal work-orders / technician briefs (kept local, not published)
 docs/tz/
 docs/infra-hardening-tz.md
+
+# Local environment secrets
+.env
+
+# Orphan worktree artifacts
+qxfx0-s13-wt/

@@ -18,6 +18,7 @@ Verifies the laws asserted in the FMAR plan, Phase 2:
 module Test.Suite.SelfAdaptivePosition
   ( selfAdaptivePositionTests
   ) where
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import Test.HUnit (Test (..), assertBool)
 import Test.QuickCheck
@@ -25,9 +26,7 @@ import Test.QuickCheck
   , Property
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -131,5 +130,6 @@ nearAny x = any (\g -> abs (x - g) < 1.0e-9)
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   assertBool ("Property failed: " ++ label) (isSuccess result)

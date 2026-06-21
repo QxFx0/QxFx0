@@ -16,10 +16,9 @@ import qualified Data.Text as T
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.Environment (lookupEnv)
-import System.Directory (makeAbsolute)
 import QxFx0.ExceptionPolicy (catchIO)
 import Data.Char (isAlphaNum, isAscii, isLetter)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe)
 
 isSafeChar :: Char -> Bool
 isSafeChar c = isAscii c && (isAlphaNum c || c == '-' || c == '_')
@@ -41,29 +40,24 @@ checkConstitution :: FilePath -> Text -> Double -> Double -> IO NixGuardStatus
 checkConstitution nixPath concept agency tension =
   case normalizeConceptKey concept of
     Nothing
-      | T.null (T.strip concept) -> return Allowed
-      | otherwise -> do
-          lenient <- isLenientMode
-          if lenient
-            then return (Unavailable "constitution concept unsupported; policy check skipped")
-            else return (Blocked "constitution concept unsupported")
+      | T.null (T.strip concept) -> return (Blocked "constitution concept is empty")
+      | otherwise -> return (Blocked "constitution concept not recognized")
     Just conceptKey -> do
-      absoluteNixPath <- makeAbsolute nixPath
       let nixExpr = "let agency = " <> T.pack (show agency)
                    <> "; tension = " <> T.pack (show tension)
-                    <> "; data = import " <> nixStringLiteral (T.pack absoluteNixPath)
+                   <> "; data = import " <> nixStringLiteral (T.pack nixPath)
                    <> "; key = " <> nixStringLiteral conceptKey
-                    <> "; match = builtins.filter (c: c.id == key) data.concepts;"
+                    <> "; match = builtins.filter (c: builtins.toLower c.id == builtins.toLower key) data.concepts;"
                     <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
-                    <> "  agencyOk = concept != null && (builtins.isNull concept.minAgency || agency >= concept.minAgency);"
-                    <> "  tensionOk = concept != null && (builtins.isNull concept.minTension || tension >= concept.minTension);"
+                    <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
+                    <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"
                     <> " in if concept != null then agencyOk && tensionOk else true"
       result <- runNixEval nixExpr
       case result of
         Right "true"  -> return Allowed
         Right "false" -> return $ Blocked $ "constitution blocked: " <> conceptKey
-        Right other   -> return $ Unavailable $ "nix evaluator unavailable: unexpected_result:" <> other
-        Left err      -> return $ Unavailable $ "nix evaluator unavailable: " <> classifyNixEvalError err
+        Right other   -> return $ Blocked $ "constitution eval unexpected_result: " <> other
+        Left err      -> return $ Blocked $ "constitution eval failed: " <> classifyNixEvalError err
 
 getNixGuardStatus :: IO (Either Text NixGuardStatus)
 getNixGuardStatus = do
@@ -74,13 +68,9 @@ getNixGuardStatus = do
 
 runNixEval :: Text -> IO (Either Text Text)
 runNixEval nixExpr = do
-  restrictedResult <- runNixInstantiate True nixExpr
-  case restrictedResult of
-    Left err
-      | isRestrictedFlagUnsupported err ->
-          runNixInstantiate False nixExpr
-    _ ->
-      pure restrictedResult
+  -- Н-1: No fallback from restricted to unrestricted mode.
+  -- If --restricted is unsupported, fail closed rather than downgrading security.
+  runNixInstantiate True nixExpr
 
 runNixInstantiate :: Bool -> Text -> IO (Either Text Text)
 runNixInstantiate restricted nixExpr = do
@@ -108,20 +98,18 @@ normalizeConceptKey raw =
   in if T.null normalized
        then Nothing
        else case conceptAlias normalized of
-         Just canonical -> Just canonical
+         Just alias -> Just alias
          Nothing -> if T.all isConceptChar normalized
-           then Just normalized
-           else Nothing
+                      then Just normalized
+                      else Nothing
 
 isConceptChar :: Char -> Bool
 isConceptChar c =
-  (isAscii c && (isAlphaNum c || c == '-' || c == '_'))
-    || (not (isAscii c) && isLetter c)
+  isSafeChar c || c == ' '
 
 conceptAlias :: Text -> Maybe Text
 conceptAlias key =
   case key of
-    "воля" -> Just "volya"
     "свобода" -> Just "svoboda"
     "смерть" -> Just "smert"
     "граница" -> Just "granitsa"
@@ -159,20 +147,9 @@ conceptAlias key =
     "пустота" -> Just "pustota"
     _ -> Nothing
 
-isLenientMode :: IO Bool
-isLenientMode = do
-  mEnv <- lookupEnv "QXFX0_NIXGUARD_LENIENT_UNSUPPORTED"
-  return (isJust mEnv && mEnv == Just "1")
-
 classifyNixEvalError :: Text -> Text
 classifyNixEvalError err
-  | isRestrictedFlagUnsupported err = "restricted_eval_unsupported"
   | "nix evaluation timed out" `T.isInfixOf` err = "timeout"
   | "nix exception:" `T.isPrefixOf` err = "process_exception"
   | "nix-instantiate failed" `T.isPrefixOf` err = "evaluation_failed"
   | otherwise = "evaluation_failed"
-
-isRestrictedFlagUnsupported :: Text -> Bool
-isRestrictedFlagUnsupported err =
-  ("--restricted" `T.isInfixOf` err)
-    && (("unrecognised flag" `T.isInfixOf` err) || ("unrecognized flag" `T.isInfixOf` err))

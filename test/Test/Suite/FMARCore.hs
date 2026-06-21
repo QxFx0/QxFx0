@@ -20,6 +20,7 @@ Verifies the laws asserted in the FMAR plan, Phase 4:
 module Test.Suite.FMARCore
   ( fmarCoreTests
   ) where
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import Test.HUnit (Test (..), assertBool, assertEqual)
 import Test.QuickCheck
@@ -28,9 +29,7 @@ import Test.QuickCheck
   , choose
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -244,7 +243,8 @@ genFamily = elements [minBound .. maxBound]
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   assertBool ("Property failed: " ++ label) (isSuccess result)
 
 -- ---------------------------------------------------------------------------

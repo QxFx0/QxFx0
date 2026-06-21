@@ -254,7 +254,6 @@ the HTTP sidecar) and never reloaded without a restart.
 | Variable | Type | Default | Meaning |
 |----------|------|---------|---------|
 | `QXFX0_CONCEPTS_PATH` | path | `$QXFX0_ROOT/semantics/concepts.nix` | Constitutional concept catalog. |
-| `QXFX0_NIXGUARD_LENIENT_UNSUPPORTED` | boolean | `0` | Allow Nix concepts that are not yet fully supported. |
 
 ### 3.8 Release / verification gates
 

@@ -261,6 +261,20 @@ instance ToJSON EpisodicIndex where
     , "eiByTag"        .= HM.toList (fmap HS.toList (eiByTag idx))
     ]
 
+
+instance FromJSON EpisodicIndex where
+  parseJSON = withObject "EpisodicIndex" $ \o -> do
+    byKind       <- o .: "eiByKind"
+    byTurn       <- o .: "eiByTurn"
+    byCommitment <- o .: "eiByCommitment"
+    byTag        <- o .: "eiByTag"
+    pure EpisodicIndex
+      { eiByKind       = HM.fromList [(k, HS.fromList v) | (k, v) <- byKind]
+      , eiByTurn       = HM.fromList [(k, HS.fromList v) | (k, v) <- byTurn]
+      , eiByCommitment = HM.fromList [(k, HS.fromList v) | (k, v) <- byCommitment]
+      , eiByTag        = HM.fromList [(k, HS.fromList v) | (k, v) <- byTag]
+      }
+
 instance ToJSON EpisodicStore where
   toJSON store = object
     [ "esEvents"    .= toJSON (foldr (:) [] (esEvents store))

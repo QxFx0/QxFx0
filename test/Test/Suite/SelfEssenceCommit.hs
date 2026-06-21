@@ -30,9 +30,7 @@ import Test.QuickCheck
   , counterexample
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   , vectorOf
   , (===)
   , (==>)
@@ -73,6 +71,7 @@ import QxFx0.Self.Salience
   )
 import QxFx0.Types.Decision (RenderStyle (..))
 import QxFx0.Types.Domain (CanonicalMoveFamily (..))
+import Test.Support.QuickCheckConfig (qcArgs)
 
 -- ---------------------------------------------------------------------------
 -- Test-suite entry point
@@ -154,7 +153,8 @@ testEssenceCommitmentRoundTrips =
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   if isSuccess result
     then pure ()
     else assertFailure ("Property failed: " ++ label)

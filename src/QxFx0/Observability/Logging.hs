@@ -15,7 +15,7 @@ module QxFx0.Observability.Logging
   , formatLogEntry
   ) where
 
-import Data.Aeson (ToJSON(..), object, (.=))
+import Data.Aeson (ToJSON(..), FromJSON(..), object, (.=), (.:), (.:?), withObject, withText)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
@@ -40,6 +40,14 @@ instance ToJSON LogLevel where
   toJSON LogWarn  = "WARN"
   toJSON LogError = "ERROR"
 
+instance FromJSON LogLevel where
+  parseJSON = withText "LogLevel" $ \t -> case t of
+    "DEBUG" -> pure LogDebug
+    "INFO"  -> pure LogInfo
+    "WARN"  -> pure LogWarn
+    "ERROR" -> pure LogError
+    _       -> fail $ "unknown LogLevel: " ++ T.unpack t
+
 -- | Structured log entry
 data LogEntry = LogEntry
   { leTimestamp :: !UTCTime
@@ -57,6 +65,15 @@ instance ToJSON LogEntry where
     , "context"   .= leContext
     , "error_code" .= leErrorCode
     ]
+
+instance FromJSON LogEntry where
+  parseJSON = withObject "LogEntry" $ \o ->
+    LogEntry
+      <$> o .:  "timestamp"
+      <*> o .:  "level"
+      <*> o .:  "message"
+      <*> o .:  "context"
+      <*> o .:? "error_code"
 
 -- | Log context for structured fields
 type LogContext = Map Text Text
@@ -123,18 +140,17 @@ logException ex ctx = do
 -- | Format log entry for output (simple text format for now)
 formatLogEntry :: LogEntry -> Text
 formatLogEntry LogEntry{..} =
-  T.pack (show leTimestamp)
-  <> " [" <> T.pack (show leLevel) <> "] "
-  <> leMessage
-  <> (if Map.null leContext then "" else " " <> formatContext leContext)
-  <> maybe "" (\code -> " error_code=" <> code) leErrorCode
-
--- | Format context map
-formatContext :: Map Text Text -> Text
-formatContext ctx =
-  T.intercalate " " $ map (\(k, v) -> k <> "=" <> v) $ Map.toList ctx
+  T.pack (show leTimestamp) <> " [" <> levelText <> "] " <> leMessage <> errorCodeText
+  where
+    levelText = case leLevel of
+      LogDebug -> "DEBUG"
+      LogInfo  -> "INFO"
+      LogWarn  -> "WARN"
+      LogError -> "ERROR"
+    errorCodeText = case leErrorCode of
+      Nothing  -> ""
+      Just ec  -> " (" <> ec <> ")"
 
 -- | Emit log entry to stderr (simple implementation)
 emitLog :: LogEntry -> IO ()
 emitLog entry = hPutStrLn stderr $ T.unpack $ formatLogEntry entry
-

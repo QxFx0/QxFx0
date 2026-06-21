@@ -159,7 +159,7 @@ runtimeInfrastructureTests =
   , testNixGuardUnsupportedConceptBlockedStrict
   , testNixGuardUnknownSafeConceptAllowedStrict
   , testNixGuardUnsupportedConceptAllowedLenient
-  , testNixGuardEmptyConceptAllowed
+  , testNixGuardEmptyConceptBlocked
   , testNixStringLiteralEscaping
   , testNixStringLiteralEmpty
   , testRunTurnRefreshesRuntimeSessionLastActive
@@ -2521,11 +2521,13 @@ testNixGuardUnsupportedConceptAllowedLenient = TestCase $ do
       Unavailable unavailableReason -> assertBool "unsupported concept should be Unavailable in lenient mode" ("unsupported" `T.isInfixOf` unavailableReason)
       other -> assertFailure ("expected Unavailable for unsupported concept in lenient mode, got: " <> show other)
 
-testNixGuardEmptyConceptAllowed :: Test
-testNixGuardEmptyConceptAllowed = TestCase $ do
+testNixGuardEmptyConceptBlocked :: Test
+testNixGuardEmptyConceptBlocked = TestCase $ do
   withEnvVar "QXFX0_NIXGUARD_LENIENT_UNSUPPORTED" Nothing $ do
     status <- NixGuard.checkConstitution "semantics/concepts.nix" "" 0.5 0.5
-    assertEqual "empty concept should be Allowed even in strict mode" Allowed status
+    case status of
+      Blocked reason -> assertBool "empty concept should be Blocked" ("empty" `T.isInfixOf` reason)
+      other -> assertFailure ("expected Blocked for empty concept, got: " <> show other)
 
 testNixStringLiteralEscaping :: Test
 testNixStringLiteralEscaping = TestCase $ do
@@ -2715,7 +2717,6 @@ testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do
         (ExitFailure _, Nothing) ->
           assertBool "--write-agda-witness on failure should report error on stderr"
             (not (null stderr))
-        _ -> pure ()  -- No Agda available, skip
         (ExitSuccess, Nothing) ->
           assertFailure "--write-agda-witness succeeded unexpectedly (agda not in PATH)"
         (ExitFailure _, Just _) ->

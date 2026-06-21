@@ -50,7 +50,7 @@ import QxFx0.Bridge.SQLite.SchemaContract
 import QxFx0.Lexicon.GfMap (GfMapLoadStatus(..), loadGfMapStatusFromPath)
 
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON)
+import Data.Aeson (ToJSON, FromJSON)
 
 data SystemHealth = SystemHealth
   { shStatus         :: !Text
@@ -91,7 +91,7 @@ data SystemHealth = SystemHealth
   , shSchemaReason   :: !Text
   , shReadinessMode  :: !Text
   } deriving stock (Show, Eq, Generic)
-   deriving anyclass (ToJSON)
+   deriving anyclass (ToJSON, FromJSON)
 
 data GfMapHealth = GfMapHealth
   { ghOk      :: !Bool

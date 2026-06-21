@@ -25,9 +25,7 @@ import Test.QuickCheck
   , choose
   , elements
   , forAll
-  , maxSuccess
   , quickCheckWithResult
-  , stdArgs
   , (==>)
   )
 import Test.QuickCheck.Test (isSuccess)
@@ -62,6 +60,7 @@ import QxFx0.Self.Salience
 import QxFx0.Types.Decision (RenderStyle (..))
 import QxFx0.Types.Domain (CanonicalMoveFamily (..))
 import QxFx0.Types.Recovery (LocalRecoveryCause (..))
+import Test.Support.QuickCheckConfig (qcArgs)
 
 -- ---------------------------------------------------------------------------
 -- Test-suite entry point
@@ -93,7 +92,8 @@ selfDeliberationTests =
 
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop = TestCase $ do
-  result <- quickCheckWithResult stdArgs { maxSuccess = 100 } prop
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
   if isSuccess result
     then pure ()
     else assertFailure ("Property failed: " ++ label)

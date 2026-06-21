@@ -1,0 +1,5 @@
+# Round-trip serialization allowlist
+# Each line: file:TypeName — reason for being write-only
+# Types listed here have ToJSON but intentionally lack FromJSON.
+# This should be EMPTY — every persisted type should be round-trippable.
+# Only add entries with explicit ADR justification.

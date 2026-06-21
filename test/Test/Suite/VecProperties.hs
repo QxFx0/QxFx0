@@ -2,6 +2,7 @@
 module Test.Suite.VecProperties
   ( vecPropertiesTests
   ) where
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import Test.HUnit (Test(..), assertFailure)
 import Test.QuickCheck
@@ -10,8 +11,6 @@ import Test.QuickCheck
   , choose
   , forAll
   , quickCheckWithResult
-  , stdArgs
-  , maxSuccess
   )
 import Test.QuickCheck.Test (isSuccess)
 
@@ -59,7 +58,8 @@ arbitraryCoreVec =
 quickCheckProperty :: String -> Property -> Test
 quickCheckProperty label prop =
   TestCase $ do
-    result <- quickCheckWithResult stdArgs { maxSuccess = 200 } prop
+    args <- qcArgs
+    result <- quickCheckWithResult args prop
     unless (isSuccess result) $
       assertFailure (label <> ": QuickCheck failed")
   where
