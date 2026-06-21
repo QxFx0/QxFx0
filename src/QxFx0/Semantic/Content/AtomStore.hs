@@ -534,6 +534,57 @@ relationStore =
       "молчание контрастирует с речью, но не тождественно пустоте" "silence contrasts with speech but is not identical to emptiness"
   , rel "молчание" "акт_отказа_или_присутствия" RelCanBe CaseInstrumental "актом отказа или знаком присутствия"
       "молчание может быть актом отказа или знаком присутствия" "silence can be an act of refusal or a sign of presence"
+
+  -- ============================================================
+  -- Inter-topic edges (mesh connectivity for PathFinder)
+  -- ============================================================
+  , rel "ответственность" "свобода" RelRelatedTo CaseInstrumental "со свободой"
+      "ответственность связана со свободой" "responsibility is related to freedom"
+  , rel "ответственность" "долг" RelRelatedTo CaseInstrumental "с долгом"
+      "ответственность связана с долгом" "responsibility is related to duty"
+  , rel "мнение" "истина" RelDiffersFrom CaseGenitive "от истины"
+      "мнение отличается от истины" "opinion differs from truth"
+  , rel "память" "воспоминание" RelRelatedTo CaseInstrumental "с воспоминанием"
+      "память связана с воспоминанием" "memory is related to recollection"
+  , rel "самосознание" "сознание" RelPresupposes CaseAccusative "сознание"
+      "самосознание предполагает сознание" "self-awareness presupposes consciousness"
+  , rel "вера" "доверие" RelRelatedTo CaseInstrumental "с доверием"
+      "вера связана с доверием" "faith is related to trust"
+  , rel "страх" "надежда" RelContrastsWith CaseInstrumental "с надеждой"
+      "страх контрастирует с надеждой" "fear contrasts with hope"
+  , rel "смерть" "время" RelRelatedTo CaseInstrumental "со временем"
+      "смерть связана со временем" "death is related to time"
+  , rel "разум" "истина" RelRelatedTo CaseInstrumental "с истиной"
+      "разум связан с истиной" "reason is related to truth"
+      `withVerb` "связан"
+  , rel "власть" "справедливость" RelRelatedTo CaseInstrumental "со справедливостью"
+      "власть связана со справедливостью" "power is related to justice"
+  , rel "долг" "справедливость" RelRelatedTo CaseInstrumental "со справедливостью"
+      "долг связан со справедливостью" "duty is related to justice"
+      `withVerb` "связан"
+  , rel "любовь" "доверие" RelPresupposes CaseAccusative "доверие"
+      "любовь предполагает доверие" "love presupposes trust"
+  , rel "одиночество" "самосознание" RelRelatedTo CaseInstrumental "с самосознанием"
+      "одиночество связано с самосознанием" "loneliness is related to self-awareness"
+      `withVerb` "связано"
+  , rel "труд" "время" RelRelatedTo CaseInstrumental "со временем"
+      "труд связан со временем" "labour is related to time"
+      `withVerb` "связан"
+  , rel "покой" "время" RelRelatedTo CaseInstrumental "со временем"
+      "покой связан со временем" "rest is related to time"
+      `withVerb` "связан"
+  , rel "красота" "истина" RelRelatedTo CaseInstrumental "с истиной"
+      "красота связана с истиной" "beauty is related to truth"
+  , rel "воля" "свобода" RelRelatedTo CaseInstrumental "со свободой"
+      "воля связана со свободой" "will is related to freedom"
+  , rel "смерть" "бытие" RelRelatedTo CaseInstrumental "с бытием"
+      "смерть связана с бытием" "death is related to being"
+  , rel "история" "память" RelRelatedTo CaseInstrumental "с памятью"
+      "история связана с памятью" "history is related to memory"
+  , rel "молчание" "язык" RelContrastsWith CaseInstrumental "с языком"
+      "молчание контрастирует с языком" "silence contrasts with language"
+  , rel "надежда" "вера" RelRelatedTo CaseInstrumental "с верой"
+      "надежда связана с верой" "hope is related to faith"
   ]
   where
     rel fromId toId rt oc objText ru en =
@@ -579,22 +630,20 @@ allTopics = map atomDisplay
 -- Verbalizer (simple — for round-trip parity)
 -- ============================================================
 
--- | Verbalize a relation using atomDisplay (no stored objectText).
--- This is the generative path: the object text comes from the target atom,
--- not from a stored string. The verb phrase comes from verbForType or relVerbText.
+-- | Verbalize a relation for generative output.
+-- Uses relObjectText (which contains correct grammatical case + prepositions)
+-- rather than atomDisplay (which is nominative only).
+-- This produces grammatically correct text for all seed + inter-topic edges.
 verbalizeRelation :: Relation -> Text
 verbalizeRelation r =
   case relVerbText r of
-    Just ""  -> subject <> " " <> objectDisplay
-    Just vt  -> subject <> " " <> vt <> " " <> objectDisplay
-    Nothing  -> subject <> " " <> verbPhrase <> " " <> objectDisplay
+    Just ""  -> subject <> " " <> relObjectText r
+    Just vt  -> subject <> " " <> vt <> " " <> relObjectText r
+    Nothing  -> subject <> " " <> verbPhrase <> " " <> relObjectText r
   where
     subject = case M.lookup (relFrom r) atomStore of
       Just a  -> atomDisplay a
       Nothing -> "??"
-    objectDisplay = case M.lookup (relTo r) atomStore of
-      Just a  -> atomDisplay a
-      Nothing -> relObjectText r  -- fallback to stored text
     verbPhrase = verbForType (relType r)
 
 -- | Verbalize using stored objectText (legacy round-trip path).

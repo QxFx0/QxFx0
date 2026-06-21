@@ -47,6 +47,7 @@ import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Ord (comparing, Down(..))
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Map.Strict as M
 import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.AtomStore
@@ -259,13 +260,73 @@ selectTopPaths n fp start maxLen =
 
 -- | Compose a definition for a topic: find top-N length-1 paths,
 -- verbalize each, join with periods. Paths are filtered through gates.
+-- For each length-1 path, also find a length-2 rationale path
+-- (topic →edge1→ intermediate →edge2→ consequence) to build argued structure.
 composeDefinition :: FieldProfile -> Int -> AtomId -> Text
 composeDefinition fp n topic =
   let paths = selectTopPaths n fp topic 1
-      texts = map (verbalizePath . rpProof) paths
+      texts = map (composeArguedPredicate fp topic) paths
   in if null texts
        then ""
        else T.intercalate ". " texts <> "."
+
+-- | Compose a single argued predicate from a length-1 path.
+-- Structure: [predicate]. Потому что [rationale from length-2 path].
+--            Но [counter from contrasting relation]. Именно поэтому [synthesis].
+composeArguedPredicate :: FieldProfile -> AtomId -> RankedPath -> Text
+composeArguedPredicate fp topic rp =
+  let mainText = verbalizePath (rpProof rp)
+      mainEdges = ppEdges (rpProof rp)
+      topicAtom = case mainEdges of (e:_) -> relFrom e; [] -> topic
+      objAtom = case mainEdges of (e:_) -> relTo e; [] -> topic
+      -- Find rationale: length-2 path from objAtom
+      rationalePaths = take 1 $ selectTopPaths 1 fp objAtom 2
+      rationaleText = case rationalePaths of
+        (rp2:_) -> verbalizePath (rpProof rp2)
+        [] -> ""
+      -- Find counter: find a contrasting relation from topic
+      counterPaths = findCounterPaths fp topic mainEdges
+      counterText = case counterPaths of
+        (rp3:_) -> verbalizePath (rpProof rp3)
+        [] -> ""
+      -- Synthesis: combine the key insight
+      synthesisText = buildSynthesis mainEdges rationaleText
+  in mainText
+     <> (if T.null rationaleText then "" else ". Потому что " <> rationaleText)
+     <> (if T.null counterText then "" else ". Но " <> counterText)
+     <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
+
+-- | Find counter-paths: relations from the topic that contrast with the main edge.
+findCounterPaths :: FieldProfile -> AtomId -> [Relation] -> [RankedPath]
+findCounterPaths _ topic mainEdges =
+  let mainTypes = map relType mainEdges
+      -- Counter types: contrast, negate, differ
+      counterTypes = [RelContrastsWith, RelDiffersFrom, RelNotReducibleTo, RelIsNot, RelNegates]
+      allRels = relationsFromAtom topic
+      -- Only keep edges that are NOT the same as main edges
+      -- and are counter-typed
+      counterRels = [ r | r <- allRels
+                         , relType r `elem` counterTypes
+                         , relRuOriginal r `notElem` map relRuOriginal mainEdges
+                         ]
+  in [ RankedPath (PathProof [r] (relTopic r))
+                    (scorePath (FieldProfile 0.5 1.0 0.5 0.5) [r])
+     | r <- counterRels
+     ]
+
+-- | Build synthesis text from the main edge and rationale.
+buildSynthesis :: [Relation] -> Text -> Text
+buildSynthesis mainEdges rationale =
+  case mainEdges of
+    (e:_) ->
+      let topicDisplay = case M.lookup (relFrom e) atomStore of
+            Just a -> atomDisplay a
+            Nothing -> relTopic e
+          objDisplay = relObjectText e
+      in if T.null rationale
+           then ""
+           else "различие между " <> topicDisplay <> " и " <> objDisplay <> " — в самой претензии"
+    [] -> ""
 
 -- | Compose with explicit gate verdict for observability.
 -- Returns (text, number of paths that passed gates, number rejected).

@@ -68,6 +68,9 @@ import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
+import QxFx0.Semantic.Content.SubstrateCandidate
+  ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
+import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, relationStore, Relation(..), RelationSource(..))
 import qualified QxFx0.Semantic.Network.Types as NetTypes
 import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..))
 import qualified Data.Set as S
@@ -209,6 +212,12 @@ bootstrapSession quiet sessionId = do
       -- Substrate: build substrate edges from brain_kb
       explicitTopicSet = S.fromList coveredTopics
       substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
+      -- Substrate candidate extraction + admission
+      topicList = allTopics
+      knownAtomIds = map AtomId topicList
+      candidates = extractCandidates brainKBEntries topicList
+      (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
+      promotedRelations = promoteAll admitted
       substrateEdgeMap = M.fromList
         [ ((seiFrom e, seiTo e), NetTypes.SemanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
         | e <- substrateEdges

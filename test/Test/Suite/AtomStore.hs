@@ -56,8 +56,8 @@ structureTests = TestList
 
   , TestCase $ do
       let relCount = length relationStore
-      assertBool ("relation count >= 60, got " <> show relCount)
-                 (relCount >= 60)
+      assertBool ("relation count >= 80, got " <> show relCount)
+                 (relCount >= 80)
 
   , TestCase $ do
       let freedomRels = relationsFromAtom (AtomId "свобода")
