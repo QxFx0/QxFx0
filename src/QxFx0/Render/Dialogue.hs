@@ -34,7 +34,7 @@ import QxFx0.Semantic.Content
   )
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
-  ( FieldProfile(..), composeDefinition, GeneratedSurface(..)
+  ( FieldProfile(..), composeDefinition, composeArgument, GeneratedSurface(..)
   )
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -1857,7 +1857,7 @@ generateFromFrame cs field mNetwork frame morph = case frame of
                (unCounterfactual (fieldCounterfactual field))
                (unConsolidation (fieldConsolidation field))
                (unResonance (fieldResonance field))
-        genSurface = composeDefinition fp 3 seedGraph (AtomId topic)
+        genSurface = composeDefinition morph fp 3 seedGraph (AtomId topic)
         genText = gsText genSurface
     in if not (T.null genText)
        then authorityText <> " " <> topicNom <> " — " <> genText
@@ -1888,16 +1888,21 @@ generateFromFrame cs field mNetwork frame morph = case frame of
         basisText = T.strip basis
         safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
-        -- Phase E: try challenge-response first
+        -- Generative path: compose argument from graph
+        genArgSurface = composeArgument morph (FieldProfile 0.5 0.8 0.5 0.5) seedGraph targetText rawObj
+        genArgText = gsText genArgSurface
+        -- Corpus fallback
         mChallengeResp = lookupChallengeResponse targetText rawObj []
         challengeText = case mChallengeResp of
           Just (intro, cr) ->
             intro <> " " <> crRestate cr <> ". "
             <> renderPredicateArgued (crRelevantPredicate cr)
           Nothing -> ""
-    in if not (T.null challengeText)
-         then challengeText
-         else case strength of
+    in if not (T.null genArgText)
+         then genArgText
+         else if not (T.null challengeText)
+           then challengeText
+           else case strength of
            FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
                     <> safeTarget <> " нужно проверить по явному критерию. "
                     <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."

@@ -8,6 +8,11 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.PathFinder
 import QxFx0.Semantic.Content.GeneratedPredicateGate (validatePath, GateVerdict(..))
+import QxFx0.Types (MorphologyData(..))
+import qualified Data.Map.Strict as M
+
+testMorph :: MorphologyData
+testMorph = MorphologyData M.empty M.empty M.empty M.empty
 
 pathFinderTests :: [Test]
 pathFinderTests =
@@ -138,21 +143,21 @@ determinismTests = TestList
 compositionTests :: Test
 compositionTests = TestList
   [ TestCase $ do
-      let surface = composeDefinition defaultFieldProfile 3 seedGraph (AtomId "свобода")
+      let surface = composeDefinition testMorph defaultFieldProfile 3 seedGraph (AtomId "свобода")
       assertBool ("composeDefinition produces non-empty text: " <> show (T.length (gsText surface)))
                  (T.length (gsText surface) > 0)
 
   , TestCase $ do
-      let surface = composeDefinition defaultFieldProfile 3 seedGraph (AtomId "свобода")
+      let surface = composeDefinition testMorph defaultFieldProfile 3 seedGraph (AtomId "свобода")
       assertBool ("composed text contains 'свобода': " <> show (gsText surface))
                  ("свобода" `T.isInfixOf` gsText surface)
 
   , TestCase $ do
-      let surface = composeDefinition defaultFieldProfile 3 seedGraph (AtomId "истина")
+      let surface = composeDefinition testMorph defaultFieldProfile 3 seedGraph (AtomId "истина")
       assertBool ("composed text contains 'истина': " <> show (gsText surface))
                  ("истина" `T.isInfixOf` gsText surface)
 
   , TestCase $ do
-      let surface = composeDefinition defaultFieldProfile 10 seedGraph (AtomId "несуществующий")
+      let surface = composeDefinition testMorph defaultFieldProfile 10 seedGraph (AtomId "несуществующий")
       assertEqual "nonexistent topic produces empty text" "" (gsText surface)
   ]

@@ -6,6 +6,8 @@ module QxFx0.Lexicon.Inflection
   , genitiveForm
   , accusativeForm
   , prepositionalForm
+  , instrumentalForm
+  , dativeForm
   ) where
 
 import Data.Text (Text)
@@ -110,3 +112,71 @@ resolveCandidatePrepositional md surface =
   case resolveLexemeForm md surface (Just PrepositionalCase) Nothing of
     Just form -> lfLemma form
     Nothing -> surface
+
+-- | Instrumental case form. Uses lexicon lookup, then suffix heuristic.
+instrumentalForm :: MorphologyData -> Text -> Text
+instrumentalForm md w =
+  case resolveLexemeForm md w (Just InstrumentalCase) Nothing of
+    Just form -> lfSurface form
+    Nothing -> instrumentalHeuristic w
+
+-- | Dative case form. Uses lexicon lookup, then suffix heuristic.
+dativeForm :: MorphologyData -> Text -> Text
+dativeForm md w =
+  case resolveLexemeForm md w (Just DativeCase) Nothing of
+    Just form -> lfSurface form
+    Nothing -> dativeHeuristic w
+
+-- | Suffix-based instrumental form heuristic.
+-- Doesn't re-inflect words already in instrumental.
+instrumentalHeuristic :: Text -> Text
+instrumentalHeuristic word =
+  let w = T.toLower word
+  in
+  if "ой" `T.isSuffixOf` w || "ей" `T.isSuffixOf` w
+     || "ом" `T.isSuffixOf` w || "ем" `T.isSuffixOf` w
+     || "ью" `T.isSuffixOf` w || "ами" `T.isSuffixOf` w
+    then word
+  else if "ь" `T.isSuffixOf` w
+    then T.init word <> "ью"
+  else if "а" `T.isSuffixOf` w
+    then T.init word <> "ой"
+  else if "я" `T.isSuffixOf` w
+    then T.init word <> "ей"
+  else if "о" `T.isSuffixOf` w
+    then T.init word <> "ом"
+  else if "е" `T.isSuffixOf` w
+    then T.init word <> "ем"
+  else if "й" `T.isSuffixOf` w
+    then T.init word <> "ем"
+  else if isConsonantEndingInf w
+    then word <> "ом"
+  else word
+
+-- | Suffix-based dative form heuristic.
+dativeHeuristic :: Text -> Text
+dativeHeuristic word =
+  let w = T.toLower word
+  in
+  if "у" `T.isSuffixOf` w || "ю" `T.isSuffixOf` w
+     || "е" `T.isSuffixOf` w || "и" `T.isSuffixOf` w
+    then word
+  else if "ь" `T.isSuffixOf` w
+    then T.init word <> "и"
+  else if "а" `T.isSuffixOf` w
+    then T.init word <> "е"
+  else if "я" `T.isSuffixOf` w
+    then T.init word <> "е"
+  else if "о" `T.isSuffixOf` w
+    then T.init word <> "у"
+  else if "е" `T.isSuffixOf` w
+    then T.init word <> "у"
+  else if "й" `T.isSuffixOf` w
+    then T.init word <> "ю"
+  else if isConsonantEndingInf w
+    then word <> "у"
+  else word
+
+isConsonantEndingInf :: Text -> Bool
+isConsonantEndingInf w = case T.last w of
+  c -> c `notElem` ("аеёиоуыэюяьй" :: String)

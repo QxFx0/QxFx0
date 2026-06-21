@@ -24,6 +24,8 @@ module QxFx0.Semantic.Morphology
   , genitiveForm
   , accusativeForm
   , prepositionalForm
+  , instrumentalForm
+  , dativeForm
   , buildLemmaMap
   , normalizeToken
   , normalizeAtoms
@@ -35,6 +37,8 @@ import QxFx0.Lexicon.Inflection
   , genitiveForm
   , prepositionalForm
   , toNominative
+  , instrumentalForm
+  , dativeForm
   )
 import QxFx0.Lexicon.Generated
   ( generatedLexemeEntries

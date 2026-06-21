@@ -38,6 +38,7 @@ module QxFx0.Semantic.Content.PathFinder
   , composeDefinition
   , defaultFieldProfile
   , composeDefinitionWithGates
+  , composeArgument
     -- * Verbalization
   , verbalizePath
   ) where
@@ -55,6 +56,8 @@ import GHC.Generics (Generic)
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.Base (renderPredicateArgued, SemanticPredicate(..), PredicateRole(..), mkArguedPred)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissible, validatePath, GateVerdict(..))
+import QxFx0.Lexicon.Inflection (instrumentalForm)
+import QxFx0.Types (MorphologyData)
 -- ============================================================
 -- Types
 -- ============================================================
@@ -257,8 +260,8 @@ selectTopPaths n fp graph start maxLen =
 
 -- | Compose a definition for a topic using a specific graph.
 -- Returns GeneratedSurface with text, path proofs, and provenance.
-composeDefinition :: FieldProfile -> Int -> AtomGraph -> AtomId -> GeneratedSurface
-composeDefinition fp n graph topic =
+composeDefinition :: MorphologyData -> FieldProfile -> Int -> AtomGraph -> AtomId -> GeneratedSurface
+composeDefinition morph fp n graph topic =
   let paths = selectTopPaths n fp graph topic 1
       (texts, usedTexts) = composePredicatesDedup fp graph topic (concatMap (map relRuOriginal . ppEdges . rpProof) paths) paths
       firstEdges = case paths of (rp:_) -> ppEdges (rpProof rp); [] -> []
@@ -269,7 +272,7 @@ composeDefinition fp n graph topic =
       bestRationale = case texts of
         (t:_) -> extractRationale t
         [] -> ""
-      synthesisText = buildSynthesis firstEdges bestRationale
+      synthesisText = buildSynthesis morph firstEdges bestRationale
       fullText = if null texts
         then ""
         else T.intercalate ". " texts
@@ -362,65 +365,21 @@ findCounterPaths graph topic mainEdges =
      ]
 
 -- | Build synthesis text from the main edge and rationale.
--- Uses instrumental case for both topic and object:
--- "различие между [topic_instr] и [obj_instr] — в самой претензии"
-buildSynthesis :: [Relation] -> Text -> Text
-buildSynthesis mainEdges rationale =
+-- Uses instrumental case for both topic and object via Lexicon.Inflection.
+buildSynthesis :: MorphologyData -> [Relation] -> Text -> Text
+buildSynthesis morph mainEdges rationale =
   case mainEdges of
     (e:_) ->
       let topicInstr = case M.lookup (relFrom e) atomStore of
-            Just a  -> toInstrumentalApprox (atomDisplay a)
-            Nothing -> toInstrumentalApprox (relTopic e)
-          -- For inter-topic edges, relTo is a topic atom — use atomDisplay
-          -- For concept edges, relObjectText has case+preposition
+            Just a  -> instrumentalForm morph (atomDisplay a)
+            Nothing -> instrumentalForm morph (relTopic e)
           objInstr = case M.lookup (relTo e) atomStore of
-            Just a | atomCategory a == CatTopic -> toInstrumentalApprox (atomDisplay a)
-            _ -> toInstrumentalApprox (stripPreposition (relObjectText e))
+            Just a | atomCategory a == CatTopic -> instrumentalForm morph (atomDisplay a)
+            _ -> instrumentalForm morph (stripPreposition (relObjectText e))
       in if T.null rationale
            then ""
            else "различие между " <> topicInstr <> " и " <> objInstr <> " — в самой претензии"
     [] -> ""
-
--- | Approximate instrumental case conversion for common Russian nouns.
--- This is a simplified heuristic — full morphological inflection
--- will replace this in a future step.
--- Does NOT re-inflect words already in instrumental (-ой, -ей, -ом, -ем, -ью).
-toInstrumentalApprox :: Text -> Text
-toInstrumentalApprox word =
-  let w = T.toLower word
-  in
-  -- Already instrumental? Don't touch it
-  if "ой" `T.isSuffixOf` w || "ей" `T.isSuffixOf` w
-     || "ом" `T.isSuffixOf` w || "ем" `T.isSuffixOf` w
-     || "ью" `T.isSuffixOf` w || "ами" `T.isSuffixOf` w
-    then word
-  -- -ь → -ью (must check BEFORE consonant — ь is not a vowel but not consonant either)
-  else if "ь" `T.isSuffixOf` w
-    then T.init word <> "ью"
-  -- Feminine -а → -ой
-  else if "а" `T.isSuffixOf` w
-    then T.init word <> "ой"
-  -- Feminine -я → -ей
-  else if "я" `T.isSuffixOf` w
-    then T.init word <> "ей"
-  -- Neuter -о → -ом
-  else if "о" `T.isSuffixOf` w
-    then T.init word <> "ом"
-  -- Neuter -е → -ем
-  else if "е" `T.isSuffixOf` w
-    then T.init word <> "ем"
-  -- Masculine consonant → +ом
-  else if isConsonantEnding w
-    then word <> "ом"
-  -- Masculine -й → -ем
-  else if "й" `T.isSuffixOf` w
-    then T.init word <> "ем"
-  else word
-
--- | Check if word ends with a consonant (not a vowel).
-isConsonantEnding :: Text -> Bool
-isConsonantEnding w = case T.last w of
-  c -> c `notElem` ("аеёиоуыэюя" :: String)
 
 -- | Strip leading preposition from object text.
 -- "с ответственностью" → "ответственностью"
@@ -464,3 +423,66 @@ composeDefinitionWithGates fp n graph topic =
 verbalizePath :: PathProof -> Text
 verbalizePath proof =
   T.intercalate ". " (map verbalizeRelation (ppEdges proof))
+
+-- ============================================================
+-- Challenge argument composition
+-- ============================================================
+
+-- | Compose a challenge argument from the graph.
+-- Finds the challenged relation, a counter-edge, and builds
+-- an argued response. Falls back to "" if no suitable edges found.
+composeArgument :: MorphologyData -> FieldProfile -> AtomGraph -> Text -> Text -> GeneratedSurface
+composeArgument morph fp graph topic objectionText =
+  let topicAtom = AtomId topic
+      topicRels = graphRelationsFromAtom graph topicAtom
+  in if null topicRels
+       then GeneratedSurface "" [] []
+       else
+         let -- 1. Find challenged edge: score by keyword overlap with objection
+             scored = [ (scoreEdgeVsObjection objectionText r, r) | r <- topicRels ]
+             challengedEdge = case [ r | (_, r) <- reverse (sortOn fst scored) ] of
+               (r:_) -> Just r
+               [] -> Nothing
+             -- 2. Find counter-edge: prefer contrasting types
+             counterTypes = [RelLimitedBy, RelContrastsWith, RelNotReducibleTo, RelIsNot, RelNegates, RelDiffersFrom]
+             counterRels = [ r | r <- topicRels
+                               , relType r `elem` counterTypes
+                               , Just r /= challengedEdge
+                               ]
+             counterEdge = case counterRels of
+               (r:_) -> Just r
+               [] -> Nothing
+         in case (challengedEdge, counterEdge) of
+              (Just ch, Just ce) ->
+                let mainText = verbalizeRelation ce
+                    objAtom = relTo ce
+                    rationalePaths = selectTopPaths 1 fp graph objAtom 2
+                    excluded = [relRuOriginal ce, relRuOriginal ch]
+                    rationaleText = case [ verbalizePath (rpProof p)
+                                         | p <- rationalePaths
+                                         , not (any (\e -> relRuOriginal e `elem` excluded)
+                                                    (ppEdges (rpProof p)))
+                                         ] of
+                      (t:_) -> t
+                      [] -> ""
+                    counterText = verbalizeRelation ch
+                    synthesisText = buildSynthesis morph [ce] rationaleText
+                    fullText = mainText
+                      <> (if T.null rationaleText then "" else ". Потому что " <> rationaleText)
+                      <> ". Но " <> counterText
+                      <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
+                    allProofs = [ PathProof [ce] topic
+                                , PathProof [ch] topic
+                                ]
+                    allSources = [relSource ce, relSource ch]
+                in GeneratedSurface fullText allProofs allSources
+              _ -> GeneratedSurface "" [] []
+
+-- | Score an edge against objection text by keyword overlap.
+-- Higher = more relevant to the objection.
+scoreEdgeVsObjection :: Text -> Relation -> Double
+scoreEdgeVsObjection objection rel =
+  let objLower = T.toLower objection
+      edgeWords = T.words (T.toLower (relRuOriginal rel))
+      overlap = length [ w | w <- edgeWords, w `T.isInfixOf` objLower ]
+  in fromIntegral overlap / fromIntegral (max 1 (length edgeWords))
