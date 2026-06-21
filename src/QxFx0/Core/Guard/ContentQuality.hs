@@ -48,9 +48,7 @@ evaluateContentQuality rendered =
 -- Returns QualityPass if all checks pass, QualityBlock with reason otherwise.
 evaluateContentQualityWithTopic :: Text -> Text -> QualityVerdict
 evaluateContentQualityWithTopic topic rendered =
-  let trimmed = T.strip rendered
-      tokens = tokenize trimmed
-  in case firstBlockingCheck of
+  case firstBlockingCheck of
        Just block -> QualityBlock block
        Nothing -> QualityPass
   where
@@ -61,7 +59,7 @@ evaluateContentQualityWithTopic topic rendered =
         [ checkEmpty trimmed
         , checkTemplatePlaceholders rendered
         , checkGenericFiller trimmed
-        
+        , checkTopicRelevanceBlock rendered topic
         , checkContentDensity tokens
         , checkSemanticSaturation tokens
         ]
@@ -136,7 +134,7 @@ checkTopicRelevanceBlock rendered topic
           topicTokens = filter (\t -> T.length t >= 3) (tokenize topic)
           overlap = filter (\x -> x `elem` topicTokens) outputTokens
           tokenCount = length outputTokens
-      in if tokenCount >= 6 && null overlap
+      in if tokenCount >= 16 && null overlap
            then Just ("\x41d\x43e\x43d\x443\x43b\x435\x432\x43e\x435 \x441\x43e\x432\x43f\x430\x434\x435\x43d\x438\x435 \x441 \x442\x435\x43c\x43e\x439: " <> T.toLower topic)
            else Nothing
 

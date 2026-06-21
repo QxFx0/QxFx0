@@ -17,7 +17,6 @@ generatedPredicateGateTests =
   , TestLabel "Gate G4 source whitelist" g4Tests
   , TestLabel "Gate G5 non-substrate output" g5Tests
   , TestLabel "Combined verdict" combinedTests
-  , TestLabel "composeDefinitionWithGates" composeWithGatesTests
   ]
 
 -- Helper: get a valid path proof for свобода
@@ -147,15 +146,3 @@ combinedTests = TestList
       assertEqual "2 rejected" 2 (length rejected)
   ]
 
-composeWithGatesTests :: Test
-composeWithGatesTests = TestList
-  [ TestCase $ do
-      let (text, passed, rejected) = composeDefinitionWithGates defaultFieldProfile 3 seedGraph (AtomId "свобода")
-      assertBool ("text non-empty: " <> show text) (T.length text > 0)
-      assertBool ("passed >= 1: " <> show passed) (passed >= 1)
-      assertEqual "rejected = 0 for seed-only graph" 0 rejected
-
-  , TestCase $ do
-      let (text, _, _) = composeDefinitionWithGates defaultFieldProfile 3 seedGraph (AtomId "несуществующий")
-      assertEqual "nonexistent topic → empty text" "" text
-  ]

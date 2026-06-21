@@ -37,7 +37,6 @@ module QxFx0.Semantic.Content.PathFinder
     -- * Composition
   , composeDefinition
   , defaultFieldProfile
-  , composeDefinitionWithGates
   , composeArgument
     -- * Verbalization
   , verbalizePath
@@ -402,23 +401,6 @@ stripPreposition text =
                                       else acc) text prepositions
   in if stripped /= text then stripped else text
 
--- | Compose with explicit gate verdict for observability.
--- Returns (text, number of paths that passed gates, number rejected).
-composeDefinitionWithGates :: FieldProfile -> Int -> AtomGraph -> AtomId -> (Text, Int, Int)
-composeDefinitionWithGates fp n graph topic =
-  let allPaths = findPathsFrom graph 1 topic
-      (passed, rejected) = splitPaths allPaths
-      ranked = rankPaths passed
-      selected = take n ranked
-      texts = map (verbalizePath . rpProof) selected
-      text = if null texts then "" else T.intercalate ". " texts <> "."
-  in (text, length passed, length rejected)
-  where
-    splitPaths rps =
-      let results = map (\rp -> (rp, validatePath (rpProof rp))) rps
-          p = [ rp | (rp, v) <- results, gvOverall v ]
-          r = [ rp | (rp, v) <- results, not (gvOverall v) ]
-      in (p, r)
 
 -- ============================================================
 -- Path verbalization

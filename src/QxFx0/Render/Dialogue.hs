@@ -21,7 +21,7 @@ module QxFx0.Render.Dialogue
 import Data.Text (Text)
 import QxFx0.Self.Field (Field, emptyField, fieldConfidence, fieldCounterfactual, fieldConsolidation, fieldResonance, unFieldConfidence, unCounterfactual, unConsolidation, unResonance)
 import QxFx0.Semantic.Content
-  ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
+  ( lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
   , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
   , ConceptCategory(..), classifyConceptCategory
@@ -502,9 +502,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                 claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
                  (sp:_) -> ". " <> T.intercalate " " (map spEn (spPredicates sp))
-                 [] -> case lookupDefinitionContent topicRef of
-                         Just dc -> ". " <> T.intercalate " " (map spEn (dcPredicates dc))
-                         Nothing -> ""
+                 [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
            in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
                <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
                <> clText claim <> contentText) ast claim "en_GF_MVP"
@@ -515,9 +513,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                 claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
                   (sp:_) -> ". " <> T.intercalate " " (map renderPredicateArgued (spPredicates sp))
-                  [] -> case lookupDefinitionContent topicRef of
-                          Just dc -> ". " <> T.intercalate " " (map renderPredicateArgued (dcPredicates dc))
-                          Nothing -> ""
+                  [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
             in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
                 <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
                 <> clText claim <> contentText) ast claim
@@ -634,14 +630,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                    <> ". If this was wrong, I will revise."
                 else " Я ранее полагал, что " <> T.intercalate " " (map spRu (spPredicates sp))
                    <> ". Если это неверно, я пересмотрю."
-            [] -> case lookupDefinitionContent topicRef of
-              Just dc ->
-                if isEn
-                  then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
-                     <> ". If this was wrong, I will revise."
-                  else " Я ранее полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
-                     <> ". Если это неверно, я пересмотрю."
-              Nothing -> ""
+            [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
           ast = claimAstOrFallback MoveMisunderstanding (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           fallback = if isEn
@@ -669,14 +658,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                    <> ". You challenge this — let me respond."
                 else " Я полагал, что " <> T.intercalate " " (map spRu (spPredicates sp))
                    <> ". Ты оспариваешь это — отвечу."
-            [] -> case lookupDefinitionContent topicRef of
-              Just dc ->
-                if isEn
-                  then " I held that " <> T.intercalate " " (map spEn (dcPredicates dc))
-                     <> ". You challenge this — let me respond."
-                  else " Я полагал, что " <> T.intercalate " " (map spRu (dcPredicates dc))
-                     <> ". Ты оспариваешь это — отвечу."
-              Nothing -> ""
+            [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
           ast = claimAstOrFallback (MoveConfront (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "тема")))) (rmpPrimaryClaimAst rmp)
           linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
           -- Phase E: challenge-response with argued predicate + varied intro

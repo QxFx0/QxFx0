@@ -340,4 +340,4 @@ guessRelationType verb
   | "поддерживает" `T.isPrefixOf` verb = RelSupports
   | "задаёт" `T.isPrefixOf` verb = RelSets
   | "разрушает" `T.isPrefixOf` verb = RelDestroys
-  | otherwise = RelIsA  -- fallback
+  | otherwise = RelRelatedTo  -- G-6 fix: safer fallback than RelIsA
