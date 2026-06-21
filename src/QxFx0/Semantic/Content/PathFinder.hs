@@ -262,39 +262,134 @@ selectTopPaths n fp start maxLen =
 -- verbalize each, join with periods. Paths are filtered through gates.
 -- For each length-1 path, also find a length-2 rationale path
 -- (topic →edge1→ intermediate →edge2→ consequence) to build argued structure.
+-- Counter and synthesis are added only once per definition, not per predicate.
+-- All rationale paths are deduplicated: no edge text appears more than once.
 composeDefinition :: FieldProfile -> Int -> AtomId -> Text
 composeDefinition fp n topic =
   let paths = selectTopPaths n fp topic 1
-      texts = map (composeArguedPredicate fp topic) paths
-  in if null texts
-       then ""
-       else T.intercalate ". " texts <> "."
-
--- | Compose a single argued predicate from a length-1 path.
--- Structure: [predicate]. Потому что [rationale from length-2 path].
---            Но [counter from contrasting relation]. Именно поэтому [synthesis].
-composeArguedPredicate :: FieldProfile -> AtomId -> RankedPath -> Text
-composeArguedPredicate fp topic rp =
-  let mainText = verbalizePath (rpProof rp)
-      mainEdges = ppEdges (rpProof rp)
-      topicAtom = case mainEdges of (e:_) -> relFrom e; [] -> topic
-      objAtom = case mainEdges of (e:_) -> relTo e; [] -> topic
-      -- Find rationale: length-2 path from objAtom
-      rationalePaths = take 1 $ selectTopPaths 1 fp objAtom 2
-      rationaleText = case rationalePaths of
-        (rp2:_) -> verbalizePath (rpProof rp2)
-        [] -> ""
-      -- Find counter: find a contrasting relation from topic
-      counterPaths = findCounterPaths fp topic mainEdges
+      allMainEdgeTexts = concatMap (map relRuOriginal . ppEdges . rpProof) paths
+      -- Compose each predicate with rationale, tracking used texts for dedup
+      (texts, usedTexts) = composePredicatesDedup fp topic allMainEdgeTexts paths
+      -- Counter: once per definition, from first path
+      firstEdges = case paths of (rp:_) -> ppEdges (rpProof rp); [] -> []
+      counterPaths = findCounterPaths fp topic firstEdges
       counterText = case counterPaths of
         (rp3:_) -> verbalizePath (rpProof rp3)
         [] -> ""
-      -- Synthesis: combine the key insight
-      synthesisText = buildSynthesis mainEdges rationaleText
+      -- Find best rationale from any path for synthesis
+      bestRationale = case texts of
+        (t:_) -> extractRationale t
+        [] -> ""
+      synthesisText = buildSynthesis firstEdges bestRationale
+  in if null texts
+       then ""
+       else T.intercalate ". " texts
+         <> (if T.null counterText then "" else ". Но " <> counterText)
+         <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
+         <> "."
+
+-- | Compose predicates with deduplication: track all used edge texts
+-- and exclude them from subsequent rationale searches.
+composePredicatesDedup :: FieldProfile -> AtomId -> [Text] -> [RankedPath] -> ([Text], [Text])
+composePredicatesDedup fp topic initialUsed paths =
+  go paths initialUsed []
+  where
+    go [] _ acc = (reverse acc, initialUsed)
+    go (rp:rps) used acc =
+      let (text, newUsed) = composeOneWithRationaleDedup fp topic used rp
+      in go rps newUsed (text : acc)
+
+-- | Compose one predicate with rationale, excluding already-used texts.
+composeOneWithRationaleDedup :: FieldProfile -> AtomId -> [Text] -> RankedPath -> (Text, [Text])
+composeOneWithRationaleDedup fp topic usedTexts rp =
+  let mainText = verbalizePath (rpProof rp)
+      mainEdges = ppEdges (rpProof rp)
+      mainEdgeTexts = map relRuOriginal mainEdges
+      objAtom = case mainEdges of (e:_) -> relTo e; [] -> topic
+      -- Exclude both already-used and current main edge texts
+      excluded = usedTexts ++ mainEdgeTexts
+      -- Find rationale: length-2 path from objAtom, excluding used edges
+      objPaths = selectTopPaths 3 fp objAtom 2
+      rationaleText = case [ verbalizePath (rpProof p)
+                           | p <- objPaths
+                           , not (any (\e -> relRuOriginal e `elem` excluded)
+                                      (ppEdges (rpProof p)))
+                           ] of
+        (t:_) -> t
+        [] -> ""
+      -- Fallback: length-2 from topic, excluding used and main edges
+      fallbackRationale = if T.null rationaleText
+                            then case [ verbalizePath (rpProof p)
+                                      | p <- selectTopPaths 5 fp topic 2
+                                      , let firstEdge = case ppEdges (rpProof p) of (e:_) -> Just e; [] -> Nothing
+                                      , firstEdge /= Nothing
+                                      , Just (head mainEdges) /= firstEdge
+                                      , not (any (\e -> relRuOriginal e `elem` excluded)
+                                                 (ppEdges (rpProof p)))
+                                      ] of
+                                   (t:_) -> t
+                                   [] -> ""
+                            else ""
+      chosenRationale = if not (T.null rationaleText) then rationaleText
+                        else fallbackRationale
+      newText = mainText
+        <> (if not (T.null chosenRationale) then ". Потому что " <> chosenRationale else "")
+      -- Track all edge texts used in this predicate + rationale
+      newUsed = usedTexts ++ mainEdgeTexts
+                  ++ (if not (T.null chosenRationale)
+                      then extractEdgeTexts chosenRationale
+                      else [])
+  in (newText, newUsed)
+
+-- | Extract edge texts from a rationale string (heuristic: split by periods).
+extractEdgeTexts :: Text -> [Text]
+extractEdgeTexts text = filter (not . T.null) (T.splitOn ". " text)
+
+-- | Extract rationale text from a composed predicate string.
+-- Looks for "Потому что " segment.
+extractRationale :: Text -> Text
+extractRationale text =
+  case T.breakOn "Потому что " text of
+    (_, rest) | not (T.null rest) -> T.drop (T.length "Потому что ") rest
+    _ -> ""
+
+-- | Compose a single predicate with rationale (no counter/synthesis).
+-- Structure: [predicate]. Потому что [rationale from length-2 path].
+-- Rationale must NOT duplicate the main edge.
+composePredicateWithRationale :: FieldProfile -> AtomId -> RankedPath -> Text
+composePredicateWithRationale fp topic rp =
+  let mainText = verbalizePath (rpProof rp)
+      mainEdges = ppEdges (rpProof rp)
+      mainEdgeTexts = map relRuOriginal mainEdges
+      objAtom = case mainEdges of (e:_) -> relTo e; [] -> topic
+      -- Find rationale: length-2 path from objAtom (if objAtom is a topic)
+      -- Exclude paths that contain the main edge (avoid duplication)
+      objPaths = selectTopPaths 1 fp objAtom 2
+      rationaleText = case [ verbalizePath (rpProof p)
+                           | p <- objPaths
+                           , not (any (\e -> relRuOriginal e `elem` mainEdgeTexts)
+                                      (ppEdges (rpProof p)))
+                           ] of
+        (t:_) -> t
+        [] -> ""
+      -- Fallback: length-2 from topic, excluding paths whose first edge
+      -- is the same as the main edge (would produce duplicate text)
+      fallbackRationale = if T.null rationaleText
+                            then case [ verbalizePath (rpProof p)
+                                      | p <- selectTopPaths 3 fp topic 2
+                                      , let firstEdge = case ppEdges (rpProof p) of (e:_) -> Just e; [] -> Nothing
+                                      , firstEdge /= Nothing
+                                      , Just (head mainEdges) /= firstEdge  -- different first edge
+                                      , not (any (\e -> relRuOriginal e `elem` mainEdgeTexts)
+                                                 (ppEdges (rpProof p)))
+                                      ] of
+                                   (t:_) -> t
+                                   [] -> ""
+                            else ""
   in mainText
-     <> (if T.null rationaleText then "" else ". Потому что " <> rationaleText)
-     <> (if T.null counterText then "" else ". Но " <> counterText)
-     <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
+     <> (if not (T.null rationaleText) then ". Потому что " <> rationaleText
+         else if not (T.null fallbackRationale) then ". Потому что " <> fallbackRationale
+         else "")
 
 -- | Find counter-paths: relations from the topic that contrast with the main edge.
 findCounterPaths :: FieldProfile -> AtomId -> [Relation] -> [RankedPath]
@@ -315,18 +410,77 @@ findCounterPaths _ topic mainEdges =
      ]
 
 -- | Build synthesis text from the main edge and rationale.
+-- Uses instrumental case for both topic and object:
+-- "различие между [topic_instr] и [obj_instr] — в самой претензии"
 buildSynthesis :: [Relation] -> Text -> Text
 buildSynthesis mainEdges rationale =
   case mainEdges of
     (e:_) ->
-      let topicDisplay = case M.lookup (relFrom e) atomStore of
-            Just a -> atomDisplay a
-            Nothing -> relTopic e
-          objDisplay = relObjectText e
+      let topicInstr = case M.lookup (relFrom e) atomStore of
+            Just a  -> toInstrumentalApprox (atomDisplay a)
+            Nothing -> toInstrumentalApprox (relTopic e)
+          -- For inter-topic edges, relTo is a topic atom — use atomDisplay
+          -- For concept edges, relObjectText has case+preposition
+          objInstr = case M.lookup (relTo e) atomStore of
+            Just a | atomCategory a == CatTopic -> toInstrumentalApprox (atomDisplay a)
+            _ -> toInstrumentalApprox (stripPreposition (relObjectText e))
       in if T.null rationale
            then ""
-           else "различие между " <> topicDisplay <> " и " <> objDisplay <> " — в самой претензии"
+           else "различие между " <> topicInstr <> " и " <> objInstr <> " — в самой претензии"
     [] -> ""
+
+-- | Approximate instrumental case conversion for common Russian nouns.
+-- This is a simplified heuristic — full morphological inflection
+-- will replace this in a future step.
+-- Does NOT re-inflect words already in instrumental (-ой, -ей, -ом, -ем, -ью).
+toInstrumentalApprox :: Text -> Text
+toInstrumentalApprox word =
+  let w = T.toLower word
+  in
+  -- Already instrumental? Don't touch it
+  if "ой" `T.isSuffixOf` w || "ей" `T.isSuffixOf` w
+     || "ом" `T.isSuffixOf` w || "ем" `T.isSuffixOf` w
+     || "ью" `T.isSuffixOf` w || "ами" `T.isSuffixOf` w
+    then word
+  -- -ь → -ью (must check BEFORE consonant — ь is not a vowel but not consonant either)
+  else if "ь" `T.isSuffixOf` w
+    then T.init word <> "ью"
+  -- Feminine -а → -ой
+  else if "а" `T.isSuffixOf` w
+    then T.init word <> "ой"
+  -- Feminine -я → -ей
+  else if "я" `T.isSuffixOf` w
+    then T.init word <> "ей"
+  -- Neuter -о → -ом
+  else if "о" `T.isSuffixOf` w
+    then T.init word <> "ом"
+  -- Neuter -е → -ем
+  else if "е" `T.isSuffixOf` w
+    then T.init word <> "ем"
+  -- Masculine consonant → +ом
+  else if isConsonantEnding w
+    then word <> "ом"
+  -- Masculine -й → -ем
+  else if "й" `T.isSuffixOf` w
+    then T.init word <> "ем"
+  else word
+
+-- | Check if word ends with a consonant (not a vowel).
+isConsonantEnding :: Text -> Bool
+isConsonantEnding w = case T.last w of
+  c -> c `notElem` ("аеёиоуыэюя" :: String)
+
+-- | Strip leading preposition from object text.
+-- "с ответственностью" → "ответственностью"
+-- "на соответствие" → "соответствие"
+-- "об угрозе" → "угрозе"
+stripPreposition :: Text -> Text
+stripPreposition text =
+  let prepositions = ["с ", "со ", "на ", "об ", "от ", "к ", "из ", "через ", "для "]
+      stripped = foldr (\prep acc -> if prep `T.isPrefixOf` T.toLower text
+                                      then T.drop (T.length prep) text
+                                      else acc) text prepositions
+  in if stripped /= text then stripped else text
 
 -- | Compose with explicit gate verdict for observability.
 -- Returns (text, number of paths that passed gates, number rejected).
