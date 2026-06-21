@@ -1851,10 +1851,14 @@ generateFromFrame cs field mNetwork frame morph = case frame of
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
         -- Generative path: compose from AtomStore graph via PathFinder.
-        -- DISABLED: produces broken grammar (wrong case, missing prepositions).
-        -- Re-enable after morphological inflection is wired into verbalizer.
-        -- genText = composeDefinition fp 3 (AtomId topic)
-        genText = "" :: Text
+        -- Uses relObjectText (correct case) + composeArguedPredicate
+        -- (rationale/counter/synthesis from length-2 paths).
+        fp = FieldProfile
+               (unFieldConfidence (fieldConfidence field))
+               (unCounterfactual (fieldCounterfactual field))
+               (unConsolidation (fieldConsolidation field))
+               (unResonance (fieldResonance field))
+        genText = composeDefinition fp 3 (AtomId topic)
     in if not (T.null genText)
        then authorityText <> " " <> topicNom <> " — " <> genText
        else
