@@ -39,14 +39,6 @@ module QxFx0.Types.State.System
   , ssLastSalienceBias
   , ssHolisticStreak
   , ssRecentNarrativeSuccess
-  , ssLearningNeedState
-  , ssGovernanceRuntimeFault
-  , ssSemanticCommitments
-  , ssMetacognition
-  , ssUserModel
-  , ssMood
-  , ssCurrentRegime
-  , ssRuntimeParadigms
   , appendAdaptiveMutationRecord
   , appendAdaptiveMutationRecords
   , commitGovernedPerspectiveProjection
