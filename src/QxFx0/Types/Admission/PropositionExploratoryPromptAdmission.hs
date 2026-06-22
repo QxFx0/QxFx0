@@ -7,35 +7,35 @@ module QxFx0.Types.Admission.PropositionExploratoryPromptAdmission
   ) where
 
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
-import QxFx0.Types.PropositionExploratoryPromptAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Constitution-aware admission for proposition exploratory-prompt raw
 -- trigger decisions.
 --
 -- Under an authoritative truth-contract contour, raw triggers pass through
--- unchanged and the decision is @PpeptdAdmitRaw@.
+-- unchanged and the decision is @PadAdmitRaw@.
 --
 -- Under a non-authoritative (weakened) contour every matched raw trigger is
--- softened to @rpeptMatched = False@ before reaching
+-- softened to @rptMatched = False@ before reaching
 -- @buildExploratoryPromptFromTriggers@; the decision is
--- @PpeptdSuppressStrongTriggers@.  Exploratory-prompt has no "guard"-class
+-- @PadSuppressStrongTriggers@.  Exploratory-prompt has no "guard"-class
 -- trigger to preserve (unlike location-formation's @mental_noun_guard@):
 -- every raw trigger here is a strong direct keyword-infix match, so the
 -- non-authoritative contour suppresses all of them uniformly.
 admitPropositionExploratoryPromptTriggers
-  :: PropositionExploratoryPromptAdmissionInput
-  -> [RawPropositionExploratoryPromptTrigger]
-  -> AdmittedPropositionExploratoryPromptTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionExploratoryPromptTriggers input rawTriggers
-  | truthContractIsAuthoritative (peptaiTruthContractStatus input) =
-      AdmittedPropositionExploratoryPromptTriggers rawTriggers rawTriggers PpeptdAdmitRaw
+  | truthContractIsAuthoritative (paiTruthContractStatus input) =
+      AdmittedPropositionTriggers rawTriggers rawTriggers PadAdmitRaw
   | otherwise =
-      AdmittedPropositionExploratoryPromptTriggers
+      AdmittedPropositionTriggers
         rawTriggers
         (map softenTrigger rawTriggers)
-        PpeptdSuppressStrongTriggers
+        PadSuppressStrongTriggers
 
-softenTrigger :: RawPropositionExploratoryPromptTrigger -> RawPropositionExploratoryPromptTrigger
+softenTrigger :: RawPropositionTrigger -> RawPropositionTrigger
 softenTrigger rawTrigger
-  | not (rpeptMatched rawTrigger) = rawTrigger
-  | otherwise = rawTrigger { rpeptMatched = False }
+  | not (rptMatched rawTrigger) = rawTrigger
+  | otherwise = rawTrigger { rptMatched = False }

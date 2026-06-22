@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionConceptKnowledgeAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionConceptKnowledgeAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition ConceptKnowledge triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionConceptKnowledgeTriggers
-  :: PropositionConceptKnowledgeAdmissionInput
-  -> [RawPropositionConceptKnowledgeTrigger]
-  -> AdmittedPropositionConceptKnowledgeTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionConceptKnowledgeTriggers =
   admitPropositionTriggers conceptKnowledgeAdmissionConfig
 
 conceptKnowledgeAdmissionConfig :: PropositionAdmissionConfig
-  PropositionConceptKnowledgeAdmissionInput
-  RawPropositionConceptKnowledgeTrigger
-  AdmittedPropositionConceptKnowledgeTriggers
-  PropositionConceptKnowledgeAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 conceptKnowledgeAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pckaiTruthContractStatus
-  , pacTriggerLabel = rpckLabel
-  , pacTriggerMatched = rpckMatched
-  , pacSetTriggerMatched = \b t -> t { rpckMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionConceptKnowledgeTriggers
-  , pacDecisionAdmitRaw = PckdAdmitRaw
-  , pacDecisionPreserveAmbiguous = PckdPreserveAmbiguous
-  , pacDecisionSuppressStrong = PckdSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

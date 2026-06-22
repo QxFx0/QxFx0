@@ -10,7 +10,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 | `DATALOG-ROLE-001` public role document | OPEN | a public shadow-validator role doc exists and matches architecture rules `[23]` / `[25]` |
 | `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
 | `SLICE-012` governed evidence admissibility | CLOSED (with pre-existing morphology blocker) | `EvidenceAdmissibility` type + `QXFX0_GOVERNED_EVIDENCE` fail-closed; `trcEvidenceAdmissibility` in every trace; CI extended contract governed; `ENV_CONTRACT.md` documents the contract; fast gate 0 new failures (8 errors + 2 failures pre-existing morphology, SLICE-010B); commits `b12cafb` + `6755b0e` on `origin/main` |
-| `B3` semantic-core MVS gate (design) | CLOSED (design finalized) | content-quality pass/fail gates defined for definition, distinction, repair, commitment, non-fallback; 4 decisions resolved; `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`; M6-FELT remains NOT PROVEN; commit `b7e4ec3` |
+| `B3` semantic-core MVS gate | IMPLEMENTED (tests wired, not verified passing) | content-quality pass/fail gates defined for definition, distinction, repair, commitment, non-fallback; 4 decisions resolved; `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`; M6-FELT remains NOT PROVEN; commit `b7e4ec3` |
 | `B2` human-eval protocol (design) | OPEN (design only) | paired blind discrimination protocol with structure-ablated fluency-matched control; rubric tied to B3 gates; pre-registered fail/pivot; `docs/closure/B2_HUMAN_EVAL_PROTOCOL.md`; M6-FELT remains NOT PROVEN; cannot run until B3 gates mechanically pass |
 
 ## Deferred feature gaps
@@ -18,6 +18,14 @@ Purpose: compact list of the remaining public debt to the final anchor.
 | Front | Status | Exit |
 |---|---|---|
 | `SLICE-015` runtime summary observability gaps (50/51) | DEFERRED | `stateSummaryLines` must surface pre-actor failure kind and restart authority status; documented in `docs/closure/SLICE-015_PLAN.md`; not in active scope |
+
+## Closed this cycle (2026-06-27)
+
+| Front | Status | Exit |
+|---|---|---|
+| `P4` Option A — legacy structuredBody gate enforcement | IMPLEMENTED | `validatePredicate` + `filterAdmissiblePredicates` in GeneratedPredicateGate.hs; `selectPredicatesGated` wrapper in Dialogue.hs; all 4 call sites gated; `docs/closure/P4_LEGACY_PATH_AUDIT.md` updated; build verification deferred to non-timeout env |
+| `C4` dead code removal | COMPLETE | Phase 0 removed 23 Python scripts + 1 Haskell module; all 407 remaining modules verified alive; no more safe mechanical removal possible |
+| `B3` mechanical gates wiring | IMPLEMENTED | Tests wired into TestMainUnit + TestMain; ContentQualityGate added to cabal; tests not verified passing due to 30s build timeout |
 
 ## Closed this cycle
 

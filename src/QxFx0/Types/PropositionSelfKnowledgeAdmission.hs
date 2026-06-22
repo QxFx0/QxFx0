@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionSelfKnowledgeAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionSelfKnowledgeAdmission
-  ( PropositionSelfKnowledgeAdmissionInput(..)
-  , PropositionSelfKnowledgeAdmissionDecision(..)
-  , RawPropositionSelfKnowledgeTrigger(..)
-  , AdmittedPropositionSelfKnowledgeTriggers(..)
+  ( PropositionSelfKnowledgeAdmissionInput, PropositionSelfKnowledgeAdmissionDecision, RawPropositionSelfKnowledgeTrigger, AdmittedPropositionSelfKnowledgeTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionSelfKnowledgeAdmissionInput = PropositionSelfKnowledgeAdmissionInput
-  { pskaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionSelfKnowledgeAdmissionDecision
-  = PskdAdmitRaw
-  | PskdPreserveAmbiguous
-  | PskdSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionSelfKnowledgeTrigger = RawPropositionSelfKnowledgeTrigger
-  { rpskLabel :: !Text
-  , rpskMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionSelfKnowledgeTriggers = AdmittedPropositionSelfKnowledgeTriggers
-  { apskRawTriggers :: ![RawPropositionSelfKnowledgeTrigger]
-  , apskTriggers :: ![RawPropositionSelfKnowledgeTrigger]
-  , apskDecision :: !PropositionSelfKnowledgeAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionSelfKnowledgeAdmissionInput = PropositionAdmissionInput
+type PropositionSelfKnowledgeAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionSelfKnowledgeTrigger = RawPropositionTrigger
+type AdmittedPropositionSelfKnowledgeTriggers = AdmittedPropositionTriggers

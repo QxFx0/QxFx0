@@ -7,22 +7,22 @@ module QxFx0.Types.Admission.PropositionDialogueInvitationAdmission
   ) where
 
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
-import QxFx0.Types.PropositionDialogueInvitationAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 admitPropositionDialogueInvitationTriggers
-  :: PropositionDialogueInvitationAdmissionInput
-  -> [RawPropositionDialogueInvitationTrigger]
-  -> AdmittedPropositionDialogueInvitationTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionDialogueInvitationTriggers input rawTriggers
-  | truthContractIsAuthoritative (pdiaiTruthContractStatus input) =
-      AdmittedPropositionDialogueInvitationTriggers rawTriggers rawTriggers PpdiadAdmitRaw
+  | truthContractIsAuthoritative (paiTruthContractStatus input) =
+      AdmittedPropositionTriggers rawTriggers rawTriggers PadAdmitRaw
   | otherwise =
-      AdmittedPropositionDialogueInvitationTriggers
+      AdmittedPropositionTriggers
         rawTriggers
         (map softenTrigger rawTriggers)
-        PpdiadSuppressStrongTriggers
+        PadSuppressStrongTriggers
 
-softenTrigger :: RawPropositionDialogueInvitationTrigger -> RawPropositionDialogueInvitationTrigger
+softenTrigger :: RawPropositionTrigger -> RawPropositionTrigger
 softenTrigger rawTrigger
-  | rpdiMatched rawTrigger = rawTrigger { rpdiMatched = False }
+  | rptMatched rawTrigger = rawTrigger { rptMatched = False }
   | otherwise = rawTrigger

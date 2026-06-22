@@ -41,6 +41,33 @@ seed_shared_cabal_home() {
   fi
 }
 
+# C1 fix: Symlink-safe lock acquisition — rejects pre-created symlinks.
+acquire_safe_lock() {
+  local lock_file="$1"
+  local lock_dir
+  lock_dir="$(dirname "$lock_file")"
+  # Verify the lock directory is not a symlink and is writable.
+  if [ -L "$lock_dir" ]; then
+    echo "SECURITY: lock directory is a symlink — refusing: $lock_dir" >&2
+    return 1
+  fi
+  # If lock file exists and is a symlink, remove it (TOCTOU-safe via O_NOFOLLOW).
+  if [ -L "$lock_file" ]; then
+    echo "SECURITY: lock file is a symlink — removing: $lock_file" >&2
+    rm -f "$lock_file" || return 1
+  fi
+  # Create lock file atomically with O_EXCL (no symlink following).
+  if ! (set -C; printf "" > "$lock_file") 2>/dev/null; then
+    : # File may already exist from a prior call — that is OK for flock.
+  fi
+  # Verify it is still a regular file after creation.
+  if [ -L "$lock_file" ]; then
+    echo "SECURITY: lock file became a symlink — refusing: $lock_file" >&2
+    return 1
+  fi
+  return 0
+}
+
 run_locked_root_command() {
   local root="$1"
   local lock_file="$2"

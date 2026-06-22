@@ -73,8 +73,11 @@ module QxFx0.Types.State.Governance
   , governanceEventHashText
   , governanceEventPayloadHashText
   , governanceHistoryFingerprint
+  , GovernanceHashScheme(..)
+  , detectGovernanceHashScheme
   ) where
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import qualified Crypto.Hash.SHA256 as SHA256
 import Data.Bits (xor)
@@ -683,8 +686,10 @@ normalizeGovernanceEventChecked event = do
   if geeSequenceNo envelope <= 0
     then Left ("invalid governance sequence number: " <> T.pack (show (geeSequenceNo envelope)))
     else pure ()
-  let scheme = detectGovernanceHashScheme envelope
-      normalized = normalizeGovernanceEventWith scheme event
+  scheme <- case detectGovernanceHashScheme envelope of
+    Just s -> pure s
+    Nothing -> Left ("cannot determine governance hash scheme for event: " <> governanceEventIdText (geeId envelope))
+  let normalized = normalizeGovernanceEventWith scheme event
       normalizedEnvelope = geEnvelope normalized
   case geePayloadHash envelope of
     Just payloadHash | payloadHash /= fromMaybe "" (geePayloadHash normalizedEnvelope) ->
@@ -864,7 +869,13 @@ governancePermissionAllowed actor subject decision =
     GovernanceDenied _ -> False
 
 supportedGovernedSubject :: GovernedSubject -> Bool
-supportedGovernedSubject _ = True
+supportedGovernedSubject subject = case subject of
+  SubjectPerspective _ -> True
+  SubjectClaimStance _ -> True
+  SubjectCapability _ -> True
+  SubjectCrossSessionCarry _ -> True
+  SubjectFreeze _ -> True
+  SubjectNormativeProfile _ -> True
 
 governanceProjectionChecksum :: ProjectionMeta -> PerspectiveRegistry -> [PerspectiveProjection] -> [GovernedProjectionRef] -> Text
 governanceProjectionChecksum meta registry projections governedRefs =
@@ -911,14 +922,11 @@ normalizeGovernanceEventWith scheme event =
     payloadHash = governanceEventPayloadHashTextWith scheme event
     eventHash = governanceEventHashTextWith scheme event payloadHash
 
-detectGovernanceHashScheme :: GovernanceEventEnvelope -> GovernanceHashScheme
+detectGovernanceHashScheme :: GovernanceEventEnvelope -> Maybe GovernanceHashScheme
 detectGovernanceHashScheme envelope =
-  fromMaybe GovernanceHashSha256
-    ( (geePayloadHash envelope >>= hashSchemeFromText)
-      <|> (geeEventHash envelope >>= hashSchemeFromText)
-      <|> (geePrevHash envelope >>= hashSchemeFromText)
-    )
-
+  (geePayloadHash envelope >>= hashSchemeFromText)
+    <|> (geeEventHash envelope >>= hashSchemeFromText)
+    <|> (geePrevHash envelope >>= hashSchemeFromText)
 governanceDecisionFromPerspectivePromotion :: PerspectivePromotionDecision -> GovernanceDecision
 governanceDecisionFromPerspectivePromotion decision =
   case decision of
@@ -958,7 +966,7 @@ governanceHistoryFingerprint events =
     Right ordered ->
       hashString (T.unpack (T.intercalate "|" (map (fromMaybe "" . geeEventHash . geEnvelope) ordered)))
     Left _ ->
-      "invalid:" <> hashString (T.unpack (T.intercalate "|" (map (fromMaybe "" . geeEventHash . geEnvelope . normalizeGovernanceEvent) events)))
+      "invalid:canonicalization_failed"
 
 perspectiveRegistryHash :: PerspectiveRegistry -> Text
 perspectiveRegistryHash = hashString . BL8.unpack . encode
@@ -1111,7 +1119,3 @@ hashSchemeFromText value
   | "fnv1a64:" `T.isPrefixOf` value = Just GovernanceHashLegacyFNV
   | "sha256:" `T.isPrefixOf` value = Just GovernanceHashSha256
   | otherwise = Nothing
-
-(<|>) :: Maybe a -> Maybe a -> Maybe a
-Just a <|> _ = Just a
-Nothing <|> b = b

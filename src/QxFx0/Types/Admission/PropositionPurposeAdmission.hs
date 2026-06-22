@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionPurposeAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionPurposeAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition Purpose triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionPurposeTriggers
-  :: PropositionPurposeAdmissionInput
-  -> [RawPropositionPurposeTrigger]
-  -> AdmittedPropositionPurposeTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionPurposeTriggers =
   admitPropositionTriggers purposeAdmissionConfig
 
 purposeAdmissionConfig :: PropositionAdmissionConfig
-  PropositionPurposeAdmissionInput
-  RawPropositionPurposeTrigger
-  AdmittedPropositionPurposeTriggers
-  PropositionPurposeAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 purposeAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = ppaiTruthContractStatus
-  , pacTriggerLabel = rpptLabel
-  , pacTriggerMatched = rpptMatched
-  , pacSetTriggerMatched = \b t -> t { rpptMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionPurposeTriggers
-  , pacDecisionAdmitRaw = PpadAdmitRaw
-  , pacDecisionPreserveAmbiguous = PpadPreserveAmbiguous
-  , pacDecisionSuppressStrong = PpadSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

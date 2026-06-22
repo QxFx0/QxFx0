@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionMisunderstandingAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionMisunderstandingAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition Misunderstanding triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionMisunderstandingTriggers
-  :: PropositionMisunderstandingAdmissionInput
-  -> [RawPropositionMisunderstandingTrigger]
-  -> AdmittedPropositionMisunderstandingTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionMisunderstandingTriggers =
   admitPropositionTriggers misunderstandingAdmissionConfig
 
 misunderstandingAdmissionConfig :: PropositionAdmissionConfig
-  PropositionMisunderstandingAdmissionInput
-  RawPropositionMisunderstandingTrigger
-  AdmittedPropositionMisunderstandingTriggers
-  PropositionMisunderstandingAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 misunderstandingAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pmiaiTruthContractStatus
-  , pacTriggerLabel = rpmtLabel
-  , pacTriggerMatched = rpmtMatched
-  , pacSetTriggerMatched = \b t -> t { rpmtMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionMisunderstandingTriggers
-  , pacDecisionAdmitRaw = PmAdmitRaw
-  , pacDecisionPreserveAmbiguous = PmPreserveAmbiguous
-  , pacDecisionSuppressStrong = PmSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

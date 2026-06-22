@@ -1,32 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionGenerativePromptAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionGenerativePromptAdmission
-  ( PropositionGenerativePromptAdmissionInput(..)
-  , PropositionGenerativePromptAdmissionDecision(..)
-  , RawPropositionGenerativePromptTrigger(..)
-  , AdmittedPropositionGenerativePromptTriggers(..)
+  ( PropositionGenerativePromptAdmissionInput, PropositionGenerativePromptAdmissionDecision, RawPropositionGenerativePromptTrigger, AdmittedPropositionGenerativePromptTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionGenerativePromptAdmissionInput = PropositionGenerativePromptAdmissionInput
-  { pgpaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionGenerativePromptAdmissionDecision
-  = PpgpdAdmitRaw
-  | PpgpdSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionGenerativePromptTrigger = RawPropositionGenerativePromptTrigger
-  { rpgpLabel :: !Text
-  , rpgpMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionGenerativePromptTriggers = AdmittedPropositionGenerativePromptTriggers
-  { apgpRawTriggers :: ![RawPropositionGenerativePromptTrigger]
-  , apgpTriggers :: ![RawPropositionGenerativePromptTrigger]
-  , apgpDecision :: !PropositionGenerativePromptAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionGenerativePromptAdmissionInput = PropositionAdmissionInput
+type PropositionGenerativePromptAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionGenerativePromptTrigger = RawPropositionTrigger
+type AdmittedPropositionGenerativePromptTriggers = AdmittedPropositionTriggers

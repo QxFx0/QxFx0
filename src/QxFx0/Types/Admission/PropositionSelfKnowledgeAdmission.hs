@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionSelfKnowledgeAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionSelfKnowledgeAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition SelfKnowledge triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionSelfKnowledgeTriggers
-  :: PropositionSelfKnowledgeAdmissionInput
-  -> [RawPropositionSelfKnowledgeTrigger]
-  -> AdmittedPropositionSelfKnowledgeTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionSelfKnowledgeTriggers =
   admitPropositionTriggers selfKnowledgeAdmissionConfig
 
 selfKnowledgeAdmissionConfig :: PropositionAdmissionConfig
-  PropositionSelfKnowledgeAdmissionInput
-  RawPropositionSelfKnowledgeTrigger
-  AdmittedPropositionSelfKnowledgeTriggers
-  PropositionSelfKnowledgeAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 selfKnowledgeAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pskaiTruthContractStatus
-  , pacTriggerLabel = rpskLabel
-  , pacTriggerMatched = rpskMatched
-  , pacSetTriggerMatched = \b t -> t { rpskMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionSelfKnowledgeTriggers
-  , pacDecisionAdmitRaw = PskdAdmitRaw
-  , pacDecisionPreserveAmbiguous = PskdPreserveAmbiguous
-  , pacDecisionSuppressStrong = PskdSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

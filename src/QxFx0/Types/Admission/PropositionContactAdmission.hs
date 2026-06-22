@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionContactAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionContactAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition contact triggers using generic admission logic.
 -- Refactored from 43-line boilerplate to 4-line config (P1-1).
 admitPropositionContactTriggers
-  :: PropositionContactAdmissionInput
-  -> [RawPropositionContactTrigger]
-  -> AdmittedPropositionContactTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionContactTriggers =
   admitPropositionTriggers contactAdmissionConfig
 
 contactAdmissionConfig :: PropositionAdmissionConfig
-  PropositionContactAdmissionInput
-  RawPropositionContactTrigger
-  AdmittedPropositionContactTriggers
-  PropositionContactAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 contactAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pcaiTruthContractStatus
-  , pacTriggerLabel = rpctLabel
-  , pacTriggerMatched = rpctMatched
-  , pacSetTriggerMatched = \b t -> t { rpctMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionContactTriggers
-  , pacDecisionAdmitRaw = PcadAdmitRaw
-  , pacDecisionPreserveAmbiguous = PcadPreserveAmbiguous
-  , pacDecisionSuppressStrong = PcadSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

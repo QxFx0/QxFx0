@@ -1,32 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionDialogueInvitationAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionDialogueInvitationAdmission
-  ( PropositionDialogueInvitationAdmissionInput(..)
-  , PropositionDialogueInvitationAdmissionDecision(..)
-  , RawPropositionDialogueInvitationTrigger(..)
-  , AdmittedPropositionDialogueInvitationTriggers(..)
+  ( PropositionDialogueInvitationAdmissionInput, PropositionDialogueInvitationAdmissionDecision, RawPropositionDialogueInvitationTrigger, AdmittedPropositionDialogueInvitationTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionDialogueInvitationAdmissionInput = PropositionDialogueInvitationAdmissionInput
-  { pdiaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionDialogueInvitationAdmissionDecision
-  = PpdiadAdmitRaw
-  | PpdiadSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionDialogueInvitationTrigger = RawPropositionDialogueInvitationTrigger
-  { rpdiLabel :: !Text
-  , rpdiMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionDialogueInvitationTriggers = AdmittedPropositionDialogueInvitationTriggers
-  { apdiRawTriggers :: ![RawPropositionDialogueInvitationTrigger]
-  , apdiTriggers :: ![RawPropositionDialogueInvitationTrigger]
-  , apdiDecision :: !PropositionDialogueInvitationAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionDialogueInvitationAdmissionInput = PropositionAdmissionInput
+type PropositionDialogueInvitationAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionDialogueInvitationTrigger = RawPropositionTrigger
+type AdmittedPropositionDialogueInvitationTriggers = AdmittedPropositionTriggers

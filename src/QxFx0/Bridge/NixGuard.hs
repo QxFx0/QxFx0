@@ -16,6 +16,7 @@ import qualified Data.Text as T
 import System.Process (readProcessWithExitCode)
 import System.Exit (ExitCode(..))
 import System.Environment (lookupEnv)
+import System.FilePath (takeDirectory)
 import QxFx0.ExceptionPolicy (catchIO)
 import Data.Char (isAlphaNum, isAscii, isLetter)
 import Data.Maybe (fromMaybe)
@@ -43,16 +44,19 @@ checkConstitution nixPath concept agency tension =
       | T.null (T.strip concept) -> return (Blocked "constitution concept is empty")
       | otherwise -> return (Blocked "constitution concept not recognized")
     Just conceptKey -> do
-      let nixExpr = "let agency = " <> T.pack (show agency)
+      -- Use --include to allow restrict-eval to import the concepts.nix file.
+      -- The nix expression uses <QxFx0Concepts> to reference the file via the include path.
+      let nixDir = takeDirectory nixPath
+          nixExpr = "let agency = " <> T.pack (show agency)
                    <> "; tension = " <> T.pack (show tension)
-                   <> "; data = import " <> nixStringLiteral (T.pack nixPath)
+                   <> "; data = import <QxFx0Concepts/concepts.nix>"
                    <> "; key = " <> nixStringLiteral conceptKey
-                    <> "; match = builtins.filter (c: builtins.toLower c.id == builtins.toLower key) data.concepts;"
+                    <> "; match = builtins.filter (c: c.id == key) data.concepts;"
                     <> "  concept = if builtins.length match > 0 then builtins.elemAt match 0 else null;"
                     <> "  agencyOk = concept != null && (concept.minAgency == null || agency >= concept.minAgency);"
                     <> "  tensionOk = concept != null && (concept.minTension == null || tension >= concept.minTension);"
-                    <> " in if concept != null then agencyOk && tensionOk else true"
-      result <- runNixEval nixExpr
+                    <> " in if concept != null then agencyOk && tensionOk else false"
+      result <- runNixEvalWithInclude nixDir nixExpr
       case result of
         Right "true"  -> return Allowed
         Right "false" -> return $ Blocked $ "constitution blocked: " <> conceptKey
@@ -70,18 +74,22 @@ runNixEval :: Text -> IO (Either Text Text)
 runNixEval nixExpr = do
   -- Н-1: No fallback from restricted to unrestricted mode.
   -- If --restricted is unsupported, fail closed rather than downgrading security.
-  runNixInstantiate True nixExpr
+  runNixInstantiate True [] nixExpr
 
-runNixInstantiate :: Bool -> Text -> IO (Either Text Text)
-runNixInstantiate restricted nixExpr = do
+runNixEvalWithInclude :: FilePath -> Text -> IO (Either Text Text)
+runNixEvalWithInclude includeDir nixExpr =
+  runNixInstantiate True ["--include", "QxFx0Concepts=" <> includeDir] nixExpr
+
+runNixInstantiate :: Bool -> [String] -> Text -> IO (Either Text Text)
+runNixInstantiate restricted extraArgs nixExpr = do
   let timeoutSec :: Int
       timeoutSec = 5
-      modeArgs = if restricted then ["--restricted"] else []
+      modeArgs = if restricted then ["--option", "restrict-eval", "true"] else []
       modeLabel = if restricted then "restricted" else "unrestricted"
   nixInstantiateBin <- fromMaybe "nix-instantiate" <$> lookupEnv "QXFX0_NIX_INSTANTIATE_BIN"
   result <- catchIO
     (do (exitCode, stdout, stderr) <- readProcessWithExitCode
-          "timeout" ([show timeoutSec, nixInstantiateBin] <> modeArgs <> ["--eval", "--expr", T.unpack nixExpr]) ""
+          "timeout" ([show timeoutSec, nixInstantiateBin] <> modeArgs <> extraArgs <> ["--eval", "--expr", T.unpack nixExpr]) ""
         case exitCode of
           ExitSuccess ->
             let output = T.strip (T.pack stdout)
@@ -104,52 +112,29 @@ normalizeConceptKey raw =
                       else Nothing
 
 isConceptChar :: Char -> Bool
-isConceptChar c =
-  isSafeChar c || c == ' '
+isConceptChar c = isSafeChar c || c == ' '
 
 conceptAlias :: Text -> Maybe Text
-conceptAlias key =
-  case key of
-    "свобода" -> Just "svoboda"
-    "смерть" -> Just "smert"
-    "граница" -> Just "granitsa"
-    "цифра" -> Just "cifra"
-    "смысл" -> Just "smysl"
-    "истина" -> Just "istina"
-    "любовь" -> Just "lyubov"
-    "время" -> Just "vremya"
-    "язык" -> Just "yazyk"
-    "идентичность" -> Just "identichnost"
-    "ремонт" -> Just "remont"
-    "якорь" -> Just "yakor"
-    "одиночество" -> Just "odinochestvo"
-    "ответственность" -> Just "otvetstvennost"
-    "страдание" -> Just "stradanie"
-    "надежда" -> Just "nadezhda"
-    "справедливость" -> Just "spravedlivost"
-    "доверие" -> Just "doverie"
-    "ничто" -> Just "nichto"
-    "вечность" -> Just "vechnost"
-    "разум" -> Just "razum"
-    "память" -> Just "pamyat"
-    "молчание" -> Just "molchanie"
-    "выбор" -> Just "vybor"
-    "тело" -> Just "telo"
-    "долг" -> Just "dolg"
-    "страх" -> Just "strah"
-    "смирение" -> Just "smirenie"
-    "гордость" -> Just "gordost"
-    "иллюзия" -> Just "illyuziya"
-    "присутствие" -> Just "prisutstvie"
-    "уход" -> Just "uhod"
-    "честность" -> Just "chestnost"
-    "хрупкость" -> Just "hrupkost"
-    "пустота" -> Just "pustota"
-    _ -> Nothing
+conceptAlias k
+  | k == "freedom" = Just "svoboda"
+  | k == "will" = Just "volya"
+  | k == "death" = Just "smert"
+  | k == "boundary" = Just "granitsa"
+  | k == "digit" = Just "cifra"
+  | k == "meaning" = Just "smysl"
+  | k == "truth" = Just "istina"
+  | k == "love" = Just "lyubov"
+  | k == "time" = Just "vremya"
+  | k == "language" = Just "yazyk"
+  | k == "identity" = Just "identichnost"
+  | k == "repair" = Just "remont"
+  | otherwise = Nothing
 
 classifyNixEvalError :: Text -> Text
 classifyNixEvalError err
-  | "nix evaluation timed out" `T.isInfixOf` err = "timeout"
-  | "nix exception:" `T.isPrefixOf` err = "process_exception"
-  | "nix-instantiate failed" `T.isPrefixOf` err = "evaluation_failed"
+  | "unrecognised flag" `T.isInfixOf` err = "unsupported_nix_flag"
+  | "access to absolute path" `T.isInfixOf` err = "restricted_path_blocked"
+  | "attribute" `T.isInfixOf` err && "missing" `T.isInfixOf` err = "attribute_missing"
+  | "timed out" `T.isInfixOf` err = "timeout"
+  | "syntax error" `T.isInfixOf` err = "syntax_error"
   | otherwise = "evaluation_failed"

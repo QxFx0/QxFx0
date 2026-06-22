@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionContemplativeTopicAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionContemplativeTopicAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition ContemplativeTopic triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionContemplativeTopicTriggers
-  :: PropositionContemplativeTopicAdmissionInput
-  -> [RawPropositionContemplativeTopicTrigger]
-  -> AdmittedPropositionContemplativeTopicTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionContemplativeTopicTriggers =
   admitPropositionTriggers contemplativeTopicAdmissionConfig
 
 contemplativeTopicAdmissionConfig :: PropositionAdmissionConfig
-  PropositionContemplativeTopicAdmissionInput
-  RawPropositionContemplativeTopicTrigger
-  AdmittedPropositionContemplativeTopicTriggers
-  PropositionContemplativeTopicAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 contemplativeTopicAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pctaiTruthContractStatus
-  , pacTriggerLabel = rpctLabel
-  , pacTriggerMatched = rpctMatched
-  , pacSetTriggerMatched = \b t -> t { rpctMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionContemplativeTopicTriggers
-  , pacDecisionAdmitRaw = PpctdAdmitRaw
-  , pacDecisionPreserveAmbiguous = PpctdPreserveAmbiguous
-  , pacDecisionSuppressStrong = PpctdSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

@@ -40,10 +40,7 @@ import QxFx0.Lexicon.Inflection
   , instrumentalForm
   , dativeForm
   )
-import QxFx0.Lexicon.Generated
-  ( generatedLexemeEntries
-  , generatedCandidateForms
-  )
+import QxFx0.Lexicon.Generated (generatedLexemeEntries, generatedCandidateForms, generatedFiniteVerbMap)
 import QxFx0.Policy.RenderLexicon
   ( morphVerbSuffixT, morphVerbSuffixTi
   , morphAdjSuffixYj, morphAdjSuffixIj, morphAdjSuffixOj

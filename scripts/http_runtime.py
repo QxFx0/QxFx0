@@ -436,6 +436,10 @@ class SessionWorker:
             self.runtime_epoch = runtime_epoch
         return payload
 
+    def reassign(self, new_session_id):
+        """Reassign this worker to a new session without respawning."""
+        self.session_id = new_session_id
+
     def _request(self, command):
         with self.command_lock:
             self.last_used_at = time.monotonic()
@@ -536,6 +540,76 @@ class SessionWorker:
         return line
 
 
+
+class WorkerPool:
+    """Pre-warmed worker pool to reduce per-session spawn latency (CF-1).
+
+    Pre-spawns N SessionWorker instances with pool session IDs at startup.
+    When a new session arrives, a pooled worker is reassigned to the real
+    session_id, avoiding the fork/exec + Haskell RTS init + handshake cycle.
+    If reassignment fails (first turn errors), existing error handling in
+    SessionRegistry.dispatch_turn drops the worker and respawns fresh.
+    """
+
+    def __init__(self, bin_path, timeout_seconds, pool_size=None):
+        self.bin_path = bin_path
+        self.timeout_seconds = timeout_seconds
+        self.pool_size = max(0, pool_size if pool_size is not None else int(os.environ.get("QXFX0_WORKER_POOL_SIZE", "2")))
+        self._lock = threading.Lock()
+        self._pool = []
+        self._refilling = False
+        self._shutdown = False
+
+    def prewarm(self):
+        with self._lock:
+            while len(self._pool) < self.pool_size and not self._shutdown:
+                try:
+                    worker = SessionWorker(
+                        f"_pool_{len(self._pool)}",
+                        self.bin_path,
+                        self.timeout_seconds,
+                    )
+                    self._pool.append(worker)
+                    log.info(json.dumps({"event": "pool_worker_prewarmed", "pool_size": len(self._pool)}))
+                except Exception as exc:
+                    log.warning(json.dumps({"event": "pool_prewarm_failed", "detail": str(exc)[:256]}))
+                    break
+
+    def checkout(self):
+        with self._lock:
+            if self._pool:
+                return self._pool.pop(0)
+            return None
+
+    def refill_background(self):
+        with self._lock:
+            if self._refilling or self._shutdown or self.pool_size == 0:
+                return
+            self._refilling = True
+        threading.Thread(target=self._refill, daemon=True).start()
+
+    def _refill(self):
+        try:
+            self.prewarm()
+        finally:
+            with self._lock:
+                self._refilling = False
+
+    def shutdown(self):
+        with self._lock:
+            self._shutdown = True
+            workers = self._pool
+            self._pool = []
+        for worker in workers:
+            try:
+                worker.close(reason="pool_shutdown")
+            except Exception:
+                pass
+
+    def pool_count(self):
+        with self._lock:
+            return len(self._pool)
+
 class SessionRegistry:
     def __init__(self, bin_path, ttl_seconds, timeout_seconds, max_sessions):
         self.bin_path = bin_path
@@ -544,6 +618,7 @@ class SessionRegistry:
         self.max_sessions = max(1, int(max_sessions))
         self._lock = threading.Lock()
         self._workers = {}
+        self._pool = WorkerPool(bin_path, timeout_seconds)
 
     def active_count(self):
         with self._lock:
@@ -620,6 +695,7 @@ class SessionRegistry:
                         }
                     )
                 )
+        self._pool.shutdown()
 
     def _drop_worker(self, session_id, reason):
         with self._lock:
@@ -640,8 +716,17 @@ class SessionRegistry:
                 self._workers.pop(session_id, None)
             if len(self._workers) >= self.max_sessions:
                 raise SessionCapacityError(self.max_sessions, len(self._workers))
+            # CF-1: Try pre-warmed pool first to avoid spawn latency
+            pooled = self._pool.checkout()
+            if pooled is not None and pooled.is_alive():
+                pooled.reassign(session_id)
+                self._workers[session_id] = pooled
+                self._pool.refill_background()
+                return pooled
+            # Fallback: spawn fresh worker
             worker = SessionWorker(session_id, self.bin_path, self.timeout_seconds)
             self._workers[session_id] = worker
+            self._pool.refill_background()
             return worker
 
     def _drop_dead_locked(self):
@@ -903,6 +988,9 @@ class QxFx0Handler(BaseHTTPRequestHandler):
         parsed = urlsplit(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
+        if path == "/healthz":
+            self._send_json({"status": "ok", "endpoint": "healthz"}, 200)
+            return
         if path == "/sidecar-health":
             if API_KEY and not self._check_auth():
                 return

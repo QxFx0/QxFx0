@@ -3,7 +3,26 @@
 # release-smoke.sh — QxFx0 10-step comprehensive release gate
 # Synthesises QxFx2's 10-step gate with QxFx5 process-group isolation
 # ═══════════════════════════════════════════════════════════════════════
-set -uo pipefail
+set -euo pipefail
+umask 077
+
+# F1 fix: Validate TMPDIR
+if [ -n "${TMPDIR:-}" ]; then
+    case "$TMPDIR" in
+        /tmp|/tmp/|/var/tmp|/var/tmp/)
+            ;;
+        *)
+            # F2 fix: Resolve symlinks before ownership check to prevent TOCTOU/symlink attacks
+            _resolved_tmpdir="$(readlink -f "$TMPDIR" 2>/dev/null || echo "")"
+            if [ -n "$_resolved_tmpdir" ] && [ -d "$_resolved_tmpdir" ] && [ -O "$_resolved_tmpdir" ]; then
+                TMPDIR="$_resolved_tmpdir"
+            else
+                echo "SECURITY: TMPDIR not /tmp and not user-owned (symlink-resolved check failed)" >&2
+                TMPDIR=/tmp
+            fi
+            ;;
+    esac
+fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$ROOT/scripts/lib/cabal_env.sh"
@@ -15,11 +34,11 @@ DEFAULT_CABAL_STORE="${HOST_CABAL_DIR}/store"
 DEFAULT_CABAL_LOGS="${HOST_CABAL_DIR}/logs"
 SHARED_CABAL_STORE="${QXFX0_SHARED_CABAL_STORE:-$DEFAULT_CABAL_STORE}"
 SHARED_CABAL_LOGS="${QXFX0_SHARED_CABAL_LOGS:-$DEFAULT_CABAL_LOGS}"
-CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-/tmp/qxfx0-cabal.lock}"
+CABAL_LOCK_FILE="${QXFX0_CABAL_LOCK_FILE:-}"
 HOST_PYTHON_SITE_PACKAGES=""
 setup_shared_python_site_packages HOST_PYTHON_SITE_PACKAGES
 BIN=""
-DB="/tmp/qxfx0-smoke-$$.db"
+DB="$(mktemp "${TMPDIR:-/tmp}/qxfx0-smoke.XXXXXX.db")"
 PORT=19170
 PID_HTTP=""
 PASS=0
@@ -44,6 +63,30 @@ RELEASE_CACHE="$RELEASE_HOME/.cache"
 RELEASE_CONFIG="$RELEASE_HOME/.config"
 RELEASE_STATE="$RELEASE_HOME/.state"
 RELEASE_CABAL_DIR="$RELEASE_HOME/.cabal"
+# C1 fix: Per-run isolated lock file — prevents race conditions and symlink attacks.
+# C1/D1 fix: Per-run isolated lock file with external override guard.
+# F4 fix: Replace glob-based prefix check with realpath containment verification.
+if [ -n "$CABAL_LOCK_FILE" ]; then
+  _resolved_lock="$(readlink -f "$CABAL_LOCK_FILE" 2>/dev/null || echo "")"
+  _resolved_release="$(readlink -f "$RELEASE_HOME" 2>/dev/null || echo "")"
+  _lock_contained=false
+  if [ -n "$_resolved_lock" ] && [ -n "$_resolved_release" ]; then
+    case "$_resolved_lock" in
+      "$_resolved_release"/*)
+        _lock_contained=true
+        ;;
+    esac
+  fi
+  if [ "$_lock_contained" = true ]; then
+    CABAL_LOCK_FILE="$_resolved_lock"
+  else
+    echo "SECURITY: External CABAL_LOCK_FILE outside RELEASE_HOME (realpath containment check failed)" >&2
+    CABAL_LOCK_FILE=""
+  fi
+fi
+if [ -z "$CABAL_LOCK_FILE" ]; then
+  CABAL_LOCK_FILE="$RELEASE_HOME/cabal.lock"
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -110,21 +153,45 @@ run_nix_flake() {
     nix --option warn-dirty false --extra-experimental-features "nix-command flakes" "$@"
 }
 
-NIX_EVAL_OUT=""
-NIX_EVAL_STATUS=1
-NIX_EVAL_MODE="restricted"
+# F2 fix: Validate CONCEPTS before interpolation - fail-closed if empty or unsafe
+nix_eval_is_allowlisted() {
+    local expr="$1"
+    if [ -z "${CONCEPTS:-}" ]; then
+        return 1
+    fi
+    case "$CONCEPTS" in
+        *[!A-Za-z0-9._/$-]*)
+            return 1
+            ;;
+    esac
+    [ "$expr" = "let c = import $CONCEPTS; in builtins.length c.concepts" ] && return 0
+    [ "$expr" = "let c = import $CONCEPTS; in c.constitutionalThresholds.agencyFloor" ] && return 0
+    [ "$expr" = "let c = import $CONCEPTS; in c.constitutionalThresholds.tensionCeiling" ] && return 0
+    return 1
+}
 
+# C2 fix: Fail-closed in ALL modes — no unrestricted fallback.
+# F1 fix: Wire nix_eval_is_allowlisted as mandatory pre-check before nix-instantiate invocation.
+# P0 fix: Also use --option restrict-eval true instead of --restricted for nix 2.34.6 compatibility.
 nix_eval_expr() {
     local expr="$1"
-    NIX_EVAL_OUT="$(nix-instantiate --restricted --eval -E "$expr" 2>&1)"
+    # F1 fix: Mandatory allowlist pre-check — fail-closed if expression is not allowlisted.
+    if ! nix_eval_is_allowlisted "$expr"; then
+        echo "SECURITY: nix_eval_expr rejected non-allowlisted expression (fail-closed)" >&2
+        NIX_EVAL_OUT=""
+        NIX_EVAL_STATUS=1
+        NIX_EVAL_MODE="allowlisted"
+        return 1
+    fi
+    NIX_EVAL_OUT="$(nix-instantiate --option restrict-eval true --eval -E "$expr" 2>&1)"
     NIX_EVAL_STATUS=$?
     NIX_EVAL_MODE="restricted"
     if [ "$NIX_EVAL_STATUS" -ne 0 ] && \
-       printf '%s' "$NIX_EVAL_OUT" | grep -Eqi 'unrecogni[sz]ed flag' && \
-       printf '%s' "$NIX_EVAL_OUT" | grep -q -- '--restricted'; then
-        NIX_EVAL_OUT="$(nix-instantiate --eval -E "$expr" 2>&1)"
-        NIX_EVAL_STATUS=$?
-        NIX_EVAL_MODE="unrestricted_fallback"
+       printf '%s' "$NIX_EVAL_OUT" | grep -Eqi 'unrecogni[sz]ed flag|restrict-eval' && \
+       printf '%s' "$NIX_EVAL_OUT" | grep -q -- 'restrict'; then
+        # C2 fix: Fail-closed in ALL modes — no unrestricted fallback.
+        echo "SECURITY: nix-instantiate restrict-eval unavailable — refusing unrestricted fallback (fail-closed)" >&2
+        return "$NIX_EVAL_STATUS"
     fi
     return "$NIX_EVAL_STATUS"
 }
@@ -305,6 +372,14 @@ cleanup() {
     fi
 }
 trap cleanup EXIT
+# C3 fix: ERR trap — catch unexpected failures and ensure fail-closed.
+on_error() {
+    local exit_code=$?
+    local line=$1
+    echo "ERROR: Unexpected failure at line $line (exit code: $exit_code) — failing closed" >&2
+    FAIL=$((FAIL+1))
+}
+trap 'on_error $LINENO' ERR
 
 echo "╔════════════════════════════════════════════════════════════╗"
 echo "║   QxFx0 Release Smoke Test — 10 Constitutional Gates      ║"
@@ -327,7 +402,7 @@ echo "[1/10] Cabal build"
 echo "─────────────────────────────────────────────────────────────"
 cd "$ROOT"
 step_info "Running cabal build all..."
-BUILD_LOG="/tmp/qxfx0-build-$$.log"
+BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/qxfx0-build.XXXXXX.log")"
 if run_local_cabal cabal build all -j1 >"$BUILD_LOG" 2>&1; then
     tail -3 "$BUILD_LOG"
     BIN="$(run_local_cabal cabal list-bin qxfx0-main 2>/dev/null || echo "")"
@@ -351,7 +426,7 @@ rm -f "$BUILD_LOG"
 echo "─────────────────────────────────────────────────────────────"
 echo "[2/10] Unit tests (cabal test)"
 echo "─────────────────────────────────────────────────────────────"
-TEST_LOG="/tmp/qxfx0-test-$$.log"
+TEST_LOG="$(mktemp "${TMPDIR:-/tmp}/qxfx0-test.XXXXXX.log")"
 step_info "Running cabal test qxfx0-test-fast..."
 if run_local_cabal cabal test qxfx0-test-fast >"$TEST_LOG" 2>&1; then
     tail -8 "$TEST_LOG"
@@ -376,7 +451,7 @@ case "$RUN_SLOW_TESTS" in
         step_skip "slow suite disabled (QXFX0_RUN_SLOW_TESTS=$RUN_SLOW_TESTS)"
         ;;
     1|true|TRUE|yes|YES)
-        SLOW_TEST_LOG="/tmp/qxfx0-test-slow-$$.log"
+        SLOW_TEST_LOG="$(mktemp "${TMPDIR:-/tmp}/qxfx0-test-slow.XXXXXX.log")"
         step_info "Running cabal test qxfx0-test-slow..."
         if run_local_cabal cabal test qxfx0-test-slow >"$SLOW_TEST_LOG" 2>&1; then
             tail -8 "$SLOW_TEST_LOG"

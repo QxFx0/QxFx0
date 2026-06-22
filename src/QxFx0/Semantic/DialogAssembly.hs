@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-|
 Dialog assembly V2: pure combinator-based Russian sentence generation.
 
@@ -91,12 +92,18 @@ assembleTurnWithGraph rp da style ds mGeodesicPlan =
                        else withFiller
       if useSelfCorrect && planLen >= 2
         then do
-          let (initSteps, [lastStep]) = splitAt (planLen - 1) (firstStep:restSteps)
-          initSents <- mapM (runStep rp da style) initSteps
-          lastSent <- runStep rp da style lastStep
-          let corrected = addFiller "то есть" lastSent
-          combined <- foldM (\acc s -> mkCoordS CoordA acc s) withPolite (initSents ++ [corrected])
-          Right (linearizeS combined)
+          let splitResult = splitAt (planLen - 1) (firstStep:restSteps)
+          case splitResult of
+            (initSteps, [lastStep]) -> do
+              initSents <- mapM (runStep rp da style) initSteps
+              lastSent <- runStep rp da style lastStep
+              let corrected = addFiller "то есть" lastSent
+              combined <- foldM (\acc s -> mkCoordS CoordA acc s) withPolite (initSents ++ [corrected])
+              Right (linearizeS combined)
+            _ -> do
+              restSents <- mapM (runStep rp da style) restSteps
+              combined <- foldM (\acc s -> mkCoordS CoordA acc s) withPolite restSents
+              Right (linearizeS combined)
         else do
           restSents <- mapM (runStep rp da style) restSteps
           combined <- foldM (\acc s -> mkCoordS CoordA acc s) withPolite restSents
@@ -109,7 +116,7 @@ data StepId = SAcknowledge | SStance | SEngage | SReflect
   | SDefine | SPurpose | SDistinguish
   | SAgree | SDisagree | SRelated
   | SModal | SQuantify | SSelfCorrect | SEmphatic | SNarrative | SMetaphor
-  deriving (Eq, Ord, Show, Bounded, Enum)
+  deriving stock (Eq, Ord, Show, Bounded, Enum)
 
 type AssemblyPlan = [StepId]
 

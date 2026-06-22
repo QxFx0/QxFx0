@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionSystemLogicAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionSystemLogicAdmission
-  ( PropositionSystemLogicAdmissionInput(..)
-  , PropositionSystemLogicAdmissionDecision(..)
-  , RawPropositionSystemLogicTrigger(..)
-  , AdmittedPropositionSystemLogicTriggers(..)
+  ( PropositionSystemLogicAdmissionInput, PropositionSystemLogicAdmissionDecision, RawPropositionSystemLogicTrigger, AdmittedPropositionSystemLogicTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionSystemLogicAdmissionInput = PropositionSystemLogicAdmissionInput
-  { pslaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionSystemLogicAdmissionDecision
-  = PsldAdmitRaw
-  | PsldPreserveAmbiguous
-  | PsldSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionSystemLogicTrigger = RawPropositionSystemLogicTrigger
-  { rpslLabel :: !Text
-  , rpslMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionSystemLogicTriggers = AdmittedPropositionSystemLogicTriggers
-  { apslRawTriggers :: ![RawPropositionSystemLogicTrigger]
-  , apslTriggers :: ![RawPropositionSystemLogicTrigger]
-  , apslDecision :: !PropositionSystemLogicAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionSystemLogicAdmissionInput = PropositionAdmissionInput
+type PropositionSystemLogicAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionSystemLogicTrigger = RawPropositionTrigger
+type AdmittedPropositionSystemLogicTriggers = AdmittedPropositionTriggers

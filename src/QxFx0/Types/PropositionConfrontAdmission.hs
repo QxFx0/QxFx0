@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionConfrontAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionConfrontAdmission
-  ( PropositionConfrontAdmissionInput(..)
-  , PropositionConfrontAdmissionDecision(..)
-  , RawPropositionConfrontTrigger(..)
-  , AdmittedPropositionConfrontTriggers(..)
+  ( PropositionConfrontAdmissionInput, PropositionConfrontAdmissionDecision, RawPropositionConfrontTrigger, AdmittedPropositionConfrontTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionConfrontAdmissionInput = PropositionConfrontAdmissionInput
-  { pcoaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionConfrontAdmissionDecision
-  = PcondAdmitRaw
-  | PcondPreserveAmbiguous
-  | PcondSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionConfrontTrigger = RawPropositionConfrontTrigger
-  { rpconfLabel :: !Text
-  , rpconfMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionConfrontTriggers = AdmittedPropositionConfrontTriggers
-  { apconfRawTriggers :: ![RawPropositionConfrontTrigger]
-  , apconfTriggers :: ![RawPropositionConfrontTrigger]
-  , apconfDecision :: !PropositionConfrontAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionConfrontAdmissionInput = PropositionAdmissionInput
+type PropositionConfrontAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionConfrontTrigger = RawPropositionTrigger
+type AdmittedPropositionConfrontTriggers = AdmittedPropositionTriggers

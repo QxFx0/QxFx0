@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionOperationalStatusAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionOperationalStatusAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition OperationalStatus triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionOperationalStatusTriggers
-  :: PropositionOperationalStatusAdmissionInput
-  -> [RawPropositionOperationalStatusTrigger]
-  -> AdmittedPropositionOperationalStatusTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionOperationalStatusTriggers =
   admitPropositionTriggers operationalStatusAdmissionConfig
 
 operationalStatusAdmissionConfig :: PropositionAdmissionConfig
-  PropositionOperationalStatusAdmissionInput
-  RawPropositionOperationalStatusTrigger
-  AdmittedPropositionOperationalStatusTriggers
-  PropositionOperationalStatusAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 operationalStatusAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = posaiTruthContractStatus
-  , pacTriggerLabel = rpostLabel
-  , pacTriggerMatched = rpostMatched
-  , pacSetTriggerMatched = \b t -> t { rpostMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionOperationalStatusTriggers
-  , pacDecisionAdmitRaw = PosdAdmitRaw
-  , pacDecisionPreserveAmbiguous = PosdPreserveAmbiguous
-  , pacDecisionSuppressStrong = PosdSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

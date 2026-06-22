@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionConceptKnowledgeAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionConceptKnowledgeAdmission
-  ( PropositionConceptKnowledgeAdmissionInput(..)
-  , PropositionConceptKnowledgeAdmissionDecision(..)
-  , RawPropositionConceptKnowledgeTrigger(..)
-  , AdmittedPropositionConceptKnowledgeTriggers(..)
+  ( PropositionConceptKnowledgeAdmissionInput, PropositionConceptKnowledgeAdmissionDecision, RawPropositionConceptKnowledgeTrigger, AdmittedPropositionConceptKnowledgeTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionConceptKnowledgeAdmissionInput = PropositionConceptKnowledgeAdmissionInput
-  { pckaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionConceptKnowledgeAdmissionDecision
-  = PckdAdmitRaw
-  | PckdPreserveAmbiguous
-  | PckdSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionConceptKnowledgeTrigger = RawPropositionConceptKnowledgeTrigger
-  { rpckLabel :: !Text
-  , rpckMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionConceptKnowledgeTriggers = AdmittedPropositionConceptKnowledgeTriggers
-  { apckRawTriggers :: ![RawPropositionConceptKnowledgeTrigger]
-  , apckTriggers :: ![RawPropositionConceptKnowledgeTrigger]
-  , apckDecision :: !PropositionConceptKnowledgeAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionConceptKnowledgeAdmissionInput = PropositionAdmissionInput
+type PropositionConceptKnowledgeAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionConceptKnowledgeTrigger = RawPropositionTrigger
+type AdmittedPropositionConceptKnowledgeTriggers = AdmittedPropositionTriggers

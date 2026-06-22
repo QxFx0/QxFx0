@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionSystemLogicAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionSystemLogicAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition SystemLogic triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionSystemLogicTriggers
-  :: PropositionSystemLogicAdmissionInput
-  -> [RawPropositionSystemLogicTrigger]
-  -> AdmittedPropositionSystemLogicTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionSystemLogicTriggers =
   admitPropositionTriggers systemLogicAdmissionConfig
 
 systemLogicAdmissionConfig :: PropositionAdmissionConfig
-  PropositionSystemLogicAdmissionInput
-  RawPropositionSystemLogicTrigger
-  AdmittedPropositionSystemLogicTriggers
-  PropositionSystemLogicAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 systemLogicAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pslaiTruthContractStatus
-  , pacTriggerLabel = rpslLabel
-  , pacTriggerMatched = rpslMatched
-  , pacSetTriggerMatched = \b t -> t { rpslMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionSystemLogicTriggers
-  , pacDecisionAdmitRaw = PsldAdmitRaw
-  , pacDecisionPreserveAmbiguous = PsldPreserveAmbiguous
-  , pacDecisionSuppressStrong = PsldSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

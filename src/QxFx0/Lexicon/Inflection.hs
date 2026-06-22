@@ -131,6 +131,20 @@ dativeForm md w =
 -- Doesn't re-inflect words already in instrumental.
 instrumentalHeuristic :: Text -> Text
 instrumentalHeuristic word =
+  -- For multi-word phrases, inflect only the last word
+  let parts = T.words word
+  in case parts of
+    [w] -> instrumentalHeuristicSingle w
+    _   -> case reverse parts of
+      (lastW:rest) ->
+        let prefix = T.intercalate " " (reverse rest)
+            inflectedLast = instrumentalHeuristicSingle lastW
+        in (if T.null prefix then "" else prefix <> " ") <> inflectedLast
+      [] -> word
+
+-- | Single-word instrumental heuristic (original logic).
+instrumentalHeuristicSingle :: Text -> Text
+instrumentalHeuristicSingle word =
   let w = T.toLower word
   in
   if "ой" `T.isSuffixOf` w || "ей" `T.isSuffixOf` w
@@ -156,6 +170,20 @@ instrumentalHeuristic word =
 -- | Suffix-based dative form heuristic.
 dativeHeuristic :: Text -> Text
 dativeHeuristic word =
+  -- For multi-word phrases, inflect only the last word
+  let parts = T.words word
+  in case parts of
+    [w] -> dativeHeuristicSingle w
+    _   -> case reverse parts of
+      (lastW:rest) ->
+        let prefix = T.intercalate " " (reverse rest)
+            inflectedLast = dativeHeuristicSingle lastW
+        in (if T.null prefix then "" else prefix <> " ") <> inflectedLast
+      [] -> word
+
+-- | Single-word dative heuristic (original logic).
+dativeHeuristicSingle :: Text -> Text
+dativeHeuristicSingle word =
   let w = T.toLower word
   in
   if "у" `T.isSuffixOf` w || "ю" `T.isSuffixOf` w

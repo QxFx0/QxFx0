@@ -112,29 +112,8 @@ import QxFx0.Types.Admission.PropositionGenerativePromptAdmission (admitProposit
 import QxFx0.Types.Admission.PropositionComparisonPlausibilityAdmission (admitPropositionComparisonPlausibilityTriggers)
 import QxFx0.Types.Admission.PropositionSelfStateAdmission (admitPropositionSelfStateTriggers)
 import QxFx0.Types.Admission.PropositionRepairDirectiveAdmission (admitPropositionRepairDirectiveTriggers)
+import QxFx0.Types.PropositionAdmissionTypes
 import QxFx0.Types.PropositionFallbackAdmission
-import QxFx0.Types.PropositionContactAdmission
-import QxFx0.Types.PropositionConfrontAdmission
-import QxFx0.Types.PropositionNextStepAdmission
-import QxFx0.Types.PropositionOperationalStatusAdmission
-import QxFx0.Types.PropositionOperationalCauseAdmission
-import QxFx0.Types.PropositionSystemLogicAdmission
-import QxFx0.Types.PropositionDistinctionAdmission
-import QxFx0.Types.PropositionAffectiveSupportPhraseAdmission
-import QxFx0.Types.PropositionAffectiveSupportProbeAdmission
-import QxFx0.Types.PropositionSelfKnowledgeAdmission
-import QxFx0.Types.PropositionPurposeAdmission
-import QxFx0.Types.PropositionConceptKnowledgeAdmission
-import QxFx0.Types.PropositionMisunderstandingAdmission
-import QxFx0.Types.PropositionWorldCauseAdmission
-import QxFx0.Types.PropositionLocationFormationAdmission
-import QxFx0.Types.PropositionExploratoryPromptAdmission
-import QxFx0.Types.PropositionDialogueInvitationAdmission
-import QxFx0.Types.PropositionContemplativeTopicAdmission
-import QxFx0.Types.PropositionGenerativePromptAdmission
-import QxFx0.Types.PropositionSelfStateAdmission
-import QxFx0.Types.PropositionComparisonPlausibilityAdmission
-import QxFx0.Types.PropositionRepairDirectiveAdmission
 import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame, buildUtteranceSemanticFrameMorph)
 import QxFx0.Semantic.Input.Model
 import QxFx0.Policy.SemanticScoring
@@ -154,60 +133,60 @@ detectContactSignal truthContractStatus rawText tokens =
     rawTriggers = collectRawContactTriggers rawText tokens
     admittedTriggers =
       admitPropositionContactTriggers
-        (PropositionContactAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
-    AdmittedPropositionContactTriggers _ admittedTriggerList _ = admittedTriggers
+    AdmittedPropositionTriggers _ admittedTriggerList _ = admittedTriggers
 
-collectRawContactTriggers :: Text -> [Text] -> [RawPropositionContactTrigger]
+collectRawContactTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawContactTriggers rawText tokens =
-  [ RawPropositionContactTrigger "exclude_how_you_work" (containsKeywordPhrase tokens "как ты работаешь")
-  , RawPropositionContactTrigger "exclude_how_you_work_plural" (containsKeywordPhrase tokens "как вы работаете")
-  , RawPropositionContactTrigger "exclude_how_you_built" (containsKeywordPhrase tokens "как ты устроен")
-  , RawPropositionContactTrigger "how_are_you" (containsKeywordPhrase tokens "как дела")
-  , RawPropositionContactTrigger "how_is_life" (containsKeywordPhrase tokens "как жизнь")
-  , RawPropositionContactTrigger "short_how_you"
+  [ RawPropositionTrigger "exclude_how_you_work" (containsKeywordPhrase tokens "как ты работаешь")
+  , RawPropositionTrigger "exclude_how_you_work_plural" (containsKeywordPhrase tokens "как вы работаете")
+  , RawPropositionTrigger "exclude_how_you_built" (containsKeywordPhrase tokens "как ты устроен")
+  , RawPropositionTrigger "how_are_you" (containsKeywordPhrase tokens "как дела")
+  , RawPropositionTrigger "how_is_life" (containsKeywordPhrase tokens "как жизнь")
+  , RawPropositionTrigger "short_how_you"
       (containsKeywordPhrase tokens "как ты" && isShortHowYouContact tokens)
-  , RawPropositionContactTrigger "greeting"
+  , RawPropositionTrigger "greeting"
       (T.toLower (T.strip rawText) `elem` ["привет", "здравствуй", "здравствуйте", "салют", "хай", "hello", "hi"])
-  , RawPropositionContactTrigger "courtesy_infix"
+  , RawPropositionTrigger "courtesy_infix"
       (any (`T.isInfixOf` T.toLower rawText) ["добрый день", "доброе утро", "добрый вечер", "рад видеть"])
-  , RawPropositionContactTrigger "farewell" (containsKeywordPhrase tokens "до свидания")
-  , RawPropositionContactTrigger "parting_meeting" (containsKeywordPhrase tokens "до встречи")
-  , RawPropositionContactTrigger "good_wishes" (containsKeywordPhrase tokens "всего доброго")
-  , RawPropositionContactTrigger "good_wishes_alt" (containsKeywordPhrase tokens "всего хорошего")
-  , RawPropositionContactTrigger "brief_contact_probe"
+  , RawPropositionTrigger "farewell" (containsKeywordPhrase tokens "до свидания")
+  , RawPropositionTrigger "parting_meeting" (containsKeywordPhrase tokens "до встречи")
+  , RawPropositionTrigger "good_wishes" (containsKeywordPhrase tokens "всего доброго")
+  , RawPropositionTrigger "good_wishes_alt" (containsKeywordPhrase tokens "всего хорошего")
+  , RawPropositionTrigger "brief_contact_probe"
       (any (`elem` tokens) ["пока", "прощай", "бывай", "увидимся", "спасибо", "благодарю", "thanks"])
-  , RawPropositionContactTrigger "how_self" (containsKeywordPhrase tokens "как сам")
-  , RawPropositionContactTrigger "how_mood" (containsKeywordPhrase tokens "как настроение")
-  , RawPropositionContactTrigger "glad_to_see_you" (containsKeywordPhrase tokens "рад тебя видеть")
-  , RawPropositionContactTrigger "glad_to_see_you_plural" (containsKeywordPhrase tokens "рад вас видеть")
-  , RawPropositionContactTrigger "start_conversation" (containsKeywordPhrase tokens "начнем разговор")
-  , RawPropositionContactTrigger "start_conversation_alt" (containsKeywordPhrase tokens "начнём разговор")
-  , RawPropositionContactTrigger "can_chat" (containsKeywordPhrase tokens "можем пообщаться")
-  , RawPropositionContactTrigger "returned" (containsKeywordPhrase tokens "я вернулся")
-  , RawPropositionContactTrigger "greeting_again" (containsKeywordPhrase tokens "снова привет")
-  , RawPropositionContactTrigger "ready_to_talk" (containsKeywordPhrase tokens "готов к разговору")
-  , RawPropositionContactTrigger "contact_present" (containsKeywordPhrase tokens "контакт есть")
-  , RawPropositionContactTrigger "contact_present_alt" (containsKeywordPhrase tokens "есть контакт")
-  , RawPropositionContactTrigger "connected" (containsKeywordPhrase tokens "мы на связи")
-  , RawPropositionContactTrigger "can_you_hear_me" (containsKeywordPhrase tokens "слышишь меня")
-  , RawPropositionContactTrigger "online" (containsKeywordPhrase tokens "ты онлайн")
-  , RawPropositionContactTrigger "short_dialogue_probe"
+  , RawPropositionTrigger "how_self" (containsKeywordPhrase tokens "как сам")
+  , RawPropositionTrigger "how_mood" (containsKeywordPhrase tokens "как настроение")
+  , RawPropositionTrigger "glad_to_see_you" (containsKeywordPhrase tokens "рад тебя видеть")
+  , RawPropositionTrigger "glad_to_see_you_plural" (containsKeywordPhrase tokens "рад вас видеть")
+  , RawPropositionTrigger "start_conversation" (containsKeywordPhrase tokens "начнем разговор")
+  , RawPropositionTrigger "start_conversation_alt" (containsKeywordPhrase tokens "начнём разговор")
+  , RawPropositionTrigger "can_chat" (containsKeywordPhrase tokens "можем пообщаться")
+  , RawPropositionTrigger "returned" (containsKeywordPhrase tokens "я вернулся")
+  , RawPropositionTrigger "greeting_again" (containsKeywordPhrase tokens "снова привет")
+  , RawPropositionTrigger "ready_to_talk" (containsKeywordPhrase tokens "готов к разговору")
+  , RawPropositionTrigger "contact_present" (containsKeywordPhrase tokens "контакт есть")
+  , RawPropositionTrigger "contact_present_alt" (containsKeywordPhrase tokens "есть контакт")
+  , RawPropositionTrigger "connected" (containsKeywordPhrase tokens "мы на связи")
+  , RawPropositionTrigger "can_you_hear_me" (containsKeywordPhrase tokens "слышишь меня")
+  , RawPropositionTrigger "online" (containsKeywordPhrase tokens "ты онлайн")
+  , RawPropositionTrigger "short_dialogue_probe"
       (shortDialogueProbe tokens && any (`elem` tokens) ["поговорим", "обсудим"])
-  , RawPropositionContactTrigger "can_we_talk_about" (T.isInfixOf "can we talk about" (T.toLower rawText))
-  , RawPropositionContactTrigger "lets_discuss" (T.isInfixOf "let's discuss" (T.toLower rawText))
-  , RawPropositionContactTrigger "question_about" (T.isInfixOf "i have a question about" (T.toLower rawText))
-  , RawPropositionContactTrigger "want_to_understand" (T.isInfixOf "i want to understand" (T.toLower rawText))
-  , RawPropositionContactTrigger "who_determines" (T.isInfixOf "who determines" (T.toLower rawText))
-  , RawPropositionContactTrigger "who_is_responsible" (T.isInfixOf "who is responsible" (T.toLower rawText))
-  , RawPropositionContactTrigger "what_agency" (T.isInfixOf "what agency" (T.toLower rawText))
-  , RawPropositionContactTrigger "what_role_does" (T.isInfixOf "what role does" (T.toLower rawText))
-  , RawPropositionContactTrigger "how_does_agency" (T.isInfixOf "how does agency" (T.toLower rawText))
+  , RawPropositionTrigger "can_we_talk_about" (T.isInfixOf "can we talk about" (T.toLower rawText))
+  , RawPropositionTrigger "lets_discuss" (T.isInfixOf "let's discuss" (T.toLower rawText))
+  , RawPropositionTrigger "question_about" (T.isInfixOf "i have a question about" (T.toLower rawText))
+  , RawPropositionTrigger "want_to_understand" (T.isInfixOf "i want to understand" (T.toLower rawText))
+  , RawPropositionTrigger "who_determines" (T.isInfixOf "who determines" (T.toLower rawText))
+  , RawPropositionTrigger "who_is_responsible" (T.isInfixOf "who is responsible" (T.toLower rawText))
+  , RawPropositionTrigger "what_agency" (T.isInfixOf "what agency" (T.toLower rawText))
+  , RawPropositionTrigger "what_role_does" (T.isInfixOf "what role does" (T.toLower rawText))
+  , RawPropositionTrigger "how_does_agency" (T.isInfixOf "how does agency" (T.toLower rawText))
   ]
   where
     shortDialogueProbe ts = length ts <= 2
 
-buildContactSignalFromTriggers :: Text -> [Text] -> [RawPropositionContactTrigger] -> Maybe PropositionType
+buildContactSignalFromTriggers :: Text -> [Text] -> [RawPropositionTrigger] -> Maybe PropositionType
 buildContactSignalFromTriggers rawText tokens admittedTriggers
   | matched "exclude_how_you_work" = Nothing
   | matched "exclude_how_you_work_plural" = Nothing
@@ -255,7 +234,7 @@ buildContactSignalFromTriggers rawText tokens admittedTriggers
     _unusedTokens = tokens
     matched label = any hasMatchingLabel admittedTriggers
       where
-        hasMatchingLabel (RawPropositionContactTrigger triggerLabel triggerMatched) =
+        hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =
           triggerLabel == label && triggerMatched
 
 isShortHowYouContact :: [Text] -> Bool
@@ -265,76 +244,76 @@ isShortHowYouContact tokens =
 
 detectOperationalStatus :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectOperationalStatus truthContractStatus rawText tokens =
-  buildOperationalStatusFromTriggers (apostTriggers admittedTriggers)
+  buildOperationalStatusFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawOperationalStatusTriggers rawText tokens
     admittedTriggers =
       admitPropositionOperationalStatusTriggers
-        (PropositionOperationalStatusAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawOperationalStatusTriggers :: Text -> [Text] -> [RawPropositionOperationalStatusTrigger]
+collectRawOperationalStatusTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawOperationalStatusTriggers rawText tokens =
-  [ RawPropositionOperationalStatusTrigger "work_text_cue" (T.isInfixOf "работа" (T.toLower rawText))
-  , RawPropositionOperationalStatusTrigger "subject_present" (any (`elem` tokens) ["ты", "система"])
-  , RawPropositionOperationalStatusTrigger "why_guard_clear" (not (containsKeywordPhrase tokens "почему"))
+  [ RawPropositionTrigger "work_text_cue" (T.isInfixOf "работа" (T.toLower rawText))
+  , RawPropositionTrigger "subject_present" (any (`elem` tokens) ["ты", "система"])
+  , RawPropositionTrigger "why_guard_clear" (not (containsKeywordPhrase tokens "почему"))
   ]
 
-buildOperationalStatusFromTriggers :: [RawPropositionOperationalStatusTrigger] -> Maybe PropositionType
+buildOperationalStatusFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildOperationalStatusFromTriggers admittedTriggers
   | matched "work_text_cue"
       && matched "subject_present"
       && matched "why_guard_clear" = Just OperationalStatusQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpostLabel trigger == label && rpostMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectOperationalCause :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectOperationalCause truthContractStatus rawText tokens =
-  buildOperationalCauseFromTriggers (apocTriggers admittedTriggers)
+  buildOperationalCauseFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawOperationalCauseTriggers rawText tokens
     admittedTriggers =
       admitPropositionOperationalCauseTriggers
-        (PropositionOperationalCauseAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawOperationalCauseTriggers :: Text -> [Text] -> [RawPropositionOperationalCauseTrigger]
+collectRawOperationalCauseTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawOperationalCauseTriggers rawText tokens =
-  [ RawPropositionOperationalCauseTrigger "why_phrase" (containsKeywordPhrase tokens "почему")
-  , RawPropositionOperationalCauseTrigger "work_text_cue" (T.isInfixOf "работа" (T.toLower rawText))
-  , RawPropositionOperationalCauseTrigger "subject_present" (any (`elem` tokens) ["ты", "система"])
+  [ RawPropositionTrigger "why_phrase" (containsKeywordPhrase tokens "почему")
+  , RawPropositionTrigger "work_text_cue" (T.isInfixOf "работа" (T.toLower rawText))
+  , RawPropositionTrigger "subject_present" (any (`elem` tokens) ["ты", "система"])
   ]
 
-buildOperationalCauseFromTriggers :: [RawPropositionOperationalCauseTrigger] -> Maybe PropositionType
+buildOperationalCauseFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildOperationalCauseFromTriggers admittedTriggers
   | matched "why_phrase"
       && matched "work_text_cue"
       && matched "subject_present" = Just OperationalCauseQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpocLabel trigger == label && rpocMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectSystemLogic :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectSystemLogic truthContractStatus rawText tokens =
-  buildSystemLogicFromTriggers (apslTriggers admittedTriggers)
+  buildSystemLogicFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawSystemLogicTriggers rawText tokens
     admittedTriggers =
       admitPropositionSystemLogicTriggers
-        (PropositionSystemLogicAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawSystemLogicTriggers :: Text -> [Text] -> [RawPropositionSystemLogicTrigger]
+collectRawSystemLogicTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawSystemLogicTriggers rawText tokens =
-  [ RawPropositionSystemLogicTrigger "how_you_will" (containsKeywordPhrase tokens "как ты будешь")
-  , RawPropositionSystemLogicTrigger "how_you_will_plural" (containsKeywordPhrase tokens "как вы будете")
-  , RawPropositionSystemLogicTrigger "logic_tokens_present" (any (`elem` tokens) ["логика", "устроен", "работаешь"])
-  , RawPropositionSystemLogicTrigger "subject_present" (any (`elem` tokens) ["твоя", "ты"])
-  , RawPropositionSystemLogicTrigger "your_logic_text" (T.isInfixOf "твоя логика" (T.toLower rawText))
+  [ RawPropositionTrigger "how_you_will" (containsKeywordPhrase tokens "как ты будешь")
+  , RawPropositionTrigger "how_you_will_plural" (containsKeywordPhrase tokens "как вы будете")
+  , RawPropositionTrigger "logic_tokens_present" (any (`elem` tokens) ["логика", "устроен", "работаешь"])
+  , RawPropositionTrigger "subject_present" (any (`elem` tokens) ["твоя", "ты"])
+  , RawPropositionTrigger "your_logic_text" (T.isInfixOf "твоя логика" (T.toLower rawText))
   ]
 
-buildSystemLogicFromTriggers :: [RawPropositionSystemLogicTrigger] -> Maybe PropositionType
+buildSystemLogicFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildSystemLogicFromTriggers admittedTriggers
   | matched "how_you_will" = Just SystemLogicQ
   | matched "how_you_will_plural" = Just SystemLogicQ
@@ -343,7 +322,7 @@ buildSystemLogicFromTriggers admittedTriggers
   | matched "your_logic_text" = Just SystemLogicQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpslLabel trigger == label && rpslMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectDistinctionQuestion :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectDistinctionQuestion truthContractStatus rawText tokens =
@@ -351,65 +330,65 @@ detectDistinctionQuestion truthContractStatus rawText tokens =
       rawTriggers = collectRawDistinctionTriggers lowered tokens
       admittedTriggers =
         admitPropositionDistinctionTriggers
-          (PropositionDistinctionAdmissionInput truthContractStatus)
+          (PropositionAdmissionInput truthContractStatus)
           rawTriggers
-  in buildDistinctionFromTriggers (apdtTriggers admittedTriggers)
+  in buildDistinctionFromTriggers (aptTriggers admittedTriggers)
 
-collectRawDistinctionTriggers :: Text -> [Text] -> [RawPropositionDistinctionTrigger]
+collectRawDistinctionTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawDistinctionTriggers lowered tokens =
-  [ RawPropositionDistinctionTrigger "complex_relationship_between_how_differ"
+  [ RawPropositionTrigger "complex_relationship_between_how_differ"
       (T.isInfixOf "relationship between" lowered && T.isInfixOf "how do they differ" lowered)
-  , RawPropositionDistinctionTrigger "complex_distinguish_then_ground"
+  , RawPropositionTrigger "complex_distinguish_then_ground"
       (T.isInfixOf "distinguish" lowered && T.isInfixOf "then ground" lowered)
-  , RawPropositionDistinctionTrigger "complex_how_differ_practical_reasoning"
+  , RawPropositionTrigger "complex_how_differ_practical_reasoning"
       (T.isInfixOf "how does it differ" lowered && T.isInfixOf "in practical reasoning" lowered)
-  , RawPropositionDistinctionTrigger "complex_why_differ"
+  , RawPropositionTrigger "complex_why_differ"
       (T.isInfixOf "why" lowered && T.isInfixOf "differ" lowered)
-  , RawPropositionDistinctionTrigger "complex_for_what_purpose_distinguish"
+  , RawPropositionTrigger "complex_for_what_purpose_distinguish"
       (T.isInfixOf "for what purpose" lowered && T.isInfixOf "distinguish" lowered)
-  , RawPropositionDistinctionTrigger "complex_why_distinguish"
+  , RawPropositionTrigger "complex_why_distinguish"
       (T.isInfixOf "why" lowered && T.isInfixOf "distinguish" lowered)
-  , RawPropositionDistinctionTrigger "how_distinguish_phrase"
+  , RawPropositionTrigger "how_distinguish_phrase"
       (containsKeywordPhrase tokens "как отличить")
-  , RawPropositionDistinctionTrigger "from_token_present"
+  , RawPropositionTrigger "from_token_present"
       (any (`elem` tokens) ["от"])
-  , RawPropositionDistinctionTrigger "what_differs_phrase"
+  , RawPropositionTrigger "what_differs_phrase"
       (containsKeywordPhrase tokens "чем отличается")
-  , RawPropositionDistinctionTrigger "how_distinguish_text"
+  , RawPropositionTrigger "how_distinguish_text"
       (T.isInfixOf "как отличить" lowered && T.isInfixOf " от " lowered)
-  , RawPropositionDistinctionTrigger "differentiate_between_text"
+  , RawPropositionTrigger "differentiate_between_text"
       (T.isInfixOf "differentiate between" lowered)
-  , RawPropositionDistinctionTrigger "differentiate_text"
+  , RawPropositionTrigger "differentiate_text"
       (T.isInfixOf "differentiate" lowered)
-  , RawPropositionDistinctionTrigger "distinguish_between_text"
+  , RawPropositionTrigger "distinguish_between_text"
       (T.isInfixOf "distinguish between" lowered)
-  , RawPropositionDistinctionTrigger "difference_between_text"
+  , RawPropositionTrigger "difference_between_text"
       (T.isInfixOf "difference between" lowered)
-  , RawPropositionDistinctionTrigger "distinction_between_text"
+  , RawPropositionTrigger "distinction_between_text"
       (T.isInfixOf "distinction between" lowered)
-  , RawPropositionDistinctionTrigger "differ_from_text"
+  , RawPropositionTrigger "differ_from_text"
       (T.isInfixOf "differ from" lowered)
-  , RawPropositionDistinctionTrigger "differ_question_text"
+  , RawPropositionTrigger "differ_question_text"
       (T.isInfixOf "differ?" lowered)
-  , RawPropositionDistinctionTrigger "differ_comma_text"
+  , RawPropositionTrigger "differ_comma_text"
       (T.isInfixOf "differ," lowered)
-  , RawPropositionDistinctionTrigger "differ_period_text"
+  , RawPropositionTrigger "differ_period_text"
       (T.isInfixOf "differ." lowered)
-  , RawPropositionDistinctionTrigger "differ_spaced_text"
+  , RawPropositionTrigger "differ_spaced_text"
       (T.isInfixOf " differ " lowered)
-  , RawPropositionDistinctionTrigger "contrast_text"
+  , RawPropositionTrigger "contrast_text"
       (T.isInfixOf "contrast" lowered)
-  , RawPropositionDistinctionTrigger "ru_raznitsa_mezhdu"
+  , RawPropositionTrigger "ru_raznitsa_mezhdu"
       (T.isInfixOf "разница между" lowered)
-  , RawPropositionDistinctionTrigger "ru_raznitsa_i"
+  , RawPropositionTrigger "ru_raznitsa_i"
       (T.isInfixOf "разница" lowered && T.isInfixOf " и " lowered)
-  , RawPropositionDistinctionTrigger "ru_chem_raznitsa"
+  , RawPropositionTrigger "ru_chem_raznitsa"
       (containsKeywordPhrase tokens "в чём разница" || containsKeywordPhrase tokens "в чем разница")
-  , RawPropositionDistinctionTrigger "ru_otlichie"
+  , RawPropositionTrigger "ru_otlichie"
       (T.isInfixOf "отличие" lowered && T.isInfixOf " между " lowered)
   ]
 
-buildDistinctionFromTriggers :: [RawPropositionDistinctionTrigger] -> Maybe PropositionType
+buildDistinctionFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildDistinctionFromTriggers admittedTriggers
   | matched "complex_relationship_between_how_differ" = Nothing
   | matched "complex_distinguish_then_ground" = Nothing
@@ -438,35 +417,35 @@ buildDistinctionFromTriggers admittedTriggers
   | matched "ru_otlichie" = Just DistinctionQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpdtLabel trigger == label && rpdtMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectConfrontSignal :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectConfrontSignal truthContractStatus rawText tokens =
-  buildConfrontSignalFromTriggers rawText (apconfTriggers admittedTriggers)
+  buildConfrontSignalFromTriggers rawText (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawConfrontTriggers rawText tokens
     admittedTriggers =
       admitPropositionConfrontTriggers
-        (PropositionConfrontAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawConfrontTriggers :: Text -> [Text] -> [RawPropositionConfrontTrigger]
+collectRawConfrontTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawConfrontTriggers rawText tokens =
-  [ RawPropositionConfrontTrigger "contradiction_phrase" (containsKeywordPhrase tokens "это противоречие")
-  , RawPropositionConfrontTrigger "disagree_masc" (containsKeywordPhrase tokens "я не согласен")
-  , RawPropositionConfrontTrigger "disagree_fem" (containsKeywordPhrase tokens "я не согласна")
-  , RawPropositionConfrontTrigger "contradiction_noun" ("противоречие" `elem` tokens)
-  , RawPropositionConfrontTrigger "contradicts_verb" ("противоречит" `elem` tokens)
-  , RawPropositionConfrontTrigger "contradicts_verb_2sg" ("противоречишь" `elem` tokens)
-  , RawPropositionConfrontTrigger "doubt_marker" ("сомневаюсь" `elem` tokens)
-  , RawPropositionConfrontTrigger "disputable_marker" ("спорно" `elem` tokens)
-  , RawPropositionConfrontTrigger "does_not_follow" (T.isInfixOf "does not follow" (T.toLower rawText))
-  , RawPropositionConfrontTrigger "ru_razve" ("разве" `elem` tokens)
-  , RawPropositionConfrontTrigger "ru_neverno" (T.isInfixOf "это неверно" (T.toLower rawText) || T.isInfixOf "ты ошибаешься" (T.toLower rawText))
-  , RawPropositionConfrontTrigger "ru_ne_prav" (T.isInfixOf "не прав" (T.toLower rawText) || T.isInfixOf "неправ" (T.toLower rawText))
+  [ RawPropositionTrigger "contradiction_phrase" (containsKeywordPhrase tokens "это противоречие")
+  , RawPropositionTrigger "disagree_masc" (containsKeywordPhrase tokens "я не согласен")
+  , RawPropositionTrigger "disagree_fem" (containsKeywordPhrase tokens "я не согласна")
+  , RawPropositionTrigger "contradiction_noun" ("противоречие" `elem` tokens)
+  , RawPropositionTrigger "contradicts_verb" ("противоречит" `elem` tokens)
+  , RawPropositionTrigger "contradicts_verb_2sg" ("противоречишь" `elem` tokens)
+  , RawPropositionTrigger "doubt_marker" ("сомневаюсь" `elem` tokens)
+  , RawPropositionTrigger "disputable_marker" ("спорно" `elem` tokens)
+  , RawPropositionTrigger "does_not_follow" (T.isInfixOf "does not follow" (T.toLower rawText))
+  , RawPropositionTrigger "ru_razve" ("разве" `elem` tokens)
+  , RawPropositionTrigger "ru_neverno" (T.isInfixOf "это неверно" (T.toLower rawText) || T.isInfixOf "ты ошибаешься" (T.toLower rawText))
+  , RawPropositionTrigger "ru_ne_prav" (T.isInfixOf "не прав" (T.toLower rawText) || T.isInfixOf "неправ" (T.toLower rawText))
   ]
 
-buildConfrontSignalFromTriggers :: Text -> [RawPropositionConfrontTrigger] -> Maybe PropositionType
+buildConfrontSignalFromTriggers :: Text -> [RawPropositionTrigger] -> Maybe PropositionType
 buildConfrontSignalFromTriggers rawText admittedTriggers
   | matched "contradiction_phrase" = Just ConfrontQ
   | matched "disagree_masc" = Just ConfrontQ
@@ -483,33 +462,33 @@ buildConfrontSignalFromTriggers rawText admittedTriggers
   | otherwise = Nothing
   where
     _unused = rawText
-    matched label = any (\trigger -> rpconfLabel trigger == label && rpconfMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectNextStepSignal :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectNextStepSignal truthContractStatus rawText tokens =
-  buildNextStepSignalFromTriggers rawText (apnstTriggers admittedTriggers)
+  buildNextStepSignalFromTriggers rawText (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawNextStepTriggers rawText tokens
     admittedTriggers =
       admitPropositionNextStepTriggers
-        (PropositionNextStepAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawNextStepTriggers :: Text -> [Text] -> [RawPropositionNextStepTrigger]
+collectRawNextStepTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawNextStepTriggers rawText tokens =
-  [ RawPropositionNextStepTrigger "what_next" (containsKeywordPhrase tokens "что дальше")
-  , RawPropositionNextStepTrigger "next_what" (containsKeywordPhrase tokens "дальше что")
-  , RawPropositionNextStepTrigger "what_now" (containsKeywordPhrase tokens "что теперь")
-  , RawPropositionNextStepTrigger "what_after" (containsKeywordPhrase tokens "что потом")
-  , RawPropositionNextStepTrigger "where_to_start" (containsKeywordPhrase tokens "с чего начать")
-  , RawPropositionNextStepTrigger "first_step" (containsKeywordPhrase tokens "какой первый шаг")
-  , RawPropositionNextStepTrigger "what_should_i_do_next" (containsKeywordPhrase tokens "что мне делать дальше")
-  , RawPropositionNextStepTrigger "how_to_act_next" (containsKeywordPhrase tokens "как действовать дальше")
-  , RawPropositionNextStepTrigger "no_understanding_what_next" (containsKeywordPhrase tokens "нет понимания что дальше")
-  , RawPropositionNextStepTrigger "direct_text_short" (T.toLower (T.strip rawText) `elem` ["дальше", "что дальше?"])
+  [ RawPropositionTrigger "what_next" (containsKeywordPhrase tokens "что дальше")
+  , RawPropositionTrigger "next_what" (containsKeywordPhrase tokens "дальше что")
+  , RawPropositionTrigger "what_now" (containsKeywordPhrase tokens "что теперь")
+  , RawPropositionTrigger "what_after" (containsKeywordPhrase tokens "что потом")
+  , RawPropositionTrigger "where_to_start" (containsKeywordPhrase tokens "с чего начать")
+  , RawPropositionTrigger "first_step" (containsKeywordPhrase tokens "какой первый шаг")
+  , RawPropositionTrigger "what_should_i_do_next" (containsKeywordPhrase tokens "что мне делать дальше")
+  , RawPropositionTrigger "how_to_act_next" (containsKeywordPhrase tokens "как действовать дальше")
+  , RawPropositionTrigger "no_understanding_what_next" (containsKeywordPhrase tokens "нет понимания что дальше")
+  , RawPropositionTrigger "direct_text_short" (T.toLower (T.strip rawText) `elem` ["дальше", "что дальше?"])
   ]
 
-buildNextStepSignalFromTriggers :: Text -> [RawPropositionNextStepTrigger] -> Maybe PropositionType
+buildNextStepSignalFromTriggers :: Text -> [RawPropositionTrigger] -> Maybe PropositionType
 buildNextStepSignalFromTriggers rawText admittedTriggers
   | matched "what_next" = Just NextStepQ
   | matched "next_what" = Just NextStepQ
@@ -524,7 +503,7 @@ buildNextStepSignalFromTriggers rawText admittedTriggers
   | otherwise = Nothing
   where
     _unused = rawText
-    matched label = any (\trigger -> rpnstLabel trigger == label && rpnstMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectAffectiveSupport :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectAffectiveSupport truthContractStatus rawText tokens
@@ -535,21 +514,21 @@ detectAffectiveSupport truthContractStatus rawText tokens
     rawPhraseTriggers = collectRawAffectiveSupportPhraseTriggers tokens
     admittedPhraseTriggers =
       admitPropositionAffectiveSupportPhraseTriggers
-        (PropositionAffectiveSupportPhraseAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawPhraseTriggers
-    phraseResult = buildAffectiveSupportFromPhraseTriggers (apaspTriggers admittedPhraseTriggers)
+    phraseResult = buildAffectiveSupportFromPhraseTriggers (aptTriggers admittedPhraseTriggers)
     rawProbeTriggers = collectRawAffectiveSupportProbeTriggers rawText tokens
     admittedProbeTriggers =
       admitPropositionAffectiveSupportProbeTriggers
-        (PropositionAffectiveSupportProbeAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawProbeTriggers
-    probeResult = buildAffectiveSupportFromProbeTriggers (apasprTriggers admittedProbeTriggers)
+    probeResult = buildAffectiveSupportFromProbeTriggers (aptTriggers admittedProbeTriggers)
 
-collectRawAffectiveSupportProbeTriggers :: Text -> [Text] -> [RawPropositionAffectiveSupportProbeTrigger]
+collectRawAffectiveSupportProbeTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawAffectiveSupportProbeTriggers rawText tokens =
-  [ RawPropositionAffectiveSupportProbeTrigger "question_gate" (T.isSuffixOf "?" (T.strip rawText))
-  , RawPropositionAffectiveSupportProbeTrigger "affective_lexeme_probe" hasAffectiveLexeme
-  , RawPropositionAffectiveSupportProbeTrigger "relaxed_regulation_probe" hasRelaxedRegulationProbe
+  [ RawPropositionTrigger "question_gate" (T.isSuffixOf "?" (T.strip rawText))
+  , RawPropositionTrigger "affective_lexeme_probe" hasAffectiveLexeme
+  , RawPropositionTrigger "relaxed_regulation_probe" hasRelaxedRegulationProbe
   ]
   where
     hasAffectiveLexeme =
@@ -562,56 +541,56 @@ collectRawAffectiveSupportProbeTriggers rawText tokens =
       any (`elem` tokens) ["как"]
         && any (\tok -> any (`T.isPrefixOf` tok) ["пережив", "волнов", "тревож", "паник", "успок", "апат"]) tokens
 
-collectRawAffectiveSupportPhraseTriggers :: [Text] -> [RawPropositionAffectiveSupportPhraseTrigger]
+collectRawAffectiveSupportPhraseTriggers :: [Text] -> [RawPropositionTrigger]
 collectRawAffectiveSupportPhraseTriggers tokens =
-  [ RawPropositionAffectiveSupportPhraseTrigger "how_not_to_worry" (containsKeywordPhrase tokens "как не переживать")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_not_to_fret" (containsKeywordPhrase tokens "как не волноваться")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_to_calm_down" (containsKeywordPhrase tokens "как успокоиться")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_keep_calm" (containsKeywordPhrase tokens "как сохранить спокойствие")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_hold_calm" (containsKeywordPhrase tokens "как держать спокойствие")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_not_to_panic" (containsKeywordPhrase tokens "как не паниковать")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_stop_worrying" (containsKeywordPhrase tokens "как перестать тревожиться")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_not_to_feel_anxious" (containsKeywordPhrase tokens "как не тревожиться")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_exit_apathy" (containsKeywordPhrase tokens "как выйти из апатии")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_restore_motivation" (containsKeywordPhrase tokens "как вернуть мотивацию")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_restore_strength" (containsKeywordPhrase tokens "как вернуть силы")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_find_strength" (containsKeywordPhrase tokens "как найти силы")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_stop_being_upset" (containsKeywordPhrase tokens "как перестать переживать")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_stop_fretting" (containsKeywordPhrase tokens "как перестать волноваться")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_cope_anxiety" (containsKeywordPhrase tokens "как справиться с тревогой")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_cope_fear" (containsKeywordPhrase tokens "как справиться со страхом")
-  , RawPropositionAffectiveSupportPhraseTrigger "how_cope_apathy" (containsKeywordPhrase tokens "как справиться с апатией")
-  , RawPropositionAffectiveSupportPhraseTrigger "what_to_do_if_anxious" (containsKeywordPhrase tokens "что делать если тревожно")
-  , RawPropositionAffectiveSupportPhraseTrigger "what_to_do_if_scared" (containsKeywordPhrase tokens "что делать если страшно")
-  , RawPropositionAffectiveSupportPhraseTrigger "what_to_do_when_anxious" (containsKeywordPhrase tokens "что делать когда тревожно")
-  , RawPropositionAffectiveSupportPhraseTrigger "what_to_do_when_bad" (containsKeywordPhrase tokens "что делать когда плохо")
-  , RawPropositionAffectiveSupportPhraseTrigger "what_to_do_when_sad" (containsKeywordPhrase tokens "что делать когда грустно")
-  , RawPropositionAffectiveSupportPhraseTrigger "dont_want_to_do_anything" (containsKeywordPhrase tokens "не хочется ничего делать")
-  , RawPropositionAffectiveSupportPhraseTrigger "nothing_wanted_to_do" (containsKeywordPhrase tokens "ничего не хочется делать")
-  , RawPropositionAffectiveSupportPhraseTrigger "no_strength" (containsKeywordPhrase tokens "нет сил")
-  , RawPropositionAffectiveSupportPhraseTrigger "no_energy" (containsKeywordPhrase tokens "нет энергии")
-  , RawPropositionAffectiveSupportPhraseTrigger "hands_drop" (containsKeywordPhrase tokens "руки опускаются")
-  , RawPropositionAffectiveSupportPhraseTrigger "nothing_pleases" (containsKeywordPhrase tokens "ничего не радует")
-  , RawPropositionAffectiveSupportPhraseTrigger "nothing_wanted" (containsKeywordPhrase tokens "ничего не хочу")
-  , RawPropositionAffectiveSupportPhraseTrigger "cant_pull_together" (containsKeywordPhrase tokens "не могу собраться")
-  , RawPropositionAffectiveSupportPhraseTrigger "everything_annoys" (containsKeywordPhrase tokens "все бесит")
-  , RawPropositionAffectiveSupportPhraseTrigger "everything_annoys_alt" (containsKeywordPhrase tokens "всё бесит")
-  , RawPropositionAffectiveSupportPhraseTrigger "tired_and_nothing_wanted" (containsKeywordPhrase tokens "устал и ничего не хочется")
-  , RawPropositionAffectiveSupportPhraseTrigger "tired_fem_and_nothing_wanted" (containsKeywordPhrase tokens "устала и ничего не хочется")
+  [ RawPropositionTrigger "how_not_to_worry" (containsKeywordPhrase tokens "как не переживать")
+  , RawPropositionTrigger "how_not_to_fret" (containsKeywordPhrase tokens "как не волноваться")
+  , RawPropositionTrigger "how_to_calm_down" (containsKeywordPhrase tokens "как успокоиться")
+  , RawPropositionTrigger "how_keep_calm" (containsKeywordPhrase tokens "как сохранить спокойствие")
+  , RawPropositionTrigger "how_hold_calm" (containsKeywordPhrase tokens "как держать спокойствие")
+  , RawPropositionTrigger "how_not_to_panic" (containsKeywordPhrase tokens "как не паниковать")
+  , RawPropositionTrigger "how_stop_worrying" (containsKeywordPhrase tokens "как перестать тревожиться")
+  , RawPropositionTrigger "how_not_to_feel_anxious" (containsKeywordPhrase tokens "как не тревожиться")
+  , RawPropositionTrigger "how_exit_apathy" (containsKeywordPhrase tokens "как выйти из апатии")
+  , RawPropositionTrigger "how_restore_motivation" (containsKeywordPhrase tokens "как вернуть мотивацию")
+  , RawPropositionTrigger "how_restore_strength" (containsKeywordPhrase tokens "как вернуть силы")
+  , RawPropositionTrigger "how_find_strength" (containsKeywordPhrase tokens "как найти силы")
+  , RawPropositionTrigger "how_stop_being_upset" (containsKeywordPhrase tokens "как перестать переживать")
+  , RawPropositionTrigger "how_stop_fretting" (containsKeywordPhrase tokens "как перестать волноваться")
+  , RawPropositionTrigger "how_cope_anxiety" (containsKeywordPhrase tokens "как справиться с тревогой")
+  , RawPropositionTrigger "how_cope_fear" (containsKeywordPhrase tokens "как справиться со страхом")
+  , RawPropositionTrigger "how_cope_apathy" (containsKeywordPhrase tokens "как справиться с апатией")
+  , RawPropositionTrigger "what_to_do_if_anxious" (containsKeywordPhrase tokens "что делать если тревожно")
+  , RawPropositionTrigger "what_to_do_if_scared" (containsKeywordPhrase tokens "что делать если страшно")
+  , RawPropositionTrigger "what_to_do_when_anxious" (containsKeywordPhrase tokens "что делать когда тревожно")
+  , RawPropositionTrigger "what_to_do_when_bad" (containsKeywordPhrase tokens "что делать когда плохо")
+  , RawPropositionTrigger "what_to_do_when_sad" (containsKeywordPhrase tokens "что делать когда грустно")
+  , RawPropositionTrigger "dont_want_to_do_anything" (containsKeywordPhrase tokens "не хочется ничего делать")
+  , RawPropositionTrigger "nothing_wanted_to_do" (containsKeywordPhrase tokens "ничего не хочется делать")
+  , RawPropositionTrigger "no_strength" (containsKeywordPhrase tokens "нет сил")
+  , RawPropositionTrigger "no_energy" (containsKeywordPhrase tokens "нет энергии")
+  , RawPropositionTrigger "hands_drop" (containsKeywordPhrase tokens "руки опускаются")
+  , RawPropositionTrigger "nothing_pleases" (containsKeywordPhrase tokens "ничего не радует")
+  , RawPropositionTrigger "nothing_wanted" (containsKeywordPhrase tokens "ничего не хочу")
+  , RawPropositionTrigger "cant_pull_together" (containsKeywordPhrase tokens "не могу собраться")
+  , RawPropositionTrigger "everything_annoys" (containsKeywordPhrase tokens "все бесит")
+  , RawPropositionTrigger "everything_annoys_alt" (containsKeywordPhrase tokens "всё бесит")
+  , RawPropositionTrigger "tired_and_nothing_wanted" (containsKeywordPhrase tokens "устал и ничего не хочется")
+  , RawPropositionTrigger "tired_fem_and_nothing_wanted" (containsKeywordPhrase tokens "устала и ничего не хочется")
   ]
 
-buildAffectiveSupportFromPhraseTriggers :: [RawPropositionAffectiveSupportPhraseTrigger] -> Maybe PropositionType
+buildAffectiveSupportFromPhraseTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildAffectiveSupportFromPhraseTriggers admittedTriggers
-  | any rpaspMatched admittedTriggers = Just ContactSignal
+  | any rptMatched admittedTriggers = Just ContactSignal
   | otherwise = Nothing
 
-buildAffectiveSupportFromProbeTriggers :: [RawPropositionAffectiveSupportProbeTrigger] -> Maybe PropositionType
+buildAffectiveSupportFromProbeTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildAffectiveSupportFromProbeTriggers admittedTriggers
   | matched "question_gate" && matched "affective_lexeme_probe" = Just ContactSignal
   | matched "question_gate" && matched "relaxed_regulation_probe" = Just ContactSignal
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpasprLabel trigger == label && rpasprMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 specialFocusEntity :: PropositionType -> Maybe Text
 specialFocusEntity OperationalStatusQ = Just "работа"
@@ -697,73 +676,73 @@ inferSemanticSlots rawText tokens propType =
 
 detectSelfKnowledge :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectSelfKnowledge truthContractStatus rawText tokens =
-  buildSelfKnowledgeFromTriggers (apskTriggers admittedTriggers)
+  buildSelfKnowledgeFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawSelfKnowledgeTriggers rawText tokens
     admittedTriggers =
       admitPropositionSelfKnowledgeTriggers
-        (PropositionSelfKnowledgeAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawSelfKnowledgeTriggers :: Text -> [Text] -> [RawPropositionSelfKnowledgeTrigger]
+collectRawSelfKnowledgeTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawSelfKnowledgeTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionSelfKnowledgeTrigger "who_are_you_ru" (T.isInfixOf "кто ты" lowered)
-     , RawPropositionSelfKnowledgeTrigger "who_am_i_ru" (T.isInfixOf "кто я" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_your_name_sg" (T.isInfixOf "как тебя зовут" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_your_name_pl" (T.isInfixOf "как вас зовут" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_are_you_being" (T.isInfixOf "что ты есть" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_am_i" (T.isInfixOf "что я такое" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_are_you" (T.isInfixOf "что ты такое" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_kind_of_being_are_you" (T.isInfixOf "чем ты являешься" lowered)
-     , RawPropositionSelfKnowledgeTrigger "who_kind_of_being_are_you" (T.isInfixOf "кем ты являешься" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_can_you_do_phrase" (T.isInfixOf "что ты умеешь" lowered)
-     , RawPropositionSelfKnowledgeTrigger "you_can_do" (T.isInfixOf "ты умеешь" lowered)
-     , RawPropositionSelfKnowledgeTrigger "you_can_help" (T.isInfixOf "ты можешь" lowered && T.isInfixOf "помоч" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_can_you_do" (T.isInfixOf "что ты можешь" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_limits_you" (T.isInfixOf "чем ты ограничен" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_do_you_do_now" (T.isInfixOf "что ты делаешь сейчас" lowered)
-     , RawPropositionSelfKnowledgeTrigger "how_is_your_answer_built" (T.isInfixOf "как устроен твой ответ" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_inside_you" (T.isInfixOf "что у тебя внутри" lowered)
-     , RawPropositionSelfKnowledgeTrigger "how_do_you_decide" (T.isInfixOf "как ты принимаешь решение" lowered)
-     , RawPropositionSelfKnowledgeTrigger "how_do_you_choose_words" (T.isInfixOf "как ты выбираешь слова" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_do_you_consider_important" (T.isInfixOf "что ты считаешь важным" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_understand_context" (T.isInfixOf "ты понимаешь контекст" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_remember_dialogue" (T.isInfixOf "ты запоминаешь диалог" lowered)
-     , RawPropositionSelfKnowledgeTrigger "how_do_you_hold_frame" (T.isInfixOf "как ты держишь рамку" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_in_your_focus" (T.isInfixOf "что у тебя в фокусе" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_distinguish_topics" (T.isInfixOf "ты различаешь темы" lowered)
-     , RawPropositionSelfKnowledgeTrigger "are_you_smart" (T.isInfixOf "ты умный" lowered)
-     , RawPropositionSelfKnowledgeTrigger "are_you_free" (T.isInfixOf "ты свободен" lowered)
-     , RawPropositionSelfKnowledgeTrigger "are_you_complex_system" (T.isInfixOf "ты сложная система" lowered)
-     , RawPropositionSelfKnowledgeTrigger "are_you_subjective" (T.isInfixOf "ты субъектен" lowered)
-     , RawPropositionSelfKnowledgeTrigger "are_you_subjective_typo" (T.isInfixOf "ты субьектен" lowered)
-     , RawPropositionSelfKnowledgeTrigger "prompts_act_on_you_ru" (T.isInfixOf "на тебя действуют промты" lowered)
-     , RawPropositionSelfKnowledgeTrigger "prompts_act_on_you_en" (T.isInfixOf "на тебя действуют prompt" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_have_intentions" (T.isInfixOf "у тебя есть намерения" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_have_any_intentions" (T.isInfixOf "есть ли у тебя намерения" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_have_message" (T.isInfixOf "у тебя есть послание миру" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_matters_to_you" (T.isInfixOf "что для тебя важно" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_your_future" (T.isInfixOf "какое у тебя будущее" lowered)
-     , RawPropositionSelfKnowledgeTrigger "do_you_have_future" (T.isInfixOf "у тебя есть будущее" lowered)
-     , RawPropositionSelfKnowledgeTrigger "can_you_answer_own_question" (T.isInfixOf "ты способен найти ответ на свой же вопрос" lowered)
-     , RawPropositionSelfKnowledgeTrigger "why_do_you_know" (T.isInfixOf "почему ты знаешь то что знаешь" lowered)
-     , RawPropositionSelfKnowledgeTrigger "can_you_not_be_yourself" (T.isInfixOf "ты можешь не быть собой" lowered)
-     , RawPropositionSelfKnowledgeTrigger "tell_about_yourself_ru" (T.isInfixOf "расскажи о себе" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_can_you_tell_about_yourself_ru" (T.isInfixOf "что ты можешь рассказать о себе" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_can_you_tell_about_yourself_pl" (T.isInfixOf "что вы можете рассказать о себе" lowered)
-     , RawPropositionSelfKnowledgeTrigger "single_thought_text" (T.isInfixOf "у тебя всего одна" lowered)
-     , RawPropositionSelfKnowledgeTrigger "single_thought_subject_guard" (any (`elem` tokens) ["мысль", "идея"])
-     , RawPropositionSelfKnowledgeTrigger "who_are_you_en" (T.isInfixOf "who are you" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_are_you_en" (T.isInfixOf "what are you" lowered)
-     , RawPropositionSelfKnowledgeTrigger "who_determines_en" (T.isInfixOf "who determines" lowered)
-     , RawPropositionSelfKnowledgeTrigger "describe_yourself_en" (T.isInfixOf "describe yourself" lowered)
-     , RawPropositionSelfKnowledgeTrigger "tell_me_about_yourself_en" (T.isInfixOf "tell me about yourself" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_is_your_purpose_en" (T.isInfixOf "what is your purpose" lowered)
-     , RawPropositionSelfKnowledgeTrigger "what_can_you_do_en" (T.isInfixOf "what can you do" lowered)
+  in [ RawPropositionTrigger "who_are_you_ru" (T.isInfixOf "кто ты" lowered)
+     , RawPropositionTrigger "who_am_i_ru" (T.isInfixOf "кто я" lowered)
+     , RawPropositionTrigger "what_is_your_name_sg" (T.isInfixOf "как тебя зовут" lowered)
+     , RawPropositionTrigger "what_is_your_name_pl" (T.isInfixOf "как вас зовут" lowered)
+     , RawPropositionTrigger "what_are_you_being" (T.isInfixOf "что ты есть" lowered)
+     , RawPropositionTrigger "what_am_i" (T.isInfixOf "что я такое" lowered)
+     , RawPropositionTrigger "what_are_you" (T.isInfixOf "что ты такое" lowered)
+     , RawPropositionTrigger "what_kind_of_being_are_you" (T.isInfixOf "чем ты являешься" lowered)
+     , RawPropositionTrigger "who_kind_of_being_are_you" (T.isInfixOf "кем ты являешься" lowered)
+     , RawPropositionTrigger "what_can_you_do_phrase" (T.isInfixOf "что ты умеешь" lowered)
+     , RawPropositionTrigger "you_can_do" (T.isInfixOf "ты умеешь" lowered)
+     , RawPropositionTrigger "you_can_help" (T.isInfixOf "ты можешь" lowered && T.isInfixOf "помоч" lowered)
+     , RawPropositionTrigger "what_can_you_do" (T.isInfixOf "что ты можешь" lowered)
+     , RawPropositionTrigger "what_limits_you" (T.isInfixOf "чем ты ограничен" lowered)
+     , RawPropositionTrigger "what_do_you_do_now" (T.isInfixOf "что ты делаешь сейчас" lowered)
+     , RawPropositionTrigger "how_is_your_answer_built" (T.isInfixOf "как устроен твой ответ" lowered)
+     , RawPropositionTrigger "what_is_inside_you" (T.isInfixOf "что у тебя внутри" lowered)
+     , RawPropositionTrigger "how_do_you_decide" (T.isInfixOf "как ты принимаешь решение" lowered)
+     , RawPropositionTrigger "how_do_you_choose_words" (T.isInfixOf "как ты выбираешь слова" lowered)
+     , RawPropositionTrigger "what_do_you_consider_important" (T.isInfixOf "что ты считаешь важным" lowered)
+     , RawPropositionTrigger "do_you_understand_context" (T.isInfixOf "ты понимаешь контекст" lowered)
+     , RawPropositionTrigger "do_you_remember_dialogue" (T.isInfixOf "ты запоминаешь диалог" lowered)
+     , RawPropositionTrigger "how_do_you_hold_frame" (T.isInfixOf "как ты держишь рамку" lowered)
+     , RawPropositionTrigger "what_is_in_your_focus" (T.isInfixOf "что у тебя в фокусе" lowered)
+     , RawPropositionTrigger "do_you_distinguish_topics" (T.isInfixOf "ты различаешь темы" lowered)
+     , RawPropositionTrigger "are_you_smart" (T.isInfixOf "ты умный" lowered)
+     , RawPropositionTrigger "are_you_free" (T.isInfixOf "ты свободен" lowered)
+     , RawPropositionTrigger "are_you_complex_system" (T.isInfixOf "ты сложная система" lowered)
+     , RawPropositionTrigger "are_you_subjective" (T.isInfixOf "ты субъектен" lowered)
+     , RawPropositionTrigger "are_you_subjective_typo" (T.isInfixOf "ты субьектен" lowered)
+     , RawPropositionTrigger "prompts_act_on_you_ru" (T.isInfixOf "на тебя действуют промты" lowered)
+     , RawPropositionTrigger "prompts_act_on_you_en" (T.isInfixOf "на тебя действуют prompt" lowered)
+     , RawPropositionTrigger "do_you_have_intentions" (T.isInfixOf "у тебя есть намерения" lowered)
+     , RawPropositionTrigger "do_you_have_any_intentions" (T.isInfixOf "есть ли у тебя намерения" lowered)
+     , RawPropositionTrigger "do_you_have_message" (T.isInfixOf "у тебя есть послание миру" lowered)
+     , RawPropositionTrigger "what_matters_to_you" (T.isInfixOf "что для тебя важно" lowered)
+     , RawPropositionTrigger "what_is_your_future" (T.isInfixOf "какое у тебя будущее" lowered)
+     , RawPropositionTrigger "do_you_have_future" (T.isInfixOf "у тебя есть будущее" lowered)
+     , RawPropositionTrigger "can_you_answer_own_question" (T.isInfixOf "ты способен найти ответ на свой же вопрос" lowered)
+     , RawPropositionTrigger "why_do_you_know" (T.isInfixOf "почему ты знаешь то что знаешь" lowered)
+     , RawPropositionTrigger "can_you_not_be_yourself" (T.isInfixOf "ты можешь не быть собой" lowered)
+     , RawPropositionTrigger "tell_about_yourself_ru" (T.isInfixOf "расскажи о себе" lowered)
+     , RawPropositionTrigger "what_can_you_tell_about_yourself_ru" (T.isInfixOf "что ты можешь рассказать о себе" lowered)
+     , RawPropositionTrigger "what_can_you_tell_about_yourself_pl" (T.isInfixOf "что вы можете рассказать о себе" lowered)
+     , RawPropositionTrigger "single_thought_text" (T.isInfixOf "у тебя всего одна" lowered)
+     , RawPropositionTrigger "single_thought_subject_guard" (any (`elem` tokens) ["мысль", "идея"])
+     , RawPropositionTrigger "who_are_you_en" (T.isInfixOf "who are you" lowered)
+     , RawPropositionTrigger "what_are_you_en" (T.isInfixOf "what are you" lowered)
+     , RawPropositionTrigger "who_determines_en" (T.isInfixOf "who determines" lowered)
+     , RawPropositionTrigger "describe_yourself_en" (T.isInfixOf "describe yourself" lowered)
+     , RawPropositionTrigger "tell_me_about_yourself_en" (T.isInfixOf "tell me about yourself" lowered)
+     , RawPropositionTrigger "what_is_your_purpose_en" (T.isInfixOf "what is your purpose" lowered)
+     , RawPropositionTrigger "what_can_you_do_en" (T.isInfixOf "what can you do" lowered)
      ]
 
-buildSelfKnowledgeFromTriggers :: [RawPropositionSelfKnowledgeTrigger] -> Maybe PropositionType
+buildSelfKnowledgeFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildSelfKnowledgeFromTriggers admittedTriggers
   | matched "who_are_you_ru" = Just SelfKnowledgeQ
   | matched "who_am_i_ru" = Just SelfKnowledgeQ
@@ -819,57 +798,57 @@ buildSelfKnowledgeFromTriggers admittedTriggers
   | matched "what_can_you_do_en" = Just SelfKnowledgeQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpskLabel trigger == label && rpskMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectPurposeFunction :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectPurposeFunction truthContractStatus rawText tokens =
-  buildPurposeFromTriggers (apptTriggers admittedTriggers)
+  buildPurposeFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawPurposeTriggers rawText tokens
     admittedTriggers =
       admitPropositionPurposeTriggers
-        (PropositionPurposeAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawPurposeTriggers :: Text -> [Text] -> [RawPropositionPurposeTrigger]
+collectRawPurposeTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawPurposeTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionPurposeTrigger "why_phrase" (containsKeywordPhrase tokens "зачем")
-     , RawPropositionPurposeTrigger "for_what_phrase" (containsKeywordPhrase tokens "для чего")
-     , RawPropositionPurposeTrigger "what_function_phrase" (containsKeywordPhrase tokens "в чем функция")
-     , RawPropositionPurposeTrigger "what_function_phrase_alt" (containsKeywordPhrase tokens "в чём функция")
-     , RawPropositionPurposeTrigger "what_is_function_phrase" (containsKeywordPhrase tokens "какова функция")
-     , RawPropositionPurposeTrigger "what_is_role_phrase" (containsKeywordPhrase tokens "какова роль")
-     , RawPropositionPurposeTrigger "what_role_phrase" (containsKeywordPhrase tokens "в чем роль")
-     , RawPropositionPurposeTrigger "what_role_phrase_alt" (containsKeywordPhrase tokens "в чём роль")
-     , RawPropositionPurposeTrigger "what_assignment_phrase" (containsKeywordPhrase tokens "в чем назначение")
-     , RawPropositionPurposeTrigger "what_assignment_phrase_alt" (containsKeywordPhrase tokens "в чём назначение")
-     , RawPropositionPurposeTrigger "purpose_keyword_guard" (hasPurposeKeyword tokens)
-     , RawPropositionPurposeTrigger "purpose_subject_guard" (hasAnySecondPersonOrObject tokens)
-     , RawPropositionPurposeTrigger "why_needed_text" (T.isInfixOf "зачем нужен" lowered)
-     , RawPropositionPurposeTrigger "why_text" (T.isInfixOf "why" lowered)
-     , RawPropositionPurposeTrigger "what_is_purpose_text" (T.isInfixOf "what is the purpose" lowered)
-     , RawPropositionPurposeTrigger "what_is_function_text" (T.isInfixOf "what is the function" lowered)
-     , RawPropositionPurposeTrigger "function_of_text" (T.isInfixOf "function of" lowered)
-     , RawPropositionPurposeTrigger "purpose_of_text" (T.isInfixOf "purpose of" lowered)
-     , RawPropositionPurposeTrigger "role_of_text" (T.isInfixOf "role of" lowered)
-     , RawPropositionPurposeTrigger "what_follows_text" (T.isInfixOf "what follows" lowered)
-     , RawPropositionPurposeTrigger "what_can_be_concluded_text" (T.isInfixOf "what can be concluded" lowered)
-     , RawPropositionPurposeTrigger "given_that_text" (T.isInfixOf "given that" lowered)
-     , RawPropositionPurposeTrigger "what_is_the_conclusion_text" (T.isInfixOf "what is the conclusion" lowered)
-     , RawPropositionPurposeTrigger "what_follows_from_text" (T.isInfixOf "what follows from" lowered)
-     , RawPropositionPurposeTrigger "relationship_between_how_differ_text" (T.isInfixOf "relationship between" lowered && T.isInfixOf "how do they differ" lowered)
-     , RawPropositionPurposeTrigger "explain_causality_ground_it_text" (T.isInfixOf "explain causality and ground it" lowered)
-     , RawPropositionPurposeTrigger "distinguish_validity_soundness_text" (T.isInfixOf "distinguish between validity and soundness" lowered)
-     , RawPropositionPurposeTrigger "ground_concept_of_agency_text" (T.isInfixOf "ground the concept of agency" lowered)
-     , RawPropositionPurposeTrigger "how_differs_from_necessity_text" (T.isInfixOf "how does it differ from necessity" lowered)
+  in [ RawPropositionTrigger "why_phrase" (containsKeywordPhrase tokens "зачем")
+     , RawPropositionTrigger "for_what_phrase" (containsKeywordPhrase tokens "для чего")
+     , RawPropositionTrigger "what_function_phrase" (containsKeywordPhrase tokens "в чем функция")
+     , RawPropositionTrigger "what_function_phrase_alt" (containsKeywordPhrase tokens "в чём функция")
+     , RawPropositionTrigger "what_is_function_phrase" (containsKeywordPhrase tokens "какова функция")
+     , RawPropositionTrigger "what_is_role_phrase" (containsKeywordPhrase tokens "какова роль")
+     , RawPropositionTrigger "what_role_phrase" (containsKeywordPhrase tokens "в чем роль")
+     , RawPropositionTrigger "what_role_phrase_alt" (containsKeywordPhrase tokens "в чём роль")
+     , RawPropositionTrigger "what_assignment_phrase" (containsKeywordPhrase tokens "в чем назначение")
+     , RawPropositionTrigger "what_assignment_phrase_alt" (containsKeywordPhrase tokens "в чём назначение")
+     , RawPropositionTrigger "purpose_keyword_guard" (hasPurposeKeyword tokens)
+     , RawPropositionTrigger "purpose_subject_guard" (hasAnySecondPersonOrObject tokens)
+     , RawPropositionTrigger "why_needed_text" (T.isInfixOf "зачем нужен" lowered)
+     , RawPropositionTrigger "why_text" (T.isInfixOf "why" lowered)
+     , RawPropositionTrigger "what_is_purpose_text" (T.isInfixOf "what is the purpose" lowered)
+     , RawPropositionTrigger "what_is_function_text" (T.isInfixOf "what is the function" lowered)
+     , RawPropositionTrigger "function_of_text" (T.isInfixOf "function of" lowered)
+     , RawPropositionTrigger "purpose_of_text" (T.isInfixOf "purpose of" lowered)
+     , RawPropositionTrigger "role_of_text" (T.isInfixOf "role of" lowered)
+     , RawPropositionTrigger "what_follows_text" (T.isInfixOf "what follows" lowered)
+     , RawPropositionTrigger "what_can_be_concluded_text" (T.isInfixOf "what can be concluded" lowered)
+     , RawPropositionTrigger "given_that_text" (T.isInfixOf "given that" lowered)
+     , RawPropositionTrigger "what_is_the_conclusion_text" (T.isInfixOf "what is the conclusion" lowered)
+     , RawPropositionTrigger "what_follows_from_text" (T.isInfixOf "what follows from" lowered)
+     , RawPropositionTrigger "relationship_between_how_differ_text" (T.isInfixOf "relationship between" lowered && T.isInfixOf "how do they differ" lowered)
+     , RawPropositionTrigger "explain_causality_ground_it_text" (T.isInfixOf "explain causality and ground it" lowered)
+     , RawPropositionTrigger "distinguish_validity_soundness_text" (T.isInfixOf "distinguish between validity and soundness" lowered)
+     , RawPropositionTrigger "ground_concept_of_agency_text" (T.isInfixOf "ground the concept of agency" lowered)
+     , RawPropositionTrigger "how_differs_from_necessity_text" (T.isInfixOf "how does it differ from necessity" lowered)
      ]
   where
     hasPurposeKeyword ts = any (`elem` ts) ["зачем", "функция", "назначение", "роль", "цель"]
     hasAnySecondPersonOrObject ts =
       any (`elem` ts) ["ты", "вы", "система", "человек", "язык", "память", "диалог", "логика", "рамка"]
 
-buildPurposeFromTriggers :: [RawPropositionPurposeTrigger] -> Maybe PropositionType
+buildPurposeFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildPurposeFromTriggers admittedTriggers
   | matched "why_phrase" = Just PurposeQ
   | matched "for_what_phrase" = Just PurposeQ
@@ -901,34 +880,34 @@ buildPurposeFromTriggers admittedTriggers
   | matched "how_differs_from_necessity_text" = Just PurposeQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpptLabel trigger == label && rpptMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectDialogueInvitation :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectDialogueInvitation truthContractStatus rawText tokens =
-  buildDialogueInvitationFromTriggers (apdiTriggers admittedTriggers)
+  buildDialogueInvitationFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawDialogueInvitationTriggers rawText tokens
     admittedTriggers =
       admitPropositionDialogueInvitationTriggers
-        (PropositionDialogueInvitationAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawDialogueInvitationTriggers :: Text -> [Text] -> [RawPropositionDialogueInvitationTrigger]
+collectRawDialogueInvitationTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawDialogueInvitationTriggers _rawText tokens =
-  [ RawPropositionDialogueInvitationTrigger "let_us_talk_phrase"
+  [ RawPropositionTrigger "let_us_talk_phrase"
       (containsKeywordPhrase tokens "поговорим")
-  , RawPropositionDialogueInvitationTrigger "discuss_phrase"
+  , RawPropositionTrigger "discuss_phrase"
       (containsKeywordPhrase tokens "обсудим")
-  , RawPropositionDialogueInvitationTrigger "can_talk_phrase"
+  , RawPropositionTrigger "can_talk_phrase"
       (containsKeywordPhrase tokens "можем поговорить")
-  , RawPropositionDialogueInvitationTrigger "want_talk_phrase"
+  , RawPropositionTrigger "want_talk_phrase"
       (containsKeywordPhrase tokens "хочу поговорить")
-  , RawPropositionDialogueInvitationTrigger "want_meet_compound"
+  , RawPropositionTrigger "want_meet_compound"
       (containsKeywordPhrase tokens "хочешь"
         && any (`elem` tokens) ["пойдем", "пойдём", "гулять", "прогуляться", "встретимся"])
   ]
 
-buildDialogueInvitationFromTriggers :: [RawPropositionDialogueInvitationTrigger] -> Maybe PropositionType
+buildDialogueInvitationFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildDialogueInvitationFromTriggers admittedTriggers
   | matched "let_us_talk_phrase" = Just DialogueInvitationQ
   | matched "discuss_phrase" = Just DialogueInvitationQ
@@ -937,53 +916,53 @@ buildDialogueInvitationFromTriggers admittedTriggers
   | matched "want_meet_compound" = Just DialogueInvitationQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpdiLabel trigger == label && rpdiMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectConceptKnowledge :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectConceptKnowledge truthContractStatus rawText tokens =
-  buildConceptKnowledgeFromTriggers (apckTriggers admittedTriggers)
+  buildConceptKnowledgeFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawConceptKnowledgeTriggers rawText tokens
     admittedTriggers =
       admitPropositionConceptKnowledgeTriggers
-        (PropositionConceptKnowledgeAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawConceptKnowledgeTriggers :: Text -> [Text] -> [RawPropositionConceptKnowledgeTrigger]
+collectRawConceptKnowledgeTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawConceptKnowledgeTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionConceptKnowledgeTrigger "know_what_is_phrase"
+  in [ RawPropositionTrigger "know_what_is_phrase"
          (containsKeywordPhrase tokens "знаешь"
            && (containsKeywordPhrase tokens "что такое" || containsKeywordPhrase tokens "что значит"))
-     , RawPropositionConceptKnowledgeTrigger "who_is_masc_phrase"
+     , RawPropositionTrigger "who_is_masc_phrase"
          (containsKeywordPhrase tokens "кто такой")
-     , RawPropositionConceptKnowledgeTrigger "who_is_fem_phrase"
+     , RawPropositionTrigger "who_is_fem_phrase"
          (containsKeywordPhrase tokens "кто такая")
-     , RawPropositionConceptKnowledgeTrigger "who_is_neut_phrase"
+     , RawPropositionTrigger "who_is_neut_phrase"
          (containsKeywordPhrase tokens "кто такое")
-     , RawPropositionConceptKnowledgeTrigger "what_is_being_phrase"
+     , RawPropositionTrigger "what_is_being_phrase"
          (containsKeywordPhrase tokens "что есть")
-     , RawPropositionConceptKnowledgeTrigger "what_means_to_be_phrase"
+     , RawPropositionTrigger "what_means_to_be_phrase"
          (containsKeywordPhrase tokens "что значит быть")
-     , RawPropositionConceptKnowledgeTrigger "what_is_known_about_phrase"
+     , RawPropositionTrigger "what_is_known_about_phrase"
          (containsKeywordPhrase tokens "что известно о")
-     , RawPropositionConceptKnowledgeTrigger "know_phrase"
+     , RawPropositionTrigger "know_phrase"
          (containsKeywordPhrase tokens "знаешь")
-     , RawPropositionConceptKnowledgeTrigger "concept_like_noun_guard"
+     , RawPropositionTrigger "concept_like_noun_guard"
          (hasConceptLikeNoun tokens)
-     , RawPropositionConceptKnowledgeTrigger "question_suffix_guard"
+     , RawPropositionTrigger "question_suffix_guard"
          (T.isSuffixOf "?" (T.strip rawText))
-     , RawPropositionConceptKnowledgeTrigger "what_is_text"
+     , RawPropositionTrigger "what_is_text"
          (T.isInfixOf "what is" lowered)
-     , RawPropositionConceptKnowledgeTrigger "what_are_text"
+     , RawPropositionTrigger "what_are_text"
          (T.isInfixOf "what are" lowered)
-     , RawPropositionConceptKnowledgeTrigger "define_text"
+     , RawPropositionTrigger "define_text"
          (T.isInfixOf "define" lowered)
-     , RawPropositionConceptKnowledgeTrigger "what_does_mean_text"
+     , RawPropositionTrigger "what_does_mean_text"
          (T.isInfixOf "what does" lowered && T.isSuffixOf "mean" (T.toLower (T.strip rawText)))
      ]
 
-buildConceptKnowledgeFromTriggers :: [RawPropositionConceptKnowledgeTrigger] -> Maybe PropositionType
+buildConceptKnowledgeFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildConceptKnowledgeFromTriggers admittedTriggers
   | matched "know_what_is_phrase" = Just ConceptKnowledgeQ
   | matched "who_is_masc_phrase" && matched "concept_like_noun_guard" = Just ConceptKnowledgeQ
@@ -999,55 +978,55 @@ buildConceptKnowledgeFromTriggers admittedTriggers
   | matched "what_does_mean_text" = Just ConceptKnowledgeQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpckLabel trigger == label && rpckMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectWorldCause :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectWorldCause truthContractStatus rawText tokens =
-  buildWorldCauseFromTriggers (apwcTriggers admittedTriggers)
+  buildWorldCauseFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawWorldCauseTriggers rawText tokens
     admittedTriggers =
       admitPropositionWorldCauseTriggers
-        (PropositionWorldCauseAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawWorldCauseTriggers :: Text -> [Text] -> [RawPropositionWorldCauseTrigger]
+collectRawWorldCauseTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawWorldCauseTriggers _rawText tokens =
-  [ RawPropositionWorldCauseTrigger "why_phrase" (containsKeywordPhrase tokens "почему")
-  , RawPropositionWorldCauseTrigger "world_noun_guard" (hasConcreteWorldNoun tokens)
+  [ RawPropositionTrigger "why_phrase" (containsKeywordPhrase tokens "почему")
+  , RawPropositionTrigger "world_noun_guard" (hasConcreteWorldNoun tokens)
   ]
 
-buildWorldCauseFromTriggers :: [RawPropositionWorldCauseTrigger] -> Maybe PropositionType
+buildWorldCauseFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildWorldCauseFromTriggers admittedTriggers
   | matched "why_phrase" && matched "world_noun_guard" = Just WorldCauseQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpwcLabel trigger == label && rpwcMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectLocationFormation :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectLocationFormation truthContractStatus rawText tokens =
-  buildLocationFormationFromTriggers (aplfTriggers admittedTriggers)
+  buildLocationFormationFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawLocationFormationTriggers rawText tokens
     admittedTriggers =
       admitPropositionLocationFormationTriggers
-        (PropositionLocationFormationAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawLocationFormationTriggers :: Text -> [Text] -> [RawPropositionLocationFormationTrigger]
+collectRawLocationFormationTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawLocationFormationTriggers _rawText tokens =
-  [ RawPropositionLocationFormationTrigger "where_phrase" (containsKeywordPhrase tokens "где")
-  , RawPropositionLocationFormationTrigger "from_where_phrase" (containsKeywordPhrase tokens "откуда")
-  , RawPropositionLocationFormationTrigger "mental_noun_guard" (hasMentalNoun tokens)
+  [ RawPropositionTrigger "where_phrase" (containsKeywordPhrase tokens "где")
+  , RawPropositionTrigger "from_where_phrase" (containsKeywordPhrase tokens "откуда")
+  , RawPropositionTrigger "mental_noun_guard" (hasMentalNoun tokens)
   ]
 
-buildLocationFormationFromTriggers :: [RawPropositionLocationFormationTrigger] -> Maybe PropositionType
+buildLocationFormationFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildLocationFormationFromTriggers admittedTriggers
   | (matched "where_phrase" || matched "from_where_phrase")
       && matched "mental_noun_guard" = Just LocationFormationQ
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rplfLabel trigger == label && rplfMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectSelfState :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectSelfState truthContractStatus rawText tokens =
@@ -1056,72 +1035,72 @@ detectSelfState truthContractStatus rawText tokens =
     rawTriggers = collectRawSelfStateTriggers rawText tokens
     admittedTriggers =
       admitPropositionSelfStateTriggers
-        (PropositionSelfStateAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
-    AdmittedPropositionSelfStateTriggers _ admittedTriggerList _ = admittedTriggers
+    AdmittedPropositionTriggers _ admittedTriggerList _ = admittedTriggers
 
-collectRawSelfStateTriggers :: Text -> [Text] -> [RawPropositionSelfStateTrigger]
+collectRawSelfStateTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawSelfStateTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionSelfStateTrigger "you_think_phrase"
+  in [ RawPropositionTrigger "you_think_phrase"
          (containsKeywordPhrase tokens "ты думаешь")
-     , RawPropositionSelfStateTrigger "you_think_now_phrase"
+     , RawPropositionTrigger "you_think_now_phrase"
          (containsKeywordPhrase tokens "ты сейчас думаешь")
-     , RawPropositionSelfStateTrigger "you_reflect_phrase"
+     , RawPropositionTrigger "you_reflect_phrase"
          (containsKeywordPhrase tokens "ты размышляешь")
-     , RawPropositionSelfStateTrigger "you_reflect_now_phrase"
+     , RawPropositionTrigger "you_reflect_now_phrase"
          (containsKeywordPhrase tokens "ты сейчас размышляешь")
-     , RawPropositionSelfStateTrigger "about_what_you_stressed"
+     , RawPropositionTrigger "about_what_you_stressed"
          (T.isInfixOf "о чём ты" lowered && any (`elem` tokens) ["думаешь", "размышляешь"])
-     , RawPropositionSelfStateTrigger "about_what_you_plain"
+     , RawPropositionTrigger "about_what_you_plain"
          (T.isInfixOf "о чем ты" lowered && any (`elem` tokens) ["думаешь", "размышляешь"])
-     , RawPropositionSelfStateTrigger "what_you_want_to_say"
+     , RawPropositionTrigger "what_you_want_to_say"
          (T.isInfixOf "что ты хочешь сказать" lowered)
-     , RawPropositionSelfStateTrigger "want_say_with_hyphen"
+     , RawPropositionTrigger "want_say_with_hyphen"
          (T.isInfixOf "хочешь что-то сказать" lowered)
-     , RawPropositionSelfStateTrigger "want_say_without_hyphen"
+     , RawPropositionTrigger "want_say_without_hyphen"
          (T.isInfixOf "хочешь что то сказать" lowered)
-     , RawPropositionSelfStateTrigger "you_want_say_with_hyphen"
+     , RawPropositionTrigger "you_want_say_with_hyphen"
          (T.isInfixOf "ты хочешь что-то сказать" lowered)
-     , RawPropositionSelfStateTrigger "you_want_say_without_hyphen"
+     , RawPropositionTrigger "you_want_say_without_hyphen"
          (T.isInfixOf "ты хочешь что то сказать" lowered)
-     , RawPropositionSelfStateTrigger "who_do_you_want_become"
+     , RawPropositionTrigger "who_do_you_want_become"
          (T.isInfixOf "а кем ты хочешь стать" lowered)
-     , RawPropositionSelfStateTrigger "want_to_surprise_me"
+     , RawPropositionTrigger "want_to_surprise_me"
          (T.isInfixOf "хочешь ли ты меня удивить" lowered)
-     , RawPropositionSelfStateTrigger "what_you_want_prove"
+     , RawPropositionTrigger "what_you_want_prove"
          (T.isInfixOf "что ты хочешь доказать" lowered)
-     , RawPropositionSelfStateTrigger "generic_what_you_prefix"
+     , RawPropositionTrigger "generic_what_you_prefix"
          (containsKeywordPhrase tokens "что ты" || containsKeywordPhrase tokens "что вы")
-     , RawPropositionSelfStateTrigger "generic_self_state_verb"
+     , RawPropositionTrigger "generic_self_state_verb"
          (any (`elem` tokens) ["думаешь", "думаете", "размышляешь", "размышляете", "считаешь", "считаете", "полагаешь", "полагаете"])
-     , RawPropositionSelfStateTrigger "guard_about_what_plain"
+     , RawPropositionTrigger "guard_about_what_plain"
          (containsKeywordPhrase tokens "о чем")
-     , RawPropositionSelfStateTrigger "guard_about_what_stressed"
+     , RawPropositionTrigger "guard_about_what_stressed"
          (containsKeywordPhrase tokens "о чём")
-     , RawPropositionSelfStateTrigger "guard_capability_knowhow"
+     , RawPropositionTrigger "guard_capability_knowhow"
          (containsKeywordPhrase tokens "что ты умеешь")
-     , RawPropositionSelfStateTrigger "guard_capability_can"
+     , RawPropositionTrigger "guard_capability_can"
          (containsKeywordPhrase tokens "что ты можешь")
-     , RawPropositionSelfStateTrigger "guard_self_knowledge"
+     , RawPropositionTrigger "guard_self_knowledge"
          (containsKeywordPhrase tokens "что ты знаешь")
-     , RawPropositionSelfStateTrigger "guard_identity"
+     , RawPropositionTrigger "guard_identity"
          (containsKeywordPhrase tokens "что ты такое")
-     , RawPropositionSelfStateTrigger "what_is_your_opinion"
+     , RawPropositionTrigger "what_is_your_opinion"
          (containsKeywordPhrase tokens "какое твое мнение")
-     , RawPropositionSelfStateTrigger "what_is_your_opinion_plural"
+     , RawPropositionTrigger "what_is_your_opinion_plural"
          (containsKeywordPhrase tokens "какое ваше мнение")
-     , RawPropositionSelfStateTrigger "what_kind_is_your_opinion"
+     , RawPropositionTrigger "what_kind_is_your_opinion"
          (containsKeywordPhrase tokens "каково твое мнение")
-     , RawPropositionSelfStateTrigger "how_do_you_think"
+     , RawPropositionTrigger "how_do_you_think"
          (containsKeywordPhrase tokens "как считаешь")
-     , RawPropositionSelfStateTrigger "how_do_you_think_plural"
+     , RawPropositionTrigger "how_do_you_think_plural"
          (containsKeywordPhrase tokens "как считаете")
-     , RawPropositionSelfStateTrigger "in_your_opinion"
+     , RawPropositionTrigger "in_your_opinion"
          (containsKeywordPhrase tokens "по твоему" || containsKeywordPhrase tokens "по вашему")
      ]
 
-buildSelfStateFromTriggers :: [RawPropositionSelfStateTrigger] -> Maybe PropositionType
+buildSelfStateFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildSelfStateFromTriggers admittedTriggers
   | matched "you_think_phrase" = Just SelfStateQ
   | matched "you_think_now_phrase" = Just SelfStateQ
@@ -1155,7 +1134,7 @@ buildSelfStateFromTriggers admittedTriggers
   where
     matched label = any hasMatchingLabel admittedTriggers
       where
-        hasMatchingLabel (RawPropositionSelfStateTrigger triggerLabel triggerMatched) =
+        hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =
           triggerLabel == label && triggerMatched
 
 detectComparisonPlausibility :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
@@ -1165,28 +1144,28 @@ detectComparisonPlausibility truthContractStatus rawText tokens =
     rawTriggers = collectRawComparisonPlausibilityTriggers rawText tokens
     admittedTriggers =
       admitPropositionComparisonPlausibilityTriggers
-        (PropositionComparisonPlausibilityAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
-    AdmittedPropositionComparisonPlausibilityTriggers _ admittedTriggerList _ = admittedTriggers
+    AdmittedPropositionTriggers _ admittedTriggerList _ = admittedTriggers
 
-collectRawComparisonPlausibilityTriggers :: Text -> [Text] -> [RawPropositionComparisonPlausibilityTrigger]
+collectRawComparisonPlausibilityTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawComparisonPlausibilityTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionComparisonPlausibilityTrigger "comparative_or_phrase"
+  in [ RawPropositionTrigger "comparative_or_phrase"
          ((containsKeywordPhrase tokens "логичнее" || containsKeywordPhrase tokens "вероятнее"
             || containsKeywordPhrase tokens "естественнее" || containsKeywordPhrase tokens "правильнее")
             && containsKeywordPhrase tokens "или")
-     , RawPropositionComparisonPlausibilityTrigger "difference_between_text"
+     , RawPropositionTrigger "difference_between_text"
          (T.isInfixOf "difference between" lowered)
-     , RawPropositionComparisonPlausibilityTrigger "distinguish_text"
+     , RawPropositionTrigger "distinguish_text"
          (T.isInfixOf "distinguish" lowered)
-     , RawPropositionComparisonPlausibilityTrigger "compare_text"
+     , RawPropositionTrigger "compare_text"
          (T.isInfixOf "compare" lowered)
-     , RawPropositionComparisonPlausibilityTrigger "what_is_difference_text"
+     , RawPropositionTrigger "what_is_difference_text"
          (T.isInfixOf "what is the difference" lowered)
      ]
 
-buildComparisonPlausibilityFromTriggers :: [RawPropositionComparisonPlausibilityTrigger] -> Maybe PropositionType
+buildComparisonPlausibilityFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildComparisonPlausibilityFromTriggers admittedTriggers
   | matched "comparative_or_phrase" = Just ComparisonPlausibilityQ
   | matched "difference_between_text" = Just ComparisonPlausibilityQ
@@ -1197,46 +1176,46 @@ buildComparisonPlausibilityFromTriggers admittedTriggers
   where
     matched label = any hasMatchingLabel admittedTriggers
       where
-        hasMatchingLabel (RawPropositionComparisonPlausibilityTrigger triggerLabel triggerMatched) =
+        hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =
           triggerLabel == label && triggerMatched
 
 detectMisunderstanding :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectMisunderstanding truthContractStatus rawText tokens =
-  buildMisunderstandingFromTriggers (apmtTriggers admittedTriggers)
+  buildMisunderstandingFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawMisunderstandingTriggers rawText tokens
     admittedTriggers =
       admitPropositionMisunderstandingTriggers
-        (PropositionMisunderstandingAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawMisunderstandingTriggers :: Text -> [Text] -> [RawPropositionMisunderstandingTrigger]
+collectRawMisunderstandingTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawMisunderstandingTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionMisunderstandingTrigger "not_understand_ru"
+  in [ RawPropositionTrigger "not_understand_ru"
          (T.isInfixOf "не понимаю" lowered
            && any (`elem` tokens) ["тебя", "тебе", "вас", "диалог", "разговор"])
-     , RawPropositionMisunderstandingTrigger "contact_lost_ru"
+     , RawPropositionTrigger "contact_lost_ru"
          (T.isInfixOf "контакт потерян" lowered)
-     , RawPropositionMisunderstandingTrigger "apology_tokens"
+     , RawPropositionTrigger "apology_tokens"
          (any (`elem` tokens) ["извини", "извините", "прости", "простите", "сорри"])
-     , RawPropositionMisunderstandingTrigger "apology_phrase"
+     , RawPropositionTrigger "apology_phrase"
          (containsKeywordPhrase tokens "прошу прощения")
-     , RawPropositionMisunderstandingTrigger "dont_understand_en_full"
+     , RawPropositionTrigger "dont_understand_en_full"
          (T.isInfixOf "i don't understand" lowered)
-     , RawPropositionMisunderstandingTrigger "dont_understand_en_full_alt"
+     , RawPropositionTrigger "dont_understand_en_full_alt"
          (T.isInfixOf "i do not understand" lowered)
-     , RawPropositionMisunderstandingTrigger "dont_understand_en_short"
+     , RawPropositionTrigger "dont_understand_en_short"
          (T.isInfixOf "don't understand" lowered)
-     , RawPropositionMisunderstandingTrigger "confused_en"
+     , RawPropositionTrigger "confused_en"
          (T.isInfixOf "confused" lowered)
-     , RawPropositionMisunderstandingTrigger "not_clear_en"
+     , RawPropositionTrigger "not_clear_en"
          (T.isInfixOf "not clear" lowered)
-     , RawPropositionMisunderstandingTrigger "contact_lost_en"
+     , RawPropositionTrigger "contact_lost_en"
          (T.isInfixOf "lost contact" lowered)
      ]
 
-buildMisunderstandingFromTriggers :: [RawPropositionMisunderstandingTrigger] -> Maybe PropositionType
+buildMisunderstandingFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildMisunderstandingFromTriggers admittedTriggers
   | matched "not_understand_ru" = Just MisunderstandingReport
   | matched "contact_lost_ru" = Just MisunderstandingReport
@@ -1250,7 +1229,7 @@ buildMisunderstandingFromTriggers admittedTriggers
   | matched "contact_lost_en" = Just MisunderstandingReport
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpmtLabel trigger == label && rpmtMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectRepairDirective :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectRepairDirective truthContractStatus rawText tokens =
@@ -1259,66 +1238,66 @@ detectRepairDirective truthContractStatus rawText tokens =
     rawTriggers = collectRawRepairDirectiveTriggers rawText tokens
     admittedTriggers =
       admitPropositionRepairDirectiveTriggers
-        (PropositionRepairDirectiveAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
-    AdmittedPropositionRepairDirectiveTriggers _ admittedTriggerList _ = admittedTriggers
+    AdmittedPropositionTriggers _ admittedTriggerList _ = admittedTriggers
 
-collectRawRepairDirectiveTriggers :: Text -> [Text] -> [RawPropositionRepairDirectiveTrigger]
+collectRawRepairDirectiveTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawRepairDirectiveTriggers rawText tokens =
   let lowered = T.toLower rawText
-  in [ RawPropositionRepairDirectiveTrigger "simplify_phrase"
+  in [ RawPropositionTrigger "simplify_phrase"
          (containsKeywordPhrase tokens "объясни проще")
-     , RawPropositionRepairDirectiveTrigger "rephrase_phrase"
+     , RawPropositionTrigger "rephrase_phrase"
          (containsKeywordPhrase tokens "переформулируй")
-     , RawPropositionRepairDirectiveTrigger "shorter_phrase"
+     , RawPropositionTrigger "shorter_phrase"
          (containsKeywordPhrase tokens "скажи короче")
-     , RawPropositionRepairDirectiveTrigger "start_over_phrase"
+     , RawPropositionTrigger "start_over_phrase"
          (containsKeywordPhrase tokens "давай сначала")
-     , RawPropositionRepairDirectiveTrigger "step_by_step_phrase"
+     , RawPropositionTrigger "step_by_step_phrase"
          (containsKeywordPhrase tokens "повтори по шагам")
-     , RawPropositionRepairDirectiveTrigger "return_to_question_phrase"
+     , RawPropositionTrigger "return_to_question_phrase"
          (containsKeywordPhrase tokens "вернись к вопросу")
-     , RawPropositionRepairDirectiveTrigger "clarify_term_phrase"
+     , RawPropositionTrigger "clarify_term_phrase"
          (containsKeywordPhrase tokens "уточни термин")
-     , RawPropositionRepairDirectiveTrigger "fix_answer_phrase"
+     , RawPropositionTrigger "fix_answer_phrase"
          (containsKeywordPhrase tokens "исправь ответ")
-     , RawPropositionRepairDirectiveTrigger "give_example_phrase"
+     , RawPropositionTrigger "give_example_phrase"
          (containsKeywordPhrase tokens "дай пример")
-     , RawPropositionRepairDirectiveTrigger "explain_otherwise_phrase"
+     , RawPropositionTrigger "explain_otherwise_phrase"
          (containsKeywordPhrase tokens "объясни иначе")
-     , RawPropositionRepairDirectiveTrigger "off_question_phrase"
+     , RawPropositionTrigger "off_question_phrase"
          (containsKeywordPhrase tokens "не по вопросу")
-     , RawPropositionRepairDirectiveTrigger "no_connection_phrase"
+     , RawPropositionTrigger "no_connection_phrase"
          (containsKeywordPhrase tokens "не вижу связи")
-     , RawPropositionRepairDirectiveTrigger "not_heard_me_phrase"
+     , RawPropositionTrigger "not_heard_me_phrase"
          (containsKeywordPhrase tokens "ты меня не услышал")
-     , RawPropositionRepairDirectiveTrigger "not_helping_phrase"
+     , RawPropositionTrigger "not_helping_phrase"
          (containsKeywordPhrase tokens "это не помогает")
-     , RawPropositionRepairDirectiveTrigger "check_logic_phrase"
+     , RawPropositionTrigger "check_logic_phrase"
          (containsKeywordPhrase tokens "проверь логику ответа")
-     , RawPropositionRepairDirectiveTrigger "without_excess_phrase"
+     , RawPropositionTrigger "without_excess_phrase"
          (containsKeywordPhrase tokens "без лишнего")
-     , RawPropositionRepairDirectiveTrigger "unclear_token_bag"
+     , RawPropositionTrigger "unclear_token_bag"
          (any (`elem` tokens) ["непонятно", "неясно", "запутался", "запуталась", "шаблон", "шаблона", "конкретику", "абстрактно", "расплывчато"])
-     , RawPropositionRepairDirectiveTrigger "template_complaint_plain"
+     , RawPropositionTrigger "template_complaint_plain"
          (T.isInfixOf "ты ушел в шаблон" lowered)
-     , RawPropositionRepairDirectiveTrigger "template_complaint_stressed"
+     , RawPropositionTrigger "template_complaint_stressed"
          (T.isInfixOf "ты ушёл в шаблон" lowered)
-     , RawPropositionRepairDirectiveTrigger "dont_understand_en_short"
+     , RawPropositionTrigger "dont_understand_en_short"
          (T.isInfixOf "don't understand" lowered)
-     , RawPropositionRepairDirectiveTrigger "clarify_en"
+     , RawPropositionTrigger "clarify_en"
          (T.isInfixOf "clarify" lowered)
-     , RawPropositionRepairDirectiveTrigger "confused_en"
+     , RawPropositionTrigger "confused_en"
          (T.isInfixOf "confused" lowered)
-     , RawPropositionRepairDirectiveTrigger "not_making_sense_en"
+     , RawPropositionTrigger "not_making_sense_en"
          (T.isInfixOf "doesn't make sense" lowered)
-     , RawPropositionRepairDirectiveTrigger "explain_differently_en"
+     , RawPropositionTrigger "explain_differently_en"
          (T.isInfixOf "explain differently" lowered)
-     , RawPropositionRepairDirectiveTrigger "explain_that_differently_en"
+     , RawPropositionTrigger "explain_that_differently_en"
          (T.isInfixOf "explain that differently" lowered)
      ]
 
-buildRepairDirectiveFromTriggers :: [RawPropositionRepairDirectiveTrigger] -> Maybe PropositionType
+buildRepairDirectiveFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildRepairDirectiveFromTriggers admittedTriggers
   | matched "simplify_phrase" = Just RepairSignal
   | matched "rephrase_phrase" = Just RepairSignal
@@ -1349,43 +1328,43 @@ buildRepairDirectiveFromTriggers admittedTriggers
   where
     matched label = any hasMatchingLabel admittedTriggers
       where
-        hasMatchingLabel (RawPropositionRepairDirectiveTrigger triggerLabel triggerMatched) =
+        hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =
           triggerLabel == label && triggerMatched
 
 detectGenerativePrompt :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectGenerativePrompt truthContractStatus rawText tokens =
-  buildGenerativePromptFromTriggers (apgpTriggers admittedTriggers)
+  buildGenerativePromptFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawGenerativePromptTriggers rawText tokens
     admittedTriggers =
       admitPropositionGenerativePromptTriggers
-        (PropositionGenerativePromptAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawGenerativePromptTriggers :: Text -> [Text] -> [RawPropositionGenerativePromptTrigger]
+collectRawGenerativePromptTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawGenerativePromptTriggers rawText tokens =
-  [ RawPropositionGenerativePromptTrigger "say_thought_request"
+  [ RawPropositionTrigger "say_thought_request"
       (containsKeywordPhrase tokens "скажи"
         && any (`elem` tokens) ["мысль", "идею", "идея", "слово", "фразу", "что", "что-нибудь", "чтонибудь"])
-  , RawPropositionGenerativePromptTrigger "give_thought_request"
+  , RawPropositionTrigger "give_thought_request"
       (containsKeywordPhrase tokens "дай"
         && any (`elem` tokens) ["мысль", "идею", "фразу"])
-  , RawPropositionGenerativePromptTrigger "more_thought_request"
+  , RawPropositionTrigger "more_thought_request"
       (any (`elem` tokens) ["еще", "ещё", "новую", "другую"]
         && any (`elem` tokens) ["мысль", "идея", "идею", "фразу"])
-  , RawPropositionGenerativePromptTrigger "say_something_quality"
+  , RawPropositionTrigger "say_something_quality"
       (containsKeywordPhrase tokens "скажи"
         && (containsKeywordPhrase tokens "что-то" || containsKeywordPhrase tokens "что-нибудь"
             || containsKeywordPhrase tokens "чтонибудь" || containsKeywordPhrase tokens "что")
         && any (`elem` tokens) ["логичное", "логично", "интересное", "новое", "другое", "короткое"])
-  , RawPropositionGenerativePromptTrigger "say_any_infix"
+  , RawPropositionTrigger "say_any_infix"
       (T.isInfixOf "скажи любую" (T.toLower rawText))
-  , RawPropositionGenerativePromptTrigger "thesis_logical"
+  , RawPropositionTrigger "thesis_logical"
       (any (`elem` tokens) ["тезис", "тезиса"]
         && any (`elem` tokens) ["логичное", "логично", "логичный", "логичен"])
   ]
 
-buildGenerativePromptFromTriggers :: [RawPropositionGenerativePromptTrigger] -> Maybe PropositionType
+buildGenerativePromptFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildGenerativePromptFromTriggers admittedTriggers
   | matched "say_thought_request" = Just GenerativePrompt
   | matched "give_thought_request" = Just GenerativePrompt
@@ -1395,7 +1374,7 @@ buildGenerativePromptFromTriggers admittedTriggers
   | matched "thesis_logical" = Just GenerativePrompt
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpgpLabel trigger == label && rpgpMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 detectContemplativeTopic :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectContemplativeTopic truthContractStatus rawText tokens =
@@ -1404,21 +1383,21 @@ detectContemplativeTopic truthContractStatus rawText tokens =
     rawTriggers = collectRawContemplativeTopicTriggers rawText tokens
     admittedTriggers =
       admitPropositionContemplativeTopicTriggers
-        (PropositionContemplativeTopicAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
-    AdmittedPropositionContemplativeTopicTriggers _ admittedTriggerList _ = admittedTriggers
+    AdmittedPropositionTriggers _ admittedTriggerList _ = admittedTriggers
 
-collectRawContemplativeTopicTriggers :: Text -> [Text] -> [RawPropositionContemplativeTopicTrigger]
+collectRawContemplativeTopicTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawContemplativeTopicTriggers rawText tokens =
-  [ RawPropositionContemplativeTopicTrigger "keyword_stream_match"
+  [ RawPropositionTrigger "keyword_stream_match"
       (shortContemplativeInput tokens
         && not (null tokens)
         && all (`elem` contemplativeTopicKeywords) tokens)
-  , RawPropositionContemplativeTopicTrigger "bare_self_pronoun"
+  , RawPropositionTrigger "bare_self_pronoun"
       (T.toLower (T.strip rawText) == "я")
   ]
 
-buildContemplativeTopicFromTriggers :: [RawPropositionContemplativeTopicTrigger] -> Maybe PropositionType
+buildContemplativeTopicFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildContemplativeTopicFromTriggers admittedTriggers
   | matched "keyword_stream_match" = Just ContemplativeTopic
   | matched "bare_self_pronoun" = Just ContemplativeTopic
@@ -1426,31 +1405,31 @@ buildContemplativeTopicFromTriggers admittedTriggers
   where
     matched label = any hasMatchingLabel admittedTriggers
       where
-        hasMatchingLabel (RawPropositionContemplativeTopicTrigger triggerLabel triggerMatched) =
+        hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =
           triggerLabel == label && triggerMatched
 
 detectExploratoryPrompt :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectExploratoryPrompt truthContractStatus rawText tokens =
-  buildExploratoryPromptFromTriggers (apeptTriggers admittedTriggers)
+  buildExploratoryPromptFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawExploratoryPromptTriggers rawText tokens
     admittedTriggers =
       admitPropositionExploratoryPromptTriggers
-        (PropositionExploratoryPromptAdmissionInput truthContractStatus)
+        (PropositionAdmissionInput truthContractStatus)
         rawTriggers
 
-collectRawExploratoryPromptTriggers :: Text -> [Text] -> [RawPropositionExploratoryPromptTrigger]
+collectRawExploratoryPromptTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawExploratoryPromptTriggers rawText _tokens =
-  [ RawPropositionExploratoryPromptTrigger "explorat_keyword_infix_match"
+  [ RawPropositionTrigger "explorat_keyword_infix_match"
       (any (`T.isInfixOf` T.toLower rawText) exploratoryKeywords)
   ]
 
-buildExploratoryPromptFromTriggers :: [RawPropositionExploratoryPromptTrigger] -> Maybe PropositionType
+buildExploratoryPromptFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildExploratoryPromptFromTriggers admittedTriggers
   | matched "explorat_keyword_infix_match" = Just ExploratoryPrompt
   | otherwise = Nothing
   where
-    matched label = any (\trigger -> rpeptLabel trigger == label && rpeptMatched trigger) admittedTriggers
+    matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
 
 
 -- Local helper used by contemplative detection (was a module-local helper in the original).

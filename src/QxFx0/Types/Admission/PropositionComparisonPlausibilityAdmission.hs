@@ -7,22 +7,22 @@ module QxFx0.Types.Admission.PropositionComparisonPlausibilityAdmission
   ) where
 
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
-import QxFx0.Types.PropositionComparisonPlausibilityAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 admitPropositionComparisonPlausibilityTriggers
-  :: PropositionComparisonPlausibilityAdmissionInput
-  -> [RawPropositionComparisonPlausibilityTrigger]
-  -> AdmittedPropositionComparisonPlausibilityTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionComparisonPlausibilityTriggers input rawTriggers
-  | truthContractIsAuthoritative (pcpaiTruthContractStatus input) =
-      AdmittedPropositionComparisonPlausibilityTriggers rawTriggers rawTriggers PcpadAdmitRaw
+  | truthContractIsAuthoritative (paiTruthContractStatus input) =
+      AdmittedPropositionTriggers rawTriggers rawTriggers PadAdmitRaw
   | otherwise =
-      AdmittedPropositionComparisonPlausibilityTriggers
+      AdmittedPropositionTriggers
         rawTriggers
         (map softenTrigger rawTriggers)
-        PcpadSuppressStrongTriggers
+        PadSuppressStrongTriggers
 
-softenTrigger :: RawPropositionComparisonPlausibilityTrigger -> RawPropositionComparisonPlausibilityTrigger
+softenTrigger :: RawPropositionTrigger -> RawPropositionTrigger
 softenTrigger rawTrigger
-  | rpcppMatched rawTrigger = rawTrigger { rpcppMatched = False }
+  | rptMatched rawTrigger = rawTrigger { rptMatched = False }
   | otherwise = rawTrigger

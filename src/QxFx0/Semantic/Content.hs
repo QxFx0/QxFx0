@@ -658,6 +658,7 @@ lookupChallengeContent topic =
            , ccBasis = "Моя позиция опиралась на: " <> firstPred
            , ccStrength = "soft"
            }
+    Just _  -> Nothing
     Nothing -> Nothing
 
 -- | Look up ground content for a topic.

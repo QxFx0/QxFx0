@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionSelfStateAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionSelfStateAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition SelfState triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionSelfStateTriggers
-  :: PropositionSelfStateAdmissionInput
-  -> [RawPropositionSelfStateTrigger]
-  -> AdmittedPropositionSelfStateTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionSelfStateTriggers =
   admitPropositionTriggers selfStateAdmissionConfig
 
 selfStateAdmissionConfig :: PropositionAdmissionConfig
-  PropositionSelfStateAdmissionInput
-  RawPropositionSelfStateTrigger
-  AdmittedPropositionSelfStateTriggers
-  PropositionSelfStateAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 selfStateAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pssaiTruthContractStatus
-  , pacTriggerLabel = rpssLabel
-  , pacTriggerMatched = rpssMatched
-  , pacSetTriggerMatched = \b t -> t { rpssMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionSelfStateTriggers
-  , pacDecisionAdmitRaw = PssadAdmitRaw
-  , pacDecisionPreserveAmbiguous = PssadPreserveAmbiguous
-  , pacDecisionSuppressStrong = PssadSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

@@ -36,6 +36,7 @@ import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
   ( FieldProfile(..), composeDefinition, composeArgument, GeneratedSurface(..)
   )
+import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
 import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
@@ -368,6 +369,17 @@ structuredDialogueType propositionType =
     , NextStepQ
     ]
 
+-- | P4 Option A: Gate-enforced selectPredicates wrapper. Filters predicates through
+-- GeneratedPredicateGate before use in structuredBody. Drops SelectedPredicate entries
+-- whose predicates all fail the gate.
+selectPredicatesGated :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> [SelectedPredicate]
+selectPredicatesGated cs field topic mNet =
+  let raw = selectPredicates cs field topic mNet
+      gated = [ sp { spPredicates = filterAdmissiblePredicates (spPredicates sp) }
+              | sp <- raw
+              ]
+  in filter (not . null . spPredicates) gated
+
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
 structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
   let isEn = isEnglishInput (ipfRawText frame)
@@ -497,7 +509,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                    else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
         | isEn ->
             let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")
-                selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme topicRef)) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
@@ -508,7 +520,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                <> clText claim <> contentText) ast claim "en_GF_MVP"
         | otherwise ->
             let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
-                selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
@@ -622,7 +634,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                  else "Различение требует явной рамки критериев. " <> rmpPrimaryClaim rmp)
     MisunderstandingReport ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
           acknowledgePrior = case selectedPreds of
             (sp:_) ->
               if isEn
@@ -644,7 +656,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConfrontQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          selectedPreds = selectPredicates contentSelector field topicRef mActivatedNetwork
+          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
           objectionText = ipfRawText frame
           -- Phase E: try challenge-response first, fall back to old template
           mChallengeResp = if not isEn
@@ -1842,7 +1854,13 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
         genSurface = composeDefinition morph fp 3 runtimeGraph (AtomId topic)
         genText = gsText genSurface
     in if not (T.null genText)
-       then authorityText <> " " <> topicNom <> " — " <> genText
+       then
+         -- Avoid tautology: if genText already starts with the topic word
+         -- (e.g. "свобода предполагает..."), don't prepend "topic — ".
+         let prefix = if T.isPrefixOf topicNom genText
+                        then authorityText
+                        else authorityText <> " " <> topicNom <> " — "
+         in prefix <> " " <> genText
        else authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
 
   FT.DistinctionFrame left right criteria ->

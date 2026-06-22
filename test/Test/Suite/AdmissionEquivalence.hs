@@ -262,7 +262,7 @@ batchChecks = concat
   [ threeBranchChecks "AffectiveSupportPhrase"
       (\i -> admitPropositionAffectiveSupportPhraseTriggers (PropositionAffectiveSupportPhraseAdmissionInput i))
       RawPropositionAffectiveSupportPhraseTrigger "no_strength"
-      AdmittedPropositionAffectiveSupportPhraseTriggers (\t -> t { rpaspMatched = False })
+      AdmittedPropositionAffectiveSupportPhraseTriggers (\t -> t { rptMatched = False })
       PaspadAdmitRaw PaspadPreserveAmbiguous PaspadSuppressStrongTriggers
   , threeBranchChecks "AffectiveSupportProbe"
       (\i -> admitPropositionAffectiveSupportProbeTriggers (PropositionAffectiveSupportProbeAdmissionInput i))

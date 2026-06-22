@@ -301,8 +301,6 @@ claimAstFromFrame truthStatus frame fallback ego =
         Just (MoveDescribe topicNP)
       LocationFormationQ ->
         Just (MoveGround topicNP)
-      _ ->
-        Just familyFallback
 
 mkTopicNP :: Text -> GfNP
 mkTopicNP topic =

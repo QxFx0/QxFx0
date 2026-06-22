@@ -130,7 +130,6 @@ familyToSenseOperator family = case family of
   CMAnchor -> OpGround
   CMContact -> OpGround
   CMHypothesis -> OpReflect
-  _ -> OpGround
 
 fallbackContinuation :: SenseOperator -> SenseOperator
 fallbackContinuation op = case adjacentOperators op of

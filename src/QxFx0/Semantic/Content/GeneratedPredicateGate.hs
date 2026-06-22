@@ -29,21 +29,37 @@ traversed in the AtomStore graph. These gates validate that:
     appear in output).
 
 All gates are pure, total, deterministic.
+
+== Predicate-level gates (P4 Option A)
+
+For the legacy @structuredBody@ path that uses @selectPredicates@
+(returning @SelectedPredicate@ with @SemanticPredicate@ — no PathProof),
+we provide equivalent gates that operate directly on @SemanticPredicate@:
+
+  Gate PG1 (Specificity): spTopicForm is non-empty.
+  Gate PG2 (Non-tautology): spRu is not just the topic word.
+  Gate PG3 (Non-emptiness): spRu and spEn are both non-empty.
+
+G4/G5 (substrate source) don't apply — SemanticPredicate has no source
+field; predicates come from curated definitionCorpus, not substrate extraction.
 -}
 module QxFx0.Semantic.Content.GeneratedPredicateGate
   ( -- * Types
     GateResult(..)
   , GateVerdict(..)
-    -- * Individual gates
+    -- * Individual gates (PathProof-level)
   , gateSpecificity
   , gateNonTautology
   , gatePathProvenance
   , gateSourceWhitelist
   , gateNonSubstrateOutput
-    -- * Combined verdict
+    -- * Combined verdict (PathProof-level)
   , validatePath
   , validatePaths
   , filterAdmissible
+    -- * Predicate-level gates (P4 Option A)
+  , validatePredicate
+  , filterAdmissiblePredicates
     -- * Helpers
   , pathContainsTopic
   , pathIsTautological
@@ -58,6 +74,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.AtomStore
+import QxFx0.Semantic.Content.Base (SemanticPredicate(..))
 
 -- ============================================================
 -- Types
@@ -78,7 +95,7 @@ data GateVerdict = GateVerdict
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- ============================================================
--- Individual gates
+-- Individual gates (PathProof-level)
 -- ============================================================
 
 -- | Gate G1: path contains ≥1 edge whose from_atom is the topic.
@@ -115,10 +132,10 @@ gateSourceWhitelist :: PathProof -> GateResult
 gateSourceWhitelist proof =
   let edges = ppEdges proof
       inadmissible = [ e | e <- edges, relSource e == SubstrateExtractedRaw ]
-  in if null inadmissible
-       then GatePass
-       else GateFail ("edge has source=SubstrateExtractedRaw: "
-                        <> relRuOriginal (head inadmissible))
+  in case inadmissible of
+       [] -> GatePass
+       (e:_) -> GateFail ("edge has source=SubstrateExtractedRaw: "
+                        <> relRuOriginal e)
 
 -- | Gate G5: verbalized text does not contain raw substrate atom surfaces.
 -- Substrate atoms have source=SubstrateExtractedRaw and should never
@@ -132,7 +149,7 @@ gateNonSubstrateOutput proof =
        else GatePass
 
 -- ============================================================
--- Combined verdict
+-- Combined verdict (PathProof-level)
 -- ============================================================
 
 -- | Run all gates on a single path proof.
@@ -158,10 +175,33 @@ validatePaths proofs =
       failed = [ (p, v) | (p, v) <- results, not (gvOverall v) ]
   in (passed, failed)
 
--- | Filter a list of RankedPaths to only admissible ones.
+-- | Filter a list of PathProofs to only admissible ones.
 -- Returns paths where all gates pass.
 filterAdmissible :: [PathProof] -> [PathProof]
 filterAdmissible = fst . validatePaths
+
+-- ============================================================
+-- Predicate-level gates (P4 Option A)
+-- ============================================================
+-- These gates operate on SemanticPredicate directly, for the legacy
+-- structuredBody path that uses selectPredicates (no PathProof available).
+-- They check equivalent properties to G1-G3. G4/G5 don't apply since
+-- SemanticPredicate has no source field — predicates come from curated
+-- definitionCorpus, not substrate extraction.
+
+-- | Validate a single SemanticPredicate through predicate-level gates.
+-- Returns True if all predicate gates pass.
+validatePredicate :: SemanticPredicate -> Bool
+validatePredicate p =
+  not (T.null (spRu p))
+  && not (T.null (spEn p))
+  && not (T.null (spTopicForm p))
+  && T.toLower (spRu p) /= T.toLower (spTopicForm p)
+
+-- | Filter a list of SemanticPredicates to only admissible ones.
+-- Predicates that fail any gate are dropped.
+filterAdmissiblePredicates :: [SemanticPredicate] -> [SemanticPredicate]
+filterAdmissiblePredicates = filter validatePredicate
 
 -- ============================================================
 -- Helpers

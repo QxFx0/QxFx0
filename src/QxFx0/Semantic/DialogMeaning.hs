@@ -172,7 +172,6 @@ hedgeSlot (Speculative _) = [(THedge, [plainSlot THedge "как бы"])]
 hedgeSlot (Unknown _)    = [(THedge, [plainSlot THedge "пожалуй"])]
 hedgeSlot (Probable _)   = [(THedge, [plainSlot THedge "скорее всего"])]
 hedgeSlot (Known _)      = [(THedge, [plainSlot THedge "насколько я понимаю"])]
-hedgeSlot _              = []
 
 -- | Modal particles: always available
 modalSlot :: [(AtomTag, [AtomSlot])]

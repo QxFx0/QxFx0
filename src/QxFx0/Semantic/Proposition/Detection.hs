@@ -55,9 +55,9 @@ import QxFx0.Types.PropositionFallbackAdmission
   , RawPropositionKeywordFallbackDecision(..)
   , RawPropositionPhraseDecision(..)
   )
-import QxFx0.Types.PropositionContactAdmission
-  ( RawPropositionContactTrigger(..)
-  )
+import QxFx0.Types.PropositionAdmissionTypes
+  ( PropositionAdmissionInput(..), PropositionAdmissionDecision(..)
+  , RawPropositionTrigger(..), AdmittedPropositionTriggers(..) )
 import QxFx0.Semantic.KeywordMatch (containsAnyKeywordPhrase)
 import QxFx0.Policy.ParserKeywords (contactKeywords)
 

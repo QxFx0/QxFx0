@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionWorldCauseAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionWorldCauseAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition world-cause triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionWorldCauseTriggers
-  :: PropositionWorldCauseAdmissionInput
-  -> [RawPropositionWorldCauseTrigger]
-  -> AdmittedPropositionWorldCauseTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionWorldCauseTriggers =
   admitPropositionTriggers worldCauseAdmissionConfig
 
 worldCauseAdmissionConfig :: PropositionAdmissionConfig
-  PropositionWorldCauseAdmissionInput
-  RawPropositionWorldCauseTrigger
-  AdmittedPropositionWorldCauseTriggers
-  PropositionWorldCauseAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 worldCauseAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pwcaiTruthContractStatus
-  , pacTriggerLabel = rpwcLabel
-  , pacTriggerMatched = rpwcMatched
-  , pacSetTriggerMatched = \b t -> t { rpwcMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionWorldCauseTriggers
-  , pacDecisionAdmitRaw = PwcAdmitRaw
-  , pacDecisionPreserveAmbiguous = PwcPreserveAmbiguous
-  , pacDecisionSuppressStrong = PwcSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

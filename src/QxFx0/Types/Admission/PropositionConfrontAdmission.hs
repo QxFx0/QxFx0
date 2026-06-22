@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionConfrontAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionConfrontAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition confront triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionConfrontTriggers
-  :: PropositionConfrontAdmissionInput
-  -> [RawPropositionConfrontTrigger]
-  -> AdmittedPropositionConfrontTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionConfrontTriggers =
   admitPropositionTriggers confrontAdmissionConfig
 
 confrontAdmissionConfig :: PropositionAdmissionConfig
-  PropositionConfrontAdmissionInput
-  RawPropositionConfrontTrigger
-  AdmittedPropositionConfrontTriggers
-  PropositionConfrontAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 confrontAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pcoaiTruthContractStatus
-  , pacTriggerLabel = rpconfLabel
-  , pacTriggerMatched = rpconfMatched
-  , pacSetTriggerMatched = \b t -> t { rpconfMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionConfrontTriggers
-  , pacDecisionAdmitRaw = PcondAdmitRaw
-  , pacDecisionPreserveAmbiguous = PcondPreserveAmbiguous
-  , pacDecisionSuppressStrong = PcondSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

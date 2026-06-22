@@ -58,7 +58,7 @@ data SelfState = SelfState
     -- ^ Phase 9: essence-selection trajectory accumulator.
     --   Carries the uncommitted (or committed) 'Essence' across
     --   turns. Initialised to 'emptyEssence'.
-  } deriving (Eq, Show, Generic)
+  } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
 
 -- | Empty SelfState (for initialization).

@@ -7,22 +7,22 @@ module QxFx0.Types.Admission.PropositionGenerativePromptAdmission
   ) where
 
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
-import QxFx0.Types.PropositionGenerativePromptAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 admitPropositionGenerativePromptTriggers
-  :: PropositionGenerativePromptAdmissionInput
-  -> [RawPropositionGenerativePromptTrigger]
-  -> AdmittedPropositionGenerativePromptTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionGenerativePromptTriggers input rawTriggers
-  | truthContractIsAuthoritative (pgpaiTruthContractStatus input) =
-      AdmittedPropositionGenerativePromptTriggers rawTriggers rawTriggers PpgpdAdmitRaw
+  | truthContractIsAuthoritative (paiTruthContractStatus input) =
+      AdmittedPropositionTriggers rawTriggers rawTriggers PadAdmitRaw
   | otherwise =
-      AdmittedPropositionGenerativePromptTriggers
+      AdmittedPropositionTriggers
         rawTriggers
         (map softenTrigger rawTriggers)
-        PpgpdSuppressStrongTriggers
+        PadSuppressStrongTriggers
 
-softenTrigger :: RawPropositionGenerativePromptTrigger -> RawPropositionGenerativePromptTrigger
+softenTrigger :: RawPropositionTrigger -> RawPropositionTrigger
 softenTrigger rawTrigger
-  | rpgpMatched rawTrigger = rawTrigger { rpgpMatched = False }
+  | rptMatched rawTrigger = rawTrigger { rptMatched = False }
   | otherwise = rawTrigger

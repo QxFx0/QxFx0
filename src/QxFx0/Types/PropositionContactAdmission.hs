@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionContactAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionContactAdmission
-  ( PropositionContactAdmissionInput(..)
-  , PropositionContactAdmissionDecision(..)
-  , RawPropositionContactTrigger(..)
-  , AdmittedPropositionContactTriggers(..)
+  ( PropositionContactAdmissionInput, PropositionContactAdmissionDecision, RawPropositionContactTrigger, AdmittedPropositionContactTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionContactAdmissionInput = PropositionContactAdmissionInput
-  { pcaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionContactAdmissionDecision
-  = PcadAdmitRaw
-  | PcadPreserveAmbiguous
-  | PcadSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionContactTrigger = RawPropositionContactTrigger
-  { rpctLabel :: !Text
-  , rpctMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionContactTriggers = AdmittedPropositionContactTriggers
-  { apctRawTriggers :: ![RawPropositionContactTrigger]
-  , apctTriggers :: ![RawPropositionContactTrigger]
-  , apctDecision :: !PropositionContactAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionContactAdmissionInput = PropositionAdmissionInput
+type PropositionContactAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionContactTrigger = RawPropositionTrigger
+type AdmittedPropositionContactTriggers = AdmittedPropositionTriggers

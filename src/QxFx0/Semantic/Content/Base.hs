@@ -50,7 +50,10 @@ data ChallengeResponse = ChallengeResponse
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 extractTopicForm :: Text -> Text
-extractTopicForm = T.toLower . head . T.words
+extractTopicForm t =
+  case T.words t of
+    (w:_) -> T.toLower w
+    []    -> ""
 
 mkPred :: PredicateRole -> Text -> Text -> SemanticPredicate
 mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing Nothing Nothing

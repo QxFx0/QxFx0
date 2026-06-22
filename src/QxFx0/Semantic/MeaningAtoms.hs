@@ -89,35 +89,35 @@ data RawLexicalPhraseDecision = RawLexicalPhraseDecision
   { rlpdClass :: !LexicalPhraseContainmentClass
   , rlpdPhrase :: !Text
   , rlpdMatched :: !Bool
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalClusterPhraseDecisions = RawLexicalClusterPhraseDecisions
   { rlcpdInputLower :: !Text
   , rlcpdClusterDecisions :: ![RawClusterPhraseDecision]
   , rlcpdLexicalDecisions :: ![RawLexicalPhraseDecision]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalClusterPhraseContainment = RawLexicalClusterPhraseContainment
   { rlcpcInputLower :: !Text
   , rlcpcClusterContainment :: ![RawClusterPhraseContainment]
   , rlcpcLexicalContainment :: ![RawLexicalPhraseContainment]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawClusterHit = RawClusterHit
   { rchTag :: !AtomTag
   , rchMatchedKeywords :: ![Text]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalHit = RawLexicalHit
   { rlhTag :: !AtomTag
   , rlhMatchedLexemes :: ![Text]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 data RawLexicalClusterHits = RawLexicalClusterHits
   { rlchInputLower :: !Text
   , rlchClusterHits :: ![RawClusterHit]
   , rlchLexicalHits :: ![RawLexicalHit]
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 collectAtoms :: Text -> [ClusterDef] -> AtomSet
 collectAtoms input clusters =

@@ -50,7 +50,7 @@ data StepId
   = SIntroduce | SContext | SQuantify | SMechanism
   | SEffect | SAnalogy | SImplicate | SDiscoverer | SRelate
   | SVerbObject
-  deriving (Eq, Ord, Show, Bounded, Enum)
+  deriving stock (Eq, Ord, Show, Bounded, Enum)
 
 type AssemblyPlan = [StepId]
 

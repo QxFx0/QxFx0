@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionAffectiveSupportProbeAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionAffectiveSupportProbeAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition AffectiveSupportProbe triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionAffectiveSupportProbeTriggers
-  :: PropositionAffectiveSupportProbeAdmissionInput
-  -> [RawPropositionAffectiveSupportProbeTrigger]
-  -> AdmittedPropositionAffectiveSupportProbeTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionAffectiveSupportProbeTriggers =
   admitPropositionTriggers affectiveSupportProbeAdmissionConfig
 
 affectiveSupportProbeAdmissionConfig :: PropositionAdmissionConfig
-  PropositionAffectiveSupportProbeAdmissionInput
-  RawPropositionAffectiveSupportProbeTrigger
-  AdmittedPropositionAffectiveSupportProbeTriggers
-  PropositionAffectiveSupportProbeAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 affectiveSupportProbeAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pasprAiTruthContractStatus
-  , pacTriggerLabel = rpasprLabel
-  , pacTriggerMatched = rpasprMatched
-  , pacSetTriggerMatched = \b t -> t { rpasprMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionAffectiveSupportProbeTriggers
-  , pacDecisionAdmitRaw = PasprAdmitRaw
-  , pacDecisionPreserveAmbiguous = PasprPreserveAmbiguous
-  , pacDecisionSuppressStrong = PasprSuppressStrongProbe
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

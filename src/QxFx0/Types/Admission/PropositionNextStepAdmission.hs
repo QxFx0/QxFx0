@@ -8,32 +8,32 @@ module QxFx0.Types.Admission.PropositionNextStepAdmission
 
 import Data.Text (Text)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types.PropositionNextStepAdmission
+import QxFx0.Types.PropositionAdmissionTypes
 
 -- | Admit proposition NextStep triggers using generic admission logic.
 -- Refactored from per-module boilerplate to config + safe-labels (P1-1).
 admitPropositionNextStepTriggers
-  :: PropositionNextStepAdmissionInput
-  -> [RawPropositionNextStepTrigger]
-  -> AdmittedPropositionNextStepTriggers
+  :: PropositionAdmissionInput
+  -> [RawPropositionTrigger]
+  -> AdmittedPropositionTriggers
 admitPropositionNextStepTriggers =
   admitPropositionTriggers nextStepAdmissionConfig
 
 nextStepAdmissionConfig :: PropositionAdmissionConfig
-  PropositionNextStepAdmissionInput
-  RawPropositionNextStepTrigger
-  AdmittedPropositionNextStepTriggers
-  PropositionNextStepAdmissionDecision
+  PropositionAdmissionInput
+  RawPropositionTrigger
+  AdmittedPropositionTriggers
+  PropositionAdmissionDecision
 nextStepAdmissionConfig = PropositionAdmissionConfig
-  { pacGetTruthContract = pnsaiTruthContractStatus
-  , pacTriggerLabel = rpnstLabel
-  , pacTriggerMatched = rpnstMatched
-  , pacSetTriggerMatched = \b t -> t { rpnstMatched = b }
+  { pacGetTruthContract = paiTruthContractStatus
+  , pacTriggerLabel = rptLabel
+  , pacTriggerMatched = rptMatched
+  , pacSetTriggerMatched = \b t -> t { rptMatched = b }
   , pacSafeLabels = safeTriggerLabels
-  , pacAdmittedCtor = AdmittedPropositionNextStepTriggers
-  , pacDecisionAdmitRaw = PnsdAdmitRaw
-  , pacDecisionPreserveAmbiguous = PnsdPreserveAmbiguous
-  , pacDecisionSuppressStrong = PnsdSuppressStrongTriggers
+  , pacAdmittedCtor = AdmittedPropositionTriggers
+  , pacDecisionAdmitRaw = PadAdmitRaw
+  , pacDecisionPreserveAmbiguous = PadPreserveAmbiguous
+  , pacDecisionSuppressStrong = PadSuppressStrongTriggers
   }
 
 safeTriggerLabels :: [Text]

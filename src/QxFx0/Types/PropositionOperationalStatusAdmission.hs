@@ -1,33 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionOperationalStatusAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionOperationalStatusAdmission
-  ( PropositionOperationalStatusAdmissionInput(..)
-  , PropositionOperationalStatusAdmissionDecision(..)
-  , RawPropositionOperationalStatusTrigger(..)
-  , AdmittedPropositionOperationalStatusTriggers(..)
+  ( PropositionOperationalStatusAdmissionInput, PropositionOperationalStatusAdmissionDecision, RawPropositionOperationalStatusTrigger, AdmittedPropositionOperationalStatusTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionOperationalStatusAdmissionInput = PropositionOperationalStatusAdmissionInput
-  { posaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionOperationalStatusAdmissionDecision
-  = PosdAdmitRaw
-  | PosdPreserveAmbiguous
-  | PosdSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionOperationalStatusTrigger = RawPropositionOperationalStatusTrigger
-  { rpostLabel :: !Text
-  , rpostMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionOperationalStatusTriggers = AdmittedPropositionOperationalStatusTriggers
-  { apostRawTriggers :: ![RawPropositionOperationalStatusTrigger]
-  , apostTriggers :: ![RawPropositionOperationalStatusTrigger]
-  , apostDecision :: !PropositionOperationalStatusAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionOperationalStatusAdmissionInput = PropositionAdmissionInput
+type PropositionOperationalStatusAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionOperationalStatusTrigger = RawPropositionTrigger
+type AdmittedPropositionOperationalStatusTriggers = AdmittedPropositionTriggers

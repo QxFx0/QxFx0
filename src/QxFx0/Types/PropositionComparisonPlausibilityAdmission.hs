@@ -1,32 +1,19 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-|
+Module      : QxFx0.Types.PropositionComparisonPlausibilityAdmission
+Description : Re-export of canonical proposition admission types (C4.3 consolidation)
+
+This module now re-exports types from PropositionAdmissionTypes.hs.
+All field accessors use canonical names (rptLabel, rptMatched, etc.).
+-}
 module QxFx0.Types.PropositionComparisonPlausibilityAdmission
-  ( PropositionComparisonPlausibilityAdmissionInput(..)
-  , PropositionComparisonPlausibilityAdmissionDecision(..)
-  , RawPropositionComparisonPlausibilityTrigger(..)
-  , AdmittedPropositionComparisonPlausibilityTriggers(..)
+  ( PropositionComparisonPlausibilityAdmissionInput, PropositionComparisonPlausibilityAdmissionDecision, RawPropositionComparisonPlausibilityTrigger, AdmittedPropositionComparisonPlausibilityTriggers
   ) where
 
-import Data.Text (Text)
-import QxFx0.Types (TruthContractStatus)
+import QxFx0.Types.PropositionAdmissionTypes
 
-data PropositionComparisonPlausibilityAdmissionInput = PropositionComparisonPlausibilityAdmissionInput
-  { pcpaiTruthContractStatus :: !TruthContractStatus
-  } deriving stock (Eq, Show)
-
-data PropositionComparisonPlausibilityAdmissionDecision
-  = PcpadAdmitRaw
-  | PcpadSuppressStrongTriggers
-  deriving stock (Eq, Show)
-
-data RawPropositionComparisonPlausibilityTrigger = RawPropositionComparisonPlausibilityTrigger
-  { rpcppLabel :: !Text
-  , rpcppMatched :: !Bool
-  } deriving stock (Eq, Show)
-
-data AdmittedPropositionComparisonPlausibilityTriggers = AdmittedPropositionComparisonPlausibilityTriggers
-  { acppRawTriggers :: ![RawPropositionComparisonPlausibilityTrigger]
-  , acppTriggers :: ![RawPropositionComparisonPlausibilityTrigger]
-  , acppDecision :: !PropositionComparisonPlausibilityAdmissionDecision
-  } deriving stock (Eq, Show)
+type PropositionComparisonPlausibilityAdmissionInput = PropositionAdmissionInput
+type PropositionComparisonPlausibilityAdmissionDecision = PropositionAdmissionDecision
+type RawPropositionComparisonPlausibilityTrigger = RawPropositionTrigger
+type AdmittedPropositionComparisonPlausibilityTriggers = AdmittedPropositionTriggers

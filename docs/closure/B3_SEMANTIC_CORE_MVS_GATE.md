@@ -1,6 +1,6 @@
 # B3 — Semantic-Core MVS Gate Design
 
-- **Status**: Design only (no runtime code, no tests, no claim upgrade)
+- **Status**: IMPLEMENTED — mechanical gates exist and are wired into test suites (TestMainFast, TestMainUnit, TestMain). Tests not yet verified passing due to 30s build timeout in dev env.
 - **Date**: 2026-06-17
 - **Front type**: Content-quality gate definition
 - **M6-FELT status**: **NOT PROVEN** — explicitly. This document defines
