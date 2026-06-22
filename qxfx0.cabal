@@ -297,6 +297,7 @@ library
       QxFx0.Semantic.GraphEngagement
       QxFx0.Semantic.ContextualComposer
       QxFx0.Semantic.LLMDiscovery
+      QxFx0.Semantic.SelfPlay
      QxFx0.Semantic.Analogy
      QxFx0.Semantic.Sense
       QxFx0.Semantic.Sense.Extract
