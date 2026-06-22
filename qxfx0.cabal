@@ -292,6 +292,10 @@ library
       QxFx0.Semantic.Content.GeneratedPredicateGate
       QxFx0.Semantic.Content.SubstrateCandidate
       QxFx0.Semantic.Content.AtomDiscovery
+      QxFx0.Semantic.PropositionParser
+      QxFx0.Semantic.DialogueContext
+      QxFx0.Semantic.GraphEngagement
+      QxFx0.Semantic.ContextualComposer
      QxFx0.Semantic.Analogy
      QxFx0.Semantic.Sense
       QxFx0.Semantic.Sense.Extract

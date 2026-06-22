@@ -288,8 +288,8 @@ composeDefinition morph fp n graph topic =
       combinedProof = PathProof allEdges topicText
       gateVerdict = validatePath combinedProof
   in if gvOverall gateVerdict
-       then GeneratedSurface fullText allProofs allSources
-       else GeneratedSurface "" [] []
+       then GeneratedSurface fullText allProofs allSources (fromIntegral (length allProofs))
+       else GeneratedSurface "" [] [] 0
 
 -- | Compose predicates with deduplication: track all used edge texts
 -- and exclude them from subsequent rationale searches.
@@ -427,7 +427,7 @@ composeArgument morph fp graph topic objectionText =
   let topicAtom = AtomId topic
       topicRels = graphRelationsFromAtom graph topicAtom
   in if null topicRels
-       then GeneratedSurface "" [] []
+       then GeneratedSurface "" [] [] 0
        else
           let -- 1. Find challenged edge: score by content overlap (NOT counter-type prior)
               -- Counter types are excluded from challenged scoring to avoid
@@ -474,9 +474,9 @@ composeArgument morph fp graph topic objectionText =
                     combinedProof = PathProof allEdges topic
                     combinedVerdict = validatePath combinedProof
                 in if gvOverall combinedVerdict
-                     then GeneratedSurface fullText allProofs allSources
-                     else GeneratedSurface "" [] []  -- gate failed, fall back to corpus
-              _ -> GeneratedSurface "" [] []
+                     then GeneratedSurface fullText allProofs allSources (fromIntegral (length allProofs))
+                     else GeneratedSurface "" [] [] 0  -- gate failed, fall back to corpus
+              _ -> GeneratedSurface "" [] [] 0
 
 -- | Score a challenged edge against objection text.
 -- Uses content overlap + topic presence, but NOT counter-type prior.

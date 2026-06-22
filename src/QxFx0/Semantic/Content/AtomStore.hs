@@ -272,6 +272,7 @@ data GeneratedSurface = GeneratedSurface
   { gsText       :: !Text
   , gsPaths      :: ![PathProof]
   , gsProvenance :: ![RelationSource]
+  , gsDepthScore :: !Double
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
