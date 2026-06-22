@@ -70,7 +70,8 @@ import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
-import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, allAtomIds, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted)
+import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, allAtomIds, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted, atomStore, Atom(..), AtomCategory(..))
+import QxFx0.Semantic.Content.AtomDiscovery (discoverAtoms, DiscoveredAtom(..))
 import qualified QxFx0.Semantic.Network.Types as NetTypes
 import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..))
 import qualified Data.Set as S
@@ -213,10 +214,12 @@ bootstrapSession quiet sessionId = do
       explicitTopicSet = S.fromList coveredTopics
       substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
       -- Substrate candidate extraction + admission
-      -- Use allAtomIds (85 atoms) for admission, not just allTopics (30)
-      -- This allows substrate to promote relations targeting concept atoms
+      -- Use allAtomIds (85+ atoms) for admission, not just allTopics (30+)
+      -- Also include discovered atoms from brain_kb
       topicList = allTopics
-      knownAtomIds = allAtomIds
+      discoveredAtoms = discoverAtoms brainKBEntries
+      discoveredAtomIds = map (atomId . daAtom) discoveredAtoms
+      knownAtomIds = allAtomIds ++ discoveredAtomIds
       candidates = extractCandidates brainKBEntries topicList
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted

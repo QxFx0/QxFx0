@@ -78,6 +78,8 @@ data AtomCategory
   | CatConcept     -- abstract concept (выбор, ответственность, ...)
   | CatProperty    -- property/quality (необратимость, осмысленность, ...)
   | CatProcess     -- process/action (действие, проверка, ...)
+  | CatDiscovered  -- auto-discovered from brain_kb (evidence, boundary, ...)
+  | CatDomain      -- cross-domain bridge concept (закон, нейрон, искусство, ...)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -603,10 +605,43 @@ atomStore = M.fromList
   , mkConcept "идентификация_с_собой" "идентификация с собой" "идентификация"
   , mkConcept "различение_я_и_не_я" "различение я и не я" "различение"
   , mkConcept "самооценка" "самооценка" "самооценка"
+  -- ============================================================
+  -- Cross-domain bridge atoms (L2 expansion)
+  -- Each connects a non-philosophical domain to L1 topics
+  -- ============================================================
+  , mkDomain "психика"
+  , mkDomain "эмоция"
+  , mkDomain "доказательство"
+  , mkDomain "эксперимент"
+  , mkDomain "нейрон"
+  , mkDomain "логика"
+  , mkDomain "аксиома"
+  , mkDomain "закон"
+  , mkDomain "право"
+  , mkDomain "договор"
+  , mkDomain "искусство"
+  , mkDomain "музыка"
+  , mkDomain "поэзия"
+  , mkDomain "государство"
+  , mkDomain "революция"
+  , mkDomain "нация"
+  , mkDomain "собственность"
+  , mkDomain "рынок"
+  , mkDomain "алгоритм"
+  , mkDomain "данные"
+  , mkDomain "код"
+  , mkDomain "жизнь"
+  , mkDomain "инстинкт"
+  , mkDomain "эволюция"
+  , mkDomain "энтропия"
+  , mkDomain "энергия"
+  , mkDomain "душа"
+  , mkDomain "дух"
   ]
   where
     mkTopic surf = (AtomId surf, Atom (AtomId surf) surf surf surf CatTopic)
     mkConcept aid display head_ = (AtomId aid, Atom (AtomId aid) aid display head_ CatConcept)
+    mkDomain surf = (AtomId surf, Atom (AtomId surf) surf surf surf CatDomain)
 
 -- ============================================================
 -- Relation store — decomposed predicates
@@ -2092,6 +2127,70 @@ relationStore =
       "преемственность я строится через нарратив о себе" "преемственность я is built through нарратив о себе"
   , rel "восстановление_функции" "диагностика_поломки" RelRequires CaseGenitive "диагностика поломки"
       "восстановление функции требует диагностика поломки" "восстановление функции requires диагностика поломки"
+  -- ============================================================
+  -- Cross-domain bridge relations (L2 expansion)
+  -- Each bridge connects a domain concept to an L1 topic
+  -- ============================================================
+  , rel "психика" "сознание" RelIncludes CaseAccusative "сознание"
+      "психика включает сознание" "psyche includes consciousness"
+  , rel "психика" "память" RelIncludes CaseAccusative "память"
+      "психика включает память" "psyche includes memory"
+  , rel "эмоция" "страх" RelExpresses CaseAccusative "страх"
+      "эмоция выражает страх" "emotion expresses fear"
+  , rel "эмоция" "любовь" RelExpresses CaseAccusative "любовь"
+      "эмоция выражает любовь" "emotion expresses love"
+  , rel "доказательство" "истина" RelSupports CaseAccusative "истину"
+      "доказательство поддерживает истину" "proof supports truth"
+  , rel "эксперимент" "истина" RelVerifiedBy CaseAccusative "истину"
+      "эксперимент проверяет истину" "experiment verifies truth"
+  , rel "нейрон" "сознание" RelRelatedTo CaseInstrumental "с сознанием"
+      "нейрон связан с сознанием" "neuron is related to consciousness"
+  , rel "логика" "разум" RelStructures CaseAccusative "разум"
+      "логика структурирует разум" "logic structures reason"
+  , rel "аксиома" "вера" RelRelatedTo CaseInstrumental "с верой"
+      "аксиома связана с верой" "axiom is related to faith"
+  , rel "закон" "справедливость" RelExpresses CaseAccusative "справедливость"
+      "закон выражает справедливость" "law expresses justice"
+  , rel "право" "свобода" RelSupports CaseAccusative "свободу"
+      "право поддерживает свободу" "right supports freedom"
+  , rel "договор" "доверие" RelRequires CaseGenitive "доверия"
+      "договор требует доверия" "contract requires trust"
+  , rel "искусство" "красота" RelExpresses CaseAccusative "красоту"
+      "искусство выражает красоту" "art expresses beauty"
+  , rel "музыка" "время" RelRelatedTo CaseInstrumental "со временем"
+      "музыка связана со временем" "music is related to time"
+  , rel "поэзия" "язык" RelStructures CaseAccusative "язык"
+      "поэзия структурирует язык" "poetry structures language"
+  , rel "государство" "власть" RelMeans CaseAccusative "власть"
+      "государство означает власть" "state means power"
+  , rel "революция" "свобода" RelRelatedTo CaseInstrumental "со свободой"
+      "революция связана со свободой" "revolution is related to freedom"
+  , rel "нация" "идентичность" RelRelatedTo CaseInstrumental "с идентичностью"
+      "нация связана с идентичностью" "nation is related to identity"
+  , rel "собственность" "свобода" RelLimitedBy CaseAccusative "свободу"
+      "собственность ограничивает свободу" "property limits freedom"
+  , rel "рынок" "доверие" RelRequires CaseGenitive "доверия"
+      "рынок требует доверия" "market requires trust"
+  , rel "алгоритм" "разум" RelStructures CaseAccusative "разум"
+      "алгоритм структурирует разум" "algorithm structures reason"
+  , rel "данные" "память" RelPreserves CaseAccusative "память"
+      "данные сохраняет память" "data preserves memory"
+  , rel "код" "язык" RelIsA CaseNominative "язык"
+      "код есть язык" "code is language"
+  , rel "жизнь" "смерть" RelContrastsWith CaseInstrumental "со смертью"
+      "жизнь контрастирует со смертью" "life contrasts with death"
+  , rel "инстинкт" "страх" RelSignals CasePrepositional "о страхе"
+      "инстинкт сигнализирует о страхе" "instinct signals fear"
+  , rel "эволюция" "время" RelRelatedTo CaseInstrumental "со временем"
+      "эволюция связана со временем" "evolution is related to time"
+  , rel "энтропия" "время" RelRelatedTo CaseInstrumental "со временем"
+      "энтропия связана со временем" "entropy is related to time"
+  , rel "энергия" "труд" RelTransforms CaseAccusative "труд"
+      "энергия преобразует труд" "energy transforms labour"
+  , rel "душа" "сознание" RelRelatedTo CaseInstrumental "с сознанием"
+      "душа связана с сознанием" "soul is related to consciousness"
+  , rel "дух" "воля" RelRelatedTo CaseInstrumental "с волей"
+      "дух связан с волей" "spirit is related to will"
   ]
   where
     rel fromId toId rt oc objText ru en =

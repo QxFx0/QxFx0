@@ -291,6 +291,7 @@ library
       QxFx0.Semantic.Content.PathFinder
       QxFx0.Semantic.Content.GeneratedPredicateGate
       QxFx0.Semantic.Content.SubstrateCandidate
+      QxFx0.Semantic.Content.AtomDiscovery
      QxFx0.Semantic.Analogy
      QxFx0.Semantic.Sense
       QxFx0.Semantic.Sense.Extract
