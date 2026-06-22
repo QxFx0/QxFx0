@@ -36,6 +36,10 @@ import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
   ( FieldProfile(..), composeDefinition, composeArgument, GeneratedSurface(..)
   )
+import QxFx0.Semantic.PropositionParser (parseProposition, PropositionMode(..))
+import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueContext(..))
+import QxFx0.Semantic.GraphEngagement (engageWithProposition)
+import QxFx0.Semantic.ContextualComposer (composeContextual)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -1844,14 +1848,16 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
-        -- Generative path: compose from AtomStore graph via PathFinder.
-        -- Uses seedGraph for now; runtimeGraph integration in Step A5.
         fp = FieldProfile
                (unFieldConfidence (fieldConfidence field))
                (unCounterfactual (fieldCounterfactual field))
                (unConsolidation (fieldConsolidation field))
                (unResonance (fieldResonance field))
-        genSurface = composeDefinition morph fp 3 runtimeGraph (AtomId topic)
+        -- Contextual orientation: parse proposition, engage with graph, compose
+        prop = parseProposition topic
+        ctx = emptyContext  -- TODO: wire from ssDialogue
+        engagement = engageWithProposition runtimeGraph ctx prop
+        genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
         genText = gsText genSurface
     in if not (T.null genText)
        then
@@ -1878,8 +1884,11 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
         basisText = T.strip basis
         safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
-        -- Generative path: compose argument from graph
-        genArgSurface = composeArgument morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph targetText rawObj
+        -- Contextual orientation for challenge
+        challengeProp = parseProposition rawObj
+        ctx = emptyContext  -- TODO: wire from ssDialogue
+        challengeEngagement = engageWithProposition runtimeGraph ctx challengeProp
+        genArgSurface = composeContextual morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph ctx challengeProp challengeEngagement
         genArgText = gsText genArgSurface
     in if not (T.null genArgText)
          then genArgText
