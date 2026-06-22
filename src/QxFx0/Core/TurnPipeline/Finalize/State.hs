@@ -173,6 +173,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
 import qualified Data.HashSet as HS
+import QxFx0.Semantic.DialogueContext (addUserEntry, addSystemEntry)
 
 -- | WP1 (contour closure): validate the reconciled 'Plan' against a
 -- pre-turn committed essence.  Only runs when the pre-turn state
@@ -486,22 +487,23 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
       executedOutcome = taExecutedOutcome ta
       baseNext = ss
         { ssDialogue = (ssDialogue ss)
-          { dsHistory = newHumanHistory
-          , dsActiveScene = tpActiveScene tp
-          , dsLastFamily = outcomeFamily
-          , dsLastTopic = tiBestTopic ti
-          , dsUserState = tiNextUserState ti
-          , dsLastForce = r5Force outcomeVerdict
-          , dsLastLayer = r5Layer outcomeVerdict
-          , dsRecentFamilies = take recentFamiliesLimit (outcomeFamily : ssRecentFamilies ss)
-          , dsRawInputHistory = appendHistoryBounded rawInputHistoryLimit (ssRawInputHistory ss) (ipfRawText (tiFrame ti))
-          , dsTurnCount = ssTurnCount ss + 1
-          , dsConsecutiveReflect = consecReflect
-          , dsLastEmbedding = Just (tiEmbedding ti)
-          , dsLastSalienceBias = salienceHolisticBias turnSalience
-          , dsHolisticStreak = newHolisticStreak
-          , dsRecentNarrativeSuccess = newNarrativeSuccess
-          }
+           { dsHistory = newHumanHistory
+           , dsActiveScene = tpActiveScene tp
+           , dsLastFamily = outcomeFamily
+           , dsLastTopic = tiBestTopic ti
+           , dsUserState = tiNextUserState ti
+           , dsLastForce = r5Force outcomeVerdict
+           , dsLastLayer = r5Layer outcomeVerdict
+           , dsRecentFamilies = take recentFamiliesLimit (outcomeFamily : ssRecentFamilies ss)
+           , dsRawInputHistory = appendHistoryBounded rawInputHistoryLimit (ssRawInputHistory ss) (ipfRawText (tiFrame ti))
+           , dsTurnCount = ssTurnCount ss + 1
+           , dsConsecutiveReflect = consecReflect
+           , dsLastEmbedding = Just (tiEmbedding ti)
+           , dsLastSalienceBias = salienceHolisticBias turnSalience
+           , dsHolisticStreak = newHolisticStreak
+           , dsRecentNarrativeSuccess = newNarrativeSuccess
+           , dsContext = addUserEntry (dsContext (ssDialogue ss)) (tiBestTopic ti) (ipfRawText (tiFrame ti))
+           }
       , ssIdentity = (ssIdentity ss)
           { idsEgo = tpNewEgo tp
           , idsOrbitalMemory = tpUpdatedOrbital tp

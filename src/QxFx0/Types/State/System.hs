@@ -174,6 +174,7 @@ import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassi
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
 import QxFx0.Semantic.Content (ConceptCategory)
 import QxFx0.Semantic.Content.AtomStore (AtomGraph, seedGraph)
+import QxFx0.Semantic.DialogueContext (emptyContext)
 import QxFx0.Types.State.Stance
   ( StanceState
   , StanceDefense
@@ -465,6 +466,7 @@ instance FromJSON SystemState where
       <*> o .:? "lastSalienceBias" .!= 0.0
       <*> o .:? "holisticStreak" .!= 0
       <*> o .:? "recentNarrativeSuccess" .!= []
+      <*> o .:? "dsContext" .!= emptyContext
     ids <- IdentityState
       <$> o .: "ego"
       <*> o .: "identityClaims"

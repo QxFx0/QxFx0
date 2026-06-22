@@ -242,7 +242,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticMorph = ssMorphology ss
       semanticIntent = semanticIntentForRender (ipfPropositionType (tiFrame ti)) semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
-      semanticText = generateFromFrame (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) (ssRuntimeGraph ss) semanticFrame semanticMorph
+      semanticText = generateFromFrame (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) (ssRuntimeGraph ss) ss semanticFrame semanticMorph
       semanticNonUnknown = case semanticIntent of
         IntentUnknown _ -> False
         _               -> True

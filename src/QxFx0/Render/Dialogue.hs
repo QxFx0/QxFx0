@@ -86,7 +86,8 @@ import QxFx0.Semantic.Input.Parse (ParsedInput)
 import QxFx0.Semantic.DialogAssembly (assembleTurn)
 import QxFx0.Semantic.MeaningDecompose (factBySubject)
 import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
-import QxFx0.Types.State.System (ssDiscourse)
+import QxFx0.Types.State.System (ssDiscourse, ssDialogue)
+import QxFx0.Types.State.Dialogue (dsContext)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
 import QxFx0.Semantic.Embedding.Fallback (stableHash)
 import qualified QxFx0.Semantic.Frame.Types as FT
@@ -1842,8 +1843,8 @@ gfMapAuthorityTags =
 -- from that payload using morphological forms and style modifiers.
 --
 -- Invariant: same frame + same morph → same output. Pure, deterministic.
-generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGraph -> FT.SemanticFrame -> MorphologyData -> Text
-generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
+generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGraph -> SystemState -> FT.SemanticFrame -> MorphologyData -> Text
+generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         scopeText = renderFrameScope scope
@@ -1855,7 +1856,7 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
                (unResonance (fieldResonance field))
         -- Contextual orientation: parse proposition, engage with graph, compose
         prop = parseProposition topic
-        ctx = emptyContext  -- TODO: wire from ssDialogue
+        ctx = dsContext (ssDialogue ss)
         engagement = engageWithProposition runtimeGraph ctx prop
         genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
         genText = gsText genSurface
@@ -1886,7 +1887,7 @@ generateFromFrame cs field mNetwork runtimeGraph frame morph = case frame of
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
         -- Contextual orientation for challenge
         challengeProp = parseProposition rawObj
-        ctx = emptyContext  -- TODO: wire from ssDialogue
+        ctx = dsContext (ssDialogue ss)
         challengeEngagement = engageWithProposition runtimeGraph ctx challengeProp
         genArgSurface = composeContextual morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph ctx challengeProp challengeEngagement
         genArgText = gsText genArgSurface
