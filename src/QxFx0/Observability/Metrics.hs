@@ -51,7 +51,7 @@ data Metric = Metric
   , mValue     :: !Double
   , mTimestamp :: !UTCTime
   , mTags      :: !(Map Text Text)
-  } deriving (Eq, Show)
+  } deriving stock (Eq, Show)
 
 instance ToJSON Metric where
   toJSON Metric{..} = object
