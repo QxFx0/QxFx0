@@ -32,11 +32,20 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.PathFinder
+import QxFx0.Semantic.Content.GeneratedPredicateGate (validatePath, GateVerdict(..))
 import QxFx0.Semantic.PropositionParser
 import QxFx0.Semantic.DialogueContext
 import QxFx0.Semantic.GraphEngagement (EngagementResult(..))
 import QxFx0.Lexicon.Inflection (instrumentalForm)
 import QxFx0.Types (MorphologyData)
+
+-- | Filter relations through predicate gates.
+-- Each relation is individually validated; only gate-passing relations survive.
+filterGatedRelations :: Text -> [Relation] -> [Relation]
+filterGatedRelations topic rels =
+  [ r | r <- rels
+  , gvOverall (validatePath (PathProof [r] topic))
+  ]
 
 -- | Main entry: compose a contextual response based on proposition mode.
 composeContextual :: MorphologyData -> FieldProfile -> AtomGraph
@@ -74,9 +83,9 @@ composeContextualAssert :: MorphologyData -> FieldProfile -> AtomGraph
                         -> GeneratedSurface
 composeContextualAssert morph fp graph ctx prop engagement =
   let topic = ppSubject prop
-      supporting = erSupporting engagement
-      contradicting = erContradicting engagement
-      qualifying = erQualifying engagement
+      supporting = filterGatedRelations topic (erSupporting engagement)
+      contradicting = filterGatedRelations topic (erContradicting engagement)
+      qualifying = filterGatedRelations topic (erQualifying engagement)
 
       -- Build response: "Я вижу это иначе. [supporting]. Но [contradicting]."
       supportText = T.intercalate ". " (map verbalizeRelation supporting)
@@ -103,9 +112,9 @@ composeContextualChallenge :: MorphologyData -> FieldProfile -> AtomGraph
                            -> GeneratedSurface
 composeContextualChallenge morph fp graph ctx prop engagement =
   let topic = ppSubject prop
-      supporting = erSupporting engagement
-      contradicting = erContradicting engagement
-      contextRels = erContext engagement
+      supporting = filterGatedRelations topic (erSupporting engagement)
+      contradicting = filterGatedRelations topic (erContradicting engagement)
+      contextRels = filterGatedRelations topic (erContext engagement)
 
       -- Build defense: use supporting edges as defense
       defenseText = T.intercalate ". " (map verbalizeRelation supporting)
@@ -135,13 +144,13 @@ composeContextualConnect :: MorphologyData -> FieldProfile -> AtomGraph
 composeContextualConnect morph fp graph ctx prop engagement =
   let subject = ppSubject prop
       object = fromMaybe "" (ppObject prop)
-      path = erPath engagement
+      path = filterGatedRelations subject (erPath engagement)
 
       pathText = if null path
                    then "Я не нахожу прямой связи между "
                         <> subject <> " и " <> object <> "."
                    else "Связь прослеживается: "
-                        <> T.intercalate " → " (map (formatPathEdge graph) path) <> "."
+                        <> T.intercalate ". " (map verbalizeRelation path) <> "."
 
       allProofs = [ PathProof path subject | not (null path) ]
       allSources = map relSource path
@@ -154,8 +163,8 @@ composeContextualReflect :: MorphologyData -> FieldProfile -> AtomGraph
                          -> GeneratedSurface
 composeContextualReflect morph fp graph ctx prop engagement =
   let topic = ppSubject prop
-      supporting = erSupporting engagement
-      contextRels = erContext engagement
+      supporting = filterGatedRelations topic (erSupporting engagement)
+      contextRels = filterGatedRelations topic (erContext engagement)
 
       allRels = nub (supporting ++ contextRels)
       relTexts = map verbalizeRelation allRels

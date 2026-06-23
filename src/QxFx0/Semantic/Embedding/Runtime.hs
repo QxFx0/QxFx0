@@ -30,6 +30,7 @@ import qualified Network.HTTP.Client as HTTPClient
 import qualified Network.HTTP.Simple as HTTP
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
+import System.IO (hPutStrLn, stderr)
 import Network.URI (URI(..), URIAuth(..), parseURI)
 import qualified Data.Map.Strict as Map
 import QxFx0.ExceptionPolicy (QxFx0Exception(EmbeddingError), mkEmbeddingError, throwQxFx0)
@@ -257,9 +258,11 @@ cachedRemoteHealth manager cache url = do
       pure status
 
 performRealHealthCheck :: Manager -> String -> IO Bool
-performRealHealthCheck manager url =
-  either (const False) (const True)
-    <$> fetchRemoteEmbeddingWithTimeout manager (HTTPClient.responseTimeoutMicro 2000000) url "healthcheck"
+performRealHealthCheck manager url = do
+  result <- fetchRemoteEmbeddingWithTimeout manager (HTTPClient.responseTimeoutMicro 2000000) url "healthcheck"
+  case result of
+    Right _ -> pure True
+    Left e -> hPutStrLn stderr ("[embedding] health check failed: " <> show e) >> pure False
 
 fetchRemoteEmbedding :: String -> Text -> IO (Either Text Embedding)
 fetchRemoteEmbedding url txt = withFreshEmbeddingManager (\manager -> fetchRemoteEmbeddingWithManager manager url txt)

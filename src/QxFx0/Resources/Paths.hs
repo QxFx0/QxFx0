@@ -33,6 +33,7 @@ import QxFx0.Internal.FilePath (isPathWithin)
 import System.Directory (canonicalizePath, doesDirectoryExist, doesFileExist, getCurrentDirectory)
 import System.Environment (getExecutablePath, lookupEnv)
 import System.FilePath ((</>), normalise, takeDirectory, takeFileName)
+import System.IO (hPutStrLn, stderr)
 
 data ResourcePaths = ResourcePaths
   { rpResourceDir   :: FilePath
@@ -153,10 +154,9 @@ findResourceDir = do
 discoverInstalledDataDir :: IO (Maybe FilePath)
 discoverInstalledDataDir = do
   result <- tryIO getDataDir
-  pure $
-    case result of
-      Left _ -> Nothing
-      Right path -> Just (normalise path)
+  case result of
+    Left e -> hPutStrLn stderr ("[paths] getDataDir failed: " <> show e) >> pure Nothing
+    Right path -> pure (Just (normalise path))
 
 discoverResourceRoot :: IO FilePath
 discoverResourceRoot = do
@@ -222,9 +222,9 @@ resolveDatalogRuleCandidates = do
       Just root -> pure (Just root)
       Nothing -> do
         rootResolution <- resolveOptionalResourceRoot
-        pure $ case rootResolution of
-          Right resolved -> resolved
-          Left _ -> Nothing
+        case rootResolution of
+           Right resolved -> pure resolved
+           Left e -> hPutStrLn stderr ("[paths] resolveOptionalResourceRoot failed: " <> show e) >> pure Nothing
   let rootedCandidates = maybe [] (\root -> map (normalise . (root </>)) relCandidates) mRoot
   dataCandidates <-
     if explicitRootConfigured
@@ -292,10 +292,9 @@ resolveOptionalResourceRoot = do
           else Left ("QXFX0 resource root is invalid: " ++ root)
     Nothing -> do
       discovered <- tryQxFx0 discoverResourceRoot
-      pure $
-        case discovered of
-          Right root -> Right (Just root)
-          Left _ -> Right Nothing
+      case discovered of
+          Right root -> pure (Right (Just root))
+          Left e -> hPutStrLn stderr ("[paths] discoverResourceRoot failed: " <> show e) >> pure (Right Nothing)
 
 resolveResourceFile :: Bool -> Maybe FilePath -> [FilePath] -> IO FilePath
 resolveResourceFile allowDataFallback mRoot candidates = do
@@ -326,7 +325,7 @@ resolveDataFileCandidate :: FilePath -> IO (Maybe FilePath)
 resolveDataFileCandidate relativePath = do
   dataResult <- tryIO (getDataFileName relativePath)
   case dataResult of
-    Left _ -> pure Nothing
+    Left e -> hPutStrLn stderr ("[paths] getDataFileName failed for " <> relativePath <> ": " <> show e) >> pure Nothing
     Right path -> do
       exists <- doesFileExist path
       pure $ if exists then Just (normalise path) else Nothing

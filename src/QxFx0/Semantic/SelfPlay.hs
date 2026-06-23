@@ -49,6 +49,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS8
 import System.Random (randomRIO)
 import Control.Monad (replicateM, forM, when)
+import System.IO (hPutStrLn, stderr)
 import qualified Data.List as L
 
 import QxFx0.Semantic.Content.AtomStore
@@ -228,7 +229,9 @@ callLLM config prompt = do
       case choices of
         (choice:_) -> return (mContent (cMessage choice))
         [] -> return ""
-    Left _ -> return ""
+    Left err -> do
+      hPutStrLn stderr $ "[selfplay] JSON decode error: " <> err
+      return ""
 
 -- | Parse LLM evaluation response.
 parseEvaluation :: Text -> (Double, [Text])

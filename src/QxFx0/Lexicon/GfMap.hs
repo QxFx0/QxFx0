@@ -28,6 +28,7 @@ import Paths_qxfx0 (getDataFileName)
 import QxFx0.ExceptionPolicy (catchIO)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
+import System.IO (hPutStrLn, stderr)
 import System.IO.Unsafe (unsafePerformIO)
 
 data GfLexemeForms = GfLexemeForms
@@ -138,7 +139,7 @@ loadCanonicalGfMap = do
 
 loadGfMapStatusFromPath :: FilePath -> IO GfMapLoadStatus
 loadGfMapStatusFromPath path = do
-  mContent <- catchIO (Just . T.pack <$> readFile path) (const (pure Nothing))
+  mContent <- catchIO (Just . T.pack <$> readFile path) (\e -> hPutStrLn stderr ("[gfmap] read failed: " ++ path ++ ": " ++ show e) >> pure Nothing)
   pure (snd (loadGfMapFromContent mContent))
 
 readCanonicalFunmap :: IO (Maybe Text)
@@ -150,24 +151,24 @@ readCanonicalFunmap = do
     Just root ->
       catchIO
         (Just . T.pack <$> readFile (root </> "spec" </> "gf" </> "lexicon_funmap.tsv"))
-        (const (pure Nothing))
+        (\e -> hPutStrLn stderr ("[gfmap] explicit root read failed: " ++ show e) >> pure Nothing)
     Nothing -> pure Nothing
   case explicitContent of
     Just content -> pure (Just content)
     Nothing -> do
-      dataPath <- catchIO (Just <$> getDataFileName "spec/gf/lexicon_funmap.tsv") (const (pure Nothing))
+      dataPath <- catchIO (Just <$> getDataFileName "spec/gf/lexicon_funmap.tsv") (\e -> hPutStrLn stderr ("[gfmap] getDataFileName failed: " ++ show e) >> pure Nothing)
       case dataPath of
         Just path ->
           catchIO
             (Just . T.pack <$> readFile path)
-            (const readRepoFallback)
+            (\e -> hPutStrLn stderr ("[gfmap] data path read failed: " ++ path ++ ": " ++ show e) >> readRepoFallback)
         Nothing ->
           readRepoFallback
   where
     readRepoFallback =
       catchIO
         (Just . T.pack <$> readFile ("spec" </> "gf" </> "lexicon_funmap.tsv"))
-        (const (pure Nothing))
+        (\e -> hPutStrLn stderr ("[gfmap] all fallbacks exhausted, GF map will be empty: " ++ show e) >> pure Nothing)
 
 parseGfMapData :: Text -> GfMapData
 parseGfMapData content =

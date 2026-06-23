@@ -31,6 +31,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy (tryQxFx0)
+import System.IO (hPutStrLn, stderr)
 
 currentSchemaVersion :: Int
 currentSchemaVersion = 4
@@ -225,7 +226,7 @@ readSchemaVersionRow :: NSQL.Database -> IO (Maybe Int)
 readSchemaVersionRow db = do
   mStmt <- NSQL.prepare db "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
   case mStmt of
-    Left _ -> pure Nothing
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (readSchemaVersionRow): " <> show e) >> pure Nothing
     Right stmt -> do
       hasRow <- NSQL.stepRow stmt
       version <- if hasRow then NSQL.columnInt stmt 0 else pure 0
@@ -260,7 +261,7 @@ tableExists db tableName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left _ -> pure False
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (tableExists): " <> show e) >> pure False
     Right stmt -> do
       _ <- NSQL.bindText stmt 1 tableName
       hasRow <- NSQL.stepRow stmt
@@ -272,7 +273,7 @@ columnMissing db tableName columnName = do
   let sql = "SELECT 1 FROM pragma_table_info('" <> tableName <> "') WHERE name = ? LIMIT 1"
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left _ -> pure True
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (columnMissing): " <> show e) >> pure True
     Right stmt -> do
       _ <- NSQL.bindText stmt 1 columnName
       hasRow <- NSQL.stepRow stmt
@@ -284,7 +285,7 @@ indexExists db indexName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ? LIMIT 1"
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left _ -> pure False
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (indexExists): " <> show e) >> pure False
     Right stmt -> do
       _ <- NSQL.bindText stmt 1 indexName
       hasRow <- NSQL.stepRow stmt
@@ -296,7 +297,7 @@ triggerExists db triggerName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = ? LIMIT 1"
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left _ -> pure False
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (triggerExists): " <> show e) >> pure False
     Right stmt -> do
       _ <- NSQL.bindText stmt 1 triggerName
       hasRow <- NSQL.stepRow stmt
@@ -308,7 +309,7 @@ ftsTableExists db ftsName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left _ -> pure False
+    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (ftsTableExists): " <> show e) >> pure False
     Right stmt -> do
       _ <- NSQL.bindText stmt 1 ftsName
       hasRow <- NSQL.stepRow stmt

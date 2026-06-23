@@ -29,6 +29,7 @@ import qualified System.Directory as Directory (executable)
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>), isPathSeparator, takeDirectory, takeFileName)
+import System.IO (hPutStrLn, stderr)
 import System.Process (CreateProcess(cwd), proc, readCreateProcessWithExitCode, readProcessWithExitCode)
 import System.Timeout (timeout)
 
@@ -171,7 +172,7 @@ resolveSouffleTrustedRoots = do
   mEnvRoot <- lookupEnv "QXFX0_ROOT"
   mResourceRoot <- catchIO
     (Just . rpResourceDir <$> resolveResourcePaths)
-    (\_ -> pure Nothing)
+    (\e -> hPutStrLn stderr ("[datalog] resolveResourcePaths failed: " <> show e) >> pure Nothing)
   let configuredRoots =
         [ "/nix/store"
         , "/usr/bin"

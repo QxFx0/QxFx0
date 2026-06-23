@@ -19,7 +19,7 @@ import System.Directory
   )
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), isAbsolute, normalise, takeDirectory, takeFileName)
-import System.IO (hClose, hPutStr)
+import System.IO (hClose, hPutStr, hPutStrLn, stderr)
 import System.Posix.Files (ownerReadMode, ownerWriteMode, unionFileModes)
 import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), defaultFileFlags, fdToHandle, openFd)
 import System.Posix.Types (FileMode)
@@ -221,7 +221,7 @@ markMarkerOnce path = do
         hPutStr handle "triggered\n"
         hClose handle
         pure True)
-    (\_ -> pure False)
+    (\e -> hPutStrLn stderr ("[handlers] marker file creation failed: " <> show e) >> pure False)
 
 markerFileMode :: FileMode
 markerFileMode = ownerReadMode `unionFileModes` ownerWriteMode

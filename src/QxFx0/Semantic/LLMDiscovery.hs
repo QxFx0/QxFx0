@@ -40,6 +40,7 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS8
+import System.IO (hPutStrLn, stderr)
 
 import QxFx0.Semantic.Content.AtomStore
 
@@ -90,7 +91,9 @@ discoverFromLLM config concept = do
       case choices of
         (choice:_) -> return $ parseLLMRelations concept (mContent (cMessage choice))
         [] -> return []
-    Left _ -> return []
+    Left err -> do
+      hPutStrLn stderr $ "[llm_discovery] JSON decode error for concept '" <> T.unpack concept <> "': " <> err
+      return []
 
 -- | Build a structured prompt for the LLM to extract relations.
 buildDiscoveryPrompt :: Text -> Text

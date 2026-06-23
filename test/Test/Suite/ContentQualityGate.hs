@@ -34,6 +34,11 @@ contentQualityGateTests =
   , TestLabel "CQG-8: Path trace present in proof" testPathTracePresent
   , TestLabel "CQG-9: Gate verdict enforced" testGateVerdictEnforced
   , TestLabel "CQG-10: Multiple concepts produce distinct output" testDistinctOutput
+  , TestLabel "CQG-11: Semantic — свобода mentions выбор or ответственность" testSemanticSvoboda
+  , TestLabel "CQG-12: Semantic — истина mentions проверяем or воспроизводим" testSemanticIstina
+  , TestLabel "CQG-13: Semantic — сознание mentions самоотчёт or первый" testSemanticSoznanie
+  , TestLabel "CQG-14: Dialectical — answer contains Потому что or Но or Именно" testDialecticalStructure
+  , TestLabel "CQG-15: Semantic — ответственность mentions долг or обязательства" testSemanticOtvetstvennost
   ]
 
 -- Helper: generate a definition surface for a topic
@@ -123,3 +128,55 @@ testDistinctOutput = TestCase $ do
       t2 = gsText s2
   assertBool ("Definitions for свобода and смысл should be different. свобода: " <> T.unpack t1 <> " | смысл: " <> T.unpack t2)
               (t1 /= t2)
+
+-- CQG-11: Semantic — answer about свобода must mention выбор or ответственность
+testSemanticSvoboda :: Test
+testSemanticSvoboda = TestCase $ do
+  let surface = generateForTopic "свобода"
+      text = T.toLower (gsText surface)
+      hasChoice = "выбор" `T.isInfixOf` text
+      hasResponsibility = "ответственност" `T.isInfixOf` text
+  assertBool ("Answer about свобода must mention выбор or ответственность. Text: " <> T.unpack text)
+              (hasChoice || hasResponsibility)
+
+-- CQG-12: Semantic — answer about истина must mention проверяем or воспроизводим
+testSemanticIstina :: Test
+testSemanticIstina = TestCase $ do
+  let surface = generateForTopic "истина"
+      text = T.toLower (gsText surface)
+      hasVerify = "проверя" `T.isInfixOf` text
+      hasReproducible = "воспроизвод" `T.isInfixOf` text
+  assertBool ("Answer about истина must mention проверяем or воспроизводимость. Text: " <> T.unpack text)
+              (hasVerify || hasReproducible)
+
+-- CQG-13: Semantic — answer about сознание must mention самоотчёт or первый
+testSemanticSoznanie :: Test
+testSemanticSoznanie = TestCase $ do
+  let surface = generateForTopic "сознание"
+      text = T.toLower (gsText surface)
+      hasSelfReport = "самоотч" `T.isInfixOf` text
+      hasFirstPerson = "первого лица" `T.isInfixOf` text || "перв лиц" `T.isInfixOf` text
+  assertBool ("Answer about сознание must mention самоотчёт or первый. Text: " <> T.unpack text)
+              (hasSelfReport || hasFirstPerson)
+
+-- CQG-14: Dialectical — answer must contain dialectical structure markers
+testDialecticalStructure :: Test
+testDialecticalStructure = TestCase $ do
+  let surface = generateForTopic "свобода"
+      text = T.toLower (gsText surface)
+      hasBecause = "потому что" `T.isInfixOf` text
+      hasBut = "но " `T.isInfixOf` text || "но не" `T.isInfixOf` text
+      hasTherefore = "именно поэтому" `T.isInfixOf` text
+      dialecticalMarkers = length (filter id [hasBecause, hasBut, hasTherefore])
+  assertBool ("Answer should contain >=2 dialectical markers (Потому что/Но/Именно поэтому). Found " <> show dialecticalMarkers <> ". Text: " <> T.unpack text)
+              (dialecticalMarkers >= 2)
+
+-- CQG-15: Semantic — answer about ответственность must mention долг or обязательства
+testSemanticOtvetstvennost :: Test
+testSemanticOtvetstvennost = TestCase $ do
+  let surface = generateForTopic "ответственность"
+      text = T.toLower (gsText surface)
+      hasDuty = "долг" `T.isInfixOf` text
+      hasObligations = "обязательств" `T.isInfixOf` text
+  assertBool ("Answer about ответственность must mention долг or обязательства. Text: " <> T.unpack text)
+              (hasDuty || hasObligations)

@@ -925,22 +925,18 @@ dedupePreservingOrder = go Set.empty
 -- (repair under challenge) and Gate 4 (commitment accountability).
 anchorToFactualClaim :: SemanticAnchor -> TurnSeq -> FactualClaimPayload
 anchorToFactualClaim anchor tseq =
-  let channel = dominantChannelText (saDominantChannel anchor)
-      topic = fromMaybe "" (saSecondaryChannel anchor)
+  let topic = fromMaybe "" (saSecondaryChannel anchor)
       mContent = Content.lookupDefinitionContent topic
-      contentStmt = case mContent of
+      stmt = case mContent of
         Just dc ->
           let preds = map Content.spRu (Content.dcPredicates dc)
-          in " Topic: " <> topic <> ". " <> T.intercalate " " preds
-        Nothing -> ""
-      stmt = "Dialogue channel: " <> channel
-             <> contentStmt
-             <> " (established at turn " <> T.pack (show (saEstablishedAtTurn anchor)) <> ")"
+          in T.intercalate ". " preds
+        Nothing -> topic <> " — " <> dominantChannelText (saDominantChannel anchor)
       conf = min 1.0 (saStrength anchor * saStability anchor)
   in FactualClaimPayload
        { fcpStatement  = stmt
        , fcpConfidence = conf
-       , fcpOrigin     = OriginParser ("anchor:" <> channel)
+       , fcpOrigin     = OriginParser ("anchor:" <> dominantChannelText (saDominantChannel anchor))
        , fcpTurnSeq    = tseq
        , fcpDeps       = []
        , fcpTopic      = topic

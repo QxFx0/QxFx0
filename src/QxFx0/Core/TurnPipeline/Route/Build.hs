@@ -357,6 +357,8 @@ hasChallengeMarker input =
        [ "разве", "не согласен", "не согласна", "противореч", "неверно"
        , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
        , "ты говоришь", "оспариваю"
+       , "это просто", "не более чем", "сводится к"
+       , "всего лишь", "это лишь"
        ]
 
 -- renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts

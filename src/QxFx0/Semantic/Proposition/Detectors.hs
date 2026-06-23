@@ -431,6 +431,7 @@ detectConfrontSignal truthContractStatus rawText tokens =
 
 collectRawConfrontTriggers :: Text -> [Text] -> [RawPropositionTrigger]
 collectRawConfrontTriggers rawText tokens =
+  let lower = T.toLower rawText in
   [ RawPropositionTrigger "contradiction_phrase" (containsKeywordPhrase tokens "это противоречие")
   , RawPropositionTrigger "disagree_masc" (containsKeywordPhrase tokens "я не согласен")
   , RawPropositionTrigger "disagree_fem" (containsKeywordPhrase tokens "я не согласна")
@@ -439,10 +440,14 @@ collectRawConfrontTriggers rawText tokens =
   , RawPropositionTrigger "contradicts_verb_2sg" ("противоречишь" `elem` tokens)
   , RawPropositionTrigger "doubt_marker" ("сомневаюсь" `elem` tokens)
   , RawPropositionTrigger "disputable_marker" ("спорно" `elem` tokens)
-  , RawPropositionTrigger "does_not_follow" (T.isInfixOf "does not follow" (T.toLower rawText))
+  , RawPropositionTrigger "does_not_follow" (T.isInfixOf "does not follow" lower)
   , RawPropositionTrigger "ru_razve" ("разве" `elem` tokens)
-  , RawPropositionTrigger "ru_neverno" (T.isInfixOf "это неверно" (T.toLower rawText) || T.isInfixOf "ты ошибаешься" (T.toLower rawText))
-  , RawPropositionTrigger "ru_ne_prav" (T.isInfixOf "не прав" (T.toLower rawText) || T.isInfixOf "неправ" (T.toLower rawText))
+  , RawPropositionTrigger "ru_neverno" (T.isInfixOf "это неверно" lower || T.isInfixOf "ты ошибаешься" lower)
+  , RawPropositionTrigger "ru_ne_prav" (T.isInfixOf "не прав" lower || T.isInfixOf "неправ" lower)
+  , RawPropositionTrigger "reduction_just" (T.isInfixOf "это просто" lower)
+  , RawPropositionTrigger "reduction_nothing_more" (T.isInfixOf "не более чем" lower)
+  , RawPropositionTrigger "reduction_reduces_to" (T.isInfixOf "сводится к" lower)
+  , RawPropositionTrigger "reduction_merely" (T.isInfixOf "всего лишь" lower || T.isInfixOf "это лишь" lower)
   ]
 
 buildConfrontSignalFromTriggers :: Text -> [RawPropositionTrigger] -> Maybe PropositionType
@@ -459,6 +464,10 @@ buildConfrontSignalFromTriggers rawText admittedTriggers
   | matched "ru_razve" = Just ConfrontQ
   | matched "ru_neverno" = Just ConfrontQ
   | matched "ru_ne_prav" = Just ConfrontQ
+  | matched "reduction_just" = Just ConfrontQ
+  | matched "reduction_nothing_more" = Just ConfrontQ
+  | matched "reduction_reduces_to" = Just ConfrontQ
+  | matched "reduction_merely" = Just ConfrontQ
   | otherwise = Nothing
   where
     _unused = rawText

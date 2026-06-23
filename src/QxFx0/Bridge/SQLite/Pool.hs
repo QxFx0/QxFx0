@@ -19,6 +19,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
+import System.IO (hPutStrLn, stderr)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(PersistenceTxError, SQLiteErrorStructured)
   , SQLiteErrorDetails(..)
@@ -140,7 +141,7 @@ withPooledDB pool action = mask $ \restore -> do
               replacement <- tryAsync (openInitializedConnection (poolPath pool))
               case replacement of
                 Right freshDb -> pure (Just freshDb)
-                Left _ -> pure Nothing
+                Left e -> hPutStrLn stderr ("[sqlite_pool] connection replacement failed: " <> show e) >> pure Nothing
 
 isNoActiveTransactionError :: Text -> Bool
 isNoActiveTransactionError err =

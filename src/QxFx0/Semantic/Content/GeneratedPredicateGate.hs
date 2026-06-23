@@ -56,7 +56,6 @@ module QxFx0.Semantic.Content.GeneratedPredicateGate
     -- * Combined verdict (PathProof-level)
   , validatePath
   , validatePaths
-  , filterAdmissible
     -- * Predicate-level gates (P4 Option A)
   , validatePredicate
   , filterAdmissiblePredicates
@@ -174,11 +173,6 @@ validatePaths proofs =
       passed = [ p | (p, v) <- results, gvOverall v ]
       failed = [ (p, v) | (p, v) <- results, not (gvOverall v) ]
   in (passed, failed)
-
--- | Filter a list of PathProofs to only admissible ones.
--- Returns paths where all gates pass.
-filterAdmissible :: [PathProof] -> [PathProof]
-filterAdmissible = fst . validatePaths
 
 -- ============================================================
 -- Predicate-level gates (P4 Option A)

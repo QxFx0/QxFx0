@@ -26,6 +26,7 @@ import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Data.Map
 import qualified Data.Set as Set
 import QxFx0.Core.TurnPipeline.Types
+import QxFx0.Types.State.SemanticCommitment (ceEngaged, ceContradicted)
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -715,6 +716,12 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
              , "response_surface_kind=" <> T.pack (show (etoResponseSurfaceKind executedOutcome))
              ]
           <> if finalizeSurfaceProv == FromRecovery then ["finalize=guard_blocked_non_expansive"] else ["finalize=preserve_upstream_surface"]
+          <> let ce = tpCommitmentEngagement tp
+             in if not (null (ceEngaged ce))
+                  then [ "commitment_engaged=" <> T.pack (show (length (ceEngaged ce)))
+                       , "commitment_contradicted=" <> T.pack (show (ceContradicted ce))
+                       ]
+                  else []
       executedDecision =
         decision
           { tdFamily = etoFamily executedOutcome
@@ -836,6 +843,8 @@ hasChallengeMarkerForDecision input =
        [ "разве", "не согласен", "не согласна", "противореч", "неверно"
        , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
        , "ты говоришь", "оспариваю"
+       , "это просто", "не более чем", "сводится к"
+       , "всего лишь", "это лишь"
        ]
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan

@@ -13,6 +13,7 @@ import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>), takeDirectory)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Unsafe (unsafePerformIO)
+import System.IO (hPutStrLn, stderr)
 import qualified PGF2 as PGF
 import QxFx0.ExceptionPolicy (tryIO, tryQxFx0)
 import QxFx0.Types.Readiness
@@ -112,7 +113,9 @@ checkHealth ctx = do
   readiness <- assessResourceReadiness dbPath
   runtimeMode <- resolveRuntimeMode
   backendResult <- tryIO (wireRuntimeReadiness ctx)
-  let backend = either (const backendProbeFailedReadiness) id backendResult
+  backend <- case backendResult of
+    Right b -> pure b
+    Left e -> hPutStrLn stderr ("[health] wireRuntimeReadiness failed: " <> show e) >> pure backendProbeFailedReadiness
   mkSystemHealth runtimeMode dbPath readiness backend
 
 probeRuntimeReadiness :: IO SystemHealth
@@ -120,7 +123,9 @@ probeRuntimeReadiness = do
   dbPath <- resolveDbPath
   readiness <- assessResourceReadiness dbPath
   backendResult <- tryIO probeBackendReadiness
-  let backend = either (const backendProbeFailedReadiness) id backendResult
+  backend <- case backendResult of
+    Right b -> pure b
+    Left e -> hPutStrLn stderr ("[health] probeBackendReadiness failed: " <> show e) >> pure backendProbeFailedReadiness
   runtimeMode <- resolveRuntimeMode
   mkSystemHealth runtimeMode dbPath readiness backend
 
@@ -242,7 +247,7 @@ loadRuntimeGfMapHealth :: IO GfMapHealth
 loadRuntimeGfMapHealth = do
   pathsResult <- tryQxFx0 resolveResourcePaths
   case pathsResult of
-    Left _ -> pure (GfMapHealth False "failed" 0 (Just "resource_root_unavailable"))
+    Left e -> hPutStrLn stderr ("[health] resolveResourcePaths failed: " <> show e) >> pure (GfMapHealth False "failed" 0 (Just "resource_root_unavailable"))
     Right paths -> do
       status <- loadGfMapStatusFromPath (rpResourceDir paths </> "spec" </> "gf" </> "lexicon_funmap.tsv")
       pure (gfMapHealthFromStatus status)

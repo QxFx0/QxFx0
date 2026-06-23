@@ -34,14 +34,14 @@ import QxFx0.Semantic.Content
   )
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Content.PathFinder
-  ( FieldProfile(..), composeDefinition, composeArgument, GeneratedSurface(..)
+  ( FieldProfile(..), GeneratedSurface(..)
   )
-import QxFx0.Semantic.PropositionParser (parseProposition, PropositionMode(..))
+import QxFx0.Semantic.PropositionParser (parseProposition, PropositionMode(..), ppSubject)
 import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueContext(..))
 import QxFx0.Semantic.GraphEngagement (engageWithProposition)
 import QxFx0.Semantic.ContextualComposer (composeContextual)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
-import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..))
+import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..))
 import QxFx0.Semantic.Network (SemanticNetwork)
 import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
 import qualified Data.Set as Set
@@ -86,8 +86,10 @@ import QxFx0.Semantic.Input.Parse (ParsedInput)
 import QxFx0.Semantic.DialogAssembly (assembleTurn)
 import QxFx0.Semantic.MeaningDecompose (factBySubject)
 import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
-import QxFx0.Types.State.System (ssDiscourse, ssDialogue)
+import QxFx0.Types.State.System (ssDiscourse, ssDialogue, ssSemanticCommitments)
 import QxFx0.Types.State.Dialogue (dsContext)
+import QxFx0.Semantic.Retrieve (retrieve)
+import QxFx0.Types.State.SemanticCommitment (fcpStatement, fcpTopic)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
 import QxFx0.Semantic.Embedding.Fallback (stableHash)
 import qualified QxFx0.Semantic.Frame.Types as FT
@@ -629,7 +631,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                 then leftNom <> " и " <> rightNom <> " различаются по набору признаков. Без явной рамки сравнение остаётся зависимым от принятых допущений."
                 else clText claim
               distText = case mDist of
-                Just dc -> ". " <> T.intercalate " " (map (if isEn then spEn else spRu) (dcDifferentiators dc))
+                Just dc -> ". " <> T.intercalate " " (map (if isEn then spEn else spRu) (filterAdmissiblePredicates (dcDifferentiators dc)))
                 Nothing -> ""
               bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> claimText <> distText
                 else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> claimText <> distText
@@ -681,8 +683,10 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
           -- Phase E: challenge-response with argued predicate + varied intro
           challengeResponseText = case mChallengeResp of
             Just (intro, cr) ->
-              intro <> " " <> crRestate cr <> ". "
-              <> renderPredicateArgued (crRelevantPredicate cr)
+              let gatedPreds = filterAdmissiblePredicates [crRelevantPredicate cr]
+              in case gatedPreds of
+                (p:_) -> intro <> " " <> crRestate cr <> ". " <> renderPredicateArgued p
+                [] -> ""
             Nothing -> ""
           fallback = if challengeResponseText /= ""
                        then challengeResponseText
@@ -1860,14 +1864,19 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         engagement = engageWithProposition runtimeGraph ctx prop
         genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
         genText = gsText genSurface
+        -- Commitment-aware context: reference prior positions on this topic
+        priorCommitments = case ssSemanticCommitments ss of
+          Just store -> take 2 (retrieve topic store)
+          Nothing -> []
+        commitmentRef = case priorCommitments of
+          (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
+          [] -> ""
     in if not (T.null genText)
        then
-         -- Avoid tautology: if genText already starts with the topic word
-         -- (e.g. "свобода предполагает..."), don't prepend "topic — ".
          let prefix = if T.isPrefixOf topicNom genText
                         then authorityText
                         else authorityText <> " " <> topicNom <> " — "
-         in prefix <> " " <> genText
+         in commitmentRef <> prefix <> " " <> genText
        else authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
 
   FT.DistinctionFrame left right criteria ->
@@ -1876,7 +1885,7 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         criteriaText = case criteria of
           [] -> "в одной рамке критериев"
           cs -> "по критерию " <> T.intercalate ", " (map (toNominative morph) cs)
-        mDistContent = lookupDistinctionContent left right
+        mDistContent = lookupDistinctionContent leftNom rightNom
     in "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
        <> renderDistinctionBody mDistContent leftNom rightNom morph
 
@@ -1891,8 +1900,16 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         challengeEngagement = engageWithProposition runtimeGraph ctx challengeProp
         genArgSurface = composeContextual morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph ctx challengeProp challengeEngagement
         genArgText = gsText genArgSurface
+        -- Commitment-aware defense: reference held positions
+        challengeTopic = ppSubject challengeProp
+        heldCommitments = case ssSemanticCommitments ss of
+          Just store -> take 2 (retrieve challengeTopic store)
+          Nothing -> []
+        defenseRef = case heldCommitments of
+          (p:_) -> "Я удерживаю позицию: " <> fcpStatement p <> ". "
+          [] -> ""
     in if not (T.null genArgText)
-         then genArgText
+         then defenseRef <> genArgText
          else case strength of
            FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
                     <> safeTarget <> " нужно проверить по явному критерию. "
@@ -1915,7 +1932,25 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
 
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic
-    in "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
+        fp = FieldProfile
+               (unFieldConfidence (fieldConfidence field))
+               (unCounterfactual (fieldCounterfactual field))
+               (unConsolidation (fieldConsolidation field))
+               (unResonance (fieldResonance field))
+        prop = parseProposition topic
+        ctx = dsContext (ssDialogue ss)
+        engagement = engageWithProposition runtimeGraph ctx prop
+        genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
+        genText = gsText genSurface
+        priorCommitments = case ssSemanticCommitments ss of
+          Just store -> take 1 (retrieve topic store)
+          Nothing -> []
+        commitmentRef = case priorCommitments of
+          (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
+          [] -> ""
+    in if not (T.null genText)
+         then commitmentRef <> "Когда я думаю о " <> topicNom <> ": " <> genText
+         else "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
 
   FT.LearnFrame topic depth ->
     let topicNom = toNominative morph topic
@@ -1966,30 +2001,16 @@ renderFrameAuthority FT.Known     = "Известно, что"
 renderFrameAuthority FT.Probable  = "Вероятно,"
 renderFrameAuthority FT.Uncertain = "Мне кажется,"
 
--- | Render definition body using content predicates from M4-001.
--- When predicates are available, renders substantive content.
--- When not available, falls back to generic definition text.
-renderDefinitionBody :: Maybe DefinitionContent -> Text -> MorphologyData -> Text
-renderDefinitionBody mDefContent topic morph =
-  let topicNom = toNominative morph topic
-  in case mDefContent of
-       Just dc | not (null (dcPredicates dc)) ->
-         let predicates = T.intercalate ". " (map renderPredicateArgued (dcPredicates dc))
-         in " — " <> predicates <> "."
-       _ -> case findNearestCoveredTopic topic of
-              Just sourceTopic -> case analogicalResponse topic sourceTopic of
-                Just analogText -> " — " <> analogText <> "."
-                Nothing -> " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
-              Nothing -> " — это рабочее определение. " <> topicNom <> " проявляется через устойчивую роль в контексте."
-
 -- | Render distinction body using content predicates from M4-001.
 -- When differentiators are available, renders substantive content.
 -- When not available, falls back to generic distinction text.
 renderDistinctionBody :: Maybe DistinctionContent -> Text -> Text -> MorphologyData -> Text
 renderDistinctionBody mDistContent leftNom rightNom _morph =
   case mDistContent of
-    Just dc | not (null (dcDifferentiators dc)) ->
-      let diffText = T.intercalate ". " (map spRu (dcDifferentiators dc))
+    Just dc | not (null gatedDiff) ->
+      let diffText = T.intercalate ". " (map spRu gatedDiff)
       in leftNom <> " и " <> rightNom <> " различаются: " <> diffText <> "."
     _ ->
       leftNom <> " и " <> rightNom <> " различаются по набору признаков. Без явной рамки сравнение остаётся зависимым от принятых допущений."
+  where
+    gatedDiff = filterAdmissiblePredicates (maybe [] dcDifferentiators mDistContent)

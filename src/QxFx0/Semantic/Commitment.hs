@@ -4,7 +4,6 @@ module QxFx0.Semantic.Commitment
   , quarantineObservation
   , promoteMatchingQuarantine
   , revise
-  , retract
   , contradict
   ) where
 
@@ -101,24 +100,6 @@ revise cid newPayload store =
           newEntry = LineageRevised ts newPayload
       in store
            { scsActive  = HashMap.insert cid (newPayload, ts) (scsActive store)
-           , scsLineage = HashMap.insert cid (maybe [newEntry] (++ [newEntry]) lineage) (scsLineage store)
-           }
-
--- | Mark a commitment as retracted.
-retract
-  :: CommitmentId
-  -> RetractionReason
-  -> TurnSeq
-  -> SemanticCommitmentStore
-  -> SemanticCommitmentStore
-retract cid reason ts store =
-  case HashMap.lookup cid (scsActive store) of
-    Nothing -> store
-    Just _  ->
-      let newEntry = LineageRetracted ts reason
-          lineage  = HashMap.lookup cid (scsLineage store)
-      in store
-           { scsActive  = HashMap.delete cid (scsActive store)
            , scsLineage = HashMap.insert cid (maybe [newEntry] (++ [newEntry]) lineage) (scsLineage store)
            }
 

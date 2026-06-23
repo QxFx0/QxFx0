@@ -180,10 +180,12 @@ jsonStringCharP = escaped <++ plain
     hexDigitP = digitToInt <$> satisfy isHexDigit
 
 extractSessionArgs :: Text -> [String] -> (Text, [String])
-extractSessionArgs defaultSid args = case args of
-  ("--session-id":sid:rest) | not (null sid) -> (T.pack sid, rest)
-  ("--session":sid:rest) | not (null sid)     -> (T.pack sid, rest)
-  _ -> (defaultSid, args)
+extractSessionArgs defaultSid args = go args []
+  where
+    go [] acc = (defaultSid, reverse acc)
+    go ("--session-id":sid:rest) acc | not (null sid) = (T.pack sid, reverse acc ++ rest)
+    go ("--session":sid:rest) acc | not (null sid) = (T.pack sid, reverse acc ++ rest)
+    go (x:rest) acc = go rest (x:acc)
 
 first :: (a -> b) -> Either a c -> Either b c
 first f value = case value of

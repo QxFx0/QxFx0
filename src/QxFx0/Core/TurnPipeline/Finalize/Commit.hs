@@ -240,8 +240,8 @@ attemptRollbackPersistedProjections pipelineIO commitPlan = do
         pipelineIO
         (TurnReqRollbackTurnProjections (fcpSessionId commitPlan) (ssTurnCount (fcpPreviousState commitPlan))))
   case rollbackAttempt of
-    Left _ ->
-      pure False
+    Left err ->
+      hPutStrLn stderr ("[rollback] projection rollback failed: " <> show err) >> pure False
     Right (TurnResRollbackTurnProjections (Right ())) ->
       pure True
     Right _ ->
@@ -255,8 +255,8 @@ attemptRollbackPersistedState pipelineIO expectedRevision commitPlan = do
         pipelineIO
         (TurnReqSaveState (fcpPreviousState commitPlan) (fcpSessionId commitPlan) expectedRevision Nothing))
   case rollbackAttempt of
-    Left _ ->
-      pure False
+    Left err ->
+      hPutStrLn stderr ("[rollback] state rollback failed: " <> show err) >> pure False
     Right (TurnResSaveState (Right _)) ->
       pure True
     Right _ ->

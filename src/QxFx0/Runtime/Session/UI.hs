@@ -10,6 +10,7 @@ module QxFx0.Runtime.Session.UI
   ) where
 
 import Control.Exception (SomeException, finally, try)
+import System.IO (hPutStrLn, stderr)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM

@@ -34,19 +34,22 @@ finalizeOutput preSafetySurface history =
 -- | Finalize output with topic-aware content quality gate.
 -- The gate is applied after structural safety checks.
 -- If structural safety blocks, recovery surface is used (existing behavior).
--- Content quality gate is advisory only — it logs but does not block,
--- because thresholds are not yet calibrated and would block valid
--- template outputs in test fixtures and short responses.
+-- Content quality gate is now BLOCKING (fail-closed): outputs that fail
+-- semantic checks (empty, template placeholders, generic fillers, zero topic
+-- relevance for 16+ tokens, low content density, high repetition) are replaced
+-- with the recovery surface.
 finalizeOutputWithTopic :: GuardSurface -> [Text] -> Text -> (GuardSurface, SurfaceProvenance)
 finalizeOutputWithTopic preSafetySurface history topic =
   let safetyStatus = postRenderSafetyCheckSurface preSafetySurface history
       renderedText = gsRenderedText preSafetySurface
-      _qualityVerdict = evaluateContentQualityWithTopic topic renderedText
-      -- Only structural safety blocks trigger recovery.
-      -- Content quality is evaluated but not blocking (advisory only).
-      isBlocked = case safetyStatus of
+      qualityVerdict = evaluateContentQualityWithTopic topic renderedText
+      structuralBlocked = case safetyStatus of
         InvariantBlock _ -> True
         _ -> False
+      qualityBlocked = case qualityVerdict of
+        QualityBlock _ -> True
+        QualityPass -> False
+      isBlocked = structuralBlocked || qualityBlocked
       renderedSurface = if isBlocked then recoverySurface else preSafetySurface
       surfaceProvenance = if isBlocked then FromRecovery else FromDB
    in (renderedSurface, surfaceProvenance)

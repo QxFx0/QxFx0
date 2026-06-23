@@ -215,7 +215,7 @@ loop session = do
     else do
       inputResult <- try T.getLine :: IO (Either IOException Text)
       case inputResult of
-        Left _ -> pure ()
+        Left e -> hPutStrLn stderr ("[engine] stdin read error: " <> show e)
         Right input ->
           let boundedInput = T.take maxInputLength input
           in case T.strip boundedInput of

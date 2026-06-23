@@ -37,7 +37,6 @@ module QxFx0.Semantic.Content.PathFinder
     -- * Composition
   , composeDefinition
   , defaultFieldProfile
-  , composeArgument
     -- * Verbalization
   , verbalizePath
   ) where
@@ -54,7 +53,7 @@ import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.AtomStore
 import QxFx0.Semantic.Content.Base (renderPredicateArgued, SemanticPredicate(..), PredicateRole(..), mkArguedPred)
-import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissible, validatePath, GateVerdict(..))
+import QxFx0.Semantic.Content.GeneratedPredicateGate (validatePath, GateVerdict(..))
 import QxFx0.Lexicon.Inflection (instrumentalForm)
 import QxFx0.Types (MorphologyData)
 -- ============================================================
@@ -425,120 +424,3 @@ stripPreposition text =
 verbalizePath :: PathProof -> Text
 verbalizePath proof =
   T.intercalate ". " (map verbalizeRelation (ppEdges proof))
-
--- ============================================================
--- Challenge argument composition
--- ============================================================
-
--- | Compose a challenge argument from the graph.
--- Finds the challenged relation, a counter-edge, and builds
--- an argued response. Falls back to "" if no suitable edges found.
-composeArgument :: MorphologyData -> FieldProfile -> AtomGraph -> Text -> Text -> GeneratedSurface
-composeArgument morph fp graph topic objectionText =
-  let topicAtom = AtomId topic
-      topicRels = graphRelationsFromAtom graph topicAtom
-  in if null topicRels
-       then GeneratedSurface "" [] [] 0
-       else
-          let -- 1. Find challenged edge: score by content overlap (NOT counter-type prior)
-              -- Counter types are excluded from challenged scoring to avoid
-              -- picking the defensive edge as the challenged one
-              scored = [ (scoreChallengedEdge objectionText r, r) | r <- topicRels
-                      , relType r `notElem` [RelContrastsWith, RelNotReducibleTo, RelIsNot, RelNegates] ]
-              challengedEdge = case [ r | (_, r) <- reverse (sortOn fst scored) ] of
-                (r:_) -> Just r
-                [] -> case topicRels of (r:_) -> Just r; [] -> Nothing
-              -- 2. Find counter-edge: prefer contrasting types
-              counterTypes = [RelLimitedBy, RelContrastsWith, RelNotReducibleTo, RelIsNot, RelNegates, RelDiffersFrom]
-              counterRels = [ r | r <- topicRels
-                                , relType r `elem` counterTypes
-                                , Just r /= challengedEdge
-                                ]
-              counterEdge = case counterRels of
-                (r:_) -> Just r
-                [] -> Nothing
-          in case (challengedEdge, counterEdge) of
-              (Just ch, Just ce) ->
-                let mainText = verbalizeRelation ce
-                    objAtom = relTo ce
-                    rationalePaths = selectTopPaths 1 fp graph objAtom 2
-                    excluded = [relRuOriginal ce, relRuOriginal ch]
-                    rationaleText = case [ verbalizePath (rpProof p)
-                                         | p <- rationalePaths
-                                         , not (any (\e -> relRuOriginal e `elem` excluded)
-                                                    (ppEdges (rpProof p)))
-                                         ] of
-                      (t:_) -> t
-                      [] -> ""
-                    counterText = verbalizeRelation ch
-                    synthesisText = buildSynthesis morph [ce] rationaleText
-                    fullText = mainText
-                      <> (if T.null rationaleText then "" else ". Потому что " <> rationaleText)
-                      <> ". Но " <> counterText
-                      <> (if T.null synthesisText then "" else ". Именно поэтому " <> synthesisText)
-                    allProofs = [ PathProof [ce] topic
-                                , PathProof [ch] topic
-                                ]
-                    allEdges = [ce, ch]
-                    allSources = map relSource allEdges
-                    -- Validate all edges through gates
-                    combinedProof = PathProof allEdges topic
-                    combinedVerdict = validatePath combinedProof
-                in if gvOverall combinedVerdict
-                     then GeneratedSurface fullText allProofs allSources (fromIntegral (length allProofs))
-                     else GeneratedSurface "" [] [] 0  -- gate failed, fall back to corpus
-              _ -> GeneratedSurface "" [] [] 0
-
--- | Score a challenged edge against objection text.
--- Uses content overlap + topic presence, but NOT counter-type prior.
--- Counter types are excluded from challenged scoring to avoid
--- picking the defensive edge as the challenged one.
-scoreChallengedEdge :: Text -> Relation -> Double
-scoreChallengedEdge objection rel =
-  let objLower = T.toLower objection
-      edgeLower = T.toLower (relRuOriginal rel)
-      edgeWords = T.words edgeLower
-      objWords = T.words objLower
-      overlap = length [ w | w <- edgeWords, w `elem` objWords || w `T.isInfixOf` objLower ]
-      overlapScore = fromIntegral overlap / fromIntegral (max 1 (length edgeWords))
-      topicWord = relTopic rel
-      topicInObj = topicWord `T.isInfixOf` objLower
-      topicBoost = if topicInObj then 0.4 else 0.0
-      -- Non-counter type prior: presupposes/requires/claims etc.
-      typePrior = case relType rel of
-        RelPresupposes -> 0.3
-        RelRequires    -> 0.3
-        RelClaims      -> 0.2
-        RelDenotes     -> 0.2
-        RelMeans       -> 0.2
-        RelPrescribes  -> 0.2
-        _              -> 0.1
-  in overlapScore * 0.4 + typePrior * 0.3 + topicBoost * 0.3
-
--- | Score an edge against objection text.
--- Combines: lemma overlap (weak signal) + relation-type prior (strong signal).
--- Relation types that are natural counters to reduction objections get a boost.
-scoreEdgeVsObjection :: Text -> Relation -> Double
-scoreEdgeVsObjection objection rel =
-  let objLower = T.toLower objection
-      edgeLower = T.toLower (relRuOriginal rel)
-      -- Lemma overlap: how many edge words appear in objection
-      edgeWords = T.words edgeLower
-      objWords = T.words objLower
-      overlap = length [ w | w <- edgeWords, w `elem` objWords || w `T.isInfixOf` objLower ]
-      overlapScore = fromIntegral overlap / fromIntegral (max 1 (length edgeWords))
-      -- Relation-type prior: certain types are natural counters to objections
-      typePrior = case relType rel of
-        RelLimitedBy      -> 0.5   -- "X ограничена Y" counters "X = just Y"
-        RelNotReducibleTo -> 0.7   -- "X не сводится к Y" directly counters reduction
-        RelContrastsWith  -> 0.4   -- "X контрастирует с Y"
-        RelDiffersFrom    -> 0.4   -- "X отличается от Y"
-        RelRequires       -> 0.3   -- "X требует Y" — adds constraint
-        RelPresupposes    -> 0.2   -- "X предполагает Y" — background
-        RelIsNot          -> 0.6   -- "X не является Y" — direct negation
-        _                 -> 0.1
-      -- Topic presence: if the edge's topic appears in objection, boost
-      topicWord = relTopic rel
-      topicInObj = topicWord `T.isInfixOf` objLower
-      topicBoost = if topicInObj then 0.3 else 0.0
-  in overlapScore * 0.3 + typePrior * 0.5 + topicBoost * 0.2

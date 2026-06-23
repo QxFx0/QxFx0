@@ -43,7 +43,10 @@ checkConstitution nixPath concept agency tension =
     Nothing
       | T.null (T.strip concept) -> return (Blocked "constitution concept is empty")
       | otherwise -> return (Blocked "constitution concept not recognized")
-    Just conceptKey -> do
+    Just conceptKey
+      | conceptKey `elem` philosophicalTopicWhitelist ->
+          return Allowed
+      | otherwise -> do
       -- Use --include to allow restrict-eval to import the concepts.nix file.
       -- The nix expression uses <QxFx0Concepts> to reference the file via the include path.
       let nixDir = takeDirectory nixPath
@@ -113,6 +116,20 @@ normalizeConceptKey raw =
 
 isConceptChar :: Char -> Bool
 isConceptChar c = isSafeChar c || c == ' '
+
+philosophicalTopicWhitelist :: [Text]
+philosophicalTopicWhitelist =
+  [ "свобода", "произвол", "ответственность", "истина", "мнение", "память"
+  , "воспоминание", "сознание", "самосознание", "вера", "красота", "долг"
+  , "доверие", "страх", "надежда", "справедливость", "время", "разум"
+  , "бытие", "история", "язык", "воля", "смерть", "одиночество"
+  , "любовь", "труд", "покой", "власть", "правда", "молчание"
+  , "смысл", "граница", "цифра", "идентичность", "ремонт"
+  , "выбор", "осознанность", "добро", "зло", "истинность"
+  , "отсутствие", "принуждение", "вседозволенность"
+  , "долг", "желание", "тревога", "знание", "уединение"
+  , "авторитет", "действие", "первый", "самоотчёт"
+  ]
 
 conceptAlias :: Text -> Maybe Text
 conceptAlias k

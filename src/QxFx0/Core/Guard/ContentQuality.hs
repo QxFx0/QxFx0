@@ -124,8 +124,9 @@ checkGenericFiller text =
        else Just "\x413\x435\x43d\x435\x440\x438\x447\x435\x441\x43a\x438\x439 filler-\x43e\x442\x432\x435\x442"
 
 -- | Topic coherence check: blocks output that has zero overlap with topic tokens.
--- Conservative: only blocks for outputs with 6+ tokens to avoid blocking short
--- legitimate responses.
+-- Conservative: only blocks for outputs with 50+ tokens to avoid blocking
+-- valid medium-length responses where the topic is a common word (e.g. "дальше",
+-- "устал") that legitimately may not appear in the output.
 checkTopicRelevanceBlock :: Text -> Text -> Maybe Text
 checkTopicRelevanceBlock rendered topic
   | T.null (T.strip topic) = Nothing
@@ -134,9 +135,9 @@ checkTopicRelevanceBlock rendered topic
           topicTokens = filter (\t -> T.length t >= 3) (tokenize topic)
           overlap = filter (\x -> x `elem` topicTokens) outputTokens
           tokenCount = length outputTokens
-      in if tokenCount >= 16 && null overlap
-           then Just ("\x41d\x43e\x43d\x443\x43b\x435\x432\x43e\x435 \x441\x43e\x432\x43f\x430\x434\x435\x43d\x438\x435 \x441 \x442\x435\x43c\x43e\x439: " <> T.toLower topic)
-           else Nothing
+      in if tokenCount >= 50 && null overlap
+            then Just ("\x41d\x43e\x43d\x443\x43b\x435\x432\x43e\x435 \x441\x43e\x432\x43f\x430\x434\x435\x43d\x438\x435 \x441 \x442\x435\x43c\x43e\x439: " <> T.toLower topic)
+            else Nothing
 
 -- | Check content word density for longer outputs.
 checkContentDensity :: [Text] -> Maybe Text

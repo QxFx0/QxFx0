@@ -22,6 +22,7 @@ import Network.HTTP.Client (HttpException)
 import qualified Network.HTTP.Client as HTTPClient
 import qualified Network.HTTP.Simple as HTTP
 import System.Environment (lookupEnv)
+import System.IO (hPutStrLn, stderr)
 
 data MorphRemoteToken = MorphRemoteToken
   { mrtWord   :: !Text
@@ -100,14 +101,14 @@ checkMorphHealth = do
     Just url -> do
       requestResult <- try @HttpException (HTTP.parseRequest (url <> "/health"))
       case requestResult of
-        Left _ -> pure False
+        Left e -> hPutStrLn stderr ("[morph_health] parseRequest failed: " <> show e) >> pure False
         Right baseRequest -> do
           let request = HTTP.setRequestResponseTimeout (HTTPClient.responseTimeoutMicro 2000000) $
                         HTTP.setRequestMethod "GET" baseRequest
           responseResult <- try @HttpException (HTTP.httpBS request)
-          pure $ case responseResult of
-            Right response -> successfulStatus response
-            Left _ -> False
+          case responseResult of
+            Right response -> pure (successfulStatus response)
+            Left e -> hPutStrLn stderr ("[morph_health] httpBS failed: " <> show e) >> pure False
 
 successfulStatus :: HTTP.Response a -> Bool
 successfulStatus response =

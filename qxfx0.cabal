@@ -110,7 +110,6 @@ library
     QxFx0.Self.Perspective
     QxFx0.Self.AdaptivePosition
     QxFx0.Self.FamilyTargets
-    QxFx0.Self.MeaningDirective
     QxFx0.Learning.Need
     QxFx0.Learning.Tool
     QxFx0.Learning.Calibration
