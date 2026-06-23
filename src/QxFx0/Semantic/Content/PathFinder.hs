@@ -249,7 +249,7 @@ rankPaths = sortOn (\rp ->
   where
     rationaleBonus rp =
       case ppEdges (rpProof rp) of
-        (e:_) -> if isJust (relRationale e) then 0.5 else 0.0
+        (e:_) -> if isJust (relRationale e) then 2.0 else 0.0
         [] -> 0.0
 
 -- | Select top-N paths after ranking and gate filtering.
