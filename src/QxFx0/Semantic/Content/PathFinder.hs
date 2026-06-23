@@ -243,7 +243,7 @@ scorePath fp edges =
 rankPaths :: [RankedPath] -> [RankedPath]
 rankPaths = sortOn (\rp ->
   ( Down (psTotal (rpScore rp) + rationaleBonus rp)
-  , relRuOriginal (head (ppEdges (rpProof rp)))
+  , case ppEdges (rpProof rp) of (e:_) -> relRuOriginal e; [] -> ""
   ))
   where
     rationaleBonus rp =
@@ -335,7 +335,7 @@ composeOneWithRationaleDedup fp graph topic usedTexts rp =
                                       | p <- selectTopPaths 5 fp graph topic 2
                                       , let firstEdge = case ppEdges (rpProof p) of (e:_) -> Just e; [] -> Nothing
                                       , firstEdge /= Nothing
-                                      , Just (head mainEdges) /= firstEdge
+                                      , case mainEdges of (m:_) -> Just m /= firstEdge; [] -> False
                                       , not (any (\e -> relRuOriginal e `elem` excluded)
                                                  (ppEdges (rpProof p)))
                                       ] of

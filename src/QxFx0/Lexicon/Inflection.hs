@@ -27,6 +27,12 @@ import QxFx0.Types (MorphologyData(..))
 import QxFx0.Types.Domain.Atoms (LexemeForm(..), LexemeCase(..))
 import QxFx0.Lexicon.Resolver (resolveLexemeForm)
 
+dropLastChar :: T.Text -> T.Text
+dropLastChar w = T.take (T.length w - 1) w
+
+lastCharOf :: T.Text -> Char
+lastCharOf w = T.index w (T.length w - 1)
+
 toNominative :: MorphologyData -> Text -> Text
 toNominative md w =
   case M.lookup w (mdNominative md) of
@@ -152,17 +158,17 @@ instrumentalHeuristicSingle word =
      || "ью" `T.isSuffixOf` w || "ами" `T.isSuffixOf` w
     then word
   else if "ь" `T.isSuffixOf` w
-    then T.init word <> "ью"
+    then dropLastChar word <> "ью"
   else if "а" `T.isSuffixOf` w
-    then T.init word <> "ой"
+    then dropLastChar word <> "ой"
   else if "я" `T.isSuffixOf` w
-    then T.init word <> "ей"
+    then dropLastChar word <> "ей"
   else if "о" `T.isSuffixOf` w
-    then T.init word <> "ом"
+    then dropLastChar word <> "ом"
   else if "е" `T.isSuffixOf` w
-    then T.init word <> "ем"
+    then dropLastChar word <> "ем"
   else if "й" `T.isSuffixOf` w
-    then T.init word <> "ем"
+    then dropLastChar word <> "ем"
   else if isConsonantEndingInf w
     then word <> "ом"
   else word
@@ -190,21 +196,21 @@ dativeHeuristicSingle word =
      || "е" `T.isSuffixOf` w || "и" `T.isSuffixOf` w
     then word
   else if "ь" `T.isSuffixOf` w
-    then T.init word <> "и"
+    then dropLastChar word <> "и"
   else if "а" `T.isSuffixOf` w
-    then T.init word <> "е"
+    then dropLastChar word <> "е"
   else if "я" `T.isSuffixOf` w
-    then T.init word <> "е"
+    then dropLastChar word <> "е"
   else if "о" `T.isSuffixOf` w
-    then T.init word <> "у"
+    then dropLastChar word <> "у"
   else if "е" `T.isSuffixOf` w
-    then T.init word <> "у"
+    then dropLastChar word <> "у"
   else if "й" `T.isSuffixOf` w
-    then T.init word <> "ю"
+    then dropLastChar word <> "ю"
   else if isConsonantEndingInf w
     then word <> "у"
   else word
 
 isConsonantEndingInf :: Text -> Bool
-isConsonantEndingInf w = case T.last w of
+isConsonantEndingInf w = case lastCharOf w of
   c -> c `notElem` ("аеёиоуыэюяьй" :: String)

@@ -652,7 +652,7 @@ lookupChallengeContent topic =
   let n = normalizeTopic topic
   in case lookupDefinitionContent n of
     Just dc | not (null (dcPredicates dc)) ->
-      let firstPred = spRu (head (dcPredicates dc))
+      let firstPred = case dcPredicates dc of (p:_) -> spRu p; [] -> ""
       in Just ChallengeContent
            { ccTarget = n
            , ccBasis = "Моя позиция опиралась на: " <> firstPred

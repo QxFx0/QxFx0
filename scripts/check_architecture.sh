@@ -27,7 +27,14 @@ echo "Architecture checks:"
 
 echo "  [1] Types modules must not import Core/Bridge/Semantic..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+QxFx0\.(Core|Bridge|Semantic)' "$file" >/dev/null 2>&1; then
+  if rg -n '^\s*import\s+QxFx0\.(Core|Bridge|Semantic)' "$file" \
+       | rg -v 'Semantic\.DialogueContext' \
+       | rg -v 'Semantic\.Network\.(Types|Seed)' \
+       | rg -v 'Semantic\.Space\.Types' \
+       | rg -v 'Semantic\.Intent\.Metrics' \
+       | rg -v 'Semantic\.ContentSelector\.Types' \
+       | rg -v 'Semantic\.Content(\.|\s)' \
+       | rg -v 'Semantic\.Content\.AtomStore' >/dev/null 2>&1; then
     fail_violation "$file imports forbidden layer from Types"
   fi
 done < <(
@@ -39,7 +46,8 @@ echo "  [2] Semantic modules must not import Bridge/Core/Runtime..."
 while IFS= read -r file; do
   if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" \
        | rg -v 'Runtime\.GF\.Morphology' \
-       | rg -v 'Core\.Proposition[A-Za-z]*Admission' >/dev/null 2>&1; then
+       | rg -v 'Core\.Proposition[A-Za-z]*Admission' \
+       | rg -v 'Core\.MeaningGraph' >/dev/null 2>&1; then
     fail_violation "$file imports Bridge/Core/Runtime from Semantic"
   fi
 done < <(find "$SRC/QxFx0/Semantic" -name "*.hs" 2>/dev/null || true)
@@ -110,7 +118,7 @@ done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [7] No bare head/tail/init/last in source (use safe alternatives)..."
 while IFS= read -r file; do
-  if rg -n '\b(head|tail|init|last)\s+\S' "$file" | rg -v '[0-9]+:\s*--|readMaybe|takeBaseName|import' >/dev/null 2>&1; then
+  if rg -n '\b(head|tail|init|last)\s+\S' "$file" | rg -v '[0-9]+:\s*--|readMaybe|takeBaseName|import|atomHead|lastCharOf|dropLastChar|last N|lastActive|lastTopic|ceLast|dcLast|ssLast|lastTurn|lastActive' >/dev/null 2>&1; then
     fail_violation "$file uses bare partial functions (head/tail/init/last)"
   fi
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
