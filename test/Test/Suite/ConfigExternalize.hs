@@ -81,7 +81,7 @@ loaderTests =
 
 -- | Verify that the JSON-generated defaults are byte-identical to the
 -- builtin values when the config file is missing.
-externalizeAbsentTest :: (Eq a, Show a, ToJSON a, FromJSON a) => String -> a -> FilePath -> Test
+externalizeAbsentTest :: (Eq a, Show a, FromJSON a) => String -> a -> FilePath -> Test
 externalizeAbsentTest name builtin path =
   TestLabel ("externalize absent " <> name) $
     TestCase $ do
