@@ -175,6 +175,9 @@ substrateEdge = Relation
   , relEnOriginal = "test_topic presupposes test_object"
   , relSource = SubstrateExtractedRaw
   , relTopic = "тест_топик"
+  , relRationale = Nothing
+  , relCounter = Nothing
+  , relSynthesis = Nothing
   }
 
 -- | A self-referential relation -- fails G2 (Non-tautology).
@@ -190,6 +193,9 @@ tautologicalEdge = Relation
   , relEnOriginal = "test_topic presupposes test_object"
   , relSource = SeedFromPredicate
   , relTopic = "тест_топик"
+  , relRationale = Nothing
+  , relCounter = Nothing
+  , relSynthesis = Nothing
   }
 
 -- | Build a graph containing only invalid edges.

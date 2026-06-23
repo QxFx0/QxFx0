@@ -45,7 +45,7 @@ module QxFx0.Semantic.Content.PathFinder
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.List (sortOn, sortBy, groupBy, nubBy)
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe, isJust, isNothing)
 import Data.Ord (comparing, Down(..))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -240,10 +240,21 @@ scorePath fp edges =
 
 -- | Rank paths by score (highest first). Deterministic: ties broken by
 -- the first edge's original predicate text (alphabetical).
+-- Paths with relRationale get a bonus (they have real argumentation).
 rankPaths :: [RankedPath] -> [RankedPath]
-rankPaths = sortOn (\rp -> (Down (psTotal (rpScore rp)), relRuOriginal (head (ppEdges (rpProof rp)))))
+rankPaths = sortOn (\rp ->
+  ( Down (psTotal (rpScore rp) + rationaleBonus rp)
+  , relRuOriginal (head (ppEdges (rpProof rp)))
+  ))
+  where
+    rationaleBonus rp =
+      case ppEdges (rpProof rp) of
+        (e:_) -> if isJust (relRationale e) then 0.5 else 0.0
+        [] -> 0.0
 
 -- | Select top-N paths after ranking and gate filtering.
+-- Prioritizes relations with relRationale (real argumentation) over
+-- bare relations (no rationale = no "Потому что" = weaker answer).
 selectTopPaths :: Int -> FieldProfile -> AtomGraph -> AtomId -> Int -> [RankedPath]
 selectTopPaths n fp graph start maxLen =
   take n

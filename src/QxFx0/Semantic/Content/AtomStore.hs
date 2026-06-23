@@ -177,6 +177,9 @@ data Relation = Relation
   , relEnOriginal :: !Text          -- English original
   , relSource     :: !RelationSource
   , relTopic      :: !Text          -- topic this relation belongs to
+  , relRationale  :: !(Maybe Text)  -- "потому что без выбора действие не отличается от рефлекса"
+  , relCounter    :: !(Maybe Text)  -- "но не любой выбор свободен"
+  , relSynthesis  :: !(Maybe Text)  -- "именно поэтому свобода требует осознанности"
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -653,26 +656,43 @@ relationStore =
   -- свобода
   [ rel "свобода" "выбор" RelPresupposes CaseAccusative "возможность выбора"
       "свобода предполагает возможность выбора" "freedom presupposes the possibility of choice"
+      `withRationale` "без выбора действие не отличается от рефлекса"
+      `withCounter` "не любой выбор свободен: выбор под принуждением не делает действие свободным"
+      `withSynthesis` "свобода требует не только возможности, но и осознанности выбора"
   , rel "свобода" "ответственность" RelLimitedBy CaseInstrumental "ответственностью"
       "свобода ограничена ответственностью" "freedom is limited by responsibility"
+      `withRationale` "без ответственности свобода превращается в произвол"
+      `withCounter` "не любое ограничение убивает свободу — только произвольное"
+      `withSynthesis` "ответственность не враг свободы, а условие её осмысленности"
 
   -- произвол
   , rel "произвол" "рамка_критериев" RelNegates CaseAccusative "рамку критериев"
       "произвол отрицает рамку критериев" "arbitrariness denies the frame of criteria"
+      `withRationale` "произвол не нуждается в оправдании — он утверждает себя фактом силы"
   , rel "произвол" "доверие_субъектов" RelDestroys CaseAccusative "доверие между субъектами"
       "произвол разрушает доверие между субъектами" "arbitrariness destroys trust between subjects"
 
   -- ответственность
   , rel "ответственность" "осознание_последствий" RelRequires CaseGenitive "осознания последствий"
       "ответственность требует осознания последствий" "responsibility requires awareness of consequences"
+      `withRationale` "нельзя отвечать за то, чего не понимаешь: ответственность без осознания — имитация"
+      `withCounter` "осознание последствий не гарантирует правильного выбора — оно лишь исключает неведение как оправдание"
+      `withSynthesis` "ответственность начинается не с действия, а с готовности понимать, к чему действие ведёт"
   , rel "ответственность" "обязательства_перед_другими" RelRelatedTo CaseInstrumental "с обязательствами перед другими"
       "ответственность связана с обязательствами перед другими" "responsibility is linked to obligations toward others"
+      `withRationale` "свобода одного кончается там, где начинается свобода другого"
+      `withSynthesis` "зрелая ответственность — это баланс, а не жертва"
 
   -- истина
   , rel "истина" "соответствие_реальности" RelClaims CaseAccusative "на соответствие реальности"
       "истина претендует на соответствие реальности" "truth claims correspondence with reality"
+      `withRationale` "истина, в отличие от мнения, не зависит от того, кто её высказывает"
+      `withCounter` "доступ к реальности всегда опосредован наблюдателем"
+      `withSynthesis` "истина — не обладание, а дисциплина проверки"
   , rel "истина" "воспроизводимость" RelVerifiedBy CaseAccusative "через воспроизводимость"
       "истина проверяется через воспроизводимость" "truth is verified through reproducibility"
+      `withRationale` "единичное совпадение может быть случайностью, а повторяемое — закономерностью"
+      `withCounter` "воспроизводимость не гарантирует истину — она лишь отсеивает то, что точно ею не является"
 
   -- мнение
   , rel "мнение" "позиция_субъекта" RelExpresses CaseAccusative "позицию субъекта"
@@ -702,8 +722,12 @@ relationStore =
   , rel "сознание" "аспект_первого_лица" RelIncludes CaseAccusative "аспект от первого лица"
       "сознание имеет аспект от первого лица" "consciousness has a first-person aspect"
       `withVerb` "имеет"
+      `withRationale` "сознание — единственное, что дано нам непосредственно, без посредника"
+      `withCounter` "перспектива от первого лица не гарантирует достоверности — она гарантирует только неотменимость переживания"
+      `withSynthesis` "сознание — не окно в реальность, а условие, при котором реальность может быть увидена"
   , rel "сознание" "способность_к_самоотчёту" RelIncludes CaseAccusative "способность к самоотчёту"
       "сознание включает способность к самоотчёту" "consciousness includes the capacity for self-report"
+      `withRationale` "существо, не способное сказать «я чувствую это», может реагировать — но не осознавать"
   , rel "сознание" "восприятие_и_рефлексия" RelUnifies CaseAccusative "восприятие и рефлексию"
       "сознание объединяет восприятие и рефлексию" "consciousness unifies perception and reflection"
 
@@ -719,6 +743,9 @@ relationStore =
   -- вера
   , rel "вера" "принятие_без_доказательства" RelRequires CaseGenitive "принятия без полного доказательства"
       "вера требует принятия без полного доказательства" "faith requires acceptance without full proof"
+      `withRationale` "если бы доказательство было полным, это было бы знание, а не вера"
+      `withCounter` "принятие без доказательств не означает принятия вопреки доказательствам"
+      `withSynthesis` "вера — не замена знанию, а решение действовать в условиях неполноты"
   , rel "вера" "доверие_к_источнику" RelRelatedTo CaseInstrumental "с доверием к источнику или опыту"
       "вера связана с доверием к источнику или опыту" "faith is connected to trust in a source or experience"
   , rel "вера" "доверие_к_непроверяемому" RelRelatedTo CaseInstrumental "с доверием к тому, что не может быть проверено"
@@ -749,10 +776,15 @@ relationStore =
   -- страх
   , rel "страх" "угроза_целостности" RelSignals CasePrepositional "об угрозе целостности"
       "страх сигнализирует об угрозе целостности" "fear signals a threat to integrity"
+      `withRationale` "страх — не слабость, а механизм: мы не боимся того, что нам безразлично"
+      `withCounter` "не любая угроза реальна: страх может быть вызван воображением"
+      `withSynthesis` "страх требует различения: сигнал — не приговор, а повод для проверки"
   , rel "страх" "угроза_целостности_субъекта" RelSignals CasePrepositional "об угрозе целостности субъекта"
       "страх сигнализирует об угрозе целостности субъекта" "fear signals a threat to the subject's integrity"
   , rel "страх" "то_что_имеет_значение" RelPointsTo CaseAccusative "на то, что имеет значение"
       "страх указывает на то, что имеет значение" "fear points to what matters"
+      `withRationale` "страх — обратная сторона заботы: мы боимся потерять то, что для нас важно"
+      `withSynthesis` "мужество — не отсутствие страха, а способность действовать несмотря на него"
   , rel "страх" "действие_к_цели" RelCanBe CaseInstrumental "парализовать действие или мобилизовать его"
       "страх может парализовать действие или мобилизовать его" "fear can paralyze action or mobilize it"
       `withVerb` "может"
@@ -2195,8 +2227,8 @@ relationStore =
   ]
   where
     rel fromId toId rt oc objText ru en =
-      relV fromId toId rt oc objText Nothing ru en
-    relV fromId toId rt oc objText mVerb ru en =
+      relV fromId toId rt oc objText Nothing ru en Nothing Nothing Nothing
+    relV fromId toId rt oc objText mVerb ru en mRat mCntr mSyn =
       Relation
         { relFrom = AtomId fromId
         , relTo = AtomId toId
@@ -2208,8 +2240,14 @@ relationStore =
         , relEnOriginal = en
         , relSource = SeedFromPredicate
         , relTopic = fromId
+        , relRationale = mRat
+        , relCounter = mCntr
+        , relSynthesis = mSyn
         }
     withVerb r v = r { relVerbText = Just v }
+    withRationale r rat = r { relRationale = Just rat }
+    withCounter r cntr = r { relCounter = Just cntr }
+    withSynthesis r syn = r { relSynthesis = Just syn }
 
 -- ============================================================
 -- Lookup helpers
@@ -2246,9 +2284,28 @@ allAtomIds = M.keys atomStore
 -- | Verbalize a relation for generative output.
 -- Uses relObjectText (which contains correct grammatical case + prepositions)
 -- rather than atomDisplay (which is nominative only).
--- This produces grammatically correct text for all seed + inter-topic edges.
+-- If relRationale/relCounter/relSynthesis are present, appends them
+-- with appropriate connectors ("Потому что", "Но", "Именно поэтому").
+-- Only uses "Потому что" when relRationale exists — no fake causality.
 verbalizeRelation :: Relation -> Text
 verbalizeRelation r =
+  core <> rationaleText <> counterText <> synthesisText
+  where
+    core = verbalizeRelationCore r
+    rationaleText = case relRationale r of
+      Just rat -> ". Потому что " <> rat
+      Nothing  -> ""
+    counterText = case relCounter r of
+      Just cntr -> ". Но " <> cntr
+      Nothing   -> ""
+    synthesisText = case relSynthesis r of
+      Just syn -> ". Именно поэтому " <> syn
+      Nothing  -> ""
+
+-- | Verbalize only the core predicate (no rationale/counter/synthesis).
+-- Used for round-trip checks and chain links.
+verbalizeRelationCore :: Relation -> Text
+verbalizeRelationCore r =
   case relVerbText r of
     Just ""  -> subject <> " " <> relObjectText r
     Just vt  -> subject <> " " <> vt <> " " <> relObjectText r
@@ -2260,6 +2317,7 @@ verbalizeRelation r =
     verbPhrase = verbForType (relType r)
 
 -- | Verbalize using stored objectText (legacy round-trip path).
+-- Uses core only (no rationale) for round-trip parity.
 verbalizeRelationStored :: Relation -> Text
 verbalizeRelationStored r =
   case relVerbText r of

@@ -296,6 +296,9 @@ promoteToRelation cand =
        , relEnOriginal = ""  -- no English for substrate-extracted
        , relSource = PromotedSubstrate
        , relTopic = topic
+       , relRationale = Nothing
+       , relCounter = Nothing
+       , relSynthesis = Nothing
        }
 
 -- | Promote all admitted candidates to relations.

@@ -156,6 +156,9 @@ parseLLMRelations topic responseText =
            , relEnOriginal = ""
            , relSource = SeedFromPredicate  -- will be overridden to LLMDiscovered by caller
            , relTopic = T.toLower topic
+           , relRationale = Nothing
+           , relCounter = Nothing
+           , relSynthesis = Nothing
            }
 
     parseRelType :: Text -> RelationType

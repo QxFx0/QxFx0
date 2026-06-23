@@ -39,6 +39,9 @@ tautologicalProof = PathProof
       , relEnOriginal = "freedom is freedom"
       , relSource = SeedFromPredicate
       , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
       }
   ] "свобода"
 
@@ -56,6 +59,9 @@ rawSubstrateProof = PathProof
       , relEnOriginal = "freedom presupposes choice"
       , relSource = SubstrateExtractedRaw
       , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
       }
   ] "свобода"
 

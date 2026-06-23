@@ -213,6 +213,9 @@ gateEnforcementTests = TestList
             , relEnOriginal = ""
             , relSource = SubstrateExtractedRaw
             , relTopic = "свобода"
+            , relRationale = Nothing
+            , relCounter = Nothing
+            , relSynthesis = Nothing
             }
           proof = PathProof [rel] "свобода"
           g4 = gateSourceWhitelist proof
