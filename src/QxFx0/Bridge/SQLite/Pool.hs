@@ -75,6 +75,7 @@ withDB path action = do
           (do
             qxfx0Result <- tryQxFx0 $ do
               execOrThrow db "PRAGMA journal_mode=WAL;"
+              execOrThrow db "PRAGMA busy_timeout=5000;"
               execOrThrow db "PRAGMA foreign_keys=ON;"
               action db
             case qxfx0Result of
@@ -154,6 +155,7 @@ openInitializedConnection path = do
     Right db ->
       (do
           execOrThrow db "PRAGMA journal_mode=WAL;"
+          execOrThrow db "PRAGMA busy_timeout=5000;"
           execOrThrow db "PRAGMA synchronous=NORMAL;"
           execOrThrow db "PRAGMA foreign_keys=ON;"
           pure db)
