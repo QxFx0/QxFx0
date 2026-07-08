@@ -4,6 +4,7 @@ module QxFx0.Semantic.Network
   ( module QxFx0.Semantic.Network.Types
   , buildSemanticNetwork
   , mergeSemanticNetworks
+  , mergeSemanticNetworksWithProvenance
   , activate
   , activateWithField
   , activateTopic
@@ -50,15 +51,34 @@ buildSemanticNetwork mg =
     }
 
 mergeSemanticNetworks :: SemanticNetwork -> SemanticNetwork -> SemanticNetwork
-mergeSemanticNetworks base update =
+mergeSemanticNetworks = mergeSemanticNetworksWithProvenance
+
+mergeSemanticNetworksWithProvenance :: SemanticNetwork -> SemanticNetwork -> SemanticNetwork
+mergeSemanticNetworksWithProvenance base update =
   SemanticNetwork
     { snNodes = S.union (snNodes base) (snNodes update)
-    , snEdges = M.union (snEdges update) (snEdges base)
+    , snEdges = M.unionWith resolveEdge (snEdges base) (snEdges update)
     , snActivation = M.empty
     , snDecayRate = snDecayRate base
     , snMaxHops = snMaxHops base
     , snActivationLog = Seq.empty
     }
+  where
+    resolveEdge baseEdge updateEdge =
+      case (isAuthoritative baseEdge, isAuthoritative updateEdge) of
+        (True, False) -> baseEdge
+        (False, True) -> updateEdge
+        _ ->
+          case compare (seConfidence baseEdge) (seConfidence updateEdge) of
+            GT -> baseEdge
+            LT -> updateEdge
+            EQ -> updateEdge
+
+    isAuthoritative e = case seProvenance e of
+      ProvenanceCurated  -> True
+      ProvenanceIngested -> True
+      ProvenanceCorpus   -> False
+      ProvenanceSubstrate -> False
 
 activate :: Text -> SemanticNetwork -> SemanticNetwork
 activate = activateWithField neutralField

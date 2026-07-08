@@ -9,6 +9,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Text (Text)
 import qualified Data.Text as T
 import Test.HUnit
 
@@ -219,4 +220,46 @@ semanticNetworkTests =
           legacyAct = snActivation (activate "seed" sn)
           explicitAct = snActivation (activateWithField neutralField "seed" sn)
       assertEqual "activate should match activateWithField neutralField" legacyAct explicitAct
+
+  , TestLabel "mergeProvenanceAuthoritativeWinsOverDerived" $ TestCase $ do
+      let baseEdge = testEdge "a" "b" ProvenanceCorpus 1.0
+          updateEdge = testEdge "a" "b" ProvenanceCurated 0.1
+          base = snWithEdge ("a", "b") baseEdge
+          update = snWithEdge ("a", "b") updateEdge
+          merged = mergeSemanticNetworks base update
+          Just winner = M.lookup ("a", "b") (snEdges merged)
+      assertEqual "authoritative edge wins over derived edge regardless of confidence" ProvenanceCurated (seProvenance winner)
+
+  , TestLabel "mergeProvenanceHigherConfidenceWinsWithinTier" $ TestCase $ do
+      let baseEdge = testEdge "a" "b" ProvenanceCurated 0.5
+          updateEdge = testEdge "a" "b" ProvenanceIngested 0.9
+          base = snWithEdge ("a", "b") baseEdge
+          update = snWithEdge ("a", "b") updateEdge
+          merged = mergeSemanticNetworks base update
+          Just winner = M.lookup ("a", "b") (snEdges merged)
+      assertEqual "higher-confidence authoritative edge wins" ProvenanceIngested (seProvenance winner)
+
+  , TestLabel "mergeProvenanceUpdateWinsOnTie" $ TestCase $ do
+      let baseEdge = (testEdge "a" "b" ProvenanceCorpus 0.7) { seWeight = 0.3 }
+          updateEdge = (testEdge "a" "b" ProvenanceCorpus 0.7) { seWeight = 0.8 }
+          base = snWithEdge ("a", "b") baseEdge
+          update = snWithEdge ("a", "b") updateEdge
+          merged = mergeSemanticNetworks base update
+          Just winner = M.lookup ("a", "b") (snEdges merged)
+      assertEqual "update edge wins when tier and confidence are equal" 0.8 (seWeight winner)
   ]
+  where
+    testEdge :: Text -> Text -> EdgeProvenance -> Double -> SemanticEdge
+    testEdge from to prov conf =
+      SemanticEdge from to 0.5 1 ExplicitEdge Nothing Nothing Nothing Nothing Nothing conf prov
+
+    snWithEdge :: (Text, Text) -> SemanticEdge -> SemanticNetwork
+    snWithEdge key edge =
+      SemanticNetwork
+        { snNodes = S.fromList [seFrom edge, seTo edge]
+        , snEdges = M.singleton key edge
+        , snActivation = M.empty
+        , snDecayRate = 0.5
+        , snMaxHops = 3
+        , snActivationLog = Seq.empty
+        }
