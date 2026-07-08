@@ -1,0 +1,336 @@
+{"name":"философия","category":"Philosophical","parent":"","depth":0}
+{"name":"психология","category":"Psychological","parent":"","depth":0}
+{"name":"социум","category":"Social","parent":"","depth":0}
+{"name":"физическое","category":"Physical","parent":"","depth":0}
+{"name":"общее","category":"General","parent":"","depth":0}
+{"name":"онтология","category":"Philosophical","parent":"философия","depth":1}
+{"name":"эпистемология","category":"Philosophical","parent":"философия","depth":1}
+{"name":"аксиология","category":"Philosophical","parent":"философия","depth":1}
+{"name":"эстетика","category":"Philosophical","parent":"философия","depth":1}
+{"name":"познание","category":"Psychological","parent":"психология","depth":1}
+{"name":"состояние","category":"Psychological","parent":"психология","depth":1}
+{"name":"волевое_начало","category":"Psychological","parent":"психология","depth":1}
+{"name":"отношения","category":"Social","parent":"социум","depth":1}
+{"name":"норма","category":"Social","parent":"социум","depth":1}
+{"name":"политическое","category":"Social","parent":"социум","depth":1}
+{"name":"деятельность","category":"Social","parent":"социум","depth":1}
+{"name":"коллектив","category":"Social","parent":"социум","depth":1}
+{"name":"материя","category":"Physical","parent":"физическое","depth":1}
+{"name":"энергетическое","category":"Physical","parent":"физическое","depth":1}
+{"name":"знак","category":"General","parent":"общее","depth":1}
+{"name":"граничность","category":"General","parent":"общее","depth":1}
+{"name":"свобода","category":"Philosophical","parent":"аксиология","depth":2}
+{"name":"произвол","category":"Philosophical","parent":"аксиология","depth":2}
+{"name":"ответственность","category":"Social","parent":"норма","depth":2}
+{"name":"истина","category":"Philosophical","parent":"эпистемология","depth":2}
+{"name":"мнение","category":"Psychological","parent":"познание","depth":2}
+{"name":"память","category":"Psychological","parent":"познание","depth":2}
+{"name":"воспоминание","category":"Psychological","parent":"познание","depth":2}
+{"name":"сознание","category":"Psychological","parent":"познание","depth":2}
+{"name":"самосознание","category":"Psychological","parent":"познание","depth":2}
+{"name":"вера","category":"Psychological","parent":"состояние","depth":2}
+{"name":"красота","category":"Philosophical","parent":"эстетика","depth":2}
+{"name":"долг","category":"Social","parent":"норма","depth":2}
+{"name":"доверие","category":"Social","parent":"отношения","depth":2}
+{"name":"страх","category":"Psychological","parent":"состояние","depth":2}
+{"name":"надежда","category":"Psychological","parent":"состояние","depth":2}
+{"name":"справедливость","category":"Social","parent":"норма","depth":2}
+{"name":"время","category":"Physical","parent":"физическое","depth":1}
+{"name":"разум","category":"Psychological","parent":"познание","depth":2}
+{"name":"бытие","category":"Philosophical","parent":"онтология","depth":2}
+{"name":"история","category":"Social","parent":"коллектив","depth":2}
+{"name":"язык","category":"General","parent":"знак","depth":2}
+{"name":"воля","category":"Psychological","parent":"волевое_начало","depth":2}
+{"name":"смерть","category":"Philosophical","parent":"онтология","depth":2}
+{"name":"одиночество","category":"Psychological","parent":"состояние","depth":2}
+{"name":"любовь","category":"Social","parent":"отношения","depth":2}
+{"name":"труд","category":"Social","parent":"деятельность","depth":2}
+{"name":"покой","category":"Psychological","parent":"состояние","depth":2}
+{"name":"власть","category":"Social","parent":"политическое","depth":2}
+{"name":"правда","category":"Philosophical","parent":"эпистемология","depth":2}
+{"name":"молчание","category":"General","parent":"знак","depth":2}
+{"name":"смысл","category":"Philosophical","parent":"онтология","depth":2}
+{"name":"граница","category":"General","parent":"граничность","depth":2}
+{"name":"цифра","category":"General","parent":"знак","depth":2}
+{"name":"идентичность","category":"Psychological","parent":"познание","depth":2}
+{"name":"ремонт","category":"General","parent":"граничность","depth":2}
+{"name":"психика","category":"Psychological","parent":"психология","depth":1}
+{"name":"эмоция","category":"Psychological","parent":"состояние","depth":2}
+{"name":"доказательство","category":"Philosophical","parent":"эпистемология","depth":2}
+{"name":"эксперимент","category":"Physical","parent":"физическое","depth":1}
+{"name":"нейрон","category":"Physical","parent":"материя","depth":2}
+{"name":"логика","category":"Philosophical","parent":"эпистемология","depth":2}
+{"name":"аксиома","category":"Philosophical","parent":"эпистемология","depth":2}
+{"name":"закон","category":"Social","parent":"норма","depth":2}
+{"name":"право","category":"Social","parent":"норма","depth":2}
+{"name":"договор","category":"Social","parent":"отношения","depth":2}
+{"name":"искусство","category":"Philosophical","parent":"эстетика","depth":2}
+{"name":"музыка","category":"Philosophical","parent":"искусство","depth":3}
+{"name":"поэзия","category":"Philosophical","parent":"искусство","depth":3}
+{"name":"государство","category":"Social","parent":"политическое","depth":2}
+{"name":"революция","category":"Social","parent":"политическое","depth":2}
+{"name":"нация","category":"Social","parent":"коллектив","depth":2}
+{"name":"собственность","category":"Social","parent":"норма","depth":2}
+{"name":"рынок","category":"Social","parent":"деятельность","depth":2}
+{"name":"алгоритм","category":"General","parent":"знак","depth":2}
+{"name":"данные","category":"General","parent":"знак","depth":2}
+{"name":"код","category":"General","parent":"знак","depth":2}
+{"name":"жизнь","category":"Physical","parent":"материя","depth":2}
+{"name":"инстинкт","category":"Psychological","parent":"состояние","depth":2}
+{"name":"эволюция","category":"Physical","parent":"материя","depth":2}
+{"name":"энтропия","category":"Physical","parent":"энергетическое","depth":2}
+{"name":"энергия","category":"Physical","parent":"энергетическое","depth":2}
+{"name":"душа","category":"Psychological","parent":"состояние","depth":2}
+{"name":"дух","category":"Psychological","parent":"состояние","depth":2}
+{"name":"выбор","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"рамка критериев","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"доверие между субъектами","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"осознание последствий","category":"Social","parent":"ответственность","depth":3}
+{"name":"обязательства перед другими","category":"Social","parent":"ответственность","depth":3}
+{"name":"соответствие реальности","category":"Philosophical","parent":"истина","depth":3}
+{"name":"воспроизводимость","category":"Philosophical","parent":"истина","depth":3}
+{"name":"позиция субъекта","category":"Psychological","parent":"мнение","depth":3}
+{"name":"перспектива наблюдателя","category":"Psychological","parent":"мнение","depth":3}
+{"name":"прошлое для настоящего","category":"Psychological","parent":"память","depth":3}
+{"name":"избирательность и реконструкция","category":"Psychological","parent":"память","depth":3}
+{"name":"пережитое в новой рамке","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"акт обращения к личному прошлому","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"субъективность","category":"Psychological","parent":"познание","depth":2}
+{"name":"аспект от первого лица","category":"Psychological","parent":"сознание","depth":3}
+{"name":"способность к самоотчёту","category":"Psychological","parent":"сознание","depth":3}
+{"name":"восприятие и рефлексию","category":"Psychological","parent":"сознание","depth":3}
+{"name":"собственные состояния субъекта","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"наличие сознания как своего основания","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"субъекта объектом для самого себя","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"принятия без полного доказательства","category":"Psychological","parent":"вера","depth":3}
+{"name":"доверием к тому, что не может быть проверено","category":"Psychological","parent":"вера","depth":3}
+{"name":"доверием к источнику или опыту","category":"Psychological","parent":"вера","depth":3}
+{"name":"к полезности","category":"Philosophical","parent":"красота","depth":3}
+{"name":"эстетическое переживание","category":"Philosophical","parent":"красота","depth":3}
+{"name":"от воспринимающего и культурной рамки","category":"Philosophical","parent":"красота","depth":3}
+{"name":"действие независимо от желания","category":"Social","parent":"долг","depth":3}
+{"name":"на моральные или социальные обязательства","category":"Social","parent":"долг","depth":3}
+{"name":"уязвимость перед другим","category":"Social","parent":"доверие","depth":3}
+{"name":"через повторяемый позитивный опыт","category":"Social","parent":"доверие","depth":3}
+{"name":"об угрозе целостности","category":"Psychological","parent":"страх","depth":3}
+{"name":"об угрозе целостности субъекта","category":"Psychological","parent":"страх","depth":3}
+{"name":"на то, что имеет значение","category":"Psychological","parent":"страх","depth":3}
+{"name":"на возможность будущего","category":"Psychological","parent":"надежда","depth":3}
+{"name":"действие в условиях неопределённости","category":"Psychological","parent":"надежда","depth":3}
+{"name":"соразмерности между деянием и воздаянием","category":"Social","parent":"справедливость","depth":3}
+{"name":"равенство перед правилом","category":"Social","parent":"справедливость","depth":3}
+{"name":"порядок следования событий","category":"Physical","parent":"время","depth":2}
+{"name":"необратимо и неравномерно","category":"Physical","parent":"время","depth":2}
+{"name":"необратимо — прошлое недоступно для изменения","category":"Physical","parent":"время","depth":2}
+{"name":"самокоррекция","category":"Psychological","parent":"разум","depth":3}
+{"name":"к обобщению и абстракции","category":"Psychological","parent":"разум","depth":3}
+{"name":"от интуиции потребностью в доказательстве","category":"Psychological","parent":"разум","depth":3}
+{"name":"сам факт существования","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"как условие возможности любого суждения","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"сущность","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"из событий и их интерпретации","category":"Social","parent":"история","depth":3}
+{"name":"прошлое с настоящим через интерпретацию","category":"Social","parent":"история","depth":3}
+{"name":"от точки зрения рассказчика","category":"Social","parent":"история","depth":3}
+{"name":"мышление","category":"General","parent":"язык","depth":3}
+{"name":"опыт через различение и именование","category":"General","parent":"язык","depth":3}
+{"name":"мышлением — он не только выражает, но и формирует мысль","category":"General","parent":"язык","depth":3}
+{"name":"действие к выбранной цели","category":"Psychological","parent":"страх","depth":3}
+{"name":"преодоления препятствий и конкурирующих мотивов","category":"Psychological","parent":"воля","depth":3}
+{"name":"необратимое прекращение существования","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"границу, через которую жизнь обретает конечную форму","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"жизни неотменимость","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"границу между я и другими","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"отсутствие значимого другого","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"избрано или навязано обстоятельствами","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"ценность другого как несводимую","category":"Social","parent":"любовь","depth":3}
+{"name":"уязвимость и риск потери","category":"Social","parent":"любовь","depth":3}
+{"name":"мир и самого трудящегося","category":"Social","parent":"труд","depth":3}
+{"name":"материал через целенаправленное усилие","category":"Social","parent":"труд","depth":3}
+{"name":"потребностью и распределением ресурсов","category":"Social","parent":"труд","depth":3}
+{"name":"отсутствием движения","category":"Psychological","parent":"покой","depth":3}
+{"name":"для восстановления и интеграции опыта","category":"Psychological","parent":"покой","depth":3}
+{"name":"отсутствие движения и напряжения","category":"Psychological","parent":"покой","depth":3}
+{"name":"способность влиять на действия других","category":"Social","parent":"власть","depth":3}
+{"name":"легитимности для устойчивости","category":"Social","parent":"власть","depth":3}
+{"name":"чья воля становится законом","category":"Social","parent":"власть","depth":3}
+{"name":"на соответствие тому, что произошло","category":"Philosophical","parent":"правда","depth":3}
+{"name":"личной вовлечённостью рассказчика","category":"General","parent":"общее","depth":1}
+{"name":"персональной вовлечённостью","category":"Psychological","parent":"психология","depth":1}
+{"name":"отсутствием слов","category":"General","parent":"молчание","depth":3}
+{"name":"с речью, но не тождественно пустоте","category":"General","parent":"молчание","depth":3}
+{"name":"актом отказа или знаком присутствия","category":"General","parent":"молчание","depth":3}
+{"name":"целостность жизни","category":"Philosophical","parent":"смысл","depth":3}
+{"name":"соотнесённость с целым","category":"Philosophical","parent":"смысл","depth":3}
+{"name":"направление вектора жизни","category":"Philosophical","parent":"смысл","depth":3}
+{"name":"почему а не зачем","category":"Philosophical","parent":"смысл","depth":3}
+{"name":"переживание значимости","category":"Philosophical","parent":"смысл","depth":3}
+{"name":"различение внутри и снаружи","category":"General","parent":"граница","depth":3}
+{"name":"условие формы","category":"General","parent":"граница","depth":3}
+{"name":"предел действия","category":"General","parent":"граница","depth":3}
+{"name":"контактная поверхность","category":"General","parent":"граница","depth":3}
+{"name":"защита и ограничение","category":"General","parent":"граница","depth":3}
+{"name":"дискретность и точность","category":"General","parent":"цифра","depth":3}
+{"name":"формализация опыта","category":"General","parent":"цифра","depth":3}
+{"name":"утрата контекста","category":"General","parent":"цифра","depth":3}
+{"name":"сжимает мир до значения","category":"General","parent":"цифра","depth":3}
+{"name":"маскировка качества количеством","category":"General","parent":"цифра","depth":3}
+{"name":"преемственность я","category":"Psychological","parent":"идентичность","depth":3}
+{"name":"ответ на вопрос кто я","category":"Psychological","parent":"идентичность","depth":3}
+{"name":"нарратив о себе","category":"Psychological","parent":"идентичность","depth":3}
+{"name":"совпадение с собой","category":"Psychological","parent":"идентичность","depth":3}
+{"name":"разрыв и восстановление","category":"Psychological","parent":"идентичность","depth":3}
+{"name":"восстановление функции","category":"General","parent":"ремонт","depth":3}
+{"name":"диагностика поломки","category":"General","parent":"ремонт","depth":3}
+{"name":"различение починить и заменить","category":"General","parent":"ремонт","depth":3}
+{"name":"возвращение к работоспособности","category":"General","parent":"ремонт","depth":3}
+{"name":"усилие против энтропии","category":"General","parent":"ремонт","depth":3}
+{"name":"осознанность выбора","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"автономия суждения","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"самоопределение","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"отсутствие принуждения","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"пространство возможностей","category":"Philosophical","parent":"свобода","depth":3}
+{"name":"объективность","category":"Philosophical","parent":"истина","depth":3}
+{"name":"доказательство","category":"Philosophical","parent":"истина","depth":3}
+{"name":"когерентность","category":"Philosophical","parent":"истина","depth":3}
+{"name":"открытость проверке","category":"Philosophical","parent":"истина","depth":3}
+{"name":"независимость от наблюдателя","category":"Philosophical","parent":"истина","depth":3}
+{"name":"идентичность через время","category":"Psychological","parent":"память","depth":3}
+{"name":"след прошлого","category":"Psychological","parent":"память","depth":3}
+{"name":"забывание как условие","category":"Psychological","parent":"память","depth":3}
+{"name":"узнавание","category":"Psychological","parent":"память","depth":3}
+{"name":"привычка и рутина","category":"Psychological","parent":"память","depth":3}
+{"name":"интенциональность","category":"Psychological","parent":"сознание","depth":3}
+{"name":"качественность опыта","category":"Psychological","parent":"сознание","depth":3}
+{"name":"единство поля опыта","category":"Psychological","parent":"сознание","depth":3}
+{"name":"присутствие","category":"Psychological","parent":"сознание","depth":3}
+{"name":"поток переживаний","category":"Psychological","parent":"сознание","depth":3}
+{"name":"акт доверия","category":"Psychological","parent":"вера","depth":3}
+{"name":"обоснованность не доказательством","category":"Psychological","parent":"вера","depth":3}
+{"name":"готовность к риску","category":"Psychological","parent":"вера","depth":3}
+{"name":"верность","category":"Psychological","parent":"вера","depth":3}
+{"name":"прыжок за горизонт","category":"Psychological","parent":"вера","depth":3}
+{"name":"гармония формы","category":"Philosophical","parent":"красота","depth":3}
+{"name":"соразмерность частей","category":"Philosophical","parent":"красота","depth":3}
+{"name":"праздность созерцания","category":"Philosophical","parent":"красота","depth":3}
+{"name":"превосходство над полезным","category":"Philosophical","parent":"красота","depth":3}
+{"name":"мгновение и вечность","category":"Philosophical","parent":"красота","depth":3}
+{"name":"долженствование","category":"Social","parent":"долг","depth":3}
+{"name":"приоритет над желанием","category":"Social","parent":"долг","depth":3}
+{"name":"внутренний закон","category":"Social","parent":"долг","depth":3}
+{"name":"совесть как свидетель","category":"Social","parent":"долг","depth":3}
+{"name":"исполнение обещания","category":"Social","parent":"долг","depth":3}
+{"name":"риск уязвимости","category":"Social","parent":"доверие","depth":3}
+{"name":"опора на другого","category":"Social","parent":"доверие","depth":3}
+{"name":"проверка опытом","category":"Social","parent":"доверие","depth":3}
+{"name":"прозрачность намерений","category":"Social","parent":"доверие","depth":3}
+{"name":"разрыв и восстановление доверия","category":"Social","parent":"доверие","depth":3}
+{"name":"ожидание угрозы","category":"Psychological","parent":"страх","depth":3}
+{"name":"сигнал опасности","category":"Psychological","parent":"страх","depth":3}
+{"name":"паралич или действие","category":"Psychological","parent":"страх","depth":3}
+{"name":"перед неизвестным","category":"Psychological","parent":"страх","depth":3}
+{"name":"защитная реакция","category":"Psychological","parent":"страх","depth":3}
+{"name":"ориентация на будущее","category":"Psychological","parent":"надежда","depth":3}
+{"name":"наперекор очевидности","category":"Psychological","parent":"надежда","depth":3}
+{"name":"утешение и мотив","category":"Psychological","parent":"надежда","depth":3}
+{"name":"обещание себе","category":"Psychological","parent":"надежда","depth":3}
+{"name":"пустота или вектор","category":"Psychological","parent":"надежда","depth":3}
+{"name":"мера и соразмерность","category":"Social","parent":"справедливость","depth":3}
+{"name":"беспристрастность","category":"Social","parent":"справедливость","depth":3}
+{"name":"воздаяние по заслугам","category":"Social","parent":"справедливость","depth":3}
+{"name":"процедура и результат","category":"Social","parent":"справедливость","depth":3}
+{"name":"признание прав другого","category":"Social","parent":"справедливость","depth":3}
+{"name":"длительность","category":"Physical","parent":"время","depth":2}
+{"name":"настоящее как точка","category":"Physical","parent":"время","depth":2}
+{"name":"будущее как возможность","category":"Physical","parent":"время","depth":2}
+{"name":"цикличность и линейность","category":"Physical","parent":"время","depth":2}
+{"name":"темп и ритм","category":"Physical","parent":"время","depth":2}
+{"name":"логическое умозаключение","category":"Psychological","parent":"разум","depth":3}
+{"name":"способность к обобщению","category":"Psychological","parent":"разум","depth":3}
+{"name":"различение истинного и ложного","category":"Psychological","parent":"разум","depth":3}
+{"name":"критика и сомнение","category":"Psychological","parent":"разум","depth":3}
+{"name":"порядок мысли","category":"Psychological","parent":"разум","depth":3}
+{"name":"факт присутствия","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"различение сущего и ничто","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"основание всего","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"необходимость и случайность","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"становление","category":"Philosophical","parent":"бытие","depth":3}
+{"name":"память коллектива","category":"Social","parent":"история","depth":3}
+{"name":"интерпретация прошлого","category":"Social","parent":"история","depth":3}
+{"name":"урок и предупреждение","category":"Social","parent":"история","depth":3}
+{"name":"нарратив и факт","category":"Social","parent":"история","depth":3}
+{"name":"причина и следствие","category":"Social","parent":"история","depth":3}
+{"name":"структура значения","category":"General","parent":"язык","depth":3}
+{"name":"граница выразимого","category":"General","parent":"язык","depth":3}
+{"name":"конвенция и произвол","category":"General","parent":"язык","depth":3}
+{"name":"переводимость и непереводимость","category":"General","parent":"язык","depth":3}
+{"name":"метафора и буква","category":"General","parent":"язык","depth":3}
+{"name":"направленность усилия","category":"Psychological","parent":"воля","depth":3}
+{"name":"выбор цели","category":"Psychological","parent":"воля","depth":3}
+{"name":"преодоление сопротивления","category":"Psychological","parent":"воля","depth":3}
+{"name":"решимость","category":"Psychological","parent":"воля","depth":3}
+{"name":"свобода и необходимость","category":"Psychological","parent":"воля","depth":3}
+{"name":"предел существования","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"осмысление конечности","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"уравнивание всех","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"страх и принятие","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"граница смысла","category":"Philosophical","parent":"смерть","depth":3}
+{"name":"отсутствие контакта","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"встреча с собой","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"изоляция или уединение","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"тишина и пустота","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"потребность в другом","category":"Psychological","parent":"одиночество","depth":3}
+{"name":"признание ценности другого","category":"Social","parent":"любовь","depth":3}
+{"name":"преодоление эгоцентризма","category":"Social","parent":"любовь","depth":3}
+{"name":"дар без расчёта","category":"Social","parent":"любовь","depth":3}
+{"name":"уязвимость и близость","category":"Social","parent":"любовь","depth":3}
+{"name":"вечность в мгновении","category":"Social","parent":"любовь","depth":3}
+{"name":"преобразование материи","category":"Social","parent":"труд","depth":3}
+{"name":"усилие и результат","category":"Social","parent":"труд","depth":3}
+{"name":"разделение и кооперация","category":"Social","parent":"труд","depth":3}
+{"name":"навык и мастерство","category":"Social","parent":"труд","depth":3}
+{"name":"усталость и удовлетворение","category":"Social","parent":"труд","depth":3}
+{"name":"пауза в действии","category":"Psychological","parent":"покой","depth":3}
+{"name":"созерцание и присутствие","category":"Psychological","parent":"покой","depth":3}
+{"name":"глубина тишины","category":"Psychological","parent":"покой","depth":3}
+{"name":"пустота как полнота","category":"Psychological","parent":"покой","depth":3}
+{"name":"остановка и осмысление","category":"Psychological","parent":"покой","depth":3}
+{"name":"асимметрия отношений","category":"Social","parent":"власть","depth":3}
+{"name":"принуждение и авторитет","category":"Social","parent":"власть","depth":3}
+{"name":"ответственность власти","category":"Social","parent":"власть","depth":3}
+{"name":"делегирование и контроль","category":"Social","parent":"власть","depth":3}
+{"name":"насилие или забота","category":"Social","parent":"власть","depth":3}
+{"name":"свидетельство","category":"Philosophical","parent":"правда","depth":3}
+{"name":"искренность рассказа","category":"Philosophical","parent":"правда","depth":3}
+{"name":"частная перспектива","category":"Philosophical","parent":"правда","depth":3}
+{"name":"долг памяти","category":"Philosophical","parent":"правда","depth":3}
+{"name":"против забвения","category":"Philosophical","parent":"правда","depth":3}
+{"name":"предел слова","category":"General","parent":"молчание","depth":3}
+{"name":"присутствие без выражения","category":"General","parent":"молчание","depth":3}
+{"name":"глубина невыразимого","category":"General","parent":"молчание","depth":3}
+{"name":"слушание","category":"General","parent":"молчание","depth":3}
+{"name":"пауза и смысл","category":"General","parent":"молчание","depth":3}
+{"name":"готовность к ответу","category":"Social","parent":"ответственность","depth":3}
+{"name":"свобода как условие","category":"Social","parent":"ответственность","depth":3}
+{"name":"вина и заслуга","category":"Social","parent":"ответственность","depth":3}
+{"name":"пределы контроля","category":"Social","parent":"ответственность","depth":3}
+{"name":"ответ перед другими","category":"Social","parent":"ответственность","depth":3}
+{"name":"отсутствие основания","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"каприз и случайность","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"игнорирование последствий","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"псевдосвобода","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"разрушение порядка","category":"Philosophical","parent":"произвол","depth":3}
+{"name":"частное суждение","category":"Psychological","parent":"мнение","depth":3}
+{"name":"обоснованность и вес","category":"Psychological","parent":"мнение","depth":3}
+{"name":"открытость пересмотру","category":"Psychological","parent":"мнение","depth":3}
+{"name":"выражение позиции","category":"Psychological","parent":"мнение","depth":3}
+{"name":"различение с истиной","category":"Psychological","parent":"мнение","depth":3}
+{"name":"актуализация прошлого","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"эмоциональная окраска","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"достоверность и искажение","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"связь времён","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"повторное переживание","category":"Psychological","parent":"воспоминание","depth":3}
+{"name":"рефлексия над собой","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"наблюдение за состояниями","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"идентификация с собой","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"различение я и не я","category":"Psychological","parent":"самосознание","depth":3}
+{"name":"самооценка","category":"Psychological","parent":"самосознание","depth":3}
