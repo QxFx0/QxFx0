@@ -21,7 +21,7 @@ import QxFx0.Render.Dialogue
 import QxFx0.Semantic.SurfaceAccumulator (VerbalizationMode(..))
 import QxFx0.Semantic.Content.Base (mkPred, PredicateRole(..))
 import QxFx0.Semantic.Network (emptySemanticNetwork, spreadingActivationActive)
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
 import QxFx0.Semantic.ContentSelector
   ( ContentSelector(..)
   , buildContentSelector
@@ -88,7 +88,7 @@ runFrame frame cs =
 testNetwork :: SemanticNetwork
 testNetwork = emptySemanticNetwork
   { snNodes = S.fromList ["связана", "субъекта"]
-  , snEdges = M.singleton ("связана", "субъекта") (SemanticEdge "связана" "субъекта" 1.0 1 ExplicitEdge)
+  , snEdges = M.singleton ("связана", "субъекта") (semanticEdge "связана" "субъекта" 1.0 1 ExplicitEdge)
   }
 
 -- | Run a frame with a supplied semantic network.

@@ -35,7 +35,7 @@ import Test.Support.TurnPipelineFixtures
   )
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network (mergeSemanticNetworks, contentDensityGate)
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
 
 revisionTests :: [Test]
 revisionTests =
@@ -285,7 +285,7 @@ revisionTests =
               update = SemanticNetwork
                 { snNodes = S.fromList ["newNode1", "newNode2"]
                 , snEdges = M.singleton ("newNode1", "newNode2")
-                    (SemanticEdge "newNode1" "newNode2" 1.0 1 ExplicitEdge)
+                    (semanticEdge "newNode1" "newNode2" 1.0 1 ExplicitEdge)
                 , snActivation = M.empty
                 , snDecayRate = 0.3
                 , snMaxHops = 5

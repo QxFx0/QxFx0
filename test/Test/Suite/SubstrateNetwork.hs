@@ -38,13 +38,13 @@ substrateTests =
       assertBool "should have свобода-страх edge" (any (\(a,b) -> (a == "свобода" && b == "страх") || (a == "страх" && b == "свобода")) edgePairs)
 
   , TestLabel "substrate merge preserves explicit edges" $ TestCase $ do
-      let explicitEdges = M.fromList [(("свобода", "ответственность"), SemanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)]
+      let explicitEdges = M.fromList [(("свобода", "ответственность"), semanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)]
           substrateEdges =
             [ SubstrateEdgeInfo "свобода" "страх" 0.3 5
             , SubstrateEdgeInfo "страх" "вера" 0.3 3
             ]
           substrateEdgeMap = M.fromList
-            [ ((seiFrom e, seiTo e), SemanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) SubstrateEdge)
+            [ ((seiFrom e, seiTo e), semanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) SubstrateEdge)
             | e <- substrateEdges
             ]
           merged = M.union explicitEdges substrateEdgeMap
@@ -94,9 +94,9 @@ substrateTests =
           substrateNet = SemanticNetwork
             { snNodes = S.fromList ["свобода", "страх", "вера", "ответственность"]
             , snEdges = M.fromList
-                [ (("свобода", "ответственность"), SemanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)
-                , (("свобода", "страх"), SemanticEdge "свобода" "страх" 0.3 8 SubstrateEdge)
-                , (("страх", "вера"), SemanticEdge "страх" "вера" 0.3 8 SubstrateEdge)
+                [ (("свобода", "ответственность"), semanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)
+                , (("свобода", "страх"), semanticEdge "свобода" "страх" 0.3 8 SubstrateEdge)
+                , (("страх", "вера"), semanticEdge "страх" "вера" 0.3 8 SubstrateEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 0.5
@@ -131,9 +131,9 @@ substrateTests =
           netWithSubstrate = SemanticNetwork
             { snNodes = S.fromList ["свобода", "страх", "вера", "ответственность"]
             , snEdges = M.fromList
-                [ (("свобода", "ответственность"), SemanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)
-                , (("свобода", "страх"), SemanticEdge "свобода" "страх" 0.3 8 SubstrateEdge)
-                , (("страх", "вера"), SemanticEdge "страх" "вера" 0.3 8 SubstrateEdge)
+                [ (("свобода", "ответственность"), semanticEdge "свобода" "ответственность" 1.0 1 ExplicitEdge)
+                , (("свобода", "страх"), semanticEdge "свобода" "страх" 0.3 8 SubstrateEdge)
+                , (("страх", "вера"), semanticEdge "страх" "вера" 0.3 8 SubstrateEdge)
                 ]
             , snActivation = M.empty
             , snDecayRate = 0.5
@@ -181,7 +181,7 @@ substrateTests =
             let net = SemanticNetwork
                   { snNodes = S.fromList coveredTopics
                   , snEdges = M.fromList
-                      [ ((a, b), SemanticEdge a b 0.3 2 SubstrateEdge)
+                      [ ((a, b), semanticEdge a b 0.3 2 SubstrateEdge)
                       | a <- coveredTopics
                       , b <- coveredTopics
                       , a < b

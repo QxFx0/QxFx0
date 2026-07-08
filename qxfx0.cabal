@@ -640,6 +640,7 @@ common test-common
     Test.Suite.SurfaceAccumulator
     Test.Suite.SurfaceAccumulatorGolden
     Test.Suite.NetworkIngest
+    Test.Suite.NetworkTypes
 
 test-suite qxfx0-test-unit
   import:        test-common

@@ -52,7 +52,8 @@ import QxFx0.Semantic.Content.AtomStore
   , atomStore
   )
 import QxFx0.Semantic.Network.Types
-  ( EdgeSource(..)
+  ( EdgeProvenance(..)
+  , EdgeSource(..)
   , SemanticEdge(..)
   , SemanticNetwork(..)
   )
@@ -327,6 +328,13 @@ semanticNetworkFromLoaded ont rawRels =
             , seWeight       = lrConfidence lr
             , seCoOccurrence = 1
             , seSource       = ExplicitEdge
+            , seRelationType = Just (lrType lr)
+            , seVerb         = lrVerb lr
+            , seRationale    = lrRationale lr
+            , seCounter      = lrCounter lr
+            , seSynthesis    = lrSynthesis lr
+            , seConfidence   = lrConfidence lr
+            , seProvenance   = ProvenanceIngested
             }
       in case M.lookup key acc of
            Nothing -> M.insert key edge acc

@@ -23,7 +23,7 @@ import QxFx0.Semantic.Content.AtomStore
   , relType
   )
 import QxFx0.Semantic.Network.Ingest
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), snEdges, snNodes)
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeProvenance(..), snEdges, snNodes)
 
 relationsPath :: FilePath
 relationsPath = "resources/knowledge/relations.jsonl"
@@ -52,6 +52,8 @@ networkIngestTests =
   , TestLabel "ingestExternalKnowledge returns Nothing on invalid ontology" testIngestExternalKnowledgeInvalidOntology
   , TestLabel "loadRelationGraph marks relations as Curated" testLoadRelationGraphSource
   , TestLabel "loadRelationGraph preserves optional fields" testLoadRelationGraphOptionalFields
+  , TestLabel "ingested edges preserve loaded relation fields" testIngestedEdgesPreserveLoadedFields
+  , TestLabel "ingested edges include at least one fully-populated optional edge" testIngestedEdgeOptionalFieldsPopulated
   ]
 
 testLoadRelations :: Test
@@ -172,3 +174,41 @@ testLoadRelationGraphOptionalFields = TestCase $ do
   assertBool "some relations must have a rationale" (not (null withRationale))
   assertBool "some relations must have a counter" (not (null withCounter))
   assertBool "some relations must have a synthesis" (not (null withSynthesis))
+
+testIngestedEdgesPreserveLoadedFields :: Test
+testIngestedEdgesPreserveLoadedFields = TestCase $ do
+  rawRels <- loadRelations relationsPath
+  mNetwork <- ingestExternalKnowledge ontologyPath relationsPath
+  case mNetwork of
+    Nothing -> assertFailure "ingestExternalKnowledge must return Just a network"
+    Just sn -> do
+      let edges = Map.elems (snEdges sn)
+      assertBool "all edges must be ProvenanceIngested"
+        (all (\e -> seProvenance e == ProvenanceIngested) edges)
+      let matchesSomeRel e =
+            any (\lr -> lrFrom lr == seFrom e
+                        && lrTo lr == seTo e
+                        && Just (lrType lr) == seRelationType e
+                        && lrVerb lr == seVerb e
+                        && lrRationale lr == seRationale e
+                        && lrCounter lr == seCounter e
+                        && lrSynthesis lr == seSynthesis e
+                        && lrConfidence lr == seConfidence e)
+                rawRels
+      assertBool "every ingested edge must match at least one loaded relation"
+        (all matchesSomeRel edges)
+
+testIngestedEdgeOptionalFieldsPopulated :: Test
+testIngestedEdgeOptionalFieldsPopulated = TestCase $ do
+  mNetwork <- ingestExternalKnowledge ontologyPath relationsPath
+  case mNetwork of
+    Nothing -> assertFailure "ingestExternalKnowledge must return Just a network"
+    Just sn -> do
+      let populated e =
+            seVerb e /= Nothing
+              && seRationale e /= Nothing
+              && seCounter e /= Nothing
+              && seSynthesis e /= Nothing
+          populatedEdges = filter populated (Map.elems (snEdges sn))
+      assertBool "at least one ingested edge must have all optional fields populated"
+        (not (null populatedEdges))

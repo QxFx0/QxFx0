@@ -252,7 +252,7 @@ bootstrapSession quiet sessionId = do
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted
       substrateEdgeMap = M.fromList
-        [ ((seiFrom e, seiTo e), NetTypes.SemanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
+        [ ((seiFrom e, seiTo e), NetTypes.semanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
         | e <- substrateEdges
         ]
       -- Merge: explicit edges win at same key, substrate adds new edges

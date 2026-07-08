@@ -10,7 +10,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
 import qualified Data.Sequence as Seq
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
 
@@ -30,7 +30,7 @@ seedFromCorpus lemmaMap =
       
       corpusEdges :: [SemanticEdge]
       corpusEdges =
-        [ SemanticEdge t1 t2 (fromIntegral sharedCount / 10.0) sharedCount ExplicitEdge
+        [ semanticEdge t1 t2 (fromIntegral sharedCount / 10.0) sharedCount ExplicitEdge
         | (t1, atoms1) <- topicAtoms
         , (t2, atoms2) <- topicAtoms
         , t1 < t2
