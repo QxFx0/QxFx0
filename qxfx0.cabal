@@ -637,6 +637,7 @@ common test-common
     Test.Suite.DialogueSemanticSelection
     Test.Suite.Ontology
     Test.Suite.BootstrapRecovery
+    Test.Suite.BootstrapExternalKnowledge
     Test.Suite.SurfaceAccumulator
     Test.Suite.SurfaceAccumulatorGolden
     Test.Suite.NetworkIngest

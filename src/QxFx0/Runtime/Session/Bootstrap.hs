@@ -10,6 +10,10 @@ module QxFx0.Runtime.Session.Bootstrap
   , generateFallbackSessionId
   , minimalMorphologyFallback
   , recoverBootstrapBlanket
+  , useExternalKnowledge
+  , readExternalKnowledgeEnabled
+  , resolveKnowledgePath
+  , bootstrapSemanticNetwork
   ) where
 
 import Control.Exception (bracket, try, IOException)
@@ -74,15 +78,16 @@ import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, all
 import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
+import QxFx0.Semantic.Network (mergeSemanticNetworks)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
-import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph)
-import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
+import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge)
+import QxFx0.Semantic.Network.Substrate (BrainKBEntry(..), loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, allAtomIds, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted, atomStore, Atom(..), AtomCategory(..))
 import QxFx0.Semantic.Content.AtomDiscovery (discoverAtoms, DiscoveredAtom(..))
 import qualified QxFx0.Semantic.Network.Types as NetTypes
-import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..))
+import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..), SemanticNetwork)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrRglMorphologyActive)
@@ -105,9 +110,64 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUIDv4
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
+import System.Environment (lookupEnv)
 import System.FilePath (takeDirectory)
 import System.IO (hPutStrLn, stderr)
+import Paths_qxfx0 (getDataFileName)
+
+-- | Compile-time feature flag for ADR-0052 Phase II external knowledge
+-- ingestion. Defaults to 'False' so runtime behavior is unchanged.
+useExternalKnowledge :: Bool
+useExternalKnowledge = False
+
+-- | Read whether external knowledge ingestion should be enabled.
+-- The compile-time 'useExternalKnowledge' flag can force it on; otherwise
+-- the @QXFX0_USE_EXTERNAL_KNOWLEDGE@ environment variable enables it
+-- when set to @\"1\"@, @\"true\"@, or @\"yes\"@.
+readExternalKnowledgeEnabled :: IO Bool
+readExternalKnowledgeEnabled = do
+  mEnv <- lookupEnv "QXFX0_USE_EXTERNAL_KNOWLEDGE"
+  let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
+  pure (envEnabled || useExternalKnowledge)
+
+-- | Resolve a knowledge file path. First try the path as given; if it
+-- does not exist, fall back to a @Paths_qxfx0@ data-file path; finally
+-- return the original path so that a later stage can report a sensible
+-- \"file not found\" error.
+resolveKnowledgePath :: FilePath -> IO FilePath
+resolveKnowledgePath path = do
+  exists <- doesFileExist path
+  if exists
+    then pure path
+    else do
+      dataResult <- tryIO (getDataFileName path)
+      case dataResult of
+        Right dataPath -> pure dataPath
+        Left _         -> pure path
+
+-- | Build the bootstrapped semantic network from morphology and brain_kb
+-- substrate, optionally merging external ontology/relations.
+bootstrapSemanticNetwork :: MorphologyData -> [BrainKBEntry] -> Bool -> IO SemanticNetwork
+bootstrapSemanticNetwork morphology brainKBEntries useExternal =
+  let lemmaMap = buildLemmaMap morphology
+      seedNetwork = seedFromCorpus lemmaMap
+      explicitTopicSet = S.fromList coveredTopics
+      substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
+      seedEdges = NetTypes.snEdges seedNetwork
+      substrateEdgeMap = M.fromList
+        [ ((seiFrom e, seiTo e), NetTypes.semanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
+        | e <- substrateEdges
+        ]
+      mergedEdges = M.union seedEdges substrateEdgeMap
+      mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
+  in if not useExternal
+       then pure mergedNetwork
+       else do
+         ontologyPath <- resolveKnowledgePath "resources/knowledge/ontology.jsonl"
+         relationsPath <- resolveKnowledgePath "resources/knowledge/relations.jsonl"
+         mExternal <- ingestExternalKnowledge ontologyPath relationsPath
+         pure $ maybe mergedNetwork (mergeSemanticNetworks mergedNetwork) mExternal
 
 bootstrapSession :: Bool -> Text -> IO Session
 bootstrapSession quiet sessionId = do
@@ -227,24 +287,20 @@ bootstrapSession quiet sessionId = do
   brainKBPath <- resolveBrainKBPath
   brainKBEntries <- loadBrainKB brainKBPath
 
+  externalEnabled <- readExternalKnowledgeEnabled
+  finalNetwork <- bootstrapSemanticNetwork morphology brainKBEntries externalEnabled
+
   let firstScene = case (scenes ++ defaultScenes) of
         s : _ -> s
         [] -> ssActiveScene emptySystemState
-      
+
       -- Initialize ContentSelector from seed network and definition corpus
       lemmaMap = buildLemmaMap morphology
-      useAtomGraphSeed = False
-      seedNetwork = if useAtomGraphSeed
-                      then buildNetworkFromAtomGraph seedGraph
-                      else seedFromCorpus lemmaMap
       topicAtoms = M.fromList
         [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList definitionCorpus
         ]
       topicPredicates = M.map dcPredicates definitionCorpus
-      -- Substrate: build substrate edges from brain_kb
-      explicitTopicSet = S.fromList coveredTopics
-      substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
       -- Substrate candidate extraction + admission
       -- Use allAtomIds (85+ atoms) for admission, not just allTopics (30+)
       -- Also include discovered atoms from brain_kb
@@ -255,17 +311,9 @@ bootstrapSession quiet sessionId = do
       candidates = extractCandidates brainKBEntries topicList
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted
-      substrateEdgeMap = M.fromList
-        [ ((seiFrom e, seiTo e), NetTypes.semanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
-        | e <- substrateEdges
-        ]
-      -- Merge: explicit edges win at same key, substrate adds new edges
-      mergedEdges = M.union seedEdges substrateEdgeMap
-      seedEdges = NetTypes.snEdges seedNetwork
-      mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
-      seedSpace = buildSemanticSpace mergedNetwork topicAtoms
+      seedSpace = buildSemanticSpace finalNetwork topicAtoms
       seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap
-      
+
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}
         , ssMorphology = morphology
@@ -275,7 +323,7 @@ bootstrapSession quiet sessionId = do
         , ssSessionId = sessionId
         , ssContentSelector = seedSelector
         , ssLemmaMap = buildLemmaMap morphology
-        , ssSemanticNetwork = mergedNetwork
+        , ssSemanticNetwork = finalNetwork
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
@@ -328,7 +376,7 @@ bootstrapSession quiet sessionId = do
                      { semClusters = if null (ssClusters ss) then clusters else ssClusters ss
                      }
                    , ssSessionId = sessionId
-                   , ssSemanticNetwork = mergedNetwork
+                   , ssSemanticNetwork = finalNetwork
                    , ssRuntimeGraph = withPromoted promotedRelations seedGraph
                    }
              in if truthContractIsAuthoritative (ssTruthContractStatus restored0)

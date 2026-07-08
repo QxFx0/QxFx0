@@ -12,6 +12,10 @@ module QxFx0.Runtime.Session
   , generateFallbackSessionId
   , minimalMorphologyFallback
   , recoverBootstrapBlanket
+  , useExternalKnowledge
+  , readExternalKnowledgeEnabled
+  , resolveKnowledgePath
+  , bootstrapSemanticNetwork
   , renderRuntimeOutputMode
   , runtimeToDialogueMode
   , dialogueToRuntimeMode
