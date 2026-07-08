@@ -181,7 +181,7 @@ planFinalizePrecommit = Finalize.planFinalizePrecommit
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit = Finalize.resolveFinalizePrecommit
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 
 planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan

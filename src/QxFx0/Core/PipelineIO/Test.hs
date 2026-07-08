@@ -75,10 +75,19 @@ defaultTestPipelineConfig = TestPipelineConfig
       in Seq.take 50 updated
   }
 
+-- | Build a deterministic, in-memory 'PipelineIO' for unit tests.
+--
+-- The two 'MVar's are created with 'unsafePerformIO' because the public
+-- constructor is pure. This is intentional test-harness mutable state:
+-- each 'PipelineIO' value keeps its own consciousness and intuition state
+-- across 'modifyPipelineConsciousLoop' / 'modifyPipelineIntuition' calls.
+-- The creation is tied to the incoming 'TestPipelineConfig' and the
+-- function is marked 'NOINLINE' so GHC does not float the thunks to a
+-- shared top-level CAF or duplicate them via inlining.
 mkTestPipelineIO :: TestPipelineConfig -> PipelineIO
 mkTestPipelineIO cfg =
-  let consciousState = unsafePerformIO (newMVar initialLoop)
-      intuitionState = unsafePerformIO (newMVar defaultIntuitiveState)
+  let consciousState = unsafePerformIO (cfg `seq` newMVar initialLoop)
+      intuitionState = unsafePerformIO (cfg `seq` newMVar defaultIntuitiveState)
   in PipelineIO
       { pioRuntimeMode = tpcRuntimeMode cfg
       , pioShadowPolicy = tpcShadowPolicy cfg
@@ -92,8 +101,9 @@ mkTestPipelineIO cfg =
           (st', result) <- f st
           pure (st', result)
       , pioConatusPrior = defaultConatusPrior
-      , pioParseAuthoritySurface = parseAuthoritySurfacePattern
+      , pioParseAuthoritySurface = pure . parseAuthoritySurfacePattern
       }
+{-# NOINLINE mkTestPipelineIO #-}
 
 defaultTestInterpreter :: TurnEffectInterpreter
 defaultTestInterpreter request =

@@ -275,8 +275,3 @@ data LLMMessage = LLMMessage
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
--- | Safe list indexing.
-safeIndex :: [a] -> Int -> a
-safeIndex lst idx = case drop idx lst of
-  (x:_) -> x
-  [] -> error "SelfPlay: index out of bounds"

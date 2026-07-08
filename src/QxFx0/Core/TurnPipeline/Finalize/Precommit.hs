@@ -130,7 +130,7 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprFmarMode = fmarMode
       }
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
   let static = fppStatic precommitPlan
       (newDreamState, newMeaningGraph, rewireEventsCount) =
@@ -142,10 +142,11 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
           turnPlan
           turnArtifacts
           (fsMeaningGraphBase static)
-      (nextSystemState0, commitmentTrigger, commitDecision, promotedCount) =
+  mClaimPayload <- parseAuthSurface (AuthoritySurface (taFinalRendered turnArtifacts))
+  let (nextSystemState0, commitmentTrigger, commitDecision, promotedCount) =
         buildNextSystemState
           updateHistory
-          parseAuthSurface
+          mClaimPayload
           systemState
           turnInput
           turnSignals

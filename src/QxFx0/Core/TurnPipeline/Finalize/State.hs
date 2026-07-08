@@ -20,8 +20,6 @@ module QxFx0.Core.TurnPipeline.Finalize.State
 --   * computeSelfStatePhase — Phase 4.1.3 grouped Self-layer state
 -- Each extraction reduces the god function's scope and enables isolated testing.
 
-import Control.Exception (throw)
-import QxFx0.ExceptionPolicy (QxFx0Exception(..))
 import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.SelfState (SelfState(..))
@@ -33,7 +31,7 @@ import QxFx0.Semantic.Revision (RevisedCommitment(..), applyRevisionDecision)
 import QxFx0.Semantic.Stance (defendOrAdapt, recoverStance, Collapse(..))
 import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), emptyStanceDefense, incrementRecoveryCounter)
 import qualified Data.Set as S
-import QxFx0.Render.Authority (AuthoritySurface(..))
+
 import QxFx0.Core.CommitmentStoreAdmission (admitCommitmentToStore, CommitmentStoreAdmissionDecision(..))
 import QxFx0.Policy.Metacognition (MetacognitionContour(..), emptyMetacognitionContour, runMetacognitionLoop)
 import QxFx0.Memory.Episodic
@@ -391,8 +389,8 @@ computeNextEssence ss ti tp =
               trajectory
       in (EssenceCommitted trajectory' commitment, Nothing)
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> Maybe FactualClaimPayload) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
-buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
+buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
       turnSalience = turnInputSalience ti
@@ -593,11 +591,9 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
         , Just dc <- [Content.lookupDefinitionContent topic]
         ]
       nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext
-      -- P4: parse the rendered authority surface; commit if recognised.
+      -- P4: commit the pre-parsed authority surface payload if recognised.
       -- Nothing parse is silently skipped (non-authority surface).
       turnSeq = TurnSeq (ssTurnCount ss + 1)
-      renderedSurface = AuthoritySurface (taFinalRendered ta)
-      mClaimPayload = parseAuthSurface renderedSurface
       store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments nextWithLog)
       -- C3: additionally commit a typed anchor observation when SemanticAnchor
       -- is established this turn. This makes the anchor machine-visible in the
@@ -706,12 +702,11 @@ buildNextSystemState updateHistory parseAuthSurface ss ti ts tp ta newDreamState
             <*> pure agreement
             <*> pure inRecovery
         }
-      -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init)
-      -- unreachable invariant (R-B4 guarantees ssEpisodic Just);
-      -- typed bottom forced here for deterministic, categorisable failure
-      !episodic0 = case ssEpisodic nextWithMeta of
-        Just store' -> store'
-        Nothing     -> throw (StateInvariantViolation "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4")
+      -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init).
+      -- The invariant is guaranteed by construction, but a deterministic empty-store
+      -- fallback avoids raising a lazy pure exception if a corrupted state somehow
+      -- reaches this point.
+      !episodic0 = fromMaybe (EpisodicStore empty emptyIndex HS.empty 0) (ssEpisodic nextWithMeta)
       userInputEncoded = encode turnSeq EpisodicUserInput (EpisodicUserText rawText) [] episodic0
       decisionKind = EpisodicSystemDecision
       decisionContent = EpisodicFamilyDecision outcomeFamily

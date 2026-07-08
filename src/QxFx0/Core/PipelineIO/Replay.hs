@@ -83,5 +83,5 @@ mkReplayPipelineIO trace =
       , pioModifyConsciousLoop = \f -> snd <$> f initialLoop
       , pioModifyIntuition = \f -> snd <$> f defaultIntuitiveState
       , pioConatusPrior = defaultConatusPrior
-      , pioParseAuthoritySurface = parseAuthoritySurfacePattern
+      , pioParseAuthoritySurface = pure . parseAuthoritySurfacePattern
       }

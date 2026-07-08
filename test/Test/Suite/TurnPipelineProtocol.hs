@@ -93,6 +93,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , finalizeMetrics
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
+import QxFx0.Memory.Episodic (EpisodicStore(..))
 import QxFx0.Core.InterpretationAdmission
   ( InterpretationAdmissionInput(..)
   , InterpretationAdmissionDecision(..)
@@ -469,6 +470,7 @@ turnPipelineProtocolTests =
       , testExternalQueryResultPopulatedAfterRenderEffects
       , testExternalQueryGraftAppliedInFinalize
       , testExternalQueryFailClosedOnMockFailure
+      , testEpisodicInvariantFallbackNoThrow
       , testExternalQueryNotAttemptedWhenNoRequestStrategy
       -- Phase 9 MVP: autonomous exploratory learning
       , testExploratoryPromptDetected
@@ -3881,6 +3883,21 @@ testExternalQueryFailClosedOnMockFailure = TestCase $ do
   let nextSs = fpbNextSs bundle
   assertEqual "knowledge tree must remain empty after external failure"
     0 (ktGraftedCount (ssKnowledgeTree nextSs))
+
+-- | P1: if the unreachable R-B4 invariant is violated and ssEpisodic is
+-- Nothing, the finalize pipeline must recover with a deterministic empty-store
+-- fallback instead of throwing a lazy pure exception.
+testEpisodicInvariantFallbackNoThrow :: Test
+testEpisodicInvariantFallbackNoThrow = TestCase $ do
+  let ss0 = emptySystemState { ssEpisodic = Nothing }
+  (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "что такое свобода"
+  let nextSs = fpbNextSs bundle
+  case ssEpisodic nextSs of
+    Nothing -> assertFailure "finalize must produce a Just episodic store when input is Nothing"
+    Just store -> do
+      assertBool "fallback store must encode at least the user input and system decision"
+        (Seq.length (esEvents store) >= 2)
+      assertEqual "fallback store must retain session id 0" 0 (esSessionId store)
 
 -- | Phase 8 gap closure: when no learning need is active, no external
 -- query is attempted.

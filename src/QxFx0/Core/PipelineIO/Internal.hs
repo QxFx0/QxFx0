@@ -91,5 +91,5 @@ data PipelineIO = PipelineIO
   , pioModifyConsciousLoop :: forall a. (ConsciousnessLoop -> IO (ConsciousnessLoop, a)) -> IO a
   , pioModifyIntuition :: forall a. (IntuitiveState -> IO (IntuitiveState, a)) -> IO a
   , pioConatusPrior     :: !ConatusPrior
-  , pioParseAuthoritySurface :: AuthoritySurface -> Maybe FactualClaimPayload
+  , pioParseAuthoritySurface :: AuthoritySurface -> IO (Maybe FactualClaimPayload)
   }

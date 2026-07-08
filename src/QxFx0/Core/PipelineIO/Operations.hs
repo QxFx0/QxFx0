@@ -173,5 +173,5 @@ checkPipelineApiHealth pio = do
 pipelineUpdateHistory :: PipelineIO -> Text -> Seq Text -> Seq Text
 pipelineUpdateHistory pio = pioUpdateHistory pio
 
-pipelineParseAuthoritySurface :: PipelineIO -> AuthoritySurface -> Maybe FactualClaimPayload
+pipelineParseAuthoritySurface :: PipelineIO -> AuthoritySurface -> IO (Maybe FactualClaimPayload)
 pipelineParseAuthoritySurface pio = pioParseAuthoritySurface pio

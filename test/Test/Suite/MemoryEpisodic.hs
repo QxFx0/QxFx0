@@ -118,14 +118,14 @@ episodicMemoryTests =
           episodicRecallActive
 
   , -- WP-B R-B4: Explicit initialization invariant - ssEpisodic is never Nothing
-    -- after emptySystemState. This test documents the contract; actual enforcement
-    -- is in Finalize/State.hs error guard.
+    -- after emptySystemState. This test documents the contract; actual handling
+    -- in Finalize/State.hs uses a deterministic empty-store fallback if the
+    -- invariant is ever violated, avoiding a lazy pure exception.
     TestLabel "WP-B: ssEpisodic initialization contract" $
       TestCase $ do
         -- This test documents that after R-B4, ssEpisodic is always Just.
-        -- The actual invariant is enforced by the error guard in Finalize/State.hs:580-584.
-        -- If this contract is violated, the system will fail-fast with:
-        -- "WP-B invariant violation: ssEpisodic should never be Nothing after R-B4"
+        -- Finalize/State.hs no longer throws on a Nothing; it recovers with an
+        -- empty store. The fallback is tested in TurnPipelineProtocol.
         assertBool "R-B4 contract: ssEpisodic always Just after init" True
   ]
 
