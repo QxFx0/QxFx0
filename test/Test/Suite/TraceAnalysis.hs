@@ -7,7 +7,7 @@ import Test.HUnit
 import Data.Aeson (decode, encode)
 
 import QxFx0.Observability.TraceAnalysis
-import QxFx0.Types.TurnProjection (TurnReplayTrace(..))
+import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
@@ -82,7 +82,7 @@ minimalTrace = TurnReplayTrace
   , trcLegitimacyReason = ReasonOk
   , trcParserConfidence = 0.9
   , trcParserBackend = "test"
-  , trcParserStatus = "ok"
+  , trcParserStatus = PsOk
   , trcParserDegradationReason = Nothing
   , trcParserLatencyMs = 10
   , trcEmbeddingQuality = "high"

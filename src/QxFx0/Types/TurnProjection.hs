@@ -3,7 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StrictData #-}
 module QxFx0.Types.TurnProjection
-  ( TurnReplayTrace(..)
+  ( ParserStatus(..)
+  , TurnReplayTrace(..)
   , PreActorFailureKind(..)
   , PreActorFailureEvent(..)
   , EffectSnapshot(..)
@@ -82,6 +83,14 @@ data GenerationAttempt = GenerationAttempt
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
+-- | Closed parser health status for the turn.
+data ParserStatus
+  = PsOk
+  | PsConstitutionAdmitted
+  | PsDegraded !Text
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
 -- | Canonical replay/projection envelope for a turn.
 -- Rich replay visibility does not imply that every field carries canonical
 -- authority: this record intentionally mixes canonical truth caps,
@@ -114,7 +123,7 @@ data TurnReplayTrace = TurnReplayTrace
   , trcLegitimacyReason :: !LegitimacyReason
   , trcParserConfidence :: !Double
   , trcParserBackend :: !Text
-  , trcParserStatus :: !Text
+  , trcParserStatus :: !ParserStatus
   , trcParserDegradationReason :: !(Maybe Text)
   , trcParserLatencyMs :: !Int
   , trcEmbeddingQuality :: !Text

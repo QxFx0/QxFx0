@@ -61,7 +61,7 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..))
 import qualified QxFx0.Runtime as Runtime
-import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..))
+import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), EffectSnapshot(..))
 import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import QxFx0.Self.Essence
@@ -820,7 +820,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
           , tqpShadowFamily = Just CMConfront
           , tqpShadowForce = Just IFConfront
           , tqpShadowMessage = "fixture_divergence"
-          , tqpReplayTrace = fixtureReplayTrace sessionId 0.31 "ok" Nothing
+          , tqpReplayTrace = fixtureReplayTrace sessionId 0.31 PsOk Nothing
           , tqpDivergence = True
           }
     beforeCount <- Runtime.withRuntimeDb rt $ \db ->
@@ -958,7 +958,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
           , tqpShadowFamily = Just CMConfront
           , tqpShadowForce = Just IFConfront
           , tqpShadowMessage = "fixture_divergence"
-          , tqpReplayTrace = fixtureReplayTrace sessionId 0.3 "degraded" (Just "low_confidence")
+          , tqpReplayTrace = fixtureReplayTrace sessionId 0.3 (PsDegraded "low_confidence") (Just "low_confidence")
           , tqpDivergence = True
           }
     saveResult <- StatePersistence.saveStateWithProjection
@@ -1007,7 +1007,7 @@ quickCheckTest _maxCases label prop = TestCase $ do
     Success{} -> pure ()
     _ -> assertFailure ("QuickCheck failed: " <> label)
 
-fixtureReplayTrace :: T.Text -> Double -> T.Text -> Maybe T.Text -> TurnReplayTrace
+fixtureReplayTrace :: T.Text -> Double -> ParserStatus -> Maybe T.Text -> TurnReplayTrace
 fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReason =
   TurnReplayTrace
     { trcRequestId = "req_projection_fixture"

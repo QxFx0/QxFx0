@@ -128,13 +128,14 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       parserBackend = "local_rule_based"
       parserAdmissionAdjusted = any (\tag -> T.isPrefixOf "interpretation_admission=" tag || T.isPrefixOf "proposition_admission=" tag || T.isInfixOf "semantic_frame_admission=" tag || T.isInfixOf "route_hint_admission=" tag) (ipfSemanticEvidence (tiFrame ti))
       parserStatus
-        | tiFrame ti == parseProposition (ipfRawText (tiFrame ti)) = "ok"
-        | parserAdmissionAdjusted = "constitution_admitted"
-        | otherwise = "degraded"
-      parserDegradationReason
-        | parserStatus == "ok" = Nothing
-        | parserStatus == "constitution_admitted" = Just "constitution_interpretation_admission"
-        | otherwise = Just "frame_runtime_mismatch"
+        | tiFrame ti == parseProposition (ipfRawText (tiFrame ti)) = PsOk
+        | parserAdmissionAdjusted = PsConstitutionAdmitted
+        | otherwise = PsDegraded "frame_runtime_mismatch"
+      parserDegradationReason =
+        case parserStatus of
+          PsOk -> Nothing
+          PsConstitutionAdmitted -> Just "constitution_interpretation_admission"
+          PsDegraded _ -> Just "frame_runtime_mismatch"
       parserLatencyMs = 0
       scenePressure
         | asLoad (tiAtomSet ti) <= scenePressureLowThreshold = PressureLow

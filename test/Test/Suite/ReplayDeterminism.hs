@@ -38,7 +38,7 @@ import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergence(..), ShadowDivergenceKind(..), ShadowDivergenceSeverity(..), ShadowSnapshotId(..))
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.FMAR (FmarMode(..))
-import QxFx0.Types.TurnProjection (TurnReplayTrace(..), EffectSnapshot(..), TurnProjection(..))
+import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), EffectSnapshot(..), TurnProjection(..))
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..), emptyCommitmentEngagement)
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
@@ -77,7 +77,7 @@ minimalReplayTrace apiHealthy =
     , trcLegitimacyReason = ReasonOk
     , trcParserConfidence = 0.0
     , trcParserBackend = "test"
-    , trcParserStatus = "ok"
+    , trcParserStatus = PsOk
     , trcParserDegradationReason = Nothing
     , trcParserLatencyMs = 0
     , trcEmbeddingQuality = "heuristic"
