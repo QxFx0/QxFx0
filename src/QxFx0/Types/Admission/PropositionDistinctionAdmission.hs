@@ -24,6 +24,7 @@ distinctionAdmissionConfig :: PropositionAdmissionConfig
   RawPropositionTrigger
   AdmittedPropositionTriggers
   PropositionAdmissionDecision
+  Text
 distinctionAdmissionConfig = PropositionAdmissionConfig
   { pacGetTruthContract = paiTruthContractStatus
   , pacTriggerLabel = rptLabel

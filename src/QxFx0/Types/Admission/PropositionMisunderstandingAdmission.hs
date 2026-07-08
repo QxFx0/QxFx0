@@ -24,6 +24,7 @@ misunderstandingAdmissionConfig :: PropositionAdmissionConfig
   RawPropositionTrigger
   AdmittedPropositionTriggers
   PropositionAdmissionDecision
+  Text
 misunderstandingAdmissionConfig = PropositionAdmissionConfig
   { pacGetTruthContract = paiTruthContractStatus
   , pacTriggerLabel = rptLabel

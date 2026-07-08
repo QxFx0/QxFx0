@@ -10,9 +10,7 @@ module QxFx0.Types.Admission.PropositionPhraseDecisionAdmission
   , admitPropositionPhraseDecisions
   ) where
 
-import Data.Text (Text, pack)
 import QxFx0.Types.Admission.GenericPropositionAdmission
-import QxFx0.Types
 import QxFx0.Types.PropositionFallbackAdmission
   ( PropositionPhraseDecisionAdmissionInput(..)
   , PropositionPhraseDecisionAdmissionDecision(..)
@@ -33,9 +31,10 @@ phraseDecisionAdmissionConfig :: PropositionAdmissionConfig
   RawPropositionPhraseDecision
   AdmittedPropositionPhraseDecisions
   PropositionPhraseDecisionAdmissionDecision
+  PropositionFallbackType
 phraseDecisionAdmissionConfig = PropositionAdmissionConfig
   { pacGetTruthContract = ppdaiTruthContractStatus
-  , pacTriggerLabel = \(RawPropositionPhraseDecision pt _ _) -> pack (show pt)
+  , pacTriggerLabel = \(RawPropositionPhraseDecision pt _ _) -> pt
   , pacTriggerMatched = rppdMatched
   , pacSetTriggerMatched = \b t -> t { rppdMatched = b }
   , pacSafeLabels = safeFallbackTypes
@@ -45,10 +44,10 @@ phraseDecisionAdmissionConfig = PropositionAdmissionConfig
   , pacDecisionSuppressStrong = PpddSuppressStrongDecisions
   }
 
-safeFallbackTypes :: [Text]
+safeFallbackTypes :: [PropositionFallbackType]
 safeFallbackTypes =
-  [ pack "PfContactSignal"
-  , pack "PfAnchorSignal"
-  , pack "PfClarifyQ"
-  , pack "PfDeepenQ"
+  [ PfContactSignal
+  , PfAnchorSignal
+  , PfClarifyQ
+  , PfDeepenQ
   ]

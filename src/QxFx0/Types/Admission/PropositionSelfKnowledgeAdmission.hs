@@ -24,6 +24,7 @@ selfKnowledgeAdmissionConfig :: PropositionAdmissionConfig
   RawPropositionTrigger
   AdmittedPropositionTriggers
   PropositionAdmissionDecision
+  Text
 selfKnowledgeAdmissionConfig = PropositionAdmissionConfig
   { pacGetTruthContract = paiTruthContractStatus
   , pacTriggerLabel = rptLabel

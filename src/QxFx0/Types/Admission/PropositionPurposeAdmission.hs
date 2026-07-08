@@ -24,6 +24,7 @@ purposeAdmissionConfig :: PropositionAdmissionConfig
   RawPropositionTrigger
   AdmittedPropositionTriggers
   PropositionAdmissionDecision
+  Text
 purposeAdmissionConfig = PropositionAdmissionConfig
   { pacGetTruthContract = paiTruthContractStatus
   , pacTriggerLabel = rptLabel

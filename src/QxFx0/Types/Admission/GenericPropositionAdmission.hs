@@ -21,7 +21,6 @@ module QxFx0.Types.Admission.GenericPropositionAdmission
   , admitPropositionTriggers
   ) where
 
-import Data.Text (Text)
 import QxFx0.Types.Observability (TruthContractStatus)
 import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 
@@ -31,17 +30,18 @@ import QxFx0.Types.TruthContract (truthContractIsAuthoritative)
 --   @trigger@ - the raw trigger type (has label and matched fields)
 --   @admitted@ - the admitted triggers result type
 --   @decision@ - the admission decision type (3 constructors)
-data PropositionAdmissionConfig input trigger admitted decision = PropositionAdmissionConfig
+--   @label@ - the type of trigger labels used for safe-list matching
+data PropositionAdmissionConfig input trigger admitted decision label = PropositionAdmissionConfig
   { -- | Extract TruthContractStatus from input
     pacGetTruthContract :: input -> TruthContractStatus
     -- | Get the label field from a trigger
-  , pacTriggerLabel :: trigger -> Text
+  , pacTriggerLabel :: trigger -> label
     -- | Get the matched field from a trigger
   , pacTriggerMatched :: trigger -> Bool
     -- | Set the matched field on a trigger
   , pacSetTriggerMatched :: Bool -> trigger -> trigger
     -- | List of trigger labels that are safe even when matched
-  , pacSafeLabels :: [Text]
+  , pacSafeLabels :: [label]
     -- | Constructor for admitted result (raw, processed, decision)
   , pacAdmittedCtor :: [trigger] -> [trigger] -> decision -> admitted
     -- | Decision constructor: admit raw
@@ -55,7 +55,8 @@ data PropositionAdmissionConfig input trigger admitted decision = PropositionAdm
 -- | Generic admission function implementing the three-guard logic.
 -- This replaces 18 nearly-identical functions across Proposition*Admission modules.
 admitPropositionTriggers
-  :: PropositionAdmissionConfig input trigger admitted decision
+  :: Eq label
+  => PropositionAdmissionConfig input trigger admitted decision label
   -> input
   -> [trigger]
   -> admitted
@@ -72,7 +73,8 @@ admitPropositionTriggers config input rawTriggers
 
 -- | Check if a trigger is already safe (not matched or in safe list)
 triggerAlreadySafe
-  :: PropositionAdmissionConfig input trigger admitted decision
+  :: Eq label
+  => PropositionAdmissionConfig input trigger admitted decision label
   -> trigger
   -> Bool
 triggerAlreadySafe config rawTrigger =
@@ -81,7 +83,8 @@ triggerAlreadySafe config rawTrigger =
 
 -- | Soften a trigger by setting matched=False if it's not already safe
 softenTrigger
-  :: PropositionAdmissionConfig input trigger admitted decision
+  :: Eq label
+  => PropositionAdmissionConfig input trigger admitted decision label
   -> trigger
   -> trigger
 softenTrigger config rawTrigger
