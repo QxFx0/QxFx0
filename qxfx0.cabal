@@ -277,6 +277,7 @@ library
     QxFx0.Semantic.DialogAssembly
     QxFx0.Semantic.DialogAtom
     QxFx0.Semantic.DialogMeaning
+    QxFx0.Semantic.Ontology
     QxFx0.Semantic.Input.Parse
     QxFx0.Semantic.Lexicon.RuntimeParadigms
      QxFx0.Semantic.Embedding
@@ -633,6 +634,7 @@ common test-common
     Test.Suite.Anomaly
     Test.Suite.PathFinder
     Test.Suite.DialogueSemanticSelection
+    Test.Suite.Ontology
     Test.Suite.BootstrapRecovery
     Test.Suite.SurfaceAccumulator
     Test.Suite.SurfaceAccumulatorGolden
