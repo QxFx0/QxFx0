@@ -6,6 +6,7 @@ module Test.Suite.DreamPressure
 
 import Test.HUnit
 
+import Data.Aeson (decode, encode)
 import Data.Time.Clock (UTCTime(..))
 import Data.Time.Calendar (Day(ModifiedJulianDay))
 import qualified Data.Map.Strict as Map
@@ -75,6 +76,9 @@ dreamPressureTests =
   , testRejectedAndQuarantinedCandidatesAreInert
   , testAcceptedGraphBiasAppliesBoundedly
   , testDreamLifecycleTelemetryConsistency
+  , testDreamCandidateKindJsonRoundTrip
+  , testDreamCandidateKindLegacyJsonParsing
+  , testDreamCorrectionCandidateJsonRoundTrip
   ]
 
 testDatalogPressureDeterministic :: Test
@@ -203,7 +207,7 @@ testDreamPressureThresholdVisibility = TestCase $ do
       biasApplied = vecNorm (doBias outcome) > 1e-9
   assertEqual "threshold visibility must align with candidate emission" thresholdFired (not (null candidates))
   assertEqual "bias visibility must align with computed bias norm" biasApplied (vecNorm (doBias outcome) > 1e-9)
-  assertBool "candidate kinds must be present when threshold fires" (not thresholdFired || all (not . T.null . dccKind) candidates)
+  assertBool "candidate kinds must be present when threshold fires" (not thresholdFired || all (not . T.null . T.pack . show . dccKind) candidates)
 
 testDreamCandidateDecisionDeterministic :: Test
 testDreamCandidateDecisionDeterministic = TestCase $ do
@@ -211,12 +215,12 @@ testDreamCandidateDecisionDeterministic = TestCase $ do
   let outcome1 = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       outcome2 = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
   assertEqual "dream candidate decisions should be deterministic" (doCandidateDecisions outcome1) (doCandidateDecisions outcome2)
-  assertBool "refined datalog semantics must not widen application beyond graph_bias" (all (\c -> dccKind c == "graph_bias" || dccAdvisoryOnly c) (doCorrectionCandidates outcome1))
+  assertBool "refined datalog semantics must not widen application beyond graph_bias" (all (\c -> dccKind c == DckGraphBias || dccAdvisoryOnly c) (doCorrectionCandidates outcome1))
 
 testNoPressureRejectsGraphBias :: Test
 testNoPressureRejectsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPNoPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "no pressure should reject graph bias" DCDRNoPressure (rdcReason rejected)
@@ -225,7 +229,7 @@ testNoPressureRejectsGraphBias = TestCase $ do
 testUnavailableOnlyRejectsGraphBias :: Test
 testUnavailableOnlyRejectsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPUnavailableOnly IntuitionPressureNone pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "unavailable-only should reject graph bias" DCDRUnavailableOnly (rdcReason rejected)
@@ -234,7 +238,7 @@ testUnavailableOnlyRejectsGraphBias = TestCase $ do
 testAdvisoryMismatchRejectsGraphBias :: Test
 testAdvisoryMismatchRejectsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPAdvisoryMismatch IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "advisory mismatch should reject graph bias" DCDRAdvisoryMismatchOnly (rdcReason rejected)
@@ -243,7 +247,7 @@ testAdvisoryMismatchRejectsGraphBias = TestCase $ do
 testAlternativeFamilyPressureQuarantinesGraphBias :: Test
 testAlternativeFamilyPressureQuarantinesGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) (Just CMRepair) [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 (Just CMRepair) [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 (Just CMRepair) [] True
       decision = evaluateDreamCandidateWithClasses DPAlternativeFamilyPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateQuarantined quarantined -> assertEqual "alternative-family pressure should quarantine graph bias" DCDRAlternativeFamilyPressure (qdcReason quarantined)
@@ -252,7 +256,7 @@ testAlternativeFamilyPressureQuarantinesGraphBias = TestCase $ do
 testSafetyConvergentAcceptsGraphBias :: Test
 testSafetyConvergentAcceptsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPSafetyPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateAccepted accepted -> assertEqual "safety convergent pressure should accept graph bias with safety reason" DCDRAcceptedSafetyGraphBias (adcReason accepted)
@@ -261,7 +265,7 @@ testSafetyConvergentAcceptsGraphBias = TestCase $ do
 testContractConvergentAcceptsGraphBias :: Test
 testContractConvergentAcceptsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateAccepted accepted -> assertEqual "contract convergent pressure should accept graph bias with contract reason" DCDRAcceptedContractGraphBias (adcReason accepted)
@@ -270,7 +274,7 @@ testContractConvergentAcceptsGraphBias = TestCase $ do
 testGateEscalationConvergentAcceptsGraphBias :: Test
 testGateEscalationConvergentAcceptsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPGateEscalation IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateAccepted accepted -> assertEqual "gate escalation convergent pressure should accept graph bias with gate reason" DCDRAcceptedGateEscalationGraphBias (adcReason accepted)
@@ -279,7 +283,7 @@ testGateEscalationConvergentAcceptsGraphBias = TestCase $ do
 testConflictAgreementQuarantinesGraphBias :: Test
 testConflictAgreementQuarantinesGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConflict 0.9 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.9 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.9 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressureFlash pressure candidate
   case decision of
     DreamCandidateQuarantined quarantined -> assertEqual "conflict agreement should quarantine graph bias" DCDRConflictAgreement (qdcReason quarantined)
@@ -288,7 +292,7 @@ testConflictAgreementQuarantinesGraphBias = TestCase $ do
 testSymbolicOnlyAgreementStaysInert :: Test
 testSymbolicOnlyAgreementStaysInert = TestCase $ do
   let pressure = DreamPressure DreamPressureDatalogDominant 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) (Just CMRepair) [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 (Just CMRepair) [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 (Just CMRepair) [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "symbolic-only agreement should stay inert" DCDRSymbolicOnlyAgreement (rdcReason rejected)
@@ -298,7 +302,7 @@ testSymbolicOnlyAgreementStaysInert = TestCase $ do
 testAffectiveOnlyAgreementStaysInert :: Test
 testAffectiveOnlyAgreementStaysInert = TestCase $ do
   let pressure = DreamPressure DreamPressureIntuitionDominant 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressureFlash pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "affective-only agreement should stay inert" DCDRAffectiveOnlyAgreement (rdcReason rejected)
@@ -308,7 +312,7 @@ testAffectiveOnlyAgreementStaysInert = TestCase $ do
 testThresholdMissRejectsGraphBias :: Test
 testThresholdMissRejectsGraphBias = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.34 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.34 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.34 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPSafetyPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "below-threshold graph bias should preserve threshold miss reason" DCDRThresholdNotReached (rdcReason rejected)
@@ -318,7 +322,7 @@ testThresholdMissRejectsGraphBias = TestCase $ do
 testNaturalSymbolicCandidateStaysObservedOnly :: Test
 testNaturalSymbolicCandidateStaysObservedOnly = TestCase $ do
   let pressure = DreamPressure DreamPressureDatalogDominant 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) (Just CMRepair) [] 0.35
-      candidate = DreamCorrectionCandidate "symbolic" "symbolic" 0.8 (Just CMRepair) [] True
+      candidate = DreamCorrectionCandidate "symbolic" DckSymbolic 0.8 (Just CMRepair) [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressurePosterior pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "natural symbolic candidate should stay observed-only" DCDRSymbolicCandidateObservedOnly (rdcReason rejected)
@@ -328,7 +332,7 @@ testNaturalSymbolicCandidateStaysObservedOnly = TestCase $ do
 testNaturalAffectiveCandidateStaysObservedOnly :: Test
 testNaturalAffectiveCandidateStaysObservedOnly = TestCase $ do
   let pressure = DreamPressure DreamPressureIntuitionDominant 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "affective" "affective" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "affective" DckAffective 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressureFlash pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "natural affective candidate should stay observed-only" DCDRAffectiveCandidateObservedOnly (rdcReason rejected)
@@ -338,7 +342,7 @@ testNaturalAffectiveCandidateStaysObservedOnly = TestCase $ do
 testNaturalConflictCandidateStaysQuarantined :: Test
 testNaturalConflictCandidateStaysQuarantined = TestCase $ do
   let pressure = DreamPressure DreamPressureConflict 0.9 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "conflict" "conflict" 0.9 Nothing [] True
+      candidate = DreamCorrectionCandidate "conflict" DckConflict 0.9 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressureFlash pressure candidate
   case decision of
     DreamCandidateQuarantined quarantined -> assertEqual "natural conflict candidate should stay quarantined as observed-only" DCDRConflictCandidateObservedOnly (qdcReason quarantined)
@@ -348,7 +352,7 @@ testNaturalConflictCandidateStaysQuarantined = TestCase $ do
 testNaturalNoneCandidateStaysObservedOnly :: Test
 testNaturalNoneCandidateStaysObservedOnly = TestCase $ do
   let pressure = DreamPressure DreamPressureNone 0.1 zeroVec Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "none" "none" 0.1 Nothing [] True
+      candidate = DreamCorrectionCandidate "none" DckNone 0.1 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPNoPressure IntuitionPressureNone pressure candidate
   case decision of
     DreamCandidateRejected rejected -> assertEqual "natural none candidate should stay observed-only" DCDRNoneCandidateObservedOnly (rdcReason rejected)
@@ -358,10 +362,10 @@ testNaturalNoneCandidateStaysObservedOnly = TestCase $ do
 testRejectedAndQuarantinedCandidatesAreInert :: Test
 testRejectedAndQuarantinedCandidatesAreInert = TestCase $ do
   let weakPressure = DreamPressure DreamPressureConvergent 0.1 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      weakCandidate = DreamCorrectionCandidate "weak" "graph_bias" 0.1 Nothing [] True
+      weakCandidate = DreamCorrectionCandidate "weak" DckGraphBias 0.1 Nothing [] True
       weakDecision = evaluateDreamCandidateWithClasses DPAdvisoryMismatch IntuitionPressurePosterior weakPressure weakCandidate
       conflictPressure = DreamPressure DreamPressureConflict 0.9 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      conflictCandidate = DreamCorrectionCandidate "conflict" "graph_bias" 0.9 Nothing [] True
+      conflictCandidate = DreamCorrectionCandidate "conflict" DckGraphBias 0.9 Nothing [] True
       conflictDecision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressureFlash conflictPressure conflictCandidate
   case weakDecision of
     DreamCandidateRejected rejected -> assertEqual "weak advisory graph-bias should preserve advisory mismatch reason" DCDRAdvisoryMismatchOnly (rdcReason rejected)
@@ -375,7 +379,7 @@ testRejectedAndQuarantinedCandidatesAreInert = TestCase $ do
 testAcceptedGraphBiasAppliesBoundedly :: Test
 testAcceptedGraphBiasAppliesBoundedly = TestCase $ do
   let pressure = DreamPressure DreamPressureConvergent 0.8 (CoreVec 0.02 0.01 0.01 0.03 0.02) Nothing [] 0.35
-      candidate = DreamCorrectionCandidate "graph" "graph_bias" 0.8 Nothing [] True
+      candidate = DreamCorrectionCandidate "graph" DckGraphBias 0.8 Nothing [] True
       decision = evaluateDreamCandidateWithClasses DPContractPressure IntuitionPressurePosterior pressure candidate
       appliedBias = decisionAppliedBias decision
   case decision of
@@ -439,3 +443,21 @@ decisionAppliedBias decision =
     DreamCandidateAccepted accepted -> applyAcceptedDreamCandidateBias accepted
     DreamCandidateRejected _ -> zeroVec
     DreamCandidateQuarantined _ -> zeroVec
+
+testDreamCandidateKindJsonRoundTrip :: Test
+testDreamCandidateKindJsonRoundTrip = TestCase $ do
+  let kinds = [DckGraphBias, DckSymbolic, DckAffective, DckConflict, DckNone]
+  mapM_ (\k -> assertEqual ("DreamCandidateKind round-trip for " ++ show k) (Just k) (decode (encode k))) kinds
+
+testDreamCandidateKindLegacyJsonParsing :: Test
+testDreamCandidateKindLegacyJsonParsing = TestCase $ do
+  assertEqual "legacy graph_bias string parses" (Just DckGraphBias) (decode "\"graph_bias\"")
+  assertEqual "legacy symbolic string parses" (Just DckSymbolic) (decode "\"symbolic\"")
+  assertEqual "legacy affective string parses" (Just DckAffective) (decode "\"affective\"")
+  assertEqual "legacy conflict string parses" (Just DckConflict) (decode "\"conflict\"")
+  assertEqual "legacy none string parses" (Just DckNone) (decode "\"none\"")
+
+testDreamCorrectionCandidateJsonRoundTrip :: Test
+testDreamCorrectionCandidateJsonRoundTrip = TestCase $ do
+  let candidate = DreamCorrectionCandidate "test" DckGraphBias 0.8 (Just CMRepair) ["tag"] True
+  assertEqual "DreamCorrectionCandidate round-trip" (Just candidate) (decode (encode candidate))

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
@@ -184,37 +185,37 @@ evaluateDreamCandidate :: DreamPressure -> DreamCorrectionCandidate -> DreamCand
 evaluateDreamCandidate = evaluateDreamCandidateWithClasses DPNoPressure IntuitionPressureNone
 
 evaluateDreamCandidateWithClasses :: DatalogPressureClass -> IntuitionPressureClass -> DreamPressure -> DreamCorrectionCandidate -> DreamCandidateDecision
-evaluateDreamCandidateWithClasses dClass iClass pressure candidate
-  | dccKind candidate == "symbolic" =
+evaluateDreamCandidateWithClasses dClass iClass pressure candidate =
+  case dccKind candidate of
+    DckSymbolic ->
       DreamCandidateRejected (RejectedDreamCandidate envelope DCDRSymbolicCandidateObservedOnly)
-  | dccKind candidate == "affective" =
+    DckAffective ->
       DreamCandidateRejected (RejectedDreamCandidate envelope DCDRAffectiveCandidateObservedOnly)
-  | dccKind candidate == "conflict" =
+    DckConflict ->
       DreamCandidateQuarantined (QuarantinedDreamCandidate envelope DCDRConflictCandidateObservedOnly)
-  | dccKind candidate == "none" =
+    DckNone ->
       DreamCandidateRejected (RejectedDreamCandidate envelope DCDRNoneCandidateObservedOnly)
-  | dccKind candidate /= "graph_bias" =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRUnsupportedCandidateKind)
-  | dClass == DPNoPressure =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRNoPressure)
-  | dClass == DPUnavailableOnly =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRUnavailableOnly)
-  | drpAgreement pressure == DreamPressureConflict =
-      DreamCandidateQuarantined (QuarantinedDreamCandidate envelope DCDRConflictAgreement)
-  | dClass == DPAlternativeFamilyPressure =
-      DreamCandidateQuarantined (QuarantinedDreamCandidate envelope DCDRAlternativeFamilyPressure)
-  | dClass == DPAdvisoryMismatch =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRAdvisoryMismatchOnly)
-  | not thresholdFired =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRThresholdNotReached)
-  | drpAgreement pressure == DreamPressureIntuitionDominant =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRAffectiveOnlyAgreement)
-  | drpAgreement pressure == DreamPressureDatalogDominant =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRSymbolicOnlyAgreement)
-  | drpAgreement pressure == DreamPressureConvergent =
-      DreamCandidateAccepted (AcceptedDreamCandidate envelope (acceptedGraphBiasReason dClass))
-  | otherwise =
-      DreamCandidateRejected (RejectedDreamCandidate envelope DCDRThresholdNotReached)
+    DckGraphBias
+      | dClass == DPNoPressure ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRNoPressure)
+      | dClass == DPUnavailableOnly ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRUnavailableOnly)
+      | drpAgreement pressure == DreamPressureConflict ->
+          DreamCandidateQuarantined (QuarantinedDreamCandidate envelope DCDRConflictAgreement)
+      | dClass == DPAlternativeFamilyPressure ->
+          DreamCandidateQuarantined (QuarantinedDreamCandidate envelope DCDRAlternativeFamilyPressure)
+      | dClass == DPAdvisoryMismatch ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRAdvisoryMismatchOnly)
+      | not thresholdFired ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRThresholdNotReached)
+      | drpAgreement pressure == DreamPressureIntuitionDominant ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRAffectiveOnlyAgreement)
+      | drpAgreement pressure == DreamPressureDatalogDominant ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRSymbolicOnlyAgreement)
+      | drpAgreement pressure == DreamPressureConvergent ->
+          DreamCandidateAccepted (AcceptedDreamCandidate envelope (acceptedGraphBiasReason dClass))
+      | otherwise ->
+          DreamCandidateRejected (RejectedDreamCandidate envelope DCDRThresholdNotReached)
   where
     thresholdFired = isThresholdFired pressure candidate
     envelope =
@@ -231,8 +232,20 @@ evaluateDreamCandidateWithClasses dClass iClass pressure candidate
 applyAcceptedDreamCandidateBias :: AcceptedDreamCandidate -> CoreVec
 applyAcceptedDreamCandidateBias accepted =
   case dccKind (dceCandidate (adcEnvelope accepted)) of
-    "graph_bias" -> vecScale (min 0.25 (dccStrength (dceCandidate (adcEnvelope accepted)) * 0.25)) (dceBias (adcEnvelope accepted))
+    DckGraphBias -> vecScale (min 0.25 (dccStrength (dceCandidate (adcEnvelope accepted)) * 0.25)) (dceBias (adcEnvelope accepted))
     _ -> zeroVec
+
+dreamKindWeight :: DreamCandidateKind -> Double
+dreamKindWeight = \case
+  DckGraphBias -> 1.0
+  DckSymbolic -> 0.75
+  DckAffective -> 0.65
+  DckConflict -> 0.55
+  DckNone -> 0.0
+
+isGraphBias :: DreamCandidateKind -> Bool
+isGraphBias DckGraphBias = True
+isGraphBias _ = False
 
 isThresholdFired :: DreamPressure -> DreamCorrectionCandidate -> Bool
 isThresholdFired pressure candidate = dccStrength candidate >= drpCandidateThreshold pressure
@@ -307,14 +320,14 @@ candidateLabel pressure =
   where
     familyLabel family = "dream_pressure_family:" <> T.pack (show family)
 
-candidateKind :: DreamPressure -> Text
+candidateKind :: DreamPressure -> DreamCandidateKind
 candidateKind pressure =
   case drpAgreement pressure of
-    DreamPressureNone -> "none"
-    DreamPressureConvergent -> "graph_bias"
-    DreamPressureDatalogDominant -> "symbolic"
-    DreamPressureIntuitionDominant -> "affective"
-    DreamPressureConflict -> "conflict"
+    DreamPressureNone -> DckNone
+    DreamPressureConvergent -> DckGraphBias
+    DreamPressureDatalogDominant -> DckSymbolic
+    DreamPressureIntuitionDominant -> DckAffective
+    DreamPressureConflict -> DckConflict
 
 prefixCandidate :: Text -> DreamCorrectionCandidate -> DreamCorrectionCandidate
 prefixCandidate stem candidate =

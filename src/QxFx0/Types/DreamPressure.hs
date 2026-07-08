@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
 module QxFx0.Types.DreamPressure
@@ -10,6 +11,7 @@ module QxFx0.Types.DreamPressure
   , IntuitionPressure(..)
   , DreamPressureAgreement(..)
   , DreamPressure(..)
+  , DreamCandidateKind(..)
   , DreamCorrectionCandidate(..)
   , DreamCandidateDecisionReason(..)
   , DreamCandidateDecision(..)
@@ -21,7 +23,14 @@ module QxFx0.Types.DreamPressure
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson
+  ( FromJSON(parseJSON)
+  , ToJSON(toJSON)
+  , Value(Object, String)
+  , object
+  , (.:)
+  , (.=)
+  )
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
@@ -95,9 +104,42 @@ data DreamPressure = DreamPressure
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
+data DreamCandidateKind
+  = DckGraphBias
+  | DckSymbolic
+  | DckAffective
+  | DckConflict
+  | DckNone
+  deriving stock (Eq, Ord, Show, Read, Generic)
+
+instance NFData DreamCandidateKind
+
+instance FromJSON DreamCandidateKind where
+  parseJSON (String t) =
+    case t of
+      "graph_bias" -> pure DckGraphBias
+      "symbolic" -> pure DckSymbolic
+      "affective" -> pure DckAffective
+      "conflict" -> pure DckConflict
+      "none" -> pure DckNone
+      other -> fail ("unknown DreamCandidateKind string: " <> show other)
+  parseJSON (Object o) = do
+    tag <- o .: "tag"
+    case tag of
+      "DckGraphBias" -> pure DckGraphBias
+      "DckSymbolic" -> pure DckSymbolic
+      "DckAffective" -> pure DckAffective
+      "DckConflict" -> pure DckConflict
+      "DckNone" -> pure DckNone
+      other -> fail ("unknown DreamCandidateKind tag: " <> show (other :: Text))
+  parseJSON _ = fail "DreamCandidateKind expects a string or an object with a 'tag' field"
+
+instance ToJSON DreamCandidateKind where
+  toJSON k = object ["tag" .= show k]
+
 data DreamCorrectionCandidate = DreamCorrectionCandidate
   { dccLabel :: !Text
-  , dccKind :: !Text
+  , dccKind :: !DreamCandidateKind
   , dccStrength :: !Double
   , dccSuggestedFamily :: !(Maybe CanonicalMoveFamily)
   , dccReasonTags :: ![Text]

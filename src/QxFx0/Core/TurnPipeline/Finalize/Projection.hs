@@ -306,7 +306,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcDreamPressureAgreement = Just (T.pack (show (drpAgreement (doDreamPressure dreamOutcome))))
           , trcDreamPressureStrength = Just (drpStrength (doDreamPressure dreamOutcome))
           , trcDreamPressureCandidateThresholdFired = Just (not (null (doCorrectionCandidates dreamOutcome)))
-          , trcDreamPressureCandidateKinds = map dccKind (doCorrectionCandidates dreamOutcome)
+          , trcDreamPressureCandidateKinds = map (T.pack . show . dccKind) (doCorrectionCandidates dreamOutcome)
           , trcDreamPressureBiasApplied = Just (vecNorm (doBias dreamOutcome) > 1e-9)
           , trcDreamCandidateLifecycleStatuses = map renderDreamCandidateDecisionStatus (doCandidateDecisions dreamOutcome)
           , trcDreamCandidateDecisionReasons = map renderDreamCandidateDecisionReasonText (doCandidateDecisions dreamOutcome)
