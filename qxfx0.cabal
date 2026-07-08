@@ -256,6 +256,7 @@ library
     QxFx0.Learning.GameTheory.LP
 
     QxFx0.CLI.Parser
+    QxFx0.CLI.Ingest
      QxFx0.Semantic.Commitment
      QxFx0.Semantic.AtomAccretion
      QxFx0.Semantic.MeaningAtoms
@@ -642,6 +643,7 @@ common test-common
     Test.Suite.SurfaceAccumulatorGolden
     Test.Suite.NetworkIngest
     Test.Suite.NetworkTypes
+    Test.Suite.CLIIngest
 
 test-suite qxfx0-test-unit
   import:        test-common

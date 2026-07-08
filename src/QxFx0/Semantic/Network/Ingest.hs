@@ -21,6 +21,7 @@ module QxFx0.Semantic.Network.Ingest
   , loadRelationGraph
   , ingestExternalKnowledge
   , buildNetworkFromAtomGraph
+  , semanticNetworkFromLoaded
   ) where
 
 import Control.DeepSeq (NFData)

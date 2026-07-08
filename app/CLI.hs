@@ -39,6 +39,7 @@ import qualified QxFx0.Semantic.Content.PathFinder as PathFinder
 import QxFx0.Semantic.Content.PathFinder (defaultFieldProfile)
 import Data.List (partition)
 import QxFx0.CLI.Parser (extractSessionArgs)
+import qualified QxFx0.CLI.Ingest as Ingest
 import QxFx0.ExceptionPolicy (QxFx0Exception)
 import QxFx0.Types.State (ssMorphology, ssRuntimeGraph)
 
@@ -71,6 +72,7 @@ main = do
     ("--selfplay":rest)       -> handleSelfPlay sessionId rest
     ("--discover":rest)       -> handleDiscover sessionId rest
     ("--tune-corpus":rest)    -> handleTuneCorpus sessionId rest
+    ("ingest":rest)           -> handleIngest rest
     _                         -> do
       hPutStrLn stderr "Unsupported arguments. Use --help."
       exitFailure
@@ -100,6 +102,8 @@ printMachineHelp = do
   T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
   T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
   T.putStrLn "  --tune-corpus [session-id|all]  run corpus-driven calibration tuning"
+  T.putStrLn "  ingest [--relations <path>] [--ontology <path>]"
+  T.putStrLn "                              ingest external knowledge and emit a summary"
 
 handleTurnJson :: Text -> [String] -> IO ()
 handleTurnJson sessionId args =
@@ -206,6 +210,20 @@ handleDiscover _sessionId args =
           forM_ relations $ \r -> do
             T.putStrLn $ "  " <> AtomStore.relRuOriginal r
               <> " [" <> T.pack (show (AtomStore.relType r)) <> "]"
+
+handleIngest :: [String] -> IO ()
+handleIngest args =
+  case Ingest.parseIngestArgs args of
+    Nothing -> do
+      hPutStrLn stderr "Error: ingest expects [--relations <path>] [--ontology <path>]"
+      exitFailure
+    Just opts -> do
+      outcome <- Ingest.runIngest opts
+      case outcome of
+        Left err -> do
+          hPutStrLn stderr (T.unpack err)
+          exitFailure
+        Right summary -> T.putStrLn (Ingest.formatIngestSummary summary)
 
 handleWorkerStdio :: Text -> IO ()
 handleWorkerStdio sessionId = runWorkerStdio sessionId
