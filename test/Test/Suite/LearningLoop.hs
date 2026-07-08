@@ -88,6 +88,8 @@ import QxFx0.Types.State
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State
   ( ssMorphology
+  , ClaimStanceRef(..)
+  , ConflictPolicy(..)
   , ConatusSlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
@@ -106,7 +108,6 @@ import QxFx0.Types.State
   , PerspectiveStatus(..)
   , PerspectiveThread(..)
   , PerspectiveVersionId(..)
-  , ClaimStanceRef(..)
   , defaultNormativeProfile
   , defaultPerspectiveRegistry
   )
@@ -1409,12 +1410,12 @@ testPerspectiveNormativeProfileVersionAffectsCandidate = TestCase $ do
   let strictProfile = defaultNormativeProfile
         { npVersionId = 1
         , npPriorities = M.fromList [("safety", 1.0), ("stability", 1.0), ("counterargument", 1.0)]
-        , npConflictPolicy = "conservative"
+        , npConflictPolicy = CpStrict
         }
       permissiveProfile = defaultNormativeProfile
         { npVersionId = 2
         , npPriorities = M.fromList [("safety", 0.7), ("stability", 0.7), ("counterargument", 0.2)]
-        , npConflictPolicy = "permissive"
+        , npConflictPolicy = CpPermissive
         }
       strictCandidate = opinionCore (mkPerspectiveBundle [EvidenceRef "knowledge:x"] [ClaimStanceRef "stance:x"] [CounterargumentRef "counter:x"] strictProfile [])
       permissiveCandidate = opinionCore (mkPerspectiveBundle [EvidenceRef "knowledge:x"] [ClaimStanceRef "stance:x"] [CounterargumentRef "counter:x"] permissiveProfile [])

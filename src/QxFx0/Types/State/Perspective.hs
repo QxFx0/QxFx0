@@ -15,6 +15,7 @@ module QxFx0.Types.State.Perspective
   , CounterargumentRef(..)
   , IdentitySlice(..)
   , ConatusSlice(..)
+  , ConflictPolicy(..)
   , NormativeProfile(..)
   , PerspectiveInputBundle(..)
   , PerspectiveCandidate(..)
@@ -39,13 +40,14 @@ module QxFx0.Types.State.Perspective
   , activePerspectiveProjectionScopes
   ) where
 
-import Control.Applicative (empty)
+import Control.Applicative (empty, (<|>))
 import Control.DeepSeq (NFData)
 import Data.Aeson
   ( FromJSON(..)
   , ToJSON(..)
   , object
   , withObject
+  , withText
   , (.:?)
   , (.!=)
   , (.=)
@@ -53,6 +55,7 @@ import Data.Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Data.List (sortOn)
 import Data.Ord (Down(..))
@@ -106,11 +109,38 @@ data ConatusSlice = ConatusSlice
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
 
+data ConflictPolicy
+  = CpInvalid
+  | CpPermissive
+  | CpStrict
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (NFData)
+
+instance ToJSON ConflictPolicy where
+  toJSON policy = object ["tag" .= show policy]
+
+instance FromJSON ConflictPolicy where
+  parseJSON v = parseTagged v <|> parseString v
+    where
+      parseTagged = withObject "ConflictPolicy" $ \o -> do
+        tag <- o .:? "tag"
+        case tag :: Maybe Text of
+          Just "CpInvalid"    -> pure CpInvalid
+          Just "CpPermissive" -> pure CpPermissive
+          Just "CpStrict"     -> pure CpStrict
+          Just _              -> pure CpStrict
+          Nothing             -> fail "missing tag"
+      parseString = withText "ConflictPolicy" $ \t ->
+        case T.toLower t of
+          "invalid"    -> pure CpInvalid
+          "permissive" -> pure CpPermissive
+          _            -> pure CpStrict
+
 data NormativeProfile = NormativeProfile
   { npId :: !NormativeProfileId
   , npVersionId :: !Int
   , npPriorities :: !(Map Text Double)
-  , npConflictPolicy :: !Text
+  , npConflictPolicy :: !ConflictPolicy
   , npActivationScope :: !(Maybe PerspectiveScope)
   }
   deriving stock (Eq, Show, Generic)
@@ -299,7 +329,7 @@ defaultNormativeProfile = NormativeProfile
       , ("revision", 0.8)
       , ("counterargument", 0.7)
       ]
-  , npConflictPolicy = "conservative"
+  , npConflictPolicy = CpStrict
   , npActivationScope = Nothing
   }
 

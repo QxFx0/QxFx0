@@ -158,7 +158,7 @@ evaluatePerspectiveAdmissibility bundle candidate
       PerspectiveInadmissible "conatus_violation"
   | pcCounterargumentPressure candidate > 0.74 =
       PerspectiveInadmissible "excessive_counterargument_pressure"
-  | npConflictPolicy (pibNormativeProfile bundle) == "invalid" =
+  | npConflictPolicy (pibNormativeProfile bundle) == CpInvalid =
       PerspectiveInadmissible "invalid_normative_conflict"
   | pcNormativeAlignment candidate < 0.25 =
       PerspectiveInadmissible "invalid_normative_conflict"
@@ -567,7 +567,10 @@ computeNormativeAlignment np counterPressure cs =
   let safety = M.findWithDefault 1.0 "safety" (npPriorities np)
       stability = M.findWithDefault 0.9 "stability" (npPriorities np)
       counterWeight = M.findWithDefault 0.7 "counterargument" (npPriorities np)
-      conflictPenalty = if npConflictPolicy np == "permissive" then 0.08 else 0.18
+      conflictPenalty = case npConflictPolicy np of
+        CpPermissive -> 0.08
+        CpInvalid    -> 0.18
+        CpStrict     -> 0.18
       base = (0.45 * safety) + (0.35 * stability) + (0.20 * csStability cs)
       penalty = (counterPressure * counterWeight * 0.30) + conflictPenalty
   in clampUnit (base - penalty)

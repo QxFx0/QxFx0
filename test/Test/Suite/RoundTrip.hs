@@ -43,6 +43,7 @@ import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Observability.Metrics (MetricType(..), Metric(..))
 import QxFx0.Observability.Logging (LogLevel(..), LogEntry(..))
 import QxFx0.Semantic.Network.Substrate (SubstrateEdgeInfo(..))
+import QxFx0.Types.State.Perspective (ConflictPolicy(..))
 
 -- | Helper: round-trip a value through JSON and verify equality
 assertRoundTrip :: (Eq a, Show a, A.ToJSON a, A.FromJSON a) => String -> a -> Assertion
@@ -74,6 +75,7 @@ roundTripTests = TestList
   , TestLabel "LogLevel" testLogLevelRT
   , TestLabel "LogEntry" testLogEntryRT
   , TestLabel "SubstrateEdgeInfo" testSubstrateEdgeInfoRT
+  , TestLabel "ConflictPolicy" testConflictPolicyRT
   ]
 
 -- LocalRecoveryCause — audit C: had broken round-trip (ToJSON snake_case, FromJSON generic)
@@ -242,4 +244,23 @@ testLogEntryRT = TestList
 testSubstrateEdgeInfoRT :: Test
 testSubstrateEdgeInfoRT = TestList
   [ TestCase $ assertRoundTrip "edge" (SubstrateEdgeInfo "topicA" "topicB" 0.5 3)
+  ]
+
+testConflictPolicyRT :: Test
+testConflictPolicyRT = TestList
+  [ TestCase $ assertRoundTrip "CpInvalid" CpInvalid
+  , TestCase $ assertRoundTrip "CpPermissive" CpPermissive
+  , TestCase $ assertRoundTrip "CpStrict" CpStrict
+  , TestCase $ assertEqual "legacy invalid string decodes to CpInvalid"
+      (Just CpInvalid) (A.decode "\"invalid\"")
+  , TestCase $ assertEqual "legacy permissive string decodes to CpPermissive"
+      (Just CpPermissive) (A.decode "\"permissive\"")
+  , TestCase $ assertEqual "legacy conservative string decodes to CpStrict"
+      (Just CpStrict) (A.decode "\"conservative\"")
+  , TestCase $ assertEqual "tagged CpInvalid decodes"
+      (Just CpInvalid) (A.decode "{\"tag\":\"CpInvalid\"}")
+  , TestCase $ assertEqual "tagged CpPermissive decodes"
+      (Just CpPermissive) (A.decode "{\"tag\":\"CpPermissive\"}")
+  , TestCase $ assertEqual "tagged CpStrict decodes"
+      (Just CpStrict) (A.decode "{\"tag\":\"CpStrict\"}")
   ]
