@@ -314,6 +314,7 @@ library
       QxFx0.Semantic.Intent.Metrics
       QxFx0.Semantic.Revision
       QxFx0.Semantic.Stance
+      QxFx0.Semantic.SurfaceAccumulator
       QxFx0.Semantic.Frame.Types
       QxFx0.Semantic.Frame.Builder
      QxFx0.Core.DialogueThread
@@ -630,6 +631,7 @@ common test-common
     Test.Suite.PathFinder
     Test.Suite.DialogueSemanticSelection
     Test.Suite.BootstrapRecovery
+    Test.Suite.SurfaceAccumulator
 
 test-suite qxfx0-test-unit
   import:        test-common
