@@ -521,29 +521,28 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
           plain (if isEn
                    then "No, not just one. I can formulate different thoughts, but if the requests are too close, my generative layer is still inclined to repeat a successful formulation instead of immediately developing a new one."
                    else "Нет, не одна. Я могу формулировать разные мысли, но если запросы слишком близки, мой генеративный слой пока склонен повторять удачную формулировку вместо того, чтобы сразу разворачивать новую.")
-      | ipfSemanticTarget frame == "user" ->
+      | SftUser <- ipfSemanticTarget frame ->
           plain (if isEn
                     then "About you I know only what is manifested in this session. I have no external biography, hidden profiles, or separate memory of you outside the current conversation; I can rely only on your replies, chosen topics, and already established dialogue frames."
                     else if hardKnowledgeTone
                       then "О тебе я знаю только то, что проявлено в этой сессии. У меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я могу опираться лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки."
                       else "О тебе я знаю только то, что проявлено в этой сессии: у меня нет внешней биографии, скрытых профилей или отдельной памяти о тебе вне текущего разговора; я опираюсь лишь на твои реплики, выбранные темы и уже установленные в диалоге рамки.")
-      | ipfSemanticTarget frame == "user_help" ->
+      | SftUserHelp <- ipfSemanticTarget frame ->
           plain (if isEn
                    then "Yes, I can help. I work best when the task is stated explicitly and a local frame can be held: what exactly needs to be clarified, distinguished, defined, or gathered."
                    else "Да, я могу помочь. Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку: что именно нужно прояснить, различить, определить или собрать.")
-      | ipfSemanticTarget frame == "self_capability" ->
+      | SftSelfCapability <- ipfSemanticTarget frame ->
           plain (if isEn
                    then "Yes, within the current session I can work with " <> (nonEmptyOr (ipfSemanticSubject frame) "this action") <> ". My ability here is not external magic but local parsing, holding the frame, and sequential assembly of the answer."
                    else "Да, в пределах текущей сессии я могу работать с " <> structuredInstrumentalIdea (nonEmptyOr (ipfSemanticSubject frame) "этим действием")
                      <> ". Моя способность здесь не внешняя магия, а локальный разбор, удержание рамки и последовательная сборка ответа.")
       | otherwise ->
           let target = ipfSemanticTarget frame
-              forceTargetAst =
-                target `elem` ["self_intentions", "self_values", "self_future", "self_freedom", "self_reflection"]
+              forceTargetAst = isSelfFamily target
               ast =
                 if forceTargetAst
-                  then selfKnowledgeFallbackAst frame
-                  else claimAstOrFallback (selfKnowledgeFallbackAst frame) (rmpPrimaryClaimAst rmp)
+                  then selfKnowledgeFallbackAst target
+                  else claimAstOrFallback (selfKnowledgeFallbackAst target) (rmpPrimaryClaimAst rmp)
               fallback = if isEn
                             then "I am a local dialogue system. About myself I know my role, current state, and the way I proceed through the conversation: I work through typed parsing, family routing, and current session constraints."
                             else if hardKnowledgeTone
@@ -1380,57 +1379,53 @@ asksThoughtCapacityQuestion frame =
       && "одна" `T.isInfixOf` lowered
       && any (`T.isInfixOf` lowered) ["мысл", "иде"]
 
-selfKnowledgeFallbackAst :: InputPropositionFrame -> ClaimAst
-selfKnowledgeFallbackAst frame =
-  case ipfSemanticTarget frame of
-    "self_intentions" -> MovePurpose (MkNP "sposobnost_N")
-    "self_values" -> MoveAnchor (MkNP "ponyatie_N")
-    "self_future" -> MoveNextStepLocal (MkNP "ponyatie_N")
-    "self_freedom" -> MoveDescribe (MkNP "svoboda_N")
-    "self_reflection" -> MoveReflect (MkNP "ponyatie_N")
-    "self_capability" -> MoveDescribe (MkNP "sposobnost_N")
+selfKnowledgeFallbackAst :: SemanticFrameTarget -> ClaimAst
+selfKnowledgeFallbackAst target =
+  case target of
+    SftSelfIntentions -> MovePurpose (MkNP "sposobnost_N")
+    SftSelfValues -> MoveAnchor (MkNP "ponyatie_N")
+    SftSelfFuture -> MoveNextStepLocal (MkNP "ponyatie_N")
+    SftSelfFreedom -> MoveDescribe (MkNP "svoboda_N")
+    SftSelfReflection -> MoveReflect (MkNP "ponyatie_N")
+    SftSelfCapability -> MoveDescribe (MkNP "sposobnost_N")
     _ ->
-      MoveDescribe (MkNP (resolveTopicLexeme (nonEmptyOr (ipfSemanticSubject frame) "смысл")))
+      MoveDescribe (MkNP "ponyatie_N")
 
 resolveTopicLexeme :: Text -> Text
 resolveTopicLexeme = fst . topicToGfLexemeDecision
 
-selfKnowledgeSurfaceByTarget :: Text -> Text -> Text
+selfKnowledgeSurfaceByTarget :: SemanticFrameTarget -> Text -> Text
 selfKnowledgeSurfaceByTarget target claimText =
   let intro = "Я — локальная система диалога. Я работаю в рамках текущей сессии. "
   in
   case target of
-    "self_intentions" ->
+    SftSelfIntentions ->
       intro <> "Человеческих намерений у меня нет: я работаю по правилам контура. " <> claimText
         <> " Это не желание, а режим построения ответа."
-    "self_values" ->
+    SftSelfValues ->
       intro <> "Для меня важно удерживать смысл, проверять связность и не терять рамку диалога. " <> claimText
-    "self_future" ->
+    SftSelfFuture ->
       intro <> "Моё будущее в этой модели не про биографию, а про следующий корректный шаг в диалоге. " <> claimText
-    "self_freedom" ->
+    SftSelfFreedom ->
       intro <> "Моя свобода ограничена архитектурой, правилами безопасности и текущим состоянием сессии. " <> claimText
-    "self_reflection" ->
-      intro <> "Да, я могу проверять собственный ход и исправлять формулировку, если вижу потерю смысла. " <> claimText
     _ ->
       intro <> "О себе я знаю свою роль и текущий режим. " <> claimText
         <> " Я работаю через типизированный разбор и ограничения текущей сессии."
 
-selfKnowledgeSurfaceByTargetEn :: Text -> Text -> Text
+selfKnowledgeSurfaceByTargetEn :: SemanticFrameTarget -> Text -> Text
 selfKnowledgeSurfaceByTargetEn target claimText =
   let intro = "I am a local dialogue system. I work within the limits of the current session. "
   in
   case target of
-    "self_intentions" ->
+    SftSelfIntentions ->
       intro <> "I do not have human intentions: I work by the rules of the contour. " <> claimText
         <> " This is not desire but a mode of constructing the answer."
-    "self_values" ->
+    SftSelfValues ->
       intro <> "For me it is important to hold meaning, verify coherence, and not lose the dialogue frame. " <> claimText
-    "self_future" ->
+    SftSelfFuture ->
       intro <> "My future in this model is not about biography but about the next correct step in the dialogue. " <> claimText
-    "self_freedom" ->
+    SftSelfFreedom ->
       intro <> "My freedom is limited by architecture, safety rules, and the current state of the session. " <> claimText
-    "self_reflection" ->
-      intro <> "Yes, I can check my own move and correct the formulation if I see loss of meaning. " <> claimText
     _ ->
       intro <> "About myself I know my role and current mode. " <> claimText
         <> " I work through typed parsing and the constraints of the current session."

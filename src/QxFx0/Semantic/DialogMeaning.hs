@@ -160,8 +160,8 @@ identitySlot =
 constraintSlot :: TruthContractStatus -> InputPropositionFrame -> [(AtomTag, [AtomSlot])]
 constraintSlot truthStatus frame =
   case (truthStatus, ipfSemanticTarget frame) of
-    (CanonicalSurfacePreserved, "user") -> [(TConstraint, [plainSlot TConstraint "я знаю только то, что проявлено в этой сессии"])]
-    (_, "user") -> [(TConstraint, [plainSlot TConstraint "я удерживаю только локально проявленный контекст этой сессии"])]
+    (CanonicalSurfacePreserved, SftUser) -> [(TConstraint, [plainSlot TConstraint "я знаю только то, что проявлено в этой сессии"])]
+    (_, SftUser) -> [(TConstraint, [plainSlot TConstraint "я удерживаю только локально проявленный контекст этой сессии"])]
     (CanonicalSurfacePreserved, _) -> [(TConstraint, [plainSlot TConstraint "я работаю в рамках текущего диалога"])]
     _ -> [(TConstraint, [plainSlot TConstraint "я держусь локальной рамки текущего диалога и не усиливаю её сверх фактической опоры"])]
 

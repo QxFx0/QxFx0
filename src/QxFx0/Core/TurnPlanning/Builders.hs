@@ -92,9 +92,9 @@ topicFromFrame thread ledger phase frame fallback =
     rawTopic =
       case ipfPropositionType frame of
         SelfKnowledgeQ
-          | ipfSemanticTarget frame == "user" -> "твой контекст"
-          | ipfSemanticTarget frame == "user_help" -> nonEmptyOr (ipfSemanticSubject frame) "помощь"
-          | ipfSemanticTarget frame == "self_capability" -> nonEmptyOr (ipfSemanticSubject frame) "способность"
+          | SftUser <- ipfSemanticTarget frame -> "твой контекст"
+          | SftUserHelp <- ipfSemanticTarget frame -> nonEmptyOr (ipfSemanticSubject frame) "помощь"
+          | SftSelfCapability <- ipfSemanticTarget frame -> nonEmptyOr (ipfSemanticSubject frame) "способность"
           | otherwise -> "моя роль"
         DialogueInvitationQ ->
           nonEmptyOr (ipfSemanticSubject frame) fallback
@@ -180,13 +180,13 @@ primaryClaimFromFrame :: TruthContractStatus -> InputPropositionFrame -> Text ->
 primaryClaimFromFrame truthStatus frame fallback =
   case ipfPropositionType frame of
     SelfKnowledgeQ
-      | ipfSemanticTarget frame == "user" ->
+      | SftUser <- ipfSemanticTarget frame ->
           if truthStatus == CanonicalSurfacePreserved
             then "Я знаю о тебе только то, что проявлено в текущей сессии."
             else "О тебе я удерживаю только то, что локально проявлено в текущей сессии."
-      | ipfSemanticTarget frame == "user_help" ->
+      | SftUserHelp <- ipfSemanticTarget frame ->
           "Я могу помочь, если удерживается локальная рамка задачи и не теряется предмет запроса."
-      | ipfSemanticTarget frame == "self_capability" ->
+      | SftSelfCapability <- ipfSemanticTarget frame ->
           "Я могу работать с таким действием в пределах текущей сессии, если запрос остаётся локально определимым."
       | otherwise ->
           if truthStatus == CanonicalSurfacePreserved
@@ -354,9 +354,9 @@ contrastAxisFromFrame frame =
   case ipfPropositionType frame of
     ComparisonPlausibilityQ -> "логичность"
     SelfKnowledgeQ
-      | ipfSemanticTarget frame == "user" -> "границы знания"
-      | ipfSemanticTarget frame == "user_help" -> "рамка помощи"
-      | ipfSemanticTarget frame == "self_capability" -> "границы способности"
+      | SftUser <- ipfSemanticTarget frame -> "границы знания"
+      | SftUserHelp <- ipfSemanticTarget frame -> "рамка помощи"
+      | SftSelfCapability <- ipfSemanticTarget frame -> "границы способности"
       | otherwise -> "самоописание"
     DialogueInvitationQ -> "рамка разговора"
     ConceptKnowledgeQ -> "границы знания"

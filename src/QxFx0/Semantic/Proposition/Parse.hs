@@ -38,6 +38,7 @@ import QxFx0.Types
   , forceForFamily
   , clauseFormForIF
   , layerForFamily
+  , semanticFrameTargetFromText
   )
 import QxFx0.Semantic.Input.Model
   ( UtteranceSemanticFrame(..)
@@ -128,7 +129,7 @@ parsePropositionWithFrameAndTruthContract truthContractStatus rawText semanticFr
     , ipfFocusEntity = focus
     , ipfFocusNominative = focusNom
     , ipfSemanticSubject = semanticSubject
-    , ipfSemanticTarget = semanticTarget
+    , ipfSemanticTarget = semanticFrameTargetFromText semanticTarget
     , ipfSemanticCandidates = semanticCandidates
     , ipfSemanticEvidence = semanticEvidence
     , ipfCanonicalFamily = family

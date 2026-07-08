@@ -1,70 +1,54 @@
-# Verification Report: PGF explicit-cache compile fix
+# Verification Report: SemanticFrameTarget Refactor Fix
 
-## Root Cause
+## Root Causes
 
-The previous Builder agent completed an explicit PGF-cache refactor in `src/QxFx0/Runtime/PGF.hs` (introducing `newPgfCache` / `cachedReadPGF` and threading the cache through `RuntimeContext` via `rtcPgf`). During that refactor `defaultPgfPath` was dropped from the module export list, but `src/QxFx0/Runtime/Session/Bootstrap.hs` still imports and uses it:
+### Failures 1 & 2 — structured turn fragments missing
+
+- **Location**: `test/Test/Suite/TurnPipelineProtocol.hs` (`testSelfKnowledgeAboutSelfRendersStructuredDescription` and `testSelfKnowledgeWhatYouAreRendersStructuredDescription`).
+- **Cause**: Generic self-knowledge inputs (e.g. `"что ты знаешь о себе?"`, `"чем ты являешься?"`) infer the semantic target string `"self"`. `semanticFrameTargetFromText` maps `"self"` to the known constructor `SftSelfReflection`. In `src/QxFx0/Render/Dialogue.hs`, `selfKnowledgeSurfaceByTarget` had a dedicated `SftSelfReflection` branch that produced reflection-specific text and did **not** contain the expected generic phrases `"свою роль"` and `"типизированный разбор"`. Previously, when `ipfSemanticTarget` was plain `Text`, `"self"` fell into the catch-all rendering path that did include those phrases.
+
+### Failure 3 — legacy arbitrary string round-trip
+
+- **Location**: `test/Test/Suite/RoundTrip.hs` (`legacy string arbitrary`).
+- **Cause**: The test used a `BSL.ByteString` string literal containing Cyrillic characters: `A.decode "\"логичность\""`. `ByteString`'s `IsString` instance truncates each `Char` to its low 8 bits, so the UTF-8 Cyrillic string was corrupted into `";>38g=>abl"`. The decoder then produced `SftOther ";>38g=>abl"` instead of `SftOther "логичность"`.
+
+## Fixes Applied
+
+### 1. `src/QxFx0/Render/Dialogue.hs`
+
+Removed the dedicated `SftSelfReflection` branches in both `selfKnowledgeSurfaceByTarget` and `selfKnowledgeSurfaceByTargetEn` so that `SftSelfReflection` falls through to the catch-all path. This restores the generic self-description surface (containing `"свою роль"` / `"типизированный разбор"`) for `"self"` inputs while preserving the typed `SemanticFrameTarget` refactor.
+
+### 2. `test/Test/Suite/RoundTrip.hs`
+
+Changed the corrupted `ByteString` literal to a properly UTF-8-encoded JSON value:
 
 ```haskell
-import QxFx0.Runtime.PGF (cachedReadPGF, defaultPgfPath)
-...
-_ <- cachedReadPGF (rtcPgf (rcCaches runtime)) defaultPgfPath
+A.decode (A.encode (T.pack "логичность"))
 ```
 
-This produced the compile error:
-
-```
-src/QxFx0/Runtime/Session/Bootstrap.hs:63:42: error:
-    Module 'QxFx0.Runtime.PGF' does not export 'defaultPgfPath'
-```
-
-## Fix Applied
-
-File changed: `/home/liskil/my-haskell-project/QxFx0/src/QxFx0/Runtime/PGF.hs`
-
-Added `defaultPgfPath` back to the module export list under the "PGF cache" section:
-
-```haskell
-module QxFx0.Runtime.PGF
-  ( -- * PGF cache
-    newPgfCache
-  , cachedReadPGF
-  , defaultPgfPath
-  ...
-```
-
-No other source changes were required. The explicit-cache refactor was already complete and wired correctly:
-
-- `QxFx0.Runtime.PGF` provides `newPgfCache`, `cachedReadPGF`, and cache-aware variants of the linearization / parse / preload functions.
-- `QxFx0.Runtime.Wiring.Context` creates a single `IORef (Map FilePath PGF.PGF)` cache and stores it in `RuntimeCaches` as `rtcPgf`.
-- `QxFx0.Runtime.Session.Bootstrap` eagerly warms that cache during session bootstrap with `cachedReadPGF (rtcPgf (rcCaches runtime)) defaultPgfPath`.
-- `QxFx0.Runtime.AuthorityParse` accepts the same cache `IORef` and uses `parseClaimAstGfWithCache`.
-
-Approach chosen: **completed the explicit-cache refactor** (did not fall back to the simpler `initPgfCache` + global `unsafePerformIO` IORef alternative) because the explicit-cache work was already fully wired and only missing the export.
+This preserves the test intent (decode a legacy arbitrary string as `SftOther`) while correctly handling non-ASCII text. No new dependencies were added.
 
 ## Build Output
 
 ```
 cd /home/liskil/my-haskell-project/QxFx0 && cabal build qxfx0 --ghc-options="-Wall -Werror"
 Build profile: -w ghc-9.6.6 -O1
-Building library for qxfx0-0.1.0.0...
-[326 of 416] Compiling QxFx0.Runtime.PGF
-[327 of 416] Compiling QxFx0.Runtime.AuthorityParse
-[384 of 416] Compiling QxFx0.Runtime.Wiring.Context
-[386 of 416] Compiling QxFx0.Runtime.Wiring.Handlers
-[398 of 416] Compiling QxFx0.Runtime.Session.Bootstrap
-[399 of 416] Compiling QxFx0.Runtime.Session
-[414 of 416] Compiling QxFx0.Runtime.Engine
-[415 of 416] Compiling QxFx0.Runtime
+...
+Up to date
 ```
 
-Build completed successfully with the project's `-Wall -Werror` options.
+Build completed successfully with no warnings or errors.
 
 ## Test Output
 
 ```
-cd /home/liskil/my-haskell-project/QxFx0 && cabal test qxfx0-test-fast
-Cases: 1326  Tried: 1326  Errors: 0  Failures: 0
+cd /home/liskil/my-haskell-project/QxFx0 && cabal test qxfx0-test-fast --test-show-details=always
+...
+Cases: 1366  Tried: 1366  Errors: 0  Failures: 0
+
 Test suite qxfx0-test-fast: PASS
+Test suite logged to:
+/home/liskil/my-haskell-project/QxFx0/./dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/t/qxfx0-test-fast/test/qxfx0-0.1.0.0-qxfx0-test-fast.log
 1 of 1 test suites (1 of 1 test cases) passed.
 ```
 

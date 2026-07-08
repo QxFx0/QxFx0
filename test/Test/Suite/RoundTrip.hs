@@ -44,6 +44,7 @@ import QxFx0.Observability.Metrics (MetricType(..), Metric(..))
 import QxFx0.Observability.Logging (LogLevel(..), LogEntry(..))
 import QxFx0.Semantic.Network.Substrate (SubstrateEdgeInfo(..))
 import QxFx0.Types.State.Perspective (ConflictPolicy(..))
+import QxFx0.Types.Decision (SemanticFrameTarget(..), semanticFrameTargetFromText)
 
 -- | Helper: round-trip a value through JSON and verify equality
 assertRoundTrip :: (Eq a, Show a, A.ToJSON a, A.FromJSON a) => String -> a -> Assertion
@@ -76,6 +77,7 @@ roundTripTests = TestList
   , TestLabel "LogEntry" testLogEntryRT
   , TestLabel "SubstrateEdgeInfo" testSubstrateEdgeInfoRT
   , TestLabel "ConflictPolicy" testConflictPolicyRT
+  , TestLabel "SemanticFrameTarget" testSemanticFrameTargetRT
   ]
 
 -- LocalRecoveryCause — audit C: had broken round-trip (ToJSON snake_case, FromJSON generic)
@@ -263,4 +265,41 @@ testConflictPolicyRT = TestList
       (Just CpPermissive) (A.decode "{\"tag\":\"CpPermissive\"}")
   , TestCase $ assertEqual "tagged CpStrict decodes"
       (Just CpStrict) (A.decode "{\"tag\":\"CpStrict\"}")
+  ]
+
+testSemanticFrameTargetRT :: Test
+testSemanticFrameTargetRT = TestList
+  [ TestCase $ assertRoundTrip "SftUser" SftUser
+  , TestCase $ assertRoundTrip "SftUserHelp" SftUserHelp
+  , TestCase $ assertRoundTrip "SftSelfCapability" SftSelfCapability
+  , TestCase $ assertRoundTrip "SftSelfIntentions" SftSelfIntentions
+  , TestCase $ assertRoundTrip "SftSelfValues" SftSelfValues
+  , TestCase $ assertRoundTrip "SftSelfFuture" SftSelfFuture
+  , TestCase $ assertRoundTrip "SftSelfFreedom" SftSelfFreedom
+  , TestCase $ assertRoundTrip "SftSelfReflection" SftSelfReflection
+  , TestCase $ assertRoundTrip "SftOther" (SftOther "legacy")
+  , TestCase $ assertEqual "legacy string user"
+      (Just SftUser) (A.decode "\"user\"")
+  , TestCase $ assertEqual "legacy string user_help"
+      (Just SftUserHelp) (A.decode "\"user_help\"")
+  , TestCase $ assertEqual "legacy string self_capability"
+      (Just SftSelfCapability) (A.decode "\"self_capability\"")
+  , TestCase $ assertEqual "legacy string self_intentions"
+      (Just SftSelfIntentions) (A.decode "\"self_intentions\"")
+  , TestCase $ assertEqual "legacy string self_values"
+      (Just SftSelfValues) (A.decode "\"self_values\"")
+  , TestCase $ assertEqual "legacy string self_future"
+      (Just SftSelfFuture) (A.decode "\"self_future\"")
+  , TestCase $ assertEqual "legacy string self_freedom"
+      (Just SftSelfFreedom) (A.decode "\"self_freedom\"")
+  , TestCase $ assertEqual "legacy string self_reflection"
+      (Just SftSelfReflection) (A.decode "\"self_reflection\"")
+  , TestCase $ assertEqual "legacy string self maps to reflection"
+      (Just SftSelfReflection) (A.decode "\"self\"")
+  , TestCase $ assertEqual "legacy string arbitrary"
+      (Just (SftOther "логичность")) (A.decode (A.encode (T.pack "логичность")))
+  , TestCase $ assertEqual "legacy string empty"
+      (Just (SftOther "")) (A.decode "\"\"")
+  , TestCase $ assertEqual "tagged SftOther decodes"
+      (Just (SftOther "legacy")) (A.decode "{\"tag\":\"SftOther\",\"value\":\"legacy\"}")
   ]

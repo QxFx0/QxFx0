@@ -16,6 +16,9 @@ module QxFx0.Types.Decision.Model
   , ResponseContentPlan(..)
   , InputPropositionFrame(..)
   , emptyInputPropositionFrame
+  , SemanticFrameTarget(..)
+  , semanticFrameTargetFromText
+  , isSelfFamily
   , SemanticAnchor(..)
   , IdentitySignalSnapshot(..)
   , TurnDecision(..)
@@ -39,7 +42,9 @@ import Data.Aeson
   , (.!=)
   , (.=)
   )
-import Data.Aeson.Types (Parser, parseFail)
+import Data.Aeson.Types (Parser, parseFail, typeMismatch)
+import qualified Data.Aeson as Aeson
+import Control.Applicative ((<|>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -177,13 +182,78 @@ instance FromJSON ResponseContentPlan where
       <*> objectValue .: "continuation"
       <*> (parseRenderStyle <$> objectValue .: "style")
 
+data SemanticFrameTarget
+  = SftUser
+  | SftUserHelp
+  | SftSelfCapability
+  | SftSelfIntentions
+  | SftSelfValues
+  | SftSelfFuture
+  | SftSelfFreedom
+  | SftSelfReflection
+  | SftOther !Text
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (NFData)
+
+instance ToJSON SemanticFrameTarget where
+  toJSON SftUser = object ["tag" .= ("SftUser" :: Text)]
+  toJSON SftUserHelp = object ["tag" .= ("SftUserHelp" :: Text)]
+  toJSON SftSelfCapability = object ["tag" .= ("SftSelfCapability" :: Text)]
+  toJSON SftSelfIntentions = object ["tag" .= ("SftSelfIntentions" :: Text)]
+  toJSON SftSelfValues = object ["tag" .= ("SftSelfValues" :: Text)]
+  toJSON SftSelfFuture = object ["tag" .= ("SftSelfFuture" :: Text)]
+  toJSON SftSelfFreedom = object ["tag" .= ("SftSelfFreedom" :: Text)]
+  toJSON SftSelfReflection = object ["tag" .= ("SftSelfReflection" :: Text)]
+  toJSON (SftOther txt) = object ["tag" .= ("SftOther" :: Text), "value" .= txt]
+
+instance FromJSON SemanticFrameTarget where
+  parseJSON v = Aeson.withText "SemanticFrameTarget" (pure . semanticFrameTargetFromText) v
+            <|> Aeson.withObject "SemanticFrameTarget" parseTagged v
+    where
+      parseTagged o = do
+        tag <- o .: "tag"
+        case tag :: Text of
+          "SftUser" -> pure SftUser
+          "SftUserHelp" -> pure SftUserHelp
+          "SftSelfCapability" -> pure SftSelfCapability
+          "SftSelfIntentions" -> pure SftSelfIntentions
+          "SftSelfValues" -> pure SftSelfValues
+          "SftSelfFuture" -> pure SftSelfFuture
+          "SftSelfFreedom" -> pure SftSelfFreedom
+          "SftSelfReflection" -> pure SftSelfReflection
+          "SftOther" -> SftOther <$> o .: "value"
+          other -> pure (SftOther other)
+
+semanticFrameTargetFromText :: Text -> SemanticFrameTarget
+semanticFrameTargetFromText t =
+  case T.toLower (T.strip t) of
+    "user" -> SftUser
+    "user_help" -> SftUserHelp
+    "self_capability" -> SftSelfCapability
+    "self_intentions" -> SftSelfIntentions
+    "self_values" -> SftSelfValues
+    "self_future" -> SftSelfFuture
+    "self_freedom" -> SftSelfFreedom
+    "self_reflection" -> SftSelfReflection
+    "self" -> SftSelfReflection
+    other -> SftOther other
+
+isSelfFamily :: SemanticFrameTarget -> Bool
+isSelfFamily target = target `elem`
+  [ SftSelfIntentions
+  , SftSelfValues
+  , SftSelfFuture
+  , SftSelfFreedom
+  , SftSelfReflection
+  ]
+
 data InputPropositionFrame = InputPropositionFrame
   { ipfRawText :: !Text
   , ipfPropositionType :: !PropositionType
   , ipfFocusEntity :: !Text
   , ipfFocusNominative :: !Text
   , ipfSemanticSubject :: !Text
-  , ipfSemanticTarget :: !Text
+  , ipfSemanticTarget :: !SemanticFrameTarget
   , ipfSemanticCandidates :: ![Text]
   , ipfSemanticEvidence :: ![Text]
   , ipfCanonicalFamily :: !CanonicalMoveFamily
@@ -259,7 +329,7 @@ emptyInputPropositionFrame = InputPropositionFrame
   , ipfFocusEntity = ""
   , ipfFocusNominative = ""
   , ipfSemanticSubject = ""
-  , ipfSemanticTarget = ""
+  , ipfSemanticTarget = SftOther ""
   , ipfSemanticCandidates = []
   , ipfSemanticEvidence = []
   , ipfCanonicalFamily = CMGround

@@ -39,6 +39,9 @@ module QxFx0.Types.Decision
   , emotionalToneText
   , InputPropositionFrame(..)
   , emptyInputPropositionFrame
+  , SemanticFrameTarget(..)
+  , semanticFrameTargetFromText
+  , isSelfFamily
   , familyToOpeningMove
   , familyToCoreMove
   , familyToStance

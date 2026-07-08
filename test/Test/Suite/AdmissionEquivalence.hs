@@ -495,7 +495,7 @@ propositionAdmissionTests =
         { ipfRawText = "я"
         , ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = CMGround, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer
@@ -592,7 +592,7 @@ earlyFamilyAdmissionTests =
       baseFrame = InputPropositionFrame
         { ipfRawText = "я", ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = strongFamily, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer
@@ -625,7 +625,7 @@ familyAdmissionTests =
       baseFrame = InputPropositionFrame
         { ipfRawText = "я", ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = strongFamily, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer
@@ -668,7 +668,7 @@ semanticLogicAdmissionTests =
       baseFrame = InputPropositionFrame
         { ipfRawText = "я", ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = CMGround, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer
@@ -701,7 +701,7 @@ semanticContributionAdmissionTests =
       baseFrame = InputPropositionFrame
         { ipfRawText = "я", ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = CMGround, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer
@@ -736,7 +736,7 @@ interpretationAdmissionTests =
       baseFrame = InputPropositionFrame
         { ipfRawText = "я", ipfPropositionType = SelfStateQ
         , ipfFocusEntity = "", ipfFocusNominative = ""
-        , ipfSemanticSubject = "", ipfSemanticTarget = ""
+        , ipfSemanticSubject = "", ipfSemanticTarget = SftOther ""
         , ipfSemanticCandidates = [], ipfSemanticEvidence = []
         , ipfCanonicalFamily = strongFamily, ipfIllocutionaryForce = IFAsk
         , ipfClauseForm = Declarative, ipfSemanticLayer = ContentLayer

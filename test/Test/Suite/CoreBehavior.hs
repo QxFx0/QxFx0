@@ -199,7 +199,7 @@ testSI layer atoms fam = SemanticInput
       , ipfFocusEntity = ""
       , ipfFocusNominative = ""
       , ipfSemanticSubject = ""
-      , ipfSemanticTarget = ""
+      , ipfSemanticTarget = SftOther ""
       , ipfSemanticCandidates = []
       , ipfSemanticEvidence = []
       , ipfCanonicalFamily = fam
@@ -2807,7 +2807,7 @@ testParsePropositionSelfKnowledgeAboutUserTypo = TestCase $ do
   assertEqual "Self-knowledge about user with typo should be SelfKnowledgeQ"
     SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Self-knowledge about user should keep a user target"
-    "user" (ipfSemanticTarget frame)
+    SftUser (ipfSemanticTarget frame)
 
 testParsePropositionWorldCauseSun :: Test
 testParsePropositionWorldCauseSun = TestCase $ do
@@ -2900,7 +2900,7 @@ testParsePropositionSelfKnowledgeTargetsUser :: Test
 testParsePropositionSelfKnowledgeTargetsUser = TestCase $ do
   let frame = parseProposition "что ты знаешь обо мне?"
   assertEqual "About-user question should preserve the user target"
-    "user" (ipfSemanticTarget frame)
+    SftUser (ipfSemanticTarget frame)
   assertEqual "About-user question should name the user as semantic subject"
     "пользователь" (ipfSemanticSubject frame)
 
@@ -2908,7 +2908,7 @@ testParsePropositionComparisonCapturesCandidates :: Test
 testParsePropositionComparisonCapturesCandidates = TestCase $ do
   let frame = parseProposition "стол на стуле. или стул на столе. что логичнее?"
   assertEqual "Comparison axis should be captured as semantic target"
-    "логичность" (ipfSemanticTarget frame)
+    (SftOther "логичность") (ipfSemanticTarget frame)
   assertBool "Comparison evidence should mention both candidates"
     (any ("candidates=стол на стуле|стул на столе" `T.isPrefixOf`) (ipfSemanticEvidence frame))
 
@@ -3056,7 +3056,7 @@ testParsePropositionSelfKnowledgeCapabilityQuestion = TestCase $ do
   assertEqual "Capability question should route to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
   assertEqual "Capability question should use capability target"
-    "self_capability" (ipfSemanticTarget frame)
+    SftSelfCapability (ipfSemanticTarget frame)
   assertEqual "Capability question should preserve action complement"
     "обобщать" (ipfSemanticSubject frame)
 
@@ -3066,7 +3066,7 @@ testParsePropositionSelfKnowledgeHelpQuestion = TestCase $ do
   assertEqual "Help question should be SelfKnowledgeQ"
     SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "Help question should use user_help target"
-    "user_help" (ipfSemanticTarget frame)
+    SftUserHelp (ipfSemanticTarget frame)
   assertEqual "Help question should preserve help subject"
     "помощь" (ipfSemanticSubject frame)
 
@@ -3076,7 +3076,7 @@ testParsePropositionSelfKnowledgeUserIdentityQuestion = TestCase $ do
   assertEqual "User identity question should be SelfKnowledgeQ"
     SelfKnowledgeQ (ipfPropositionType frame)
   assertEqual "User identity question should target user"
-    "user" (ipfSemanticTarget frame)
+    SftUser (ipfSemanticTarget frame)
 
 testParsePropositionKeywordFallbackOperationalCause :: Test
 testParsePropositionKeywordFallbackOperationalCause = TestCase $ do
