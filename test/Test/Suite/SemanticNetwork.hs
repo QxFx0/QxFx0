@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import Test.HUnit
 
 import QxFx0.Core.MeaningGraph
+import QxFx0.Self.Field (Field(..), Resonance(..), FieldConfidence(..), Counterfactual(..), Atmosphere(..), Consolidation(..))
 import QxFx0.Semantic.Network
 
 semanticNetworkTests :: [Test]
@@ -138,4 +139,84 @@ semanticNetworkTests =
             , snActivationLog = Seq.empty
             }
       assertBool "should pass gate (20 nodes >= 15, 60 edges >= 50)" (contentDensityGate sn)
+
+  , TestLabel "spreadActivationWithFieldHighConfidence" $ TestCase $ do
+      let sn = SemanticNetwork
+            { snNodes = S.fromList ["seed", "neighbor"]
+            , snEdges = M.fromList
+                [ (("seed", "neighbor"), semanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            , snActivationLog = Seq.empty
+            }
+          highConf = neutralField { fieldConfidence = FieldConfidence 1.0 }
+          neutralAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField neutralField sn (M.singleton "seed" 1.0) 0
+          highConfAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField highConf sn (M.singleton "seed" 1.0) 0
+      assertBool "neutral field should activate neighbor" (maybe False (> 0) neutralAct)
+      assertBool "high confidence should yield >= neutral activation" (highConfAct >= neutralAct)
+
+  , TestLabel "spreadActivationWithFieldCounterfactual" $ TestCase $ do
+      let sn = SemanticNetwork
+            { snNodes = S.fromList ["seed", "neighbor"]
+            , snEdges = M.fromList
+                [ (("seed", "neighbor"), semanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            , snActivationLog = Seq.empty
+            }
+          highCounter = neutralField { fieldCounterfactual = Counterfactual 1.0 }
+          neutralAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField neutralField sn (M.singleton "seed" 1.0) 0
+          counterAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField highCounter sn (M.singleton "seed" 1.0) 0
+      assertBool "counterfactual field should change activation vs neutral" (counterAct /= neutralAct)
+
+  , TestLabel "spreadActivationWithFieldResonance" $ TestCase $ do
+      let sn = SemanticNetwork
+            { snNodes = S.fromList ["seed", "neighbor"]
+            , snEdges = M.fromList
+                [ (("seed", "neighbor"), semanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            , snActivationLog = Seq.empty
+            }
+          highRes = neutralField { fieldResonance = Resonance 1.0 }
+          neutralAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField neutralField sn (M.singleton "seed" 1.0) 0
+          resAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField highRes sn (M.singleton "seed" 1.0) 0
+      assertBool "resonance field should change activation vs neutral" (resAct /= neutralAct)
+
+  , TestLabel "spreadActivationWithFieldLowConfidence" $ TestCase $ do
+      let sn = SemanticNetwork
+            { snNodes = S.fromList ["seed", "neighbor"]
+            , snEdges = M.fromList
+                [ (("seed", "neighbor"), semanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            , snActivationLog = Seq.empty
+            }
+          lowConf = neutralField { fieldConfidence = FieldConfidence 0.0 }
+          neutralAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField neutralField sn (M.singleton "seed" 1.0) 0
+          lowConfAct = M.lookup "neighbor" . snActivation $ spreadActivationWithField lowConf sn (M.singleton "seed" 1.0) 0
+      assertBool "low confidence should yield <= neutral activation" (lowConfAct <= neutralAct)
+
+  , TestLabel "activatePreservesLegacyBehavior" $ TestCase $ do
+      let sn = SemanticNetwork
+            { snNodes = S.fromList ["seed", "neighbor"]
+            , snEdges = M.fromList
+                [ (("seed", "neighbor"), semanticEdge "seed" "neighbor" 0.8 5 ExplicitEdge)
+                ]
+            , snActivation = M.empty
+            , snDecayRate = 0.5
+            , snMaxHops = 3
+            , snActivationLog = Seq.empty
+            }
+          legacyAct = snActivation (activate "seed" sn)
+          explicitAct = snActivation (activateWithField neutralField "seed" sn)
+      assertEqual "activate should match activateWithField neutralField" legacyAct explicitAct
   ]

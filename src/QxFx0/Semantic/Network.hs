@@ -5,10 +5,15 @@ module QxFx0.Semantic.Network
   , buildSemanticNetwork
   , mergeSemanticNetworks
   , activate
+  , activateWithField
   , activateTopic
+  , activateTopicWithField
+  , spreadActivation
+  , spreadActivationWithField
   , getActivatedAtoms
   , contentDensityGate
   , spreadingActivationActive
+  , neutralField
   ) where
 
 import Data.Map.Strict (Map)
@@ -19,6 +24,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 import QxFx0.Core.MeaningGraph (MeaningGraph(..), MeaningEdge(..))
+import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Semantic.Network.Types
 
 buildSemanticNetwork :: MeaningGraph -> SemanticNetwork
@@ -55,39 +61,67 @@ mergeSemanticNetworks base update =
     }
 
 activate :: Text -> SemanticNetwork -> SemanticNetwork
-activate seed sn =
+activate = activateWithField neutralField
+
+activateWithField :: Field -> Text -> SemanticNetwork -> SemanticNetwork
+activateWithField field seed sn =
   let initialActivation = M.singleton seed 1.0
       step0 = ActivationStep seed ExplicitEdge seed 0 1.0
-  in spreadActivation (sn { snActivationLog = Seq.singleton step0 }) initialActivation 0
+  in spreadActivationWithField field (sn { snActivationLog = Seq.singleton step0 }) initialActivation 0
 
 activateTopic :: Set Text -> SemanticNetwork -> SemanticNetwork
-activateTopic topicAtoms sn =
+activateTopic = activateTopicWithField neutralField
+
+activateTopicWithField :: Field -> Set Text -> SemanticNetwork -> SemanticNetwork
+activateTopicWithField field topicAtoms sn =
   let initialActivation = M.fromList [(atom, 1.0) | atom <- S.toList topicAtoms]
       steps0 = Seq.fromList [ ActivationStep atom ExplicitEdge atom 0 1.0 | atom <- S.toList topicAtoms ]
-  in spreadActivation (sn { snActivationLog = steps0 }) initialActivation 0
+  in spreadActivationWithField field (sn { snActivationLog = steps0 }) initialActivation 0
+
+-- | A neutral field for callers that do not supply one. All dimensions are
+-- set to 0.5 so the modulation multipliers evaluate to exactly 1.0 and the
+-- historical activation behaviour is preserved.
+neutralField :: Field
+neutralField =
+  Field
+    { fieldResonance      = Resonance 0.5
+    , fieldAtmosphere     = Atmosphere 0.5 0.5
+    , fieldConfidence     = FieldConfidence 0.5
+    , fieldConsolidation  = Consolidation 0.5
+    , fieldCounterfactual = Counterfactual 0.5
+    }
 
 spreadActivation :: SemanticNetwork -> Map Text Double -> Int -> SemanticNetwork
-spreadActivation sn activation hopCount
+spreadActivation = spreadActivationWithField neutralField
+
+spreadActivationWithField :: Field -> SemanticNetwork -> Map Text Double -> Int -> SemanticNetwork
+spreadActivationWithField field sn activation hopCount
   | hopCount >= snMaxHops sn = sn { snActivation = activation }
   | otherwise =
-      let newSteps = buildSteps activation sn (hopCount + 1)
+      let newSteps = buildSteps field activation sn (hopCount + 1)
           newActs = M.fromList [(asNode s, asWeight s) | s <- newSteps]
           merged = M.unionWith max activation newActs
       in if M.size merged == M.size activation
          then sn { snActivation = merged }
-         else spreadActivation
+         else spreadActivationWithField field
                 (sn { snActivationLog = snActivationLog sn <> Seq.fromList newSteps })
                 merged
                 (hopCount + 1)
 
-buildSteps :: Map Text Double -> SemanticNetwork -> Int -> [ActivationStep]
-buildSteps activation sn hop =
+buildSteps :: Field -> Map Text Double -> SemanticNetwork -> Int -> [ActivationStep]
+buildSteps field activation sn hop =
   [ ActivationStep neighbor (seSource edge) atom hop weight
   | (atom, act) <- M.toList activation
   , (neighbor, edge) <- getNeighbors atom sn
   , not (M.member neighbor activation)
-  , let weight = act * seWeight edge * snDecayRate sn
+  , let weight = clampUnit (act * seWeight edge * snDecayRate sn * confMul * counterMul * resMul)
+        confMul = 1.0 - 0.3 * (1.0 - unFieldConfidence (fieldConfidence field))
+        counterMul = 1.0 + 0.2 * unCounterfactual (fieldCounterfactual field)
+        resMul = 1.0 + 0.2 * unResonance (fieldResonance field)
   ]
+
+clampUnit :: Double -> Double
+clampUnit = max 0.0 . min 1.0
 
 propagateAll :: Map Text Double -> SemanticNetwork -> Map Text Double
 propagateAll activation sn =

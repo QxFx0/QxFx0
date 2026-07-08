@@ -23,7 +23,7 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 
 import QxFx0.Semantic.Space (tokenizePredicate, SemanticSpace(..), FieldDimension(..), PredicateVector(..), computeFieldAffinity)
-import QxFx0.Semantic.Network (SemanticNetwork(..), activateTopic, getActivatedAtoms)
+import QxFx0.Semantic.Network (SemanticNetwork(..), activateTopicWithField, getActivatedAtoms)
 import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
@@ -96,7 +96,7 @@ composePredicates cs field preds mNetwork =
 composeFromActivation :: ContentSelector -> Field -> Text -> SemanticNetwork -> [SemanticPredicate]
 composeFromActivation cs field topic network =
   let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
-      activatedNetwork = activateTopic topicAtoms network
+      activatedNetwork = activateTopicWithField field topicAtoms network
       activatedAtoms = S.fromList (map fst (getActivatedAtoms activatedNetwork))
       overlappingTopics = M.keys (M.filter (not . S.null . S.intersection activatedAtoms) (csTopicAtoms cs))
       perTopicPreds = mapMaybe (\t ->
