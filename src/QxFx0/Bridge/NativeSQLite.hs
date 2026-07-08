@@ -17,7 +17,9 @@ module QxFx0.Bridge.NativeSQLite
   , columnText
   , columnTextLenient
   , columnInt
+  , columnIntMaybe
   , columnDouble
+  , columnDoubleMaybe
   , columnIsNull
   , finalize
   , execSql
@@ -231,11 +233,37 @@ columnTextLenient stmt idx = do
           bs <- BS.packCStringLen (cStr, fromIntegral cLen)
           pure (TE.decodeUtf8With lenientDecode bs)
 
+-- | Read an integer column value.
+--
+-- /Warning:/ SQLite returns @0@ for a NULL integer column. This function
+-- preserves that behaviour and does /not/ distinguish NULL from the value @0@.
+-- Use 'columnIntMaybe' if you need to tell the two apart.
 columnInt :: Statement -> CInt -> IO Int
 columnInt stmt idx = fromIntegral <$> c_sqlite3_column_int stmt idx
 
+-- | Read an integer column value, returning 'Nothing' when the column is NULL.
+columnIntMaybe :: Statement -> CInt -> IO (Maybe Int)
+columnIntMaybe stmt idx = do
+  isNull <- columnIsNull stmt idx
+  if isNull
+    then pure Nothing
+    else Just . fromIntegral <$> c_sqlite3_column_int stmt idx
+
+-- | Read a floating-point column value.
+--
+-- /Warning:/ SQLite returns @0.0@ for a NULL real column. This function
+-- preserves that behaviour and does /not/ distinguish NULL from the value @0.0@.
+-- Use 'columnDoubleMaybe' if you need to tell the two apart.
 columnDouble :: Statement -> CInt -> IO Double
 columnDouble stmt idx = realToFrac <$> c_sqlite3_column_double stmt idx
+
+-- | Read a floating-point column value, returning 'Nothing' when the column is NULL.
+columnDoubleMaybe :: Statement -> CInt -> IO (Maybe Double)
+columnDoubleMaybe stmt idx = do
+  isNull <- columnIsNull stmt idx
+  if isNull
+    then pure Nothing
+    else Just . realToFrac <$> c_sqlite3_column_double stmt idx
 
 columnIsNull :: Statement -> CInt -> IO Bool
 columnIsNull stmt idx = do

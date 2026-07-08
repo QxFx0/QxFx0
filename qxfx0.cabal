@@ -238,6 +238,7 @@ library
     QxFx0.Bridge.Datalog
     QxFx0.Bridge.Datalog.Support
     QxFx0.Bridge.StatePersistence
+    QxFx0.Bridge.SQLite.Bootstrap
     QxFx0.Bridge.TxStatement
     QxFx0.Bridge.ExternalLLM
 
@@ -246,6 +247,8 @@ library
     QxFx0.Learning.Loop
     QxFx0.Learning.Sandbox
     QxFx0.Learning.TrainingCycle
+    QxFx0.Learning.CorpusExtract
+    QxFx0.Learning.Tuning
     QxFx0.Learning.GameTheory
     QxFx0.Learning.GameTheory.LP
 
@@ -402,7 +405,6 @@ library
     QxFx0.Bridge.Datalog.Runtime
     QxFx0.Bridge.Datalog.Types
     QxFx0.Bridge.SQLite.Pool
-    QxFx0.Bridge.SQLite.Bootstrap
     QxFx0.Bridge.SQLite.Queries
     QxFx0.Resources.Paths
     QxFx0.Resources.Readiness
@@ -609,6 +611,7 @@ common test-common
     Test.Suite.Observability
     Test.Suite.TraceAnalysis
     Test.Suite.RoundTrip
+    Test.Suite.NativeSQLiteNulls
     Test.Suite.ResponseContentAdmission
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine
