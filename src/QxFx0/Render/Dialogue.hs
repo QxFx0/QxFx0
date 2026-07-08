@@ -29,6 +29,7 @@ module QxFx0.Render.Dialogue
   -- Semantic selection supplement helpers
   , formatSelectedPredicates
   , semanticSupplement
+  , frameSupplement
   , appendSupplement
   ) where
 

@@ -28,6 +28,7 @@ data-files:
   spec/sql/*.sql
   spec/sql/lexicon/*.sql
   scripts/http_runtime.py
+  test/golden/spreading_activation_surface.jsonl
 
 source-repository head
   type: git
@@ -632,6 +633,7 @@ common test-common
     Test.Suite.DialogueSemanticSelection
     Test.Suite.BootstrapRecovery
     Test.Suite.SurfaceAccumulator
+    Test.Suite.SurfaceAccumulatorGolden
 
 test-suite qxfx0-test-unit
   import:        test-common

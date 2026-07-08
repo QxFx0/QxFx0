@@ -15,7 +15,10 @@ import QxFx0.Render.Dialogue
   ( generateFromFrame
   , formatSelectedPredicates
   , appendSupplement
+  , semanticSupplement
+  , frameSupplement
   )
+import QxFx0.Semantic.SurfaceAccumulator (VerbalizationMode(..))
 import QxFx0.Semantic.Content.Base (mkPred, PredicateRole(..))
 import QxFx0.Semantic.Network (emptySemanticNetwork, spreadingActivationActive)
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
@@ -159,6 +162,8 @@ dialogueSemanticSelectionTests =
   , TestLabel "DistinctionFrame preserves template with empty selector" testDistinctionFrameEmpty
   , TestLabel "DistinctionFrame enriches with selected predicate" testDistinctionFrameEnriched
   , TestLabel "spreading activation flag is enabled" testSpreadingActivationFlagEnabled
+  , TestLabel "spreading activation disabled falls back to semanticSupplement" testSpreadingActivationFlagDisabledFallback
+  , TestLabel "DefinitionFrame without network falls back to semanticSupplement/template" testDefinitionFrameFallbackWhenNetworkAbsent
   , TestLabel "DefinitionFrame uses spreading-activation supplement when network active" testDefinitionFrameSpreading
   , TestLabel "ReflectFrame uses spreading-activation supplement when network active" testReflectFrameSpreading
   , TestLabel "ChallengeFrame Soft uses spreading-activation supplement when network active" testChallengeFrameSoftSpreading
@@ -435,6 +440,30 @@ testContentSelectorNoMutation = TestCase $ do
 testSpreadingActivationFlagEnabled :: Test
 testSpreadingActivationFlagEnabled = TestCase $
   assertBool "spreadingActivationActive should be True by default" spreadingActivationActive
+
+-- | The spreading-activation feature flag is a compile-time 'Bool' constant and
+-- is not mutable at runtime.  The disabled-flag branch in 'frameSupplement'
+-- shares the same fallback code path as the "no network" case, so we verify
+-- that path directly and confirm that 'generateFromFrame' still follows the
+-- semanticSupplement / template behaviour.
+testSpreadingActivationFlagDisabledFallback :: Test
+testSpreadingActivationFlagDisabledFallback = TestCase $ do
+  let cs = mkTestSelector "свобода" "свобода предполагает выбор" "freedom implies choice"
+      topic = "свобода"
+      supplement = frameSupplement VmDefinition emptyMorphologyData cs testField topic Nothing False
+  assertEqual "frameSupplement with no network should fall back to semanticSupplement"
+    (semanticSupplement cs testField topic Nothing False) supplement
+
+testDefinitionFrameFallbackWhenNetworkAbsent :: Test
+testDefinitionFrameFallbackWhenNetworkAbsent = TestCase $ do
+  let cs = mkTestSelector "свобода" "свобода предполагает выбор" "freedom implies choice"
+      frame = FT.DefinitionFrame "свобода" FT.GeneralScope FT.Known
+      result = generateFromFrame cs testField Nothing seedGraph emptySystemState frame emptyMorphologyData
+      expected = appendSupplement
+        "Известно, что свобода — содержание не прошло проверку качества и не может быть представлено без проверки."
+        (semanticSupplement cs testField "свобода" Nothing False)
+  assertEqual "DefinitionFrame without network should fall back to semanticSupplement/template behavior"
+    expected result
 
 testDefinitionFrameSpreading :: Test
 testDefinitionFrameSpreading = TestCase $ do
