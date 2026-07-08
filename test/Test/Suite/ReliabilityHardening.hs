@@ -38,14 +38,20 @@ import QxFx0.Bridge.ExternalLLM
   , validateEndpointUrl
   , validateEndpointUrlWithContext
   , buildTransportFromEnvWithManager
+  , queryExternalTool
   , LLMTransport(..)
   , extractStructured
   , decodeLlmBodyLimited
   , redactUpstreamError
   , classifyHttpException
   , classifyBodyReadFailure
+  , isRetryableError
+  , retryDelayMs
+  , defaultMockTable
   )
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), TransportFallbackReason(..))
+import QxFx0.Learning.Need (LearningNeed(..))
+import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..))
 import Test.Support (withEnvVar)
 
 -- | 1. Tool selection with empty candidate list -> total (no crash).
@@ -321,6 +327,42 @@ testExtractStructuredPlainPayload = TestCase $ do
       result = extractStructured payload
   assertEqual "plain payload must pass through" payload result
 
+-- | 35. Retry helper classifies expected transient errors as retryable.
+testRetryableErrors :: Test
+testRetryableErrors = TestCase $ do
+  assertBool "rate limited is retryable" (isRetryableError (EqeRateLimited "test"))
+  assertBool "server error is retryable" (isRetryableError (EqeServerError "test"))
+  assertBool "network unavailable is retryable" (isRetryableError (EqeNetworkUnavailable "test"))
+  assertBool "connection reset is retryable" (isRetryableError (EqeConnectionReset "test"))
+  assertBool "timeout is retryable" (isRetryableError (EqeTimeout "test"))
+
+-- | 36. Retry helper rejects non-transient errors.
+testNonRetryableErrors :: Test
+testNonRetryableErrors = TestCase $ do
+  assertBool "auth failure is not retryable" (not (isRetryableError (EqeAuthFailure "test")))
+  assertBool "invalid response is not retryable" (not (isRetryableError (EqeInvalidResponse "test")))
+  assertBool "empty response is not retryable" (not (isRetryableError EqeEmptyResponse))
+  assertBool "fallback is not retryable" (not (isRetryableError (EqeFallback TfrEnvNotSet)))
+
+-- | 37. Exponential backoff delay doubles each attempt.
+testExponentialBackoff :: Test
+testExponentialBackoff = TestCase $ do
+  assertEqual "attempt 0 delay is base" 100 (retryDelayMs 100 0)
+  assertEqual "attempt 1 delay doubles" 200 (retryDelayMs 100 1)
+  assertEqual "attempt 2 delay quadruples" 400 (retryDelayMs 100 2)
+  assertEqual "attempt 3 delay octuples" 800 (retryDelayMs 100 3)
+
+-- | 38. Mock transport returns injected failure immediately without retry.
+testMockTransportNoRetry :: Test
+testMockTransportNoRetry = TestCase $ do
+  let transport = MockTransport defaultMockTable Nothing
+      tool = ExternalTool "llm-augment" DomainLexicon 0.5 True
+  result <- queryExternalTool transport tool NeedLexiconExtension "fail"
+  case result of
+    Left (EqeServerError msg) ->
+      assertBool "mock server error must contain injected tag" ("mock_injected_failure" `T.isInfixOf` msg)
+    other -> assertFailure ("expected EqeServerError from mock, got: " ++ show other)
+
 reliabilityHardeningTests :: [Test]
 reliabilityHardeningTests =
   [ TestLabel "select-tool-empty-pool"             testSelectToolEmptyPool
@@ -358,4 +400,8 @@ reliabilityHardeningTests =
   , TestLabel "extract-structured-invalid-json" testExtractStructuredInvalidJson
   , TestLabel "extract-structured-missing-content" testExtractStructuredMissingContent
   , TestLabel "extract-structured-plain-payload" testExtractStructuredPlainPayload
+  , TestLabel "retryable-errors-classified" testRetryableErrors
+  , TestLabel "non-retryable-errors-rejected" testNonRetryableErrors
+  , TestLabel "exponential-backoff-delays" testExponentialBackoff
+  , TestLabel "mock-transport-no-retry" testMockTransportNoRetry
   ]

@@ -42,9 +42,13 @@ module QxFx0.Bridge.ExternalLLM
   , redactUpstreamError
   , classifyHttpException
   , classifyBodyReadFailure
+  , isRetryableError
+  , retryDelayMs
+  , defaultMockTable
   ) where
 
 import Control.Applicative ((<|>))
+import Control.Concurrent (threadDelay)
 import Control.Exception (try)
 import Data.Aeson (FromJSON(..), ToJSON, decodeStrict, encode, object, (.=))
 import Data.Aeson.Types (withObject, (.:), (.:?))
@@ -123,10 +127,15 @@ type MockTable = [(Text, Text, Text, Either ExternalQueryError Text)]
 
 -- | Mistral API configuration from env vars.
 data MistralConfig = MistralConfig
-  { mcApiKey    :: !Text
-  , mcModel     :: !Text
-  , mcEndpoint  :: !Text
-  , mcTimeoutMs :: !Int
+  { mcApiKey         :: !Text
+  , mcModel          :: !Text
+  , mcEndpoint       :: !Text
+  , mcTimeoutMs      :: !Int
+  , mcMaxQueryChars  :: !(Maybe Int)
+  , mcMaxRequestBytes :: !(Maybe Int)
+  , mcMaxResponseBytes :: !(Maybe Int)
+  , mcMaxRetries     :: !Int
+  , mcRetryBaseDelayMs :: !Int
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -136,10 +145,15 @@ data MistralConfig = MistralConfig
 -- response shape are identical to Mistral.  Only the endpoint and
 -- env-var prefix differ.
 data FireworksConfig = FireworksConfig
-  { fcApiKey    :: !Text
-  , fcModel     :: !Text
-  , fcEndpoint  :: !Text
-  , fcTimeoutMs :: !Int
+  { fcApiKey          :: !Text
+  , fcModel           :: !Text
+  , fcEndpoint        :: !Text
+  , fcTimeoutMs       :: !Int
+  , fcMaxQueryChars   :: !(Maybe Int)
+  , fcMaxRequestBytes :: !(Maybe Int)
+  , fcMaxResponseBytes :: !(Maybe Int)
+  , fcMaxRetries      :: !Int
+  , fcRetryBaseDelayMs :: !Int
   }
   deriving stock (Eq, Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
@@ -174,6 +188,12 @@ llmMaxResponseBytes = 65536
 llmRawBodyTelemetryChars :: Int
 llmRawBodyTelemetryChars = 4096
 
+llmDefaultMaxRetries :: Int
+llmDefaultMaxRetries = 3
+
+llmDefaultRetryBaseDelayMs :: Int
+llmDefaultRetryBaseDelayMs = 500
+
 -- Endpoint-host validation (allowlist, https/port checks, override context)
 -- now lives in 'QxFx0.Policy.EndpointAllowlist' and is imported above, shared
 -- with the Semantic embedding path.
@@ -181,12 +201,17 @@ llmRawBodyTelemetryChars = 4096
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig
 defaultExternalQueryConfig = ExternalQueryConfig
-  { eqcTransportMode  = "disabled"
-  , eqcApiKey         = Nothing
-  , eqcModel          = "mistral-small-latest"
-  , eqcEndpoint       = "https://api.mistral.ai/v1/chat/completions"
-  , eqcTimeoutMs      = llmDefaultTimeoutMs
-  , eqcFallbackReason = Just TfrEnvNotSet
+  { eqcTransportMode   = "disabled"
+  , eqcApiKey          = Nothing
+  , eqcModel           = "mistral-small-latest"
+  , eqcEndpoint        = "https://api.mistral.ai/v1/chat/completions"
+  , eqcTimeoutMs       = llmDefaultTimeoutMs
+  , eqcFallbackReason  = Just TfrEnvNotSet
+  , eqcMaxQueryChars   = Just llmMaxQueryChars
+  , eqcMaxRequestBytes = Just llmMaxRequestBytes
+  , eqcMaxResponseBytes = Just llmMaxResponseBytes
+  , eqcMaxRetries      = llmDefaultMaxRetries
+  , eqcRetryBaseDelayMs = llmDefaultRetryBaseDelayMs
   }
 
 transportTimeoutMs :: LLMTransport -> Maybe Int
@@ -232,6 +257,8 @@ resolveTransportConfigFromEnv = do
       mKey <- lookupEnv "QXFX0_MISTRAL_API_KEY"
       overrideContext <- readOverrideContext
       timeoutMs <- readTransportTimeoutMs ["QXFX0_MISTRAL_TIMEOUT_MS", "QXFX0_LLM_TIMEOUT_MS"]
+      maxRetries <- readMaxRetries
+      retryBaseDelayMs <- readRetryBaseDelayMs
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "mistral"
@@ -264,11 +291,18 @@ resolveTransportConfigFromEnv = do
                 , eqcEndpoint = endpoint
                 , eqcTimeoutMs = timeoutMs
                 , eqcFallbackReason = Nothing
+                , eqcMaxQueryChars = Nothing
+                , eqcMaxRequestBytes = Nothing
+                , eqcMaxResponseBytes = Nothing
+                , eqcMaxRetries = maxRetries
+                , eqcRetryBaseDelayMs = retryBaseDelayMs
                 }
     "fireworks" -> do
       mKey <- lookupEnv "QXFX0_FIREWORKS_API_KEY"
       overrideContext <- readOverrideContext
       timeoutMs <- readTransportTimeoutMs ["QXFX0_FIREWORKS_TIMEOUT_MS", "QXFX0_LLM_TIMEOUT_MS"]
+      maxRetries <- readMaxRetries
+      retryBaseDelayMs <- readRetryBaseDelayMs
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
           { eqcTransportMode = "fireworks"
@@ -301,6 +335,11 @@ resolveTransportConfigFromEnv = do
                 , eqcEndpoint = endpoint
                 , eqcTimeoutMs = timeoutMs
                 , eqcFallbackReason = Nothing
+                , eqcMaxQueryChars = Nothing
+                , eqcMaxRequestBytes = Nothing
+                , eqcMaxResponseBytes = Nothing
+                , eqcMaxRetries = maxRetries
+                , eqcRetryBaseDelayMs = retryBaseDelayMs
                 }
     _ -> pure $ defaultExternalQueryConfig
            { eqcTransportMode = T.pack mode
@@ -354,6 +393,26 @@ sanitizeTimeoutMs raw =
   let parsed = fromMaybe llmDefaultTimeoutMs (raw >>= readMaybe)
   in max llmMinTimeoutMs (min llmMaxTimeoutMs parsed)
 
+readMaxRetries :: IO Int
+readMaxRetries = do
+  raw <- lookupEnv "QXFX0_LLM_MAX_RETRIES"
+  pure (sanitizeMaxRetries raw)
+
+sanitizeMaxRetries :: Maybe String -> Int
+sanitizeMaxRetries raw =
+  let parsed = fromMaybe llmDefaultMaxRetries (raw >>= readMaybe)
+  in max 0 (min 10 parsed)
+
+readRetryBaseDelayMs :: IO Int
+readRetryBaseDelayMs = do
+  raw <- lookupEnv "QXFX0_LLM_RETRY_BASE_DELAY_MS"
+  pure (sanitizeRetryBaseDelayMs raw)
+
+sanitizeRetryBaseDelayMs :: Maybe String -> Int
+sanitizeRetryBaseDelayMs raw =
+  let parsed = fromMaybe llmDefaultRetryBaseDelayMs (raw >>= readMaybe)
+  in max 0 (min 30000 parsed)
+
 emitOverrideWarning :: Text -> Maybe Text -> IO ()
 emitOverrideWarning _ Nothing = pure ()
 emitOverrideWarning endpoint (Just tag) =
@@ -392,12 +451,22 @@ realTransportForKey mgr cfg key =
       , fcModel = eqcModel cfg
       , fcEndpoint = eqcEndpoint cfg
       , fcTimeoutMs = eqcTimeoutMs cfg
+      , fcMaxQueryChars = eqcMaxQueryChars cfg
+      , fcMaxRequestBytes = eqcMaxRequestBytes cfg
+      , fcMaxResponseBytes = eqcMaxResponseBytes cfg
+      , fcMaxRetries = eqcMaxRetries cfg
+      , fcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
       }
     else MistralTransport mgr MistralConfig
       { mcApiKey = key
       , mcModel = eqcModel cfg
       , mcEndpoint = eqcEndpoint cfg
       , mcTimeoutMs = eqcTimeoutMs cfg
+      , mcMaxQueryChars = eqcMaxQueryChars cfg
+      , mcMaxRequestBytes = eqcMaxRequestBytes cfg
+      , mcMaxResponseBytes = eqcMaxResponseBytes cfg
+      , mcMaxRetries = eqcMaxRetries cfg
+      , mcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
       }
 
 -- | Build transport from an explicit configuration record.
@@ -478,8 +547,9 @@ queryExternalTool
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalTool transport tool need query =
   let queryChars = T.length query
-  in if queryChars > llmMaxQueryChars
-       then pure (Left (queryTooLarge queryChars llmMaxQueryChars))
+      maxQueryChars = transportMaxQueryChars transport
+  in if queryChars > maxQueryChars
+       then pure (Left (queryTooLarge queryChars maxQueryChars))
        else case transport of
          MockTransport table mCfg  ->
            case mCfg >>= eqcFallbackReason of
@@ -487,6 +557,24 @@ queryExternalTool transport tool need query =
              _ -> mockQuery table tool need query
          MistralTransport mgr cfg  -> mistralQuery mgr cfg tool need query
          FireworksTransport mgr cfg -> fireworksQuery mgr cfg tool need query
+
+-- | Effective maximum query length for a transport, falling back to the
+-- module default when no override is configured.
+transportMaxQueryChars :: LLMTransport -> Int
+transportMaxQueryChars transport =
+  case transport of
+    MockTransport _ mCfg -> effectiveMaxQueryChars (mCfg >>= eqcMaxQueryChars)
+    MistralTransport _ cfg -> effectiveMaxQueryChars (mcMaxQueryChars cfg)
+    FireworksTransport _ cfg -> effectiveMaxQueryChars (fcMaxQueryChars cfg)
+
+effectiveMaxQueryChars :: Maybe Int -> Int
+effectiveMaxQueryChars = fromMaybe llmMaxQueryChars
+
+effectiveMaxRequestBytes :: Maybe Int -> Int
+effectiveMaxRequestBytes = fromMaybe llmMaxRequestBytes
+
+effectiveMaxResponseBytes :: Maybe Int -> Int
+effectiveMaxResponseBytes = fromMaybe llmMaxResponseBytes
 
 -- | Execute a query with explicit config (for tests and telemetry).
 queryExternalToolWithConfig
@@ -531,7 +619,7 @@ renderNeedTag NeedNone                  = "NeedNone"
 -- 'ExternalQueryError'.  Never returns a silent accept.
 mistralQuery :: Manager -> MistralConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
 mistralQuery mgr cfg tool _need query =
-  chatCompletionQuery mgr "mistral" (mcEndpoint cfg) (mcModel cfg) (mcApiKey cfg) (mcTimeoutMs cfg) tool query
+  chatCompletionQuery mgr "mistral" (mcEndpoint cfg) (mcModel cfg) (mcApiKey cfg) (mcTimeoutMs cfg) (effectiveMaxRequestBytes (mcMaxRequestBytes cfg)) (effectiveMaxResponseBytes (mcMaxResponseBytes cfg)) (mcMaxRetries cfg) (mcRetryBaseDelayMs cfg) tool query
 
 -- | Real Fireworks HTTP query.
 -- Fireworks uses the same OpenAI-compatible chat-completion schema as
@@ -539,7 +627,7 @@ mistralQuery mgr cfg tool _need query =
 -- Only the endpoint and auth header differ.
 fireworksQuery :: Manager -> FireworksConfig -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
 fireworksQuery mgr cfg tool _need query =
-  chatCompletionQuery mgr "fireworks" (fcEndpoint cfg) (fcModel cfg) (fcApiKey cfg) (fcTimeoutMs cfg) tool query
+  chatCompletionQuery mgr "fireworks" (fcEndpoint cfg) (fcModel cfg) (fcApiKey cfg) (fcTimeoutMs cfg) (effectiveMaxRequestBytes (fcMaxRequestBytes cfg)) (effectiveMaxResponseBytes (fcMaxResponseBytes cfg)) (fcMaxRetries cfg) (fcRetryBaseDelayMs cfg) tool query
 
 chatCompletionQuery
   :: Manager
@@ -548,22 +636,36 @@ chatCompletionQuery
   -> Text
   -> Text
   -> Int
+  -> Int
+  -> Int
+  -> Int
+  -> Int
   -> ExternalTool
   -> Text
   -> IO (Either ExternalQueryError ExternalQueryResponse)
-chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs tool query = do
-  requestResult <- buildChatRequest endpoint model apiKey timeoutMs query
-  case requestResult of
-    Left err -> pure (Left err)
-    Right req -> do
-      start <- getCurrentTime
-      httpResult <- runChatHttp mgr req
-      end <- getCurrentTime
-      let latencyMs = elapsedMs start end
-      pure (handleChatHttpResult tool latencyMs httpResult)
+chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs maxRequestBytes maxResponseBytes maxRetries retryBaseDelayMs tool query =
+  attempt 0 0
+  where
+    attempt accLatencyMs retryCount = do
+      requestResult <- buildChatRequest endpoint model apiKey timeoutMs maxRequestBytes query
+      case requestResult of
+        Left err -> pure (Left err)
+        Right req -> do
+          start <- getCurrentTime
+          httpResult <- runChatHttp mgr req maxResponseBytes
+          end <- getCurrentTime
+          let latencyMs = accLatencyMs + elapsedMs start end
+          case handleChatHttpResult tool maxResponseBytes latencyMs httpResult of
+            Left err
+              | retryCount < maxRetries && isRetryableError err -> do
+                  let delayUs = retryDelayMs retryBaseDelayMs retryCount * 1000
+                  threadDelay delayUs
+                  attempt latencyMs (retryCount + 1)
+              | otherwise -> pure (Left err)
+            Right resp -> pure (Right resp)
 
-buildChatRequest :: Text -> Text -> Text -> Int -> Text -> IO (Either ExternalQueryError Request)
-buildChatRequest endpoint model apiKey timeoutMs query = do
+buildChatRequest :: Text -> Text -> Text -> Int -> Int -> Text -> IO (Either ExternalQueryError Request)
+buildChatRequest endpoint model apiKey timeoutMs maxRequestBytes query = do
   parsed <- try (parseRequest (T.unpack endpoint)) :: IO (Either HttpException Request)
   pure $ case parsed of
     Left err -> Left (classifyHttpException err)
@@ -573,8 +675,8 @@ buildChatRequest endpoint model apiKey timeoutMs query = do
             , "messages" .= [object ["role" .= ("user" :: Text), "content" .= query]]
             ]
           payloadBytes = fromIntegral (LBS.length payload)
-      in if payloadBytes > llmMaxRequestBytes
-           then Left (requestBodyTooLarge payloadBytes llmMaxRequestBytes)
+      in if payloadBytes > maxRequestBytes
+           then Left (requestBodyTooLarge payloadBytes maxRequestBytes)
            else Right req0
              { method = "POST"
              , requestHeaders =
@@ -586,25 +688,26 @@ buildChatRequest endpoint model apiKey timeoutMs query = do
              , checkResponse = \_ _ -> pure ()
              }
 
-runChatHttp :: Manager -> Request -> IO (Either HttpException (Status, Either ExternalQueryError BS.ByteString))
-runChatHttp mgr req =
+runChatHttp :: Manager -> Request -> Int -> IO (Either HttpException (Status, Either ExternalQueryError BS.ByteString))
+runChatHttp mgr req maxResponseBytes =
   try (withResponse req mgr $ \resp -> do
-    bodyResult <- readResponseBodyLimited llmMaxResponseBytes (responseBody resp)
+    bodyResult <- readResponseBodyLimited maxResponseBytes (responseBody resp)
     pure (responseStatus resp, bodyResult))
 
 handleChatHttpResult
   :: ExternalTool
   -> Int
+  -> Int
   -> Either HttpException (Status, Either ExternalQueryError BS.ByteString)
   -> Either ExternalQueryError ExternalQueryResponse
-handleChatHttpResult tool latencyMs httpResult =
+handleChatHttpResult tool maxResponseBytes latencyMs httpResult =
   case httpResult of
     Left err -> Left (classifyHttpException err)
     Right (status, bodyResult) ->
       case bodyResult of
         Left err -> Left (classifyBodyReadFailure (statusCode status) err)
         Right rawBody ->
-          case decodeLlmBodyLimited llmMaxResponseBytes rawBody of
+          case decodeLlmBodyLimited maxResponseBytes rawBody of
             Left err -> Left err
             Right body -> responseFromStatus status body
   where
@@ -641,6 +744,24 @@ classifyHttpStatusError code diag =
     _ | code >= 500 && code < 600 -> EqeServerError diag
     _ | code >= 400 && code < 500 -> EqeInvalidResponse diag
     _ -> EqeInvalidResponse diag
+
+-- | Errors that are considered transient and safe to retry with
+-- exponential backoff.
+isRetryableError :: ExternalQueryError -> Bool
+isRetryableError err =
+  case err of
+    EqeRateLimited _       -> True
+    EqeServerError _       -> True
+    EqeNetworkUnavailable _ -> True
+    EqeConnectionReset _   -> True
+    EqeTimeout _           -> True
+    _                      -> False
+
+-- | Exponential backoff delay for a given retry attempt.
+-- delay = baseDelayMs * 2^attempt.
+retryDelayMs :: Int -> Int -> Int
+retryDelayMs baseDelayMs attempt =
+  baseDelayMs * (2 ^ attempt)
 
 bodyReadFailureTag :: ExternalQueryError -> Text
 bodyReadFailureTag (EqeInvalidResponse msg) = msg

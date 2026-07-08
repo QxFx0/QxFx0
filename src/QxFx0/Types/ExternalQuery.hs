@@ -35,6 +35,8 @@ import GHC.Generics (Generic)
 data ExternalQueryError
   = EqeNetworkUnavailable !Text
     -- ^ DNS timeout, TLS failure, or no route to host.
+  | EqeConnectionReset !Text
+    -- ^ Connection closed or reset by peer mid-request.
   | EqeAuthFailure !Text
     -- ^ 401 / 403 or missing API key.
   | EqeRateLimited !Text
@@ -84,6 +86,16 @@ data ExternalQueryConfig = ExternalQueryConfig
   , eqcTimeoutMs       :: !Int
   , eqcFallbackReason  :: !(Maybe TransportFallbackReason)
     -- ^ If transport fell back to mock, why.
+  , eqcMaxQueryChars   :: !(Maybe Int)
+    -- ^ Optional override for maximum query length in characters.
+  , eqcMaxRequestBytes :: !(Maybe Int)
+    -- ^ Optional override for maximum serialized request body size in bytes.
+  , eqcMaxResponseBytes :: !(Maybe Int)
+    -- ^ Optional override for maximum response body size in bytes.
+  , eqcMaxRetries :: !Int
+    -- ^ Maximum number of retry attempts for transient failures.
+  , eqcRetryBaseDelayMs :: !Int
+    -- ^ Base delay in milliseconds before the first retry.
   }
   deriving stock (Eq, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
@@ -96,6 +108,11 @@ instance Show ExternalQueryConfig where
     ++ ", endpoint=" ++ show (eqcEndpoint cfg)
     ++ ", timeoutMs=" ++ show (eqcTimeoutMs cfg)
     ++ ", fallbackReason=" ++ show (eqcFallbackReason cfg)
+    ++ ", maxQueryChars=" ++ show (eqcMaxQueryChars cfg)
+    ++ ", maxRequestBytes=" ++ show (eqcMaxRequestBytes cfg)
+    ++ ", maxResponseBytes=" ++ show (eqcMaxResponseBytes cfg)
+    ++ ", maxRetries=" ++ show (eqcMaxRetries cfg)
+    ++ ", retryBaseDelayMs=" ++ show (eqcRetryBaseDelayMs cfg)
     ++ " }"
 
 -- | Why the transport fell back to mock instead of using the real
@@ -130,6 +147,7 @@ renderExternalQueryError :: ExternalQueryError -> Text
 renderExternalQueryError err =
   case err of
     EqeNetworkUnavailable t -> T.concat ["network_unavailable:", t]
+    EqeConnectionReset t    -> T.concat ["connection_reset:", t]
     EqeAuthFailure t        -> T.concat ["auth_failure:", t]
     EqeRateLimited t        -> T.concat ["rate_limited:", t]
     EqeServerError t        -> T.concat ["server_error:", t]

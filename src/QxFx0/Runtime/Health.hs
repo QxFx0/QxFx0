@@ -12,7 +12,6 @@ import Data.List (find)
 import System.Directory (doesDirectoryExist, doesFileExist)
 import System.FilePath ((</>), takeDirectory)
 import System.IO.Error (isDoesNotExistError)
-import System.IO.Unsafe (unsafePerformIO)
 import System.IO (hPutStrLn, stderr)
 import qualified PGF2 as PGF
 import QxFx0.ExceptionPolicy (tryIO, tryQxFx0)

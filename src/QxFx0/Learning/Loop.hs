@@ -354,6 +354,7 @@ renderNeedTag NeedNone                  = "NeedNone"
 
 renderQueryError :: ExternalQueryError -> Text
 renderQueryError (EqeNetworkUnavailable t) = T.concat ["network:", t]
+renderQueryError (EqeConnectionReset t)    = T.concat ["connection_reset:", t]
 renderQueryError (EqeAuthFailure t)        = T.concat ["auth:", t]
 renderQueryError (EqeRateLimited t)        = T.concat ["rate_limit:", t]
 renderQueryError (EqeServerError t)        = T.concat ["server:", t]

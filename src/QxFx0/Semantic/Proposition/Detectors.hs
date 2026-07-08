@@ -230,8 +230,6 @@ buildContactSignalFromTriggers rawText tokens admittedTriggers
   | matched "how_does_agency" = Just ContactSignal
   | otherwise = Nothing
   where
-    _unused = rawText
-    _unusedTokens = tokens
     matched label = any hasMatchingLabel admittedTriggers
       where
         hasMatchingLabel (RawPropositionTrigger triggerLabel triggerMatched) =

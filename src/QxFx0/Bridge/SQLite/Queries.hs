@@ -9,6 +9,7 @@ module QxFx0.Bridge.SQLite.Queries
   ) where
 
 import Control.Exception (finally)
+import Control.Monad (when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isLetter, isSpace)
@@ -103,9 +104,6 @@ maybeCheckpoint db turnCount =
   when (turnCount > 0 && turnCount `mod` 100 == 0) $ do
     _ <- NSQL.execSql db "PRAGMA wal_checkpoint(TRUNCATE);"
     pure ()
-  where
-    when True action = action
-    when False _ = pure ()
 
 loadScenes :: NSQL.Database -> IO [SemanticScene]
 loadScenes db = do

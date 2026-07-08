@@ -173,9 +173,10 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
       -- FMAR Phase-4+7: override cascade family when Field-driven routing is active.
       fmarActive = isFmarActive fmarMode
       fmarPos = computeAdaptivePosition (tiField ti) (rdToMs rd) (tiConatusEnergy ti)
-      fmarFamily
-        | fmarActive = fmarSelectFamily fmarPos (tiRecommendedFamily ti) familyTargets
-        | otherwise  = cascadeFamily  -- unused when inactive, kept for totality
+      fmarFamily =
+        case fmarActive of
+          True  -> fmarSelectFamily fmarPos (tiRecommendedFamily ti) familyTargets
+          False -> cascadeFamily
       renderingFamily = case fmarMode of
         FmarLive -> fmarFamily
         _        -> cascadeFamily

@@ -1,7 +1,7 @@
 # QxFx0 hlint configuration
 # See: https://github.com/ndmitchell/hlint
 
-- group: defaults
+- group: {name: default}
 
 # Ban partial list functions in production code
 - warn: {name: "Use head", within: []}

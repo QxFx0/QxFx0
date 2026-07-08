@@ -430,7 +430,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           Just reason -> Just reason
           Nothing ->
             case mExternalActionDecision of
-              Just (ExternalActionDenied reason) -> Just reason
+              Just (ExternalActionDenied reason) -> reasonText reason
               _ -> Nothing
       repLikeExploratory =
         mExternalQueryRequest == Nothing && lnsCurrentNeed (ssLearningNeedState ss) /= NeedNone
@@ -509,17 +509,13 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
            _ -> Nothing
     deniedTrace kind need decision =
       ExternalActionDecisionTrace kind (decisionReason kind need decision) (Just (renderNeedTag need))
-    decisionReason kind need decision =
+    decisionReason kind _ decision =
       case decision of
         ExternalActionAllowed ->
           case kind of
             RequestDrivenExternalAction -> AllowedRequestDriven
             ExploratoryExternalAction -> AllowedExploratory
-        ExternalActionDenied reason
-          | reason == "guardrail_rate_limit" -> DeniedGuardrailRateLimit
-          | reason == "guardrail_circuit_breaker" -> DeniedGuardrailCircuitBreaker
-          | need == NeedNone -> DeniedNoEligibleNeed
-          | otherwise -> DeniedNoExecutableTool
+        ExternalActionDenied reason -> reason
     reasonText reason =
       Just $ case reason of
         AllowedRequestDriven -> "allowed_request_driven"

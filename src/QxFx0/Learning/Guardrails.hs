@@ -70,7 +70,7 @@ data ExternalActionDecisionTrace = ExternalActionDecisionTrace
 
 data ExternalActionDecision
   = ExternalActionAllowed
-  | ExternalActionDenied !Text
+  | ExternalActionDenied !ExternalActionDecisionReason
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -150,8 +150,8 @@ canSubmitProposal gs turn =
 
 canIssueExternalAction :: GuardrailState -> ExternalActionKind -> Int -> ExternalActionDecision
 canIssueExternalAction gs _kind turn
-  | circuitBreakerOpen gs turn = ExternalActionDenied "guardrail_circuit_breaker"
-  | rateLimitExceeded gs turn = ExternalActionDenied "guardrail_rate_limit"
+  | circuitBreakerOpen gs turn = ExternalActionDenied DeniedGuardrailCircuitBreaker
+  | rateLimitExceeded gs turn = ExternalActionDenied DeniedGuardrailRateLimit
   | otherwise = ExternalActionAllowed
 
 -- | Record a new proposal submission, updating counters and window.
