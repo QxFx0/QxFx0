@@ -23,7 +23,7 @@ This roadmap derives from a code-verified audit of QxFx0 against the rubric of "
 | **I** | Rename campaign | I | ✅ done Tier-0 | **Spectral→ContentCluster** (module + 5 imports + cabal); ADR-0043. **Rejected:** Consciousness (active lexicon, not dead), Dream/Counterfactual (Tier-1, serialized). Tier-1 requires schema migration (deferred). Suite green, 0 errors |
 | **M1** | SQL canon + provenance | II | ✅ done (incr.1) | requirements.txt pinned to exact versions (pymorphy3==2.0.6, spacy==3.8.13); Generated.hs provenance header (X6); README clarified (runtime pure Haskell, data-dependent on offline Python pipeline). SQL already canonical (check_generated_artifacts.sh). Full regeneration-byte-identical check = follow-up |
 | **M2** | GF/RGL runtime morphology | II | ✅ done (incr.1) | runtimeMorphologyActive flag + paradigmGenitive resolver (genitiveForm-first, no hardcoded exceptions); legacy path preserved behind flag. Registry + flag-discipline reg. Full RGL runtime path = increment-2 |
-| **H2** | GF boot-probe + default-on | II | ✅ done | `PgfHealth` probe integrated into `SystemHealth` (R-H2.1); `Runtime.PGFStatus` module (circular dep fix); `linearizeOrFallbackTagged` checks both `gfMapFallbackReason` AND `pgfFallbackReason` → GF default-on when PGF valid (R-H2.2); ADR-0044. Telemetry (R-H2.3) → Phase II. Suite green |
+| **H2** | GF boot-probe + default-on | II | ✅ done | `PgfHealth` probe integrated into `SystemHealth` (R-H2.1); `Lexicon.PGFStatus` module (circular dep fix); `linearizeOrFallbackTagged` checks both `gfMapFallbackReason` AND `pgfFallbackReason` → GF default-on when PGF valid (R-H2.2); ADR-0044. Telemetry (R-H2.3) → Phase II. Suite green |
 | **M3** | GF renderer, relocation, staged | II | 🟡 M3.0 harness done | `GFParityHarness` module (reference table + `verifyParity` gate); anti-rot test (`Test.Suite.GFParityHarness`) + registry. Table starts empty; `captureParityFixture` + per-move GF migration = M3.1 |
 | **X1** | Anti-rot standard + gate rule #21 | x | ✅ done | ADR-0042 + `docs/anti_rot_registry.tsv` + `check_architecture.sh` rule [21] (syntax-clean, rule verified in isolation; WP-F seeded) |
 | **X6** | Word-gen provenance (pin python) | x | ⬜ planned | |
@@ -134,7 +134,7 @@ Rename only the **residual** after A…H/M (if M2/E make a type real, keep its n
 |---|---|---|---|
 | `Core.Consciousness` (module) | `StanceClassifier` | 0 | imports+exposed-modules |
 | `Core.Dream` (module) | `TopicDrift` | 0 | imports+exposed-modules |
-| `Core.Spectral` (if not wired) | `ContentCluster` | 0 | imports+exposed-modules |
+| `Core.Spectral (module removed; renamed to Core.ContentCluster)` (if not wired) | `ContentCluster` | 0 | imports+exposed-modules |
 | `Counterfactual` (newtype ToJSON; field `fieldCounterfactual`) | `ParseEntropy` | **1** | **breaks JSON/replay** |
 - R-I1(Tier-0) compiler-checked, safe. R-I2(Tier-1) stable wire-format (`fieldLabelModifier`/custom instances) OR migration via versioned `fromJSON` (R-A1). R-I3 ADR rename-migration policy.
 

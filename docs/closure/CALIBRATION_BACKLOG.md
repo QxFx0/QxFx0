@@ -71,7 +71,7 @@ We do not claim these are calibrated."
 (LearningContour exposes SalienceWeights as a `LearningTarget`),
 a production-trace corpus.
 
-### 2.2 `Self.Field.FieldHeuristics`
+### 2.2 `Self.Field.FieldHeuristics (module removed)`
 
 Per Phase 7 (AGENTS.md), `FieldHeuristics` was extracted from
 inline constants; empirical tuning is deferred.

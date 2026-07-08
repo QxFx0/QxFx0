@@ -230,7 +230,7 @@ discipline and the first subset, not the complete refactor.
 - [ ] `QxFx0.Render.Authority` module (new) exposes the
       `AuthoritySurface` newtype, `parseAuthoritySurface`,
       `renderAuthoritySurface`, and the `roundTripProperty`.
-- [ ] `QxFx0.Semantic.AuthorityParse` module (new) exposes
+- [ ] `QxFx0.Runtime.AuthorityParse` module (new) exposes
       `parseAuthoritySurface` over the existing
       `Semantic.Sense.Extract` pipeline.
 - [ ] `Test.Suite.AuthoritySurface` (new) ships with:

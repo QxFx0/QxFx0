@@ -72,11 +72,11 @@ Health endpoint (`/health`) now exposes PGF status.
 **Problem**: Circular dependency. `Runtime.Health` → `Runtime.Wiring` →
 `Render.Dialogue` → needs PGF status.
 
-**Solution**: Created `QxFx0.Runtime.PGFStatus` — minimal-dependency module
+**Solution**: Created `QxFx0.Lexicon.PGFStatus` — minimal-dependency module
 importable by `Render.Dialogue`:
 
 ```haskell
-module QxFx0.Runtime.PGFStatus
+module QxFx0.Lexicon.PGFStatus
   ( pgfRuntimeActive
   , pgfFallbackReason
   ) where

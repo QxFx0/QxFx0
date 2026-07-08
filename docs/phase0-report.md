@@ -9,7 +9,7 @@
 |---|--------|--------|
 | 1 | Зафиксировать результат `cabal build` | ✅ **FIRST SUCCESSFUL BUILD** — `cabal build` exits 0, "Up to date" |
 | 2 | Удалить мёртвые Python-скрипты | ✅ 23 скрипта удалено (13,495 LOC) |
-| 3 | Удалить мёртвые Haskell-модули | ⚠️ Только 1 из 4 оказался мёртвым (Semantic.AuthorityParse, ~120 LOC) |
+| 3 | Удалить мёртвые Haskell-модули | ⚠️ Только 1 из 4 оказался мёртвым (Runtime.AuthorityParse, ~120 LOC) |
 | 4 | Архивировать ADR из `proposed/` | ✅ 19 ADR перемещены в `docs/adr/archived/` |
 
 ## Detailed Results
@@ -78,7 +78,7 @@ scripts/wave5_soak.py
 
 | Module | Status | Evidence |
 |--------|--------|----------|
-| `Semantic.AuthorityParse` | ✅ DEAD — deleted | Zero imports in src/, app/, test/ |
+| `Runtime.AuthorityParse` | ✅ DEAD — deleted | Zero imports in src/, app/, test/ |
 | `Render.Text` | ❌ ALIVE | Imported by 4 app/CLI modules (`textShow`) |
 | `Bridge.EmbeddedSQLSync` | ❌ ALIVE | Imported by `app/CLI.hs` (SQL sync operations) |
 | `Self.MeaningDirective` | ❌ ALIVE | Re-export shim for `MeaningDirective` type, used via `QxFx0.Types` by tests |
@@ -122,7 +122,7 @@ scripts/wave5_soak.py
 | Category | LOC Removed |
 |-----------|------------|
 | Python scripts | ~13,495 |
-| Haskell module (Semantic.AuthorityParse) | ~120 |
+| Haskell module (Runtime.AuthorityParse) | ~120 |
 | **Total** | **~13,615** |
 
 ## Corrections to Prior Audit
@@ -131,7 +131,7 @@ scripts/wave5_soak.py
 2. **Bridge.EmbeddedSQLSync is NOT dead** — imported by `app/CLI.hs`.
 3. **Self.MeaningDirective is NOT dead** — re-export shim, type used by test suite via `QxFx0.Types`.
 4. **Thresholds sub-modules are NOT orphaned** — re-exported through `Constants.hs` → `Types/Thresholds.hs`, used by 35+ modules.
-5. **Only Semantic.AuthorityParse was truly dead** — zero imports anywhere.
+5. **Only Runtime.AuthorityParse was truly dead** — zero imports anywhere.
 
 ## Next Steps (Phase 1)
 

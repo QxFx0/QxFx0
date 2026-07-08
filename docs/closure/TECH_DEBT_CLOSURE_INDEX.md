@@ -175,7 +175,7 @@ back to itself with high round-trip coverage.
 - `GF_AUTHORITY_SUBSET.md` (the `AuthoritySurface` newtype;
   the parser-complete subset; the boundary rule).
 - New module `QxFx0.Render.Authority`.
-- New module `QxFx0.Semantic.AuthorityParse`.
+- New module `QxFx0.Runtime.AuthorityParse`.
 - New `trcAuthoritySurface` field on `TurnReplayTrace`.
 
 **Acceptance criteria**:

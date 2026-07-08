@@ -626,6 +626,7 @@ common test-common
     Test.Suite.MorphologicalNormalization
     Test.Suite.Anomaly
     Test.Suite.PathFinder
+    Test.Suite.DialogueSemanticSelection
 
 test-suite qxfx0-test-unit
   import:        test-common

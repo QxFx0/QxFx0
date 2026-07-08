@@ -82,7 +82,7 @@ landed fully vs. partially):
 - **Impact**: Cleaner module interface
 
 **P1-1: Generic Admission Foundation (Phase 1 of 3)**
-- Created `QxFx0.Core.GenericPropositionAdmission` (92 lines)
+- Created `QxFx0.Types.Admission.GenericPropositionAdmission` (92 lines)
 - Introduced `PropositionAdmissionConfig` for parameterized admission
 - Refactored `PropositionContactAdmission` as proof-of-concept
 - Documented completion plan in `docs/P1-1-REFACTORING-PLAN.md`

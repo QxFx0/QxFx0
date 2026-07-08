@@ -36,7 +36,7 @@ of the following hold:
   runtime trace; the audit finds that every caller of
   `holisticFamily` / `formalFamily` goes through
   `Self.Adjunction.reconcile` (no direct
-  `QxFx0.Self.Holistic` / `QxFx0.Self.Formal` imports
+  `QxFx0.Self.Holistic (module removed)` / `QxFx0.Self.Formal (module removed)` imports
   in the pipeline; this is already enforced by
   `check_architecture.sh` rule [12]).
 - **G2 — replay parity**: a fixed-fixture replay under

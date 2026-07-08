@@ -372,7 +372,7 @@ When a new `QxFx0.Self.*` module becomes canonical
 `docs/closure/PROMOTION_PLAYBOOK.md`):
 
 1. **Define** the contour in the Self/* subtree
-   (e.g. `QxFx0.Self.Will`).
+   (e.g. `QxFx0.Self.Will (module removed)`).
 2. **Compute** its value in
    `QxFx0.Core.TurnPipeline.Prepare.Build` (or
    similar single-source-of-truth location, per

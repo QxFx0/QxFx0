@@ -83,7 +83,7 @@ safe check) and a behavior-change review — a separate decision, not this pass.
    - Demonstrates the pattern for remaining 17 modules
 
 3. **Updated Build Configuration** (`qxfx0.cabal`)
-   - Added `QxFx0.Core.GenericPropositionAdmission` to exposed-modules
+   - Added `QxFx0.Types.Admission.GenericPropositionAdmission` to exposed-modules
    - Project compiles successfully
 
 ### Remaining Work
@@ -117,7 +117,7 @@ Refactor these Proposition*Admission modules using the same pattern as Propositi
 
 **Pattern for each file:**
 ```haskell
-import QxFx0.Core.GenericPropositionAdmission
+import QxFx0.Types.Admission.GenericPropositionAdmission
 
 admitPropositionXxxTriggers :: PropositionXxxAdmissionInput -> [RawPropositionXxxTrigger] -> AdmittedPropositionXxxTriggers
 admitPropositionXxxTriggers = admitPropositionTriggers xxxConfig
@@ -149,7 +149,7 @@ The 22 Types/Proposition*Admission.hs files are identical 33-line templates. Opt
 Create `src/QxFx0/Types/GenericPropositionAdmission.hs` with TH splice:
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
-module QxFx0.Types.GenericPropositionAdmission (mkPropositionAdmissionTypes) where
+module QxFx0.Types.Admission.GenericPropositionAdmission (mkPropositionAdmissionTypes) where
 
 import Language.Haskell.TH
 
@@ -164,7 +164,7 @@ Then each Types file becomes:
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
 module QxFx0.Types.PropositionXxxAdmission where
-import QxFx0.Types.GenericPropositionAdmission
+import QxFx0.Types.Admission.GenericPropositionAdmission
 $(mkPropositionAdmissionTypes "Xxx")
 ```
 

@@ -16,12 +16,16 @@ module QxFx0.Render.Dialogue
   , renderArtifactViaAssembly
   -- M4-SEMANTIC-CORE-003: compositional generator
   , generateFromFrame
+  -- Semantic selection supplement helpers
+  , formatSelectedPredicates
+  , semanticSupplement
+  , appendSupplement
   ) where
 
 import Data.Text (Text)
 import QxFx0.Self.Field (Field, emptyField, fieldConfidence, fieldCounterfactual, fieldConsolidation, fieldResonance, unFieldConfidence, unCounterfactual, unConsolidation, unResonance)
 import QxFx0.Semantic.Content
-  ( lookupDistinctionContent, isCoveredTopic
+  ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
   , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
   , ConceptCategory(..), classifyConceptCategory
@@ -41,10 +45,11 @@ import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueCon
 import QxFx0.Semantic.GraphEngagement (engageWithProposition)
 import QxFx0.Semantic.ContextualComposer (composeContextual)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
-import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..))
+import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..), csTopicPredicates)
 import QxFx0.Semantic.Network (SemanticNetwork)
 import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
 import qualified Data.Set as Set
+import qualified Data.Map.Strict as M
 import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
 import qualified Data.Char as Char
@@ -386,6 +391,54 @@ selectPredicatesGated cs field topic mNet =
               | sp <- raw
               ]
   in filter (not . null . spPredicates) gated
+
+-- | Convert selected predicates into a brief phrase suitable for appending to
+-- a template. Returns empty text when no predicates survive the gate.
+--
+-- The Bool argument selects the language surface (True = English, False = Russian).
+formatSelectedPredicates :: Bool -> [SelectedPredicate] -> Text
+formatSelectedPredicates isEn sps =
+  let preds = concatMap spPredicates sps
+      texts = map (if isEn then spEn else spRu) preds
+      nonEmpty = filter (not . T.null) texts
+  in if null nonEmpty then "" else T.intercalate ". " nonEmpty
+
+-- | True when the ContentSelector actually holds predicates for the topic.
+selectorHasTopic :: ContentSelector -> Text -> Bool
+selectorHasTopic cs topic =
+  case M.lookup topic (csTopicPredicates cs) of
+    Just preds -> not (null preds)
+    Nothing    -> False
+
+-- | Build a semantic supplement for a single topic. Combines ContentSelector
+-- scoring with the existing predicate gate. Returns empty text if the topic is
+-- not selected, not covered, or no predicates are admissible.
+semanticSupplement :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
+semanticSupplement cs field topic mNet isEn =
+  if T.null (T.strip topic) || not (selectorHasTopic cs topic)
+    then ""
+    else formatSelectedPredicates isEn (selectPredicatesGated cs field topic mNet)
+
+-- | Build a supplement from the ContentSelector only. A static corpus entry is
+-- no longer used as an ungated fallback: if the selector has not selected the
+-- topic, the supplement stays empty so the original template is preserved.
+semanticSupplementFromCorpus :: (Text -> Maybe a) -> (a -> [SemanticPredicate]) -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
+semanticSupplementFromCorpus _lookupFn _getPreds cs field topic mNet isEn =
+  if T.null (T.strip topic) || not (selectorHasTopic cs topic)
+    then ""
+    else semanticSupplement cs field topic mNet isEn
+
+-- | Append a non-empty supplement to a base text with appropriate punctuation.
+-- If the supplement is empty, the base text is returned unchanged.
+appendSupplement :: Text -> Text -> Text
+appendSupplement base supplement =
+  if T.null supplement
+    then base
+    else if T.null base
+           then supplement
+           else (if any (`T.isSuffixOf` base) [".", "!", "?"]
+                   then base <> " "
+                   else base <> ". ") <> supplement
 
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
 structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
@@ -1851,6 +1904,7 @@ generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGr
 generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
+        isEn = isEnglishInput topic
         scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
         fp = FieldProfile
@@ -1871,13 +1925,11 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         commitmentRef = case priorCommitments of
           (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
           [] -> ""
-    in if not (T.null genText)
-       then
-         let prefix = if T.isPrefixOf topicNom genText
-                        then authorityText
-                        else authorityText <> " " <> topicNom <> " — "
-         in commitmentRef <> prefix <> " " <> genText
-       else authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
+    in let fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
+           supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
+                          then ""
+                          else semanticSupplement cs field topic mNetwork isEn
+       in appendSupplement fallback supplement
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
@@ -1886,8 +1938,17 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
           [] -> "в одной рамке критериев"
           cs -> "по критерию " <> T.intercalate ", " (map (toNominative morph) cs)
         mDistContent = lookupDistinctionContent leftNom rightNom
-    in "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
-       <> renderDistinctionBody mDistContent leftNom rightNom morph
+        base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
+               <> renderDistinctionBody mDistContent leftNom rightNom morph
+        isEn = isEnglishInput left
+        leftSup = if T.null (T.strip left) || not (selectorHasTopic cs left)
+                    then ""
+                    else semanticSupplement cs field left mNetwork isEn
+        rightSup = if T.null (T.strip right) || not (selectorHasTopic cs right)
+                     then ""
+                     else semanticSupplement cs field right mNetwork isEn
+        supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
+    in appendSupplement base supplement
 
   FT.ChallengeFrame target basis strength rawObj ->
     let targetText = T.strip target
@@ -1908,21 +1969,28 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         defenseRef = case heldCommitments of
           (p:_) -> "Я удерживаю позицию: " <> fcpStatement p <> ". "
           [] -> ""
-    in if not (T.null genArgText)
-         then defenseRef <> genArgText
-         else case strength of
-           FT.Soft -> "Слышу возражение. Я не буду превращать его в определение: "
+        isEn = isEnglishInput rawObj
+        softFallback = "Слышу возражение. Я не буду превращать его в определение: "
                     <> safeTarget <> " нужно проверить по явному критерию. "
                     <> "Если " <> safeBasis <> ", я уточняю рамку и отделяю тезис от контрпримера."
-           FT.Firm -> "Возражение принято как проверка тезиса. "
+        firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
+        supplement = if T.null (T.strip rawObj) || not (selectorHasTopic cs rawObj)
+                       then ""
+                       else semanticSupplement cs field rawObj mNetwork isEn
+    in case strength of
+         FT.Soft -> appendSupplement softFallback supplement
+         FT.Firm -> appendSupplement firmFallback supplement
 
   FT.GroundFrame topic depth ->
     let topicNom = toNominative morph topic
-    in case depth of
-         FT.Shallow -> "Держу " <> topicNom <> " как устойчивую опору для дальнейшего разбора."
-         FT.Detailed -> "Конкретизирую " <> topicNom <> ": фиксирую это как рабочую опору и продолжаю от неё."
+        isEn = isEnglishInput topic
+        base = case depth of
+                 FT.Shallow -> "Держу " <> topicNom <> " как устойчивую опору для дальнейшего разбора."
+                 FT.Detailed -> "Конкретизирую " <> topicNom <> ": фиксирую это как рабочую опору и продолжаю от неё."
+        supplement = semanticSupplementFromCorpus lookupGroundContent gcPredicates cs field topic mNetwork isEn
+    in appendSupplement base supplement
 
   FT.RepairFrame ->
     "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
@@ -1932,6 +2000,7 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
 
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic
+        isEn = isEnglishInput topic
         fp = FieldProfile
                (unFieldConfidence (fieldConfidence field))
                (unCounterfactual (fieldCounterfactual field))
@@ -1948,31 +2017,48 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         commitmentRef = case priorCommitments of
           (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
           [] -> ""
-    in if not (T.null genText)
-         then commitmentRef <> "Когда я думаю о " <> topicNom <> ": " <> genText
-         else "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
+        fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
+        supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
+                       then ""
+                       else semanticSupplement cs field topic mNetwork isEn
+    in appendSupplement fallback supplement
 
   FT.LearnFrame topic depth ->
     let topicNom = toNominative morph topic
-    in case depth of
-         FT.Shallow -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение."
-         FT.Detailed -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания."
+        isEn = isEnglishInput topic
+        base = case depth of
+                 FT.Shallow -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение."
+                 FT.Detailed -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания."
+        supplement = semanticSupplement cs field topic mNetwork isEn
+    in appendSupplement base supplement
 
   FT.HelpFrame task ->
     let taskNom = toNominative morph task
-    in "Помогу с " <> taskNom <> ". Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку."
+        isEn = isEnglishInput task
+        base = "Помогу с " <> taskNom <> ". Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку."
+        supplement = semanticSupplement cs field task mNetwork isEn
+    in appendSupplement base supplement
 
   FT.PurposeFrame topic ->
     let topicNom = toNominative morph topic
-    in "Функция " <> topicNom <> " проявляется через повторяемую роль в действии."
+        isEn = isEnglishInput topic
+        base = "Функция " <> topicNom <> " проявляется через повторяемую роль в действии."
+        supplement = semanticSupplementFromCorpus lookupPurposeContent pcPredicates cs field topic mNetwork isEn
+    in appendSupplement base supplement
 
   FT.WorldCauseFrame topic ->
     let topicNom = toNominative morph topic
-    in "Если говорить о причине " <> topicNom <> ", различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+        isEn = isEnglishInput topic
+        base = "Если говорить о причине " <> topicNom <> ", различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
+        supplement = semanticSupplement cs field topic mNetwork isEn
+    in appendSupplement base supplement
 
   FT.DeepenFrame topic ->
     let topicNom = toNominative morph topic
-    in "Углубимся в " <> topicNom <> " через одно устойчивое фокусирование."
+        isEn = isEnglishInput topic
+        base = "Углубимся в " <> topicNom <> " через одно устойчивое фокусирование."
+        supplement = semanticSupplement cs field topic mNetwork isEn
+    in appendSupplement base supplement
 
   FT.NextStepFrame ->
     "Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его."

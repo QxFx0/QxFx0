@@ -32,7 +32,7 @@ Each entry has:
 
 ### S-01: `SrcDialogueOutcome !DialogueOutcomeTag`
 
-- **owner-module**: `QxFx0.Core.DialogueOutcomeLearning` (and
+- **owner-module**: `QxFx0.Core.DialogueOutcomeLearning (module removed)` (and
   its post-Package 8 successor in `QxFx0.Learning.Contour`)
 - **signal-type**: `DialogueOutcomeTag` (a closed enum; the
   exact set is `Success | Failure | Refinement |

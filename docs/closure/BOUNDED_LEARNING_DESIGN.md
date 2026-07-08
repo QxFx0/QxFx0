@@ -38,7 +38,7 @@ must satisfy:
 1. **I1. Authority-carrier-only.** A learning update may only
    target an **authority-bearing** contour. The current set:
    - `Self.Salience.SalienceWeights` (canonical)
-   - `Self.Field.FieldHeuristics` (canonical)
+   - `Self.Field.FieldHeuristics (module removed)` (canonical)
    - `Self.Essence.EssenceModulation` (canonical-flag-off)
    - `Self.Deliberation.DeliberationModulation` (canonical)
    - `Semantic.Commitment.*` thresholds (Package 2, when landed)

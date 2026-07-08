@@ -365,9 +365,7 @@ discipline that the file already uses.
 
 ### Step 9.3 — Thread `Essence` through `SystemState` and `TurnInput`
 
-**Modify** `src/QxFx0/Core/State.hs` (or wherever `SystemState` lives
-— follow the path from `QxFx0.Core.State` import in
-`Finalize/State.hs`).  Add a new strict field:
+**Modify** `src/QxFx0/Core/State.hs` (or wherever `SystemState` lives).  Add a new strict field:
 
 ```haskell
 , ssEssence :: !Essence

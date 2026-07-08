@@ -110,8 +110,8 @@ The table is sorted by field name for stable diffs.
 | Field | Role | Writer | Reader | Replay-visible | Notes |
 |---|---|---|---|---|---|
 | `ssSemantic :: !SemanticState` | `canonical` | `Core.TurnPipeline.Effects` | downstream | yes | |
-| `ssSemanticConfig :: !SemanticConfig` | `canonical` | `QxFx0.Semantic.Config` (init) | `Core.TurnPipeline.Effects` | yes | |
-| `ssMorphology :: !MorphologyData` | `canonical` | `QxFx0.Lexicon.Morphology` (post-Package 5) | downstream | yes | Post-Package 5: `services/morphology/server.py` is gone; field is populated by the Haskell parser. |
+| `ssSemanticConfig :: !SemanticConfig` | `canonical` | `QxFx0.Semantic.Config (module removed)` (init) | `Core.TurnPipeline.Effects` | yes | |
+| `ssMorphology :: !MorphologyData` | `canonical` | `QxFx0.Semantic.Morphology` (post-Package 5) | downstream | yes | Post-Package 5: `services/morphology/server.py` is gone; field is populated by the Haskell parser. |
 
 ### 1.6 Closure-plan additions (P2 / P7 / P8 / P9 / P11)
 

@@ -15,7 +15,7 @@ mechanism exists, but its consumer is dead**. Concretely:
 - write-only cognitive fields — `clDoubtScore`, `dtIntentHypothesis`,
   `dtUserGoal`, `dtActiveQuestion` are assigned and serialized but never read
   to influence a decision;
-- unwired modules — `Core.Bayesian`, `Core.Spectral` have no production
+- unwired modules — `Core.Bayesian`, `Core.Spectral (module removed; renamed to Core.ContentCluster)` have no production
   consumer;
 - dead entry points — `Memory.Episodic.retrieve` is defined but never called.
 

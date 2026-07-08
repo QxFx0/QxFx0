@@ -113,7 +113,7 @@ the salience decision.
 
 ### Adjacent: FieldHeuristics
 
-`QxFx0.Self.Field.FieldHeuristics` is a
+`QxFx0.Self.Field.FieldHeuristics (module removed)` is a
 **calibration struct** that lives in `Self/Field.hs`
 but is not a canonical contour. The compute
 functions (`computeResonance`, `computeAtmosphere`,
