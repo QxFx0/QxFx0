@@ -28,6 +28,7 @@ import QxFx0.Core.PipelineIO
   , resolveTurnEffect
   , shadowPolicyText
   )
+import QxFx0.Core.TurnPipeline.EffectLabel (PipelineEffectLabel(..))
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -97,27 +98,27 @@ planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts 
 
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit pipelineIO plan = do
-  let scheduledRequests :: [(Text, TurnEffectRequest)]
+  let scheduledRequests :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledRequests =
         scheduleTurnEffects pipelineIO (fppConatusEnergy plan)
-          [ ("semantic_introspection", TurnReqSemanticIntrospectionEnv)
-          , ("warn_morphology", TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
-          , ("fmar_mode", TurnReqReadEnv "QXFX0_FMAR")
+          [ (PelSemanticIntrospection, TurnReqSemanticIntrospectionEnv)
+          , (PelWarnMorphology, TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
+          , (PelFmarMode, TurnReqReadEnv "QXFX0_FMAR")
           ]
   resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
     result <- resolveTurnEffect pipelineIO request
     pure (label, result)
   let semanticIntrospectionEnabled =
-        case firstMatch (\(label, _) -> label == "semantic_introspection") resolved of
-          Just (_, TurnResSemanticIntrospectionEnv hasIntrospectionEnv) -> hasIntrospectionEnv
+        case lookup PelSemanticIntrospection resolved of
+          Just (TurnResSemanticIntrospectionEnv hasIntrospectionEnv) -> hasIntrospectionEnv
           _ -> False
       warnMorphologyFallbackEnabled =
-        case firstMatch (\(label, _) -> label == "warn_morphology") resolved of
-          Just (_, TurnResReadEnv (Just "1")) -> True
+        case lookup PelWarnMorphology resolved of
+          Just (TurnResReadEnv (Just "1")) -> True
           _ -> False
       fmarMode =
-        case firstMatch (\(label, _) -> label == "fmar_mode") resolved of
-          Just (_, TurnResReadEnv mraw) -> readFmarMode mraw
+        case lookup PelFmarMode resolved of
+          Just (TurnResReadEnv mraw) -> readFmarMode mraw
           _ -> FmarOff
   pure
     FinalizePrecommitResults
@@ -216,10 +217,3 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
          , fpbCommitmentTrigger = commitmentTrigger
          }
 
-firstMatch :: (a -> Bool) -> [a] -> Maybe a
-firstMatch predicate = go
-  where
-    go [] = Nothing
-    go (x:xs)
-      | predicate x = Just x
-      | otherwise = go xs

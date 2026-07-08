@@ -27,6 +27,7 @@ import qualified Data.Map.Strict as Data.Map
 import qualified Data.Set as Set
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Types.State.SemanticCommitment (ceEngaged, ceContradicted)
+import QxFx0.Core.TurnPipeline.EffectLabel (PipelineEffectLabel(..))
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -551,10 +552,10 @@ resolveRenderEffects pio effectPlan = do
       mKnowledgeSource = lfSourceId <$> mLegalFact
   let scheduledRequests =
         scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
-          (  [ ("request" :: Text, TurnReqExternalQuery tool need queryText)
+          (  [ (PelRequest, TurnReqExternalQuery tool need queryText)
              | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
              ]
-          <> [ ("explore" :: Text, TurnReqExternalQuery tool need queryText)
+          <> [ (PelExplore, TurnReqExternalQuery tool need queryText)
              | Just (tool, need, queryText) <- [repExploratoryQueryRequest effectPlan]
              ]
           )
@@ -562,14 +563,14 @@ resolveRenderEffects pio effectPlan = do
     result <- resolveTurnEffect pio request
     pure (label, result)
   let mExternalQueryResult =
-        case firstMatch (\(label, _) -> label == "request") resolvedEffects of
+        case lookup PelRequest resolvedEffects of
           Nothing -> Nothing
-          Just (_, TurnResExternalQuery res) -> Just res
+          Just (TurnResExternalQuery res) -> Just res
           Just _ -> Just (Left (EqeInvalidResponse "unexpected_effect_result"))
       mExploratoryQueryResult =
-        case firstMatch (\(label, _) -> label == "explore") resolvedEffects of
+        case lookup PelExplore resolvedEffects of
           Nothing -> Nothing
-          Just (_, TurnResExternalQuery res) -> Just res
+          Just (TurnResExternalQuery res) -> Just res
           Just _ -> Just (Left (EqeInvalidResponse "unexpected_effect_result"))
   let tRender1 = tiStartTime (repTurnInput effectPlan)
   pure RenderEffectResults
@@ -1181,13 +1182,6 @@ normalizeBool :: Text -> Bool
 normalizeBool rawValue =
   T.toLower (T.strip rawValue) `elem` ["1", "true", "yes", "on"]
 
-firstMatch :: (a -> Bool) -> [a] -> Maybe a
-firstMatch predicate = go
-  where
-    go [] = Nothing
-    go (x:xs)
-      | predicate x = Just x
-      | otherwise = go xs
 
 applyRuntimeGfResult :: Text -> RenderStatic -> TurnEffectResult -> RenderStatic
 applyRuntimeGfResult gfLang renderStatic result =

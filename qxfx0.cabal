@@ -462,6 +462,7 @@ library
     QxFx0.Core.TurnLegitimacy.Output
     QxFx0.Core.TurnPipeline.Types
     QxFx0.Core.TurnPipeline.Effects
+    QxFx0.Core.TurnPipeline.EffectLabel
     QxFx0.Core.TurnPipeline.Prepare
     QxFx0.Core.TurnPipeline.Prepare.Types
     QxFx0.Core.TurnPipeline.Prepare.Resolve

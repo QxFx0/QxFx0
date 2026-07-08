@@ -16,6 +16,7 @@ import QxFx0.Core.PipelineIO
   , scheduleTurnEffects
   , resolveTurnEffect
   )
+import QxFx0.Core.TurnPipeline.EffectLabel (PipelineEffectLabel(..))
 import QxFx0.Core.TurnPipeline.Effects
   ( PrepareEffectPlan(..)
   , PrepareEffectRequest(..)
@@ -38,7 +39,6 @@ import QxFx0.Types
 
 import Control.Exception (evaluate)
 import Data.Maybe (fromMaybe)
-import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 
 resolvePrepareEffects :: PipelineIO -> PrepareEffectPlan -> IO PrepareEffectResults
@@ -46,15 +46,15 @@ resolvePrepareEffects pio effectPlan = do
   let t0 = pepCapturedCurrentTime effectPlan
   _ <- evaluate (pepStatic effectPlan)
   let tStatic1 = t0
-      requestPairs :: [(Text, Maybe TurnEffectRequest)]
+      requestPairs :: [(PipelineEffectLabel, Maybe TurnEffectRequest)]
       requestPairs =
-        [ ("embedding", prepareRequestToTurnEffect (pepEmbeddingRequest effectPlan))
-        , ("nix", prepareRequestToTurnEffect (pepNixGuardRequest effectPlan))
-        , ("consciousness", prepareRequestToTurnEffect (pepConsciousnessRequest effectPlan))
-        , ("intuition", prepareRequestToTurnEffect (pepIntuitionRequest effectPlan))
-        , ("api_health", prepareRequestToTurnEffect (pepApiHealthRequest effectPlan))
+        [ (PelEmbedding, prepareRequestToTurnEffect (pepEmbeddingRequest effectPlan))
+        , (PelNix, prepareRequestToTurnEffect (pepNixGuardRequest effectPlan))
+        , (PelConsciousness, prepareRequestToTurnEffect (pepConsciousnessRequest effectPlan))
+        , (PelIntuition, prepareRequestToTurnEffect (pepIntuitionRequest effectPlan))
+        , (PelApiHealth, prepareRequestToTurnEffect (pepApiHealthRequest effectPlan))
         ]
-      scheduledPairs :: [(Text, TurnEffectRequest)]
+      scheduledPairs :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledPairs =
         scheduleTurnEffects pio (psConatusEnergy (pepStatic effectPlan))
           [ (label, request)
@@ -69,23 +69,23 @@ resolvePrepareEffects pio effectPlan = do
   -- apiHealthy=False keep the turn moving while reducing epistemic strength.
   let embeddingResult =
         fromMaybe fallbackEmbeddingResult $ do
-          (_, TurnResEmbedding value) <- firstMatch (\(label, result) -> label == "embedding" && isEmbeddingResult result) resolved
+          TurnResEmbedding value <- lookup PelEmbedding (filter (isEmbeddingResult . snd) resolved)
           Just value
       nixStatus =
         fromMaybe (Blocked "nix_guard_missing_request") $ do
-          (_, TurnResNixGuard value) <- firstMatch (\(label, result) -> label == "nix" && isNixResult result) resolved
+          TurnResNixGuard value <- lookup PelNix (filter (isNixResult . snd) resolved)
           Just value
       consciousnessResult =
         fromMaybe (initialLoop, Nothing, Nothing) $ do
-          (_, TurnResConsciousness loop narrative fragment) <- firstMatch (\(label, result) -> label == "consciousness" && isConsciousnessResult result) resolved
+          TurnResConsciousness loop narrative fragment <- lookup PelConsciousness (filter (isConsciousnessResult . snd) resolved)
           Just (loop, narrative, fragment)
       intuitionResult =
         fromMaybe (Nothing, defaultPosterior, defaultIntuitiveState) $ do
-          (_, TurnResIntuition flash posterior state) <- firstMatch (\(label, result) -> label == "intuition" && isIntuitionResult result) resolved
+          TurnResIntuition flash posterior state <- lookup PelIntuition (filter (isIntuitionResult . snd) resolved)
           Just (flash, posterior, state)
       apiHealthy =
         fromMaybe False $ do
-          (_, TurnResApiHealth value) <- firstMatch (\(label, result) -> label == "api_health" && isApiHealthResult result) resolved
+          TurnResApiHealth value <- lookup PelApiHealth (filter (isApiHealthResult . snd) resolved)
           Just value
       timedEmb = TimedResult t0 t0 embeddingResult
       timedNix = TimedResult t0 t0 nixStatus
@@ -165,11 +165,3 @@ isApiHealthResult :: TurnEffectResult -> Bool
 isApiHealthResult result = case result of
   TurnResApiHealth _ -> True
   _ -> False
-
-firstMatch :: (a -> Bool) -> [a] -> Maybe a
-firstMatch predicate = go
-  where
-    go [] = Nothing
-    go (x:xs)
-      | predicate x = Just x
-      | otherwise = go xs

@@ -22,6 +22,7 @@ import QxFx0.Core.PipelineIO
   , scheduleTurnEffects
   , resolveTurnEffect
   )
+import QxFx0.Core.TurnPipeline.EffectLabel (PipelineEffectLabel(..))
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -89,13 +90,13 @@ planRouteEffects ss ti ts =
 
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects pio effectPlan = do
-  let scheduledRequests :: [(Text, TurnEffectRequest)]
+  let scheduledRequests :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledRequests =
         scheduleTurnEffects pio (tiConatusEnergy (repRouteTurnInput effectPlan))
-          ( [ ("shadow", TurnReqShadow family force atomTags)
+          ( [ (PelShadow, TurnReqShadow family force atomTags)
             | RouteReqShadow family force atomTags <- [repShadowRequest effectPlan]
             ]
-         <> [ ("agda", TurnReqAgdaVerify)
+         <> [ (PelAgda, TurnReqAgdaVerify)
             | RouteReqAgdaVerify <- [repAgdaRequest effectPlan]
             ]
           )
@@ -104,11 +105,11 @@ resolveRouteEffects pio effectPlan = do
     pure (label, result)
   let shadowResult =
         fromMaybe unexpectedShadowResult $ do
-          (_, result) <- firstMatch (\(label, _) -> label == "shadow") resolved
+          result <- lookup PelShadow resolved
           shadowResultFromTurnResult result
       agdaStatus =
         fromMaybe AgdaInvalid $ do
-          (_, result) <- firstMatch (\(label, _) -> label == "agda") resolved
+          result <- lookup PelAgda resolved
           agdaStatusFromTurnResult result
   let agdaReady = agdaVerificationReady agdaStatus
       strictMode = pipelineRuntimeMode pio == RuntimeStrict
@@ -142,13 +143,6 @@ agdaStatusFromTurnResult result =
     TurnResAgdaVerify agdaStatus -> Just agdaStatus
     _ -> Nothing
 
-firstMatch :: (a -> Bool) -> [a] -> Maybe a
-firstMatch predicate = go
-  where
-    go [] = Nothing
-    go (x:xs)
-      | predicate x = Just x
-      | otherwise = go xs
 
 unexpectedShadowResult :: ShadowResult
 unexpectedShadowResult =
