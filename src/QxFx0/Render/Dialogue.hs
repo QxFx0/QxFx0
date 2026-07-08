@@ -1,5 +1,15 @@
 {-# LANGUAGE OverloadedStrings, LambdaCase, DerivingStrategies #-}
-{-| Dialogue surface rendering: claim linearization, stance framing, and fallback text assembly. -}
+{-| Dialogue surface rendering: claim linearization, stance framing, and fallback text assembly.
+
+    NOTE ON SEMANTIC ENGINE INTEGRATION (2026-07-08):
+    This module currently renders surface text from hardcoded frame templates
+    enriched by gated predicate selection ('selectPredicatesGated') over the
+    'ContentSelector'.  Spreading-activation composition ('composeFromActivation'
+    in the semantic network layer) is NOT wired into the surface renderer yet.
+    Full graph-driven generation is future work; the current integration is
+    intentionally conservative: templates stay verbatim when no predicates are
+    selected, and selected predicates are appended as semantic supplements.
+-}
 module QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , GenerationAttempt(..)
@@ -23,7 +33,7 @@ module QxFx0.Render.Dialogue
   ) where
 
 import Data.Text (Text)
-import QxFx0.Self.Field (Field, emptyField, fieldConfidence, fieldCounterfactual, fieldConsolidation, fieldResonance, unFieldConfidence, unCounterfactual, unConsolidation, unResonance)
+import QxFx0.Self.Field (Field, emptyField)
 import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
@@ -37,13 +47,7 @@ import QxFx0.Semantic.Content
   , challengeIntros, pickChallengeIntro
   )
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
-import QxFx0.Semantic.Content.PathFinder
-  ( FieldProfile(..), GeneratedSurface(..)
-  )
-import QxFx0.Semantic.PropositionParser (parseProposition, PropositionMode(..), ppSubject)
 import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueContext(..))
-import QxFx0.Semantic.GraphEngagement (engageWithProposition)
-import QxFx0.Semantic.ContextualComposer (composeContextual)
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
 import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..), csTopicPredicates)
 import QxFx0.Semantic.Network (SemanticNetwork)
@@ -91,10 +95,7 @@ import QxFx0.Semantic.Input.Parse (ParsedInput)
 import QxFx0.Semantic.DialogAssembly (assembleTurn)
 import QxFx0.Semantic.MeaningDecompose (factBySubject)
 import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
-import QxFx0.Types.State.System (ssDiscourse, ssDialogue, ssSemanticCommitments)
-import QxFx0.Types.State.Dialogue (dsContext)
-import QxFx0.Semantic.Retrieve (retrieve)
-import QxFx0.Types.State.SemanticCommitment (fcpStatement, fcpTopic)
+import QxFx0.Types.State.System (ssDiscourse, ssDialogue)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
 import QxFx0.Semantic.Embedding.Fallback (stableHash)
 import qualified QxFx0.Semantic.Frame.Types as FT
@@ -1905,31 +1906,12 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
-        scopeText = renderFrameScope scope
         authorityText = renderFrameAuthority authority
-        fp = FieldProfile
-               (unFieldConfidence (fieldConfidence field))
-               (unCounterfactual (fieldCounterfactual field))
-               (unConsolidation (fieldConsolidation field))
-               (unResonance (fieldResonance field))
-        -- Contextual orientation: parse proposition, engage with graph, compose
-        prop = parseProposition topic
-        ctx = dsContext (ssDialogue ss)
-        engagement = engageWithProposition runtimeGraph ctx prop
-        genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
-        genText = gsText genSurface
-        -- Commitment-aware context: reference prior positions on this topic
-        priorCommitments = case ssSemanticCommitments ss of
-          Just store -> take 2 (retrieve topic store)
-          Nothing -> []
-        commitmentRef = case priorCommitments of
-          (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
-          [] -> ""
-    in let fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-           supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
-                          then ""
-                          else semanticSupplement cs field topic mNetwork isEn
-       in appendSupplement fallback supplement
+        fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
+        supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
+                       then ""
+                       else semanticSupplement cs field topic mNetwork isEn
+    in appendSupplement fallback supplement
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
@@ -1955,20 +1937,6 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         basisText = T.strip basis
         safeTarget = if T.null targetText || targetText == basisText then "исходный тезис" else targetText
         safeBasis = if T.null basisText || basisText == targetText then "возражение требует проверки рамки" else basisText
-        -- Contextual orientation for challenge
-        challengeProp = parseProposition rawObj
-        ctx = dsContext (ssDialogue ss)
-        challengeEngagement = engageWithProposition runtimeGraph ctx challengeProp
-        genArgSurface = composeContextual morph (FieldProfile 0.5 0.8 0.5 0.5) runtimeGraph ctx challengeProp challengeEngagement
-        genArgText = gsText genArgSurface
-        -- Commitment-aware defense: reference held positions
-        challengeTopic = ppSubject challengeProp
-        heldCommitments = case ssSemanticCommitments ss of
-          Just store -> take 2 (retrieve challengeTopic store)
-          Nothing -> []
-        defenseRef = case heldCommitments of
-          (p:_) -> "Я удерживаю позицию: " <> fcpStatement p <> ". "
-          [] -> ""
         isEn = isEnglishInput rawObj
         softFallback = "Слышу возражение. Я не буду превращать его в определение: "
                     <> safeTarget <> " нужно проверить по явному критерию. "
@@ -2001,22 +1969,6 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
-        fp = FieldProfile
-               (unFieldConfidence (fieldConfidence field))
-               (unCounterfactual (fieldCounterfactual field))
-               (unConsolidation (fieldConsolidation field))
-               (unResonance (fieldResonance field))
-        prop = parseProposition topic
-        ctx = dsContext (ssDialogue ss)
-        engagement = engageWithProposition runtimeGraph ctx prop
-        genSurface = composeContextual morph fp runtimeGraph ctx prop engagement
-        genText = gsText genSurface
-        priorCommitments = case ssSemanticCommitments ss of
-          Just store -> take 1 (retrieve topic store)
-          Nothing -> []
-        commitmentRef = case priorCommitments of
-          (p:_) -> "Я ранее полагал, что " <> fcpStatement p <> ". "
-          [] -> ""
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
         supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
                        then ""

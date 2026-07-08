@@ -34,7 +34,10 @@ import QxFx0.Self.Field (emptyField, fieldResonance, mkResonance)
 import QxFx0.Self.Salience (computeSalience)
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Internal.FilePath (isPathWithin)
-import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
+import QxFx0.Runtime.PGF
+  ( linearizeClaimAstGfLangWithCache
+  , linearizeDialogAtomsGfLangWithCache
+  )
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
   , RuntimeWorkers(..)
@@ -43,6 +46,7 @@ import QxFx0.Runtime.Wiring.Context
   , rcCaches
   , rcTimeSource
   , readConsciousLoop
+  , rtcPgf
   , readApiHealth
   , readIntuition
   , resolveNixPath
@@ -142,9 +146,9 @@ handleTurnEffect ctx request =
       withRuntimeDb ctx $ \db -> maybeCheckpoint db turnCount
       pure TurnResCheckpointCompleted
     TurnReqLinearizeClaimAst mPgfPath lang claimAst ->
-      TurnResLinearizeClaimAst <$> linearizeClaimAstGfLang mPgfPath lang claimAst
+      TurnResLinearizeClaimAst <$> linearizeClaimAstGfLangWithCache (rtcPgf (rcCaches ctx)) mPgfPath lang claimAst
     TurnReqLinearizeDialogAtoms mPgfPath lang da ->
-      TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLang mPgfPath lang da
+      TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLangWithCache (rtcPgf (rcCaches ctx)) mPgfPath lang da
     TurnReqExternalQuery tool need query -> do
       transport <- buildTransportFromEnvWithManager (rtwHttpManager (rcWorkers ctx))
       result <- queryExternalTool transport tool need query

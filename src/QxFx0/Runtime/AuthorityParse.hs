@@ -13,7 +13,11 @@ module QxFx0.Runtime.AuthorityParse
 
 import qualified Data.Text as T
 
-import QxFx0.Runtime.PGF (parseClaimAstGf)
+import Data.IORef (IORef)
+import qualified Data.Map.Strict as Map
+import qualified PGF2 as PGF
+
+import QxFx0.Runtime.PGF (parseClaimAstGfWithCache)
 import QxFx0.Render.Authority
   ( AuthoritySurface(..)
   , claimAstToFactualClaim
@@ -34,13 +38,13 @@ parseAuthoritySurfaceRuntime s@(AuthoritySurface txt)
   | otherwise            = parseAuthoritySurfacePattern s
 
 -- | IO variant for contexts where IO is available.
--- Stage 1: attempt GF-backed parsing via 'parseClaimAstGf'.
+-- Stage 1: attempt GF-backed parsing via 'parseClaimAstGfWithCache'.
 -- Stage 2: fall back to pattern-matching on the four canonical forms.
-parseAuthoritySurfaceIO :: AuthoritySurface -> IO (Maybe FactualClaimPayload)
-parseAuthoritySurfaceIO (AuthoritySurface txt)
+parseAuthoritySurfaceIO :: IORef (Map.Map FilePath PGF.PGF) -> AuthoritySurface -> IO (Maybe FactualClaimPayload)
+parseAuthoritySurfaceIO pgfCache (AuthoritySurface txt)
   | T.null (T.strip txt) = pure Nothing
   | otherwise = do
-      result <- parseClaimAstGf Nothing txt
+      result <- parseClaimAstGfWithCache pgfCache Nothing txt
       case result of
         Right ast -> pure (Just (claimAstToFactualClaim txt ast))
         Left _    -> pure (parseAuthoritySurfacePattern (AuthoritySurface txt))

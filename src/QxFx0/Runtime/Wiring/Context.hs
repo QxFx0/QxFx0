@@ -33,7 +33,8 @@ module QxFx0.Runtime.Wiring.Context
 
 import Control.Concurrent.MVar (MVar, modifyMVar, modifyMVar_, newMVar, readMVar)
 import Control.Exception (finally, mask, onException)
-import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Sequence as Seq
@@ -54,7 +55,9 @@ import QxFx0.Core.Intuition (IntuitiveState, defaultIntuitiveState)
 import QxFx0.Core.SessionLock (SessionLockManager, newSessionLockManager, withSessionLock)
 import QxFx0.Resources (getNixGuardPath)
 import QxFx0.Runtime.Mode (RuntimeMode, resolveRuntimeMode)
+import QxFx0.Runtime.PGF (newPgfCache)
 import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealthWithManager, checkEmbeddingHealthWithManager)
+import qualified PGF2 as PGF
 import QxFx0.Types (SystemState, ssIntuitionState, ssTurnCount)
 import Network.HTTP.Client (Manager, closeManager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -62,6 +65,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 data RuntimeCaches = RuntimeCaches
   { rtcHealth :: !APIHealthCache
   , rtcNix    :: !NixCache
+  , rtcPgf    :: !(IORef (Map.Map FilePath PGF.PGF))
   }
 
 data RuntimeWorkers = RuntimeWorkers
@@ -102,10 +106,11 @@ initRuntimeContext path = mask $ \restore -> do
   runtimeMode <- resolveRuntimeMode
   healthCache <- newMVar Nothing
   nixCache <- newNixCache 300 1000
+  pgfCache <- newPgfCache
   dbPool <- newDBPool path 2
   httpManager <- newManager tlsManagerSettings
   timeSource <- resolveTimeSource
-  restore (buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager timeSource)
+  restore (buildRuntimeContext path runtimeMode healthCache nixCache pgfCache dbPool httpManager timeSource)
     `onException` (closeManager httpManager `finally` closeDBPool dbPool)
 
 resolveTimeSource :: IO TimeSource
@@ -133,11 +138,12 @@ buildRuntimeContext
   -> RuntimeMode
   -> APIHealthCache
   -> NixCache
+  -> IORef (Map.Map FilePath PGF.PGF)
   -> WorkerDBPool
   -> Manager
   -> TimeSource
   -> IO RuntimeContext
-buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager timeSource = do
+buildRuntimeContext path runtimeMode healthCache nixCache pgfCache dbPool httpManager timeSource = do
   sessionLock <- newSessionLockManager
   runtimeTurnState <- newMVar RuntimeTurnState
     { rtsConsciousLoop = initialLoop
@@ -152,6 +158,7 @@ buildRuntimeContext path runtimeMode healthCache nixCache dbPool httpManager tim
     , rcCaches = RuntimeCaches
         { rtcHealth = healthCache
         , rtcNix = nixCache
+        , rtcPgf = pgfCache
         }
     , rcWorkers = RuntimeWorkers
         { rtwDbPool = dbPool

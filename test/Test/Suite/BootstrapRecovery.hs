@@ -1,0 +1,149 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+{-|
+Module      : Test.Suite.BootstrapRecovery
+Description : Unit tests for bootstrap blanket recovery helpers.
+
+Tests exercise the pure fallback morphology and the IO recovery
+function over constructed 'SystemState' values that violate the
+initial self-blanket. No database or filesystem access is required.
+-}
+module Test.Suite.BootstrapRecovery
+  ( bootstrapRecoveryTests
+  ) where
+
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import Test.HUnit (Test (..), (@?=), assertBool)
+
+import QxFx0.Runtime.Session
+  ( generateFallbackSessionId
+  , minimalMorphologyFallback
+  , recoverBootstrapBlanket
+  )
+import QxFx0.Self.Blanket (computeSelfBlanket)
+import QxFx0.Self.Invariants (checkInitialBlanket)
+import QxFx0.Self.Types (BlanketViolation (..))
+import QxFx0.Types (MorphologyData (..), SystemState (..))
+import QxFx0.Types.Domain.Atoms
+  ( LexemeCase (..)
+  , LexemeForm (..)
+  , LexemeNumber (..)
+  , SourceTier (..)
+  )
+import QxFx0.Types.State (emptySystemState)
+
+-- | A morphology with at least one entry so that the baseline state
+-- satisfies the blanket.
+nonEmptyMorphology :: MorphologyData
+nonEmptyMorphology = MorphologyData
+  { mdPrepositional = Map.singleton "о" "о"
+  , mdGenitive      = Map.empty
+  , mdNominative    = Map.empty
+  , mdFormsBySurface = Map.empty
+  }
+
+-- | A morphology whose total size is zero.
+emptyMorphology :: MorphologyData
+emptyMorphology = MorphologyData
+  { mdPrepositional = Map.empty
+  , mdGenitive      = Map.empty
+  , mdNominative    = Map.empty
+  , mdFormsBySurface = Map.empty
+  }
+
+-- | A valid baseline state with non-empty session id and morphology.
+validState :: SystemState
+validState = emptySystemState
+  { ssSessionId  = "demo"
+  , ssMorphology = nonEmptyMorphology
+  }
+
+-- | State with an empty session identifier.
+emptySessionState :: SystemState
+emptySessionState = validState { ssSessionId = "" }
+
+-- | State with an empty morphology.
+emptyMorphologyState :: SystemState
+emptyMorphologyState = validState { ssMorphology = emptyMorphology }
+
+-- | State where both recoverable violations occur at once.
+bothViolationsState :: SystemState
+bothViolationsState = emptySystemState
+  { ssSessionId  = ""
+  , ssMorphology = emptyMorphology
+  }
+
+-- | The fallback morphology must have total size > 0.
+testFallbackMorphologyNonEmpty :: Test
+testFallbackMorphologyNonEmpty = TestCase $ do
+  let md = minimalMorphologyFallback
+      totalSize = Map.size (mdPrepositional md)
+                  + Map.size (mdGenitive md)
+                  + Map.size (mdNominative md)
+                  + Map.size (mdFormsBySurface md)
+  assertBool "fallback morphology total size must be > 0" (totalSize > 0)
+
+-- | Empty session id is repaired to a non-empty fallback id.
+testEmptySessionRepaired :: Test
+testEmptySessionRepaired = TestCase $ do
+  (remaining, repaired, sessionIdOut) <-
+    recoverBootstrapBlanket nonEmptyMorphology emptySessionState ""
+  assertBool "session id should be repaired to non-empty"
+    (not (T.null sessionIdOut))
+  assertBool "session id should be reflected in repaired state"
+    (ssSessionId repaired == sessionIdOut)
+  assertBool "BlanketEmptySession should be removed"
+    (BlanketEmptySession `notElem` remaining)
+
+-- | Empty morphology is repaired to the non-empty fallback.
+testEmptyMorphologyRepaired :: Test
+testEmptyMorphologyRepaired = TestCase $ do
+  (remaining, repaired, sessionIdOut) <-
+    recoverBootstrapBlanket emptyMorphology emptyMorphologyState "demo"
+  assertBool "session id should be unchanged"
+    (sessionIdOut == "demo")
+  assertBool "morphology should be repaired to non-empty"
+    (not (Map.null (mdNominative (ssMorphology repaired))))
+  assertBool "BlanketEmptyMorphology should be removed"
+    (BlanketEmptyMorphology `notElem` remaining)
+
+-- | Both violations repaired together leave no remaining violations.
+testBothRepaired :: Test
+testBothRepaired = TestCase $ do
+  (remaining, repaired, sessionIdOut) <-
+    recoverBootstrapBlanket emptyMorphology bothViolationsState ""
+  assertBool "session id should be repaired to non-empty"
+    (not (T.null sessionIdOut))
+  assertBool "morphology should be repaired to non-empty"
+    (not (Map.null (mdNominative (ssMorphology repaired))))
+  assertBool "no blanket violations should remain"
+    (null remaining)
+  assertBool "repaired state must satisfy the initial blanket"
+    (null (checkInitialBlanket (computeSelfBlanket repaired)))
+
+-- | The fallback session id follows the documented prefix.
+testFallbackSessionIdFormat :: Test
+testFallbackSessionIdFormat = TestCase $ do
+  sid <- generateFallbackSessionId
+  assertBool "fallback session id must start with documented prefix"
+    ("bootstrap-recovery-" `T.isPrefixOf` sid)
+
+-- | A valid state requires no repairs and keeps the original session id.
+testValidStateUnchanged :: Test
+testValidStateUnchanged = TestCase $ do
+  (remaining, repaired, sessionIdOut) <-
+    recoverBootstrapBlanket nonEmptyMorphology validState "demo"
+  remaining @?= []
+  sessionIdOut @?= "demo"
+  ssSessionId repaired @?= "demo"
+
+bootstrapRecoveryTests :: [Test]
+bootstrapRecoveryTests =
+  [ TestLabel "fallback morphology is non-empty" testFallbackMorphologyNonEmpty
+  , TestLabel "empty session id is repaired" testEmptySessionRepaired
+  , TestLabel "empty morphology is repaired" testEmptyMorphologyRepaired
+  , TestLabel "both violations repaired together" testBothRepaired
+  , TestLabel "fallback session id format" testFallbackSessionIdFormat
+  , TestLabel "valid state remains unchanged" testValidStateUnchanged
+  ]

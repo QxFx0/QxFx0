@@ -95,7 +95,7 @@ flow through `Self.*`. This is the role split the closure plan pins.
 | `Core.TurnModulation*` | **canonical** | Per-turn modulation. |
 | `Core.Observability*` | **canonical** | Trace assembly. |
 | `Core.R5Dynamics` | **supplier** | R5 algorithm (deferred decision). |
-| `Core.Spectral* (module removed; renamed to Core.ContentCluster*)` | **supplier** | Spectral analysis. |
+| `Core.ContentCluster* (renamed to Core.ContentCluster)` | **supplier** | Spectral analysis. |
 | `Core.TopicTransition*` | **supplier** | Topic transition logic. |
 | `Core.Proposition*` | **supplier** | Per-proposition admission; reads kernel proposals. |
 | `Core.PipelineIO*` | **supplier** | Pipeline IO. |

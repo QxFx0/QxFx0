@@ -200,13 +200,13 @@ path with Haskell; allowlist the rest.
   per-gate replacement plan).
 - New Haskell commands: `--check-schema-consistency`,
   `--check-schema-contract`, `--check-embedded-sql`,
-  `QxFx0.Lexicon.Morphology.Parser`.
+  `QxFx0.Semantic.Morphology.Parser`.
 
 **Acceptance criteria**:
 - [ ] The three `A. canonical-build` scripts replaced by
       Haskell and deleted.
 - [ ] `services/morphology/server.py` replaced by
-      `QxFx0.Lexicon.Morphology.Parser` and the HTTP call sites
+      `QxFx0.Semantic.Morphology.Parser` and the HTTP call sites
       updated.
 - [ ] `scripts/http_runtime.py` confirmed not invoked and
       deleted.

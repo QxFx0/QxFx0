@@ -134,7 +134,7 @@ Rename only the **residual** after A…H/M (if M2/E make a type real, keep its n
 |---|---|---|---|
 | `Core.Consciousness` (module) | `StanceClassifier` | 0 | imports+exposed-modules |
 | `Core.Dream` (module) | `TopicDrift` | 0 | imports+exposed-modules |
-| `Core.Spectral (module removed; renamed to Core.ContentCluster)` (if not wired) | `ContentCluster` | 0 | imports+exposed-modules |
+| `Core.ContentCluster (renamed to Core.ContentCluster)` (if not wired) | `ContentCluster` | 0 | imports+exposed-modules |
 | `Counterfactual` (newtype ToJSON; field `fieldCounterfactual`) | `ParseEntropy` | **1** | **breaks JSON/replay** |
 - R-I1(Tier-0) compiler-checked, safe. R-I2(Tier-1) stable wire-format (`fieldLabelModifier`/custom instances) OR migration via versioned `fromJSON` (R-A1). R-I3 ADR rename-migration policy.
 

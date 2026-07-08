@@ -12,7 +12,8 @@ import QxFx0.Core.PipelineIO.Internal (PipelineIO(..), defaultConatusPrior)
 import QxFx0.Runtime.Mode (RuntimeMode(..))
 import QxFx0.Runtime.Wiring.Handlers (handleTurnEffect)
 import QxFx0.Runtime.Wiring.Context
-  ( RuntimeContext(..)
+  ( RuntimeCaches(..)
+  , RuntimeContext(..)
   , modifyConsciousLoop
   , modifyIntuition
   , rcMode
@@ -35,5 +36,5 @@ toPipelineIO ctx = PipelineIO
   , pioModifyConsciousLoop = modifyConsciousLoop ctx
   , pioModifyIntuition = modifyIntuition ctx
   , pioConatusPrior = defaultConatusPrior
-  , pioParseAuthoritySurface = parseAuthoritySurfaceIO
+  , pioParseAuthoritySurface = parseAuthoritySurfaceIO (rtcPgf (rcCaches ctx))
   }

@@ -592,6 +592,7 @@ common test-common
     Test.Suite.PhaseM2d
     Test.Suite.LearningLoop
      Test.Suite.TrainingCycle
+     Test.Suite.TunedConfigLoading
      Test.Suite.ReliabilityHardening
     Test.Suite.M5Regime
     Test.Suite.M6Witness
@@ -627,6 +628,7 @@ common test-common
     Test.Suite.Anomaly
     Test.Suite.PathFinder
     Test.Suite.DialogueSemanticSelection
+    Test.Suite.BootstrapRecovery
 
 test-suite qxfx0-test-unit
   import:        test-common

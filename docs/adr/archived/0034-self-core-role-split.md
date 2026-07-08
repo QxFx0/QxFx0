@@ -60,7 +60,7 @@ runtime" framing.
   Examples: `Core.Consciousness.*` (narrative content),
   `Core.MeaningGraph`, `Core.Atom*`, `Core.Proposition*`,
   `Core.IdentitySignal*`, `Core.FamilyAdmission*`, `Core.R5Dynamics`,
-  `Core.Spectral*`, `Core.TopicTransition*`.
+  `Core.ContentCluster* (renamed to Core.ContentCluster)`, `Core.TopicTransition*`.
 - **observer** — emits into trace only, no kernel writes. Examples:
   `Core.DreamDynamics`.
 

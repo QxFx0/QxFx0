@@ -71,7 +71,7 @@ safe check) and a behavior-change review — a separate decision, not this pass.
 
 ### Completed Work
 
-1. **Created Generic Module** (`src/QxFx0/Core/GenericPropositionAdmission.hs`)
+1. **Created Generic Module** (`src/QxFx0/Types/Admission/GenericPropositionAdmission.hs`)
    - 92 lines of reusable admission logic
    - `PropositionAdmissionConfig` record with 10 fields
    - `admitPropositionTriggers` function implementing three-guard logic
@@ -146,7 +146,7 @@ safeTriggerLabels = [...]  -- Copy from original file
 The 22 Types/Proposition*Admission.hs files are identical 33-line templates. Options:
 
 **Option A: Template Haskell (recommended)**
-Create `src/QxFx0/Types/GenericPropositionAdmission.hs` with TH splice:
+Create `src/QxFx0/Types/Admission/GenericPropositionAdmission.hs` with TH splice:
 ```haskell
 {-# LANGUAGE TemplateHaskell #-}
 module QxFx0.Types.Admission.GenericPropositionAdmission (mkPropositionAdmissionTypes) where

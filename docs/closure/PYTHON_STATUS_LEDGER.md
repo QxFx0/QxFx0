@@ -154,12 +154,12 @@ Replacement pattern:
 
 `services/morphology/server.py` is the only ACTIVE runtime Python
 in the project. The Haskell replacement is a typed
-`QxFx0.Lexicon.Morphology.Parser` module that exposes the same
+`QxFx0.Semantic.Morphology.Parser` module that exposes the same
 operations without the HTTP round-trip.
 
 Replacement pattern:
 1. Profile current call sites of the morphology server.
-2. Implement `QxFx0.Lexicon.Morphology.Parser` (pure Haskell,
+2. Implement `QxFx0.Semantic.Morphology.Parser` (pure Haskell,
    base-only dependencies) with the same `parse :: Text -> Maybe
    MorphologyInfo` API.
 3. Replace each HTTP call with a direct call.
@@ -208,7 +208,7 @@ that lands at Gate P5-4.
 | `check_schema_consistency.py` | `cabal run qxfx0-main -- --check-schema-consistency` | `QxFx0.Bridge.SQLite.SchemaConsistency` | landed in working tree |
 | `check_schema_contract.py` | `cabal run qxfx0-main -- --check-schema-contract` | `QxFx0.Bridge.SQLite.SchemaContractCheck` | landed in working tree |
 | `sync_embedded_sql.py --check` | `cabal run qxfx0-main -- --check-embedded-sql` | `QxFx0.Bridge.EmbeddedSQLSync` | landed in working tree |
-| `services/morphology/server.py` (HTTP) | `QxFx0.Lexicon.Morphology.Parser` (in-process) | new module | per §5.2 |
+| `services/morphology/server.py` (HTTP) | `QxFx0.Semantic.Morphology.Parser` (in-process) | new module | per §5.2 |
 
 The exact module paths are TBD and require a small Package 5
 follow-up PR.

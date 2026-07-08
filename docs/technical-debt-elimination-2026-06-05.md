@@ -143,7 +143,7 @@ c83a48f refactor(P0): eliminate critical safety defects
 - `src/QxFx0/Core/TurnPipeline/Finalize/State.hs` — Replaced error with throw
 - `src/QxFx0/Core/TurnPipeline/Finalize/Precommit.hs` — IO boundary for logging
 - `src/QxFx0/Core/PropositionAdmission.hs` — Typed dispatch
-- `src/QxFx0/Core/GenericPropositionAdmission.hs` — NEW: Generic admission
+- `src/QxFx0/Types/Admission/GenericPropositionAdmission.hs` — NEW: Generic admission
 - `src/QxFx0/Core/PropositionContactAdmission.hs` — Refactored example
 - `src/QxFx0/Core/TurnRouting/Cascade.hs` — Renamed flag
 - `src/QxFx0/Core/TurnRouting.hs` — Renamed flag

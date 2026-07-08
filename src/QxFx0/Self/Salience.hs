@@ -124,7 +124,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
+import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
 import QxFx0.Self.Conatus
   ( ConatusComponents (..)
@@ -266,15 +266,20 @@ builtinSalienceWeights = SalienceWeights
   }
 
 -- | The Phase-5 default weights, loaded from
--- 'resources/config/salience_weights.json' if present, otherwise
--- falling back to 'builtinSalienceWeights'.
+-- 'resources/config/tuned_salience_weights.json' if present and
+-- valid, otherwise falling back to
+-- 'resources/config/salience_weights.json', and finally to
+-- 'builtinSalienceWeights'.
 --
 -- The NOINLINE pragma is required to prevent GHC from inlining
 -- the 'unsafePerformIO' call and potentially evaluating it
 -- multiple times.
 defaultSalienceWeights :: SalienceWeights
 defaultSalienceWeights =
-  loadConfigOrBuiltin "resources/config/salience_weights.json" builtinSalienceWeights
+  loadTunedOrDefault
+    "resources/config/tuned_salience_weights.json"
+    "resources/config/salience_weights.json"
+    builtinSalienceWeights
 {-# NOINLINE defaultSalienceWeights #-}
 
 -- ---------------------------------------------------------------------------

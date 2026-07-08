@@ -9,6 +9,9 @@ module QxFx0.Runtime.Session
   , withBootstrappedSession
   , closeSession
   , checkSessionReadiness
+  , generateFallbackSessionId
+  , minimalMorphologyFallback
+  , recoverBootstrapBlanket
   , renderRuntimeOutputMode
   , runtimeToDialogueMode
   , dialogueToRuntimeMode

@@ -116,7 +116,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
+import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 
 -- ---------------------------------------------------------------------------
 -- Component newtypes
@@ -303,15 +303,20 @@ builtinFieldHeuristics = FieldHeuristics
   }
 
 -- | Phase-7 default heuristic parameters, loaded from
--- 'resources/config/field_heuristics.json' if present, otherwise
--- falling back to 'builtinFieldHeuristics'.
+-- 'resources/config/tuned_field_heuristics.json' if present and
+-- valid, otherwise falling back to
+-- 'resources/config/field_heuristics.json', and finally to
+-- 'builtinFieldHeuristics'.
 --
 -- The NOINLINE pragma is required to prevent GHC from inlining
 -- the 'unsafePerformIO' call and potentially evaluating it
 -- multiple times.
 defaultFieldHeuristics :: FieldHeuristics
 defaultFieldHeuristics =
-  loadConfigOrBuiltin "resources/config/field_heuristics.json" builtinFieldHeuristics
+  loadTunedOrDefault
+    "resources/config/tuned_field_heuristics.json"
+    "resources/config/field_heuristics.json"
+    builtinFieldHeuristics
 {-# NOINLINE defaultFieldHeuristics #-}
 
 -- | Compute 'Consolidation' from a window of recent narrative

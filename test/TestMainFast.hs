@@ -30,6 +30,7 @@ import Test.Suite.P5Governance (p5GovernanceTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
 import Test.Suite.TrainingCycle (trainingCycleTests)
+import Test.Suite.TunedConfigLoading (tunedConfigLoadingTests)
 import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 import Test.Suite.M6Witness (m6WitnessTests)
 import Test.Suite.M5Regime (m5RegimeTests)
@@ -59,10 +60,11 @@ import Test.Suite.SubstrateCandidate (substrateCandidateTests)
 import Test.Suite.ContentQualityGate (contentQualityGateTests)
 import Test.Suite.CorpusTuning (corpusTuningTests)
 import Test.Suite.DialogueSemanticSelection (dialogueSemanticSelectionTests)
+import Test.Suite.BootstrapRecovery (bootstrapRecoveryTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests   ++ semanticContentB3Tests ++ semanticRepairB3Tests   ++ b3MechanicalGateExecutionTests ++ [roundTripTests]   ++ nativeSQLiteNullsTests ++ atomStoreTests   ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ contentQualityGateTests ++ corpusTuningTests ++ dialogueSemanticSelectionTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ tunedConfigLoadingTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests   ++ semanticContentB3Tests ++ semanticRepairB3Tests   ++ b3MechanicalGateExecutionTests ++ [roundTripTests]   ++ nativeSQLiteNullsTests ++ atomStoreTests   ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ contentQualityGateTests ++ corpusTuningTests ++ dialogueSemanticSelectionTests ++ bootstrapRecoveryTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

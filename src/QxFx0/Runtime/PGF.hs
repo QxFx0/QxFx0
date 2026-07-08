@@ -13,16 +13,32 @@
     ClaimAst. gfExprToClaimAst is re-exported for backward compatibility.
 -}
 module QxFx0.Runtime.PGF
-  ( astToGfExpr
+  ( -- * PGF cache
+    newPgfCache
+  , cachedReadPGF
+  , defaultPgfPath
+    -- * AST linearization (cache-aware)
+  , linearizeClaimAstGfWithCache
+  , linearizeClaimAstGfLangWithCache
+  , linearizeDialogAtomsGfWithCache
+  , linearizeDialogAtomsGfLangWithCache
+    -- * Parsing (cache-aware)
+  , parseClaimAstGfWithCache
+  , parseClaimAstGfLangWithCache
+    -- * Preload (cache-aware)
+  , preloadDefaultPGFWithCache
+    -- * Backward-compatible shims (create a fresh cache per call)
   , linearizeClaimAstGf
   , linearizeClaimAstGfLang
-  , dialogAtomsToGfExpr
   , linearizeDialogAtomsGf
   , linearizeDialogAtomsGfLang
   , parseClaimAstGf
   , parseClaimAstGfLang
-  , gfExprToClaimAst
   , preloadDefaultPGF
+    -- * Expression conversion
+  , astToGfExpr
+  , dialogAtomsToGfExpr
+  , gfExprToClaimAst
   ) where
 
 import Control.Exception (try, IOException)
@@ -32,7 +48,6 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
 import System.IO.Error (isDoesNotExistError)
-import System.IO.Unsafe (unsafePerformIO)
 import Data.IORef (IORef, newIORef, readIORef, modifyIORef')
 import qualified PGF2 as PGF
 import Data.Bits (xor)
@@ -54,34 +69,47 @@ import QxFx0.Semantic.Authority.GfExprParse (gfExprToClaimAst)
 defaultPgfPath :: FilePath
 defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
 
--- P1-1: session-scoped PGF cache keyed by path. 'PGF.readPGF' reads a 312KB
--- binary on every call; without this it ran once per linearize/parse per turn
--- (~3GB I/O over 10k turns). Pattern mirrors 'PGFStatus.pgfLoadResult'
--- (unsafePerformIO + NOINLINE). The IORef holds a path->PGF map populated
--- lazily on first use of each path.
-pgfCacheRef :: IORef (Map.Map FilePath PGF.PGF)
-pgfCacheRef = unsafePerformIO (newIORef Map.empty)
-{-# NOINLINE pgfCacheRef #-}
+-- | Create a fresh, empty PGF cache. Callers that perform more than one
+--   linearization or parse in a session should create a single cache and pass
+--   it to the cache-aware variants; the backward-compatible public functions
+--   below create a fresh cache per call and therefore do not share loaded
+--   grammars across calls.
+newPgfCache :: IO (IORef (Map.Map FilePath PGF.PGF))
+newPgfCache = newIORef Map.empty
 
--- | Load a PGF for the given path, caching the result. Subsequent calls for
---   the same path return the cached grammar without touching disk.
-cachedReadPGF :: FilePath -> IO PGF.PGF
-cachedReadPGF pgfPath = do
-  cache <- readIORef pgfCacheRef
+-- | Load a PGF for the given path, caching the result in the supplied 'IORef'.
+--   Subsequent calls for the same path return the cached grammar without
+--   touching disk.
+cachedReadPGF :: IORef (Map.Map FilePath PGF.PGF) -> FilePath -> IO PGF.PGF
+cachedReadPGF cacheRef pgfPath = do
+  cache <- readIORef cacheRef
   case Map.lookup pgfPath cache of
     Just pgf -> pure pgf
     Nothing -> do
       pgf <- PGF.readPGF pgfPath
-      modifyIORef' pgfCacheRef (Map.insert pgfPath pgf)
+      modifyIORef' cacheRef (Map.insert pgfPath pgf)
       pure pgf
 
 -- COMPAT GLUE: Old target wiring expects 2-arg interface (no explicit language).
 -- We default to the Russian concrete syntax shipped in the repo.
+-- These public functions create a fresh PGF cache per call and are therefore
+-- suitable for one-off use; repeated calls should use the *WithCache variants.
 linearizeClaimAstGf :: Maybe FilePath -> ClaimAst -> IO (Either Text GfLinearizationResult)
-linearizeClaimAstGf mPgfPath ast = linearizeClaimAstGfLang mPgfPath "QxFx0SyntaxRus" ast
+linearizeClaimAstGf mPgfPath ast = do
+  cache <- newPgfCache
+  linearizeClaimAstGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" ast
 
 linearizeClaimAstGfLang :: Maybe FilePath -> Text -> ClaimAst -> IO (Either Text GfLinearizationResult)
-linearizeClaimAstGfLang mPgfPath lang ast
+linearizeClaimAstGfLang mPgfPath lang ast = do
+  cache <- newPgfCache
+  linearizeClaimAstGfLangWithCache cache mPgfPath lang ast
+
+linearizeClaimAstGfWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> ClaimAst -> IO (Either Text GfLinearizationResult)
+linearizeClaimAstGfWithCache cache mPgfPath ast =
+  linearizeClaimAstGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" ast
+
+linearizeClaimAstGfLangWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> ClaimAst -> IO (Either Text GfLinearizationResult)
+linearizeClaimAstGfLangWithCache cache mPgfPath lang ast
   -- P0-1 (variant A): for Russian the Haskell renderer 'linearizeClaimAstRus'
   -- is the sole authoritative path. Compute it directly instead of running
   -- PGF.linearize and discarding the result. PGF is consulted only as an
@@ -94,7 +122,7 @@ linearizeClaimAstGfLang mPgfPath lang ast
           case astToGfExpr ast of
             Left err -> pure (Left err)
             Right expr -> do
-              result <- linearizeExpr mPgfPath lang expr
+              result <- linearizeExprWithCache cache mPgfPath lang expr
               pure $ case result of
                 Left pgfErr -> Left (renderPGFError pgfErr)
                 Right raw ->
@@ -103,21 +131,32 @@ linearizeClaimAstGfLang mPgfPath lang ast
       case astToGfExpr ast of
         Left err -> pure (Left err)
         Right expr -> do
-          result <- linearizeExpr mPgfPath lang expr
+          result <- linearizeExprWithCache cache mPgfPath lang expr
           pure $ case result of
             Left pgfErr -> Left (renderPGFError pgfErr)
             Right raw ->
               Right (mkGfLinearizationResult mPgfPath lang PgfClaimRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfClaimRoute AuthorityCanonical raw))
 
 linearizeDialogAtomsGf :: Maybe FilePath -> DialogAtoms -> IO (Either Text GfLinearizationResult)
-linearizeDialogAtomsGf mPgfPath da = linearizeDialogAtomsGfLang mPgfPath "QxFx0SyntaxRus" da
+linearizeDialogAtomsGf mPgfPath da = do
+  cache <- newPgfCache
+  linearizeDialogAtomsGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" da
 
 linearizeDialogAtomsGfLang :: Maybe FilePath -> Text -> DialogAtoms -> IO (Either Text GfLinearizationResult)
-linearizeDialogAtomsGfLang mPgfPath lang da =
+linearizeDialogAtomsGfLang mPgfPath lang da = do
+  cache <- newPgfCache
+  linearizeDialogAtomsGfLangWithCache cache mPgfPath lang da
+
+linearizeDialogAtomsGfWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> DialogAtoms -> IO (Either Text GfLinearizationResult)
+linearizeDialogAtomsGfWithCache cache mPgfPath da =
+  linearizeDialogAtomsGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" da
+
+linearizeDialogAtomsGfLangWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> DialogAtoms -> IO (Either Text GfLinearizationResult)
+linearizeDialogAtomsGfLangWithCache cache mPgfPath lang da =
   case dialogAtomsToGfExpr da of
     Left err -> pure (Left err)
     Right expr -> do
-      result <- linearizeExpr mPgfPath lang expr
+      result <- linearizeExprWithCache cache mPgfPath lang expr
       pure $ case result of
         Left pgfErr -> Left (renderPGFError pgfErr)
         Right raw
@@ -126,15 +165,15 @@ linearizeDialogAtomsGfLang mPgfPath lang da =
           | otherwise ->
               Right (mkGfLinearizationResult mPgfPath lang PgfAtomsRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfAtomsRoute AuthorityCanonical raw))
 
-linearizeExpr :: Maybe FilePath -> Text -> Text -> IO (Either PGFError Text)
-linearizeExpr mPgfPath lang expr = do
+linearizeExprWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> Text -> IO (Either PGFError Text)
+linearizeExprWithCache cache mPgfPath lang expr = do
   let pgfPath = fromMaybe defaultPgfPath mPgfPath
   exists <- doesFileExist pgfPath
   if not exists
     then pure (Left (PGFFileNotFound pgfPath))
     else do
       result <- try @IOException $ do
-        pgf <- cachedReadPGF pgfPath
+        pgf <- cachedReadPGF cache pgfPath
         let langs = PGF.languages pgf
         case Map.lookup (T.unpack lang) langs of
           Nothing -> pure (Left (PGFParseError ("pgf_lang_not_found:" <> lang <> ":available=" <> T.pack (show (Map.keys langs)))))
@@ -327,17 +366,28 @@ legacyShimSuffix raw =
 -- Returns @Left err@ on any parse failure; the caller should fall back to
 -- the pattern-matching parser in 'QxFx0.Render.Authority'.
 parseClaimAstGf :: Maybe FilePath -> Text -> IO (Either Text ClaimAst)
-parseClaimAstGf mPgfPath = parseClaimAstGfLang mPgfPath "QxFx0SyntaxRus"
+parseClaimAstGf mPgfPath surface = do
+  cache <- newPgfCache
+  parseClaimAstGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" surface
 
 parseClaimAstGfLang :: Maybe FilePath -> Text -> Text -> IO (Either Text ClaimAst)
 parseClaimAstGfLang mPgfPath lang surface = do
+  cache <- newPgfCache
+  parseClaimAstGfLangWithCache cache mPgfPath lang surface
+
+parseClaimAstGfWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> IO (Either Text ClaimAst)
+parseClaimAstGfWithCache cache mPgfPath surface =
+  parseClaimAstGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" surface
+
+parseClaimAstGfLangWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> Text -> IO (Either Text ClaimAst)
+parseClaimAstGfLangWithCache cache mPgfPath lang surface = do
   let pgfPath = fromMaybe defaultPgfPath mPgfPath
   exists <- doesFileExist pgfPath
   if not exists
     then pure (Left ("pgf_missing:" <> T.pack pgfPath))
     else do
       result <- try $ do
-        pgf <- cachedReadPGF pgfPath
+        pgf <- cachedReadPGF cache pgfPath
         let langs = PGF.languages pgf
         case Map.lookup (T.unpack lang) langs of
           Nothing ->
@@ -364,13 +414,16 @@ parseClaimAstGfLang mPgfPath lang surface = do
 -- with 'cachedReadPGF', so this warms the grammar for subsequent
 -- linearization / parse calls without changing their semantics.
 preloadDefaultPGF :: IO (Either Text ())
-preloadDefaultPGF = do
+preloadDefaultPGF = newPgfCache >>= preloadDefaultPGFWithCache
+
+preloadDefaultPGFWithCache :: IORef (Map.Map FilePath PGF.PGF) -> IO (Either Text ())
+preloadDefaultPGFWithCache cache = do
   exists <- doesFileExist defaultPgfPath
   if not exists
     then pure (Left ("PGF grammar not found at " <> T.pack defaultPgfPath))
     else do
       result <- try @IOException $ do
-        _ <- cachedReadPGF defaultPgfPath
+        _ <- cachedReadPGF cache defaultPgfPath
         pure (Right ())
       case result of
         Left e -> pure (Left ("PGF preload failed: " <> T.pack (show e)))

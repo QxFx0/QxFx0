@@ -97,7 +97,7 @@ When G1–G4 are met, the next release:
 `docs/closure/PYTHON_STATUS_LEDGER.md` lists the
 `services/morphology/server.py` Python process as the
 only active runtime Python. The Haskell replacement is
-`QxFx0.Lexicon.Morphology.Parser`. The LLM transport
+`QxFx0.Semantic.Morphology.Parser`. The LLM transport
 does **not** depend on this Python process; the LLM
 transport is a separate supplier. The Python process
 is replaced by the Haskell parser per Package 5, not

@@ -11,7 +11,7 @@
 
 The 2026-06 cognitive audit identified module names that systematically mislead:
 
-- `QxFx0.Core.Spectral` — suggests spectral analysis, actually performs Fiedler
+- `QxFx0.Core.ContentCluster (renamed to Core.ContentCluster)` — suggests spectral analysis, actually performs Fiedler
   clustering for content saliency
 - `QxFx0.Policy.Consciousness` — suggests consciousness model, actually a
   lexicon of string constants (labels/prefixes)
@@ -30,7 +30,7 @@ These names create false expectations and hinder onboarding. The rename campaign
 
 ### 2.1 Tier-0 Execution (Immediate)
 
-**Completed**: `QxFx0.Core.Spectral` → `QxFx0.Core.ContentCluster`
+**Completed**: `QxFx0.Core.ContentCluster` → `QxFx0.Core.ContentCluster`
 
 - Renamed module file: `src/QxFx0/Core/Spectral.hs` →
   `src/QxFx0/Core/ContentCluster.hs`

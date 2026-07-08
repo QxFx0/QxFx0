@@ -144,7 +144,7 @@ The eight phases are sequenced as:
   `QxFx0.Left.*` via re-export shims; existing imports continue to
   work. The "real" Left/Right boundary tightens incrementally
   through Phases 4–5.
-- **Existing scientific modules** (`Core.GameTheory`, `Core.Spectral (module removed; renamed to Core.ContentCluster)`,
+- **Existing scientific modules** (`Core.GameTheory`, `Core.ContentCluster (renamed to Core.ContentCluster)`,
   `Core.Bayesian`) remain in `other-modules` (extended contour) and
   are unaffected by this modernization. Phase 4's `Right.FieldConfidence`
   may take inputs from `Core.Bayesian` but does not depend on it for

@@ -7,9 +7,12 @@ module QxFx0.Runtime.Session.Bootstrap
   , withBootstrappedSession
   , closeSession
   , checkSessionReadiness
+  , generateFallbackSessionId
+  , minimalMorphologyFallback
+  , recoverBootstrapBlanket
   ) where
 
-import Control.Exception (bracket, try)
+import Control.Exception (bracket, try, IOException)
 import Control.Monad (unless, when)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -40,6 +43,7 @@ import QxFx0.Governance.Replay (rebuildGovernedSystemState)
 import QxFx0.Core.TruthContract (truthContractIsAuthoritative)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkInitialBlanket, renderBlanketViolations)
+import QxFx0.Self.Types (BlanketViolation (..))
 import QxFx0.Resources
   ( ReadinessMode(..)
   , assessResourceReadiness
@@ -49,16 +53,18 @@ import QxFx0.Resources
 import QxFx0.Runtime.Wiring
   ( hydrateRuntimeTurnState
   , initRuntimeContext
+  , rcCaches
   , releaseRuntimeContext
   , withRuntimeDb
   )
+import QxFx0.Runtime.Wiring.Context (rtcPgf)
 import QxFx0.Runtime.Gate
   ( evaluateBootstrapReadiness
   , evaluateStrictHealth
   , renderBootstrapGateFailure
   )
 import QxFx0.Runtime.Health (checkHealth)
-import QxFx0.Runtime.PGF (preloadDefaultPGF)
+import QxFx0.Runtime.PGF (cachedReadPGF, defaultPgfPath)
 import QxFx0.Lexicon.GfMap (preloadGfMap, GfMapLoadStatus(..))
 import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
 import QxFx0.Runtime.Paths (resolveDbPath)
@@ -91,9 +97,13 @@ import QxFx0.Types.State
   , ssIdentityClaims
   , ssTurnCount
   )
-import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+import QxFx0.Types.Domain.Atoms (LexemeCase(..), LexemeForm(..), LexemeNumber(..), MorphologyData(..), SourceTier(..))
 import QxFx0.Semantic.Morphology (buildLemmaMap)
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
+import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUIDv4
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeDirectory)
 import System.IO (hPutStrLn, stderr)
@@ -124,13 +134,6 @@ bootstrapSession quiet sessionId = do
           unless quiet $ hPutStrLn stderr $ "[degraded] optional components unavailable: " ++ show failed
         _ ->
           pure ()
-  pgfPreloadResult <- preloadDefaultPGF
-  case pgfPreloadResult of
-    Left err ->
-      Log.logWarn "PGF grammar preload failed; runtime will degrade gracefully on PGF paths"
-        (Log.addContext "error" err Log.emptyContext)
-    Right _ ->
-      Log.logInfo "PGF grammar preloaded" Log.emptyContext
   gfMapPreloadStatus <- preloadGfMap
   case gfMapPreloadStatus of
     GfMapLoaded _ ->
@@ -193,6 +196,15 @@ bootstrapSession quiet sessionId = do
         pure ps
       else pure emptyRuntimeParadigms
   runtime <- initRuntimeContext dbPath
+  pgfPreloadResult <- try $ do
+    _ <- cachedReadPGF (rtcPgf (rcCaches runtime)) defaultPgfPath
+    pure (Right ())
+  case pgfPreloadResult of
+    Left (err :: IOException) ->
+      Log.logWarn "PGF grammar preload failed; runtime will degrade gracefully on PGF paths"
+        (Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+    Right _ ->
+      Log.logInfo "PGF grammar preloaded" Log.emptyContext
   health <- checkHealth runtime
   case evaluateStrictHealth runtimeMode health of
     Left failure -> do
@@ -323,28 +335,35 @@ bootstrapSession quiet sessionId = do
                   else pure (RestoredOrigin, restored0)
   -- Phase 1: verify that the freshly bootstrapped state forms a
   -- structurally coherent self (see docs/THEORY.md §4.1 and
-  -- docs/adr/0007-dual-mode-conatus.md). Failure here is categorical:
-  -- the session was unable to come into being as /this system/, and
-  -- there is nothing to recover.
-  case checkInitialBlanket (computeSelfBlanket restored) of
+  -- docs/adr/0007-dual-mode-conatus.md). Some failures are recoverable
+  -- (empty session identifier, empty morphology). Recovered fields are
+  -- threaded back into 'restored' and 'sessionId' so the remainder of
+  -- bootstrap uses the repaired values.
+  (remainingVs, restored', sessionId') <-
+    recoverBootstrapBlanket morphology restored sessionId
+  case remainingVs of
     [] -> do
-      Log.logInfo "Self-blanket verification passed"
-        (Log.addContext "state_origin" (T.pack $ show stateOrigin) Log.emptyContext)
+      if sessionId' /= sessionId || restored' /= restored
+        then Log.logWarn "Self-blanket verification recovered"
+               (Log.addContext "state_origin" (T.pack $ show stateOrigin) $
+                Log.addContext "recovered_session_id" sessionId' Log.emptyContext)
+        else Log.logInfo "Self-blanket verification passed"
+               (Log.addContext "state_origin" (T.pack $ show stateOrigin) Log.emptyContext)
       pure ()
     vs -> do
       let violations = renderBlanketViolations vs
       Log.logError "Self-blanket verification failed"
         (Log.addContext "violations" violations Log.emptyContext)
       throwQxFx0 (IdentityRupture ("bootstrap: " <> violations))
-  hydrateRuntimeTurnState runtime restored
+  hydrateRuntimeTurnState runtime restored'
   Log.logInfo "Session bootstrap complete"
-    (Log.addContext "session_id" sessionId $
+    (Log.addContext "session_id" sessionId' $
      Log.addContext "state_origin" (T.pack $ show stateOrigin) $
-     Log.addContext "turn_count" (T.pack $ show $ ssTurnCount restored) Log.emptyContext)
+     Log.addContext "turn_count" (T.pack $ show $ ssTurnCount restored') Log.emptyContext)
   pure Session
-    { sessSystemState = restored
+    { sessSystemState = restored'
     , sessOutputMode = DialogueMode
-    , sessSessionId = sessionId
+    , sessSessionId = sessionId'
     , sessDbPath = dbPath
     , sessStateOrigin = stateOrigin
     , sessStateRevision = stateRevision
@@ -405,3 +424,90 @@ tokenizePredicateForSeed text =
       , "of", "to", "in", "on", "at", "for", "with", "by"
       , "that", "which", "who", "when", "where", "how"
       ]
+
+-- | Generate a stable, human-readable fallback session identifier.
+-- Used when the bootstrap self-blanket reports 'BlanketEmptySession'.
+-- Format: @bootstrap-recovery-<utc>-<uuid>@.
+generateFallbackSessionId :: IO Text
+generateFallbackSessionId = do
+  now <- getCurrentTime
+  uuid <- UUIDv4.nextRandom
+  pure $ T.concat
+    [ "bootstrap-recovery-"
+    , T.pack (formatTime defaultTimeLocale "%Y%m%dT%H%M%S%Q" now)
+    , "-"
+    , UUID.toText uuid
+    ]
+
+-- | A minimal, valid morphology that guarantees
+-- @sbMorphologyTotalSize > 0@. It contains a single surface form
+-- mapped to itself so the system can always normalise at least one
+-- token. This is the morphology used by 'recoverBootstrapBlanket' when
+-- the loaded morphology is completely empty.
+minimalMorphologyFallback :: MorphologyData
+minimalMorphologyFallback = MorphologyData
+  { mdPrepositional = M.empty
+  , mdGenitive      = M.empty
+  , mdNominative    = M.singleton "qxfx0" "qxfx0"
+  , mdFormsBySurface = M.singleton "qxfx0"
+      [ LexemeForm
+          { lfSurface = "qxfx0"
+          , lfLemma   = "qxfx0"
+          , lfPOS     = "noun"
+          , lfCase    = NominativeCase
+          , lfNumber  = SingularNumber
+          , lfTier    = CuratedTier
+          , lfQuality = 1.0
+          }
+      ]
+  }
+
+-- | Recover a bootstrapped state that fails the initial self-blanket.
+-- Currently handles two recoverable violations:
+--
+--   * 'BlanketEmptySession'      -> generate a fallback session id;
+--   * 'BlanketEmptyMorphology'   -> install 'minimalMorphologyFallback'
+--                                   and recompute the lemma map.
+--
+-- After repairs the blanket is recomputed. Remaining (non-recoverable)
+-- violations, the repaired state, and the final session id are
+-- returned to the caller.
+recoverBootstrapBlanket
+  :: MorphologyData
+  -> SystemState
+  -> Text
+  -> IO ([BlanketViolation], SystemState, Text)
+recoverBootstrapBlanket originalMorphology state sessionIdIn = do
+  let initialVs = checkInitialBlanket (computeSelfBlanket state)
+  if null initialVs
+    then pure ([], state, sessionIdIn)
+    else do
+      let sessionIdOut
+            | BlanketEmptySession `elem` initialVs = Nothing
+            | otherwise                            = Just sessionIdIn
+          stateWithMorph
+            | BlanketEmptyMorphology `elem` initialVs =
+                let fallback = minimalMorphologyFallback
+                in state
+                     { ssMorphology = fallback
+                     , ssLemmaMap   = buildLemmaMap fallback
+                     }
+            | otherwise = state
+      recoveredSessionId <- maybe generateFallbackSessionId pure sessionIdOut
+      let stateOut = stateWithMorph { ssSessionId = recoveredSessionId }
+          remainingVs = checkInitialBlanket (computeSelfBlanket stateOut)
+      unless (null remainingVs) $ do
+        Log.logWarn "Bootstrap blanket recovery attempted but violations remain"
+          (Log.addContext "violations" (renderBlanketViolations remainingVs) Log.emptyContext)
+      when (BlanketEmptySession `elem` initialVs) $ do
+        Log.logWarn "Generated fallback session id during bootstrap blanket recovery"
+          (Log.addContext "fallback_session_id" recoveredSessionId Log.emptyContext)
+      when (BlanketEmptyMorphology `elem` initialVs) $ do
+        Log.logWarn "Installed minimal morphology fallback during bootstrap blanket recovery"
+          (Log.addContext "original_morphology_size"
+             (T.pack $ show $ M.size (mdNominative originalMorphology)
+                       + M.size (mdGenitive originalMorphology)
+                       + M.size (mdPrepositional originalMorphology)
+                       + M.size (mdFormsBySurface originalMorphology))
+             Log.emptyContext)
+      pure (remainingVs, stateOut, recoveredSessionId)
