@@ -268,6 +268,7 @@ library
       QxFx0.Semantic.Network.Types
       QxFx0.Semantic.Network.Seed
       QxFx0.Semantic.Network.Substrate
+      QxFx0.Semantic.Network.Ingest
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
@@ -638,6 +639,7 @@ common test-common
     Test.Suite.BootstrapRecovery
     Test.Suite.SurfaceAccumulator
     Test.Suite.SurfaceAccumulatorGolden
+    Test.Suite.NetworkIngest
 
 test-suite qxfx0-test-unit
   import:        test-common
