@@ -1,4 +1,4 @@
-{-| Guard façade: post-render safety checks, content quality gate, and recovery surface primitives. -}
+{-| Guard facade: post-render safety checks, content quality gate, and recovery surface primitives. -}
 module QxFx0.Core.Guard
   ( postRenderSafetyCheck
   , postRenderSafetyCheckSurface
@@ -11,6 +11,7 @@ module QxFx0.Core.Guard
   , QualityVerdict(..)
   , evaluateContentQuality
   , evaluateContentQualityWithTopic
+  , qualityVerdictToSafetyStatus
   ) where
 
 import QxFx0.Core.Guard.Checks
@@ -31,4 +32,5 @@ import QxFx0.Core.Guard.ContentQuality
   ( QualityVerdict(..)
   , evaluateContentQuality
   , evaluateContentQualityWithTopic
+  , qualityVerdictToSafetyStatus
   )
