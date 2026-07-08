@@ -17,6 +17,7 @@ extra-doc-files: CHANGELOG.md
 data-files:
   migrations/*.sql
   resources/config/*.json
+  resources/knowledge/relations.jsonl
   resources/lexicon/*.json
   resources/morphology/*.json
   semantics/*.nix

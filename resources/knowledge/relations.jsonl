@@ -1,0 +1,666 @@
+{"author":"curator","confidence":1.0,"counter":"не любой выбор свободен: выбор под принуждением не делает действие свободным","from":"свобода","rationale":"без выбора действие не отличается от рефлекса","synthesis":"свобода требует не только возможности, но и осознанности выбора","to":"выбор","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"counter":"не любое ограничение убивает свободу — только произвольное","from":"свобода","rationale":"без ответственности свобода превращается в произвол","synthesis":"ответственность не враг свободы, а условие её осмысленности","to":"ответственность","type":"RelLimitedBy","verb":"ограничена","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","rationale":"произвол не нуждается в оправдании — он утверждает себя фактом силы","to":"рамка критериев","type":"RelNegates","verb":"отрицает","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"доверие между субъектами","type":"RelDestroys","verb":"разрушает","version":1}
+{"author":"curator","confidence":1.0,"counter":"осознание последствий не гарантирует правильного выбора — оно лишь исключает неведение как оправдание","from":"ответственность","rationale":"нельзя отвечать за то, чего не понимаешь: ответственность без осознания — имитация","synthesis":"ответственность начинается не с действия, а с готовности понимать, к чему действие ведёт","to":"осознание последствий","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","rationale":"свобода одного кончается там, где начинается свобода другого","synthesis":"зрелая ответственность — это баланс, а не жертва","to":"обязательства перед другими","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"counter":"доступ к реальности всегда опосредован наблюдателем","from":"истина","rationale":"истина, в отличие от мнения, не зависит от того, кто её высказывает","synthesis":"истина — не обладание, а дисциплина проверки","to":"соответствие реальности","type":"RelClaims","verb":"претендует","version":1}
+{"author":"curator","confidence":1.0,"counter":"воспроизводимость не гарантирует истину — она лишь отсеивает то, что точно ею не является","from":"истина","rationale":"единичное совпадение может быть случайностью, а повторяемое — закономерностью","to":"воспроизводимость","type":"RelVerifiedBy","verb":"проверяется","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"позиция субъекта","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"перспектива наблюдателя","type":"RelDependsOn","verb":"зависит","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"прошлое для настоящего","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"избирательность и реконструкция","type":"RelNotJustCopies","verb":"реконструирует","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"избирательность и реконструкция","type":"RelIsA","verb":"","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"пережитое в новой рамке","type":"RelReconstructs","verb":"восстанавливает","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"акт обращения к личному прошлому","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"память","type":"RelDiffersFrom","verb":"отличается","version":1}
+{"author":"curator","confidence":1.0,"counter":"перспектива от первого лица не гарантирует достоверности — она гарантирует только неотменимость переживания","from":"сознание","rationale":"сознание — единственное, что дано нам непосредственно, без посредника","synthesis":"сознание — не окно в реальность, а условие, при котором реальность может быть увидена","to":"аспект от первого лица","type":"RelIncludes","verb":"имеет","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","rationale":"существо, не способное сказать «я чувствую это», может реагировать — но не осознавать","to":"способность к самоотчёту","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"восприятие и рефлексию","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"собственные состояния субъекта","type":"RelDirectedAt","verb":"направлено на","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"наличие сознания как своего основания","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"субъекта объектом для самого себя","type":"RelMakes","verb":"делает","version":1}
+{"author":"curator","confidence":1.0,"counter":"принятие без доказательств не означает принятия вопреки доказательствам","from":"вера","rationale":"если бы доказательство было полным, это было бы знание, а не вера","synthesis":"вера — не замена знанию, а решение действовать в условиях неполноты","to":"принятия без полного доказательства","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"доверием к источнику или опыту","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"доверием к тому, что не может быть проверено","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"к полезности","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"эстетическое переживание","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"от воспринимающего и культурной рамки","type":"RelDependsOn","verb":"зависит","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"действие независимо от желания","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"действие независимо от желания","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"на моральные или социальные обязательства","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"уязвимость перед другим","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"через повторяемый позитивный опыт","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"counter":"не любая угроза реальна: страх может быть вызван воображением","from":"страх","rationale":"страх — не слабость, а механизм: мы не боимся того, что нам безразлично","synthesis":"страх требует различения: сигнал — не приговор, а повод для проверки","to":"об угрозе целостности","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"об угрозе целостности субъекта","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","rationale":"страх — обратная сторона заботы: мы боимся потерять то, что для нас важно","synthesis":"мужество — не отсутствие страха, а способность действовать несмотря на него","to":"на то, что имеет значение","type":"RelPointsTo","verb":"указывает","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"действие к выбранной цели","type":"RelCanBe","verb":"может","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"на возможность будущего","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"действие в условиях неопределённости","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"соразмерности между деянием и воздаянием","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"равенство перед правилом","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"порядок следования событий","type":"RelSets","verb":"задаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"необратимо и неравномерно","type":"RelIsA","verb":"","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"необратимо — прошлое недоступно для изменения","type":"RelIsA","verb":"","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"самокоррекция","type":"RelCapableOf","verb":"способен","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"к обобщению и абстракции","type":"RelCapableOf","verb":"способен","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"от интуиции потребностью в доказательстве","type":"RelDiffersFrom","verb":"отличается","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"сам факт существования","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"как условие возможности любого суждения","type":"RelIsA","verb":"рассматривается","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"сущность","type":"RelPrecedes","verb":"предшествует","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"из событий и их интерпретации","type":"RelCreatedFrom","verb":"создаётся","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"прошлое с настоящим через интерпретацию","type":"RelConnects","verb":"связывает","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"от точки зрения рассказчика","type":"RelDependsOn","verb":"зависит","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"мышление","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"опыт через различение и именование","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"мышлением — он не только выражает, но и формирует мысль","type":"RelRelatedTo","verb":"связан с","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"действие к выбранной цели","type":"RelDirectedAt","verb":"направляет","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"преодоления препятствий и конкурирующих мотивов","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"необратимое прекращение существования","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"границу, через которую жизнь обретает конечную форму","type":"RelSets","verb":"задаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"жизни неотменимость","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"отсутствие значимого другого","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"границу между я и другими","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"избрано или навязано обстоятельствами","type":"RelCanBe","verb":"может быть","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"ценность другого как несводимую","type":"RelRecognizes","verb":"признаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"ценность другого как несводимую","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"уязвимость и риск потери","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"мир и самого трудящегося","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"материал через целенаправленное усилие","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"потребностью и распределением ресурсов","type":"RelRelatedTo","verb":"связан с","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"отсутствием движения","type":"RelIsNot","verb":"не является","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"для восстановления и интеграции опыта","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"отсутствие движения и напряжения","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"способность влиять на действия других","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"легитимности для устойчивости","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"чья воля становится законом","type":"RelDetermines","verb":"определяет,","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"на соответствие тому, что произошло","type":"RelClaims","verb":"претендует","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"истина","type":"RelDiffersFrom","verb":"отличается","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"истина","type":"RelDiffersFrom","verb":"отличается","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"отсутствием слов","type":"RelSays","verb":"говорит","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"с речью, но не тождественно пустоте","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"актом отказа или знаком присутствия","type":"RelCanBe","verb":"может быть","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"свобода","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"долг","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"истина","type":"RelDiffersFrom","verb":"отличается","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"воспоминание","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"сознание","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"доверие","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"надежда","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"время","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"истина","type":"RelRelatedTo","verb":"связан","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"справедливость","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"справедливость","type":"RelRelatedTo","verb":"связан","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"доверие","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"самосознание","type":"RelRelatedTo","verb":"связано","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"время","type":"RelRelatedTo","verb":"связан","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"время","type":"RelRelatedTo","verb":"связан","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"истина","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"свобода","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"бытие","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"память","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"язык","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"вера","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"разум","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"правда","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"память","type":"RelRelatedTo","verb":"связано","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"язык","type":"RelRelatedTo","verb":"связано","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"надежда","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"истина","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"ответственность","type":"RelRelatedTo","verb":"связано","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"правда","type":"RelRelatedTo","verb":"связано","version":1}
+{"author":"curator","confidence":1.0,"from":"выбор","to":"свобода","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"воспроизводимость","to":"истина","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"сущность","to":"бытие","type":"RelPrecedes","verb":"следует","version":1}
+{"author":"curator","confidence":1.0,"from":"мышление","to":"язык","type":"RelDependsOn","verb":"зависит","version":1}
+{"author":"curator","confidence":1.0,"from":"самокоррекция","to":"разум","type":"RelDirectedAt","verb":"направлена на","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"целостность жизни","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"соотнесённость с целым","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"направление вектора жизни","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"почему а не зачем","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"переживание значимости","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"различение внутри и снаружи","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"условие формы","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"предел действия","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"контактная поверхность","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"защита и ограничение","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"дискретность и точность","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"формализация опыта","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"утрата контекста","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"сжимает мир до значения","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"маскировка качества количеством","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"преемственность я","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"ответ на вопрос кто я","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"нарратив о себе","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"совпадение с собой","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"разрыв и восстановление","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"восстановление функции","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"диагностика поломки","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"различение починить и заменить","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"возвращение к работоспособности","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"усилие против энтропии","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"осознанность выбора","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"автономия суждения","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"самоопределение","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"отсутствие принуждения","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"пространство возможностей","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"объективность","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"доказательство","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"когерентность","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"открытость проверке","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"независимость от наблюдателя","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"идентичность через время","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"след прошлого","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"забывание как условие","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"узнавание","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"привычка и рутина","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"интенциональность","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"качественность опыта","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"единство поля опыта","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"присутствие","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"поток переживаний","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"акт доверия","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"обоснованность не доказательством","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"готовность к риску","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"верность","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"прыжок за горизонт","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"гармония формы","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"соразмерность частей","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"праздность созерцания","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"превосходство над полезным","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"мгновение и вечность","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"долженствование","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"приоритет над желанием","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"внутренний закон","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"совесть как свидетель","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"исполнение обещания","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"риск уязвимости","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"опора на другого","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"проверка опытом","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"прозрачность намерений","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"разрыв и восстановление доверия","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"ожидание угрозы","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"сигнал опасности","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"паралич или действие","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"перед неизвестным","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"защитная реакция","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"ориентация на будущее","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"наперекор очевидности","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"утешение и мотив","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"обещание себе","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"пустота или вектор","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"мера и соразмерность","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"беспристрастность","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"воздаяние по заслугам","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"процедура и результат","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"признание прав другого","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"длительность","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"настоящее как точка","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"будущее как возможность","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"цикличность и линейность","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"темп и ритм","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"логическое умозаключение","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"способность к обобщению","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"различение истинного и ложного","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"критика и сомнение","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"порядок мысли","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"факт присутствия","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"различение сущего и ничто","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"основание всего","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"необходимость и случайность","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"становление","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"память коллектива","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"интерпретация прошлого","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"урок и предупреждение","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"нарратив и факт","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"причина и следствие","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"структура значения","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"граница выразимого","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"конвенция и произвол","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"переводимость и непереводимость","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"метафора и буква","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"направленность усилия","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"выбор цели","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"преодоление сопротивления","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"решимость","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"свобода и необходимость","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"предел существования","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"осмысление конечности","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"уравнивание всех","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"страх и принятие","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"граница смысла","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"отсутствие контакта","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"встреча с собой","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"изоляция или уединение","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"тишина и пустота","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"потребность в другом","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"признание ценности другого","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"преодоление эгоцентризма","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"дар без расчёта","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"уязвимость и близость","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"вечность в мгновении","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"преобразование материи","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"усилие и результат","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"разделение и кооперация","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"навык и мастерство","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"усталость и удовлетворение","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"пауза в действии","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"созерцание и присутствие","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"глубина тишины","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"пустота как полнота","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"остановка и осмысление","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"асимметрия отношений","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"принуждение и авторитет","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"ответственность власти","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"делегирование и контроль","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"насилие или забота","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"свидетельство","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"искренность рассказа","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"частная перспектива","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"долг памяти","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"против забвения","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"предел слова","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"присутствие без выражения","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"глубина невыразимого","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"слушание","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"пауза и смысл","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"готовность к ответу","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"свобода как условие","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"вина и заслуга","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"пределы контроля","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность","to":"ответ перед другими","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"отсутствие основания","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"каприз и случайность","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"игнорирование последствий","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"псевдосвобода","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"произвол","to":"разрушение порядка","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"частное суждение","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"обоснованность и вес","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"открытость пересмотру","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"выражение позиции","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"мнение","to":"различение с истиной","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"актуализация прошлого","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"эмоциональная окраска","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"достоверность и искажение","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"связь времён","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"воспоминание","to":"повторное переживание","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"рефлексия над собой","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"наблюдение за состояниями","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"идентификация с собой","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"различение я и не я","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"самосознание","to":"самооценка","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"ответственность","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"воля","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"смысл","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"сознание","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода","to":"истина","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"правда","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"мнение","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"разум","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"бытие","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"истина","to":"долг","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"воспоминание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"время","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"идентичность","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"история","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"память","to":"правда","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"самосознание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"разум","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"язык","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"время","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"сознание","to":"воля","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"доверие","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"истина","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"надежда","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"разум","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"вера","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"истина","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"смысл","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"язык","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"покой","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"красота","to":"любовь","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"ответственность","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"свобода","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"справедливость","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"долг","to":"воля","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"вера","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"правда","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"ответственность","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"любовь","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"доверие","to":"надежда","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"смерть","type":"RelDirectedAt","verb":"направлена на","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"надежда","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"власть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"страх","to":"одиночество","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"страх","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"вера","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"надежда","to":"любовь","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"долг","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"власть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"ответственность","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"справедливость","to":"правда","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"память","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"бытие","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"история","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"время","to":"надежда","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"истина","type":"RelDirectedAt","verb":"направлена на","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"сознание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"язык","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"разум","to":"воля","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"сущность","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"время","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"становление","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"бытие","to":"разум","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"память","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"время","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"правда","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"история","to":"идентичность","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"разум","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"сознание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"молчание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"истина","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"язык","to":"бытие","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"свобода","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"долг","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"разум","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"воля","to":"решимость","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"бытие","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"смысл","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"время","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"страх","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"смерть","to":"любовь","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"любовь","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"молчание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"одиночество","to":"покой","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"доверие","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"красота","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"любовь","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"ремонт","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"воля","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"время","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"труд","to":"покой","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"молчание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"сознание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"красота","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"покой","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"справедливость","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"ответственность","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"воля","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"власть","to":"страх","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"истина","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"память","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"история","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"правда","to":"молчание","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"язык","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"покой","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"молчание","to":"слушание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"время","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"любовь","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"труд","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"смысл","to":"надежда","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"свобода","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"идентичность","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"граница","to":"язык","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"язык","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"истина","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"разум","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"цифра","to":"красота","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"память","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"история","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"язык","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность","to":"смерть","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"труд","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"время","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"покой","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"ремонт","to":"граница","type":"RelContrastsWith","verb":"контрастирует с","version":1}
+{"author":"curator","confidence":1.0,"from":"целостность жизни","to":"смысл","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"соотнесённость с целым","to":"смысл","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"направление вектора жизни","to":"смысл","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"почему а не зачем","to":"смысл","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"переживание значимости","to":"смысл","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"различение внутри и снаружи","to":"граница","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"условие формы","to":"граница","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"предел действия","to":"граница","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"контактная поверхность","to":"граница","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"защита и ограничение","to":"граница","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"дискретность и точность","to":"цифра","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"формализация опыта","to":"цифра","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"утрата контекста","to":"цифра","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"сжимает мир до значения","to":"цифра","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"маскировка качества количеством","to":"цифра","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"преемственность я","to":"идентичность","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"ответ на вопрос кто я","to":"идентичность","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"нарратив о себе","to":"идентичность","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"совпадение с собой","to":"идентичность","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"разрыв и восстановление","to":"идентичность","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"восстановление функции","to":"ремонт","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"диагностика поломки","to":"ремонт","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"различение починить и заменить","to":"ремонт","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"возвращение к работоспособности","to":"ремонт","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"усилие против энтропии","to":"ремонт","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"осознанность выбора","to":"свобода","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"автономия суждения","to":"свобода","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"самоопределение","to":"свобода","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"отсутствие принуждения","to":"свобода","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"пространство возможностей","to":"свобода","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"объективность","to":"истина","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"доказательство","to":"истина","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"когерентность","to":"истина","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"открытость проверке","to":"истина","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"независимость от наблюдателя","to":"истина","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность через время","to":"память","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"след прошлого","to":"память","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"забывание как условие","to":"память","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"узнавание","to":"память","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"привычка и рутина","to":"память","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"интенциональность","to":"сознание","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"качественность опыта","to":"сознание","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"единство поля опыта","to":"сознание","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"присутствие","to":"сознание","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"поток переживаний","to":"сознание","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"акт доверия","to":"вера","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"обоснованность не доказательством","to":"вера","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"готовность к риску","to":"вера","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"верность","to":"вера","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"прыжок за горизонт","to":"вера","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"гармония формы","to":"красота","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"соразмерность частей","to":"красота","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"праздность созерцания","to":"красота","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"превосходство над полезным","to":"красота","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"мгновение и вечность","to":"красота","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"долженствование","to":"долг","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"приоритет над желанием","to":"долг","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"внутренний закон","to":"долг","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"совесть как свидетель","to":"долг","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"исполнение обещания","to":"долг","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"риск уязвимости","to":"доверие","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"опора на другого","to":"доверие","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"проверка опытом","to":"доверие","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"прозрачность намерений","to":"доверие","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"разрыв и восстановление доверия","to":"доверие","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"ожидание угрозы","to":"страх","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"сигнал опасности","to":"страх","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"паралич или действие","to":"страх","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"перед неизвестным","to":"страх","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"защитная реакция","to":"страх","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"ориентация на будущее","to":"надежда","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"наперекор очевидности","to":"надежда","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"утешение и мотив","to":"надежда","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"обещание себе","to":"надежда","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"пустота или вектор","to":"надежда","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"мера и соразмерность","to":"справедливость","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"беспристрастность","to":"справедливость","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"воздаяние по заслугам","to":"справедливость","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"процедура и результат","to":"справедливость","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"признание прав другого","to":"справедливость","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"длительность","to":"время","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"настоящее как точка","to":"время","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"будущее как возможность","to":"время","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"цикличность и линейность","to":"время","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"темп и ритм","to":"время","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"логическое умозаключение","to":"разум","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"способность к обобщению","to":"разум","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"различение истинного и ложного","to":"разум","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"критика и сомнение","to":"разум","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"порядок мысли","to":"разум","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"факт присутствия","to":"бытие","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"различение сущего и ничто","to":"бытие","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"основание всего","to":"бытие","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"необходимость и случайность","to":"бытие","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"становление","to":"бытие","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"память коллектива","to":"история","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"интерпретация прошлого","to":"история","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"урок и предупреждение","to":"история","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"нарратив и факт","to":"история","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"причина и следствие","to":"история","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"структура значения","to":"язык","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"граница выразимого","to":"язык","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"конвенция и произвол","to":"язык","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"переводимость и непереводимость","to":"язык","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"метафора и буква","to":"язык","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"направленность усилия","to":"воля","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"выбор цели","to":"воля","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"преодоление сопротивления","to":"воля","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"решимость","to":"воля","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода и необходимость","to":"воля","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"предел существования","to":"смерть","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"осмысление конечности","to":"смерть","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"уравнивание всех","to":"смерть","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"страх и принятие","to":"смерть","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"граница смысла","to":"смерть","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"отсутствие контакта","to":"одиночество","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"встреча с собой","to":"одиночество","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"изоляция или уединение","to":"одиночество","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"тишина и пустота","to":"одиночество","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"потребность в другом","to":"одиночество","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"признание ценности другого","to":"любовь","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"преодоление эгоцентризма","to":"любовь","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"дар без расчёта","to":"любовь","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"уязвимость и близость","to":"любовь","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"вечность в мгновении","to":"любовь","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"преобразование материи","to":"труд","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"усилие и результат","to":"труд","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"разделение и кооперация","to":"труд","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"навык и мастерство","to":"труд","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"усталость и удовлетворение","to":"труд","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"пауза в действии","to":"покой","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"созерцание и присутствие","to":"покой","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"глубина тишины","to":"покой","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"пустота как полнота","to":"покой","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"остановка и осмысление","to":"покой","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"асимметрия отношений","to":"власть","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"принуждение и авторитет","to":"власть","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"ответственность власти","to":"власть","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"делегирование и контроль","to":"власть","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"насилие или забота","to":"власть","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"свидетельство","to":"правда","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"искренность рассказа","to":"правда","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"частная перспектива","to":"правда","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"долг памяти","to":"правда","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"против забвения","to":"правда","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"предел слова","to":"молчание","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"присутствие без выражения","to":"молчание","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"глубина невыразимого","to":"молчание","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"слушание","to":"молчание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"пауза и смысл","to":"молчание","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"готовность к ответу","to":"ответственность","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"свобода как условие","to":"ответственность","type":"RelDetermines","verb":"определяет","version":1}
+{"author":"curator","confidence":1.0,"from":"вина и заслуга","to":"ответственность","type":"RelReliesOn","verb":"опирается","version":1}
+{"author":"curator","confidence":1.0,"from":"пределы контроля","to":"ответственность","type":"RelGives","verb":"придаёт","version":1}
+{"author":"curator","confidence":1.0,"from":"ответ перед другими","to":"ответственность","type":"RelReveals","verb":"обнаруживает","version":1}
+{"author":"curator","confidence":1.0,"from":"отсутствие основания","to":"произвол","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"каприз и случайность","to":"произвол","type":"RelUnifies","verb":"объединяет","version":1}
+{"author":"curator","confidence":1.0,"from":"игнорирование последствий","to":"произвол","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"псевдосвобода","to":"произвол","type":"RelDirectedAt","verb":"направлена","version":1}
+{"author":"curator","confidence":1.0,"from":"разрушение порядка","to":"произвол","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"частное суждение","to":"мнение","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"обоснованность и вес","to":"мнение","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"открытость пересмотру","to":"мнение","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"выражение позиции","to":"мнение","type":"RelOrientsToward","verb":"ориентирует","version":1}
+{"author":"curator","confidence":1.0,"from":"различение с истиной","to":"мнение","type":"RelPrescribes","verb":"предписывает","version":1}
+{"author":"curator","confidence":1.0,"from":"актуализация прошлого","to":"воспоминание","type":"RelNotReducibleTo","verb":"не сводится","version":1}
+{"author":"curator","confidence":1.0,"from":"эмоциональная окраска","to":"воспоминание","type":"RelNecessaryFor","verb":"необходим","version":1}
+{"author":"curator","confidence":1.0,"from":"достоверность и искажение","to":"воспоминание","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"связь времён","to":"воспоминание","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"повторное переживание","to":"воспоминание","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"рефлексия над собой","to":"самосознание","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"наблюдение за состояниями","to":"самосознание","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"идентификация с собой","to":"самосознание","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"различение я и не я","to":"самосознание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"самооценка","to":"самосознание","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"осознанность выбора","to":"самоопределение","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"объективность","to":"доказательство","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"доказательство","to":"когерентность","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"идентичность через время","to":"след прошлого","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"интенциональность","to":"присутствие","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"акт доверия","to":"готовность к риску","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"гармония формы","to":"соразмерность частей","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"долженствование","to":"приоритет над желанием","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"риск уязвимости","to":"опора на другого","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"ожидание угрозы","to":"сигнал опасности","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"ориентация на будущее","to":"наперекор очевидности","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"мера и соразмерность","to":"беспристрастность","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"длительность","to":"настоящее как точка","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"логическое умозаключение","to":"способность к обобщению","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"факт присутствия","to":"становление","type":"RelTransformsInto","verb":"превращается в","version":1}
+{"author":"curator","confidence":1.0,"from":"память коллектива","to":"интерпретация прошлого","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"структура значения","to":"граница выразимого","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"направленность усилия","to":"выбор цели","type":"RelDenotes","verb":"обозначает","version":1}
+{"author":"curator","confidence":1.0,"from":"предел существования","to":"осмысление конечности","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"отсутствие контакта","to":"встреча с собой","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"признание ценности другого","to":"преодоление эгоцентризма","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"преобразование материи","to":"усилие и результат","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"пауза в действии","to":"созерцание и присутствие","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"асимметрия отношений","to":"принуждение и авторитет","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"свидетельство","to":"искренность рассказа","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"предел слова","to":"присутствие без выражения","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"готовность к ответу","to":"свобода как условие","type":"RelPresupposes","verb":"предполагает","version":1}
+{"author":"curator","confidence":1.0,"from":"отсутствие основания","to":"каприз и случайность","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"частное суждение","to":"обоснованность и вес","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"актуализация прошлого","to":"эмоциональная окраска","type":"RelEvokes","verb":"вызывает","version":1}
+{"author":"curator","confidence":1.0,"from":"рефлексия над собой","to":"наблюдение за состояниями","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"целостность жизни","to":"соотнесённость с целым","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"различение внутри и снаружи","to":"условие формы","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"дискретность и точность","to":"формализация опыта","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"преемственность я","to":"нарратив о себе","type":"RelBuiltThrough","verb":"строится","version":1}
+{"author":"curator","confidence":1.0,"from":"восстановление функции","to":"диагностика поломки","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"психика","to":"сознание","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"психика","to":"память","type":"RelIncludes","verb":"включает","version":1}
+{"author":"curator","confidence":1.0,"from":"эмоция","to":"страх","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"эмоция","to":"любовь","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"доказательство","to":"истина","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"эксперимент","to":"истина","type":"RelVerifiedBy","verb":"проверяется","version":1}
+{"author":"curator","confidence":1.0,"from":"нейрон","to":"сознание","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"логика","to":"разум","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"аксиома","to":"вера","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"закон","to":"справедливость","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"право","to":"свобода","type":"RelSupports","verb":"поддерживает","version":1}
+{"author":"curator","confidence":1.0,"from":"договор","to":"доверие","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"искусство","to":"красота","type":"RelExpresses","verb":"выражает","version":1}
+{"author":"curator","confidence":1.0,"from":"музыка","to":"время","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"поэзия","to":"язык","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"государство","to":"власть","type":"RelMeans","verb":"означает","version":1}
+{"author":"curator","confidence":1.0,"from":"революция","to":"свобода","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"нация","to":"идентичность","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"собственность","to":"свобода","type":"RelLimitedBy","verb":"ограничена","version":1}
+{"author":"curator","confidence":1.0,"from":"рынок","to":"доверие","type":"RelRequires","verb":"требует","version":1}
+{"author":"curator","confidence":1.0,"from":"алгоритм","to":"разум","type":"RelStructures","verb":"структурирует","version":1}
+{"author":"curator","confidence":1.0,"from":"данные","to":"память","type":"RelPreserves","verb":"сохраняет","version":1}
+{"author":"curator","confidence":1.0,"from":"код","to":"язык","type":"RelIsA","verb":"есть","version":1}
+{"author":"curator","confidence":1.0,"from":"жизнь","to":"смерть","type":"RelContrastsWith","verb":"контрастирует","version":1}
+{"author":"curator","confidence":1.0,"from":"инстинкт","to":"страх","type":"RelSignals","verb":"сигнализирует","version":1}
+{"author":"curator","confidence":1.0,"from":"эволюция","to":"время","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"энтропия","to":"время","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"энергия","to":"труд","type":"RelTransforms","verb":"преобразует","version":1}
+{"author":"curator","confidence":1.0,"from":"душа","to":"сознание","type":"RelRelatedTo","verb":"связана","version":1}
+{"author":"curator","confidence":1.0,"from":"дух","to":"воля","type":"RelRelatedTo","verb":"связана","version":1}
