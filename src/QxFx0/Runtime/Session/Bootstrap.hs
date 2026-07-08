@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-| Session bootstrap, readiness gating, and runtime lifecycle wiring. -}
 module QxFx0.Runtime.Session.Bootstrap
@@ -82,6 +83,7 @@ import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, all
 import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
+import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
 import QxFx0.Semantic.Network (mergeSemanticNetworks)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge, mergeSelfPlayRelations)
@@ -329,6 +331,19 @@ bootstrapSession quiet sessionId = do
   brainKBPath <- resolveBrainKBPath
   brainKBEntries <- loadBrainKB brainKBPath
 
+  -- ADR-0052 Phase IV: load ontology once for category classification.
+  -- Failure is non-fatal: the classifier falls back to lexical markers.
+  ontologyPath <- resolveKnowledgePath "resources/knowledge/ontology.jsonl"
+  ontologyResult <- try @IOException (loadOntology ontologyPath)
+  ontology <- case ontologyResult of
+    Left err -> do
+      Log.logWarn "Ontology load failed; category classifier will fall back to lexical markers"
+        (Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+      pure emptyOntology
+    Right ot -> do
+      Log.logInfo "Ontology loaded" Log.emptyContext
+      pure ot
+
   externalEnabled <- readExternalKnowledgeEnabled
   finalNetwork <- bootstrapSemanticNetwork morphology brainKBEntries externalEnabled
 
@@ -366,6 +381,7 @@ bootstrapSession quiet sessionId = do
         , ssContentSelector = seedSelector
         , ssLemmaMap = buildLemmaMap morphology
         , ssSemanticNetwork = finalNetwork
+        , ssOntology = ontology
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
@@ -419,6 +435,7 @@ bootstrapSession quiet sessionId = do
                      }
                    , ssSessionId = sessionId
                    , ssSemanticNetwork = finalNetwork
+                   , ssOntology = ontology
                    , ssRuntimeGraph = withPromoted promotedRelations seedGraph
                    }
              in if truthContractIsAuthoritative (ssTruthContractStatus restored0)

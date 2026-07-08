@@ -172,8 +172,9 @@ import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
 import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
-import QxFx0.Semantic.Content (ConceptCategory)
+import QxFx0.Semantic.Content.Category (ConceptCategory)
 import QxFx0.Semantic.Content.AtomStore (AtomGraph, seedGraph)
+import QxFx0.Semantic.Ontology (Ontology, emptyOntology)
 import QxFx0.Semantic.DialogueContext (emptyContext)
 import QxFx0.Types.State.Stance
   ( StanceState
@@ -298,6 +299,9 @@ data SystemState = SystemState
     -- ^ Phase 1: semantic network built from MeaningGraph edges.
     --   Used for spreading activation and content density gating.
     --   Initialised to 'emptySemanticNetwork'.
+  , ssOntology :: !Ontology
+    -- ^ ADR-0052 Phase IV: loaded once at bootstrap and passed to the
+    --   ontology-driven category classifier.
   , ssSemanticSpace :: !SemanticSpace
     -- ^ Phase 1: vector space for predicate affinity computation.
     --   Built from semantic network nodes. Used by ContentSelector.
@@ -407,6 +411,7 @@ instance ToJSON SystemState where
             , "currentRegime" .= ssCurrentRegime ss
             , "runtimeParadigms" .= ssRuntimeParadigms ss
             , "semanticNetwork" .= ssSemanticNetwork ss
+            , "ontology" .= ssOntology ss
             , "semanticSpace" .= ssSemanticSpace ss
              , "contentSelector" .= ssContentSelector ss
               , "lemmaMap" .= ssLemmaMap ss
@@ -530,6 +535,7 @@ instance FromJSON SystemState where
             <*> o .:? "mood" .!= 0.0
             <*> o .:? "currentRegime" .!= defaultRuntimeRegime
             <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
+            <*> o .:? "ontology" .!= emptyOntology
             <*> o .:? "semanticSpace" .!= emptySemanticSpace
              <*> o .:? "contentSelector" .!= emptyContentSelector
               <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
@@ -725,6 +731,7 @@ emptySystemState = SystemState
   , ssMood = 0.0
   , ssCurrentRegime = defaultRuntimeRegime
   , ssSemanticNetwork = seedFromCorpus M.empty
+  , ssOntology = emptyOntology
   , ssSemanticSpace = emptySemanticSpace
   , ssContentSelector = emptyContentSelector
   , ssGeometricMetrics = emptyIntentClassifierMetrics

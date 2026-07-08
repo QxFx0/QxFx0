@@ -39,7 +39,7 @@ import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
   , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
-  , ConceptCategory(..), classifyConceptCategory
+  , ConceptCategory(..)
   , genericDefinitionPredicates, genericDistinctionPredicates
   , lookupDefinitionWithGeneric, lookupDistinctionWithGeneric
   , lookupChallengeContent, lookupGroundContent, lookupPurposeContent

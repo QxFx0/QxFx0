@@ -293,6 +293,7 @@ library
      QxFx0.Semantic.Proposition.Detectors
       QxFx0.Semantic.Proposition.Parse
       QxFx0.Semantic.Content
+      QxFx0.Semantic.Content.Category
       QxFx0.Semantic.Content.Base
       QxFx0.Semantic.Content.Argued
       QxFx0.Semantic.Content.Challenges
@@ -638,6 +639,7 @@ common test-common
     Test.Suite.PathFinder
     Test.Suite.DialogueSemanticSelection
     Test.Suite.Ontology
+    Test.Suite.OntologyCategoryClassification
     Test.Suite.BootstrapRecovery
     Test.Suite.BootstrapExternalKnowledge
     Test.Suite.SurfaceAccumulator

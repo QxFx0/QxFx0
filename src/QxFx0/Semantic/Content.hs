@@ -68,6 +68,7 @@ module QxFx0.Semantic.Content
   , isCoveredPair
   , coveredTopics
   , classifyConceptCategory
+  , categoryFromOntology
   , genericDefinitionPredicates
   , genericDistinctionPredicates
     -- * B3 helpers
@@ -108,6 +109,8 @@ import QxFx0.Semantic.Content.Base
   )
 import QxFx0.Semantic.Content.Argued (arguedPredicates)
 import QxFx0.Semantic.Content.Challenges (challengeResponseCorpusFull)
+import QxFx0.Semantic.Content.Category (ConceptCategory(..))
+import QxFx0.Semantic.Ontology (Ontology, emptyOntology, lookupCategory)
 
 -- | Definition content for a topic: ≥2 substantive predicates.
 data DefinitionContent = DefinitionContent
@@ -495,28 +498,27 @@ hasMinimumPredicates dc = substantivePredicateCount dc >= 2
 -- Phase C: Concept categories + generic predicates (C.1)
 -- ============================================================================
 
--- | Category of a concept, used for category-typed generic predicates.
--- Generic predicates are NOT universal templates — they differ by category,
--- ensuring non-tautological content for uncovered topics.
-data ConceptCategory
-  = CategoryPhilosophical
-    -- ^ Abstract philosophical concepts (свобода, истина, сознание, etc.)
-  | CategorySocial
-    -- ^ Social/interpersonal concepts (ответственность, доверие, долг)
-  | CategoryPsychological
-    -- ^ Psychological/mental concepts (память, восприятие, эмоция)
-  | CategoryPhysical
-    -- ^ Physical/concrete concepts (тело, пространство, время)
-  | CategoryGeneral
-    -- ^ Fallback for unclassifiable topics
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+-- | Lookup a concept's category in the ontology, returning 'Nothing' when
+-- the concept is not present.  Lookup key is case-insensitive and
+-- whitespace-stripped.
+categoryFromOntology :: Ontology -> Text -> Maybe ConceptCategory
+categoryFromOntology ont name = lookupCategory ont (normalizeTopic name)
 
--- | Classify a topic into a concept category using deterministic rules.
--- Based on lexical features (keyword markers + morphological suffixes),
--- not statistics.
-classifyConceptCategory :: Text -> ConceptCategory
-classifyConceptCategory topic =
+-- | Classify a topic into a concept category.
+--
+-- ADR-0052 Phase IV: ontology is consulted first; if the concept is absent,
+-- fall back to deterministic lexical markers and morphological suffixes.
+-- Passing 'emptyOntology' recovers the legacy lexical-only behavior.
+classifyConceptCategory :: Ontology -> Text -> ConceptCategory
+classifyConceptCategory ontology topic =
+  case categoryFromOntology ontology (normalizeTopic topic) of
+    Just cat -> cat
+    Nothing  -> lexicalClassifyConceptCategory topic
+
+-- | Lexical-only classifier used as the fallback when the ontology has no
+-- entry for a concept. Based on keyword markers + morphological suffixes.
+lexicalClassifyConceptCategory :: Text -> ConceptCategory
+lexicalClassifyConceptCategory topic =
   let t = normalizeTopic topic
   in case () of
     _ | any (`T.isInfixOf` t) philosophicalMarkers -> CategoryPhilosophical
@@ -530,19 +532,19 @@ classifyConceptCategory topic =
       | otherwise -> CategoryGeneral
   where
     philosophicalMarkers =
-      ["свобод", "истин", "смысл", "сознан", "бытие", "ничто", "вечн", "разум"
+      ["филос", "свобод", "истин", "смысл", "сознан", "бытие", "ничто", "вечн", "разум"
       , "познан", "реальн", "иллюз", "пустот", "сущнос", "вер", "красот"
       , "добр", "благ", "мудрост", "истин", "справедлив"]
     socialMarkers =
-      ["ответств", "довер", "долг", "обяз", "справедлив", "право", "закон"
+      ["соци", "ответств", "довер", "долг", "обяз", "справедлив", "право", "закон"
       , "обществ", "нравств", "этик", "морал", "совест", "чест", "верност"
       , "предан", "уважен"]
     psychologicalMarkers =
-      ["памят", "воспомин", "эмоц", "чувств", "восприят", "мышлен", "вниман"
+      ["псих", "памят", "воспомин", "эмоц", "чувств", "восприят", "мышлен", "вниман"
       , "воображ", "сон", "мечт", "страх", "надежд", "радост", "груст"
       , "тревог", "пережив", "интуиц"]
     physicalMarkers =
-      ["тел", "пространств", "времен", "матер", "энерг", "свет", "звук", "движен"
+      ["физ", "тел", "пространств", "времен", "матер", "энерг", "свет", "звук", "движен"
       , "природ", "вод", "огн", "воздух", "земл", "камен", "дерев"]
     -- Russian abstract noun suffixes → likely philosophical/abstract
     abstractSuffixes =
@@ -559,7 +561,7 @@ classifyConceptCategory topic =
 -- that are non-tautological for concepts in that category.
 genericDefinitionPredicates :: Text -> [SemanticPredicate]
 genericDefinitionPredicates topic =
-  let cat = classifyConceptCategory topic
+  let cat = lexicalClassifyConceptCategory topic
   in case cat of
     CategoryPhilosophical ->
       [ mkPred RoleProperty (topic <> " предполагает наличие внутренней структуры") (topic <> " presupposes an internal structure")
@@ -585,8 +587,8 @@ genericDefinitionPredicates topic =
 -- | Category-typed generic distinction predicates.
 genericDistinctionPredicates :: Text -> Text -> [SemanticPredicate]
 genericDistinctionPredicates left right =
-  let catL = classifyConceptCategory left
-      catR = classifyConceptCategory right
+  let catL = lexicalClassifyConceptCategory left
+      catR = lexicalClassifyConceptCategory right
   in case (catL, catR) of
     (CategoryPhilosophical, CategoryPhilosophical) ->
       [ mkPred RoleDifferentiator (left <> " относится к сфере должного, " <> right <> " — к сфере сущего") (left <> " belongs to the normative, " <> right <> " — to the descriptive")

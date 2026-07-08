@@ -17,6 +17,7 @@ module QxFx0.Semantic.Ontology
   ( ConceptCategory(..)
   , OntologyNode(..)
   , Ontology(..)
+  , emptyOntology
   , loadOntology
   , lookupOntologyNode
   , lookupCategory
@@ -26,7 +27,7 @@ module QxFx0.Semantic.Ontology
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(parseJSON), eitherDecodeStrict, withObject, (.:))
+import Data.Aeson (FromJSON(parseJSON), ToJSON, eitherDecodeStrict, withObject, (.:))
 import Data.Foldable (foldl')
 import Data.List (sort)
 import Data.Map.Strict (Map)
@@ -39,7 +40,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import GHC.Generics (Generic)
 
-import QxFx0.Semantic.Content (ConceptCategory(..))
+import QxFx0.Semantic.Content.Category (ConceptCategory(..))
 
 -- | A single concept in the ontology hierarchy.
 data OntologyNode = OntologyNode
@@ -49,14 +50,18 @@ data OntologyNode = OntologyNode
   , onChildren :: !(Set Text)
   , onDepth    :: !Int
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
+    deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | In-memory ontology graph.
 data Ontology = Ontology
   { otNodes :: !(Map Text OntologyNode)
   , otRoots :: !(Set Text)
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
+    deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Empty ontology with no nodes.
+emptyOntology :: Ontology
+emptyOntology = Ontology Map.empty Set.empty
 
 -- | Intermediate representation used only while loading the JSONL file.
 data RawNode = RawNode
