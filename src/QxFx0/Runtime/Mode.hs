@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -8,14 +9,27 @@ module QxFx0.Runtime.Mode
   , isStrictRuntimeMode
   ) where
 
+import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), withText)
 import Data.Text (Text)
 import qualified Data.Text as T
+import GHC.Generics (Generic)
 import System.Environment (lookupEnv)
 
 data RuntimeMode
   = DegradedRuntime
   | StrictRuntime
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance ToJSON RuntimeMode where
+  toJSON DegradedRuntime = String "degraded"
+  toJSON StrictRuntime = String "strict"
+
+instance FromJSON RuntimeMode where
+  parseJSON = withText "RuntimeMode" $ \t ->
+    case T.toLower (T.strip t) of
+      "degraded" -> pure DegradedRuntime
+      "strict"   -> pure StrictRuntime
+      _          -> fail ("Unknown RuntimeMode: " <> T.unpack t)
 
 resolveRuntimeMode :: IO RuntimeMode
 resolveRuntimeMode = do
@@ -28,6 +42,9 @@ resolveRuntimeMode = do
     Just "clockwork" -> StrictRuntime
     _ -> StrictRuntime
 
+-- | Render a 'RuntimeMode' to its canonical string representation.
+-- Use this for logging, CLI output, or external serialization only;
+-- dispatch code should pattern-match on the 'RuntimeMode' constructors.
 runtimeModeText :: RuntimeMode -> Text
 runtimeModeText DegradedRuntime = "degraded"
 runtimeModeText StrictRuntime = "strict"

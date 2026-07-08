@@ -22,6 +22,8 @@ module QxFx0.Runtime
   , checkHealth
   , probeRuntimeReadiness
   , SystemHealth(..)
+  , HealthStatus(..)
+  , healthStatusText
   , AgdaWitnessReport(..)
   , readAgdaWitnessReport
   , writeAgdaWitness
@@ -41,7 +43,9 @@ import QxFx0.Runtime.Paths
   , resolveSessionId
   )
 import QxFx0.Runtime.Health
-  ( SystemHealth(..)
+  ( HealthStatus(..)
+  , healthStatusText
+  , SystemHealth(..)
   , checkHealth
   , probeRuntimeReadiness
   )

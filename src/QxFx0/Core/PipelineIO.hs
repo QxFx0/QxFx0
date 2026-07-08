@@ -11,6 +11,7 @@ module QxFx0.Core.PipelineIO
   , mkReplayPipelineIO
   , pipelineRuntimeMode
   , pipelineRuntimeModeText
+  , pipelineRuntimeModeAsRuntimeMode
   , pipelineShadowPolicy
   , shadowPolicyText
   , pipelineLocalRecoveryPolicy
@@ -46,6 +47,7 @@ import QxFx0.Core.PipelineIO.Operations
     , modifyPipelineIntuition
     , pipelineLocalRecoveryPolicy
     , pipelineRuntimeModeText
+    , pipelineRuntimeModeAsRuntimeMode
     , pipelineRuntimeMode
     , scheduleTurnEffects
     , pipelineShadowPolicy

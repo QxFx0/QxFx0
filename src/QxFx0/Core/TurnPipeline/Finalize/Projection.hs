@@ -83,6 +83,7 @@ import QxFx0.Types.Thresholds
   , scenePressureLowThreshold
   , scenePressureMediumThreshold
   )
+import QxFx0.Runtime.Mode (RuntimeMode(..))
 
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience = svSalience . tiSelfVerdict
@@ -101,7 +102,7 @@ buildCognitiveSignals ti tp nextSs = CS.CognitiveSignals
   }
 
 buildTurnProjection
-  :: Text
+  :: RuntimeMode
   -> Text
   -> Text
   -> Bool
@@ -163,7 +164,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           Just cause ->
             (Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)
           Nothing
-            | runtimeMode == "degraded" ->
+            | DegradedRuntime <- runtimeMode ->
                 (Nothing, Nothing, ["runtime_mode=degraded"])
           Nothing ->
             (Nothing, Nothing, [])

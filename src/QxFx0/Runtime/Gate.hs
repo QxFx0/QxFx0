@@ -13,7 +13,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Resources (ReadinessComponent, ReadinessMode(..))
-import QxFx0.Runtime.Health (SystemHealth(..))
+import QxFx0.Runtime.Health (SystemHealth(..), HealthStatus(..), healthStatusText)
 import QxFx0.Runtime.Mode (RuntimeMode, isStrictRuntimeMode)
 
 data RuntimeGateFailure
@@ -37,8 +37,10 @@ evaluateStrictHealth runtimeMode health
   | not (isStrictRuntimeMode runtimeMode) && not (shReady health) =
       Left (GateStrictHealth health)
   | not (isStrictRuntimeMode runtimeMode) = Right ()
-  | shReady health && shStatus health == "ok" =
-      Right ()
+  | shReady health =
+      case shStatus health of
+        HsOk -> Right ()
+        _    -> Left (GateStrictHealth health)
   | otherwise =
       Left (GateStrictHealth health)
 
@@ -50,7 +52,7 @@ renderBootstrapGateFailure failure =
     GateOptionalReadiness failed ->
       "Strict runtime requires all optional resources: " <> renderComponents failed
     GateStrictHealth health ->
-      "Strict runtime requires status=ok, got " <> shStatus health <> " [" <> shReadinessMode health <> "]; " <> renderStrictHealthDetail health
+      "Strict runtime requires status=ok, got " <> healthStatusText (shStatus health) <> " [" <> shReadinessMode health <> "]; " <> renderStrictHealthDetail health
 
 renderTurnGateFailure :: RuntimeGateFailure -> Text
 renderTurnGateFailure failure =
@@ -60,7 +62,7 @@ renderTurnGateFailure failure =
     GateOptionalReadiness failed ->
       "Turn blocked: strict runtime requires all optional resources: " <> renderComponents failed
     GateStrictHealth health ->
-      "Turn blocked: strict runtime requires status=ok, got " <> shStatus health <> " [" <> shReadinessMode health <> "]; " <> renderStrictHealthDetail health
+      "Turn blocked: strict runtime requires status=ok, got " <> healthStatusText (shStatus health) <> " [" <> shReadinessMode health <> "]; " <> renderStrictHealthDetail health
 
 renderComponents :: [ReadinessComponent] -> Text
 renderComponents = T.pack . show

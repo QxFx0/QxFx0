@@ -7,6 +7,7 @@ import Test.HUnit
 import Data.Aeson (decode, encode)
 
 import QxFx0.Observability.TraceAnalysis
+import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
@@ -58,7 +59,7 @@ minimalTrace :: TurnReplayTrace
 minimalTrace = TurnReplayTrace
   { trcRequestId = "test-request"
   , trcSessionId = "test-session"
-  , trcRuntimeMode = "production"
+  , trcRuntimeMode = StrictRuntime
   , trcShadowPolicy = "enabled"
   , trcLocalRecoveryPolicy = "enabled"
   , trcRecoveryCause = Nothing

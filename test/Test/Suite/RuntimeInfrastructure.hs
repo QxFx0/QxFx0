@@ -480,7 +480,7 @@ testReadinessStrictInvariantSchemaV1Behind = TestCase $ do
     let rt = Runtime.sessRuntime session0
     health <- Runtime.checkHealth rt
     assertBool "health should be ready after bootstrap migrates" (Runtime.shReady health)
-    assertEqual "status should be ok after migration" "ok" (Runtime.shStatus health)
+    assertEqual "status should be ok after migration" Runtime.HsOk (Runtime.shStatus health)
 
 testReadinessStrictInvariantFreshDbOk :: Test
 testReadinessStrictInvariantFreshDbOk = TestCase $ do
@@ -489,7 +489,7 @@ testReadinessStrictInvariantFreshDbOk = TestCase $ do
     let rt = Runtime.sessRuntime session0
     health <- Runtime.checkHealth rt
     assertBool "fresh DB health should be ready" (Runtime.shReady health)
-    assertEqual "fresh DB status should be ok" "ok" (Runtime.shStatus health)
+    assertEqual "fresh DB status should be ok" Runtime.HsOk (Runtime.shStatus health)
     assertBool "fresh DB schema_ok should be true" (Runtime.shSchemaOk health)
     assertEqual "fresh DB schema_version should be current" 4 (Runtime.shSchemaVersion health)
 
@@ -586,7 +586,7 @@ testStrictRuntimeBootstrapAndPersistence :: Test
 testStrictRuntimeBootstrapAndPersistence = TestCase $ do
   withStrictRuntimeEnv "qxfx0_test_runtime_strict_persist.db" $ do
     health0 <- Runtime.probeRuntimeReadiness
-    assertEqual "strict probe should be green under strict harness" "ok" (Runtime.shStatus health0)
+    assertEqual "strict probe should be green under strict harness" Runtime.HsOk (Runtime.shStatus health0)
     assertEqual "strict harness should expose verified agda status" AgdaVerified (Runtime.shAgdaStatus health0)
     assertBool "strict harness should expose datalog backend" (Runtime.shDatalogReady health0)
 
@@ -1009,8 +1009,8 @@ testProbeRuntimeReadinessStrictRequiresWitness = TestCase $
         withEnvVar "EMBEDDING_API_URL" Nothing $
           withEnvVar "QXFX0_AGDA_WITNESS" (Just "/tmp/qxfx0_test_missing_witness.json") $ do
           health <- Runtime.probeRuntimeReadiness
-          assertEqual "probe should report strict runtime mode" "strict" (Runtime.shRuntimeMode health)
-          assertEqual "strict mode should mark missing witness runtime as not ready" "not_ready" (Runtime.shStatus health)
+          assertEqual "probe should report strict runtime mode" Runtime.StrictRuntime (Runtime.shRuntimeMode health)
+          assertEqual "strict mode should mark missing witness runtime as not ready" Runtime.HsFailed (Runtime.shStatus health)
           assertBool "strict mode should refuse readiness when Agda witness is unavailable" (not (Runtime.shReady health))
           assertEqual "missing witness should map to typed status" AgdaMissingWitness (Runtime.shAgdaStatus health)
           assertBool "implicit local deterministic backend should be strict-ready" (Runtime.shEmbeddingAlive health)
@@ -1022,7 +1022,7 @@ testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend :: Test
 testProbeRuntimeReadinessStrictAcceptsWitnessedLocalBackend = TestCase $
   withStrictRuntimeEnv "qxfx0_test_strict_readiness_ok.db" $ do
     health <- Runtime.probeRuntimeReadiness
-    assertEqual "strict probe should report ok when witness, explicit local backend, and datalog runtime exist" "ok" (Runtime.shStatus health)
+    assertEqual "strict probe should report ok when witness, explicit local backend, and datalog runtime exist" Runtime.HsOk (Runtime.shStatus health)
     assertBool "strict probe should be ready with explicit local backend and fresh witness" (Runtime.shReady health)
     assertBool "strict probe should surface present Nix policy" (Runtime.shNixPolicyPresent health)
     assertBool "strict probe should surface operational Nix evaluator" (Runtime.shNixReady health)
@@ -1040,7 +1040,7 @@ testProbeRuntimeReadinessStrictAcceptsImplicitLocalBackend = TestCase $
     withEnvVar "QXFX0_EMBEDDING_BACKEND" Nothing $
       withEnvVar "EMBEDDING_API_URL" (Just "http://127.0.0.1:1/embeddings") $ do
         health <- Runtime.probeRuntimeReadiness
-        assertEqual "strict probe should accept autonomous implicit local backend" "ok" (Runtime.shStatus health)
+        assertEqual "strict probe should accept autonomous implicit local backend" Runtime.HsOk (Runtime.shStatus health)
         assertBool "strict probe should be ready with implicit local backend and valid witness" (Runtime.shReady health)
         assertBool "implicit local backend should be operational" (Runtime.shEmbeddingOperational health)
         assertBool "implicit local backend should be strict-ready" (Runtime.shEmbeddingAlive health)
@@ -1057,7 +1057,7 @@ testProbeRuntimeReadinessStrictExplicitRemoteMissingUrlIsNotReady = TestCase $
     withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
       withEnvVar "EMBEDDING_API_URL" Nothing $ do
         health <- Runtime.probeRuntimeReadiness
-        assertEqual "strict probe should fail when explicit remote embedding backend has no URL" "not_ready" (Runtime.shStatus health)
+        assertEqual "strict probe should fail when explicit remote embedding backend has no URL" Runtime.HsFailed (Runtime.shStatus health)
         assertBool "strict probe should not be ready when explicit remote embedding backend has no URL" (not (Runtime.shReady health))
         assertEqual "strict probe should report remote embedding backend explicitly" "remote_http" (Runtime.shEmbeddingBackend health)
         assertBool "strict probe should mark missing remote URL backend as non-operational" (not (Runtime.shEmbeddingOperational health))
@@ -1080,7 +1080,7 @@ testProbeRuntimeReadinessStrictRequiresNixEvaluator = TestCase $ do
   withStrictRuntimeEnv "qxfx0_test_strict_readiness_nix_fail.db" $
     withEnvVar "QXFX0_NIX_INSTANTIATE_BIN" (Just fakeNix) $ do
         health <- Runtime.probeRuntimeReadiness
-        assertEqual "strict probe should fail when Nix evaluator is unavailable" "not_ready" (Runtime.shStatus health)
+        assertEqual "strict probe should fail when Nix evaluator is unavailable" Runtime.HsFailed (Runtime.shStatus health)
         assertBool "strict probe should not report ready when Nix evaluator is unavailable" (not (Runtime.shReady health))
         assertBool "strict probe should surface present Nix policy separately from evaluator state" (Runtime.shNixPolicyPresent health)
         assertBool "strict probe should mark Nix evaluator as unavailable" (not (Runtime.shNixReady health))
@@ -1574,7 +1574,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
           , tqpReplayTrace = TurnReplayTrace
               { trcRequestId = "req_projection_rollback_fixture"
               , trcSessionId = sessionId
-              , trcRuntimeMode = "strict"
+              , trcRuntimeMode = Runtime.StrictRuntime
               , trcShadowPolicy = "block_on_unavailable_or_divergence"
               , trcLocalRecoveryPolicy = "enabled"
               , trcRecoveryCause = Just RecoveryShadowDivergence
@@ -2108,7 +2108,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
           , tqpReplayTrace = TurnReplayTrace
               { trcRequestId = "req_test_shadow_divergence"
               , trcSessionId = sessionId
-              , trcRuntimeMode = "strict"
+              , trcRuntimeMode = Runtime.StrictRuntime
               , trcShadowPolicy = "block_on_unavailable_or_divergence"
               , trcLocalRecoveryPolicy = "enabled"
               , trcRecoveryCause = Just RecoveryShadowDivergence

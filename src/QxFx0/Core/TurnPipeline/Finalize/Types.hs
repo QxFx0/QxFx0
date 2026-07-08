@@ -18,6 +18,7 @@ import Data.Time.Clock (UTCTime)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Core.FMAR (FmarMode(..))
+import QxFx0.Runtime.Mode (RuntimeMode(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
@@ -43,7 +44,7 @@ data FinalizePrecommitPlan = FinalizePrecommitPlan
 
 data FinalizePrecommitResults = FinalizePrecommitResults
   { fprCurrentTime :: !UTCTime
-  , fprRuntimeMode :: !Text
+  , fprRuntimeMode :: !RuntimeMode
   , fprShadowPolicy :: !Text
   , fprLocalRecoveryPolicy :: !Text
   , fprSemanticIntrospectionEnabled :: !Bool

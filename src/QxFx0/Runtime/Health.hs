@@ -1,6 +1,8 @@
 {-# LANGUAGE DerivingStrategies, DeriveAnyClass, OverloadedStrings, BangPatterns, StrictData, DeriveGeneric, TypeApplications #-}
 module QxFx0.Runtime.Health
-  ( SystemHealth(..)
+  ( HealthStatus(..)
+  , healthStatusText
+  , SystemHealth(..)
   , checkHealth
   , probeRuntimeReadiness
   ) where
@@ -50,11 +52,39 @@ import QxFx0.Bridge.SQLite.SchemaContract
 import QxFx0.Lexicon.GfMap (GfMapLoadStatus(..), loadGfMapStatusFromPath)
 
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
+import Data.Aeson (ToJSON(..), FromJSON(..), Value(..), withText)
+
+-- | Closed sum type for the high-level health status reported by
+-- 'SystemHealth'.  Kept distinct from the richer 'ReadinessMode' so that
+-- dispatch sites can pattern-match instead of comparing strings.
+data HealthStatus
+  = HsOk
+  | HsDegraded
+  | HsFailed
+  deriving stock (Eq, Show, Generic)
+
+-- | Canonical string rendering used for logging, CLI output, and
+-- backward-compatible JSON serialization.
+healthStatusText :: HealthStatus -> Text
+healthStatusText HsOk       = "ok"
+healthStatusText HsDegraded = "degraded"
+healthStatusText HsFailed   = "not_ready"
+
+instance ToJSON HealthStatus where
+  toJSON = String . healthStatusText
+
+instance FromJSON HealthStatus where
+  parseJSON = withText "HealthStatus" $ \t ->
+    case T.toLower (T.strip t) of
+      "ok"        -> pure HsOk
+      "degraded"  -> pure HsDegraded
+      "not_ready" -> pure HsFailed
+      "failed"    -> pure HsFailed
+      _           -> fail ("Unknown HealthStatus: " <> T.unpack t)
 
 data SystemHealth = SystemHealth
-  { shStatus         :: !Text
-  , shRuntimeMode    :: !Text
+  { shStatus         :: !HealthStatus
+  , shRuntimeMode    :: !RuntimeMode
   , shReady          :: !Bool
   , shDbAlive        :: !Bool
   , shDbBootstrapable :: !Bool
@@ -199,12 +229,12 @@ mkSystemHealth runtimeMode dbPath readiness backend = do
       ready = strictReadinessOk && dbReady && schemaOk && gfOk && pgfOk && (not strictBackendRequired || backendOk) && strictDecisionPathOk
       degraded = ready && (readinessMode /= Ready || not embedStrictReady || not agdaOk || not datalogOk || not nixOk)
       status
-        | not ready = "not_ready"
-        | degraded = "degraded"
-        | otherwise = "ok"
+        | not ready = HsFailed
+        | degraded = HsDegraded
+        | otherwise = HsOk
   pure SystemHealth
     { shStatus = status
-    , shRuntimeMode = runtimeModeText runtimeMode
+    , shRuntimeMode = runtimeMode
     , shReady = ready
     , shDbAlive = dhAlive dbHealth
     , shDbBootstrapable = dhBootstrapable dbHealth

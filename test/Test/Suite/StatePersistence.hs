@@ -61,6 +61,7 @@ import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..))
 import qualified QxFx0.Runtime as Runtime
+import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), EffectSnapshot(..))
 import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
@@ -1012,7 +1013,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
   TurnReplayTrace
     { trcRequestId = "req_projection_fixture"
     , trcSessionId = sessionId
-    , trcRuntimeMode = "strict"
+    , trcRuntimeMode = StrictRuntime
     , trcShadowPolicy = "block_on_unavailable_or_divergence"
     , trcLocalRecoveryPolicy = "enabled"
     , trcRecoveryCause = Just RecoveryShadowDivergence

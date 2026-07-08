@@ -28,6 +28,7 @@ import QxFx0.Core.PipelineIO
   , mkReplayPipelineIO
   , checkPipelineApiHealth
   )
+import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
@@ -53,7 +54,7 @@ minimalReplayTrace apiHealthy =
   TurnReplayTrace
     { trcRequestId = "test"
     , trcSessionId = "test"
-    , trcRuntimeMode = "test"
+    , trcRuntimeMode = StrictRuntime
     , trcShadowPolicy = "observe"
     , trcLocalRecoveryPolicy = "enabled"
     , trcRecoveryCause = Nothing
@@ -257,7 +258,7 @@ testRecordedEqualsConsumed =
   TestLabel "P3: buildTurnProjection records consumed tsApiHealthy; replay round-trips it" $
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
-    let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
+    let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
                      ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
         recorded proj = esApiHealthy <$> trcEffectSnapshot (tqpReplayTrace proj)
     assertEqual "projection records True when consumed value is True"
@@ -281,7 +282,7 @@ testSnapshotSurvivesSerialization =
   TestLabel "P4: trcEffectSnapshot survives Aeson encode/decode (DB column round-trip)" $
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
-    let projOf h = buildTurnProjection "test" "observe" "enabled" False False FmarOff
+    let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
                      ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
         decodeSnapshot proj =
           (eitherDecode (encode (tqpReplayTrace proj))
@@ -305,7 +306,7 @@ testFullTraceRoundTrips =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
-                  (buildTurnProjection "test" "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
+                  (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
     assertEqual "decode (encode trace) must reproduce the trace exactly"
       (Right trace)
       (eitherDecode (encode trace) :: Either String TurnReplayTrace)

@@ -7,6 +7,7 @@ Public operations over `PipelineIO`, including effect dispatch and typed adapter
 module QxFx0.Core.PipelineIO.Operations
   ( pipelineRuntimeMode
   , pipelineRuntimeModeText
+  , pipelineRuntimeModeAsRuntimeMode
   , pipelineShadowPolicy
   , shadowPolicyText
   , pipelineLocalRecoveryPolicy
@@ -59,6 +60,7 @@ import QxFx0.Types.ShadowDivergence
   )
 import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))
 import QxFx0.Types.TurnProjection (TurnProjection)
+import QxFx0.Runtime.Mode (RuntimeMode(..))
 
 import Data.Sequence (Seq)
 import Data.Text (Text)
@@ -72,6 +74,12 @@ pipelineRuntimeModeText mode =
   case mode of
     RuntimeStrict -> "strict"
     RuntimeDegraded -> "degraded"
+
+-- | Convert the pipeline runtime mode to the canonical 'RuntimeMode' used
+-- for dispatch and health reporting.  The two enumerations are isomorphic.
+pipelineRuntimeModeAsRuntimeMode :: PipelineRuntimeMode -> RuntimeMode
+pipelineRuntimeModeAsRuntimeMode RuntimeStrict   = StrictRuntime
+pipelineRuntimeModeAsRuntimeMode RuntimeDegraded = DegradedRuntime
 
 pipelineShadowPolicy :: PipelineIO -> ShadowPolicy
 pipelineShadowPolicy = pioShadowPolicy

@@ -22,7 +22,7 @@ import QxFx0.Core.PipelineIO
   , localRecoveryPolicyText
   , pipelineLocalRecoveryPolicy
   , pipelineRuntimeMode
-  , pipelineRuntimeModeText
+  , pipelineRuntimeModeAsRuntimeMode
   , pipelineShadowPolicy
   , scheduleTurnEffects
   , resolveTurnEffect
@@ -122,7 +122,7 @@ resolveFinalizePrecommit pipelineIO plan = do
   pure
     FinalizePrecommitResults
       { fprCurrentTime = fppCapturedCurrentTime plan
-      , fprRuntimeMode = pipelineRuntimeModeText (pipelineRuntimeMode pipelineIO)
+      , fprRuntimeMode = pipelineRuntimeModeAsRuntimeMode (pipelineRuntimeMode pipelineIO)
       , fprShadowPolicy = shadowPolicyText (pipelineShadowPolicy pipelineIO)
       , fprLocalRecoveryPolicy = localRecoveryPolicyText (pipelineLocalRecoveryPolicy pipelineIO)
       , fprSemanticIntrospectionEnabled = semanticIntrospectionEnabled

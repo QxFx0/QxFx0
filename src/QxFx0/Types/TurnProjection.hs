@@ -41,6 +41,7 @@ import QxFx0.Memory.Episodic
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import QxFx0.Runtime.Mode (RuntimeMode(..))
 import QxFx0.Types.FMAR (FmarMode(..))
 
 data PreActorFailureKind
@@ -99,7 +100,7 @@ data ParserStatus
 data TurnReplayTrace = TurnReplayTrace
   { trcRequestId :: !Text
   , trcSessionId :: !Text
-  , trcRuntimeMode :: !Text
+  , trcRuntimeMode :: !RuntimeMode
   , trcShadowPolicy :: !Text
   , trcLocalRecoveryPolicy :: !Text
   , trcRecoveryCause :: !(Maybe LocalRecoveryCause)
