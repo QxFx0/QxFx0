@@ -308,7 +308,7 @@ import QxFx0.Bridge.ExternalLLM
   , queryExternalTool
   , defaultExternalQueryConfig
   )
-import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportFallbackReason(..))
+import QxFx0.Types.ExternalQuery (ExternalQueryConfig(..), TransportMode(..), TransportFallbackReason(..))
 import QxFx0.Learning.Calibration
   ( CalibrationId(..)
   , CalibrationProposal(..)
@@ -2291,7 +2291,7 @@ testProtocolInterpreter request =
 explicitMockExternalQueryConfig :: ExternalQueryConfig
 explicitMockExternalQueryConfig =
   defaultExternalQueryConfig
-    { eqcTransportMode = "mock"
+    { eqcTransportMode = TmDirect
     , eqcFallbackReason = Just TfrExplicitMock
     }
 

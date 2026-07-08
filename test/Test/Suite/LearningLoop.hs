@@ -146,6 +146,7 @@ import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
   , ExternalQueryConfig(..)
+  , TransportMode(..)
   , TransportFallbackReason(..)
   , renderFallbackReason
   )
@@ -173,6 +174,10 @@ learningLoopTests =
   , testToolReliabilityAffectsSelection
   , testKnowledgeTreeRoundTripsJson
   , testOldJsonLoadsWithDefaults
+  , testTransportModeRoundTripsJson
+  , testTransportModeAcceptsLegacyStrings
+  , testTransportModeAcceptsTaggedObjects
+  , testExternalQueryConfigRoundTripsJson
   -- Phase 8 vertical slice tests
   , testMockTransportSuccess
   , testMockTransportFailure
@@ -404,6 +409,44 @@ testOldJsonLoadsWithDefaults = TestCase $ do
   assertEqual "default quarantine must be empty"
     [] (ktQuarantine tree)
 
+-- | TransportMode JSON round-trips through the tagged object format.
+testTransportModeRoundTripsJson :: Test
+testTransportModeRoundTripsJson = TestCase $ do
+  assertEqual "TmFireworks must round-trip"
+    (Just TmFireworks) (decode (encode TmFireworks) :: Maybe TransportMode)
+  assertEqual "TmOpenAI must round-trip"
+    (Just TmOpenAI) (decode (encode TmOpenAI) :: Maybe TransportMode)
+  assertEqual "TmDirect must round-trip"
+    (Just TmDirect) (decode (encode TmDirect) :: Maybe TransportMode)
+
+-- | TransportMode accepts legacy string values for backward compatibility.
+testTransportModeAcceptsLegacyStrings :: Test
+testTransportModeAcceptsLegacyStrings = TestCase $ do
+  assertEqual "legacy 'fireworks' string must decode to TmFireworks"
+    (Just TmFireworks) (decode "\"fireworks\"" :: Maybe TransportMode)
+  assertEqual "legacy 'openai' string must decode to TmOpenAI"
+    (Just TmOpenAI) (decode "\"openai\"" :: Maybe TransportMode)
+  assertEqual "legacy 'direct' string must decode to TmDirect"
+    (Just TmDirect) (decode "\"direct\"" :: Maybe TransportMode)
+
+-- | TransportMode accepts the new tagged object format.
+testTransportModeAcceptsTaggedObjects :: Test
+testTransportModeAcceptsTaggedObjects = TestCase $ do
+  assertEqual "tagged TmFireworks object must decode"
+    (Just TmFireworks) (decode "{\"tag\":\"TmFireworks\"}" :: Maybe TransportMode)
+  assertEqual "tagged TmOpenAI object must decode"
+    (Just TmOpenAI) (decode "{\"tag\":\"TmOpenAI\"}" :: Maybe TransportMode)
+  assertEqual "tagged TmDirect object must decode"
+    (Just TmDirect) (decode "{\"tag\":\"TmDirect\"}" :: Maybe TransportMode)
+
+-- | ExternalQueryConfig round-trips through JSON with the new transport mode.
+testExternalQueryConfigRoundTripsJson :: Test
+testExternalQueryConfigRoundTripsJson = TestCase $ do
+  let cfg = defaultExternalQueryConfig { eqcTransportMode = TmFireworks }
+      decoded = decode (encode cfg) :: Maybe ExternalQueryConfig
+  assertEqual "ExternalQueryConfig must round-trip through JSON"
+    (Just cfg) decoded
+
 -- Helpers
 
 mkFruit :: T.Text -> KnowledgeSource -> Bool -> Double -> Double -> KnowledgeFruit
@@ -452,14 +495,14 @@ testMockTransportFailure = TestCase $ do
 explicitMockConfig :: ExternalQueryConfig
 explicitMockConfig =
   defaultExternalQueryConfig
-    { eqcTransportMode = "mock"
+    { eqcTransportMode = TmDirect
     , eqcFallbackReason = Just TfrExplicitMock
     }
 
 testConfigFallbackDoesNotMasqueradeAsSuccess :: Test
 testConfigFallbackDoesNotMasqueradeAsSuccess = TestCase $ do
   let cfg = defaultExternalQueryConfig
-        { eqcTransportMode = "mistral"
+        { eqcTransportMode = TmOpenAI
         , eqcFallbackReason = Just TfrKeyMissing
         }
   result <- queryExternalToolWithConfig cfg
@@ -764,7 +807,7 @@ testNoResultKeepsActorClean = TestCase $ do
 testExplicitConfigFallbackReason :: Test
 testExplicitConfigFallbackReason = TestCase $ do
   let cfg = defaultExternalQueryConfig
-        { eqcTransportMode = "mistral"
+        { eqcTransportMode = TmOpenAI
         , eqcFallbackReason = Nothing
         }
   transport <- buildTransportFromConfig cfg
@@ -778,7 +821,7 @@ testExplicitConfigFallbackReason = TestCase $ do
 testConfigRedactsApiKey :: Test
 testConfigRedactsApiKey = TestCase $ do
   let cfg = defaultExternalQueryConfig
-        { eqcTransportMode = "mistral"
+        { eqcTransportMode = TmOpenAI
         , eqcApiKey = Just "secret-key-123"
         }
       shown = show cfg
@@ -1003,7 +1046,7 @@ testRealPathMiniEvalScenario4 = TestCase $ do
 testRealPathMiniEvalScenario5 :: Test
 testRealPathMiniEvalScenario5 = TestCase $ do
   let cfg = defaultExternalQueryConfig
-        { eqcTransportMode = "mistral"
+        { eqcTransportMode = TmOpenAI
         , eqcFallbackReason = Nothing
           -- ^ Clear any default fallback so buildTransportFromConfig
           --   evaluates the key and discovers it is missing.

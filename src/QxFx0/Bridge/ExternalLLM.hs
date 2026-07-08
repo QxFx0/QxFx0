@@ -102,6 +102,7 @@ import QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
   , ExternalQueryConfig(..)
+  , TransportMode(..)
   , TransportFallbackReason(..)
   )
 
@@ -201,7 +202,7 @@ llmDefaultRetryBaseDelayMs = 500
 -- | Default safe configuration when no env vars are present.
 defaultExternalQueryConfig :: ExternalQueryConfig
 defaultExternalQueryConfig = ExternalQueryConfig
-  { eqcTransportMode   = "disabled"
+  { eqcTransportMode   = TmFireworks
   , eqcApiKey          = Nothing
   , eqcModel           = "mistral-small-latest"
   , eqcEndpoint        = "https://api.mistral.ai/v1/chat/completions"
@@ -250,7 +251,7 @@ resolveTransportConfigFromEnv = do
   let mode = fromMaybe "disabled" mTransport
   case mode of
     "mock" -> pure $ defaultExternalQueryConfig
-      { eqcTransportMode = "mock"
+      { eqcTransportMode = TmDirect
       , eqcFallbackReason = Just TfrExplicitMock
       }
     "mistral" -> do
@@ -261,12 +262,12 @@ resolveTransportConfigFromEnv = do
       retryBaseDelayMs <- readRetryBaseDelayMs
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
-          { eqcTransportMode = "mistral"
+          { eqcTransportMode = TmOpenAI
           , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key | T.null key -> pure $ defaultExternalQueryConfig
-          { eqcTransportMode = "mistral"
+          { eqcTransportMode = TmOpenAI
           , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
@@ -275,7 +276,7 @@ resolveTransportConfigFromEnv = do
           endpoint <- fmap (T.pack . fromMaybe "https://api.mistral.ai/v1/chat/completions") (lookupEnv "QXFX0_MISTRAL_ENDPOINT")
           case validateEndpointWithOverrideContext endpoint overrideContext of
             Left reason -> pure $ defaultExternalQueryConfig
-              { eqcTransportMode = "mistral"
+              { eqcTransportMode = TmOpenAI
               , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
@@ -285,7 +286,7 @@ resolveTransportConfigFromEnv = do
             Right mWarningTag -> do
               emitOverrideWarning endpoint mWarningTag
               pure $ ExternalQueryConfig
-                { eqcTransportMode = "mistral"
+                { eqcTransportMode = TmOpenAI
                 , eqcApiKey = Just key
                 , eqcModel = model
                 , eqcEndpoint = endpoint
@@ -305,12 +306,12 @@ resolveTransportConfigFromEnv = do
       retryBaseDelayMs <- readRetryBaseDelayMs
       case fmap (T.strip . T.pack) mKey of
         Nothing -> pure $ defaultExternalQueryConfig
-          { eqcTransportMode = "fireworks"
+          { eqcTransportMode = TmFireworks
           , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
         Just key | T.null key -> pure $ defaultExternalQueryConfig
-          { eqcTransportMode = "fireworks"
+          { eqcTransportMode = TmFireworks
           , eqcTimeoutMs = timeoutMs
           , eqcFallbackReason = Just TfrKeyMissing
           }
@@ -319,7 +320,7 @@ resolveTransportConfigFromEnv = do
           endpoint <- fmap (T.pack . fromMaybe "https://api.fireworks.ai/inference/v1/chat/completions") (lookupEnv "QXFX0_FIREWORKS_ENDPOINT")
           case validateEndpointWithOverrideContext endpoint overrideContext of
             Left reason -> pure $ defaultExternalQueryConfig
-              { eqcTransportMode = "fireworks"
+              { eqcTransportMode = TmFireworks
               , eqcApiKey = Nothing
               , eqcModel = model
               , eqcEndpoint = endpoint
@@ -329,7 +330,7 @@ resolveTransportConfigFromEnv = do
             Right mWarningTag -> do
               emitOverrideWarning endpoint mWarningTag
               pure $ ExternalQueryConfig
-                { eqcTransportMode = "fireworks"
+                { eqcTransportMode = TmFireworks
                 , eqcApiKey = Just key
                 , eqcModel = model
                 , eqcEndpoint = endpoint
@@ -342,7 +343,7 @@ resolveTransportConfigFromEnv = do
                 , eqcRetryBaseDelayMs = retryBaseDelayMs
                 }
     _ -> pure $ defaultExternalQueryConfig
-           { eqcTransportMode = T.pack mode
+           { eqcTransportMode = TmDirect
            , eqcFallbackReason = Just TfrEnvNotSet
            }
 
@@ -445,29 +446,43 @@ buildTransportFromValidatedConfigWithManager mgr cfg =
 
 realTransportForKey :: Manager -> ExternalQueryConfig -> Text -> LLMTransport
 realTransportForKey mgr cfg key =
-  if eqcTransportMode cfg == "fireworks"
-    then FireworksTransport mgr FireworksConfig
-      { fcApiKey = key
-      , fcModel = eqcModel cfg
-      , fcEndpoint = eqcEndpoint cfg
-      , fcTimeoutMs = eqcTimeoutMs cfg
-      , fcMaxQueryChars = eqcMaxQueryChars cfg
-      , fcMaxRequestBytes = eqcMaxRequestBytes cfg
-      , fcMaxResponseBytes = eqcMaxResponseBytes cfg
-      , fcMaxRetries = eqcMaxRetries cfg
-      , fcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
-      }
-    else MistralTransport mgr MistralConfig
-      { mcApiKey = key
-      , mcModel = eqcModel cfg
-      , mcEndpoint = eqcEndpoint cfg
-      , mcTimeoutMs = eqcTimeoutMs cfg
-      , mcMaxQueryChars = eqcMaxQueryChars cfg
-      , mcMaxRequestBytes = eqcMaxRequestBytes cfg
-      , mcMaxResponseBytes = eqcMaxResponseBytes cfg
-      , mcMaxRetries = eqcMaxRetries cfg
-      , mcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
-      }
+  case eqcTransportMode cfg of
+    TmFireworks ->
+      FireworksTransport mgr FireworksConfig
+        { fcApiKey = key
+        , fcModel = eqcModel cfg
+        , fcEndpoint = eqcEndpoint cfg
+        , fcTimeoutMs = eqcTimeoutMs cfg
+        , fcMaxQueryChars = eqcMaxQueryChars cfg
+        , fcMaxRequestBytes = eqcMaxRequestBytes cfg
+        , fcMaxResponseBytes = eqcMaxResponseBytes cfg
+        , fcMaxRetries = eqcMaxRetries cfg
+        , fcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
+        }
+    TmOpenAI ->
+      MistralTransport mgr MistralConfig
+        { mcApiKey = key
+        , mcModel = eqcModel cfg
+        , mcEndpoint = eqcEndpoint cfg
+        , mcTimeoutMs = eqcTimeoutMs cfg
+        , mcMaxQueryChars = eqcMaxQueryChars cfg
+        , mcMaxRequestBytes = eqcMaxRequestBytes cfg
+        , mcMaxResponseBytes = eqcMaxResponseBytes cfg
+        , mcMaxRetries = eqcMaxRetries cfg
+        , mcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
+        }
+    TmDirect ->
+      MistralTransport mgr MistralConfig
+        { mcApiKey = key
+        , mcModel = eqcModel cfg
+        , mcEndpoint = eqcEndpoint cfg
+        , mcTimeoutMs = eqcTimeoutMs cfg
+        , mcMaxQueryChars = eqcMaxQueryChars cfg
+        , mcMaxRequestBytes = eqcMaxRequestBytes cfg
+        , mcMaxResponseBytes = eqcMaxResponseBytes cfg
+        , mcMaxRetries = eqcMaxRetries cfg
+        , mcRetryBaseDelayMs = eqcRetryBaseDelayMs cfg
+        }
 
 -- | Build transport from an explicit configuration record.
 -- Useful for tests and for deterministic fallback paths.

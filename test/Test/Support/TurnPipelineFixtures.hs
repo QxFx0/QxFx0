@@ -60,7 +60,7 @@ import qualified QxFx0.Core.ConsciousnessLoop as CLoop
 import qualified QxFx0.Core.Intuition as Intuition
 import qualified QxFx0.Semantic.Embedding as Emb
 import QxFx0.Types.Domain.Atoms ()
-import QxFx0.Types.ExternalQuery ()
+import QxFx0.Types.ExternalQuery (TransportMode(..))
 import QxFx0.Types.ShadowDivergence (ShadowSnapshotId(..), emptyShadowDivergence)
 import QxFx0.Bridge.ExternalLLM
   ( buildTransportFromConfig
@@ -288,7 +288,7 @@ defaultProtocolFixtureState =
 explicitMockExternalQueryConfig :: ExternalQueryConfig
 explicitMockExternalQueryConfig =
   defaultExternalQueryConfig
-    { eqcTransportMode = "mock"
+    { eqcTransportMode = TmDirect
     , eqcFallbackReason = Just TfrExplicitMock
     }
 

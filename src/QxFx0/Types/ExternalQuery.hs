@@ -16,16 +16,18 @@ module QxFx0.Types.ExternalQuery
   ( ExternalQueryError(..)
   , ExternalQueryResponse(..)
   , ExternalQueryConfig(..)
+  , TransportMode(..)
   , TransportFallbackReason(..)
   , renderExternalQueryError
   , renderFallbackReason
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), object, (.:), (.=))
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Text.Read (readMaybe)
 
 -- | Typed error taxonomy for external query failures.
 --
@@ -73,12 +75,47 @@ data ExternalQueryResponse = ExternalQueryResponse
   deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
+-- | Transport mode selector for external queries.
+--
+-- The constructors distinguish Fireworks from generic OpenAI-compatible
+-- providers and direct/offline transport.  JSON instances accept both the
+-- legacy string format (e.g.  @"fireworks"@) and the tagged object format
+-- (e.g. @{"tag":"TmFireworks"}@) for backward compatibility.
+data TransportMode
+  = TmFireworks
+  | TmOpenAI
+  | TmDirect
+  deriving stock (Eq, Ord, Show, Read, Generic)
+    deriving anyclass (NFData)
+
+instance FromJSON TransportMode where
+  parseJSON (String txt)
+    | txt == "fireworks" = pure TmFireworks
+    | txt == "openai"    = pure TmOpenAI
+    | txt == "direct"    = pure TmDirect
+    | otherwise =
+        case readMaybe (T.unpack txt) of
+          Just mode -> pure mode
+          Nothing   -> fail ("Unknown TransportMode: " ++ T.unpack txt)
+  parseJSON (Object o) = do
+    tag <- o .: "tag"
+    case tag :: Text of
+      "TmFireworks" -> pure TmFireworks
+      "TmOpenAI"    -> pure TmOpenAI
+      "TmDirect"    -> pure TmDirect
+      other         -> fail ("Unknown TransportMode tag: " ++ T.unpack other)
+  parseJSON invalid =
+    fail ("Expected string or tagged object for TransportMode, got: " ++ show invalid)
+
+instance ToJSON TransportMode where
+  toJSON mode = object ["tag" .= show mode]
+
 -- | Explicit configuration contract for external query transport.
 -- All fields are optional with safe defaults; the builder in
 -- 'Bridge.ExternalLLM' fills them from env vars.
 data ExternalQueryConfig = ExternalQueryConfig
-  { eqcTransportMode   :: !Text
-    -- ^ "mock" | "mistral"
+  { eqcTransportMode   :: !TransportMode
+    -- ^ Fireworks, OpenAI-compatible, or direct/offline transport.
   , eqcApiKey          :: !(Maybe Text)
     -- ^ Redacted in 'Show' / logs.
   , eqcModel           :: !Text
