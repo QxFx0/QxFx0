@@ -10,6 +10,8 @@ import CLI.State (handleStateJson)
 import CLI.Turn (runTurnJson)
 import CLI.Worker (runWorkerStdio)
 
+import QxFx0.Learning.Tuning (runCorpusTuning)
+
 import Control.Monad (when, forM_)
 import Data.Aeson (encode)
 import Data.Text (Text)
@@ -68,6 +70,7 @@ main = do
     ["--sync-embedded-sql"]   -> handleSyncEmbeddedSql
     ("--selfplay":rest)       -> handleSelfPlay sessionId rest
     ("--discover":rest)       -> handleDiscover sessionId rest
+    ("--tune-corpus":rest)    -> handleTuneCorpus sessionId rest
     _                         -> do
       hPutStrLn stderr "Unsupported arguments. Use --help."
       exitFailure
@@ -96,6 +99,7 @@ printMachineHelp = do
   T.putStrLn "  --discover <concept>         discover relations for a concept via LLM (offline)"
   T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
   T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
+  T.putStrLn "  --tune-corpus [session-id|all]  run corpus-driven calibration tuning"
 
 handleTurnJson :: Text -> [String] -> IO ()
 handleTurnJson sessionId args =
@@ -167,6 +171,20 @@ handleSelfPlay _sessionId args = do
         case saveResult of
           Right _ -> T.putStrLn "Enriched graph persisted to session."
           Left err -> hPutStrLn stderr $ "Failed to persist enriched graph: " <> show err
+
+handleTuneCorpus :: Text -> [String] -> IO ()
+handleTuneCorpus defaultSessionId args =
+  let mTarget = case args of
+        []             -> Just defaultSessionId
+        ["all"]        -> Nothing
+        (sid:_)        -> Just (T.pack sid)
+  in Runtime.withBootstrappedSession True defaultSessionId $ \session -> do
+       let dbRunner = Runtime.withRuntimeDb (Runtime.sessRuntime session)
+           mSessionId = case args of
+             ["all"] -> Nothing
+             _       -> mTarget
+       outcome <- runCorpusTuning dbRunner mSessionId
+       BLC.putStrLn (encode outcome)
 
 handleDiscover :: Text -> [String] -> IO ()
 handleDiscover _sessionId args =

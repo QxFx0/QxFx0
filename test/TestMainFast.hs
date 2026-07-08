@@ -51,15 +51,17 @@ import Test.Suite.SemanticContentB3 (semanticContentB3Tests)
 import Test.Suite.SemanticRepairB3 (semanticRepairB3Tests)
 import Test.Suite.B3MechanicalGateExecution (b3MechanicalGateExecutionTests)
 import Test.Suite.RoundTrip (roundTripTests)
+import Test.Suite.NativeSQLiteNulls (nativeSQLiteNullsTests)
 import Test.Suite.AtomStore (atomStoreTests)
 import Test.Suite.PathFinder (pathFinderTests)
 import Test.Suite.GeneratedPredicateGate (generatedPredicateGateTests)
 import Test.Suite.SubstrateCandidate (substrateCandidateTests)
 import Test.Suite.ContentQualityGate (contentQualityGateTests)
+import Test.Suite.CorpusTuning (corpusTuningTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests   ++ semanticContentB3Tests ++ semanticRepairB3Tests   ++ b3MechanicalGateExecutionTests ++ [roundTripTests]   ++ atomStoreTests   ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ contentQualityGateTests)
+  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ semanticCorpusTests ++ lexiconTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfAdaptivePositionTests ++ selfFamilyTargetsTests ++ fmarCoreTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ semanticCommitmentCorpusTests ++ authoritySurfaceTests ++ datalogSafetyTests ++ sandboxBoundaryTests ++ pgfErrorHandlingTests ++ structuredErrorsTests ++ episodicMemoryTests ++ userModelTests ++ cognitiveSignalsTests ++ doubtLoopTests ++ affectModelTests ++ contentSalienceTests ++ derivedInferenceTests ++ gfParityHarnessTests   ++ semanticContentB3Tests ++ semanticRepairB3Tests   ++ b3MechanicalGateExecutionTests ++ [roundTripTests]   ++ nativeSQLiteNullsTests ++ atomStoreTests   ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ contentQualityGateTests ++ corpusTuningTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
