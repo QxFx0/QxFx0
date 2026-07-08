@@ -43,6 +43,7 @@ data EdgeProvenance
   | ProvenanceCorpus
   | ProvenanceSubstrate
   | ProvenanceIngested
+  | ProvenanceSelfPlay
   deriving stock (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 

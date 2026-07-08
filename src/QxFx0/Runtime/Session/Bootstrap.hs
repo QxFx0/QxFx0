@@ -14,6 +14,10 @@ module QxFx0.Runtime.Session.Bootstrap
   , readExternalKnowledgeEnabled
   , resolveKnowledgePath
   , bootstrapSemanticNetwork
+  , readSelfPlayEnabled
+  , readSelfPlayRelationsPath
+  , selfPlayRelationsPath
+  , useSelfPlay
   ) where
 
 import Control.Exception (bracket, try, IOException)
@@ -80,7 +84,8 @@ import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Network (mergeSemanticNetworks)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
-import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge)
+import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge, mergeSelfPlayRelations)
+import Data.Maybe (fromMaybe)
 import QxFx0.Semantic.Network.Substrate (BrainKBEntry(..), loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
@@ -131,6 +136,33 @@ readExternalKnowledgeEnabled = do
   let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
   pure (envEnabled || useExternalKnowledge)
 
+-- | Compile-time feature flag for ADR-0052 Phase III self-play relation
+-- ingestion. Defaults to 'False' so runtime behavior is unchanged.
+useSelfPlay :: Bool
+useSelfPlay = False
+
+-- | Read whether self-play relation ingestion should be enabled.
+-- The compile-time 'useSelfPlay' flag can force it on; otherwise the
+-- @QXFX0_USE_SELFPLAY@ environment variable enables it when set to
+-- @\"1\"@, @\"true\"@, or @\"yes\"@.
+readSelfPlayEnabled :: IO Bool
+readSelfPlayEnabled = do
+  mEnv <- lookupEnv "QXFX0_USE_SELFPLAY"
+  let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
+  pure (envEnabled || useSelfPlay)
+
+-- | Resolve the path to the self-play relations file. The
+-- @QXFX0_SELFPLAY_RELATIONS_PATH@ environment variable overrides the
+-- default @resources/knowledge/selfplay_relations.jsonl@.
+readSelfPlayRelationsPath :: IO FilePath
+readSelfPlayRelationsPath = do
+  mEnv <- lookupEnv "QXFX0_SELFPLAY_RELATIONS_PATH"
+  pure (fromMaybe "resources/knowledge/selfplay_relations.jsonl" mEnv)
+
+-- | Alias for 'readSelfPlayRelationsPath'.
+selfPlayRelationsPath :: IO FilePath
+selfPlayRelationsPath = readSelfPlayRelationsPath
+
 -- | Resolve a knowledge file path. First try the path as given; if it
 -- does not exist, fall back to a @Paths_qxfx0@ data-file path; finally
 -- return the original path so that a later stage can report a sensible
@@ -161,13 +193,23 @@ bootstrapSemanticNetwork morphology brainKBEntries useExternal =
         ]
       mergedEdges = M.union seedEdges substrateEdgeMap
       mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
-  in if not useExternal
-       then pure mergedNetwork
-       else do
-         ontologyPath <- resolveKnowledgePath "resources/knowledge/ontology.jsonl"
-         relationsPath <- resolveKnowledgePath "resources/knowledge/relations.jsonl"
-         mExternal <- ingestExternalKnowledge ontologyPath relationsPath
-         pure $ maybe mergedNetwork (mergeSemanticNetworks mergedNetwork) mExternal
+  in do
+      withExternal <- if not useExternal
+        then pure mergedNetwork
+        else do
+          ontologyPath <- resolveKnowledgePath "resources/knowledge/ontology.jsonl"
+          relationsPath <- resolveKnowledgePath "resources/knowledge/relations.jsonl"
+          mExternal <- ingestExternalKnowledge ontologyPath relationsPath
+          pure $ maybe mergedNetwork (mergeSemanticNetworks mergedNetwork) mExternal
+      selfPlayEnabled <- readSelfPlayEnabled
+      if not selfPlayEnabled
+        then pure withExternal
+        else do
+          selfPlayPath <- resolveKnowledgePath =<< readSelfPlayRelationsPath
+          selfPlayExists <- doesFileExist selfPlayPath
+          if not selfPlayExists
+            then pure withExternal
+            else mergeSelfPlayRelations selfPlayPath withExternal
 
 bootstrapSession :: Bool -> Text -> IO Session
 bootstrapSession quiet sessionId = do

@@ -22,6 +22,8 @@ module QxFx0.Semantic.Network.Ingest
   , ingestExternalKnowledge
   , buildNetworkFromAtomGraph
   , semanticNetworkFromLoaded
+  , loadSelfPlayRelations
+  , mergeSelfPlayRelations
   ) where
 
 import Control.DeepSeq (NFData)
@@ -53,6 +55,9 @@ import QxFx0.Semantic.Content.AtomStore
   , RelationType(..)
   , atomStore
   )
+import QxFx0.Semantic.Network
+  ( mergeSemanticNetworks
+  )
 import QxFx0.Semantic.Network.Types
   ( EdgeProvenance(..)
   , EdgeSource(..)
@@ -60,6 +65,7 @@ import QxFx0.Semantic.Network.Types
   , SemanticNetwork(..)
   , relationTypeWeight
   )
+import qualified QxFx0.Semantic.Network.Types as NetTypes
 import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), loadOntology)
 
 -- ============================================================
@@ -417,3 +423,59 @@ ingestExternalKnowledge ontologyPath relationsPath = do
     Left exc -> do
       hPutStrLn stderr ("Warning: ingestExternalKnowledge failed: " ++ show exc)
       pure Nothing
+
+-- | Load self-play relations from a JSONL file. The format is identical
+-- to the external relation corpus, but the expected author is
+-- @"selfplay"@ and provenance is tracked separately.
+loadSelfPlayRelations :: FilePath -> IO [LoadedRelation]
+loadSelfPlayRelations = loadRelations
+
+-- | Build a 'SemanticNetwork' from a list of self-play relations. All
+-- relation endpoints become nodes and every relation becomes an
+-- explicit edge with 'ProvenanceSelfPlay' and its loaded confidence.
+semanticNetworkFromSelfPlay :: [LoadedRelation] -> SemanticNetwork
+semanticNetworkFromSelfPlay rawRels =
+  let nodes = foldl' insertRelation S.empty rawRels
+      edgeMap = foldl' insertEdge M.empty rawRels
+  in SemanticNetwork
+      { snNodes         = nodes
+      , snEdges         = edgeMap
+      , snActivation    = M.empty
+      , snDecayRate     = 0.5
+      , snMaxHops       = 3
+      , snActivationLog = Seq.empty
+      }
+  where
+    insertRelation :: Set Text -> LoadedRelation -> Set Text
+    insertRelation acc lr = S.insert (lrFrom lr) (S.insert (lrTo lr) acc)
+
+    insertEdge
+      :: Map (Text, Text) SemanticEdge
+      -> LoadedRelation
+      -> Map (Text, Text) SemanticEdge
+    insertEdge acc lr =
+      let key = (lrFrom lr, lrTo lr)
+          edge = SemanticEdge
+            { seFrom         = lrFrom lr
+            , seTo           = lrTo lr
+            , seWeight       = lrConfidence lr
+            , seCoOccurrence = 1
+            , seSource       = ExplicitEdge
+            , seRelationType = Just (lrType lr)
+            , seVerb         = lrVerb lr
+            , seRationale    = lrRationale lr
+            , seCounter      = lrCounter lr
+            , seSynthesis    = lrSynthesis lr
+            , seConfidence   = lrConfidence lr
+            , seProvenance   = ProvenanceSelfPlay
+            }
+      in M.insert key edge acc
+
+-- | Load self-play relations from a file and merge them into an
+-- existing 'SemanticNetwork'. Merging uses 'mergeSemanticNetworks', so
+-- collisions are resolved by provenance authority and confidence.
+mergeSelfPlayRelations :: FilePath -> SemanticNetwork -> IO SemanticNetwork
+mergeSelfPlayRelations path baseNetwork = do
+  rawRels <- loadSelfPlayRelations path
+  let selfplayNetwork = semanticNetworkFromSelfPlay rawRels
+  pure $ mergeSemanticNetworks baseNetwork selfplayNetwork

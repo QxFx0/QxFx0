@@ -75,9 +75,10 @@ mergeSemanticNetworksWithProvenance base update =
             EQ -> updateEdge
 
     isAuthoritative e = case seProvenance e of
-      ProvenanceCurated  -> True
-      ProvenanceIngested -> True
-      ProvenanceCorpus   -> False
+      ProvenanceCurated   -> True
+      ProvenanceIngested  -> True
+      ProvenanceSelfPlay  -> True
+      ProvenanceCorpus    -> False
       ProvenanceSubstrate -> False
 
 activate :: Text -> SemanticNetwork -> SemanticNetwork

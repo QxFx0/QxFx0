@@ -19,6 +19,7 @@ data-files:
   resources/config/*.json
   resources/knowledge/relations.jsonl
   resources/knowledge/ontology.jsonl
+  resources/knowledge/selfplay_relations.jsonl
   resources/lexicon/*.json
   resources/morphology/*.json
   semantics/*.nix
@@ -644,6 +645,7 @@ common test-common
     Test.Suite.NetworkIngest
     Test.Suite.NetworkTypes
     Test.Suite.CLIIngest
+    Test.Suite.SelfPlayRelations
 
 test-suite qxfx0-test-unit
   import:        test-common

@@ -215,7 +215,7 @@ handleIngest :: [String] -> IO ()
 handleIngest args =
   case Ingest.parseIngestArgs args of
     Nothing -> do
-      hPutStrLn stderr "Error: ingest expects [--relations <path>] [--ontology <path>]"
+      hPutStrLn stderr "Error: ingest expects [--relations <path>] [--ontology <path>] [--selfplay <path>]"
       exitFailure
     Just opts -> do
       outcome <- Ingest.runIngest opts

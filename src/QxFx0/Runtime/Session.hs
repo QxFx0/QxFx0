@@ -16,6 +16,9 @@ module QxFx0.Runtime.Session
   , readExternalKnowledgeEnabled
   , resolveKnowledgePath
   , bootstrapSemanticNetwork
+  , readSelfPlayEnabled
+  , readSelfPlayRelationsPath
+  , selfPlayRelationsPath
   , renderRuntimeOutputMode
   , runtimeToDialogueMode
   , dialogueToRuntimeMode
